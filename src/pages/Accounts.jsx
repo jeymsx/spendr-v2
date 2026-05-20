@@ -3,6 +3,7 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCycleRange, getNextCycleRange } from '../utils/creditCycle'
 import { PH_ACCOUNTS, PH_GROUPS, TYPE_ICON } from '../lib/phAccounts'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -317,6 +318,7 @@ function AccountCard({ acct, hidden, onTap, stmt }) {
 
 function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
   const [closing, setClosing] = useState(false)
+  useScrollLock(open)
 
   const close = useCallback(() => {
     setClosing(true)
@@ -579,6 +581,7 @@ export default function Accounts() {
 
 function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [closing,    setClosing]    = useState(false)
+  useScrollLock(open)
   const [saving,     setSaving]     = useState(false)
   const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete'
   const [deleteBlocked, setDeleteBlocked] = useState(null)
@@ -1031,6 +1034,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
 function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
   const [closing, setClosing] = useState(false)
+  useScrollLock(open)
 
   const close = () => {
     setClosing(true)
@@ -1106,7 +1110,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
   if (!account) return null
 
   const isCredit    = account.type === 'credit'
-  const totalUsed   = isCredit ? (creditData?.thisTotal ?? 0) + (creditData?.nextTotal ?? 0) : 0
+  const totalUsed   = isCredit ? (creditData?.thisTotal ?? 0) + (creditData?.nextTotal ?? 0) : (account.balance ?? 0)
   const usedPct     = isCredit && (account.creditLimit ?? 0) > 0
     ? Math.min((totalUsed / account.creditLimit) * 100, 100) : 0
 

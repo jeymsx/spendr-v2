@@ -51,10 +51,7 @@ export default function AppLayout() {
   }, [])
 
   return (
-    <div
-      className="relative flex flex-col min-h-dvh"
-      style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}
-    >
+    <div className="relative flex flex-col min-h-dvh">
       {/*
         IMPORTANT: no z-index on <main>. Adding z-index creates a stacking context,
         which would make all fixed sheets/modals rendered inside pages lose against
@@ -63,6 +60,7 @@ export default function AppLayout() {
         values properly beat the Navbar's z-50.
       */}
       <main
+        id="app-main"
         ref={mainRef}
         className="flex-1 overflow-y-auto relative"
         style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}

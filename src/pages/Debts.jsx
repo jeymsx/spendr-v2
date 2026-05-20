@@ -844,6 +844,11 @@ export default function Debts() {
   const [paymentDebt, setPaymentDebt] = useState(null)
   const [showPayment, setShowPayment] = useState(false)
 
+  useEffect(() => {
+    const el = document.getElementById('app-main')
+    if (el) el.scrollTop = 0
+  }, [])
+
   const allDebts = useLiveQuery(() => db.debts.orderBy('createdAt').reverse().toArray(), [], [])
 
   const tabDebts = useMemo(

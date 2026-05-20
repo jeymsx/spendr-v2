@@ -15,6 +15,18 @@ html {
   background-color: #0b0f14;
 }
 
+/* Fixed gradient layer — always viewport-pinned, never scrolls or clips */
+html.dark::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(ellipse 90% 55% at 15% -5%, rgba(45, 157, 255, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 85% 105%, rgba(59, 141, 255, 0.10) 0%, transparent 50%);
+}
+
 body {
   font-family: 'Inter', sans-serif;
   -webkit-font-smoothing: antialiased;
@@ -25,12 +37,9 @@ body {
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
-.dark body {
+html.dark body {
   color: white;
-  background:
-    radial-gradient(ellipse 90% 55% at 15% -5%, rgba(45, 157, 255, 0.18) 0%, transparent 55%),
-    radial-gradient(ellipse 60% 45% at 85% 105%, rgba(59, 141, 255, 0.10) 0%, transparent 50%),
-    #0b0f14;
+  background: transparent;
 }
 
 #root {
@@ -77,6 +86,11 @@ body {
   box-shadow:
     inset 0 1px 0 rgba(45, 157, 255, 0.08),
     inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+/* ── Sheet scroll lock — prevents iOS scroll bleed-through */
+#app-main.scroll-locked {
+  overflow: hidden;
 }
 
 /* ── Bottom sheet ─────────────────────────────────────── */

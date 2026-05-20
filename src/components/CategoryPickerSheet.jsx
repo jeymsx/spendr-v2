@@ -1,7 +1,9 @@
 import { useState } from 'react'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect }) {
   const [closing, setClosing] = useState(false)
+  useScrollLock(open)
 
   const close = () => {
     setClosing(true)

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { supabase } from '../lib/supabase'
 import { fullSync } from '../lib/sync'
 import db from '../db/db'
 
@@ -89,7 +90,8 @@ function SyncIndicator({ status }) {
 
 export default function SyncManager() {
   const { user } = useAuth()
-  const [status, setStatus] = useState('idle') // 'idle' | 'syncing' | 'success' | 'error'
+  const [status,   setStatus]   = useState('idle') // 'idle' | 'syncing' | 'success' | 'error'
+  const [errMsg,   setErrMsg]   = useState('')
   const syncingRef = useRef(false)
   const dismissRef = useRef(null)
 
@@ -99,16 +101,23 @@ export default function SyncManager() {
     syncingRef.current = true
     clearTimeout(dismissRef.current)
     setStatus('syncing')
+    setErrMsg('')
 
     try {
+      // Refresh the session first — iOS Safari PWA can have stale tokens
+      const { error: sessionErr } = await supabase.auth.refreshSession()
+      if (sessionErr) console.warn('[SyncManager] session refresh:', sessionErr.message)
+
       await fullSync(user.id)
       await db.meta.put({ key: 'lastSync', value: new Date().toISOString() })
       setStatus('success')
       dismissRef.current = setTimeout(() => setStatus('idle'), 3000)
     } catch (err) {
       console.error('[SyncManager]', err)
+      const msg = err?.message ?? String(err)
+      setErrMsg(msg)
       setStatus('error')
-      dismissRef.current = setTimeout(() => setStatus('idle'), 5000)
+      dismissRef.current = setTimeout(() => setStatus('idle'), 8000)
     } finally {
       syncingRef.current = false
     }

@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from 'react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -68,6 +69,7 @@ function TemplateRow({ tpl, onTap, onLongPressDelete }) {
 
 export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
   const [closing, setClosing] = useState(false)
+  useScrollLock(open)
   const [deleting, setDeleting] = useState(null)
 
   const rawTemplates = useLiveQuery(() => db.templates.toArray(), [], [])

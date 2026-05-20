@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import db from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -14,6 +15,7 @@ const TYPE_CONFIG = {
 
 export default function TemplateConfirmSheet({ open, onClose, template }) {
   const [closing,     setClosing]     = useState(false)
+  useScrollLock(open)
   const [saving,      setSaving]      = useState(false)
   const [amountStr,   setAmountStr]   = useState('')
   const [description, setDescription] = useState('')

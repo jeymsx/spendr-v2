@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -61,6 +62,7 @@ export default function TxConfirmSheet({
   onSaveTemplate = null,  // if provided, shows save-as-template toggle
 }) {
   const [closing,       setClosing]       = useState(false)
+  useScrollLock(open)
   const [saveTemplate,  setSaveTemplate]  = useState(false)
   const [templateName,  setTemplateName]  = useState('')
 

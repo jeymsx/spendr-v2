@@ -187,7 +187,7 @@ export default function AddInflow() {
   const fontSize   = displayStr.length <= 9 ? '3rem' : displayStr.length <= 12 ? '2.375rem' : '1.875rem'
 
   return (
-    <div className="flex flex-col bg-transparent" style={{ height: 'calc(100dvh - 80px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px))' }}>
+    <div className="flex flex-col bg-transparent" style={{ height: 'calc(100dvh - 80px)' }}>
 
       {/* ── Header ── */}
       <header className="flex items-center gap-3 px-4 pt-5 pb-2 shrink-0">

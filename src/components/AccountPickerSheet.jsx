@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -7,6 +8,7 @@ const TYPE_LABEL = { cash: 'Cash', savings: 'Savings', credit: 'Credit', ewallet
 
 export default function AccountPickerSheet({ open, onClose, accounts, selected, onSelect, exclude = [] }) {
   const [closing, setClosing] = useState(false)
+  useScrollLock(open)
 
   const close = () => {
     setClosing(true)

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 const ACTIONS = [
   {
@@ -34,6 +35,7 @@ const ACTIONS = [
 export default function AddActionSheet({ open, onClose }) {
   const navigate = useNavigate()
   const [closing, setClosing] = useState(false)
+  useScrollLock(open)
   const overlayRef = useRef(null)
 
   const handleClose = useCallback(() => {

@@ -1,4 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
+import { useScrollLock } from '../hooks/useScrollLock'
 import db from '../db/db'
 import { reverseBalanceEffect, applyBalanceEffect } from '../db/txHelpers'
 import CategoryPickerSheet from './CategoryPickerSheet'
@@ -103,6 +104,7 @@ function EditPickerBtn({ label, dot, placeholder, onClick }) {
 
 export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [] }) {
   const [closing,         setClosing]         = useState(false)
+  useScrollLock(open)
   const [mode,            setMode]            = useState('detail')   // 'detail' | 'edit' | 'confirm-delete'
   const [saving,          setSaving]          = useState(false)
 

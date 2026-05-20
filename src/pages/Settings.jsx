@@ -8,6 +8,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
+import { useScrollLock } from '../hooks/useScrollLock'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -365,6 +366,7 @@ function FieldLabel({ children }) {
 
 function ProfileSheet({ open, onClose, displayName: initName, currency: initCurrency }) {
   const [closing,  setClosing]  = useState(false)
+  useScrollLock(open)
   const [saving,   setSaving]   = useState(false)
   const [name,     setName]     = useState('')
   const [currency, setCurrency] = useState('PHP')
@@ -722,6 +724,7 @@ function CategoryRow({ cat, onTap, onLongPressDelete }) {
 
 function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) {
   const [closing, setClosing] = useState(false)
+  useScrollLock(open)
   const [adding,  setAdding]  = useState(null)
 
   const presets      = activeTab === 'expense' ? EXPENSE_PRESETS : INFLOW_PRESETS
@@ -814,6 +817,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
 
 function CategoryManagerSheet({ open, onClose }) {
   const [closing,        setClosing]        = useState(false)
+  useScrollLock(open)
   const [activeTab,      setActiveTab]      = useState('expense')
   const [formOpen,       setFormOpen]       = useState(false)
   const [editingCat,     setEditingCat]     = useState(null)
@@ -965,6 +969,7 @@ function CategoryManagerSheet({ open, onClose }) {
 
 function CategoryFormSheet({ open, onClose, category, defaultType, allCategories, startAtDelete, zIndex = 100 }) {
   const [closing,        setClosing]        = useState(false)
+  useScrollLock(open)
   const [saving,         setSaving]         = useState(false)
   const [mode,           setMode]           = useState('form')
   const [txCount,        setTxCount]        = useState(0)
@@ -1402,6 +1407,7 @@ function TemplateRow({ tpl, catIcon, onTap, onLongPressDelete }) {
 
 function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories }) {
   const [closing,   setClosing]   = useState(false)
+  useScrollLock(open)
   const [saving,    setSaving]    = useState(false)
   const [name,      setName]      = useState('')
   const [type,      setType]      = useState('expense')
@@ -1674,6 +1680,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
 function TemplateManagerSheet({ open, onClose }) {
   const [closing,    setClosing]    = useState(false)
+  useScrollLock(open)
   const [formOpen,   setFormOpen]   = useState(false)
   const [editingTpl, setEditingTpl] = useState(null)
 
