@@ -1,0 +1,180 @@
+@import "tailwindcss";
+@config "../tailwind.config.js";
+
+/* ── Base ─────────────────────────────────────────────── */
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  scroll-behavior: smooth;
+  min-height: 100dvh;
+  background-color: #0b0f14;
+}
+
+body {
+  font-family: 'Inter', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overscroll-behavior: none;
+  min-height: 100dvh;
+  @apply bg-slate-50 text-slate-900;
+  transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.dark body {
+  color: white;
+  background:
+    radial-gradient(ellipse 90% 55% at 15% -5%, rgba(45, 157, 255, 0.18) 0%, transparent 55%),
+    radial-gradient(ellipse 60% 45% at 85% 105%, rgba(59, 141, 255, 0.10) 0%, transparent 50%),
+    #0b0f14;
+}
+
+#root {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ── Glass card ───────────────────────────────────────── */
+.glass-card {
+  background: rgba(255, 255, 255, 0.75);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(255, 255, 255, 0.85);
+  @apply shadow-sm;
+}
+
+.dark .glass-card {
+  background: rgba(45, 157, 255, 0.07);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(45, 157, 255, 0.18);
+  box-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
+}
+
+/* ── Card surface — iOS-style material ───────────────── */
+.card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.072);
+  box-shadow:
+    0 1px 3px rgba(0, 0, 0, 0.07),
+    0 1px 2px rgba(0, 0, 0, 0.04);
+}
+
+.dark .card {
+  background: linear-gradient(
+    158deg,
+    rgba(45, 157, 255, 0.07) 0%,
+    rgba(255, 255, 255, 0.03) 100%
+  );
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(45, 157, 255, 0.09);
+  box-shadow:
+    inset 0 1px 0 rgba(45, 157, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.12);
+}
+
+/* ── Bottom sheet ─────────────────────────────────────── */
+.sheet-overlay {
+  animation: fadeIn 0.22s ease forwards;
+}
+
+.sheet-panel {
+  animation: slideUp 0.30s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+.sheet-panel-exit {
+  animation: slideDown 0.24s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+
+@keyframes slideDown {
+  from { transform: translateY(0); }
+  to   { transform: translateY(100%); }
+}
+
+/* ── Page enter ───────────────────────────────────────── */
+.page-enter {
+  animation: pageFadeIn 0.22s ease;
+}
+
+@keyframes pageFadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Scrollbar ────────────────────────────────────────── */
+::-webkit-scrollbar {
+  width: 4px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(45, 157, 255, 0.25);
+  border-radius: 9999px;
+}
+
+/* ── Safe-area helpers ────────────────────────────────── */
+.pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pt-safe  { padding-top:    env(safe-area-inset-top,    0px); }
+.mb-safe  { margin-bottom:  env(safe-area-inset-bottom, 0px); }
+.min-h-screen-safe { min-height: 100dvh; }
+
+/* ── Prevent iOS zoom on input focus ─────────────────── */
+input, textarea, select {
+  font-size: 16px !important;
+}
+
+/* ── Tap highlight ────────────────────────────────────── */
+button, a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ── Haptic press scale ───────────────────────────────── */
+.press-scale {
+  transition: transform 100ms ease;
+}
+.press-scale:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+/* ── Skeleton shimmer (dark-mode optimised) ───────────── */
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.06) 50%,
+    transparent 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.6s infinite;
+}
+
+/* ── Sheet overlay exit ───────────────────────────────── */
+.sheet-overlay-exit {
+  animation: fadeOut 0.22s ease forwards;
+}
+
+@keyframes fadeOut {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
