@@ -83,7 +83,7 @@ export default function Navbar({ onAddClick }) {
       className={[
         'fixed bottom-0 inset-x-0 z-50',
         'flex items-center justify-around',
-        'px-2 pt-2 pb-safe',
+        'px-2',
         /* light */
         'bg-white/90 border-t border-slate-200/70',
         /* dark */
@@ -91,7 +91,7 @@ export default function Navbar({ onAddClick }) {
         'backdrop-filter backdrop-blur-xl',
         'safe-bottom',
       ].join(' ')}
-      style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}
+      style={{ paddingTop: '8px', paddingBottom: '8px' }}
     >
       {/* left tabs */}
       {LEFT_TABS.map(t => (

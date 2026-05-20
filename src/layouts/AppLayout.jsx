@@ -14,10 +14,10 @@ export default function AppLayout() {
   const runSyncRef = useRef(runSync)
   useEffect(() => { runSyncRef.current = runSync }, [runSync])
 
-  // Reset scroll to top on every route change
+  // Reset scroll to top on every navigation (location.key changes on every push/replace)
   useEffect(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0
-  }, [location.pathname])
+  }, [location.key])
 
   useEffect(() => {
     const el = mainRef.current

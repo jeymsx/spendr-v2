@@ -233,7 +233,7 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => navigate('/settings')}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center bg-white dark:bg-white/8 border border-slate-200 dark:border-white/10 text-slate-500 dark:text-slate-400 active:scale-95 transition-transform shadow-sm"
+          className="w-9 h-9 rounded-2xl flex items-center justify-center bg-white dark:bg-primary/[0.10] border border-slate-200 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 active:scale-95 transition-transform shadow-sm dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.12)]"
           aria-label="Settings"
         >
           <IconSettings />

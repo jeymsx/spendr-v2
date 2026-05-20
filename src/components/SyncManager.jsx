@@ -46,7 +46,7 @@ function IconAlertCircle() {
 
 // ── Indicator pill ────────────────────────────────────────────────────────────
 
-function SyncIndicator({ status }) {
+function SyncIndicator({ status, errMsg }) {
   const visible = status !== 'idle'
 
   if (!visible) return null
@@ -73,13 +73,20 @@ function SyncIndicator({ status }) {
 
   return (
     <div
-      className={`fixed top-14 right-4 z-[400] flex items-center gap-1.5 px-3 py-1.5 rounded-full
-        text-[11px] font-semibold shadow-lg
-        transition-all duration-300
-        ${styles.pill}`}
+      className={`fixed top-14 right-4 z-[400] flex flex-col items-end gap-0.5
+        transition-all duration-300`}
     >
-      {styles.icon}
-      <span>{styles.label}</span>
+      <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full
+        text-[11px] font-semibold shadow-lg ${styles.pill}`}
+      >
+        {styles.icon}
+        <span>{styles.label}</span>
+      </div>
+      {status === 'error' && errMsg && (
+        <div className="max-w-[220px] px-3 py-1 rounded-full bg-red-600 text-white text-[10px] shadow-lg truncate">
+          {errMsg}
+        </div>
+      )}
     </div>
   )
 }
@@ -95,13 +102,16 @@ export default function SyncManager() {
   const syncingRef = useRef(false)
   const dismissRef = useRef(null)
 
-  const runSync = useCallback(async () => {
+  const runSync = useCallback(async ({ silent = false } = {}) => {
     if (!user?.id || syncingRef.current) return
 
     syncingRef.current = true
     clearTimeout(dismissRef.current)
-    setStatus('syncing')
-    setErrMsg('')
+
+    if (!silent) {
+      setStatus('syncing')
+      setErrMsg('')
+    }
 
     try {
       // Refresh the session first — iOS Safari PWA can have stale tokens
@@ -110,8 +120,11 @@ export default function SyncManager() {
 
       await fullSync(user.id)
       await db.meta.put({ key: 'lastSync', value: new Date().toISOString() })
-      setStatus('success')
-      dismissRef.current = setTimeout(() => setStatus('idle'), 3000)
+
+      if (!silent) {
+        setStatus('success')
+        dismissRef.current = setTimeout(() => setStatus('idle'), 3000)
+      }
     } catch (err) {
       console.error('[SyncManager]', err)
       const msg = err?.message ?? String(err)
@@ -123,9 +136,9 @@ export default function SyncManager() {
     }
   }, [user?.id])
 
-  // Sync on mount / user change
+  // Sync on mount / user change (silent — no chip shown unless error)
   useEffect(() => {
-    if (user?.id) runSync()
+    if (user?.id) runSync({ silent: true })
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Sync on window focus, but at most once per 60 s (prevents firing on every tap/click in some browsers)
@@ -136,7 +149,7 @@ export default function SyncManager() {
       const now = Date.now()
       if (now - lastFocusSync < 60_000) return
       lastFocusSync = now
-      runSync()
+      runSync({ silent: true })
     }
     window.addEventListener('focus', onFocus)
     return () => window.removeEventListener('focus', onFocus)
@@ -147,7 +160,7 @@ export default function SyncManager() {
 
   return (
     <SyncContext.Provider value={{ status, runSync }}>
-      <SyncIndicator status={status} />
+      <SyncIndicator status={status} errMsg={errMsg} />
       <Outlet />
     </SyncContext.Provider>
   )

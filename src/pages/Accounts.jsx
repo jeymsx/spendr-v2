@@ -4,6 +4,8 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCycleRange, getNextCycleRange } from '../utils/creditCycle'
 import { PH_ACCOUNTS, PH_GROUPS, TYPE_ICON } from '../lib/phAccounts'
 import { useScrollLock } from '../hooks/useScrollLock'
+import { useToast } from '../context/ToastContext'
+import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -265,7 +267,7 @@ function AccountCard({ acct, hidden, onTap, stmt }) {
     <button
       onClick={onTap}
       className="w-full flex flex-col px-4 py-4 text-left
-        active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+        active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors"
     >
       <div className="flex items-center gap-4 w-full">
         <span
@@ -529,8 +531,8 @@ export default function Accounts() {
           <div
             className="mx-5 rounded-2xl overflow-hidden
               bg-white border border-slate-100
-              dark:bg-white/[0.04] dark:border-white/[0.07]
-              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
+              dark:bg-primary/[0.07] dark:border-primary/[0.14]
+              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]"
           >
             {group.accounts.map((acct, i) => (
               <div key={acct.id}>
@@ -541,7 +543,7 @@ export default function Accounts() {
                   stmt={creditStmtMap[acct.name]}
                 />
                 {i < group.accounts.length - 1 && (
-                  <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                  <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
                 )}
               </div>
             ))}
@@ -582,6 +584,7 @@ export default function Accounts() {
 function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [closing,    setClosing]    = useState(false)
   useScrollLock(open)
+  const { showToast } = useToast()
   const [saving,     setSaving]     = useState(false)
   const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete'
   const [deleteBlocked, setDeleteBlocked] = useState(null)
@@ -612,12 +615,12 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setType(t)
       setRole(account.role ?? defaultRole(t))
       setColor(account.color ?? PALETTE[0])
-      setStartingBal(String(account.balance ?? 0))
-      setCreditLimit(String(account.creditLimit ?? 0))
+      setStartingBal(numToMoneyStr(account.balance ?? 0))
+      setCreditLimit(numToMoneyStr(account.creditLimit ?? 0))
       setStatementDay(account.statementDate != null ? String(account.statementDate) : '')
       setDueDay(account.dueDate != null ? String(account.dueDate) : '')
       setCutoffDay(account.cutoffDate != null ? String(account.cutoffDate) : '')
-      setMinPayment(String(account.minimumPayment ?? 0))
+      setMinPayment(numToMoneyStr(account.minimumPayment ?? 0))
     } else {
       const t = prefill?.type ?? 'cash'
       setName(prefill?.name ?? '')
@@ -651,11 +654,11 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
         role:           isCredit ? 'credit' : role,
         color,
         currency:       'PHP',
-        creditLimit:    isCredit ? (parseFloat(creditLimit)  || 0)    : null,
+        creditLimit:    isCredit ? (parseMoney(creditLimit)  || 0)    : null,
         statementDate:  isCredit ? (parseInt(statementDay)   || null)  : null,
         dueDate:        isCredit ? (parseInt(dueDay)         || null)  : null,
         cutoffDate:     isCredit ? (parseInt(cutoffDay)      || null)  : null,
-        minimumPayment: isCredit ? (parseFloat(minPayment)   || 0)    : null,
+        minimumPayment: isCredit ? (parseMoney(minPayment)   || 0)    : null,
       }
 
       if (isEdit) {
@@ -679,15 +682,17 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
           }
         })
       } else {
-        const balance = parseFloat(startingBal) || 0
+        const balance = parseMoney(startingBal)
         await db.transaction('rw', [db.accounts, db.balances], async () => {
           await db.accounts.add({ ...data, balance })
           await db.balances.put({ account: cleanName, balance })
         })
       }
+      showToast(isEdit ? 'Account updated' : 'Account created')
       close()
     } catch (e) {
       console.error('[AccountForm] save failed:', e)
+      showToast('Failed to save account', 'error')
       setSaving(false)
     }
   }
@@ -856,11 +861,10 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
               <div>
                 <Label>Starting Balance</Label>
                 <input
-                  type="number"
+                  type="text"
                   inputMode="decimal"
-                  min="0"
-                  value={startingBal}
-                  onChange={e => setStartingBal(e.target.value)}
+                  value={startingBal === '0' ? '' : startingBal}
+                  onChange={moneyChangeHandler(setStartingBal)}
                   placeholder="0.00"
                   className={inputClass(false)}
                 />
@@ -875,11 +879,10 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 <div>
                   <Label>Credit Limit</Label>
                   <input
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    min="0"
-                    value={creditLimit}
-                    onChange={e => setCreditLimit(e.target.value)}
+                    value={creditLimit === '0' ? '' : creditLimit}
+                    onChange={moneyChangeHandler(setCreditLimit)}
                     placeholder="0.00"
                     className={inputClass(false)}
                   />
@@ -888,11 +891,10 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 <div>
                   <Label>Minimum Payment</Label>
                   <input
-                    type="number"
+                    type="text"
                     inputMode="decimal"
-                    min="0"
-                    value={minPayment}
-                    onChange={e => setMinPayment(e.target.value)}
+                    value={minPayment === '0' ? '' : minPayment}
+                    onChange={moneyChangeHandler(setMinPayment)}
                     placeholder="0.00"
                     className={inputClass(false)}
                   />

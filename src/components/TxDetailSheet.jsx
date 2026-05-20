@@ -184,6 +184,12 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
   async function handleDelete() {
     setSaving(true)
     try {
+      // Add to tombstone so sync doesn't resurrect it
+      if (tx.txId) {
+        const existing = await db.meta.get('deletedTxIds')
+        const list = existing?.value ?? []
+        await db.meta.put({ key: 'deletedTxIds', value: [...list, tx.txId] })
+      }
       await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
         await reverseBalanceEffect(tx)
         await db.transactions.delete(tx.id)
@@ -206,7 +212,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
   const editCatList = categories.filter(c => c.type === tx.type)
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
 
       <div
@@ -217,7 +223,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
           'border-t border-slate-100 dark:border-white/[0.07]',
           'max-h-[88vh] overflow-y-auto',
         ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />

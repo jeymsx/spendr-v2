@@ -15,7 +15,7 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
   if (!open && !closing) return null
 
   return (
-    <div className="fixed inset-0 z-[130]">
+    <div className="fixed inset-0 z-[130]" style={{ touchAction: 'none' }}>
       <div
         className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
         onClick={close}
@@ -23,43 +23,56 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
       <div
         className={[
           closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px] px-5 pt-5',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
           'bg-white dark:bg-[#111820]',
           'border-t border-slate-100 dark:border-white/[0.07]',
+          'flex flex-col overflow-hidden',
         ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+        style={{ maxHeight: '60dvh' }}
       >
-        <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
+        {/* non-scrollable header */}
+        <div className="pt-5 px-5 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
+          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
+            Select Category
+          </p>
+        </div>
 
-        <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
-          Select Category
-        </p>
-
-        <div className="grid grid-cols-4 gap-2.5 pb-2">
-          {categories.map(cat => {
-            const isSelected = selected?.id === cat.id
-            return (
-              <button
-                key={cat.id}
-                onClick={() => pick(cat)}
-                className={[
-                  'flex flex-col items-center gap-1.5 py-3.5 px-1 rounded-2xl',
-                  'active:scale-[0.95] transition-all duration-75',
-                  isSelected
-                    ? 'ring-2 ring-primary/50 bg-primary/8 dark:bg-primary/15'
-                    : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.09]',
-                ].join(' ')}
-              >
-                <span className="text-[26px] leading-none">{cat.icon}</span>
-                <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
-                  {cat.name}
-                </span>
-                {isSelected && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
-                )}
-              </button>
-            )
-          })}
+        {/* scrollable grid */}
+        <div
+          className="overflow-y-auto flex-1 px-5"
+          style={{
+            touchAction: 'pan-y',
+            overscrollBehavior: 'contain',
+            paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
+          }}
+        >
+          <div className="grid grid-cols-4 gap-2.5 pb-2">
+            {categories.map(cat => {
+              const isSelected = selected?.id === cat.id
+              return (
+                <button
+                  key={cat.id}
+                  onClick={() => pick(cat)}
+                  className={[
+                    'flex flex-col items-center gap-1.5 py-3.5 px-1 rounded-2xl',
+                    'active:scale-[0.95] transition-all duration-75',
+                    isSelected
+                      ? 'ring-2 ring-primary/50 bg-primary/8 dark:bg-primary/15'
+                      : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.09]',
+                  ].join(' ')}
+                >
+                  <span className="text-[26px] leading-none">{cat.icon}</span>
+                  <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
+                    {cat.name}
+                  </span>
+                  {isSelected && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  )}
+                </button>
+              )
+            })}
+          </div>
         </div>
       </div>
     </div>

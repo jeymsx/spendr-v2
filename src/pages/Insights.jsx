@@ -91,8 +91,8 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
           </>
         ) : (
           <>
-            <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-              Total Spent
+            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+              Total spent
             </span>
             <span className="text-lg font-bold text-slate-800 dark:text-white tabular-nums mt-0.5">
               {fmtK(total)}
@@ -229,31 +229,28 @@ function MonthSelector({ offset, onChange }) {
   const d = new Date()
   d.setDate(1)
   d.setMonth(d.getMonth() + offset)
-  const label    = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`
+  const label     = `${MONTHS[d.getMonth()]} ${d.getFullYear()}`
   const isCurrent = offset === 0
 
   return (
-    <div className="flex items-center justify-between px-4 py-3">
+    <div className="flex items-center gap-1">
       <button
         onClick={() => onChange(offset - 1)}
-        className="w-9 h-9 rounded-2xl flex items-center justify-center
-          bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-          text-slate-600 dark:text-slate-300 shadow-sm
-          active:scale-90 transition-transform duration-75"
+        className="p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200 transition-colors"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6" />
         </svg>
       </button>
 
       <button
         onClick={() => !isCurrent && onChange(0)}
-        className="flex items-center gap-2 text-sm font-semibold text-slate-800 dark:text-white"
+        className="flex items-center gap-1.5"
       >
-        <span>{label}</span>
+        <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{label}</span>
         {!isCurrent && (
-          <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-            Back to today
+          <span className="text-[10px] font-semibold px-1.5 py-0.5 rounded-full bg-primary/10 dark:bg-primary/15 text-primary">
+            Today
           </span>
         )}
       </button>
@@ -261,13 +258,9 @@ function MonthSelector({ offset, onChange }) {
       <button
         onClick={() => onChange(offset + 1)}
         disabled={isCurrent}
-        className="w-9 h-9 rounded-2xl flex items-center justify-center
-          bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-          text-slate-600 dark:text-slate-300 shadow-sm
-          active:scale-90 transition-transform duration-75
-          disabled:opacity-30"
+        className="p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200 transition-colors disabled:opacity-25"
       >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6" />
         </svg>
       </button>
@@ -281,50 +274,40 @@ function SummaryCards({ totalSpent, totalEarned, topCategory }) {
   const net    = totalEarned - totalSpent
   const netPos = net >= 0
 
-  const cards = [
-    {
-      label: 'Total Spent',
-      value: fmtK(totalSpent),
-      sub:   'expenses',
-      ring:  'bg-red-50 dark:bg-red-500/[0.08] border-red-100 dark:border-red-500/[0.15]',
-      text:  'text-red-600 dark:text-red-400',
-    },
-    {
-      label: 'Total Earned',
-      value: fmtK(totalEarned),
-      sub:   'inflows',
-      ring:  'bg-emerald-50 dark:bg-emerald-500/[0.08] border-emerald-100 dark:border-emerald-500/[0.15]',
-      text:  'text-emerald-600 dark:text-emerald-400',
-    },
-    {
-      label: 'Net Savings',
-      value: `${netPos ? '+' : '-'}${fmtK(Math.abs(net))}`,
-      sub:   netPos ? 'surplus' : 'deficit',
-      ring:  netPos
-        ? 'bg-blue-50 dark:bg-blue-500/[0.08] border-blue-100 dark:border-blue-500/[0.15]'
-        : 'bg-amber-50 dark:bg-amber-500/[0.08] border-amber-100 dark:border-amber-500/[0.15]',
-      text:  netPos ? 'text-blue-600 dark:text-blue-400' : 'text-amber-600 dark:text-amber-400',
-    },
-    {
-      label: 'Top Category',
-      value: topCategory ? `${topCategory.icon} ${topCategory.name}` : '—',
-      sub:   topCategory ? fmtK(topCategory.value) : 'no expenses',
-      ring:  'bg-violet-50 dark:bg-violet-500/[0.08] border-violet-100 dark:border-violet-500/[0.15]',
-      text:  'text-violet-700 dark:text-violet-300',
-    },
-  ]
-
   return (
-    <div className="flex gap-3 px-4 overflow-x-auto" style={{ scrollbarWidth: 'none' }}>
-      {cards.map((c, i) => (
-        <div key={i} className={`shrink-0 w-36 rounded-2xl border px-3.5 py-3 ${c.ring}`}>
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
-            {c.label}
-          </p>
-          <p className={`text-base font-bold leading-tight ${c.text}`}>{c.value}</p>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{c.sub}</p>
+    <div className="px-4">
+      <div className="card rounded-2xl overflow-hidden">
+        {/* 3-stat row */}
+        <div className="grid grid-cols-3 divide-x divide-slate-100 dark:divide-white/[0.06]">
+          <div className="px-3.5 py-3.5">
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mb-1.5">Spent</p>
+            <p className="text-[17px] font-bold leading-none text-red-500 dark:text-red-400 tabular-nums">{fmtK(totalSpent)}</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">expenses</p>
+          </div>
+          <div className="px-3.5 py-3.5">
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mb-1.5">Earned</p>
+            <p className="text-[17px] font-bold leading-none text-emerald-500 dark:text-emerald-400 tabular-nums">{fmtK(totalEarned)}</p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">inflows</p>
+          </div>
+          <div className="px-3.5 py-3.5">
+            <p className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mb-1.5">Net</p>
+            <p className={`text-[17px] font-bold leading-none tabular-nums ${netPos ? 'text-primary' : 'text-amber-500 dark:text-amber-400'}`}>
+              {netPos ? '+' : '−'}{fmtK(Math.abs(net))}
+            </p>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1.5">{netPos ? 'surplus' : 'deficit'}</p>
+          </div>
         </div>
-      ))}
+        {/* Top category footer row */}
+        {topCategory && (
+          <div className="flex items-center gap-2.5 px-3.5 py-2.5
+            border-t border-slate-100 dark:border-white/[0.06]">
+            <span className="text-sm leading-none">{topCategory.icon}</span>
+            <span className="text-[11px] text-slate-400 dark:text-slate-500">Top</span>
+            <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-300 truncate flex-1">{topCategory.name}</span>
+            <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 tabular-nums shrink-0">{fmtK(topCategory.value)}</span>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -334,9 +317,9 @@ function SummaryCards({ totalSpent, totalEarned, topCategory }) {
 function Section({ title, children }) {
   return (
     <div className="px-4">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
+      <h2 className="text-base font-semibold text-slate-800 dark:text-white mb-3 px-0.5">
         {title}
-      </p>
+      </h2>
       <div className="card rounded-2xl overflow-hidden">
         {children}
       </div>
@@ -352,34 +335,37 @@ function SpendingByCategory({ segments, total, animKey }) {
 
   if (!segments.length) {
     return (
-      <Section title="Spending by Category">
+      <Section title="By category">
         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-10">No expenses this month</p>
       </Section>
     )
   }
 
   return (
-    <Section title="Spending by Category">
+    <Section title="By category">
       <div className="px-4 pt-4 pb-2">
         <DonutChart
           segments={segments} total={total}
           animKey={animKey} selected={selected} onSelect={setSelected}
         />
       </div>
-      <div className="px-4 pb-4 flex flex-col divide-y divide-slate-100 dark:divide-white/[0.05]">
+      <div className="px-4 pb-3 flex flex-col divide-y divide-slate-100 dark:divide-white/[0.05]">
         {segments.map((seg, i) => {
-          const pct = total > 0 ? (seg.value / total * 100).toFixed(1) : '0.0'
+          const pctNum = total > 0 ? (seg.value / total * 100) : 0
           return (
             <button
               key={i}
               onClick={() => setSelected(selected === i ? null : i)}
-              className={`flex items-center gap-3 py-2.5 text-left transition-opacity ${selected != null && selected !== i ? 'opacity-40' : ''}`}
+              className={`flex flex-col gap-2 py-3 text-left transition-opacity w-full ${selected != null && selected !== i ? 'opacity-35' : ''}`}
             >
-              <span className="text-lg w-7 text-center leading-none shrink-0">{seg.icon}</span>
-              <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{seg.name}</span>
-              <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums w-10 text-right">{pct}%</span>
-              <span className="text-sm font-semibold text-slate-800 dark:text-white tabular-nums w-20 text-right">{fmt(seg.value)}</span>
-              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+              <div className="flex items-center gap-3">
+                <span className="text-base w-7 text-center leading-none shrink-0">{seg.icon}</span>
+                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{seg.name}</span>
+                <span className="text-sm font-semibold text-slate-800 dark:text-white tabular-nums shrink-0">{fmt(seg.value)}</span>
+              </div>
+              <div className="h-1 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
+                <div className="h-full rounded-full" style={{ width: `${pctNum}%`, backgroundColor: seg.color }} />
+              </div>
             </button>
           )
         })}
@@ -393,27 +379,30 @@ function SpendingByCategory({ segments, total, animKey }) {
 function TopTransactions({ txs, catMap }) {
   if (!txs.length) {
     return (
-      <Section title="Top Expenses">
+      <Section title="Top expenses">
         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-10">No expenses this month</p>
       </Section>
     )
   }
   return (
-    <Section title="Top Expenses">
+    <Section title="Top expenses">
       <div className="divide-y divide-slate-100 dark:divide-white/[0.05]">
         {txs.map((tx, i) => {
           const cat  = catMap[tx.category]
           const date = new Date(tx.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
           return (
             <div key={tx.id ?? i} className="flex items-center gap-3 px-4 py-3">
-              <span className="text-xl w-8 text-center leading-none shrink-0">{cat?.icon ?? '📦'}</span>
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[17px] shrink-0
+                bg-slate-50 dark:bg-white/[0.05]">
+                {cat?.icon ?? '📦'}
+              </div>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-slate-800 dark:text-white truncate">
+                <p className="text-[13px] font-medium text-slate-800 dark:text-white truncate leading-snug">
                   {tx.description || tx.category || '—'}
                 </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500">{tx.category} · {date}</p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{tx.category} · {date}</p>
               </div>
-              <p className="text-sm font-bold text-red-600 dark:text-red-400 tabular-nums shrink-0">{fmt(tx.amount)}</p>
+              <p className="text-[13px] font-semibold text-red-500 dark:text-red-400 tabular-nums shrink-0">{fmt(tx.amount)}</p>
             </div>
           )
         })}
@@ -453,7 +442,7 @@ function AccountBreakdown({ data, animKey }) {
 
   if (!data.length) {
     return (
-      <Section title="Account Breakdown">
+      <Section title="By account">
         <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-10">No expenses this month</p>
       </Section>
     )
@@ -462,26 +451,26 @@ function AccountBreakdown({ data, animKey }) {
   const max = Math.max(...data.map(d => d.value), 1)
 
   return (
-    <Section title="Account Breakdown">
-      <div className="px-4 py-3 flex flex-col gap-3.5">
+    <Section title="By account">
+      <div className="px-4 py-3.5 flex flex-col gap-4">
         {data.map((d, i) => {
           const dueSoon = d.isCredit && isDueSoon(d.dueDay)
           const dueLabel = dueSoon ? nextDueLabel(d.dueDay) : null
           return (
             <div key={i}>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2 min-w-0">
-                  <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300 truncate">{d.name}</span>
+                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                  <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300 truncate">{d.name}</span>
                   {dueSoon && (
-                    <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 whitespace-nowrap">
+                    <span className="shrink-0 text-[9px] font-semibold px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 whitespace-nowrap">
                       Due {dueLabel}
                     </span>
                   )}
                 </div>
-                <span className="text-sm font-bold text-slate-800 dark:text-white tabular-nums shrink-0 ml-2">{fmt(d.value)}</span>
+                <span className="text-[13px] font-semibold text-slate-800 dark:text-white tabular-nums shrink-0 ml-2">{fmt(d.value)}</span>
               </div>
-              <div className="h-2 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-700 ease-out"
                   style={{ width: ready ? `${(d.value / max) * 100}%` : '0%', backgroundColor: d.color }}
@@ -509,7 +498,7 @@ function BudgetVsActual({ data, animKey }) {
   }, [animKey])
 
   return (
-    <Section title="Budget vs Actual">
+    <Section title="Budget">
       <div className="px-4 py-3 flex flex-col gap-4">
         {data.map((d, i) => {
           const pct      = d.budget > 0 ? Math.min((d.spent / d.budget) * 100, 100) : 0
@@ -517,22 +506,22 @@ function BudgetVsActual({ data, animKey }) {
           const warn     = pct >= 75 && !over
           const barColor = over ? '#ef4444' : warn ? '#f59e0b' : d.color
           const valClass = over
-            ? 'text-red-600 dark:text-red-400'
-            : warn ? 'text-amber-600 dark:text-amber-400'
+            ? 'text-red-500 dark:text-red-400'
+            : warn ? 'text-amber-500 dark:text-amber-400'
             : 'text-slate-500 dark:text-slate-400'
           return (
             <div key={i}>
-              <div className="flex items-center justify-between mb-1.5">
+              <div className="flex items-center justify-between mb-2">
                 <div className="flex items-center gap-2">
-                  <span className="text-base leading-none">{d.icon}</span>
-                  <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{d.name}</span>
+                  <span className="text-sm leading-none">{d.icon}</span>
+                  <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{d.name}</span>
                 </div>
-                <span className={`text-xs font-semibold tabular-nums ${valClass}`}>
+                <span className={`text-[11px] font-semibold tabular-nums ${valClass}`}>
                   {fmt(d.spent)}{' '}
-                  <span className="font-normal text-slate-400 dark:text-slate-500">of {fmt(d.budget)}</span>
+                  <span className="font-normal text-slate-400 dark:text-slate-500">/ {fmt(d.budget)}</span>
                 </span>
               </div>
-              <div className="h-2 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
+              <div className="h-1.5 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-700 ease-out"
                   style={{ width: ready ? `${pct}%` : '0%', backgroundColor: barColor }}
@@ -793,25 +782,22 @@ function SpendingTrivia({ trivia, triviaKey }) {
 
   return (
     <div className="px-4">
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
-        Spending Insight
-      </p>
       <button
         onClick={next}
-        style={{ outline: 'none', height: 88 }}
-        className="w-full rounded-2xl px-4
-          bg-gradient-to-br from-primary/[0.10] to-violet-500/[0.07]
-          border border-primary/[0.18] dark:border-primary/[0.13]
-          flex items-center
-          active:scale-[0.98] transition-transform duration-75"
+        className="w-full rounded-2xl px-4 pt-4 pb-3.5 text-left active:opacity-70 transition-opacity duration-75
+          bg-gradient-to-br from-primary/[0.28] to-primary/[0.12]
+          border border-primary/[0.35] dark:border-primary/[0.28]"
+        style={{ outline: 'none' }}
       >
-        <div
-          className="flex items-center gap-3 w-full"
-          style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}
-        >
-          <span className="text-2xl leading-none shrink-0">{item.emoji}</span>
-          <p className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 leading-relaxed text-left tracking-[-0.01em]">
-            {item.text}
+        <div style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}>
+          <div className="flex items-start gap-3 mb-3">
+            <span className="text-xl leading-none mt-0.5 shrink-0">{item.emoji}</span>
+            <p className="flex-1 text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed tracking-[-0.01em]">
+              {item.text}
+            </p>
+          </div>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500 text-right">
+            Tap for another
           </p>
         </div>
       </button>
@@ -956,11 +942,10 @@ export default function Insights() {
   return (
     <div className="flex flex-col page-enter" style={{ minHeight: 'calc(100dvh - 80px)' }}>
       {/* Header */}
-      <div className="px-5 pt-14 pb-3">
+      <div className="flex items-center justify-between px-5 pt-14 pb-3">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Insights</h1>
+        <MonthSelector offset={monthOffset} onChange={(o) => { if (o <= 0) setMonthOffset(o) }} />
       </div>
-
-      <MonthSelector offset={monthOffset} onChange={(o) => { if (o <= 0) setMonthOffset(o) }} />
 
       <div className="flex flex-col gap-5 py-4">
         <SummaryCards totalSpent={totalSpent} totalEarned={totalEarned} topCategory={topCategory} />
@@ -969,13 +954,13 @@ export default function Insights() {
 
         <SpendingByCategory segments={categorySegments} total={totalSpent} animKey={animKey} />
 
-        <Section title="Income vs Expense — Last 6 Months">
+        <Section title="6-month trend">
           <div className="px-3 py-4">
             <BarChart6 data={sixMonthData} />
           </div>
         </Section>
 
-        <Section title="Daily Spending">
+        <Section title="Daily spending">
           <div className="px-3 py-4">
             {monthTxs === null ? (
               <div className="h-[180px]" />

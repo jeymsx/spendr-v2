@@ -201,14 +201,30 @@ export async function syncToSupabase(userId) {
   // Transactions: only push unsynced (falsy synced field = unsynced)
   const unsyncedTxs = await db.transactions.filter(t => !t.synced).toArray()
 
-  if (unsyncedTxs.length > 0) {
-    const rows = unsyncedTxs.map(r => toSupabaseRow(r, userId))
-
-    // Remove null tx_id entries from the unique-constraint check by batching with ignoreDuplicates
-    const { error } = await supabase
+  // Push tombstoned deletions first
+  const deletedMeta = await db.meta.get('deletedTxIds')
+  const deletedTxIds = deletedMeta?.value ?? []
+  if (deletedTxIds.length > 0) {
+    const { error: delErr } = await supabase
       .from('transactions')
-      .upsert(rows, { onConflict: 'user_id,local_id', ignoreDuplicates: false })
-    if (error) throw new Error(`transactions push: ${error.message}`)
+      .delete()
+      .eq('user_id', userId)
+      .in('tx_id', deletedTxIds)
+    if (!delErr) {
+      await db.meta.put({ key: 'deletedTxIds', value: [] })
+    }
+  }
+
+  if (unsyncedTxs.length > 0) {
+    // Only push transactions that have a stable tx_id
+    const rows = unsyncedTxs.filter(r => r.txId).map(r => toSupabaseRow(r, userId))
+
+    if (rows.length > 0) {
+      const { error } = await supabase
+        .from('transactions')
+        .upsert(rows, { onConflict: 'user_id,tx_id', ignoreDuplicates: false })
+      if (error) throw new Error(`transactions push: ${error.message}`)
+    }
 
     // Mark as synced locally
     const ids = unsyncedTxs.map(r => r.id).filter(Boolean)
@@ -260,8 +276,12 @@ async function pullTxs(userId) {
   if (error) throw new Error(`transactions pull: ${error.message}`)
   if (!data?.length) return
 
+  const deletedMeta = await db.meta.get('deletedTxIds')
+  const deletedSet = new Set(deletedMeta?.value ?? [])
+
   for (const row of data) {
     if (!row.tx_id) continue // skip rows without a stable key
+    if (deletedSet.has(row.tx_id)) continue // skip locally-deleted transactions
 
     const existing = await db.transactions.where('txId').equals(row.tx_id).first()
     const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0

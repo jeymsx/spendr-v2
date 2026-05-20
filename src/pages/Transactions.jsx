@@ -469,7 +469,7 @@ export default function Transactions() {
               'border shadow-sm',
               activeFilterCount > 0
                 ? 'bg-primary border-primary text-white'
-                : 'bg-white dark:bg-white/[0.07] border-slate-200/80 dark:border-white/[0.09] text-slate-500 dark:text-slate-400',
+                : 'bg-white dark:bg-primary/[0.10] border-slate-200/80 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.12)]',
             ].join(' ')}
             aria-label="Filters"
           >
@@ -492,7 +492,7 @@ export default function Transactions() {
               'border shadow-sm',
               searchExpanded
                 ? 'bg-primary border-primary text-white'
-                : 'bg-white dark:bg-white/[0.07] border-slate-200/80 dark:border-white/[0.09] text-slate-500 dark:text-slate-400',
+                : 'bg-white dark:bg-primary/[0.10] border-slate-200/80 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.12)]',
             ].join(' ')}
             aria-label="Toggle search"
           >
@@ -508,9 +508,9 @@ export default function Transactions() {
       {searchExpanded && (
         <div className="px-5 mb-3">
           <div className="flex items-center gap-3 px-4 h-[44px] rounded-2xl
-            bg-white dark:bg-white/[0.06]
-            border border-slate-200/80 dark:border-white/[0.09]
-            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-none"
+            bg-white dark:bg-primary/[0.07]
+            border border-slate-200/80 dark:border-primary/[0.14]
+            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 shrink-0">
               <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />

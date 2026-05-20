@@ -3,6 +3,8 @@ import db from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { advanceNextDate, toMonthlyAmount } from '../utils/recurring'
+import { useToast } from '../context/ToastContext'
+import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 
@@ -310,6 +312,7 @@ function EmptyState({ onAdd }) {
 
 function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
   const [closing,      setClosing]      = useState(false)
+  const { showToast } = useToast()
   const [name,         setName]         = useState('')
   const [amountStr,    setAmountStr]    = useState('')
   const [category,     setCategory]     = useState(null)
@@ -328,7 +331,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
     if (!open) return
     if (editRec) {
       setName(editRec.name ?? '')
-      setAmountStr(editRec.amount != null ? String(editRec.amount) : '')
+      setAmountStr(editRec.amount != null ? numToMoneyStr(editRec.amount) : '')
       setCategory(categories.find(c => c.name === editRec.category) ?? null)
       setAccount(accounts.find(a => a.name === editRec.account) ?? null)
       setFrequency(editRec.frequency ?? 'monthly')
@@ -365,8 +368,8 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
   async function handleSave() {
     const errs = {}
     if (!name.trim()) errs.name = 'Required'
-    const amount = parseFloat(amountStr)
-    if (!amountStr || isNaN(amount) || amount <= 0) errs.amount = 'Enter a valid amount'
+    const amount = parseMoney(amountStr)
+    if (!amountStr || amount <= 0) errs.amount = 'Enter a valid amount'
     if (!category) errs.category = 'Select a category'
     if (!account)  errs.account  = 'Select an account'
     if (!nextDate) errs.nextDate = 'Required'
@@ -385,12 +388,15 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
       }
       if (editRec) {
         await db.recurring.update(editRec.id, data)
+        showToast('Recurring updated')
       } else {
         await db.recurring.add(data)
+        showToast('Recurring saved')
       }
       handleClose()
     } catch (e) {
       console.error('[RecurringForm] save failed:', e)
+      showToast('Failed to save', 'error')
     } finally {
       setSaving(false)
     }
@@ -493,9 +499,9 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
               ].join(' ')}>
                 <span className="text-slate-400 dark:text-slate-500 mr-1.5 text-sm shrink-0">₱</span>
                 <input
-                  type="number" min="0"
+                  type="text" inputMode="decimal"
                   value={amountStr}
-                  onChange={e => { setAmountStr(e.target.value); setErrors(p => ({ ...p, amount: null })) }}
+                  onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
                   placeholder="0.00"
                   className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 tabular-nums w-0"
                 />
@@ -757,8 +763,8 @@ export default function Recurring() {
     <div className="flex flex-col page-enter" style={{ minHeight: 'calc(100dvh - 80px)' }}>
 
       {/* Header */}
-      <header className="flex items-center justify-between px-4 pt-5 pb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white">Recurring</h1>
+      <header className="flex items-center justify-between px-4 pt-14 pb-4">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Recurring</h1>
         <button
           onClick={openAdd}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-sm font-semibold text-white

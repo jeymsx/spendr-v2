@@ -1,9 +1,10 @@
-import { useState, useRef } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import NumericKeypad from '../components/NumericKeypad'
+import { useToast } from '../context/ToastContext'
+import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
@@ -13,21 +14,8 @@ import TemplatePickerSheet from '../components/TemplatePickerSheet'
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
 
-function fmtDisplay(str) {
-  const [intRaw, decRaw] = str.split('.')
-  const intFmt = parseInt(intRaw || '0', 10).toLocaleString('en-PH')
-  return str.includes('.') ? intFmt + '.' + (decRaw ?? '') : intFmt
-}
-
-function handleAmountKey(prev, key) {
-  if (key === 'backspace') return prev.length <= 1 ? '0' : prev.slice(0, -1)
-  if (key === '.') return prev.includes('.') ? prev : prev + '.'
-  if (prev === '0') return key
-  const dotIdx = prev.indexOf('.')
-  if (dotIdx !== -1 && prev.length - dotIdx > 2) return prev
-  const intLen = dotIdx !== -1 ? dotIdx : prev.length
-  if (intLen >= 10) return prev
-  return prev + key
+function localDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -68,8 +56,8 @@ function IconCalendar() {
 function fmtDateLabel(dateStr) {
   const today = new Date()
   const yest  = new Date(today); yest.setDate(today.getDate() - 1)
-  const todayKey = today.toISOString().slice(0, 10)
-  const yesterKey = yest.toISOString().slice(0, 10)
+  const todayKey = localDateStr(today)
+  const yesterKey = localDateStr(yest)
   if (dateStr === todayKey)   return 'Today'
   if (dateStr === yesterKey)  return 'Yesterday'
   const d = new Date(dateStr + 'T00:00:00')
@@ -88,12 +76,12 @@ function FieldButton({ onClick, error, label, left, center, right }) {
         onClick={onClick}
         className={[
           'w-full flex items-center gap-3 px-4 h-[56px] rounded-2xl text-left',
-          'active:bg-slate-50 dark:active:bg-white/[0.08] transition-colors',
-          'bg-white dark:bg-white/[0.05]',
+          'active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors',
+          'bg-white dark:bg-primary/[0.07]',
           error
             ? 'border border-red-300 dark:border-red-500/40'
-            : 'border border-slate-200/80 dark:border-white/[0.08]',
-          'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-none',
+            : 'border border-slate-200/80 dark:border-primary/[0.14]',
+          'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]',
         ].join(' ')}
       >
         <span className="shrink-0">{left}</span>
@@ -108,10 +96,14 @@ function FieldButton({ onClick, error, label, left, center, right }) {
 
 export default function Transfer() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
 
   const [amountStr,      setAmountStr]      = useState('0')
   const [feeStr,         setFeeStr]         = useState('0')
-  const [date,           setDate]           = useState(() => new Date().toISOString().slice(0, 10))
+  const [date,           setDate]           = useState(() => {
+    const n = new Date()
+    return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}-${String(n.getDate()).padStart(2,'0')}`
+  })
   const [fromAccount,    setFromAccount]    = useState(null)
   const [toAccount,      setToAccount]      = useState(null)
   const [fromError,      setFromError]      = useState(false)
@@ -127,18 +119,26 @@ export default function Transfer() {
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false
 
-  const amount = parseFloat(amountStr) || 0
-  const fee    = parseFloat(feeStr)    || 0
+  const amountInputRef = useRef(null)
+  const amount = parseMoney(amountStr)
+  const fee    = parseMoney(feeStr)
 
-  function onKey(key) {
-    setAmountStr(prev => handleAmountKey(prev, key))
-  }
+  useEffect(() => {
+    const t = setTimeout(() => amountInputRef.current?.focus(), 80)
+    return () => clearTimeout(t)
+  }, [])
+
+  const handleAmountChange = moneyChangeHandler(setAmountStr)
+  const handleFeeChange    = moneyChangeHandler(setFeeStr)
 
   function onConfirmPress() {
     let err = false
     if (!fromAccount) { setFromError(true); err = true }
     if (!toAccount)   { setToError(true);   err = true }
     if (err) return
+    if (fromAccount.type !== 'credit' && amount + fee > (fromAccount.balance ?? 0)) {
+      showToast(`Low balance in ${fromAccount.name}`, 'warning')
+    }
     if (skipConfirm) { handleSave(); return }
     setShowConfirm(true)
   }
@@ -188,29 +188,25 @@ export default function Transfer() {
           await applyBalanceEffect({ type: 'expense', amount: fee, account: fromAccount.name })
         }
       })
-      if (templateData) {
-        await db.templates.add({ ...templateData, createdAt: new Date().toISOString() })
-      }
+      showToast('Transfer saved')
       navigate('/')
     } catch (e) {
       console.error('[Transfer] save failed:', e)
+      showToast('Failed to save transfer', 'error')
       setSaving(false)
     }
   }
 
   function applyTemplate(tpl) {
-    if (tpl.amount) setAmountStr(String(tpl.amount))
+    if (tpl.amount) setAmountStr(numToMoneyStr(tpl.amount))
     const from = (accounts ?? []).find(a => a.name === tpl.fromAccount)
     const to   = (accounts ?? []).find(a => a.name === tpl.toAccount)
     if (from) { setFromAccount(from); setFromError(false) }
     if (to)   { setToAccount(to);     setToError(false) }
   }
 
-  const displayStr = fmtDisplay(amountStr)
-  const fontSize   = displayStr.length <= 9 ? '3rem' : displayStr.length <= 12 ? '2.375rem' : '1.875rem'
-
   return (
-    <div className="flex flex-col bg-transparent" style={{ height: 'calc(100dvh - 80px)' }}>
+    <div className="flex flex-col bg-transparent pb-6">
 
       {/* ── Header ── */}
       <header className="flex items-center gap-3 px-4 pt-5 pb-2 shrink-0">
@@ -234,49 +230,57 @@ export default function Transfer() {
         </button>
       </header>
 
-      {/* ── Amount display ── */}
-      <div className="flex items-end justify-center gap-1.5 px-6 py-5 shrink-0">
-        <span className="text-2xl font-semibold text-slate-400 dark:text-slate-500 mb-[3px]">₱</span>
-        <span
-          className="font-bold text-slate-900 dark:text-white tabular-nums transition-[font-size] duration-100"
-          style={{ fontSize }}
-        >
-          {displayStr}
-        </span>
+      {/* ── Amount ── */}
+      <div className="flex flex-col items-center px-6 pt-12 pb-12 shrink-0">
+        <input
+          ref={amountInputRef}
+          type="text"
+          inputMode="decimal"
+          placeholder="0.00"
+          value={amountStr === '0' ? '' : amountStr}
+          onChange={handleAmountChange}
+          className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
+            text-slate-900 dark:text-white outline-none
+            placeholder-slate-200 dark:placeholder-slate-800"
+        />
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">Amount</p>
       </div>
 
-      {/* ── Account selectors + fee (scrollable) ── */}
-      <div className="px-4 flex flex-col gap-3 flex-1 overflow-y-auto py-1">
+      {/* ── Form fields ── */}
+      <div className="px-4 flex flex-col gap-4">
+
         {/* From */}
-        <FieldButton
-          label="From"
-          onClick={() => { setFromError(false); setShowFromSheet(true) }}
-          error={fromError}
-          left={
-            <span
-              className="w-6 h-6 rounded-lg shrink-0"
-              style={{ backgroundColor: fromAccount?.color ?? '#cbd5e1' }}
-            />
-          }
-          center={
-            <div>
-              <span className={`text-sm ${fromAccount ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                {fromAccount?.name ?? 'Select account'}
-              </span>
-              {fromError && !fromAccount && (
-                <span className="ml-2 text-xs text-red-500">Required</span>
-              )}
-            </div>
-          }
-          right={
-            fromAccount
-              ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{fmt(fromAccount.balance)}</span>
-              : <IconChevronRight />
-          }
-        />
+        <div>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">From</p>
+          <FieldButton
+            onClick={() => { setFromError(false); setShowFromSheet(true) }}
+            error={fromError}
+            left={
+              <span
+                className="w-6 h-6 rounded-lg shrink-0"
+                style={{ backgroundColor: fromAccount?.color ?? '#cbd5e1' }}
+              />
+            }
+            center={
+              <div>
+                <span className={`text-sm ${fromAccount ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {fromAccount?.name ?? 'Select account'}
+                </span>
+                {fromError && !fromAccount && (
+                  <span className="ml-2 text-xs text-red-500">Required</span>
+                )}
+              </div>
+            }
+            right={
+              fromAccount
+                ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{fmt(fromAccount.balance)}</span>
+                : <IconChevronRight />
+            }
+          />
+        </div>
 
         {/* Arrow connector */}
-        <div className="flex items-center gap-3 px-1">
+        <div className="flex items-center gap-3 px-1 -my-1">
           <div className="flex-1 h-px bg-slate-200 dark:bg-white/[0.08]" />
           <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.07] flex items-center justify-center text-slate-400 dark:text-slate-500">
             <IconArrowDown />
@@ -285,86 +289,58 @@ export default function Transfer() {
         </div>
 
         {/* To */}
-        <FieldButton
-          label="To"
-          onClick={() => { setToError(false); setShowToSheet(true) }}
-          error={toError}
-          left={
-            <span
-              className="w-6 h-6 rounded-lg shrink-0"
-              style={{ backgroundColor: toAccount?.color ?? '#cbd5e1' }}
-            />
-          }
-          center={
-            <div>
-              <span className={`text-sm ${toAccount ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                {toAccount?.name ?? 'Select account'}
-              </span>
-              {toError && !toAccount && (
-                <span className="ml-2 text-xs text-red-500">Required</span>
-              )}
-            </div>
-          }
-          right={
-            toAccount
-              ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{fmt(toAccount.balance)}</span>
-              : <IconChevronRight />
-          }
-        />
+        <div>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">To</p>
+          <FieldButton
+            onClick={() => { setToError(false); setShowToSheet(true) }}
+            error={toError}
+            left={
+              <span
+                className="w-6 h-6 rounded-lg shrink-0"
+                style={{ backgroundColor: toAccount?.color ?? '#cbd5e1' }}
+              />
+            }
+            center={
+              <div>
+                <span className={`text-sm ${toAccount ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                  {toAccount?.name ?? 'Select account'}
+                </span>
+                {toError && !toAccount && (
+                  <span className="ml-2 text-xs text-red-500">Required</span>
+                )}
+              </div>
+            }
+            right={
+              toAccount
+                ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{fmt(toAccount.balance)}</span>
+                : <IconChevronRight />
+            }
+          />
+        </div>
 
         {/* same-account warning */}
         {fromAccount && toAccount && fromAccount.id === toAccount.id && (
-          <p className="text-xs text-amber-600 dark:text-amber-400 text-center px-2">
+          <p className="text-xs text-amber-600 dark:text-amber-400 text-center px-2 -mt-2">
             From and To accounts must be different.
           </p>
         )}
 
-        {/* Date */}
+        {/* Transfer Fee */}
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-1">
-            Date
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">
+            Transfer Fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
           </p>
-          <button
-            type="button"
-            onClick={() => dateInputRef.current?.showPicker()}
-            className="w-full flex items-center gap-3 px-4 h-[56px] rounded-2xl text-left
-              bg-white dark:bg-white/[0.05]
-              border border-slate-200/80 dark:border-white/[0.08]
-              shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-none
-              active:bg-slate-50 dark:active:bg-white/[0.08] transition-colors"
-          >
-            <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
-            <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">
-              {fmtDateLabel(date)}
-            </span>
-          </button>
-          <input
-            ref={dateInputRef}
-            type="date"
-            value={date}
-            max={new Date().toISOString().slice(0, 10)}
-            onChange={e => e.target.value && setDate(e.target.value)}
-            className="sr-only"
-          />
-        </div>
-
-        {/* Transfer fee */}
-        <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-1">
-            Transfer Fee <span className="normal-case font-normal text-slate-400 dark:text-slate-600">(optional)</span>
-          </p>
-          <div className="flex items-center gap-3 px-4 h-[56px] rounded-2xl
-            bg-white dark:bg-white/[0.05]
-            border border-slate-200/80 dark:border-white/[0.08]
-            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-none">
+          <div className="flex items-center gap-3 px-4 h-[52px] rounded-2xl
+            bg-white dark:bg-primary/[0.07]
+            border border-slate-200/80 dark:border-primary/[0.14]
+            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]">
             <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">₱</span>
             <input
-              type="number"
+              type="text"
               inputMode="decimal"
-              min="0"
               placeholder="0.00"
               value={feeStr === '0' ? '' : feeStr}
-              onChange={e => setFeeStr(e.target.value || '0')}
+              onChange={handleFeeChange}
               className="flex-1 bg-transparent text-sm text-slate-800 dark:text-white
                 placeholder-slate-400 dark:placeholder-slate-500 outline-none min-w-0 tabular-nums"
             />
@@ -375,21 +351,47 @@ export default function Transfer() {
             )}
           </div>
         </div>
+
+        {/* Date — last */}
+        <div>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Date</p>
+          <button
+            type="button"
+            onClick={() => dateInputRef.current?.showPicker()}
+            className="w-full flex items-center gap-3 px-4 h-[52px] rounded-2xl text-left
+              bg-white dark:bg-primary/[0.07]
+              border border-slate-200/80 dark:border-primary/[0.14]
+              shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]
+              active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors"
+          >
+            <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
+            <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">
+              {fmtDateLabel(date)}
+            </span>
+          </button>
+          <input
+            ref={dateInputRef}
+            type="date"
+            value={date}
+            max={localDateStr(new Date())}
+            onChange={e => e.target.value && setDate(e.target.value)}
+            className="sr-only"
+          />
+        </div>
+
       </div>
 
-      {/* ── Keypad (pinned to bottom) ── */}
-      <div className="px-4 pt-3 pb-3 shrink-0 border-t border-slate-100 dark:border-white/[0.06] bg-white dark:bg-[#0d1117]">
-        <NumericKeypad
-          onKey={onKey}
-          onConfirm={onConfirmPress}
-          confirmLabel="Review Transfer"
-          confirmDisabled={
-            amount <= 0 ||
-            !fromAccount ||
-            !toAccount ||
-            fromAccount?.id === toAccount?.id
-          }
-        />
+      <div className="px-4 pt-5">
+        <button
+          onClick={onConfirmPress}
+          disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id}
+          className="w-full py-4 rounded-2xl text-sm font-semibold text-white
+            bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+            disabled:opacity-40 disabled:shadow-none
+            active:scale-[0.98] transition-all duration-100"
+        >
+          Review Transfer
+        </button>
       </div>
 
       {/* ── Sheets ── */}

@@ -2,6 +2,8 @@ import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import db from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { useToast } from '../context/ToastContext'
+import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import NumericKeypad from '../components/NumericKeypad'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 
@@ -371,6 +373,7 @@ function SettledSection({ debts, onEdit }) {
 
 function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
   const [closing,    setClosing]    = useState(false)
+  const { showToast } = useToast()
   const [contact,    setContact]    = useState('')
   const [amountStr,  setAmountStr]  = useState('')
   const [paidStr,    setPaidStr]    = useState('0')
@@ -386,8 +389,8 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
     if (open) {
       if (editDebt) {
         setContact(editDebt.contact ?? editDebt.name ?? '')
-        setAmountStr(editDebt.amount != null ? String(editDebt.amount) : '')
-        setPaidStr(editDebt.amountPaid != null ? String(editDebt.amountPaid) : '0')
+        setAmountStr(editDebt.amount != null ? numToMoneyStr(editDebt.amount) : '')
+        setPaidStr(editDebt.amountPaid != null ? numToMoneyStr(editDebt.amountPaid) : '0')
         setDueDate(editDebt.dueDate ? editDebt.dueDate.slice(0, 10) : '')
         setType(editDebt.type ?? 'i_owe')
         setNotes(editDebt.notes ?? '')
@@ -421,9 +424,9 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
   async function handleSave() {
     const errs = {}
     if (!contact.trim()) errs.contact = 'Required'
-    const amount = parseFloat(amountStr)
-    if (!amountStr || isNaN(amount) || amount <= 0) errs.amount = 'Enter a valid amount'
-    const paid = parseFloat(paidStr) || 0
+    const amount = parseMoney(amountStr)
+    if (!amountStr || amount <= 0) errs.amount = 'Enter a valid amount'
+    const paid = parseMoney(paidStr)
     if (paid < 0) errs.paid = 'Cannot be negative'
     if (Object.keys(errs).length) { setErrors(errs); return }
 
@@ -439,12 +442,15 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
       }
       if (editDebt) {
         await db.debts.update(editDebt.id, data)
+        showToast('Debt updated')
       } else {
         await db.debts.add({ ...data, createdAt: new Date().toISOString() })
+        showToast('Debt saved')
       }
       handleClose()
     } catch (e) {
       console.error('[DebtForm] save failed:', e)
+      showToast('Failed to save debt', 'error')
     } finally {
       setSaving(false)
     }
@@ -565,9 +571,9 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
               ].join(' ')}>
                 <span className="text-slate-400 dark:text-slate-500 mr-1 text-sm shrink-0">₱</span>
                 <input
-                  type="number" min="0"
+                  type="text" inputMode="decimal"
                   value={amountStr}
-                  onChange={e => { setAmountStr(e.target.value); setErrors(p => ({ ...p, amount: null })) }}
+                  onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
                   placeholder="0.00"
                   className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 tabular-nums w-0"
                 />
@@ -585,9 +591,9 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
               ].join(' ')}>
                 <span className="text-slate-400 dark:text-slate-500 mr-1 text-sm shrink-0">₱</span>
                 <input
-                  type="number" min="0"
+                  type="text" inputMode="decimal"
                   value={paidStr}
-                  onChange={e => { setPaidStr(e.target.value); setErrors(p => ({ ...p, paid: null })) }}
+                  onChange={e => { moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
                   placeholder="0.00"
                   className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 tabular-nums w-0"
                 />
@@ -650,6 +656,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
 
 function PaymentSheet({ open, onClose, debt }) {
   const [closing,       setClosing]       = useState(false)
+  const { showToast } = useToast()
   const [amountStr,     setAmountStr]     = useState('0')
   const [account,       setAccount]       = useState(null)
   const [acctError,     setAcctError]     = useState(false)
@@ -676,7 +683,7 @@ function PaymentSheet({ open, onClose, debt }) {
     if (open) { setAmountStr('0'); setAccount(null); setAcctError(false) }
   }, [open])
 
-  const paymentAmount = parseFloat(amountStr) || 0
+  const paymentAmount = parseMoney(amountStr)
   const remaining     = debt ? Math.max(0, (debt.amount ?? 0) - (debt.amountPaid ?? 0)) : 0
   const isIOwe        = debt?.type === 'i_owe'
   const isDisabled    = paymentAmount <= 0 || paymentAmount > remaining
@@ -713,9 +720,11 @@ function PaymentSheet({ open, onClose, debt }) {
         const newPaid = Math.min((debt.amountPaid ?? 0) + paymentAmount, debt.amount ?? 0)
         await db.debts.update(debt.id, { amountPaid: newPaid })
       })
+      showToast('Payment recorded')
       handleClose()
     } catch (e) {
       console.error('[PaymentSheet] save failed:', e)
+      showToast('Failed to record payment', 'error')
     } finally {
       setSaving(false)
     }
@@ -878,8 +887,8 @@ export default function Debts() {
     <div className="flex flex-col page-enter" style={{ minHeight: 'calc(100dvh - 80px)' }}>
 
       {/* Header */}
-      <header className="flex items-center justify-between px-4 pt-5 pb-4">
-        <h1 className="text-xl font-bold text-slate-800 dark:text-white">Debts</h1>
+      <header className="flex items-center justify-between px-4 pt-14 pb-4">
+        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Debts</h1>
         <button
           onClick={openAdd}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-sm font-semibold text-white

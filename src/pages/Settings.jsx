@@ -5,6 +5,8 @@ import { useAuth } from '../context/AuthContext'
 import { useSyncManager } from '../components/SyncManager'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { useToast } from '../context/ToastContext'
+import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
@@ -85,36 +87,6 @@ function buildAndDownloadCSV(transactions) {
   URL.revokeObjectURL(url)
 }
 
-// ── Toast ──────────────────────────────────────────────────────────────────────
-
-function useToast() {
-  const [toast, setToast] = useState(null)
-  const showToast = useCallback((message) => {
-    const id = Date.now()
-    setToast({ message, id })
-    setTimeout(() => setToast(t => (t?.id === id ? null : t)), 2500)
-  }, [])
-  return { toast, showToast }
-}
-
-function Toast({ toast }) {
-  return (
-    <div
-      className={`fixed bottom-28 inset-x-0 z-[300] flex justify-center px-6
-        transition-all duration-300 pointer-events-none
-        ${toast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
-    >
-      <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl
-        bg-slate-900 dark:bg-white
-        shadow-[0_8px_32px_rgba(0,0,0,0.25)]">
-        <span className="text-emerald-400 dark:text-emerald-600 font-bold">✓</span>
-        <p className="text-sm font-semibold text-white dark:text-slate-900 whitespace-nowrap">
-          {toast?.message}
-        </p>
-      </div>
-    </div>
-  )
-}
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -399,7 +371,7 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
   if (!open && !closing) return null
 
   return (
-    <div className="fixed inset-0 z-[100]">
+    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
       <div
         className={[
@@ -521,7 +493,7 @@ function ResetConfirmModal({ open, onClose }) {
   if (!open) return null
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4">
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
       <div className="relative w-full max-w-sm rounded-3xl
         bg-white dark:bg-[#111820]
@@ -752,7 +724,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
   if (!open && !closing) return null
 
   return (
-    <div className="fixed inset-0 z-[120]">
+    <div className="fixed inset-0 z-[120]" style={{ touchAction: 'none' }}>
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
       <div
         className={[
@@ -779,7 +751,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
           </div>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-5 py-4">
+        <div className="overflow-y-auto flex-1 px-5 py-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
           <div className="flex flex-wrap gap-2">
             {presets.map(preset => {
               const exists    = existingNames.has(preset.name)
@@ -849,7 +821,7 @@ function CategoryManagerSheet({ open, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[100]">
+      <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
         <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
         <div
           className={[
@@ -893,7 +865,7 @@ function CategoryManagerSheet({ open, onClose }) {
           </div>
 
           {/* Scrollable content */}
-          <div className="overflow-y-auto flex-1 pt-4">
+          <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
             {activeTab === 'expense' && (
               <BudgetSummaryCard categories={categories} transactions={transactions} />
             )}
@@ -1000,7 +972,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
       setType(category.type ?? 'expense')
       setIcon(category.icon ?? '📦')
       setColor(category.color ?? CAT_COLORS[0])
-      setBudget(String(category.budget ?? 0))
+      setBudget(numToMoneyStr(category.budget ?? 0))
       if (startAtDelete) runDeleteCheck()
       else setMode('form')
     } else {
@@ -1029,7 +1001,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
     if (!name.trim()) { setNameError(true); return }
     setSaving(true)
     try {
-      const data = { name: name.trim(), type, icon, color, budget: parseFloat(budget) || 0 }
+      const data = { name: name.trim(), type, icon, color, budget: parseMoney(budget) || 0 }
       if (isEdit) {
         const oldName = category.name
         const newName = data.name
@@ -1085,7 +1057,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
   }[mode]
 
   return (
-    <div className="fixed inset-0" style={{ zIndex }}>
+    <div className="fixed inset-0" style={{ zIndex, touchAction: 'none' }}>
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
       <div
         className={[
@@ -1095,7 +1067,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
           'border-t border-slate-100 dark:border-white/[0.07]',
           'max-h-[92vh] overflow-y-auto',
         ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         {/* Header */}
         <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10 border-b border-slate-50 dark:border-white/[0.04]">
@@ -1196,18 +1168,18 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{name || 'Category Name'}</p>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
                   {type === 'expense' ? 'Expense' : 'Inflow'}
-                  {parseFloat(budget) > 0 && ` · ${fmt(parseFloat(budget))} / mo`}
+                  {parseMoney(budget) > 0 && ` · ${fmt(parseMoney(budget))} / mo`}
                 </p>
               </div>
             </div>
 
             <div>
               <FieldLabel>Monthly Budget (optional)</FieldLabel>
-              <input type="number" inputMode="decimal" min="0" value={budget}
-                onChange={e => setBudget(e.target.value)} placeholder="0 = no budget" className={inputClass()} />
-              {parseFloat(budget) > 0 && (
+              <input type="text" inputMode="decimal" value={budget === '0' ? '' : budget}
+                onChange={moneyChangeHandler(setBudget)} placeholder="0 = no budget" className={inputClass()} />
+              {parseMoney(budget) > 0 && (
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 px-1">
-                  Spending alerts when you approach {fmt(parseFloat(budget))} this month
+                  Spending alerts when you approach {fmt(parseMoney(budget))} this month
                 </p>
               )}
             </div>
@@ -1434,7 +1406,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
     if (template?.id) {
       setName(template.name ?? '')
       setType(template.type ?? 'expense')
-      setAmountStr(String(template.amount ?? 0))
+      setAmountStr(numToMoneyStr(template.amount ?? 0))
       setDesc(template.description ?? '')
       setCategory((allCategories ?? []).find(c => c.name === template.category) ?? null)
       setAccount((allAccounts ?? []).find(a => a.name === template.account) ?? null)
@@ -1458,7 +1430,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
     try {
       const data = {
         name: name.trim(), type,
-        amount: parseFloat(amountStr) || 0,
+        amount: parseMoney(amountStr) || 0,
         description: desc.trim(),
         category: category?.name ?? null,
         account: account?.name ?? null,
@@ -1488,13 +1460,13 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
   return (
     <>
-      <div className="fixed inset-0 z-[120]">
+      <div className="fixed inset-0 z-[120]" style={{ touchAction: 'none' }}>
         <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
         <div
           className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px]
             bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]
             max-h-[92vh] overflow-y-auto`}
-          style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+          style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           {/* Header */}
           <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10 border-b border-slate-50 dark:border-white/[0.04]">
@@ -1559,8 +1531,9 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
               <div className="flex items-center gap-2 px-4 h-[48px] rounded-2xl
                 bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]">
                 <span className="text-slate-400 dark:text-slate-500 text-sm">₱</span>
-                <input type="number" inputMode="decimal" min="0" value={amountStr}
-                  onChange={e => setAmountStr(e.target.value)}
+                <input type="text" inputMode="decimal" value={amountStr === '0' ? '' : amountStr}
+                  onChange={moneyChangeHandler(setAmountStr)}
+                  placeholder="0.00"
                   className="flex-1 bg-transparent text-sm font-medium text-slate-800 dark:text-white outline-none tabular-nums" />
               </div>
             </div>
@@ -1704,7 +1677,7 @@ function TemplateManagerSheet({ open, onClose }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[110]">
+      <div className="fixed inset-0 z-[110]" style={{ touchAction: 'none' }}>
         <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
         <div
           className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px]
@@ -1725,7 +1698,7 @@ function TemplateManagerSheet({ open, onClose }) {
           </div>
 
           {/* List */}
-          <div className="overflow-y-auto flex-1 pt-4">
+          <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
             {(templates ?? []).length === 0 ? (
               <div className="py-14 text-center px-8">
                 <p className="text-3xl mb-3">⚡</p>
@@ -1796,7 +1769,7 @@ function ToggleSwitch({ on }) {
 export default function Settings() {
   const navigate               = useNavigate()
   const { theme, toggleTheme } = useTheme()
-  const { toast, showToast }   = useToast()
+  const { showToast }          = useToast()
   const { user, signOut }      = useAuth()
   const { status: syncStatus, runSync } = useSyncManager()
 
@@ -1862,9 +1835,9 @@ export default function Settings() {
         <button
           onClick={() => setProfileOpen(true)}
           className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left
-            bg-white dark:bg-white/[0.04]
-            border border-slate-100 dark:border-white/[0.07]
-            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none
+            bg-white dark:bg-primary/[0.10]
+            border border-slate-100 dark:border-primary/[0.22]
+            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.15),0_0_0_1px_rgba(45,157,255,0.06)]
             active:scale-[0.99] transition-transform duration-100"
         >
           <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
@@ -2195,8 +2168,6 @@ export default function Settings() {
         onClose={() => setResetOpen(false)}
       />
 
-      {/* ── Toast ── */}
-      <Toast toast={toast} />
     </div>
   )
 }

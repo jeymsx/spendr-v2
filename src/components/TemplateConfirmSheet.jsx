@@ -3,6 +3,8 @@ import db from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useScrollLock } from '../hooks/useScrollLock'
+import { useToast } from '../context/ToastContext'
+import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -16,6 +18,7 @@ const TYPE_CONFIG = {
 export default function TemplateConfirmSheet({ open, onClose, template }) {
   const [closing,     setClosing]     = useState(false)
   useScrollLock(open)
+  const { showToast } = useToast()
   const [saving,      setSaving]      = useState(false)
   const [amountStr,   setAmountStr]   = useState('')
   const [description, setDescription] = useState('')
@@ -25,7 +28,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
 
   useEffect(() => {
     if (open && template) {
-      setAmountStr(String(template.amount ?? 0))
+      setAmountStr(numToMoneyStr(template.amount ?? 0))
       setDescription(template.description ?? '')
       setSaving(false)
     }
@@ -41,7 +44,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
   if (!template) return null
 
   const cfg         = TYPE_CONFIG[template.type] ?? TYPE_CONFIG.expense
-  const amount      = parseFloat(amountStr) || 0
+  const amount      = parseMoney(amountStr)
   const category    = (categories ?? []).find(c => c.name === template.category)
   const account     = (accounts ?? []).find(a => a.name === template.account)
   const fromAccount = (accounts ?? []).find(a => a.name === template.fromAccount)
@@ -74,9 +77,11 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           await applyBalanceEffect({ type: template.type, amount, account: template.account })
         })
       }
+      showToast('Transaction saved')
       close()
     } catch (e) {
       console.error('[TemplateConfirmSheet] save failed:', e)
+      showToast('Failed to save transaction', 'error')
       setSaving(false)
     }
   }
@@ -110,10 +115,10 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           <span className="text-slate-300 dark:text-slate-600 mx-1">·</span>
           <span className="text-slate-500 dark:text-slate-400 text-sm shrink-0">₱</span>
           <input
-            type="number"
+            type="text"
             inputMode="decimal"
             value={amountStr}
-            onChange={e => setAmountStr(e.target.value)}
+            onChange={moneyChangeHandler(setAmountStr)}
             className="flex-1 bg-transparent text-sm font-bold text-slate-800 dark:text-white
               outline-none tabular-nums min-w-0"
           />

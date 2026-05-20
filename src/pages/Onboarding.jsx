@@ -916,18 +916,7 @@ export default function Onboarding() {
   const TOTAL_NON_WELCOME_STEPS = 7
 
   return (
-    <div className="min-h-screen bg-[#0b0f14] text-white relative overflow-hidden flex flex-col">
-      {/* Ambient glows */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div
-          className="absolute -top-32 -left-20 w-96 h-96 rounded-full opacity-[0.18]"
-          style={{ background: 'radial-gradient(circle, #2D9DFF 0%, transparent 70%)' }}
-        />
-        <div
-          className="absolute -bottom-24 -right-16 w-80 h-80 rounded-full opacity-[0.10]"
-          style={{ background: 'radial-gradient(circle, #8b5cf6 0%, transparent 70%)' }}
-        />
-      </div>
+    <div className="min-h-screen bg-[#0b0f14] text-white relative flex flex-col">
 
       {/* Top bar: back + step dots */}
       <div className="relative z-10 flex items-center justify-between px-6 pt-14 pb-2 shrink-0">

@@ -97,7 +97,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
   if (!open && !closing) return null
 
   return (
-    <div className="fixed inset-0 z-[130]">
+    <div className="fixed inset-0 z-[130]" style={{ touchAction: 'none' }}>
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
       <div
         className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px]
@@ -118,7 +118,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
         </div>
 
         {/* List */}
-        <div className="overflow-y-auto flex-1">
+        <div className="overflow-y-auto flex-1" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
           {templates.length === 0 ? (
             <div className="py-14 text-center px-8">
               <p className="text-3xl mb-3">⚡</p>
