@@ -916,10 +916,13 @@ export default function Onboarding() {
   const TOTAL_NON_WELCOME_STEPS = 7
 
   return (
-    <div className="min-h-screen bg-[#0b0f14] text-white relative flex flex-col">
+    <div className="min-h-screen text-white relative flex flex-col">
 
       {/* Top bar: back + step dots */}
-      <div className="relative z-10 flex items-center justify-between px-6 pt-14 pb-2 shrink-0">
+      <div
+        className="relative z-10 flex items-center justify-between px-6 pb-2 shrink-0"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+      >
         {step > 0 ? (
           <button
             onClick={() => setStep(s => s - 1)}

@@ -75,7 +75,10 @@ export default function AppLayout() {
         id="app-main"
         ref={mainRef}
         className="flex-1 overflow-y-auto relative"
-        style={{ paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
+        style={{
+          paddingTop:    'env(safe-area-inset-top, 0px)',
+          paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
+        }}
       >
         {/* Pull-to-refresh hint */}
         <div className={`flex items-center justify-center overflow-hidden transition-all duration-200 text-xs font-medium text-primary/70 ${
