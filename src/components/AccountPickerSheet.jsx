@@ -1,5 +1,8 @@
 import { useState } from 'react'
+import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useScrollLock } from '../hooks/useScrollLock'
+import db from '../db/db'
+import { getCycleRange } from '../utils/creditCycle'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -9,6 +12,19 @@ const TYPE_LABEL = { cash: 'Cash', savings: 'Savings', credit: 'Credit', ewallet
 export default function AccountPickerSheet({ open, onClose, accounts, selected, onSelect, exclude = [] }) {
   const [closing, setClosing] = useState(false)
   useScrollLock(open)
+
+  const creditAvailMap = useLiveQuery(async () => {
+    const map = {}
+    const creditAccts = (accounts || []).filter(a => a.type === 'credit')
+    for (const acct of creditAccts) {
+      const { cycleStart, cycleEnd } = getCycleRange(acct.cutoffDate)
+      const txs = await db.transactions.where('account').equals(acct.name).and(tx => tx.type === 'expense').toArray()
+      const thisTotal = txs.filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd }).reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      const nextTotal = txs.filter(tx => new Date(tx.date) > cycleEnd).reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      map[acct.name] = (acct.creditLimit ?? 0) - thisTotal - nextTotal
+    }
+    return map
+  }, [accounts])
 
   const close = () => {
     setClosing(true)
@@ -57,7 +73,7 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
               const isCredit    = acct.type === 'credit'
               const isSelected  = selected?.id === acct.id
               const displayBal  = isCredit
-                ? fmt((acct.creditLimit ?? 0) - (acct.balance ?? 0))
+                ? fmt(creditAvailMap?.[acct.name] ?? 0)
                 : fmt(acct.balance)
               const balLabel    = isCredit ? 'available' : 'balance'
 
