@@ -573,9 +573,9 @@ export default function Transactions() {
 
       {/* ── Summary bar ── */}
       <div className="sticky top-0 z-20 mx-5 mb-4 rounded-2xl overflow-hidden
-        bg-white/90 dark:bg-[#0e1420]/90 backdrop-blur-xl
-        border border-slate-100 dark:border-white/[0.07]
-        shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-[0_2px_16px_rgba(0,0,0,0.3)]"
+        bg-white/70 dark:bg-primary/[0.08] backdrop-blur-2xl
+        border border-slate-100/80 dark:border-primary/[0.22]
+        shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-none"
       >
         <div className="flex items-center justify-around py-3 px-2">
           <SummaryItem label="In"  value={fmt(summary.totalIn)}  colorCls="text-emerald-600 dark:text-emerald-400" />

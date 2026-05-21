@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import AddActionSheet from '../components/AddActionSheet'
@@ -11,19 +11,31 @@ export default function AppLayout() {
   const mainRef = useRef(null)
   const touchStartY = useRef(-1)
   const [pullState, setPullState] = useState('idle') // idle | pulling | ready
-  const runSyncRef = useRef(runSync)
-  useEffect(() => { runSyncRef.current = runSync }, [runSync])
+  const runSyncRef   = useRef(runSync)
+  const pathnameRef  = useRef(location.pathname)
+  useEffect(() => { runSyncRef.current  = runSync },          [runSync])
+  useEffect(() => { pathnameRef.current = location.pathname }, [location.pathname])
 
-  // Reset scroll to top on every navigation (location.key changes on every push/replace)
+  // Disable browser scroll restoration so it can't override our manual reset
   useEffect(() => {
+    if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
+  }, [])
+
+  // Reset scroll to top on every navigation — useLayoutEffect fires before paint
+  // so iOS Safari cannot restore the previous scroll position after the reset.
+  useLayoutEffect(() => {
     if (mainRef.current) mainRef.current.scrollTop = 0
+    window.scrollTo(0, 0)
   }, [location.key])
 
   useEffect(() => {
     const el = mainRef.current
     if (!el) return
 
+    const noPullRoutes = new Set(['/import'])
+
     const onTouchStart = (e) => {
+      if (noPullRoutes.has(pathnameRef.current)) { touchStartY.current = -1; return }
       touchStartY.current = el.scrollTop <= 0 ? e.touches[0].clientY : -1
     }
     const onTouchMove = (e) => {

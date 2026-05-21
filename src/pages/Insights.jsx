@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { useToast } from '../context/ToastContext'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -36,7 +37,7 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
   const active = selected != null ? segments[selected] : null
 
   return (
-    <div style={{ position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto', height: 220 }}>
+    <div className="[&_*]:outline-none [&_*]:focus:outline-none" style={{ position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto', height: 220 }}>
       <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
@@ -45,9 +46,10 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
             dataKey="value"
             cx="50%"
             cy="50%"
-            innerRadius={62}
+            innerRadius={74}
             outerRadius={92}
-            paddingAngle={2}
+            paddingAngle={3}
+            cornerRadius={6}
             startAngle={90}
             endAngle={-270}
             onClick={(_, i) => onSelect(selected === i ? null : i)}
@@ -127,7 +129,7 @@ function BarChart6({ data }) {
   return (
     <div className="[&_*]:outline-none [&_*]:focus:outline-none">
     <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }} barCategoryGap="35%">
+      <BarChart data={data} margin={{ top: 8, right: 8, left: -8, bottom: 0 }} barCategoryGap="28%" barGap={2}>
         <CartesianGrid strokeDasharray="4 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
         <XAxis
           dataKey="label"
@@ -808,8 +810,25 @@ function SpendingTrivia({ trivia, triviaKey }) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function Insights() {
-  const [monthOffset, setMonthOffset] = useState(0)
-  const [animKey,     setAnimKey]     = useState(0)
+  const [monthOffset,  setMonthOffset]  = useState(0)
+  const [animKey,      setAnimKey]      = useState(0)
+  const [exportingPdf, setExportingPdf] = useState(false)
+
+  const { showToast } = useToast()
+
+  async function handleExportPdf() {
+    setExportingPdf(true)
+    try {
+      const { downloadMonthlyReport } = await import('../utils/reportData.js')
+      await downloadMonthlyReport(year, month + 1) // month is 0-indexed in Insights
+      showToast('Report downloaded')
+    } catch (e) {
+      console.error(e)
+      showToast('Failed to generate report', 'error')
+    } finally {
+      setExportingPdf(false)
+    }
+  }
 
   const { year, month } = useMemo(() => {
     const d = new Date()
@@ -978,6 +997,21 @@ export default function Insights() {
 
         {budgetData.length > 0 && <BudgetVsActual data={budgetData} animKey={animKey} />}
 
+        <div className="px-4 pb-2">
+          <button
+            onClick={handleExportPdf}
+            disabled={exportingPdf}
+            className="w-full flex items-center justify-center gap-2 h-11 rounded-2xl text-sm font-semibold
+              text-primary bg-primary/[0.08] dark:bg-primary/[0.12]
+              border border-primary/20 disabled:opacity-50
+              active:scale-[0.98] transition-all duration-100"
+          >
+            {exportingPdf
+              ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              : <span>↓</span>}
+            {exportingPdf ? 'Generating PDF…' : 'Export as PDF'}
+          </button>
+        </div>
         <div className="h-4" />
       </div>
     </div>

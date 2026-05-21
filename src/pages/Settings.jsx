@@ -243,6 +243,18 @@ function IconCheck() {
   )
 }
 
+function IconFileText() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
+    </svg>
+  )
+}
+
 // ── UI primitives ──────────────────────────────────────────────────────────────
 
 function SectionHeader({ children }) {
@@ -1788,6 +1800,41 @@ export default function Settings() {
 
   const txCount     = useLiveQuery(() => db.transactions.count(), [], 0)
 
+  const [reportMonth, setReportMonth] = useState(() => {
+    const d = new Date()
+    d.setMonth(d.getMonth() - 1)
+    return { year: d.getFullYear(), month: d.getMonth() + 1 }
+  })
+  const [generatingReport, setGeneratingReport] = useState(false)
+
+  function getLast12Months() {
+    const result = []
+    const now = new Date()
+    for (let i = 1; i <= 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i + 1, 1)
+      result.push({
+        year:  d.getFullYear(),
+        month: d.getMonth() + 1,
+        label: d.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }),
+      })
+    }
+    return result
+  }
+
+  async function handleGenerateReport() {
+    setGeneratingReport(true)
+    try {
+      const { downloadMonthlyReport } = await import('../utils/reportData.js')
+      await downloadMonthlyReport(reportMonth.year, reportMonth.month)
+      showToast('Report downloaded')
+    } catch (e) {
+      console.error(e)
+      showToast('Failed to generate report', 'error')
+    } finally {
+      setGeneratingReport(false)
+    }
+  }
+
   async function handleLogout() {
     setLoggingOut(true)
     try {
@@ -2115,6 +2162,46 @@ export default function Settings() {
           </SectionCard>
         </div>
       )}
+
+      {/* ══════ REPORTS ══════ */}
+      <div className="mb-8">
+        <SectionHeader>Reports</SectionHeader>
+        <SectionCard>
+          <div className="px-4 py-4">
+            <div className="flex items-center gap-3 mb-4">
+              <RowIcon color="blue"><IconFileText /></RowIcon>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">Monthly PDF Report</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Full summary: spending, income, transactions</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-3">
+              <select
+                value={`${reportMonth.year}-${reportMonth.month}`}
+                onChange={e => {
+                  const [y, m] = e.target.value.split('-').map(Number)
+                  setReportMonth({ year: y, month: m })
+                }}
+                className="flex-1 text-sm bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 text-slate-800 dark:text-white outline-none dark:[color-scheme:dark]"
+              >
+                {getLast12Months().map(({ year, month, label }) => (
+                  <option key={`${year}-${month}`} value={`${year}-${month}`}>{label}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleGenerateReport}
+                disabled={generatingReport}
+                className="flex items-center justify-center gap-2 w-[130px] h-10 rounded-xl text-sm font-semibold text-white bg-primary disabled:opacity-50 active:scale-95 transition-all duration-100 shrink-0"
+              >
+                {generatingReport
+                  ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
+                  : null}
+                {generatingReport ? 'Generating…' : 'Generate PDF'}
+              </button>
+            </div>
+          </div>
+        </SectionCard>
+      </div>
 
       {/* ══════════════════════════════════════════════════
           7. ABOUT

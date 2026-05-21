@@ -312,7 +312,7 @@ export default function Dashboard() {
       <section className="mt-6">
         <SectionHeader title="Accounts" actionLabel="See all" actionTo="/accounts" px />
         <div
-          className="flex gap-3 overflow-x-auto mt-3 px-5 pb-1"
+          className="flex gap-3 overflow-x-auto mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4"
           style={{ scrollbarWidth: 'none' }}
         >
           {(accounts || []).length === 0 && (
