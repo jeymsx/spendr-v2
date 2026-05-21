@@ -210,6 +210,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
   const fromAcct    = acctMap[tx.fromAccount]
   const toAcct      = acctMap[tx.toAccount]
   const editCatList = categories.filter(c => c.type === tx.type)
+    .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))
 
   return (
     <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
@@ -333,7 +334,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   type="date"
                   value={editDate}
                   onChange={e => setEditDate(e.target.value)}
-                  className="w-full h-[48px] px-4 rounded-2xl text-sm font-medium
+                  className="block w-full h-[48px] px-4 rounded-2xl text-sm font-medium
                     text-slate-800 dark:text-white
                     bg-white dark:bg-white/[0.06]
                     border border-slate-200/80 dark:border-white/[0.09]

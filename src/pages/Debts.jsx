@@ -611,7 +611,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
               type="date"
               value={dueDate}
               onChange={e => setDueDate(e.target.value)}
-              className="w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white
+              className="block w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white
                 bg-white dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.08]
                 outline-none dark:[color-scheme:dark]"
             />

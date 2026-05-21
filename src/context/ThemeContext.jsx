@@ -30,8 +30,7 @@ function applyAccent(color) {
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(() => {
     try {
-      return localStorage.getItem('spendr-theme') ||
-        (window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+      return localStorage.getItem('spendr-theme') || 'dark'
     } catch {
       return 'light'
     }

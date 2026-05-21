@@ -53,6 +53,7 @@ function categoryToRow(r, userId) {
     color:      r.color,
     type:       r.type,
     budget:     r.budget,
+    sort_order: r.sort_order ?? 0,
     updated_at: r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -144,12 +145,13 @@ function rowToAccount(row) {
 
 function rowToCategory(row) {
   return {
-    name:      row.name,
-    icon:      row.icon,
-    color:     row.color,
-    type:      row.type,
-    budget:    row.budget,
-    updatedAt: row.updated_at,
+    name:       row.name,
+    icon:       row.icon,
+    color:      row.color,
+    type:       row.type,
+    budget:     row.budget,
+    sort_order: row.sort_order ?? 0,
+    updatedAt:  row.updated_at,
   }
 }
 
@@ -296,7 +298,9 @@ export async function syncFromSupabase(userId) {
 
   await pullTxs(userId)
   await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId)
-  await pullSimpleTable('categories', db.categories, rowToCategory,  'name', userId)
+  // Categories: match on name+type to avoid confusing same-named categories of different types
+  await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
+    row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first())
   await pullSimpleTable('debts',      db.debts,      rowToDebt,      null,   userId)
   await pullSimpleTable('recurring',  db.recurring,  rowToRecurring, null,   userId)
   await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId)
@@ -332,7 +336,9 @@ async function pullTxs(userId) {
   }
 }
 
-async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId) {
+// findFn: optional async (row) => existing local record | null
+// Used when a simple single-key lookup isn't enough (e.g. categories: name+type).
+async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, findFn) {
   const { data, error } = await supabase
     .from(tableName)
     .select('*')
@@ -344,10 +350,12 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId) 
     const localId = row.local_id
     const existing = localId ? await dexieTable.get(localId) : null
 
-    // Also check by name if available (accounts/categories)
-    const byName = nameKey && row[nameKey]
-      ? await dexieTable.where(nameKey).equals(row[nameKey]).first()
-      : null
+    // Prefer a custom finder (compound key), fall back to single nameKey
+    const byName = existing ? null
+      : findFn ? await findFn(row)
+      : nameKey && row[nameKey]
+        ? await dexieTable.where(nameKey).equals(row[nameKey]).first()
+        : null
 
     const target   = existing ?? byName
     const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0

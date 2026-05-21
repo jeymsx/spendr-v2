@@ -5,7 +5,8 @@ async function adjustBalance(accountName, delta) {
   const acct = await db.accounts.where('name').equals(accountName).first()
   if (!acct) return
   const newBal = (acct.balance ?? 0) + delta
-  await db.accounts.update(acct.id, { balance: newBal })
+  const now = new Date().toISOString()
+  await db.accounts.update(acct.id, { balance: newBal, updatedAt: now })
   await db.balances.put({ account: accountName, balance: newBal })
 }
 

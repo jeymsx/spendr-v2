@@ -415,7 +415,8 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
   }
 
   const expenseCategories = useMemo(
-    () => (categories ?? []).filter(c => c.type === 'expense'),
+    () => (categories ?? []).filter(c => c.type === 'expense')
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name)),
     [categories],
   )
 
@@ -592,7 +593,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
                 value={nextDate}
                 onChange={e => { setNextDate(e.target.value); setErrors(p => ({ ...p, nextDate: null })) }}
                 className={[
-                  'w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white',
+                  'block w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white',
                   'bg-white dark:bg-white/[0.05] outline-none dark:[color-scheme:dark]',
                   errors.nextDate
                     ? 'border border-red-300 dark:border-red-500/40'

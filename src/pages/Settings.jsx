@@ -1,4 +1,12 @@
 ﻿import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor,
+  useSensor, useSensors, DragOverlay,
+} from '@dnd-kit/core'
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
@@ -494,7 +502,7 @@ function ResetConfirmModal({ open, onClose }) {
     try {
       await db.transaction('rw', [
         db.transactions, db.balances, db.accounts,
-        db.categories, db.debts, db.recurring, db.meta,
+        db.categories, db.debts, db.recurring, db.templates, db.meta,
       ], async () => {
         await db.transactions.clear()
         await db.balances.clear()
@@ -502,6 +510,7 @@ function ResetConfirmModal({ open, onClose }) {
         await db.categories.clear()
         await db.debts.clear()
         await db.recurring.clear()
+        await db.templates.clear()
         await db.meta.clear()
       })
       // Full reload re-imports db.js and triggers seed() on empty DB.
@@ -808,6 +817,40 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
   )
 }
 
+// ── Sortable category row (for drag-to-reorder) ────────────────────────────────
+
+function SortableCategoryRow({ cat, onTap, onLongPressDelete, isDragging }) {
+  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: cat.id })
+  const style = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.4 : 1,
+  }
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex items-center">
+      {/* Drag handle */}
+      <button
+        {...attributes}
+        {...listeners}
+        className="pl-3 pr-0 py-4 text-slate-300 dark:text-slate-600 touch-none shrink-0 cursor-grab active:cursor-grabbing"
+        tabIndex={-1}
+        aria-label="Drag to reorder"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+          <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+        </svg>
+      </button>
+      {/* Row content fills remaining space */}
+      <div className="flex-1 min-w-0">
+        <CategoryRow cat={cat} onTap={onTap} onLongPressDelete={onLongPressDelete} />
+      </div>
+    </div>
+  )
+}
+
 // ── Category manager sheet ─────────────────────────────────────────────────────
 
 function CategoryManagerSheet({ open, onClose }) {
@@ -818,18 +861,58 @@ function CategoryManagerSheet({ open, onClose }) {
   const [editingCat,     setEditingCat]     = useState(null)
   const [formStartDelete, setFormStartDelete] = useState(false)
   const [browseOpen,     setBrowseOpen]     = useState(false)
+  const [activeDragId,   setActiveDragId]   = useState(null)
+  const isDraggingRef = useRef(false)
+  // Local ordered list used during and after drag (separate per tab)
+  const [localExpense,   setLocalExpense]   = useState([])
+  const [localInflow,    setLocalInflow]    = useState([])
 
   const categories   = useLiveQuery(() => db.categories.toArray(),   [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
 
   const expenseCats = useMemo(() =>
-    (categories ?? []).filter(c => c.type === 'expense').sort((a, b) => a.name.localeCompare(b.name)),
+    (categories ?? []).filter(c => c.type === 'expense')
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name)),
     [categories])
   const inflowCats = useMemo(() =>
-    (categories ?? []).filter(c => c.type === 'inflow').sort((a, b) => a.name.localeCompare(b.name)),
+    (categories ?? []).filter(c => c.type === 'inflow')
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name)),
     [categories])
 
-  const visibleCats = activeTab === 'expense' ? expenseCats : inflowCats
+  // Sync local lists from DB only when not dragging
+  useEffect(() => { if (!isDraggingRef.current) setLocalExpense(expenseCats) }, [expenseCats])
+  useEffect(() => { if (!isDraggingRef.current) setLocalInflow(inflowCats)   }, [inflowCats])
+
+  const visibleCats    = activeTab === 'expense' ? localExpense   : localInflow
+  const setVisibleCats = activeTab === 'expense' ? setLocalExpense : setLocalInflow
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 150, tolerance: 5 } }),
+  )
+
+  function handleDragStart({ active }) {
+    isDraggingRef.current = true
+    setActiveDragId(active.id)
+  }
+
+  async function handleDragEnd({ active, over }) {
+    setActiveDragId(null)
+    if (!over || active.id === over.id) {
+      isDraggingRef.current = false
+      return
+    }
+    const oldIdx = visibleCats.findIndex(c => c.id === active.id)
+    const newIdx = visibleCats.findIndex(c => c.id === over.id)
+    if (oldIdx === -1 || newIdx === -1) { isDraggingRef.current = false; return }
+    const reordered = arrayMove(visibleCats, oldIdx, newIdx)
+    setVisibleCats(reordered)
+    const now = new Date().toISOString()
+    await Promise.all(reordered.map((cat, i) =>
+      db.categories.update(cat.id, { sort_order: i, updatedAt: now })
+    ))
+    isDraggingRef.current = false
+  }
 
   const close = () => {
     setClosing(true)
@@ -854,7 +937,6 @@ function CategoryManagerSheet({ open, onClose }) {
             'border-t border-slate-100 dark:border-white/[0.07]',
             'max-h-[92vh] flex flex-col',
           ].join(' ')}
-          style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
         >
           {/* Header */}
           <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
@@ -903,16 +985,40 @@ function CategoryManagerSheet({ open, onClose }) {
                   <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Tap "Add" below to create one</p>
                 </div>
               ) : (
-                visibleCats.map((cat, i) => (
-                  <div key={cat.id}>
-                    <CategoryRow cat={cat} onTap={openEdit} onLongPressDelete={openDelete} />
-                    {i < visibleCats.length - 1 && <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />}
-                  </div>
-                ))
+                <DndContext
+                  sensors={sensors}
+                  collisionDetection={closestCenter}
+                  onDragStart={handleDragStart}
+                  onDragEnd={handleDragEnd}
+                >
+                  <SortableContext items={visibleCats.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                    {visibleCats.map((cat, i) => (
+                      <div key={cat.id}>
+                        <SortableCategoryRow
+                          cat={cat}
+                          onTap={openEdit}
+                          onLongPressDelete={openDelete}
+                          isDragging={activeDragId === cat.id}
+                        />
+                        {i < visibleCats.length - 1 && <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />}
+                      </div>
+                    ))}
+                  </SortableContext>
+                  <DragOverlay>
+                    {activeDragId ? (() => {
+                      const cat = visibleCats.find(c => c.id === activeDragId)
+                      return cat ? (
+                        <div className="bg-white dark:bg-[#1a2130] rounded-2xl shadow-2xl border border-primary/30 opacity-95">
+                          <CategoryRow cat={cat} onTap={() => {}} onLongPressDelete={() => {}} />
+                        </div>
+                      ) : null
+                    })() : null}
+                  </DragOverlay>
+                </DndContext>
               )}
             </div>
 
-            <div className="px-5 flex flex-col gap-2">
+            <div className="px-5 flex flex-col gap-2 pb-6">
               <button
                 onClick={openAdd}
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold
@@ -2027,8 +2133,9 @@ export default function Settings() {
   const [resetOpen,    setResetOpen]    = useState(false)
   const [accentOpen,   setAccentOpen]   = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
-  const [exporting,   setExporting]   = useState(false)
-  const [loggingOut,  setLoggingOut]  = useState(false)
+  const [exporting,    setExporting]    = useState(false)
+  const [backingUp,    setBackingUp]    = useState(false)
+  const [loggingOut,   setLoggingOut]   = useState(false)
 
   const meta        = useLiveQuery(() => db.meta.toArray(), [], [])
   const displayName = useMemo(() => (meta ?? []).find(m => m.key === 'displayName')?.value ?? '', [meta])
@@ -2101,6 +2208,41 @@ export default function Settings() {
       console.error('[Settings] export failed:', e)
     } finally {
       setExporting(false)
+    }
+  }
+
+  async function handleFullBackup() {
+    if (backingUp) return
+    setBackingUp(true)
+    try {
+      const [transactions, accounts, categories, templates, recurring, debts] = await Promise.all([
+        db.transactions.toArray(),
+        db.accounts.toArray(),
+        db.categories.toArray(),
+        db.templates.toArray(),
+        db.recurring.toArray(),
+        db.debts.toArray(),
+      ])
+      const backup = {
+        version: 1,
+        exportedAt: new Date().toISOString(),
+        transactions, accounts, categories, templates, recurring, debts,
+      }
+      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
+      const url  = URL.createObjectURL(blob)
+      const a    = document.createElement('a')
+      a.href     = url
+      a.download = `spendr-backup-${new Date().toISOString().slice(0, 10)}.json`
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
+      URL.revokeObjectURL(url)
+      showToast('Full backup downloaded')
+    } catch (e) {
+      console.error('[Settings] backup failed:', e)
+      showToast('Backup failed')
+    } finally {
+      setBackingUp(false)
     }
   }
 
@@ -2262,7 +2404,7 @@ export default function Settings() {
           <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="green"><IconDownload /></RowIcon>}
-            label="Export Data"
+            label="Export Transactions (CSV)"
             sublabel={exporting ? 'Preparing download…' : `${txCount ?? 0} transactions`}
             right={
               exporting
@@ -2271,6 +2413,19 @@ export default function Settings() {
             }
             onTap={handleExport}
             disabled={exporting}
+          />
+          <RowDivider />
+          <SettingsRow
+            iconEl={<RowIcon color="teal"><IconDownload /></RowIcon>}
+            label="Full Backup (JSON)"
+            sublabel={backingUp ? 'Preparing download…' : 'Accounts, categories, transactions & more'}
+            right={
+              backingUp
+                ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+                : <IconChevronRight />
+            }
+            onTap={handleFullBackup}
+            disabled={backingUp}
           />
           <RowDivider />
           {/* PDF Report inline */}

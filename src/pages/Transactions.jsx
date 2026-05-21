@@ -235,7 +235,7 @@ function FilterModal({
                     type="date"
                     value={customFrom}
                     onChange={e => setCustomFrom(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl text-sm font-medium
+                    className="block w-full h-10 px-3 rounded-xl text-sm font-medium
                       text-slate-700 dark:text-white
                       bg-slate-50 dark:bg-white/[0.06]
                       border border-slate-200/80 dark:border-white/[0.09]
@@ -249,7 +249,7 @@ function FilterModal({
                     type="date"
                     value={customTo}
                     onChange={e => setCustomTo(e.target.value)}
-                    className="w-full h-10 px-3 rounded-xl text-sm font-medium
+                    className="block w-full h-10 px-3 rounded-xl text-sm font-medium
                       text-slate-700 dark:text-white
                       bg-slate-50 dark:bg-white/[0.06]
                       border border-slate-200/80 dark:border-white/[0.09]

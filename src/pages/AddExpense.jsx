@@ -102,7 +102,9 @@ export default function AddExpense() {
 
   const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
   const categories = useLiveQuery(
-    () => db.categories.where('type').equals('expense').toArray(), [], [],
+    () => db.categories.where('type').equals('expense').toArray()
+      .then(cs => cs.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))),
+    [], [],
   )
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false

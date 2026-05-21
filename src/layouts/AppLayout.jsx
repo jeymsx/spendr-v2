@@ -36,6 +36,8 @@ export default function AppLayout() {
 
     const onTouchStart = (e) => {
       if (noPullRoutes.has(pathnameRef.current)) { touchStartY.current = -1; return }
+      // Disable pull-to-refresh while any sheet/modal is open
+      if (document.querySelector('.sheet-overlay')) { touchStartY.current = -1; return }
       touchStartY.current = el.scrollTop <= 0 ? e.touches[0].clientY : -1
     }
     const onTouchMove = (e) => {

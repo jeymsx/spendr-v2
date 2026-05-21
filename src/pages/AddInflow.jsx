@@ -100,7 +100,9 @@ export default function AddInflow() {
 
   const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
   const categories = useLiveQuery(
-    () => db.categories.where('type').equals('inflow').toArray(), [], [],
+    () => db.categories.where('type').equals('inflow').toArray()
+      .then(cs => cs.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))),
+    [], [],
   )
 
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)

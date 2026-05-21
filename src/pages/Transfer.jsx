@@ -152,15 +152,14 @@ export default function Transfer() {
       const dateISO = txDate.toISOString()
       const updISO  = now.toISOString()
 
-      // Ensure 'Transfer Fee' category exists before opening the transaction
-      if (fee > 0) {
-        const existing = await db.categories.where('name').equals('Transfer Fee').first()
-        if (!existing) {
-          await db.categories.add({ name: 'Transfer Fee', icon: '💸', color: '#64748b', type: 'expense', budget: 0 })
+      await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.categories], async () => {
+        // Ensure 'Transfer Fee' category exists atomically with the transfer
+        if (fee > 0) {
+          const existing = await db.categories.where('name').equals('Transfer Fee').first()
+          if (!existing) {
+            await db.categories.add({ name: 'Transfer Fee', icon: '💸', color: '#f59e0b', type: 'expense', budget: 0 })
+          }
         }
-      }
-
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
         await db.transactions.add({
           txId:        crypto.randomUUID(),
           type:        'transfer',

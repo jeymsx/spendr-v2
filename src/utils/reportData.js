@@ -154,7 +154,12 @@ export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF'
   const { default: MonthlyReport } = await import('../components/pdf/MonthlyReport.jsx')
   const { pdf }                    = await import('@react-pdf/renderer')
 
-  const blob = await pdf(createElement(MonthlyReport, { ...data, accentColor })).toBlob()
+  const generatedAt = new Date().toLocaleString('en-PH', {
+    year: 'numeric', month: 'long', day: 'numeric',
+    hour: 'numeric', minute: '2-digit', hour12: true,
+  })
+
+  const blob = await pdf(createElement(MonthlyReport, { ...data, accentColor, generatedAt })).toBlob()
 
   const mm  = String(month).padStart(2, '0')
   const url = URL.createObjectURL(blob)

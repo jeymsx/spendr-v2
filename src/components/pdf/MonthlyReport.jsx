@@ -272,7 +272,7 @@ function HeaderBar({ subtitle, colors }) {
 
 // ── Page 1: Cover & Summary ────────────────────────────────────────────────────
 
-function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, colors }) {
+function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, generatedAt, colors }) {
   const monthName = MONTH_NAMES[month - 1]
   const { totalIncome, totalExpenses, netSavings, savingsRate } = summary
 
@@ -284,6 +284,11 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
   return (
     <Page size="A4" style={styles.page}>
       <HeaderBar subtitle="MONTHLY REPORT" colors={colors} />
+      {generatedAt ? (
+        <Text style={{ fontSize: 7, color: '#94a3b8', marginTop: -10, marginBottom: 14, textAlign: 'right' }}>
+          Generated on {generatedAt}
+        </Text>
+      ) : null}
 
       {/* Month + username */}
       <Text style={styles.pageTitle}>{monthName} {year}</Text>
@@ -649,6 +654,7 @@ export default function MonthlyReport(props) {
     categoryBreakdown,
     transactions,
     accentColor = '#2D9DFF',
+    generatedAt = '',
   } = props
 
   const colors = computePdfColors(accentColor)
@@ -670,6 +676,7 @@ export default function MonthlyReport(props) {
         totalCreditUsed={totalCreditUsed}
         totalCreditLimit={totalCreditLimit}
         netWorth={netWorth}
+        generatedAt={generatedAt}
         colors={colors}
       />
       <SpendingPage
