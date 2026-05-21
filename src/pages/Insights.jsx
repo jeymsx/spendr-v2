@@ -7,6 +7,7 @@ import {
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
+import { useTheme } from '../context/ThemeContext'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -186,8 +187,8 @@ function DailyChart({ data }) {
       <AreaChart data={data} margin={{ top: 10, right: 8, left: -8, bottom: 0 }}>
         <defs>
           <linearGradient id="dailyGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%"   stopColor="#2D9DFF" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="#2D9DFF" stopOpacity={0} />
+            <stop offset="0%"   stopColor="var(--color-primary)" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
           </linearGradient>
         </defs>
         <CartesianGrid strokeDasharray="4 3" vertical={false} stroke="rgba(148,163,184,0.15)" />
@@ -207,16 +208,16 @@ function DailyChart({ data }) {
         />
         <Tooltip
           content={<DailyTooltip />}
-          cursor={{ stroke: '#2D9DFF', strokeWidth: 1, strokeDasharray: '4 2' }}
+          cursor={{ stroke: 'var(--color-primary)', strokeWidth: 1, strokeDasharray: '4 2' }}
         />
         <Area
           type="monotone"
           dataKey="value"
-          stroke="#2D9DFF"
+          stroke="var(--color-primary)"
           strokeWidth={2.5}
           fill="url(#dailyGrad)"
           dot={false}
-          activeDot={{ r: 5, fill: '#2D9DFF', stroke: 'white', strokeWidth: 2 }}
+          activeDot={{ r: 5, fill: 'var(--color-primary)', stroke: 'white', strokeWidth: 2 }}
           animationDuration={800}
         />
       </AreaChart>
@@ -815,12 +816,13 @@ export default function Insights() {
   const [exportingPdf, setExportingPdf] = useState(false)
 
   const { showToast } = useToast()
+  const { accentColor } = useTheme()
 
   async function handleExportPdf() {
     setExportingPdf(true)
     try {
       const { downloadMonthlyReport } = await import('../utils/reportData.js')
-      await downloadMonthlyReport(year, month + 1) // month is 0-indexed in Insights
+      await downloadMonthlyReport(year, month + 1, accentColor) // month is 0-indexed in Insights
       showToast('Report downloaded')
     } catch (e) {
       console.error(e)

@@ -148,13 +148,13 @@ export async function fetchReportData(year, month) {
  * @param {number} year
  * @param {number} month  1-indexed
  */
-export async function downloadMonthlyReport(year, month) {
+export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF') {
   const data = await fetchReportData(year, month)
 
   const { default: MonthlyReport } = await import('../components/pdf/MonthlyReport.jsx')
   const { pdf }                    = await import('@react-pdf/renderer')
 
-  const blob = await pdf(createElement(MonthlyReport, data)).toBlob()
+  const blob = await pdf(createElement(MonthlyReport, { ...data, accentColor })).toBlob()
 
   const mm  = String(month).padStart(2, '0')
   const url = URL.createObjectURL(blob)

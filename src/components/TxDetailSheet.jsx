@@ -11,7 +11,7 @@ const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
 const TYPE_CFG = {
   expense:  { label: 'Expense',  color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',      sign: '−' },
   inflow:   { label: 'Inflow',   color: '#22c55e', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400', sign: '+' },
-  transfer: { label: 'Transfer', color: '#2D9DFF', badge: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',   sign: '' },
+  transfer: { label: 'Transfer', color: 'var(--color-primary)', badge: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',   sign: '' },
 }
 
 function toLocalDateStr(isoStr) {
@@ -298,7 +298,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 <button
                   onClick={enterEdit}
                   className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                    bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+                    bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
                     active:scale-[0.98] transition-transform duration-100"
                 >
                   Edit
@@ -397,7 +397,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   onClick={handleSave}
                   disabled={saving || !parseFloat(editAmount)}
                   className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                    bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+                    bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
                     disabled:opacity-40 disabled:shadow-none
                     active:scale-[0.98] transition-all duration-100"
                 >

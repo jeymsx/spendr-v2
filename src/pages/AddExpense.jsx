@@ -70,7 +70,7 @@ function FieldButton({ onClick, error, left, center, right }) {
         error
           ? 'border border-red-300 dark:border-red-500/40'
           : 'border border-slate-200/80 dark:border-primary/[0.14]',
-        'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]',
+        'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]',
       ].join(' ')}
     >
       <span className="shrink-0">{left}</span>
@@ -221,7 +221,7 @@ export default function AddExpense() {
           <div className="flex items-center gap-3 px-4 h-[52px] rounded-2xl
             bg-white dark:bg-primary/[0.07]
             border border-slate-200/80 dark:border-primary/[0.14]
-            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]"
+            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]"
           >
             <input
               type="text"
@@ -299,7 +299,7 @@ export default function AddExpense() {
             className="w-full flex items-center gap-3 px-4 h-[52px] rounded-2xl text-left
               bg-white dark:bg-primary/[0.07]
               border border-slate-200/80 dark:border-primary/[0.14]
-              shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]
+              shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]
               active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors"
           >
             <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
@@ -324,7 +324,7 @@ export default function AddExpense() {
           onClick={onConfirmPress}
           disabled={saving || amount <= 0}
           className="w-full py-4 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
             disabled:opacity-40 disabled:shadow-none
             active:scale-[0.98] transition-all duration-100"
         >

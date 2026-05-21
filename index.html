@@ -17,6 +17,16 @@
       rel="stylesheet"
     />
     <title>Spendr</title>
+    <script>
+      (function(){
+        var a=localStorage.getItem('accentColor')||'#2D9DFF';
+        var h=a.replace('#','');
+        var r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+        document.documentElement.style.setProperty('--color-primary',a);
+        document.documentElement.style.setProperty('--color-primary-rgb',r+', '+g+', '+b);
+        document.documentElement.classList.add(a==='#2D9DFF'?'accent-blue':'accent-custom');
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

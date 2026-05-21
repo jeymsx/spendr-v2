@@ -303,7 +303,7 @@ function EmptyState({ tab, onAdd }) {
       <button
         onClick={onAdd}
         className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-white
-          bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+          bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
           active:scale-95 transition-transform duration-75"
       >
         Add Debt
@@ -640,7 +640,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
             onClick={handleSave}
             disabled={saving}
             className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
-              bg-primary shadow-[0_4px_20px_rgba(45,157,255,0.4)]
+              bg-primary shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.4)]
               disabled:opacity-40 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >
@@ -892,7 +892,7 @@ export default function Debts() {
         <button
           onClick={openAdd}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
             active:scale-95 transition-transform duration-75"
         >
           <IconPlus />

@@ -1,5 +1,6 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCycleRange } from '../utils/creditCycle'
@@ -28,7 +29,8 @@ function getGreeting() {
 }
 
 function getContextHint(txAll, budgetCategories, upcomingRecurring) {
-  const today = new Date().toISOString().slice(0, 10)
+  const _d    = new Date()
+  const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`
   const dow   = new Date().getDay() // 0=Sun, 6=Sat
 
   // Budget warnings take top priority
@@ -48,7 +50,7 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
 
   // Today's spending
   const todayTotal = (txAll ?? [])
-    .filter(t => t.type === 'expense' && t.date === today)
+    .filter(t => t.type === 'expense' && (t.date ?? '').startsWith(today))
     .reduce((s, t) => s + (t.amount ?? 0), 0)
   if (todayTotal > 0) {
     const compact = todayTotal >= 1000
@@ -117,9 +119,20 @@ function inNext7Days(dateStr) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
+function cardGradient(accentColor, theme) {
+  const isBlue = accentColor === '#2D9DFF'
+  const isDark = theme === 'dark'
+  if (isBlue  && isDark)  return 'linear-gradient(135deg, #0d47a1 0%, #1565c0 35%, #2196f3 70%, #42a5f5 100%)'
+  if (isBlue  && !isDark) return 'linear-gradient(135deg, #1565c0 0%, #1e88e5 45%, #64b5f6 100%)'
+  if (!isBlue && isDark)  return 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 28%, black) 0%, color-mix(in srgb, var(--color-primary) 48%, black) 40%, color-mix(in srgb, var(--color-primary) 75%, black) 100%)'
+  return 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 52%, black) 0%, color-mix(in srgb, var(--color-primary) 80%, black) 50%, var(--color-primary) 100%)'
+}
+
 export default function Dashboard() {
   const navigate = useNavigate()
-  const [balanceHidden,    setBalanceHidden]    = useState(false)
+  const { accentColor, theme } = useTheme()
+  const [balanceHidden,    setBalanceHidden]    = useState(true)
+  const [peek,             setPeek]             = useState(false)
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
 
@@ -233,7 +246,7 @@ export default function Dashboard() {
         </div>
         <button
           onClick={() => navigate('/settings')}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center bg-white dark:bg-primary/[0.10] border border-slate-200 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 active:scale-95 transition-transform shadow-sm dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.12)]"
+          className="w-9 h-9 rounded-2xl flex items-center justify-center bg-white dark:bg-primary/[0.10] border border-slate-200 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 active:scale-95 transition-transform shadow-sm dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]"
           aria-label="Settings"
         >
           <IconSettings />
@@ -242,78 +255,87 @@ export default function Dashboard() {
 
       {/* ── Net Worth Card ───────────────────────────────────────────────────── */}
       <section className="px-5 mt-4">
-        <div
-          className="rounded-3xl p-6 relative overflow-hidden"
-          style={{ background: 'linear-gradient(135deg, #0d47a1 0%, #1565c0 35%, #2196f3 70%, #42a5f5 100%)' }}
-        >
-          {/* subtle glare overlay */}
-          <div
-            className="absolute inset-0 opacity-20 pointer-events-none"
-            style={{ background: 'radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255,255,255,0.5) 0%, transparent 60%)' }}
-          />
-          {/* dot grid texture */}
-          <div
-            className="absolute inset-0 opacity-[0.06] pointer-events-none"
-            style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '18px 18px' }}
-          />
+        {(() => {
+          const revealed = !balanceHidden || peek
+          return (
+            <div
+              className="rounded-3xl p-6 relative overflow-hidden select-none"
+              style={{ background: cardGradient(accentColor, theme) }}
+              onPointerDown={() => setPeek(true)}
+              onPointerUp={() => setPeek(false)}
+              onPointerLeave={() => setPeek(false)}
+              onPointerCancel={() => setPeek(false)}
+            >
+              {/* subtle glare overlay */}
+              <div
+                className="absolute inset-0 opacity-20 pointer-events-none"
+                style={{ background: 'radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255,255,255,0.5) 0%, transparent 60%)' }}
+              />
+              {/* dot grid texture */}
+              <div
+                className="absolute inset-0 opacity-[0.06] pointer-events-none"
+                style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '18px 18px' }}
+              />
 
-          <div className="relative">
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Net Worth</span>
-              <button
-                onClick={() => setBalanceHidden(h => !h)}
-                className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
-                aria-label={balanceHidden ? 'Show balance' : 'Hide balance'}
-              >
-                {balanceHidden ? <IconEyeOff /> : <IconEye />}
-              </button>
-            </div>
+              <div className="relative">
+                <div className="flex items-center justify-between mb-1">
+                  <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Net Worth</span>
+                  <button
+                    onPointerDown={e => e.stopPropagation()}
+                    onClick={() => setBalanceHidden(h => !h)}
+                    className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
+                    aria-label={balanceHidden ? 'Show balance' : 'Hide balance'}
+                  >
+                    {balanceHidden ? <IconEyeOff /> : <IconEye />}
+                  </button>
+                </div>
 
-            <div className="mt-2 mb-5">
-              {balanceHidden ? (
-                <span className="text-4xl font-semibold tracking-tight text-white select-none">₱ ••••••</span>
-              ) : (
-                <span className="text-4xl font-semibold tracking-tight text-white tabular-nums">
-                  {fmt(animatedNetWorth)}
-                </span>
-              )}
-            </div>
+                <div className="mt-2 mb-5">
+                  {revealed ? (
+                    <span className="text-4xl font-semibold tracking-tight text-white tabular-nums">
+                      {fmt(animatedNetWorth)}
+                    </span>
+                  ) : (
+                    <span className="text-4xl font-semibold tracking-tight text-white/80">₱ ••••••</span>
+                  )}
+                </div>
 
-            <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/15">
-              <div>
-                <p className="text-white/50 text-[11px] mb-1">Spending</p>
-                <p className="text-white font-semibold text-sm tabular-nums">
-                  {balanceHidden ? '••••' : fmt(spendingBalance)}
-                </p>
-                <p className="text-white/35 text-[10px] mt-0.5">Cash, wallets</p>
-              </div>
-              <div>
-                <p className="text-white/50 text-[11px] mb-1">Savings</p>
-                <p className="text-white font-semibold text-sm tabular-nums">
-                  {balanceHidden ? '••••' : fmt(savingsBalance)}
-                </p>
-                <p className="text-white/35 text-[10px] mt-0.5">Banks, deposits</p>
-              </div>
-              <div>
-                <p className="text-white/50 text-[11px] mb-1">Credit</p>
-                <p className="font-semibold text-sm tabular-nums text-white">
-                  {balanceHidden ? '••••' : fmt(creditOutstanding)}
-                </p>
-                <p className="text-white/35 text-[10px] mt-0.5">
-                  {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}
-                </p>
+                <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/15">
+                  <div>
+                    <p className="text-white/50 text-[11px] mb-1">Spending</p>
+                    <p className="text-white font-semibold text-sm tabular-nums">
+                      {revealed ? fmt(spendingBalance) : '••••'}
+                    </p>
+                    <p className="text-white/35 text-[10px] mt-0.5">Cash, wallets</p>
+                  </div>
+                  <div>
+                    <p className="text-white/50 text-[11px] mb-1">Savings</p>
+                    <p className="text-white font-semibold text-sm tabular-nums">
+                      {revealed ? fmt(savingsBalance) : '••••'}
+                    </p>
+                    <p className="text-white/35 text-[10px] mt-0.5">Banks, deposits</p>
+                  </div>
+                  <div>
+                    <p className="text-white/50 text-[11px] mb-1">Credit</p>
+                    <p className="font-semibold text-sm tabular-nums text-white">
+                      {revealed ? fmt(creditOutstanding) : '••••'}
+                    </p>
+                    <p className="text-white/35 text-[10px] mt-0.5">
+                      {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
+          )
+        })()}
       </section>
 
       {/* ── Account Cards ────────────────────────────────────────────────────── */}
       <section className="mt-6">
         <SectionHeader title="Accounts" actionLabel="See all" actionTo="/accounts" px />
         <div
-          className="flex gap-3 overflow-x-auto mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4"
-          style={{ scrollbarWidth: 'none' }}
+          className="flex gap-3 overflow-x-auto mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4 no-scrollbar"
         >
           {(accounts || []).length === 0 && (
             <EmptyPill label="No accounts yet" />
@@ -322,7 +344,7 @@ export default function Dashboard() {
             <AccountCard
               key={acct.id}
               acct={acct}
-              hidden={balanceHidden}
+              hidden={balanceHidden && !peek}
               onClick={() => navigate('/accounts')}
               stmt={creditStmtMap[acct.name]}
             />
@@ -336,8 +358,7 @@ export default function Dashboard() {
       {(templates ?? []).length > 0 && (
         <section className="mt-3">
           <div
-            className="flex gap-2 overflow-x-auto px-5 pb-1"
-            style={{ scrollbarWidth: 'none' }}
+            className="flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar"
           >
             {(templates ?? [])
               .slice()
@@ -403,7 +424,7 @@ export default function Dashboard() {
         template={quickTemplate}
       />
 
-      <section className="px-5 mt-8">
+      <section className="px-5 mt-8 pb-nav">
         <SectionHeader title="Recent" actionLabel="See all" actionTo="/transactions" />
         <div
           className="card mt-3 rounded-3xl overflow-hidden"

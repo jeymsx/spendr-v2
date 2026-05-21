@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
-import { PH_ACCOUNTS, PH_GROUPS, TYPE_ICON, CUSTOM_PALETTE } from '../lib/phAccounts'
+import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON, CUSTOM_PALETTE } from '../lib/phAccounts'
 import { EXPENSE_PRESETS, INFLOW_PRESETS, SYSTEM_CATS, EMOJI_SUGGESTIONS, CAT_PALETTE, LOCKED_EXPENSE, LOCKED_INFLOW } from '../lib/phCategories'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -77,7 +77,7 @@ function StepWelcome({ onNext }) {
       <button
         onClick={onNext}
         className="mt-6 w-full max-w-xs py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-          shadow-[0_4px_24px_rgba(45,157,255,0.45)] active:scale-[0.98] transition-all duration-100"
+          shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
       >
         Get Started →
       </button>
@@ -117,7 +117,7 @@ function StepName({ value, onChange, onNext }) {
           onClick={onNext}
           disabled={!value.trim()}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(45,157,255,0.45)] active:scale-[0.98] transition-all duration-100
+            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100
             disabled:opacity-40 disabled:shadow-none disabled:active:scale-100"
         >
           Continue →
@@ -147,7 +147,7 @@ function StepCurrency({ value, onChange, onNext }) {
             onClick={() => onChange(code)}
             className={`p-4 rounded-2xl border-2 text-left transition-all duration-100 active:scale-[0.97] ${
               value === code
-                ? 'border-primary bg-primary/10 shadow-[0_0_0_1px_rgba(45,157,255,0.3)]'
+                ? 'border-primary bg-primary/10 shadow-[0_0_0_1px_rgba(var(--color-primary-rgb),0.3)]'
                 : 'border-white/[0.08] bg-white/[0.04] active:bg-white/[0.08]'
             }`}
           >
@@ -162,7 +162,7 @@ function StepCurrency({ value, onChange, onNext }) {
         <button
           onClick={onNext}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(45,157,255,0.45)] active:scale-[0.98] transition-all duration-100"
+            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
         >
           Continue →
         </button>
@@ -175,11 +175,21 @@ function StepCurrency({ value, onChange, onNext }) {
 
 const COLOR_SWATCHES = ['#2D9DFF', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#ec4899']
 
+function OnbSectionLabel({ children }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-2.5">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 shrink-0">{children}</span>
+      <div className="flex-1 h-px bg-white/[0.07]" />
+    </div>
+  )
+}
+
 function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom, onRemoveCustom, onNext }) {
   const [showCustomForm, setShowCustomForm] = useState(false)
   const [customName,     setCustomName]     = useState('')
   const [customType,     setCustomType]     = useState('bank')
   const [customColor,    setCustomColor]    = useState(COLOR_SWATCHES[0])
+  const [query,          setQuery]          = useState('')
 
   function addCustom() {
     const trimmed = customName.trim()
@@ -191,12 +201,8 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
     setShowCustomForm(false)
   }
 
-  function openCustomForm() {
-    setCustomName('')
-    setCustomType('bank')
-    setCustomColor(COLOR_SWATCHES[0])
-    setShowCustomForm(true)
-  }
+  const q        = query.toLowerCase().trim()
+  const filtered = q ? PH_ACCOUNTS.filter(a => a.name.toLowerCase().includes(q)) : null
 
   const totalSelected = 1 + selectedNames.size + customAccounts.length // Cash always included
 
@@ -210,97 +216,186 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
         <p className="text-slate-500 mt-2 text-sm">Tap to select. Cash is always included.</p>
       </div>
 
-      <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5 pb-2">
-
-        {/* Cash — locked */}
-        <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Always included</p>
-          <div className="flex flex-wrap gap-2">
-            <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
-              bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 text-sm font-semibold">
-              <span>💵</span> Cash <span className="text-[10px] opacity-70 ml-0.5">✓</span>
-            </span>
-          </div>
-        </div>
-
-        {/* PH account groups */}
-        {PH_GROUPS.map(group => (
-          <div key={group}>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">{group}</p>
-            <div className="flex flex-wrap gap-2">
-              {PH_ACCOUNTS.filter(a => a.group === group).map(acct => {
-                const sel = selectedNames.has(acct.name)
-                return (
-                  <button
-                    key={acct.name}
-                    onClick={() => onToggle(acct.name)}
-                    className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-medium
-                      transition-all duration-100 active:scale-95 ${
-                      sel
-                        ? 'bg-primary/15 border-primary/50 text-primary'
-                        : 'bg-white/[0.04] border-white/[0.08] text-slate-400 active:bg-white/[0.08]'
-                    }`}
-                  >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
-                    {acct.name}
-                    {sel && <span className="text-[10px] ml-0.5">✓</span>}
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        ))}
-
-        {/* Custom accounts (already added) */}
-        {customAccounts.length > 0 && (
-          <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Custom</p>
-            <div className="flex flex-wrap gap-2">
-              {customAccounts.map(acct => (
-                <span key={acct.name}
-                  className="flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-xl
-                    bg-primary/15 border border-primary/50 text-primary text-sm font-medium">
-                  <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
-                  {acct.name}
-                  <button
-                    onClick={() => onRemoveCustom(acct.name)}
-                    className="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center
-                      text-primary/60 hover:text-primary hover:bg-primary/20 transition-colors shrink-0"
-                    aria-label={`Remove ${acct.name}`}
-                  >
-                    <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                      <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
-                    </svg>
-                  </button>
-                </span>
-              ))}
-            </div>
-          </div>
+      {/* Search */}
+      <div className="relative shrink-0">
+        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500"
+          width="14" height="14" viewBox="0 0 20 20" fill="none">
+          <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.8"/>
+          <path d="M14.5 14.5L18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+        </svg>
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder="Search accounts…"
+          className="w-full h-10 pl-9 pr-8 rounded-2xl text-sm
+            bg-white/[0.07] border border-white/[0.10] text-white
+            placeholder:text-slate-600 focus:outline-none focus:border-primary/50 transition-colors"
+        />
+        {query && (
+          <button
+            onClick={() => setQuery('')}
+            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
+              bg-white/[0.15] flex items-center justify-center text-slate-300 active:opacity-70"
+          >
+            <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+              <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
+            </svg>
+          </button>
         )}
+      </div>
 
-        <button
-          onClick={openCustomForm}
-          className="flex items-center gap-2 text-sm text-slate-500 active:text-slate-300
-            transition-colors active:scale-95 duration-100"
-        >
-          <span className="w-6 h-6 rounded-full border border-white/[0.12] flex items-center justify-center text-xs">+</span>
-          Add custom account
-        </button>
+      <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5 pb-2"
+        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+
+        {filtered ? (
+          /* ── Search results ── */
+          <div>
+            {filtered.length === 0 ? (
+              <p className="text-sm text-slate-500 py-4">No accounts match "{query}"</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {filtered.map(acct => {
+                  const sel = selectedNames.has(acct.name)
+                  return (
+                    <button
+                      key={acct.name}
+                      onClick={() => onToggle(acct.name)}
+                      className={`flex items-center gap-2 px-3 py-2 rounded-2xl border text-sm font-medium
+                        transition-all duration-100 active:scale-[0.94] ${
+                        sel
+                          ? 'bg-primary/15 border-primary/50 text-primary'
+                          : 'bg-white/[0.04] border-white/[0.08] text-slate-300'
+                      }`}
+                    >
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
+                      {acct.name}
+                      {sel && <span className="text-[10px]">✓</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <>
+            {/* Cash — locked */}
+            <div>
+              <OnbSectionLabel>Always included</OnbSectionLabel>
+              <div className="flex flex-wrap gap-2">
+                <span className="flex items-center gap-2 px-3 py-2 rounded-2xl
+                  bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-sm font-medium">
+                  <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                  Cash
+                  <span className="text-[10px] opacity-70">✓</span>
+                </span>
+              </div>
+            </div>
+
+            {/* Popular */}
+            <div>
+              <OnbSectionLabel>Popular</OnbSectionLabel>
+              <div
+                className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+              >
+                {POPULAR_ACCOUNTS.map(acct => {
+                  const sel = selectedNames.has(acct.name)
+                  return (
+                    <button
+                      key={acct.name}
+                      onClick={() => onToggle(acct.name)}
+                      className={`shrink-0 flex flex-col gap-0.5 px-4 py-3 rounded-2xl border text-left
+                        transition-all duration-100 active:scale-[0.96] min-w-[100px] ${
+                        sel
+                          ? 'bg-primary/15 border-primary/50'
+                          : 'bg-white/[0.04] border-white/[0.09]'
+                      }`}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: acct.color }} />
+                      <span className={`text-sm font-semibold mt-2 leading-tight ${sel ? 'text-primary' : 'text-white'}`}>
+                        {acct.name}
+                      </span>
+                      {sel && <span className="text-[10px] text-primary/70">✓ Selected</span>}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* PH account groups */}
+            {PH_GROUPS.map(group => (
+              <div key={group}>
+                <OnbSectionLabel>{group}</OnbSectionLabel>
+                <div className="flex flex-wrap gap-2">
+                  {PH_ACCOUNTS.filter(a => a.group === group).map(acct => {
+                    const sel = selectedNames.has(acct.name)
+                    return (
+                      <button
+                        key={acct.name}
+                        onClick={() => onToggle(acct.name)}
+                        className={`flex items-center gap-2 px-3 py-2 rounded-2xl border text-sm font-medium
+                          transition-all duration-100 active:scale-[0.94] ${
+                          sel
+                            ? 'bg-primary/15 border-primary/50 text-primary'
+                            : 'bg-white/[0.04] border-white/[0.08] text-slate-300'
+                        }`}
+                      >
+                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
+                        {acct.name}
+                        {sel && <span className="text-[10px]">✓</span>}
+                      </button>
+                    )
+                  })}
+                </div>
+              </div>
+            ))}
+
+            {/* Custom accounts added */}
+            {customAccounts.length > 0 && (
+              <div>
+                <OnbSectionLabel>Custom</OnbSectionLabel>
+                <div className="flex flex-wrap gap-2">
+                  {customAccounts.map(acct => (
+                    <span key={acct.name}
+                      className="flex items-center gap-2 pl-3 pr-1.5 py-2 rounded-2xl
+                        bg-primary/15 border border-primary/50 text-primary text-sm font-medium">
+                      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
+                      {acct.name}
+                      <button
+                        onClick={() => onRemoveCustom(acct.name)}
+                        className="ml-0.5 w-5 h-5 rounded-full flex items-center justify-center
+                          bg-primary/20 text-primary/70 active:bg-primary/35 transition-colors shrink-0"
+                        aria-label={`Remove ${acct.name}`}
+                      >
+                        <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                          <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
+                        </svg>
+                      </button>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={() => { setCustomName(''); setCustomType('bank'); setCustomColor(COLOR_SWATCHES[0]); setShowCustomForm(true) }}
+              className="flex items-center gap-2 text-sm text-slate-500 active:text-slate-300 transition-colors active:scale-95"
+            >
+              <span className="w-6 h-6 rounded-full border border-white/[0.12] flex items-center justify-center text-xs">+</span>
+              Add custom account
+            </button>
+          </>
+        )}
       </div>
 
       {/* Custom account modal */}
       {showCustomForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
-          <div
-            className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => setShowCustomForm(false)}
-          />
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCustomForm(false)} />
           <div className="relative w-full max-w-sm bg-[#1a2130] border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
             <div>
               <h3 className="text-base font-semibold text-white">Custom Account</h3>
               <p className="text-xs text-slate-500 mt-0.5">Name, type, and color.</p>
             </div>
-
             <input
               type="text"
               value={customName}
@@ -310,10 +405,8 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
               autoFocus
               maxLength={40}
               className="w-full bg-white/[0.06] border border-white/[0.10] rounded-2xl px-4 py-3
-                text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-primary/60
-                transition-colors"
+                text-white text-sm placeholder:text-slate-600 focus:outline-none focus:border-primary/60 transition-colors"
             />
-
             <div className="grid grid-cols-4 gap-1.5">
               {CUSTOM_TYPES.map(t => (
                 <button
@@ -321,7 +414,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                   onClick={() => setCustomType(t.value)}
                   className={`py-2 rounded-xl text-xs font-semibold transition-all duration-100 ${
                     customType === t.value
-                      ? 'bg-primary text-white shadow-[0_2px_8px_rgba(45,157,255,0.4)]'
+                      ? 'bg-primary text-white shadow-[0_2px_8px_rgba(var(--color-primary-rgb),0.4)]'
                       : 'bg-white/[0.06] text-slate-400 border border-white/[0.08]'
                   }`}
                 >
@@ -329,8 +422,6 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                 </button>
               ))}
             </div>
-
-            {/* Color picker */}
             <div>
               <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2.5">Color</p>
               <div className="flex gap-2.5">
@@ -342,21 +433,17 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                     style={{ backgroundColor: c }}
                   >
                     {customColor === c && (
-                      <span className="absolute inset-0 flex items-center justify-center">
-                        <span className="w-2.5 h-2.5 rounded-full bg-white/90 shadow-sm" />
-                      </span>
-                    )}
-                    {customColor === c && (
-                      <span
-                        className="absolute inset-0 rounded-full"
-                        style={{ boxShadow: `0 0 0 2px ${c}, 0 0 0 4px ${c}88` }}
-                      />
+                      <>
+                        <span className="absolute inset-0 flex items-center justify-center">
+                          <span className="w-2.5 h-2.5 rounded-full bg-white/90 shadow-sm" />
+                        </span>
+                        <span className="absolute inset-0 rounded-full" style={{ boxShadow: `0 0 0 2px ${c}, 0 0 0 4px ${c}88` }} />
+                      </>
                     )}
                   </button>
                 ))}
               </div>
             </div>
-
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setShowCustomForm(false)}
@@ -369,8 +456,8 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                 onClick={addCustom}
                 disabled={!customName.trim()}
                 className="flex-[2] py-3 rounded-2xl text-sm font-semibold text-white
-                  bg-primary disabled:opacity-40 disabled:shadow-none
-                  shadow-[0_4px_16px_rgba(45,157,255,0.4)]
+                  bg-primary disabled:opacity-40
+                  shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.4)]
                   active:scale-[0.98] transition-all duration-100"
               >
                 Add Account
@@ -384,7 +471,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
         <button
           onClick={onNext}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(45,157,255,0.45)] active:scale-[0.98] transition-all duration-100"
+            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
         >
           Continue ({totalSelected} {totalSelected === 1 ? 'account' : 'accounts'}) →
         </button>
@@ -407,7 +494,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
       </div>
 
       {/* Ledger list — no cards, just rows divided by hairlines */}
-      <div className="flex-1 overflow-y-auto pb-2" style={{ scrollbarWidth: 'none' }}>
+      <div className="flex-1 overflow-y-auto pb-2 no-scrollbar">
         <div className="divide-y divide-white/[0.06]">
           {allAccounts.map(acct => {
             const isCredit = acct.type === 'credit'
@@ -497,7 +584,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
         <button
           onClick={onNext}
           className="flex-[2] py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(45,157,255,0.45)] active:scale-[0.98] transition-all duration-100"
+            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
         >
           Continue →
         </button>
@@ -707,7 +794,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
                 disabled={!customName.trim()}
                 className="flex-[2] py-3 rounded-2xl text-sm font-semibold text-white
                   bg-primary disabled:opacity-40 disabled:shadow-none
-                  shadow-[0_4px_16px_rgba(45,157,255,0.4)]
+                  shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.4)]
                   active:scale-[0.98] transition-all duration-100"
               >
                 Add Category
@@ -721,7 +808,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
         <button
           onClick={onNext}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(45,157,255,0.45)] active:scale-[0.98] transition-all duration-100"
+            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
         >
           Continue ({totalSelected} {totalSelected === 1 ? 'category' : 'categories'}) →
         </button>
@@ -916,7 +1003,7 @@ export default function Onboarding() {
   const TOTAL_NON_WELCOME_STEPS = 7
 
   return (
-    <div className="min-h-screen text-white relative flex flex-col">
+    <div className="h-dvh text-white relative flex flex-col overflow-hidden">
 
       {/* Top bar: back + step dots */}
       <div

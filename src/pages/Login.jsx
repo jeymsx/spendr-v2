@@ -56,7 +56,7 @@ export default function Login() {
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div
           className="absolute -top-40 -left-24 w-96 h-96 rounded-full opacity-[0.15] dark:opacity-[0.20]"
-          style={{ background: 'radial-gradient(circle, #2D9DFF 0%, transparent 70%)' }}
+          style={{ background: 'radial-gradient(circle, var(--color-primary) 0%, transparent 70%)' }}
         />
         <div
           className="absolute -bottom-24 -right-16 w-80 h-80 rounded-full opacity-[0.10] dark:opacity-[0.15]"
@@ -70,7 +70,7 @@ export default function Login() {
         <div className="flex flex-col items-center mb-10">
           <div
             className="w-[72px] h-[72px] rounded-[22px] bg-primary flex items-center justify-center mb-5
-              shadow-[0_12px_40px_rgba(45,157,255,0.50)]"
+              shadow-[0_12px_40px_rgba(var(--color-primary-rgb),0.50)]"
           >
             <span className="text-white text-[34px] font-semibold tracking-tighter leading-none">S</span>
           </div>
@@ -98,7 +98,7 @@ export default function Login() {
             className="w-full flex items-center justify-center gap-3
               py-3.5 rounded-2xl text-sm font-semibold
               bg-primary text-white
-              shadow-[0_4px_20px_rgba(45,157,255,0.40)]
+              shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.40)]
               disabled:opacity-50 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >

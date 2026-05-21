@@ -1,8 +1,9 @@
 ﻿import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCycleRange, getNextCycleRange } from '../utils/creditCycle'
-import { PH_ACCOUNTS, PH_GROUPS, TYPE_ICON } from '../lib/phAccounts'
+import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON } from '../lib/phAccounts'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -205,11 +206,20 @@ function inputClass(error = false) {
 
 // ── Summary bar ────────────────────────────────────────────────────────────────
 
-function SummaryBar({ summary, hidden, onToggleHide }) {
+function cardGradient(accentColor, theme) {
+  const isBlue = accentColor === '#2D9DFF'
+  const isDark = theme === 'dark'
+  if (isBlue  && isDark)  return 'linear-gradient(135deg, #0d47a1 0%, #1565c0 35%, #2196f3 70%, #42a5f5 100%)'
+  if (isBlue  && !isDark) return 'linear-gradient(135deg, #1565c0 0%, #1e88e5 45%, #64b5f6 100%)'
+  if (!isBlue && isDark)  return 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 28%, black) 0%, color-mix(in srgb, var(--color-primary) 48%, black) 40%, color-mix(in srgb, var(--color-primary) 75%, black) 100%)'
+  return 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 52%, black) 0%, color-mix(in srgb, var(--color-primary) 80%, black) 50%, var(--color-primary) 100%)'
+}
+
+function SummaryBar({ summary, hidden, onToggleHide, accentColor, theme }) {
   return (
     <div
       className="mx-5 mb-6 rounded-3xl p-5 relative overflow-hidden"
-      style={{ background: 'linear-gradient(135deg, #0d47a1 0%, #1565c0 35%, #2196f3 70%, #42a5f5 100%)' }}
+      style={{ background: cardGradient(accentColor, theme) }}
     >
       <div
         className="absolute inset-0 opacity-20 pointer-events-none"
@@ -316,11 +326,73 @@ function AccountCard({ acct, hidden, onTap, stmt }) {
   )
 }
 
-// ── Quick-add sheet (PH accounts grid) ────────────────────────────────────────
+// ── Quick-add sheet helpers ────────────────────────────────────────────────────
+
+const RECENT_PRESETS_KEY = 'recentAccountPresets'
+
+function getRecentPresets() {
+  try { return JSON.parse(localStorage.getItem(RECENT_PRESETS_KEY) ?? '[]') } catch { return [] }
+}
+function pushRecentPreset(name) {
+  const next = [name, ...getRecentPresets().filter(n => n !== name)].slice(0, 5)
+  try { localStorage.setItem(RECENT_PRESETS_KEY, JSON.stringify(next)) } catch {}
+}
+
+const TYPE_LABEL_SHORT = { ewallet: 'E-Wallet', bank: 'Bank', credit: 'Credit Card', cash: 'Cash', savings: 'Savings' }
+
+function QASectionLabel({ children }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-2.5">
+      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 shrink-0">
+        {children}
+      </span>
+      <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.06]" />
+    </div>
+  )
+}
+
+function AccountChip({ acct, onPick }) {
+  return (
+    <button
+      onClick={() => onPick(acct)}
+      className="flex items-center gap-2 px-3 py-2 rounded-2xl border text-sm font-medium
+        bg-white dark:bg-white/[0.04] text-slate-700 dark:text-slate-200
+        active:scale-[0.94] transition-all duration-75"
+      style={{ borderColor: `${acct.color}40` }}
+    >
+      <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
+      {acct.name}
+    </button>
+  )
+}
+
+function PopularCard({ acct, onPick }) {
+  return (
+    <button
+      onClick={() => onPick(acct)}
+      className="shrink-0 flex flex-col gap-0.5 px-4 py-3 rounded-2xl border text-left
+        bg-white dark:bg-white/[0.05] min-w-[108px]
+        active:scale-[0.96] transition-all duration-75"
+      style={{ borderColor: `${acct.color}45` }}
+    >
+      <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: acct.color }} />
+      <span className="text-sm font-semibold text-slate-800 dark:text-white mt-2 leading-tight">{acct.name}</span>
+      <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{TYPE_LABEL_SHORT[acct.type]}</span>
+    </button>
+  )
+}
+
+// ── Quick-add sheet ────────────────────────────────────────────────────────────
 
 function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
-  const [closing, setClosing] = useState(false)
+  const [closing,     setClosing]     = useState(false)
+  const [query,       setQuery]       = useState('')
+  const [recentNames, setRecentNames] = useState([])
   useScrollLock(open)
+
+  useEffect(() => {
+    if (open) { setQuery(''); setRecentNames(getRecentPresets()) }
+  }, [open])
 
   const close = useCallback(() => {
     setClosing(true)
@@ -336,67 +408,158 @@ function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [open])
 
+  function pick(acct) {
+    pushRecentPreset(acct.name)
+    close()
+    setTimeout(() => onPickPreset(acct), 260)
+  }
+
+  const q        = query.toLowerCase().trim()
+  const filtered = q ? PH_ACCOUNTS.filter(a => a.name.toLowerCase().includes(q)) : null
+  const recents  = recentNames.map(n => PH_ACCOUNTS.find(a => a.name === n)).filter(Boolean)
+
   if (!open && !closing) return null
 
   return (
     <div className="fixed inset-0 z-[100]">
+      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
       <div
-        className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={close}
-      />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]',
-          'flex flex-col',
-        ].join(' ')}
-        style={{
-          maxHeight: '88dvh',
-          paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
-        }}
+        className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0
+          rounded-t-[28px] overflow-hidden
+          bg-white dark:bg-[#111820]
+          border-t border-slate-100 dark:border-white/[0.07]
+          flex flex-col`}
+        style={{ maxHeight: '88dvh' }}
       >
+        {/* Header */}
         <div className="pt-4 px-5 pb-3 shrink-0">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <h2 className="text-base font-semibold text-slate-800 dark:text-white">Add Account</h2>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Tap to add from common accounts, or add a custom one.</p>
-        </div>
-
-        <div className="overflow-y-auto flex-1 px-5 pb-3 space-y-5">
-          {PH_GROUPS.map(group => (
-            <div key={group}>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2.5">{group}</p>
-              <div className="flex flex-wrap gap-2">
-                {PH_ACCOUNTS.filter(a => a.group === group).map(acct => (
-                  <button
-                    key={acct.name}
-                    onClick={() => { close(); setTimeout(() => onPickPreset(acct), 260) }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-medium
-                      bg-white dark:bg-white/[0.04]
-                      border-slate-200/80 dark:border-white/[0.08]
-                      text-slate-700 dark:text-slate-300
-                      active:bg-slate-50 dark:active:bg-white/[0.08]
-                      active:scale-95 transition-all duration-100"
-                  >
-                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
-                    {acct.name}
-                  </button>
-                ))}
-              </div>
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-base font-semibold text-slate-800 dark:text-white">Add Account</h2>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Select a preset or create a custom one</p>
             </div>
-          ))}
+            <button
+              onClick={close}
+              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.08]
+                flex items-center justify-center text-slate-500 dark:text-slate-400
+                active:bg-slate-200 dark:active:bg-white/[0.14] transition-colors"
+            >
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="1" y1="1" x2="11" y2="11"/><line x1="11" y1="1" x2="1" y2="11"/>
+              </svg>
+            </button>
+          </div>
         </div>
 
-        <div className="px-5 pt-3 shrink-0">
+        {/* Search */}
+        <div className="px-5 pb-3 shrink-0">
+          <div className="relative">
+            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500"
+              width="14" height="14" viewBox="0 0 20 20" fill="none">
+              <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.8"/>
+              <path d="M14.5 14.5L18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+            <input
+              value={query}
+              onChange={e => setQuery(e.target.value)}
+              placeholder="Search accounts…"
+              className="w-full h-10 pl-9 pr-8 rounded-2xl text-sm
+                bg-slate-100 dark:bg-white/[0.07]
+                text-slate-800 dark:text-slate-200
+                placeholder:text-slate-400 dark:placeholder:text-slate-600
+                border border-slate-200/60 dark:border-white/[0.08]
+                focus:outline-none focus:border-primary/40 transition-colors"
+            />
+            {query && (
+              <button
+                onClick={() => setQuery('')}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
+                  bg-slate-300/80 dark:bg-white/[0.15] flex items-center justify-center
+                  text-slate-600 dark:text-slate-300 active:opacity-70"
+              >
+                <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                  <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
+                </svg>
+              </button>
+            )}
+          </div>
+        </div>
+
+        {/* Scrollable content */}
+        <div className="overflow-y-auto flex-1 px-5" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+          {filtered ? (
+            /* ── Search results ── */
+            <div className="pb-4">
+              {filtered.length === 0 ? (
+                <div className="py-12 text-center">
+                  <p className="text-sm text-slate-400 dark:text-slate-500">No results for "{query}"</p>
+                  <button
+                    onClick={() => { close(); setTimeout(onCustom, 260) }}
+                    className="mt-3 text-xs font-semibold text-primary active:opacity-70"
+                  >
+                    + Create custom account
+                  </button>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {filtered.map(acct => <AccountChip key={acct.name} acct={acct} onPick={pick} />)}
+                </div>
+              )}
+            </div>
+          ) : (
+            /* ── Browse ── */
+            <div className="pb-4 space-y-5">
+              {recents.length > 0 && (
+                <div>
+                  <QASectionLabel>Recent</QASectionLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {recents.map(acct => <AccountChip key={acct.name} acct={acct} onPick={pick} />)}
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <QASectionLabel>Popular</QASectionLabel>
+                <div
+                  className="flex gap-2.5 overflow-x-auto pb-1 -mx-5 px-5 no-scrollbar"
+                >
+                  {POPULAR_ACCOUNTS.map(acct => <PopularCard key={acct.name} acct={acct} onPick={pick} />)}
+                </div>
+              </div>
+
+              {PH_GROUPS.map(group => (
+                <div key={group}>
+                  <QASectionLabel>{group}</QASectionLabel>
+                  <div className="flex flex-wrap gap-2">
+                    {PH_ACCOUNTS.filter(a => a.group === group).map(acct => (
+                      <AccountChip key={acct.name} acct={acct} onPick={pick} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Custom account footer */}
+        <div
+          className="px-5 pt-3 shrink-0 border-t border-slate-100 dark:border-white/[0.06]"
+          style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+        >
           <button
             onClick={() => { close(); setTimeout(onCustom, 260) }}
-            className="w-full py-3.5 rounded-2xl text-sm font-semibold
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold
               text-slate-600 dark:text-slate-300
               bg-slate-100 dark:bg-white/[0.06]
               border border-slate-200/60 dark:border-white/[0.08]
               active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
           >
-            + Custom account
+            <span className="w-5 h-5 rounded-full bg-slate-300 dark:bg-white/[0.15]
+              flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-white">
+              +
+            </span>
+            Custom Account
           </button>
         </div>
       </div>
@@ -407,6 +570,7 @@ function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function Accounts() {
+  const { accentColor, theme } = useTheme()
   const [balanceHidden,   setBalanceHidden]   = useState(false)
   const [editingAccount,  setEditingAccount]  = useState(null)
   const [formOpen,        setFormOpen]        = useState(false)
@@ -487,7 +651,7 @@ export default function Accounts() {
         <button
           onClick={openAdd}
           className="flex items-center gap-1.5 pl-3 pr-4 h-9 rounded-2xl text-sm font-semibold
-            bg-primary text-white shadow-[0_4px_16px_rgba(45,157,255,0.4)]
+            bg-primary text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.4)]
             active:scale-95 transition-transform duration-100"
         >
           <IconPlus />
@@ -500,6 +664,8 @@ export default function Accounts() {
         summary={summary}
         hidden={balanceHidden}
         onToggleHide={() => setBalanceHidden(h => !h)}
+        accentColor={accentColor}
+        theme={theme}
       />
 
       {/* ── Empty state ── */}
@@ -532,7 +698,7 @@ export default function Accounts() {
             className="mx-5 rounded-2xl overflow-hidden
               bg-white border border-slate-100
               dark:bg-primary/[0.07] dark:border-primary/[0.14]
-              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.08)]"
+              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]"
           >
             {group.accounts.map((acct, i) => (
               <div key={acct.id}>
@@ -798,7 +964,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                       className={[
                         'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
                         type === o.value
-                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(45,157,255,0.4)]'
+                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
                       ].join(' ')}
                     >
@@ -824,7 +990,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                       className={[
                         'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-75 active:scale-95',
                         role === o.value
-                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(45,157,255,0.35)]'
+                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
                       ].join(' ')}
                     >
@@ -961,7 +1127,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 onClick={handleSave}
                 disabled={saving}
                 className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                  bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
                   disabled:opacity-40 disabled:shadow-none
                   active:scale-[0.98] transition-all duration-100"
               >

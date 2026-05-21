@@ -1,6 +1,11 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
 
+:root {
+  --color-primary: #2D9DFF;
+  --color-primary-rgb: 45, 157, 255;
+}
+
 /* ── Base ─────────────────────────────────────────────── */
 *,
 *::before,
@@ -15,7 +20,7 @@ html {
 }
 
 /* Fixed gradient layer — always viewport-pinned, never scrolls or clips */
-html.dark::before {
+html.dark.accent-blue::before {
   content: '';
   position: fixed;
   inset: 0;
@@ -23,13 +28,32 @@ html.dark::before {
   pointer-events: none;
   background:
     radial-gradient(130% 90% at 50% -10%,
-      rgba(120, 180, 255, 0.22),
-      rgba(120, 180, 255, 0.12) 35%,
-      rgba(120, 180, 255, 0.05) 45%,
+      rgba(var(--color-primary-rgb), 0.13),
+      rgba(var(--color-primary-rgb), 0.07) 35%,
+      rgba(var(--color-primary-rgb), 0.02) 45%,
       transparent 85%),
     radial-gradient(110% 90% at 70% 90%,
-      rgba(45, 157, 255, 0.18),
-      rgba(45, 157, 255, 0.08) 55%,
+      rgba(var(--color-primary-rgb), 0.10),
+      rgba(var(--color-primary-rgb), 0.04) 55%,
+      rgba(11, 15, 20, 0.85) 80%,
+      #0b0f14 85%);
+}
+
+html.dark.accent-custom::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 90% at 50% -10%,
+      rgba(var(--color-primary-rgb), 0.06),
+      rgba(var(--color-primary-rgb), 0.03) 35%,
+      rgba(var(--color-primary-rgb), 0.01) 45%,
+      transparent 85%),
+    radial-gradient(110% 90% at 70% 90%,
+      rgba(var(--color-primary-rgb), 0.05),
+      rgba(var(--color-primary-rgb), 0.02) 55%,
       rgba(11, 15, 20, 0.85) 80%,
       #0b0f14 85%);
 }
@@ -65,10 +89,10 @@ html.dark body {
 }
 
 .dark .glass-card {
-  background: rgba(45, 157, 255, 0.07);
+  background: rgba(var(--color-primary-rgb), 0.07);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(45, 157, 255, 0.18);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.18);
   box-shadow: 0 4px 32px rgba(0, 0, 0, 0.3);
 }
 
@@ -85,7 +109,7 @@ html.dark body {
   background: rgba(40, 60, 95, 0.2);
   backdrop-filter: blur(10px) saturate(140%);
   -webkit-backdrop-filter: blur(10px) saturate(140%);
-  border: 1px solid rgba(120, 160, 255, 0.10);
+  border: 1px solid rgba(var(--color-primary-rgb), 0.10);
   box-shadow:
     0 4px 16px rgba(0, 0, 0, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
@@ -142,9 +166,11 @@ html.dark body {
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(45, 157, 255, 0.25);
+  background: rgba(var(--color-primary-rgb), 0.25);
   border-radius: 9999px;
 }
+.no-scrollbar { scrollbar-width: none; }
+.no-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* ── Safe-area helpers ────────────────────────────────── */
 .safe-top    { padding-top:    env(safe-area-inset-top,    0px); }

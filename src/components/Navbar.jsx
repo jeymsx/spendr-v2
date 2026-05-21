@@ -61,7 +61,7 @@ function Tab({ path, label, Icon }) {
     <NavLink
       to={path}
       className="flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors duration-150"
-      style={{ color: active ? '#2D9DFF' : undefined }}
+      style={{ color: active ? 'var(--color-primary)' : undefined }}
     >
       <span className={active ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}>
         <Icon active={active} />
@@ -88,7 +88,7 @@ export default function Navbar({ onAddClick }) {
         'dark:bg-navy/90 dark:border-white/[0.06]',
         'backdrop-filter backdrop-blur-xl',
       ].join(' ')}
-      style={{ paddingTop: '8px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
+      style={{ paddingTop: '8px', paddingBottom: '8px' }}
     >
       {/* left tabs */}
       {LEFT_TABS.map(t => (
@@ -106,7 +106,7 @@ export default function Navbar({ onAddClick }) {
             'active:scale-95 transition-transform duration-100',
             'border-4 border-white dark:border-navy',
           ].join(' ')}
-          style={{ background: 'linear-gradient(135deg, #42a5f5 0%, #2D9DFF 50%, #1565c0 100%)' }}
+          style={{ background: 'var(--color-primary)' }}
         >
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round">
             <line x1="12" y1="5" x2="12" y2="19" />

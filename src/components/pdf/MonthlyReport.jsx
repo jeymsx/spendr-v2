@@ -1,10 +1,57 @@
 import { Document, Page, View, Text, StyleSheet, Svg, Rect } from '@react-pdf/renderer'
 
+// ── Color helpers ──────────────────────────────────────────────────────────────
+
+function hexToRgb(hex) {
+  const h = hex.replace('#', '')
+  return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]
+}
+
+function rgbToHex(r, g, b) {
+  return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('')
+}
+
+function blendWithWhite(hex, t) {
+  const [r,g,b] = hexToRgb(hex)
+  return rgbToHex(r*t+255*(1-t), g*t+255*(1-t), b*t+255*(1-t))
+}
+
+function darken(hex, t) {
+  const [r,g,b] = hexToRgb(hex)
+  return rgbToHex(r*(1-t), g*(1-t), b*(1-t))
+}
+
+function luminance(hex) {
+  return hexToRgb(hex).map(v => {
+    const s = v / 255
+    return s <= 0.03928 ? s / 12.92 : Math.pow((s + 0.055) / 1.055, 2.4)
+  }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0)
+}
+
+function darkenForWhiteText(hex) {
+  const [r, g, b] = hexToRgb(hex)
+  let factor = 1
+  while (factor > 0.05) {
+    const lum = luminance(rgbToHex(r * factor, g * factor, b * factor))
+    if (1.05 / (lum + 0.05) >= 4.5) break
+    factor -= 0.05
+  }
+  return rgbToHex(r * factor, g * factor, b * factor)
+}
+
+function computePdfColors(accentHex) {
+  const primary = darkenForWhiteText(accentHex)
+  return {
+    primary,
+    primaryDark: darken(primary, 0.18),
+    lightBg:     blendWithWhite(primary, 0.15),
+    borderTint:  blendWithWhite(primary, 0.35),
+    bgTint:      blendWithWhite(primary, 0.08),
+  }
+}
+
 // ── Design tokens ──────────────────────────────────────────────────────────────
 
-const PRIMARY        = '#2D9DFF'
-const PRIMARY_DARK   = '#1a7fd4'
-const LIGHT_BLUE_BG  = '#dbeafe'
 const BORDER         = '#e2e8f0'
 const RED            = '#ef4444'
 const GREEN          = '#22c55e'
@@ -36,12 +83,12 @@ const styles = StyleSheet.create({
     backgroundColor: WHITE,
   },
 
-  // Header bar
+  // Header bar (backgroundColor overridden inline with accent)
   headerBar: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: PRIMARY,
+    backgroundColor: '#2D9DFF',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 6,
@@ -97,9 +144,9 @@ const styles = StyleSheet.create({
     fontSize: 11,
   },
 
-  // Section header
+  // Section header (backgroundColor + text color overridden inline with accent)
   sectionHeader: {
-    backgroundColor: LIGHT_BLUE_BG,
+    backgroundColor: '#dbeafe',
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 4,
@@ -108,7 +155,7 @@ const styles = StyleSheet.create({
   sectionHeaderText: {
     fontFamily: 'Helvetica-Bold',
     fontSize: 8,
-    color: PRIMARY_DARK,
+    color: '#1a7fd4',
     textTransform: 'uppercase',
   },
 
@@ -214,9 +261,9 @@ function ReportFooter({ monthName, year }) {
 
 // ── Header bar component ───────────────────────────────────────────────────────
 
-function HeaderBar({ subtitle }) {
+function HeaderBar({ subtitle, colors }) {
   return (
-    <View style={styles.headerBar}>
+    <View style={[styles.headerBar, { backgroundColor: colors.primary }]}>
       <Text style={styles.headerBarTitle}>Spendr</Text>
       <Text style={styles.headerBarSub}>{subtitle}</Text>
     </View>
@@ -225,7 +272,7 @@ function HeaderBar({ subtitle }) {
 
 // ── Page 1: Cover & Summary ────────────────────────────────────────────────────
 
-function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth }) {
+function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, colors }) {
   const monthName = MONTH_NAMES[month - 1]
   const { totalIncome, totalExpenses, netSavings, savingsRate } = summary
 
@@ -236,7 +283,7 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
 
   return (
     <Page size="A4" style={styles.page}>
-      <HeaderBar subtitle="MONTHLY REPORT" />
+      <HeaderBar subtitle="MONTHLY REPORT" colors={colors} />
 
       {/* Month + username */}
       <Text style={styles.pageTitle}>{monthName} {year}</Text>
@@ -256,15 +303,15 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
           <Text style={styles.summaryLabel}>Net Savings</Text>
           <Text style={[styles.summaryValue, { color: savingsPositive ? GREEN : RED }]}>{fmt(netSavings)}</Text>
         </View>
-        <View style={[styles.summaryCard, styles.summaryCardLast, { borderColor: '#bfdbfe', backgroundColor: '#eff6ff' }]}>
+        <View style={[styles.summaryCard, styles.summaryCardLast, { borderColor: colors.borderTint, backgroundColor: colors.bgTint }]}>
           <Text style={styles.summaryLabel}>Savings Rate</Text>
-          <Text style={[styles.summaryValue, { color: PRIMARY }]}>{savingsRate.toFixed(1)}%</Text>
+          <Text style={[styles.summaryValue, { color: colors.primary }]}>{savingsRate.toFixed(1)}%</Text>
         </View>
       </View>
 
       {/* Account Balances */}
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>Account Balances</Text>
+      <View style={[styles.sectionHeader, { backgroundColor: colors.lightBg }]}>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>Account Balances</Text>
       </View>
 
       {/* Table header */}
@@ -292,7 +339,7 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
                 balanceUsed = 0, available = 0, usedPct = 0, limit = 0,
                 dueDate = '—', minimumPayment = 0 } = det
         const barFill = Math.max((usedPct / 100) * 450, 0)
-        const usedColor = usedPct >= 90 ? RED : usedPct >= 70 ? '#f59e0b' : PRIMARY
+        const usedColor = usedPct >= 90 ? RED : usedPct >= 70 ? '#f59e0b' : colors.primary
 
         return (
           <View key={acct.id ?? i} style={{ marginTop: 6, borderWidth: 1, borderColor: BORDER, borderRadius: 6, overflow: 'hidden' }}>
@@ -357,8 +404,8 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
       )}
 
       {/* Net Worth section header */}
-      <View style={[styles.sectionHeader, { marginTop: 14 }]}>
-        <Text style={styles.sectionHeaderText}>Overall Financial Position</Text>
+      <View style={[styles.sectionHeader, { marginTop: 14, backgroundColor: colors.lightBg }]}>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>Overall Financial Position</Text>
       </View>
 
       {/* Net Worth row */}
@@ -374,9 +421,9 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
             <Text style={[{ fontSize: 7, color: MUTED, marginTop: 2 }]}>of {fmt(totalCreditLimit)} limit</Text>
           )}
         </View>
-        <View style={[styles.netWorthCard, styles.netWorthCardLast, { backgroundColor: '#eff6ff', borderWidth: 1, borderColor: '#bfdbfe' }]}>
-          <Text style={[styles.netWorthLabel, { color: PRIMARY }]}>Net Worth</Text>
-          <Text style={[styles.netWorthValue, { color: netWorth >= 0 ? PRIMARY : RED }]}>{fmt(netWorth)}</Text>
+        <View style={[styles.netWorthCard, styles.netWorthCardLast, { backgroundColor: colors.bgTint, borderWidth: 1, borderColor: colors.borderTint }]}>
+          <Text style={[styles.netWorthLabel, { color: colors.primary }]}>Net Worth</Text>
+          <Text style={[styles.netWorthValue, { color: netWorth >= 0 ? colors.primary : RED }]}>{fmt(netWorth)}</Text>
         </View>
       </View>
 
@@ -387,17 +434,17 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
 
 // ── Page 2: Spending Breakdown ─────────────────────────────────────────────────
 
-function SpendingPage({ year, month, summary, categoryBreakdown }) {
+function SpendingPage({ year, month, summary, categoryBreakdown, colors }) {
   const monthName = MONTH_NAMES[month - 1]
   const { totalExpenses } = summary
   const BAR_MAX_WIDTH = 400
 
   return (
     <Page size="A4" style={styles.page}>
-      <HeaderBar subtitle="SPENDING BREAKDOWN" />
+      <HeaderBar subtitle="SPENDING BREAKDOWN" colors={colors} />
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>Spending by Category — {monthName} {year}</Text>
+      <View style={[styles.sectionHeader, { backgroundColor: colors.lightBg }]}>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>Spending by Category — {monthName} {year}</Text>
       </View>
 
       {categoryBreakdown.length === 0 ? (
@@ -496,7 +543,7 @@ function weekGroupLabel(group, year, month) {
   return `${monthName} ${s}–${e}`
 }
 
-function TransactionsPage({ year, month, transactions }) {
+function TransactionsPage({ year, month, transactions, colors }) {
   const monthName = MONTH_NAMES[month - 1]
 
   // Group by week
@@ -515,10 +562,10 @@ function TransactionsPage({ year, month, transactions }) {
 
   return (
     <Page size="A4" style={styles.page}>
-      <HeaderBar subtitle="TRANSACTION LIST" />
+      <HeaderBar subtitle="TRANSACTION LIST" colors={colors} />
 
-      <View style={styles.sectionHeader}>
-        <Text style={styles.sectionHeaderText}>All Transactions — {monthName} {year}</Text>
+      <View style={[styles.sectionHeader, { backgroundColor: colors.lightBg }]}>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>All Transactions — {monthName} {year}</Text>
       </View>
 
       {transactions.length === 0 ? (
@@ -601,7 +648,10 @@ export default function MonthlyReport(props) {
     netWorth,
     categoryBreakdown,
     transactions,
+    accentColor = '#2D9DFF',
   } = props
+
+  const colors = computePdfColors(accentColor)
 
   return (
     <Document
@@ -620,17 +670,20 @@ export default function MonthlyReport(props) {
         totalCreditUsed={totalCreditUsed}
         totalCreditLimit={totalCreditLimit}
         netWorth={netWorth}
+        colors={colors}
       />
       <SpendingPage
         year={year}
         month={month}
         summary={summary}
         categoryBreakdown={categoryBreakdown}
+        colors={colors}
       />
       <TransactionsPage
         year={year}
         month={month}
         transactions={transactions}
+        colors={colors}
       />
     </Document>
   )

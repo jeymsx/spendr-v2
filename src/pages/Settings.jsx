@@ -38,6 +38,17 @@ const CAT_COLORS = [
 
 const DEFAULT_CAT_NAMES = new Set(['Others', 'Income', 'Transfer', 'Transfer Fee'])
 
+const ACCENT_COLORS = [
+  { hex: '#2D9DFF', name: 'Blue'   },
+  { hex: '#845EF7', name: 'Purple' },
+  { hex: '#F06595', name: 'Pink'   },
+  { hex: '#51CF66', name: 'Green'  },
+  { hex: '#20C997', name: 'Teal'   },
+  { hex: '#FFB347', name: 'Orange' },
+  { hex: '#FF6B6B', name: 'Red'    },
+  { hex: '#FCC419', name: 'Yellow' },
+]
+
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -426,7 +437,7 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
                   className={[
                     'py-3 px-4 rounded-2xl text-left transition-all duration-75 active:scale-[0.97]',
                     currency === c.code
-                      ? 'bg-primary text-white shadow-[0_2px_10px_rgba(45,157,255,0.4)]'
+                      ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
                       : 'bg-slate-100 dark:bg-white/[0.07] text-slate-700 dark:text-slate-300',
                   ].join(' ')}
                 >
@@ -454,7 +465,7 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
               onClick={handleSave}
               disabled={saving}
               className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+                bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
                 disabled:opacity-40 disabled:shadow-none
                 active:scale-[0.98] transition-all duration-100"
             >
@@ -838,7 +849,7 @@ function CategoryManagerSheet({ open, onClose }) {
         <div
           className={[
             closing ? 'sheet-panel-exit' : 'sheet-panel',
-            'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+            'absolute bottom-0 inset-x-0 rounded-t-[28px] overflow-hidden',
             'bg-slate-50 dark:bg-[#0d1117]',
             'border-t border-slate-100 dark:border-white/[0.07]',
             'max-h-[92vh] flex flex-col',
@@ -863,7 +874,7 @@ function CategoryManagerSheet({ open, onClose }) {
                   className={[
                     'flex-1 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-100',
                     activeTab === tab
-                      ? 'bg-primary text-white shadow-[0_2px_12px_rgba(45,157,255,0.4)]'
+                      ? 'bg-primary text-white shadow-[0_2px_12px_rgba(var(--color-primary-rgb),0.4)]'
                       : 'bg-white dark:bg-white/[0.06] text-slate-500 dark:text-slate-400',
                   ].join(' ')}
                 >
@@ -1127,7 +1138,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
                       className={[
                         'py-3 rounded-2xl text-sm font-semibold transition-all duration-75 active:scale-[0.97]',
                         type === o.value
-                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(45,157,255,0.4)]'
+                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400',
                       ].join(' ')}>
                       {o.label}
@@ -1205,7 +1216,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               </button>
               <button onClick={handleSave} disabled={saving}
                 className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                  bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
                   disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Category'}
               </button>
@@ -1528,7 +1539,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                   {['expense', 'inflow', 'transfer'].map(t => (
                     <button key={t} onClick={() => { setType(t); setCategory(null); setAccount(null); setFromAcct(null); setToAcct(null) }}
                       className={`py-2.5 rounded-2xl text-xs font-semibold transition-all duration-75 active:scale-[0.97]
-                        ${type === t ? 'bg-primary text-white shadow-[0_2px_10px_rgba(45,157,255,0.4)]'
+                        ${type === t ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400'}`}>
                       {TMPL_TYPE_STYLE[t]?.label}
                     </button>
@@ -1637,7 +1648,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
               </button>
               <button onClick={handleSave} disabled={saving}
                 className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                  bg-primary shadow-[0_4px_16px_rgba(45,157,255,0.35)]
+                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
                   disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Template'}
               </button>
@@ -1692,7 +1703,7 @@ function TemplateManagerSheet({ open, onClose }) {
       <div className="fixed inset-0 z-[110]" style={{ touchAction: 'none' }}>
         <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
         <div
-          className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px]
+          className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px] overflow-hidden
             bg-slate-50 dark:bg-[#0d1117] border-t border-slate-100 dark:border-white/[0.07]
             max-h-[92vh] flex flex-col`}
           style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
@@ -1766,6 +1777,231 @@ function TemplateManagerSheet({ open, onClose }) {
   )
 }
 
+// ── Accent color sheet ────────────────────────────────────────────────────────
+
+function AccentColorSheet({ open, onClose, accentColor, setAccentColor }) {
+  const [closing, setClosing] = useState(false)
+  useScrollLock(open)
+
+  const close = () => {
+    setClosing(true)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
+      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+          'bg-white dark:bg-[#111820]',
+          'border-t border-slate-100 dark:border-white/[0.07]',
+        ].join(' ')}
+        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04]">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Accent Color</h3>
+            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+              Done
+            </button>
+          </div>
+        </div>
+
+        <div className="px-5 pt-6 pb-2">
+          <div className="grid grid-cols-4 gap-5">
+            {ACCENT_COLORS.map(({ hex, name }) => {
+              const active = accentColor === hex
+              return (
+                <button
+                  key={hex}
+                  aria-label={name}
+                  onClick={() => { setAccentColor(hex); close() }}
+                  className="flex flex-col items-center gap-2.5 active:scale-95 transition-transform duration-100"
+                >
+                  <div
+                    className="w-14 h-14 rounded-full"
+                    style={{
+                      backgroundColor: hex,
+                      boxShadow: active
+                        ? `0 0 0 2.5px white, 0 0 0 4.5px ${hex}, 0 4px 12px rgba(0,0,0,0.2)`
+                        : '0 2px 8px rgba(0,0,0,0.18)',
+                      transform: active ? 'scale(1.08)' : undefined,
+                      transition: 'transform 150ms, box-shadow 150ms',
+                    }}
+                  />
+                  <span className={`text-[11px] font-medium ${active ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+                    {name}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Policy sheet ──────────────────────────────────────────────────────────────
+
+const PRIVACY_SECTIONS = [
+  { h: null,                  b: 'Last updated: May 2026' },
+  { h: 'What We Store',       b: 'Your financial data — transactions, accounts, categories, and budgets — is stored locally on your device using IndexedDB. Nothing leaves your device unless you explicitly enable cloud sync.' },
+  { h: 'Cloud Sync',          b: 'If you sign in with Google and enable Supabase sync, your data is stored in Supabase under your own credentials. The developer has no access to your cloud data.' },
+  { h: 'What We Don\'t Collect', b: 'We collect no analytics, usage telemetry, advertising identifiers, or personal information beyond what you voluntarily enter in the app.' },
+  { h: 'How Data Is Used',    b: 'All data exists solely to provide the app\'s budgeting and tracking functionality. Your data is never sold, shared, or transmitted to any third party.' },
+  { h: 'Data Deletion',       b: 'You can permanently delete all local data at any time via Settings → Reset App. To remove cloud-synced data, delete the relevant tables from your Supabase project.' },
+  { h: 'Security',            b: 'Local data security depends on your device\'s own security settings. Cloud-synced data is protected by Supabase\'s infrastructure and your Google account credentials.' },
+  { h: 'Changes',             b: 'This policy may be updated from time to time. Continued use of the app after changes are posted constitutes acceptance of the updated policy.' },
+  { h: 'Contact',             b: 'Questions or concerns? Email us at jamesandgen111@gmail.com' },
+]
+
+const TERMS_SECTIONS = [
+  { h: null,                         b: 'Last updated: May 2026. By using Spendr, you agree to these Terms. If you do not agree, please stop using the app.' },
+  { h: 'Permitted Use',              b: 'Spendr is intended for personal, non-commercial financial tracking only. You are solely responsible for the accuracy of any data you enter.' },
+  { h: 'No Financial Advice',        b: 'Spendr does not provide financial, investment, tax, or legal advice. All figures and summaries are derived solely from data you enter and are for informational purposes only. Do not make financial decisions based solely on this app.' },
+  { h: 'No Institutional Affiliations', b: 'Spendr is an independent tool. It is not affiliated with, endorsed by, sponsored by, or officially connected to GCash, Maya, BPI, BDO, or any other bank, e-wallet, or financial institution whose name appears in the app. Institution names are used only as labels for your own organizational convenience.' },
+  { h: 'Intellectual Property',      b: 'The Spendr application, its design, interface, and source code are the intellectual property of James Sablay. All rights reserved.' },
+  { h: 'Disclaimer of Warranties',   b: 'The app is provided "as is" and "as available" without warranties of any kind. The developer makes no guarantees regarding accuracy, reliability, uptime, or fitness for a particular purpose.' },
+  { h: 'Limitation of Liability',    b: 'To the fullest extent permitted by law, James Sablay shall not be liable for any direct, indirect, incidental, or consequential damages arising from your use of or inability to use the app, including any loss of data.' },
+  { h: 'Changes to Terms',           b: 'These terms may be revised at any time. Your continued use of the app after changes are posted constitutes acceptance of the revised terms.' },
+  { h: 'Governing Law',              b: 'These terms are governed by the laws of the Republic of the Philippines.' },
+  { h: 'Contact',                    b: 'Questions? Email us at jamesandgen111@gmail.com' },
+]
+
+function PolicySheet({ open, type, onClose }) {
+  const [closing, setClosing] = useState(false)
+  useScrollLock(open)
+
+  const close = () => {
+    setClosing(true)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }
+
+  const title    = type === 'privacy' ? 'Privacy Policy' : 'Terms of Use'
+  const badge    = type === 'privacy' ? 'Privacy' : 'Legal'
+  const sections = type === 'privacy' ? PRIVACY_SECTIONS : TERMS_SECTIONS
+  const intro    = sections.find(s => s.h === null)
+  const body     = sections.filter(s => s.h !== null)
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
+      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px] overflow-hidden',
+          'bg-white dark:bg-[#111820]',
+          'border-t border-slate-100 dark:border-white/[0.07]',
+          'max-h-[88vh] flex flex-col',
+        ].join(' ')}
+        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+      >
+        {/* ── Header ── */}
+        <div className="pt-5 px-5 pb-4 shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <span className="inline-block text-[10px] font-bold uppercase tracking-widest
+                px-2 py-0.5 rounded-full mb-1.5
+                bg-primary/10 dark:bg-primary/20 text-primary">
+                {badge}
+              </span>
+              <h3 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
+                {title}
+              </h3>
+            </div>
+            <button
+              onClick={close}
+              className="shrink-0 mt-1 text-xs font-semibold
+                text-slate-600 dark:text-slate-300
+                px-3 py-1.5 rounded-xl
+                bg-slate-100 dark:bg-white/[0.08]
+                active:bg-slate-200 dark:active:bg-white/[0.14] transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+
+        <div className="h-px bg-slate-100 dark:bg-white/[0.05] shrink-0 mx-5" />
+
+        {/* ── Scrollable body ── */}
+        <div
+          className="overflow-y-auto flex-1 px-5 pt-5 pb-4"
+          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+        >
+          {/* Intro callout */}
+          {intro && (
+            <div className="mb-6 px-4 py-3.5 rounded-2xl
+              bg-slate-50 dark:bg-white/[0.04]
+              border border-slate-200/60 dark:border-white/[0.07]">
+              <p className="text-[13px] italic leading-relaxed text-slate-500 dark:text-slate-400">
+                {intro.b}
+              </p>
+            </div>
+          )}
+
+          {/* Sections */}
+          <div className="flex flex-col">
+            {body.map((s, i) => {
+              const isContact  = s.h === 'Contact'
+              const emailMatch = s.b.match(/[\w.-]+@[\w.-]+\.\w+/)
+              const beforeEmail = emailMatch ? s.b.slice(0, s.b.indexOf(emailMatch[0])) : s.b
+              const afterEmail  = emailMatch ? s.b.slice(s.b.indexOf(emailMatch[0]) + emailMatch[0].length) : ''
+
+              return (
+                <div key={i}>
+                  {i > 0 && (
+                    <div className="h-px bg-slate-100 dark:bg-white/[0.05] my-4" />
+                  )}
+                  <div className="flex gap-3 items-start">
+                    {/* Index badge */}
+                    <div
+                      className="w-[26px] h-[26px] rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                      style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.12)' }}
+                    >
+                      <span className="text-[11px] font-bold tabular-nums text-primary">{i + 1}</span>
+                    </div>
+
+                    {/* Content */}
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold text-slate-800 dark:text-white mb-1.5 leading-snug">
+                        {s.h}
+                      </p>
+                      <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                        {isContact && emailMatch ? (
+                          <>
+                            {beforeEmail}
+                            <a
+                              href={`mailto:${emailMatch[0]}`}
+                              className="font-semibold text-primary underline underline-offset-2 decoration-primary/40"
+                            >
+                              {emailMatch[0]}
+                            </a>
+                            {afterEmail}
+                          </>
+                        ) : s.b}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Toggle switch ──────────────────────────────────────────────────────────────
 
 function ToggleSwitch({ on }) {
@@ -1780,7 +2016,7 @@ function ToggleSwitch({ on }) {
 
 export default function Settings() {
   const navigate               = useNavigate()
-  const { theme, toggleTheme } = useTheme()
+  const { theme, toggleTheme, accentColor, setAccentColor } = useTheme()
   const { showToast }          = useToast()
   const { user, signOut }      = useAuth()
   const { status: syncStatus, runSync } = useSyncManager()
@@ -1789,6 +2025,8 @@ export default function Settings() {
   const [catMgrOpen,   setCatMgrOpen]   = useState(false)
   const [tmplMgrOpen,  setTmplMgrOpen]  = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
+  const [accentOpen,   setAccentOpen]   = useState(false)
+  const [policyOpen,   setPolicyOpen]   = useState(null)
   const [exporting,   setExporting]   = useState(false)
   const [loggingOut,  setLoggingOut]  = useState(false)
 
@@ -1825,7 +2063,7 @@ export default function Settings() {
     setGeneratingReport(true)
     try {
       const { downloadMonthlyReport } = await import('../utils/reportData.js')
-      await downloadMonthlyReport(reportMonth.year, reportMonth.month)
+      await downloadMonthlyReport(reportMonth.year, reportMonth.month, accentColor)
       showToast('Report downloaded')
     } catch (e) {
       console.error(e)
@@ -1884,7 +2122,7 @@ export default function Settings() {
           className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left
             bg-white dark:bg-primary/[0.10]
             border border-slate-100 dark:border-primary/[0.22]
-            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(45,157,255,0.15),0_0_0_1px_rgba(45,157,255,0.06)]
+            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.15),0_0_0_1px_rgba(var(--color-primary-rgb),0.06)]
             active:scale-[0.99] transition-transform duration-100"
         >
           <div className="w-14 h-14 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
@@ -1911,9 +2149,7 @@ export default function Settings() {
         </button>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          1. PROFILE
-      ══════════════════════════════════════════════════ */}
+      {/* ══ 1. PROFILE ══ */}
       <div className="mb-8">
         <SectionHeader>Profile</SectionHeader>
         <SectionCard>
@@ -1929,26 +2165,18 @@ export default function Settings() {
             iconEl={<RowIcon color="teal"><IconGlobe /></RowIcon>}
             label="Default Currency"
             sublabel={CURRENCIES.find(c => c.code === currency)?.label ?? 'Philippine Peso'}
-            right={
-              <span className="text-xs font-bold text-slate-600 dark:text-slate-300 mr-1">{currency}</span>
-            }
+            right={<span className="text-xs font-bold text-slate-600 dark:text-slate-300 mr-1">{currency}</span>}
             onTap={() => setProfileOpen(true)}
           />
         </SectionCard>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          2. APPEARANCE
-      ══════════════════════════════════════════════════ */}
+      {/* ══ 2. APPEARANCE ══ */}
       <div className="mb-8">
         <SectionHeader>Appearance</SectionHeader>
         <SectionCard>
           <SettingsRow
-            iconEl={
-              <RowIcon color="slate">
-                {theme === 'dark' ? <IconSun /> : <IconMoon />}
-              </RowIcon>
-            }
+            iconEl={<RowIcon color="slate">{theme === 'dark' ? <IconSun /> : <IconMoon />}</RowIcon>}
             label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
             sublabel={`Currently ${theme}`}
             right={<ToggleSwitch on={theme === 'dark'} />}
@@ -1958,23 +2186,21 @@ export default function Settings() {
           <SettingsRow
             iconEl={<RowIcon color="violet"><IconPalette /></RowIcon>}
             label="Accent Color"
-            sublabel="Coming soon"
+            sublabel={ACCENT_COLORS.find(c => c.hex === accentColor)?.name ?? 'Custom'}
             right={
-              <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full
-                bg-slate-100 dark:bg-white/[0.08] text-slate-400 dark:text-slate-500">
-                Soon
-              </span>
+              <div className="flex items-center gap-2.5">
+                <span className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
+                <IconChevronRight />
+              </div>
             }
-            disabled
+            onTap={() => setAccentOpen(true)}
           />
         </SectionCard>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          3. TRANSACTIONS
-      ══════════════════════════════════════════════════ */}
+      {/* ══ 3. PREFERENCES ══ */}
       <div className="mb-8">
-        <SectionHeader>Transactions</SectionHeader>
+        <SectionHeader>Preferences</SectionHeader>
         <SectionCard>
           <SettingsRow
             iconEl={
@@ -1992,47 +2218,29 @@ export default function Settings() {
         </SectionCard>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          4. ACCOUNTS
-      ══════════════════════════════════════════════════ */}
+      {/* ══ 4. MANAGE ══ */}
       <div className="mb-8">
-        <SectionHeader>Accounts</SectionHeader>
+        <SectionHeader>Manage</SectionHeader>
         <SectionCard>
           <SettingsRow
             iconEl={<RowIcon color="green"><IconWallet /></RowIcon>}
-            label="Manage Accounts"
+            label="Accounts"
             sublabel="Add, edit, or remove accounts"
             right={<IconChevronRight />}
             onTap={() => navigate('/accounts')}
           />
-        </SectionCard>
-      </div>
-
-      {/* ══════════════════════════════════════════════════
-          4. CATEGORIES
-      ══════════════════════════════════════════════════ */}
-      <div className="mb-8">
-        <SectionHeader>Categories</SectionHeader>
-        <SectionCard>
+          <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="amber"><IconTag /></RowIcon>}
-            label="Manage Categories"
+            label="Categories"
             sublabel="Customize expense and inflow categories"
             right={<IconChevronRight />}
             onTap={() => setCatMgrOpen(true)}
           />
-        </SectionCard>
-      </div>
-
-      {/* ══════════════════════════════════════════════════
-          5. QUICK TEMPLATES
-      ══════════════════════════════════════════════════ */}
-      <div className="mb-8">
-        <SectionHeader>Quick Templates</SectionHeader>
-        <SectionCard>
+          <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="amber"><span className="text-base">⚡</span></RowIcon>}
-            label="Manage Templates"
+            label="Quick Templates"
             sublabel="One-tap repeat transactions"
             right={<IconChevronRight />}
             onTap={() => setTmplMgrOpen(true)}
@@ -2040,11 +2248,9 @@ export default function Settings() {
         </SectionCard>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          6. DATA
-      ══════════════════════════════════════════════════ */}
+      {/* ══ 5. DATA & REPORTS ══ */}
       <div className="mb-8">
-        <SectionHeader>Data</SectionHeader>
+        <SectionHeader>Data & Reports</SectionHeader>
         <SectionCard>
           <SettingsRow
             iconEl={<RowIcon color="blue"><IconUpload /></RowIcon>}
@@ -2067,6 +2273,40 @@ export default function Settings() {
             disabled={exporting}
           />
           <RowDivider />
+          {/* PDF Report inline */}
+          <div className="px-4 py-3.5">
+            <div className="flex items-center gap-4 mb-2.5">
+              <RowIcon color="blue"><IconFileText /></RowIcon>
+              <div>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">Monthly PDF Report</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Full summary: spending, income, transactions</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 pl-[52px]">
+              <select
+                value={`${reportMonth.year}-${reportMonth.month}`}
+                onChange={e => {
+                  const [y, m] = e.target.value.split('-').map(Number)
+                  setReportMonth({ year: y, month: m })
+                }}
+                className="flex-1 text-sm bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 text-slate-800 dark:text-white outline-none dark:[color-scheme:dark]"
+              >
+                {getLast12Months().map(({ year, month, label }) => (
+                  <option key={`${year}-${month}`} value={`${year}-${month}`}>{label}</option>
+                ))}
+              </select>
+              <button
+                onClick={handleGenerateReport}
+                disabled={generatingReport}
+                className="flex items-center justify-center gap-1.5 w-10 h-10 rounded-xl text-white bg-primary disabled:opacity-50 active:scale-95 transition-all duration-100 shrink-0"
+              >
+                {generatingReport
+                  ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <IconDownload />}
+              </button>
+            </div>
+          </div>
+          <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="slate"><IconRefresh /></RowIcon>}
             label="Redo Onboarding"
@@ -2074,21 +2314,10 @@ export default function Settings() {
             right={<IconChevronRight />}
             onTap={handleRedoOnboarding}
           />
-          <RowDivider />
-          <SettingsRow
-            iconEl={<RowIcon color="red"><IconTrash /></RowIcon>}
-            label="Reset App"
-            sublabel="Permanently delete all data"
-            right={<IconChevronRight />}
-            onTap={() => setResetOpen(true)}
-            destructive
-          />
         </SectionCard>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          6. SYNC
-      ══════════════════════════════════════════════════ */}
+      {/* ══ 6. SYNC ══ */}
       <div className="mb-8">
         <SectionHeader>Sync</SectionHeader>
         <SectionCard>
@@ -2118,7 +2347,7 @@ export default function Settings() {
                 }
                 label="Sync Now"
                 sublabel={
-                  syncStatus === 'syncing' ? 'Syncing…'
+                  syncStatus === 'syncing'  ? 'Syncing…'
                   : syncStatus === 'success' ? 'Up to date'
                   : syncStatus === 'error'   ? 'Last sync failed — tap to retry'
                   : 'Sync data with Supabase'
@@ -2140,9 +2369,7 @@ export default function Settings() {
         </SectionCard>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          ACCOUNT
-      ══════════════════════════════════════════════════ */}
+      {/* ══ 7. ACCOUNT (sign-out) ══ */}
       {user && (
         <div className="mb-8">
           <SectionHeader>Account</SectionHeader>
@@ -2163,76 +2390,67 @@ export default function Settings() {
         </div>
       )}
 
-      {/* ══════ REPORTS ══════ */}
+      {/* ══ 8. DANGER ZONE ══ */}
       <div className="mb-8">
-        <SectionHeader>Reports</SectionHeader>
+        <SectionHeader>Danger Zone</SectionHeader>
         <SectionCard>
-          <div className="px-4 py-4">
-            <div className="flex items-center gap-3 mb-4">
-              <RowIcon color="blue"><IconFileText /></RowIcon>
-              <div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">Monthly PDF Report</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Full summary: spending, income, transactions</p>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <select
-                value={`${reportMonth.year}-${reportMonth.month}`}
-                onChange={e => {
-                  const [y, m] = e.target.value.split('-').map(Number)
-                  setReportMonth({ year: y, month: m })
-                }}
-                className="flex-1 text-sm bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 text-slate-800 dark:text-white outline-none dark:[color-scheme:dark]"
-              >
-                {getLast12Months().map(({ year, month, label }) => (
-                  <option key={`${year}-${month}`} value={`${year}-${month}`}>{label}</option>
-                ))}
-              </select>
-              <button
-                onClick={handleGenerateReport}
-                disabled={generatingReport}
-                className="flex items-center justify-center gap-2 w-[130px] h-10 rounded-xl text-sm font-semibold text-white bg-primary disabled:opacity-50 active:scale-95 transition-all duration-100 shrink-0"
-              >
-                {generatingReport
-                  ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin shrink-0" />
-                  : null}
-                {generatingReport ? 'Generating…' : 'Generate PDF'}
-              </button>
-            </div>
-          </div>
+          <SettingsRow
+            iconEl={<RowIcon color="red"><IconTrash /></RowIcon>}
+            label="Reset App"
+            sublabel="Permanently delete all local data"
+            right={<IconChevronRight />}
+            onTap={() => setResetOpen(true)}
+            destructive
+          />
         </SectionCard>
       </div>
 
-      {/* ══════════════════════════════════════════════════
-          7. ABOUT
-      ══════════════════════════════════════════════════ */}
-      <div className="mb-8">
+      {/* ══ 9. ABOUT ══ */}
+      <div className="mb-3">
         <SectionHeader>About</SectionHeader>
         <SectionCard>
           <SettingsRow
             iconEl={<RowIcon color="slate"><IconInfo /></RowIcon>}
             label="Version"
             sublabel="Spendr"
-            right={
-              <span className="text-sm font-semibold text-slate-500 dark:text-slate-400">
-                v{APP_VERSION}
-              </span>
-            }
+            right={<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">v{APP_VERSION}</span>}
+          />
+        </SectionCard>
+      </div>
+
+      {/* ══ 10. LEGAL ══ */}
+      <div className="mb-10">
+        <SectionCard>
+          <SettingsRow
+            iconEl={<RowIcon color="slate"><IconFileText /></RowIcon>}
+            label="Privacy Policy"
+            right={<IconChevronRight />}
+            onTap={() => setPolicyOpen('privacy')}
           />
           <RowDivider />
-          <div className="px-4 py-4 flex items-center gap-4">
-            <span className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-lg
-              bg-amber-100 dark:bg-amber-500/15">
-              ☕
-            </span>
-            <div>
-              <p className="text-sm font-semibold text-slate-800 dark:text-white">Made with ☕</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                Built for personal finance, with love.
-              </p>
-            </div>
-          </div>
+          <SettingsRow
+            iconEl={<RowIcon color="slate"><IconInfo /></RowIcon>}
+            label="Terms of Use"
+            right={<IconChevronRight />}
+            onTap={() => setPolicyOpen('terms')}
+          />
         </SectionCard>
+      </div>
+
+      {/* ══ Spendr footer (no card) ══ */}
+      <div className="px-5 pb-8 flex flex-col items-center gap-3 text-center">
+        <img
+          src="/icons/icon-512.png"
+          alt="Spendr"
+          className="w-14 h-14 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+        />
+        <p className="text-base font-bold text-slate-800 dark:text-white tracking-tight">Spendr</p>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed max-w-[260px]">
+          Spendr is an independent tool and is not affiliated with any financial institutions mentioned within the app.
+        </p>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+          © {new Date().getFullYear()} James Sablay
+        </p>
       </div>
 
       {/* ── Sheets & modals ── */}
@@ -2253,6 +2471,17 @@ export default function Settings() {
       <ResetConfirmModal
         open={resetOpen}
         onClose={() => setResetOpen(false)}
+      />
+      <AccentColorSheet
+        open={accentOpen}
+        onClose={() => setAccentOpen(false)}
+        accentColor={accentColor}
+        setAccentColor={setAccentColor}
+      />
+      <PolicySheet
+        open={!!policyOpen}
+        type={policyOpen}
+        onClose={() => setPolicyOpen(null)}
       />
 
     </div>

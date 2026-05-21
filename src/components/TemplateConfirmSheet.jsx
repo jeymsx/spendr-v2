@@ -12,7 +12,7 @@ const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
 const TYPE_CONFIG = {
   expense:  { label: 'Expense',  sign: '−', color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' },
   inflow:   { label: 'Inflow',   sign: '+', color: '#22c55e', badge: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400' },
-  transfer: { label: 'Transfer', sign: '',  color: '#2D9DFF', badge: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' },
+  transfer: { label: 'Transfer', sign: '',  color: 'var(--color-primary)', badge: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400' },
 }
 
 export default function TemplateConfirmSheet({ open, onClose, template }) {
@@ -196,7 +196,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
             onClick={handleSave}
             disabled={saving || amount <= 0}
             className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-              bg-primary shadow-[0_4px_20px_rgba(45,157,255,0.4)]
+              bg-primary shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.4)]
               disabled:opacity-50 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >

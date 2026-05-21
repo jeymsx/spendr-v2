@@ -54,7 +54,7 @@ export default function NumericKeypad({
         onClick={onConfirm}
         disabled={confirmDisabled || confirmLoading}
         className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white mt-1
-          bg-primary shadow-[0_4px_20px_rgba(45,157,255,0.45)]
+          bg-primary shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.45)]
           disabled:opacity-35 disabled:shadow-none
           active:scale-[0.98] transition-all duration-100"
       >
