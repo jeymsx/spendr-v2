@@ -2138,6 +2138,7 @@ export default function Settings() {
   const [resetOpen,    setResetOpen]    = useState(false)
   const [accentOpen,   setAccentOpen]   = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
+  const [legalOpen,    setLegalOpen]    = useState(false)
   const [exporting,    setExporting]    = useState(false)
   const [backingUp,    setBackingUp]    = useState(false)
   const [loggingOut,        setLoggingOut]        = useState(false)
@@ -2297,29 +2298,7 @@ export default function Settings() {
         </button>
       </div>
 
-      {/* ══ 1. PROFILE ══ */}
-      <div className="mb-8">
-        <SectionHeader>Profile</SectionHeader>
-        <SectionCard>
-          <SettingsRow
-            iconEl={<RowIcon color="blue"><IconUser /></RowIcon>}
-            label="Display Name"
-            sublabel={displayName || 'Not set'}
-            right={<IconChevronRight />}
-            onTap={() => setProfileOpen(true)}
-          />
-          <RowDivider />
-          <SettingsRow
-            iconEl={<RowIcon color="teal"><IconGlobe /></RowIcon>}
-            label="Default Currency"
-            sublabel={CURRENCIES.find(c => c.code === currency)?.label ?? 'Philippine Peso'}
-            right={<span className="text-xs font-bold text-slate-600 dark:text-slate-300 mr-1">{currency}</span>}
-            onTap={() => setProfileOpen(true)}
-          />
-        </SectionCard>
-      </div>
-
-      {/* ══ 2. APPEARANCE ══ */}
+      {/* ══ 1. APPEARANCE ══ */}
       <div className="mb-8">
         <SectionHeader>Appearance</SectionHeader>
         <SectionCard>
@@ -2467,14 +2446,14 @@ export default function Settings() {
               </button>
             </div>
           </div>
-          <RowDivider />
+          {/* <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="slate"><IconRefresh /></RowIcon>}
             label="Redo Onboarding"
             sublabel="Restart the setup flow"
             right={<IconChevronRight />}
             onTap={handleRedoOnboarding}
-          />
+          /> */}
         </SectionCard>
       </div>
 
@@ -2483,41 +2462,38 @@ export default function Settings() {
         <SectionHeader>Sync</SectionHeader>
         <SectionCard>
           {user ? (
-            <>
-              <SettingsRow
-                iconEl={<RowIcon color="violet"><IconCloud /></RowIcon>}
-                label="Supabase Sync"
-                sublabel={`Last synced: ${fmtRelTime(lastSync)}`}
-                right={
-                  <span className={`w-2 h-2 rounded-full shrink-0 ${
-                    syncStatus === 'syncing' ? 'bg-primary animate-pulse'
-                    : syncStatus === 'error'  ? 'bg-red-400'
-                    : lastSync               ? 'bg-emerald-400'
-                    :                          'bg-slate-300 dark:bg-slate-600'
-                  }`} />
-                }
-              />
-              <RowDivider />
-              <SettingsRow
-                iconEl={
-                  <RowIcon color="slate">
-                    <span className={syncStatus === 'syncing' ? 'animate-spin inline-block' : ''}>
-                      <IconRefresh />
-                    </span>
-                  </RowIcon>
-                }
-                label="Sync Now"
-                sublabel={
-                  syncStatus === 'syncing'  ? 'Syncing…'
-                  : syncStatus === 'success' ? 'Up to date'
-                  : syncStatus === 'error'   ? 'Last sync failed — tap to retry'
-                  : 'Sync data with Supabase'
-                }
-                right={<IconChevronRight />}
-                onTap={runSync}
-                disabled={syncStatus === 'syncing'}
-              />
-            </>
+            <div className="flex items-center gap-4 px-4 py-3.5">
+              <RowIcon color="violet">
+                <span className={syncStatus === 'syncing' ? 'animate-spin inline-block' : ''}>
+                  <IconCloud />
+                </span>
+              </RowIcon>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">Cloud Sync</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  {syncStatus === 'syncing' ? 'Syncing…'
+                    : syncStatus === 'error' ? 'Last sync failed'
+                    : `Last synced: ${fmtRelTime(lastSync)}`}
+                </p>
+              </div>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span className={`w-2 h-2 rounded-full ${
+                  syncStatus === 'syncing' ? 'bg-primary animate-pulse'
+                  : syncStatus === 'error' ? 'bg-red-400'
+                  : lastSync               ? 'bg-emerald-400'
+                  :                          'bg-slate-300 dark:bg-slate-600'
+                }`} />
+                <button
+                  onClick={runSync}
+                  disabled={syncStatus === 'syncing'}
+                  className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
+                    bg-primary/[0.08] dark:bg-primary/[0.12]
+                    disabled:opacity-40 active:bg-primary/[0.15] transition-colors"
+                >
+                  Sync
+                </button>
+              </div>
+            </div>
           ) : (
             <SettingsRow
               iconEl={<RowIcon color="violet"><IconCloud /></RowIcon>}
@@ -2614,37 +2590,58 @@ export default function Settings() {
         </SectionCard>
       </div>
 
-      {/* ══ 9. ABOUT ══ */}
-      <div className="mb-3">
-        <SectionHeader>About</SectionHeader>
-        <SectionCard>
-          <SettingsRow
-            iconEl={<RowIcon color="slate"><IconInfo /></RowIcon>}
-            label="Version"
-            sublabel="Spendr"
-            right={<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">v{APP_VERSION}</span>}
-          />
-        </SectionCard>
-      </div>
-
-      {/* ══ 10. LEGAL ══ */}
+      {/* ══ 9. LEGAL ══ */}
       <div className="mb-10">
         <SectionCard>
           <SettingsRow
             iconEl={<RowIcon color="slate"><IconFileText /></RowIcon>}
-            label="Privacy Policy"
+            label="Legal"
+            sublabel="Privacy Policy & Terms of Use"
             right={<IconChevronRight />}
-            onTap={() => setPolicyOpen('privacy')}
-          />
-          <RowDivider />
-          <SettingsRow
-            iconEl={<RowIcon color="slate"><IconInfo /></RowIcon>}
-            label="Terms of Use"
-            right={<IconChevronRight />}
-            onTap={() => setPolicyOpen('terms')}
+            onTap={() => setLegalOpen(true)}
           />
         </SectionCard>
       </div>
+
+      {/* Legal picker sheet */}
+      {legalOpen && (
+        <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
+          <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm"
+            onClick={() => setLegalOpen(false)} />
+          <div className="sheet-panel absolute bottom-0 inset-x-0 rounded-t-[28px]
+            bg-white dark:bg-[#111820]
+            border-t border-slate-100 dark:border-white/[0.07]"
+            style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+          >
+            <div className="pt-5 px-5 pb-4">
+              <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Legal</p>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => { setLegalOpen(false); setTimeout(() => setPolicyOpen('privacy'), 60) }}
+                  className="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left
+                    bg-slate-50 dark:bg-white/[0.04]
+                    active:bg-slate-100 dark:active:bg-white/[0.08] transition-colors"
+                >
+                  <RowIcon color="slate"><IconFileText /></RowIcon>
+                  <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Privacy Policy</span>
+                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                </button>
+                <button
+                  onClick={() => { setLegalOpen(false); setTimeout(() => setPolicyOpen('terms'), 60) }}
+                  className="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left
+                    bg-slate-50 dark:bg-white/[0.04]
+                    active:bg-slate-100 dark:active:bg-white/[0.08] transition-colors"
+                >
+                  <RowIcon color="slate"><IconInfo /></RowIcon>
+                  <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Terms of Use</span>
+                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* ══ Spendr footer (no card) ══ */}
       <div className="px-5 pb-8 flex flex-col items-center gap-3 text-center">
@@ -2658,7 +2655,7 @@ export default function Settings() {
           Spendr is an independent tool and is not affiliated with any financial institutions mentioned within the app.
         </p>
         <p className="text-[11px] text-slate-400 dark:text-slate-500">
-          © {new Date().getFullYear()} James Sablay
+          © {new Date().getFullYear()} James Sablay · v{APP_VERSION}
         </p>
       </div>
 
