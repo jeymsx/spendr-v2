@@ -572,7 +572,7 @@ export default function Transactions() {
       )}
 
       {/* ── Summary bar ── */}
-      <div className="sticky top-0 z-20 mx-5 mb-4 rounded-2xl overflow-hidden
+      <div className="mx-5 mb-4 rounded-2xl overflow-hidden
         bg-white/70 dark:bg-primary/[0.08] backdrop-blur-2xl
         border border-slate-100/80 dark:border-primary/[0.22]
         shadow-[0_2px_12px_rgba(0,0,0,0.06)] dark:shadow-none"
