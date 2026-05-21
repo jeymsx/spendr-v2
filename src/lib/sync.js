@@ -7,7 +7,7 @@ function toSupabaseRow(r, userId) {
   const type = r.type
   return {
     user_id:          userId,
-    local_id:         r.id ?? null,
+    local_id:         null,
     tx_id:            r.txId ?? null,
     type,
     transaction_date: r.date,
