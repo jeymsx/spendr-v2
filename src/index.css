@@ -194,6 +194,21 @@ input, textarea, select {
   font-size: 16px !important;
 }
 
+/* ── Date input — prevent iOS overflow ───────────────── */
+input[type="date"] {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  min-width: 0;
+}
+input[type="date"]::-webkit-date-and-time-value {
+  text-align: left;
+  line-height: 1.2;
+}
+input[type="date"]::-webkit-datetime-edit {
+  padding: 0;
+}
+
 /* ── Amount input override ────────────────────────────── */
 .amount-input {
   font-size: 3rem !important;

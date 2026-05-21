@@ -787,13 +787,14 @@ function SpendingTrivia({ trivia, triviaKey }) {
     <div className="px-4">
       <button
         onClick={next}
-        className="w-full rounded-2xl px-4 pt-4 pb-3.5 text-left active:opacity-70 transition-opacity duration-75
+        className="w-full rounded-2xl px-4 text-left active:opacity-70 transition-opacity duration-75
           bg-gradient-to-br from-primary/[0.28] to-primary/[0.12]
-          border border-primary/[0.35] dark:border-primary/[0.28]"
-        style={{ outline: 'none' }}
+          border border-primary/[0.35] dark:border-primary/[0.28]
+          flex items-center"
+        style={{ outline: 'none', minHeight: '80px' }}
       >
-        <div style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}>
-          <div className="flex items-start gap-3 mb-3">
+        <div className="w-full" style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}>
+          <div className="flex items-start gap-3 mb-1.5">
             <span className="text-xl leading-none mt-0.5 shrink-0">{item.emoji}</span>
             <p className="flex-1 text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed tracking-[-0.01em]">
               {item.text}

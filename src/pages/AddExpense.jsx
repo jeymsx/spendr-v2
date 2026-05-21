@@ -98,7 +98,6 @@ export default function AddExpense() {
   const [showConfirm,    setShowConfirm]    = useState(false)
   const [showTemplates,  setShowTemplates]  = useState(false)
   const [saving,         setSaving]         = useState(false)
-  const dateInputRef = useRef(null)
 
   const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
   const categories = useLiveQuery(
@@ -295,28 +294,19 @@ export default function AddExpense() {
         {/* Date — last */}
         <div>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Date</p>
-          <button
-            type="button"
-            onClick={() => dateInputRef.current?.showPicker()}
-            className="w-full flex items-center gap-3 px-4 h-[52px] rounded-2xl text-left
-              bg-white dark:bg-primary/[0.07]
-              border border-slate-200/80 dark:border-primary/[0.14]
-              shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]
-              active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors"
-          >
+          <div className="flex items-center gap-3 px-4 h-[52px] rounded-2xl
+            bg-white dark:bg-primary/[0.07]
+            border border-slate-200/80 dark:border-primary/[0.14]
+            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]">
             <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
-            <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">
-              {fmtDateLabel(date)}
-            </span>
-          </button>
-          <input
-            ref={dateInputRef}
-            type="date"
-            value={date}
-            max={localDateStr(new Date())}
-            onChange={e => e.target.value && setDate(e.target.value)}
-            className="sr-only"
-          />
+            <input
+              type="date"
+              value={date}
+              max={localDateStr(new Date())}
+              onChange={e => e.target.value && setDate(e.target.value)}
+              className="flex-1 min-w-0 bg-transparent text-sm font-medium text-slate-800 dark:text-white outline-none"
+            />
+          </div>
         </div>
 
       </div>
