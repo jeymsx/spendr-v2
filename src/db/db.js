@@ -5,7 +5,7 @@ const db = new Dexie('SpendrDB')
 db.version(1).stores({
   transactions: '++id, txId, type, date, description, category, payment, account, fromAccount, toAccount, amount, synced, updatedAt',
   balances:     'account',
-  accounts:     '++id, name, type, balance, currency, creditLimit, statementDate, dueDate, cutoffDate, minimumPayment, color',
+  accounts:     '++id, name, type, role, balance, currency, creditLimit, statementDate, dueDate, cutoffDate, minimumPayment, color',
   categories:   '++id, name, icon, color, type, budget',
   debts:        '++id, name, contact, amount, amountPaid, dueDate, type, notes, createdAt',
   recurring:    '++id, name, amount, category, account, frequency, nextDate, active',
@@ -14,6 +14,10 @@ db.version(1).stores({
 
 db.version(2).stores({
   templates: '++id, name, type, amount, description, category, account, fromAccount, toAccount, createdAt',
+})
+
+db.version(3).stores({
+  accounts: '++id, name, type, role, balance, currency, creditLimit, statementDate, dueDate, cutoffDate, minimumPayment, color',
 })
 
 // ── Seed data ─────────────────────────────────────────────────────────────────

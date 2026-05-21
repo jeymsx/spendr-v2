@@ -32,6 +32,7 @@ function accountToRow(r, userId) {
     user_id:         userId,
     name:            r.name,
     type:            r.type,
+    role:            r.role            ?? null,
     balance:         r.balance,
     currency:        r.currency,
     credit_limit:    r.creditLimit    ?? null,
@@ -128,6 +129,7 @@ function rowToAccount(row) {
   return {
     name:           row.name,
     type:           row.type,
+    role:           row.role,
     balance:        row.balance,
     currency:       row.currency,
     creditLimit:    row.credit_limit,
@@ -249,13 +251,45 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
   const records = await dexieTable.toArray()
   if (!records.length) return
 
+  let rows = records.map(r => toRow(r, userId))
+
+  // Deduplicate rows by conflict key so Postgres never sees two rows with the
+  // same conflict target in one batch ("cannot affect row a second time").
+  const keys = conflictCols.split(',').filter(k => k !== 'user_id')
+  if (keys.length > 0) {
+    const seen = new Set()
+    rows = rows.filter(row => {
+      const key = keys.map(k => row[k]).join('|')
+      if (seen.has(key)) return false
+      seen.add(key)
+      return true
+    })
+  }
+
   const { error } = await supabase
     .from(tableName)
-    .upsert(records.map(r => toRow(r, userId)), { onConflict: conflictCols, ignoreDuplicates: false })
+    .upsert(rows, { onConflict: conflictCols, ignoreDuplicates: false })
   if (error) throw new Error(`${tableName} push: ${error.message}`)
 }
 
 // ── Pull from Supabase ────────────────────────────────────────────────────────
+
+const SYSTEM_CATS = [
+  { name: 'Others',       icon: '📦', color: '#6b7280', type: 'expense',  budget: 0 },
+  { name: 'Income',       icon: '💰', color: '#22c55e', type: 'inflow',   budget: 0 },
+  { name: 'Transfer',     icon: '🔄', color: '#2D9DFF', type: 'transfer', budget: 0 },
+  { name: 'Transfer Fee', icon: '💸', color: '#f59e0b', type: 'expense',  budget: 0 },
+]
+
+async function ensureSystemCategories() {
+  for (const cat of SYSTEM_CATS) {
+    const exists = await db.categories
+      .where('name').equals(cat.name)
+      .and(c => c.type === cat.type)
+      .first()
+    if (!exists) await db.categories.add(cat)
+  }
+}
 
 export async function syncFromSupabase(userId) {
   if (!userId) return
@@ -266,6 +300,9 @@ export async function syncFromSupabase(userId) {
   await pullSimpleTable('debts',      db.debts,      rowToDebt,      null,   userId)
   await pullSimpleTable('recurring',  db.recurring,  rowToRecurring, null,   userId)
   await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId)
+
+  // Guarantee system categories exist locally even if never pushed to Supabase
+  await ensureSystemCategories()
 }
 
 async function pullTxs(userId) {
