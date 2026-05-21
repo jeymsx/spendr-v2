@@ -41,13 +41,9 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
         {/* scrollable grid */}
         <div
           className="overflow-y-auto flex-1 px-5"
-          style={{
-            touchAction: 'pan-y',
-            overscrollBehavior: 'contain',
-            paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
-          }}
+          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
-          <div className="grid grid-cols-4 gap-2.5 pb-2">
+          <div className="grid grid-cols-4 gap-2.5">
             {categories.map(cat => {
               const isSelected = selected?.id === cat.id
               return (
@@ -73,6 +69,7 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
               )
             })}
           </div>
+          <div className="h-8 shrink-0" />
         </div>
       </div>
     </div>

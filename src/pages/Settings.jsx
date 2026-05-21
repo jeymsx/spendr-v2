@@ -783,7 +783,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
           </div>
         </div>
 
-        <div className="overflow-y-auto flex-1 px-5 py-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+        <div className="overflow-y-auto flex-1 px-5 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
           <div className="flex flex-wrap gap-2">
             {presets.map(preset => {
               const exists    = existingNames.has(preset.name)
@@ -811,6 +811,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
               )
             })}
           </div>
+          <div className="h-8 shrink-0" />
         </div>
       </div>
     </div>
@@ -1196,7 +1197,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
           'border-t border-slate-100 dark:border-white/[0.07]',
           'max-h-[92vh] overflow-y-auto',
         ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         {/* Header */}
         <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10 border-b border-slate-50 dark:border-white/[0.04]">
@@ -1451,6 +1452,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             </div>
           </div>
         )}
+        <div className="h-8" />
       </div>
     </div>
   )
@@ -1595,7 +1597,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
           className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px]
             bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]
             max-h-[92vh] overflow-y-auto`}
-          style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           {/* Header */}
           <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10 border-b border-slate-50 dark:border-white/[0.04]">
@@ -1761,6 +1763,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
             </div>
           </div>
         </div>
+        <div className="h-8" />
       </div>
 
       {/* Nested pickers */}
@@ -1868,6 +1871,7 @@ function TemplateManagerSheet({ open, onClose }) {
                 Hold a template to quickly delete it
               </p>
             </div>
+            <div className="h-8 shrink-0" />
           </div>
         </div>
       </div>
@@ -2041,7 +2045,7 @@ function PolicySheet({ open, type, onClose }) {
 
         {/* ── Scrollable body ── */}
         <div
-          className="overflow-y-auto flex-1 px-5 pt-5 pb-4"
+          className="overflow-y-auto flex-1 px-5 pt-5"
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           {/* Intro callout */}
@@ -2102,6 +2106,7 @@ function PolicySheet({ open, type, onClose }) {
               )
             })}
           </div>
+          <div className="h-8 shrink-0" />
         </div>
       </div>
     </div>

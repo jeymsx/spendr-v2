@@ -50,13 +50,9 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
         {/* scrollable list — touch-action:pan-y re-enables vertical swipe here */}
         <div
           className="overflow-y-auto flex-1 px-5"
-          style={{
-            touchAction: 'pan-y',
-            overscrollBehavior: 'contain',
-            paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
-          }}
+          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
-          <div className="flex flex-col gap-2 pb-2">
+          <div className="flex flex-col gap-2">
             {visible.map(acct => {
               const isCredit    = acct.type === 'credit'
               const isSelected  = selected?.id === acct.id
@@ -108,6 +104,7 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
               )
             })}
           </div>
+          <div className="h-8 shrink-0" />
         </div>
       </div>
     </div>

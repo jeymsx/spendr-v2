@@ -151,9 +151,10 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
               ))}
             </div>
           )}
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-3 mb-1">
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-3">
             Hold a template to delete it
           </p>
+          <div className="h-8 shrink-0" />
         </div>
       </div>
     </div>

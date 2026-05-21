@@ -513,7 +513,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
         </div>
 
         {/* Scrollable body */}
-        <div className="overflow-y-auto flex-1 px-5 pb-2 space-y-4">
+        <div className="overflow-y-auto flex-1 px-5 space-y-4">
           {/* Type toggle */}
           <div>
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Type</p>
@@ -632,6 +632,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
                 outline-none resize-none placeholder:text-slate-300 dark:placeholder:text-slate-600"
             />
           </div>
+          <div className="h-4 shrink-0" />
         </div>
 
         {/* Save */}

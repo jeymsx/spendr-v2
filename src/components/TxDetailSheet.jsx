@@ -224,7 +224,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
           'border-t border-slate-100 dark:border-white/[0.07]',
           'max-h-[88vh] overflow-y-auto',
         ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))', touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
@@ -449,6 +449,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
             </div>
           )}
         </div>
+        <div className="h-8 shrink-0" />
       </div>
 
       {/* nested pickers — z-[110] renders above this sheet at z-[100] */}

@@ -466,7 +466,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
           </div>
 
           {/* Scrollable fields */}
-          <div className="overflow-y-auto flex-1 px-5 pb-2 space-y-4">
+          <div className="overflow-y-auto flex-1 px-5 space-y-4">
 
             {/* Name */}
             <div>
@@ -626,6 +626,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
                 ].join(' ')} />
               </button>
             </div>
+            <div className="h-4 shrink-0" />
           </div>
 
           {/* Save */}

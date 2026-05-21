@@ -937,7 +937,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
           'border-t border-slate-100 dark:border-white/[0.07]',
           'max-h-[92vh] overflow-y-auto',
         ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         {/* sticky handle + title */}
         <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10
@@ -1318,6 +1318,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
             )}
           </div>
         )}
+        <div className="h-8" />
       </div>
     </div>
   )
@@ -1418,7 +1419,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
           'border-t border-slate-100 dark:border-white/[0.07]',
           'max-h-[92vh] overflow-y-auto',
         ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
         {/* sticky header */}
         <div className="sticky top-0 pt-5 px-5 pb-4 bg-white dark:bg-[#111820] z-10
@@ -1587,6 +1588,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
             </>
           )}
         </div>
+        <div className="h-8" />
       </div>
     </div>
   )
