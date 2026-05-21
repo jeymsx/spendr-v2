@@ -482,7 +482,7 @@ export default function Accounts() {
   return (
     <div className="pb-8">
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-5 pt-14 pb-5">
+      <div className="flex items-center justify-between px-5 pt-safe-header pb-5">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Accounts</h1>
         <button
           onClick={openAdd}

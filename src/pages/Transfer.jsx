@@ -209,7 +209,7 @@ export default function Transfer() {
     <div className="flex flex-col bg-transparent pb-6">
 
       {/* ── Header ── */}
-      <header className="flex items-center gap-3 px-4 pt-14 pb-2 shrink-0">
+      <header className="flex items-center gap-3 px-4 pt-safe-header pb-2 shrink-0">
         <button
           onClick={() => navigate(-1)}
           className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0

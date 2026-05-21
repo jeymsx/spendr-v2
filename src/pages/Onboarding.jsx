@@ -921,7 +921,7 @@ export default function Onboarding() {
       {/* Top bar: back + step dots */}
       <div
         className="relative z-10 flex items-center justify-between px-6 pb-2 shrink-0"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 16px)' }}
+        style={{ paddingTop: 'max(3.5rem, calc(env(safe-area-inset-top, 0px) + 1rem))' }}
       >
         {step > 0 ? (
           <button

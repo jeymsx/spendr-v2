@@ -84,14 +84,11 @@ export default function Navbar({ onAddClick }) {
         'fixed bottom-0 inset-x-0 z-50',
         'flex items-center justify-around',
         'px-2',
-        /* light */
         'bg-white/90 border-t border-slate-200/70',
-        /* dark */
         'dark:bg-navy/90 dark:border-white/[0.06]',
         'backdrop-filter backdrop-blur-xl',
-        'safe-bottom',
       ].join(' ')}
-      style={{ paddingTop: '8px', paddingBottom: '8px' }}
+      style={{ paddingTop: '8px', paddingBottom: 'max(env(safe-area-inset-bottom, 0px), 10px)' }}
     >
       {/* left tabs */}
       {LEFT_TABS.map(t => (

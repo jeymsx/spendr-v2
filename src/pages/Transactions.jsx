@@ -456,7 +456,7 @@ export default function Transactions() {
     <div className="pb-4">
 
       {/* ── Header ── */}
-      <div className="flex items-center justify-between px-5 pt-14 pb-3">
+      <div className="flex items-center justify-between px-5 pt-safe-header pb-3">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
           Transactions
         </h1>

@@ -147,10 +147,21 @@ html.dark body {
 }
 
 /* ── Safe-area helpers ────────────────────────────────── */
-.pb-safe  { padding-bottom: env(safe-area-inset-bottom, 0px); }
-.pt-safe  { padding-top:    env(safe-area-inset-top,    0px); }
-.mb-safe  { margin-bottom:  env(safe-area-inset-bottom, 0px); }
-.min-h-screen-safe { min-height: 100dvh; }
+.safe-top    { padding-top:    env(safe-area-inset-top,    0px); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pb-safe     { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.pt-safe     { padding-top:    env(safe-area-inset-top,    0px); }
+.mb-safe     { margin-bottom:  env(safe-area-inset-bottom, 0px); }
+
+/* Nav bar height + bottom safe area — keeps content from hiding under nav */
+.pb-nav { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+.h-nav  { height:         calc(5rem + env(safe-area-inset-bottom, 0px)); }
+
+/* Page header top padding — notch + visual breathing room.
+   Falls back to 3.5rem on devices without a notch. */
+.pt-safe-header {
+  padding-top: max(3.5rem, calc(env(safe-area-inset-top, 0px) + 1rem));
+}
 
 /* ── Prevent iOS zoom on input focus ─────────────────── */
 input, textarea, select {

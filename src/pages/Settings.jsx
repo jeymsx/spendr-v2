@@ -1873,7 +1873,7 @@ export default function Settings() {
     <div className="pb-10">
 
       {/* ── Header ── */}
-      <div className="px-5 pt-14 pb-2">
+      <div className="px-5 pt-safe-header pb-2">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Settings</h1>
       </div>
 

@@ -887,7 +887,7 @@ export default function Debts() {
     <div className="flex flex-col page-enter" style={{ minHeight: 'calc(100dvh - 80px)' }}>
 
       {/* Header */}
-      <header className="flex items-center justify-between px-4 pt-14 pb-4">
+      <header className="flex items-center justify-between px-4 pt-safe-header pb-4">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Debts</h1>
         <button
           onClick={openAdd}

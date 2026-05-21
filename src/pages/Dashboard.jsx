@@ -222,7 +222,7 @@ export default function Dashboard() {
     <div className="min-h-full pb-4">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-5 pt-14 pb-2">
+      <header className="flex items-center justify-between px-5 pt-safe-header pb-2">
         <div>
           <h1 className="text-xl tracking-tight text-slate-500 dark:text-slate-400">
             {getGreeting()}, <span className="font-semibold text-slate-900 dark:text-white">{userName}</span>!
@@ -442,7 +442,7 @@ function DashboardSkeleton() {
   return (
     <div className="min-h-full pb-4">
       {/* header */}
-      <div className="flex items-center justify-between px-5 pt-14 pb-2">
+      <div className="flex items-center justify-between px-5 pt-safe-header pb-2">
         <div className="flex flex-col gap-2">
           <Skel className="h-6 w-20" />
           <Skel className="h-4 w-36" />

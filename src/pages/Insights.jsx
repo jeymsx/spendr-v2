@@ -961,7 +961,7 @@ export default function Insights() {
   return (
     <div className="flex flex-col page-enter" style={{ minHeight: 'calc(100dvh - 80px)' }}>
       {/* Header */}
-      <div className="flex items-center justify-between px-5 pt-14 pb-3">
+      <div className="flex items-center justify-between px-5 pt-safe-header pb-3">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Insights</h1>
         <MonthSelector offset={monthOffset} onChange={(o) => { if (o <= 0) setMonthOffset(o) }} />
       </div>

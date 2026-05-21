@@ -63,7 +63,7 @@ export default function AppLayout() {
   }, [])
 
   return (
-    <div className="relative flex flex-col min-h-dvh">
+    <div className="h-[100dvh] flex flex-col overflow-hidden relative">
       {/*
         IMPORTANT: no z-index on <main>. Adding z-index creates a stacking context,
         which would make all fixed sheets/modals rendered inside pages lose against
@@ -74,11 +74,7 @@ export default function AppLayout() {
       <main
         id="app-main"
         ref={mainRef}
-        className="flex-1 overflow-y-auto relative"
-        style={{
-          paddingTop:    'env(safe-area-inset-top, 0px)',
-          paddingBottom: 'calc(5rem + env(safe-area-inset-bottom, 0px))',
-        }}
+        className="flex-1 overflow-y-auto min-h-0 relative"
       >
         {/* Pull-to-refresh hint */}
         <div className={`flex items-center justify-center overflow-hidden transition-all duration-200 text-xs font-medium text-primary/70 ${
@@ -87,8 +83,8 @@ export default function AppLayout() {
           {pullState === 'ready' ? '↑ Release to sync' : '↓ Pull to sync'}
         </div>
 
-        {/* key triggers page-enter CSS animation on every route change */}
-        <div key={location.pathname} className="page-enter">
+        {/* pb-nav ensures content isn't hidden under the fixed navbar */}
+        <div key={location.pathname} className="page-enter pb-nav">
           <Outlet />
         </div>
       </main>
