@@ -2140,7 +2140,8 @@ export default function Settings() {
   const [policyOpen,   setPolicyOpen]   = useState(null)
   const [exporting,    setExporting]    = useState(false)
   const [backingUp,    setBackingUp]    = useState(false)
-  const [loggingOut,   setLoggingOut]   = useState(false)
+  const [loggingOut,        setLoggingOut]        = useState(false)
+  const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
 
   const meta        = useLiveQuery(() => db.meta.toArray(), [], [])
   const displayName = useMemo(() => (meta ?? []).find(m => m.key === 'displayName')?.value ?? '', [meta])
@@ -2542,11 +2543,59 @@ export default function Settings() {
                 ? <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
                 : <IconChevronRight />
               }
-              onTap={handleLogout}
+              onTap={() => setShowSignOutConfirm(true)}
               destructive
               disabled={loggingOut}
             />
           </SectionCard>
+        </div>
+      )}
+
+      {/* Sign-out confirmation dialog */}
+      {showSignOutConfirm && (
+        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            onClick={() => !loggingOut && setShowSignOutConfirm(false)} />
+          <div className="relative w-full max-w-sm rounded-3xl
+            bg-white dark:bg-[#111820]
+            border border-slate-100 dark:border-white/[0.07]
+            shadow-[0_20px_60px_rgba(0,0,0,0.3)]
+            p-6 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-500/15
+              flex items-center justify-center mx-auto text-red-500 dark:text-red-400">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+                <polyline points="16 17 21 12 16 7"/>
+                <line x1="21" y1="12" x2="9" y2="12"/>
+              </svg>
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Sign Out?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Your data stays on this device. You can sign back in anytime to sync again.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowSignOutConfirm(false)}
+                disabled={loggingOut}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold
+                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
+                  active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={async () => { await handleLogout(); setShowSignOutConfirm(false) }}
+                disabled={loggingOut}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold text-white
+                  bg-red-500 shadow-[0_4px_16px_rgba(239,68,68,0.35)]
+                  disabled:opacity-40 disabled:shadow-none
+                  active:scale-[0.98] transition-all duration-100">
+                {loggingOut ? 'Signing out…' : 'Continue'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
 
