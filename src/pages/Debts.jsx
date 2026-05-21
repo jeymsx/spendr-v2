@@ -6,6 +6,8 @@ import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import NumericKeypad from '../components/NumericKeypad'
 import AccountPickerSheet from '../components/AccountPickerSheet'
+import { useAuth } from '../context/AuthContext'
+import { deleteDebtRemote } from '../lib/sync'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -374,6 +376,7 @@ function SettledSection({ debts, onEdit }) {
 function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
   const [closing,    setClosing]    = useState(false)
   const { showToast } = useToast()
+  const { user } = useAuth()
   const [contact,    setContact]    = useState('')
   const [amountStr,  setAmountStr]  = useState('')
   const [paidStr,    setPaidStr]    = useState('0')
@@ -461,6 +464,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
     setDeleting(true)
     try {
       await db.debts.delete(editDebt.id)
+      await deleteDebtRemote(user?.id, editDebt.id)
       handleClose()
     } catch (e) {
       console.error('[DebtForm] delete failed:', e)

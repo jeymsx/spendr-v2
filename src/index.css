@@ -184,9 +184,10 @@ html.dark body {
 .h-nav  { height:         calc(5rem + env(safe-area-inset-bottom, 0px)); }
 
 /* Page header top padding — notch + visual breathing room.
-   Falls back to 3.5rem on devices without a notch. */
+   1rem minimum keeps it sane on Android (small safe-area-inset-top);
+   large notched iPhones naturally exceed this via env(). */
 .pt-safe-header {
-  padding-top: max(3.5rem, calc(env(safe-area-inset-top, 0px) + 1rem));
+  padding-top: max(1rem, calc(env(safe-area-inset-top, 0px) + 1rem));
 }
 
 /* ── Prevent iOS zoom on input focus ─────────────────── */

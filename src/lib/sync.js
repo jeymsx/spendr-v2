@@ -197,6 +197,55 @@ function rowToTemplate(row) {
   }
 }
 
+// ── User preferences ─────────────────────────────────────────────────────────
+
+async function pushPreferences(userId) {
+  const [nameMeta, currencyMeta, skipMeta] = await Promise.all([
+    db.meta.get('displayName'),
+    db.meta.get('currency'),
+    db.meta.get('skipConfirm'),
+  ])
+  const accentColor = localStorage.getItem('accentColor') ?? '#2D9DFF'
+  const row = {
+    user_id:      userId,
+    display_name: nameMeta?.value ?? null,
+    currency:     currencyMeta?.value ?? 'PHP',
+    accent_color: accentColor,
+    skip_confirm: skipMeta?.value ?? false,
+    updated_at:   new Date().toISOString(),
+  }
+  const { error } = await supabase
+    .from('user_preferences')
+    .upsert(row, { onConflict: 'user_id' })
+  if (error) throw new Error(`user_preferences push: ${error.message}`)
+}
+
+async function pullPreferences(userId) {
+  const { data, error } = await supabase
+    .from('user_preferences')
+    .select('*')
+    .eq('user_id', userId)
+    .single()
+  if (error) {
+    if (error.code === 'PGRST116') return // no row yet — first sign-in
+    throw new Error(`user_preferences pull: ${error.message}`)
+  }
+  if (!data) return
+  if (data.display_name) {
+    await db.meta.put({ key: 'displayName', value: data.display_name })
+    await db.meta.put({ key: 'userName',    value: data.display_name })
+  }
+  if (data.currency) {
+    await db.meta.put({ key: 'currency', value: data.currency })
+  }
+  if (data.accent_color) {
+    localStorage.setItem('accentColor', data.accent_color)
+  }
+  if (data.skip_confirm != null) {
+    await db.meta.put({ key: 'skipConfirm', value: data.skip_confirm })
+  }
+}
+
 // ── Push to Supabase ──────────────────────────────────────────────────────────
 
 export async function syncToSupabase(userId) {
@@ -243,6 +292,7 @@ export async function syncToSupabase(userId) {
   await pushTable('debts',      db.debts,      debtToRow,     userId)
   await pushTable('recurring',  db.recurring,  recurringToRow, userId)
   await pushTable('templates',  db.templates,  templateToRow,  userId)
+  await pushPreferences(userId)
 }
 
 // conflictCols: the Supabase UNIQUE constraint columns to resolve on.
@@ -296,13 +346,16 @@ async function ensureSystemCategories() {
 export async function syncFromSupabase(userId) {
   if (!userId) return
 
+  await pullPreferences(userId)
   await pullTxs(userId)
   await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId)
   // Categories: match on name+type to avoid confusing same-named categories of different types
   await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
     row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first())
-  await pullSimpleTable('debts',      db.debts,      rowToDebt,      null,   userId)
-  await pullSimpleTable('recurring',  db.recurring,  rowToRecurring, null,   userId)
+  await pullSimpleTable('debts', db.debts, rowToDebt, null, userId,
+    row => db.debts.where('name').equals(row.name).and(d => d.type === row.type && d.amount === row.amount).first())
+  await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
+    row => db.recurring.where('name').equals(row.name).and(r => r.amount === row.amount).first())
   await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId)
 
   // Guarantee system categories exist locally even if never pushed to Supabase
@@ -362,9 +415,24 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
     const localts  = target?.updatedAt ? new Date(target.updatedAt).getTime() : 0
 
     if (!target) {
-      await dexieTable.add(fromRow(row))
-    } else if (remotets > localts) {
-      await dexieTable.update(target.id, fromRow(row))
+      // Create the local record; Dexie assigns a new auto-increment id
+      const newId = await dexieTable.add(fromRow(row))
+      // If the Supabase local_id doesn't match what Dexie assigned, the Supabase row is
+      // stale (came from a different device). Delete it — syncToSupabase will re-push with
+      // the correct local_id, preventing a duplicate from accumulating.
+      if (localId && localId !== newId) {
+        await supabase.from(tableName).delete().eq('user_id', userId).eq('local_id', localId)
+      }
+    } else {
+      if (remotets > localts) {
+        await dexieTable.update(target.id, fromRow(row))
+      }
+      // Found by secondary key (byName): the Supabase row carries a stale local_id that
+      // no longer matches the local record. Delete the stale Supabase row so it doesn't
+      // keep creating duplicates; syncToSupabase will re-push with the correct local_id.
+      if (byName && localId != null && localId !== target.id) {
+        await supabase.from(tableName).delete().eq('user_id', userId).eq('local_id', localId)
+      }
     }
   }
 }
@@ -375,4 +443,20 @@ export async function fullSync(userId) {
   if (!userId) throw new Error('Not authenticated')
   await syncFromSupabase(userId)
   await syncToSupabase(userId)
+}
+
+// ── Deletion helpers (call these alongside the local db.delete) ───────────────
+
+export async function deleteDebtRemote(userId, debtId) {
+  if (!userId) return
+  const { error } = await supabase.from('debts').delete()
+    .eq('user_id', userId).eq('local_id', debtId)
+  if (error) console.error('[sync] deleteDebtRemote:', error.message)
+}
+
+export async function deleteRecurringRemote(userId, recurringId) {
+  if (!userId) return
+  const { error } = await supabase.from('recurring').delete()
+    .eq('user_id', userId).eq('local_id', recurringId)
+  if (error) console.error('[sync] deleteRecurringRemote:', error.message)
 }

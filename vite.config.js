@@ -16,7 +16,7 @@ export default defineConfig({
         name: 'Spendr',
         short_name: 'Spendr',
         description: 'Personal finance tracker — track spending, income, and more.',
-        theme_color: '#2D9DFF',
+        theme_color: '#0b0f14',
         background_color: '#0b0f14',
         display: 'standalone',
         orientation: 'portrait',
