@@ -194,12 +194,14 @@ input, textarea, select {
   font-size: 16px !important;
 }
 
-/* ── Date input — prevent iOS overflow ───────────────── */
+/* ── Date input — prevent iOS overflow, center text ─────── */
 input[type="date"] {
   -webkit-appearance: none;
   appearance: none;
   width: 100%;
   min-width: 0;
+  display: flex;
+  align-items: center;
 }
 input[type="date"]::-webkit-date-and-time-value {
   text-align: left;
