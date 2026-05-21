@@ -793,15 +793,10 @@ function SpendingTrivia({ trivia, triviaKey }) {
           flex items-center"
         style={{ outline: 'none', minHeight: '80px' }}
       >
-        <div className="w-full" style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}>
-          <div className="flex items-start gap-3 mb-1.5">
-            <span className="text-xl leading-none mt-0.5 shrink-0">{item.emoji}</span>
-            <p className="flex-1 text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed tracking-[-0.01em]">
-              {item.text}
-            </p>
-          </div>
-          <p className="text-[10px] text-slate-400 dark:text-slate-500 text-right">
-            Tap for another
+        <div className="w-full flex items-start gap-3" style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}>
+          <span className="text-xl leading-none mt-0.5 shrink-0">{item.emoji}</span>
+          <p className="flex-1 text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed tracking-[-0.01em]">
+            {item.text}
           </p>
         </div>
       </button>
