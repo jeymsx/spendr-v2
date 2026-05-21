@@ -1761,9 +1761,9 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Template'}
               </button>
             </div>
+            <div className="h-8 shrink-0" />
           </div>
         </div>
-        <div className="h-8" />
       </div>
 
       {/* Nested pickers */}
