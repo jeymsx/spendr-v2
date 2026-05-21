@@ -353,9 +353,13 @@ export async function syncFromSupabase(userId) {
   await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
     row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first())
   await pullSimpleTable('debts', db.debts, rowToDebt, null, userId,
-    row => db.debts.where('name').equals(row.name).and(d => d.type === row.type && d.amount === row.amount).first())
+    row => row.contact
+      ? db.debts.where('contact').equals(row.contact).and(d => d.type === row.type && d.amount === row.amount).first()
+      : null)
   await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
-    row => db.recurring.where('name').equals(row.name).and(r => r.amount === row.amount).first())
+    row => row.name
+      ? db.recurring.where('name').equals(row.name).and(r => r.amount === row.amount).first()
+      : null)
   await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId)
 
   // Guarantee system categories exist locally even if never pushed to Supabase
