@@ -33,13 +33,22 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
 
   const pick = (acct) => { onSelect(acct); close() }
 
-  const visible = (accounts || []).filter(a => !exclude.includes(a.id))
+  // Derive parent/child structure from all accounts (not filtered)
+  const parentNames = new Set((accounts || []).filter(a => a.parentName).map(a => a.parentName))
+  // All accounts are selectable; only exclude by the exclude prop
+  const selectable = (accounts || []).filter(a => !exclude.includes(a.id))
+
+  // Parents that are themselves selectable (not excluded)
+  const parentAccts      = selectable.filter(a => parentNames.has(a.name))
+  const visibleParentSet = new Set(parentAccts.map(a => a.name))
+  // Flat: not a parent, and either has no parentName OR its parent was excluded (orphaned child → show flat)
+  const flatSelectable   = selectable.filter(a =>
+    !parentNames.has(a.name) && (!a.parentName || !visibleParentSet.has(a.parentName))
+  )
 
   if (!open && !closing) return null
 
   return (
-    // touch-action:none on the fixed wrapper stops iOS from chaining
-    // any touch gesture here to the page behind it
     <div className="fixed inset-0 z-[130]" style={{ touchAction: 'none' }}>
       <div
         className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
@@ -63,66 +72,102 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
           </p>
         </div>
 
-        {/* scrollable list — touch-action:pan-y re-enables vertical swipe here */}
+        {/* scrollable list */}
         <div
           className="overflow-y-auto flex-1 px-5"
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           <div className="flex flex-col gap-2">
-            {visible.map(acct => {
-              const isCredit    = acct.type === 'credit'
-              const isSelected  = selected?.id === acct.id
-              const displayBal  = isCredit
-                ? fmt(creditAvailMap?.[acct.name] ?? 0)
-                : fmt(acct.balance)
-              const balLabel    = isCredit ? 'available' : 'balance'
-
+            {/* Parent groups — parent is selectable, children listed below with indent */}
+            {parentAccts.map(parent => {
+              const children = selectable.filter(a => a.parentName === parent.name)
               return (
-                <button
-                  key={acct.id}
-                  onClick={() => pick(acct)}
-                  className={[
-                    'flex items-center gap-3 px-4 py-3 rounded-2xl text-left',
-                    'active:scale-[0.98] transition-all duration-75',
-                    isSelected
-                      ? 'ring-2 ring-primary/40 bg-primary/6 dark:bg-primary/12'
-                      : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.08]',
-                  ].join(' ')}
-                >
-                  <span
-                    className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
-                    style={{ backgroundColor: (acct.color ?? '#2D9DFF') + '22' }}
-                  >
-                    <span
-                      className="w-3.5 h-3.5 rounded-full"
-                      style={{ backgroundColor: acct.color ?? '#2D9DFF' }}
+                <div key={parent.id}>
+                  <AccountRow
+                    acct={parent}
+                    selected={selected}
+                    creditAvailMap={creditAvailMap}
+                    onPick={pick}
+                  />
+                  {children.map(acct => (
+                    <AccountRow
+                      key={acct.id}
+                      acct={acct}
+                      selected={selected}
+                      creditAvailMap={creditAvailMap}
+                      onPick={pick}
+                      indent
                     />
-                  </span>
-
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{acct.name}</p>
-                    <p className="text-xs text-slate-400 dark:text-slate-500">{TYPE_LABEL[acct.type] ?? acct.type}</p>
-                  </div>
-
-                  <div className="text-right shrink-0">
-                    <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
-                      {displayBal}
-                    </p>
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500">{balLabel}</p>
-                  </div>
-
-                  {isSelected && (
-                    <svg className="text-primary shrink-0 ml-1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                      <polyline points="20 6 9 17 4 12" />
-                    </svg>
-                  )}
-                </button>
+                  ))}
+                </div>
               )
             })}
+
+            {/* Flat accounts */}
+            {flatSelectable.map(acct => (
+              <AccountRow
+                key={acct.id}
+                acct={acct}
+                selected={selected}
+                creditAvailMap={creditAvailMap}
+                onPick={pick}
+              />
+            ))}
           </div>
           <div className="h-8 shrink-0" />
         </div>
       </div>
     </div>
+  )
+}
+
+function AccountRow({ acct, selected, creditAvailMap, onPick, indent = false }) {
+  const isCredit   = acct.type === 'credit'
+  const isSelected = selected?.id === acct.id
+  const displayBal = isCredit
+    ? fmt(creditAvailMap?.[acct.name] ?? 0)
+    : fmt(acct.balance)
+  const balLabel   = isCredit ? 'available' : 'balance'
+
+  return (
+    <button
+      onClick={() => onPick(acct)}
+      className={[
+        'flex items-center gap-3 px-4 py-3 rounded-2xl text-left w-full',
+        indent ? 'ml-3' : '',
+        'active:scale-[0.98] transition-all duration-75',
+        isSelected
+          ? 'ring-2 ring-primary/40 bg-primary/6 dark:bg-primary/12'
+          : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.08]',
+      ].join(' ')}
+    >
+      <span
+        className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
+        style={{ backgroundColor: (acct.color ?? '#2D9DFF') + '22' }}
+      >
+        <span
+          className="w-3.5 h-3.5 rounded-full"
+          style={{ backgroundColor: acct.color ?? '#2D9DFF' }}
+        />
+      </span>
+
+      <div className="flex-1 min-w-0">
+        <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{acct.name}</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500">{TYPE_LABEL[acct.type] ?? acct.type}</p>
+      </div>
+
+      <div className="text-right shrink-0">
+        <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+          {displayBal}
+        </p>
+        <p className="text-[10px] text-slate-400 dark:text-slate-500">{balLabel}</p>
+      </div>
+
+      {isSelected && (
+        <svg className="text-primary shrink-0 ml-1" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12" />
+        </svg>
+      )}
+    </button>
   )
 }

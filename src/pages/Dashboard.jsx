@@ -154,15 +154,29 @@ export default function Dashboard() {
 
   // ── Derived values ────────────────────────────────────────────────────────────
   const { spendingBalance, savingsBalance } = useMemo(() => {
-    const accts = accounts || []
+    const allAccts = accounts || []
     const roleOf = (a) => {
       if (a.type === 'credit') return 'credit'
       if (a.role) return a.role
       return ['cash', 'ewallet'].includes(a.type) ? 'spending' : 'savings'
     }
-    const spendingBalance = accts.filter(a => roleOf(a) === 'spending').reduce((s, a) => s + (a.balance ?? 0), 0)
-    const savingsBalance  = accts.filter(a => roleOf(a) === 'savings').reduce((s, a)  => s + (a.balance ?? 0), 0)
+    // Parents have their own real balance; sum all accounts (no double-counting)
+    const spendingBalance = allAccts.filter(a => roleOf(a) === 'spending').reduce((s, a) => s + (a.balance ?? 0), 0)
+    const savingsBalance  = allAccts.filter(a => roleOf(a) === 'savings').reduce((s, a)  => s + (a.balance ?? 0), 0)
     return { spendingBalance, savingsBalance }
+  }, [accounts])
+
+  const parentCombinedBal = useMemo(() => {
+    const allAccts = accounts || []
+    const map = {}
+    allAccts.filter(a => a.parentName).forEach(child => {
+      map[child.parentName] = (map[child.parentName] ?? 0) + (child.balance ?? 0)
+    })
+    // Add the parent's own balance to the children sum
+    allAccts.forEach(a => {
+      if (map[a.name] !== undefined) map[a.name] += (a.balance ?? 0)
+    })
+    return map
   }, [accounts])
 
   const recentTx = useMemo(() =>
@@ -347,15 +361,27 @@ export default function Dashboard() {
           {(accounts || []).length === 0 && (
             <EmptyPill label="No accounts yet" />
           )}
-          {(accounts || []).map(acct => (
-            <AccountCard
-              key={acct.id}
-              acct={acct}
-              hidden={balanceHidden && !peek}
-              onClick={() => navigate('/accounts')}
-              stmt={creditStmtMap[acct.name]}
-            />
-          ))}
+          {(() => {
+            const allAccts    = accounts || []
+            const parentNames = new Set(allAccts.filter(a => a.parentName).map(a => a.parentName))
+            // Show parent accounts (combined balance) + flat accounts; exclude child accounts
+            const cardAccts   = allAccts.filter(a => parentNames.has(a.name) || !a.parentName)
+            return cardAccts.map(acct => {
+              const isParent = parentNames.has(acct.name)
+              const displayAcct = isParent
+                ? { ...acct, balance: parentCombinedBal[acct.name] ?? acct.balance }
+                : acct
+              return (
+                <AccountCard
+                  key={acct.id}
+                  acct={displayAcct}
+                  hidden={balanceHidden && !peek}
+                  onClick={() => navigate('/accounts')}
+                  stmt={creditStmtMap[acct.name]}
+                />
+              )
+            })
+          })()}
           {/* spacer so last card doesn't clip under scroll fade */}
           <div className="shrink-0 w-1" />
         </div>

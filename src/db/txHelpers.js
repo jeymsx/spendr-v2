@@ -10,6 +10,15 @@ async function adjustBalance(accountName, delta) {
   await db.balances.put({ account: accountName, balance: newBal })
 }
 
+export async function syncParentBalance(parentName) {
+  const children = await db.accounts.where('parentName').equals(parentName).toArray()
+  const total = children.reduce((s, a) => s + (a.balance ?? 0), 0)
+  const parent = await db.accounts.where('name').equals(parentName).first()
+  if (parent) {
+    await db.accounts.update(parent.id, { balance: total, updatedAt: new Date().toISOString() })
+  }
+}
+
 /** Returns true if the named account is a credit card. */
 async function isCredit(accountName) {
   if (!accountName) return false

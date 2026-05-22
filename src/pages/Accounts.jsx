@@ -265,7 +265,7 @@ function SummaryBar({ summary, hidden, onToggleHide, accentColor, theme }) {
 
 // ── Account card ───────────────────────────────────────────────────────────────
 
-function AccountCard({ acct, hidden, onTap, stmt }) {
+function AccountCard({ acct, hidden, onTap, stmt, indent = false }) {
   const isCredit    = acct.type === 'credit'
   const thisTotal   = stmt?.thisTotal ?? 0
   const nextTotal   = stmt?.nextTotal ?? 0
@@ -278,12 +278,13 @@ function AccountCard({ acct, hidden, onTap, stmt }) {
   return (
     <button
       onClick={onTap}
-      className="w-full flex flex-col px-4 py-4 text-left
-        active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors"
+      className={`w-full flex flex-col text-left
+        active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors
+        ${indent ? 'pl-10 pr-4 py-3.5' : 'px-4 py-4'}`}
     >
       <div className="flex items-center gap-4 w-full">
         <span
-          className="w-10 h-10 rounded-xl flex items-center justify-center shrink-0 text-white"
+          className={`${indent ? 'w-8 h-8 rounded-lg' : 'w-10 h-10 rounded-xl'} flex items-center justify-center shrink-0 text-white`}
           style={{ backgroundColor: acct.color ?? '#2D9DFF' }}
         >
           {typeIcon(acct.type)}
@@ -601,9 +602,26 @@ export default function Accounts() {
     return map
   }, [accounts, transactions])
 
+  const parentNames = useMemo(() =>
+    new Set((accounts ?? []).filter(a => a.parentName).map(a => a.parentName)),
+    [accounts],
+  )
+
+  const parentAccts = useMemo(() =>
+    (accounts ?? []).filter(a => parentNames.has(a.name)),
+    [accounts, parentNames],
+  )
+
+  const flatAccts = useMemo(() =>
+    (accounts ?? []).filter(a => !a.parentName && !parentNames.has(a.name)),
+    [accounts, parentNames],
+  )
+
   const summary = useMemo(() => {
-    const assets     = (accounts ?? []).filter(a => a.type !== 'credit').reduce((s, a) => s + (a.balance ?? 0), 0)
-    const creditUsed = (accounts ?? []).filter(a => a.type === 'credit').reduce((s, a) => {
+    // Parents have their own real balance; sum all accounts (no double-counting)
+    const allAccts   = accounts ?? []
+    const assets     = allAccts.filter(a => a.type !== 'credit').reduce((s, a) => s + (a.balance ?? 0), 0)
+    const creditUsed = allAccts.filter(a => a.type === 'credit').reduce((s, a) => {
       const stmt = creditStmtMap[a.name]
       return s + (stmt?.thisTotal ?? 0) + (stmt?.nextTotal ?? 0)
     }, 0)
@@ -612,9 +630,9 @@ export default function Accounts() {
 
   const groups = useMemo(() =>
     ACCOUNT_GROUPS
-      .map(g => ({ ...g, accounts: (accounts ?? []).filter(a => g.types.includes(a.type)) }))
+      .map(g => ({ ...g, accounts: flatAccts.filter(a => g.types.includes(a.type)) }))
       .filter(g => g.accounts.length > 0),
-    [accounts],
+    [flatAccts],
   )
 
   // Keep selectedAccount in sync with live DB changes
@@ -683,6 +701,51 @@ export default function Accounts() {
         </div>
       )}
 
+      {/* ── Parent account groups ── */}
+      {parentAccts.map(parent => {
+        const children = (accounts ?? []).filter(a => a.parentName === parent.name)
+        const groupTotal = (parent.balance ?? 0) + children.reduce((s, a) => s + (a.balance ?? 0), 0)
+        return (
+          <section key={parent.id} className="mb-3">
+            <div className="flex items-center gap-3 px-5 py-2">
+              <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                {parent.name}
+              </span>
+              <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
+              <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                {fmt(groupTotal)}
+              </span>
+            </div>
+            <div
+              className="mx-5 rounded-2xl overflow-hidden
+                bg-white border border-slate-100
+                dark:bg-primary/[0.07] dark:border-primary/[0.14]
+                shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]"
+            >
+              {/* Parent itself as first row (it holds real money) */}
+              <AccountCard
+                acct={parent}
+                hidden={balanceHidden}
+                onTap={() => openDetail(parent)}
+                stmt={creditStmtMap[parent.name]}
+              />
+              {children.map((acct) => (
+                <div key={acct.id}>
+                  <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
+                  <AccountCard
+                    acct={acct}
+                    hidden={balanceHidden}
+                    onTap={() => openDetail(acct)}
+                    stmt={creditStmtMap[acct.name]}
+                    indent
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
+        )
+      })}
+
       {/* ── Account groups ── */}
       {groups.map(group => (
         <section key={group.label} className="mb-3">
@@ -737,9 +800,15 @@ export default function Accounts() {
         onClose={() => setDetailOpen(false)}
         account={selectedAccount}
         transactions={transactions ?? []}
+        allAccounts={accounts ?? []}
         onEdit={(acct) => {
           setEditingAccount(acct)
           setFormPrefill(null)
+          setFormOpen(true)
+        }}
+        onAddSubAccount={(parentAcctName) => {
+          setEditingAccount(null)
+          setFormPrefill({ parentName: parentAcctName })
           setFormOpen(true)
         }}
       />
@@ -979,6 +1048,8 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [nameError,      setNameError]      = useState(false)
   const [qrImage,        setQrImage]        = useState(null)
   const [qrCropOpen,     setQrCropOpen]     = useState(false)
+  const [parentName,     setParentName]     = useState(null)
+  const allAccounts = useLiveQuery(() => db.accounts.toArray(), [], [])
 
   const isEdit = !!account?.id
 
@@ -1001,6 +1072,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setCutoffDay(account.cutoffDate != null ? String(account.cutoffDate) : '')
       setMinPayment(numToMoneyStr(account.minimumPayment ?? 0))
       setQrImage(account.qrImage ?? null)
+      setParentName(account.parentName ?? null)
     } else {
       const t = prefill?.type ?? 'cash'
       setName(prefill?.name ?? '')
@@ -1014,6 +1086,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setCutoffDay('')
       setMinPayment('0')
       setQrImage(null)
+      setParentName(prefill?.parentName ?? null)
     }
   }, [open, account?.id])
 
@@ -1042,6 +1115,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
         minimumPayment: isCredit ? (parseMoney(minPayment)   || 0)    : null,
         qrImage:        qrImage ?? null,
         updatedAt:      new Date().toISOString(),
+        parentName:     parentName ?? null,
       }
 
       if (isEdit) {
@@ -1062,6 +1136,8 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
             for (const tx of byFrom) await db.transactions.update(tx.id, { fromAccount: cleanName })
             const byTo = await db.transactions.where('toAccount').equals(oldName).toArray()
             for (const tx of byTo) await db.transactions.update(tx.id, { toAccount: cleanName })
+            // Update children's parentName reference
+            await db.accounts.where('parentName').equals(oldName).modify({ parentName: cleanName })
           }
         })
       } else {
@@ -1070,6 +1146,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
           await db.accounts.add({ ...data, balance })
           await db.balances.put({ account: cleanName, balance })
         })
+        // If this new account has a parent, recompute the parent's balance
       }
       showToast(isEdit ? 'Account updated' : 'Account created')
       close()
@@ -1084,8 +1161,10 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
     const byAcct = await db.transactions.where('account').equals(account.name).count()
     const byFrom = await db.transactions.where('fromAccount').equals(account.name).count()
     const byTo   = await db.transactions.where('toAccount').equals(account.name).count()
-    const total  = byAcct + byFrom + byTo
-    setDeleteBlocked(total > 0 ? total : null)
+    const txTotal = byAcct + byFrom + byTo
+    // Also block if this account has sub-accounts
+    const childCount = await db.accounts.where('parentName').equals(account.name).count()
+    setDeleteBlocked(childCount > 0 ? `sub-accounts` : txTotal > 0 ? txTotal : null)
     setMode('confirm-delete')
   }
 
@@ -1139,6 +1218,11 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setSaving(false)
     }
   }
+
+  const isParentItself = (allAccounts ?? []).some(a => a.parentName === account?.name)
+  const potentialParents = (allAccounts ?? []).filter(a =>
+    !a.parentName && a.type !== 'credit' && a.name !== name
+  )
 
   if (!open && !closing) return null
 
@@ -1294,6 +1378,43 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 ))}
               </div>
             </div>
+
+            {/* Group under parent */}
+            {type !== 'credit' && !isParentItself && potentialParents.length > 0 && (
+              <div>
+                <Label>Group Under</Label>
+                <div className="flex flex-wrap gap-2">
+                  <button
+                    onClick={() => setParentName(null)}
+                    className={[
+                      'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
+                      parentName === null
+                        ? 'bg-primary text-white'
+                        : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
+                    ].join(' ')}
+                  >
+                    None
+                  </button>
+                  {potentialParents.map(acct => (
+                    <button
+                      key={acct.id}
+                      onClick={() => setParentName(acct.name)}
+                      className={[
+                        'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
+                        parentName === acct.name
+                          ? 'bg-primary text-white'
+                          : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
+                      ].join(' ')}
+                    >
+                      {acct.name}
+                    </button>
+                  ))}
+                </div>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 px-1">
+                  Group this account under a parent
+                </p>
+              </div>
+            )}
 
             {/* Starting balance — add mode only */}
             {!isEdit && (
@@ -1537,8 +1658,9 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                   Cannot delete <span className="font-semibold text-slate-800 dark:text-white">{account?.name}</span>
                 </p>
                 <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-6 leading-relaxed">
-                  This account has {deleteBlocked} {deleteBlocked === 1 ? 'transaction' : 'transactions'}.
-                  Remove those transactions first before deleting the account.
+                  {deleteBlocked === 'sub-accounts'
+                    ? 'This account has sub-accounts. Delete or re-assign them first.'
+                    : `This account has ${deleteBlocked} ${deleteBlocked === 1 ? 'transaction' : 'transactions'}. Remove those transactions first.`}
                 </p>
                 <button
                   onClick={() => setMode('form')}
@@ -1599,7 +1721,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
 
-function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
+function AccountDetailSheet({ open, onClose, account, transactions, allAccounts = [], onEdit, onAddSubAccount }) {
   const [closing,   setClosing]   = useState(false)
   const [qrVisible, setQrVisible] = useState(false)
   useScrollLock(open)
@@ -1677,8 +1799,15 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
   if (!open && !closing) return null
   if (!account) return null
 
+  const childAccounts = allAccounts.filter(a => a.parentName === account.name)
+  const isParent      = childAccounts.length > 0
+  const isChild       = !!account.parentName
+
   const isCredit    = account.type === 'credit'
-  const totalUsed   = isCredit ? (creditData?.thisTotal ?? 0) + (creditData?.nextTotal ?? 0) : (account.balance ?? 0)
+  const combinedBal = isParent
+    ? (account.balance ?? 0) + childAccounts.reduce((s, a) => s + (a.balance ?? 0), 0)
+    : (account.balance ?? 0)
+  const totalUsed   = isCredit ? (creditData?.thisTotal ?? 0) + (creditData?.nextTotal ?? 0) : combinedBal
   const usedPct     = isCredit && (account.creditLimit ?? 0) > 0
     ? Math.min((totalUsed / account.creditLimit) * 100, 100) : 0
 
@@ -1710,7 +1839,11 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
             </span>
             <div className="flex-1 min-w-0">
               <h3 className="text-base font-semibold text-slate-800 dark:text-white truncate">{account.name}</h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500">{TYPE_LABEL[account.type]}</p>
+              {isChild ? (
+                <p className="text-xs text-primary/80 dark:text-primary/70 font-medium">Part of {account.parentName}</p>
+              ) : (
+                <p className="text-xs text-slate-400 dark:text-slate-500">{TYPE_LABEL[account.type]}</p>
+              )}
             </div>
             <div className="flex items-center gap-2 shrink-0">
               {account.qrImage && (
@@ -1752,7 +1885,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
               : 'bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]'
           }`}>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-              {isCredit ? 'Balance Used' : 'Current Balance'}
+              {isCredit ? 'Balance Used' : isParent ? 'Combined Balance' : 'Current Balance'}
             </p>
             <p className={`text-2xl font-bold tabular-nums ${
               isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
@@ -1850,6 +1983,74 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
                   totalColor="text-emerald-600 dark:text-emerald-400"
                   totalSign="−"
                 />
+              )}
+            </>
+          ) : isParent ? (
+            <>
+              {/* ── Parent: sub-accounts list ── */}
+              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2.5">
+                Sub-accounts · {childAccounts.length}
+              </p>
+              <div
+                className="rounded-2xl overflow-hidden mb-3
+                  bg-white border border-slate-100
+                  dark:bg-white/[0.04] dark:border-white/[0.07]
+                  shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
+              >
+                {childAccounts.map((child, i) => (
+                  <div key={child.id}>
+                    <div className="flex items-center gap-3 px-4 py-3.5">
+                      <span
+                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
+                        style={{ backgroundColor: child.color ?? '#2D9DFF' }}
+                      >
+                        {typeIcon(child.type)}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate">{child.name}</p>
+                        <p className="text-[10px] text-slate-400 dark:text-slate-500">{TYPE_LABEL[child.type]}</p>
+                      </div>
+                      <p className="text-[13px] font-bold tabular-nums text-slate-700 dark:text-slate-200">
+                        {fmt(child.balance ?? 0)}
+                      </p>
+                    </div>
+                    {i < childAccounts.length - 1 && (
+                      <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => { close(); setTimeout(() => onAddSubAccount?.(account.name), 250) }}
+                className="w-full py-3 rounded-2xl text-sm font-semibold text-primary
+                  bg-primary/[0.08] dark:bg-primary/[0.12]
+                  active:bg-primary/[0.15] transition-colors mb-4"
+              >
+                + Add Sub-account
+              </button>
+
+              {/* ── Direct transactions on the parent account ── */}
+              {acctTxs.length > 0 && (
+                <>
+                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2.5">
+                    Direct Transactions · {acctTxs.length}
+                  </p>
+                  <div
+                    className="rounded-2xl overflow-hidden mb-4
+                      bg-white border border-slate-100
+                      dark:bg-white/[0.04] dark:border-white/[0.07]
+                      shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
+                  >
+                    {txsWithRunning.map((tx, i) => (
+                      <div key={tx.id}>
+                        <DetailTxRow tx={tx} accountName={account.name} />
+                        {i < txsWithRunning.length - 1 && (
+                          <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </>
               )}
             </>
           ) : (
