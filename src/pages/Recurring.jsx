@@ -720,16 +720,18 @@ export default function Recurring() {
       const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
       await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
         await db.transactions.add({
-          txId:      crypto.randomUUID(),
-          type:      'expense',
-          amount:    rec.amount,
-          description: rec.name,
-          category:  rec.category,
-          payment:   rec.account,
-          account:   rec.account,
-          date:      now,
-          synced:    false,
-          updatedAt: now,
+          txId:             crypto.randomUUID(),
+          type:             'expense',
+          amount:           rec.amount,
+          description:      rec.name,
+          category:         rec.category,
+          payment:          rec.account,
+          account:          rec.account,
+          date:             now,
+          synced:           false,
+          updatedAt:        now,
+          recurringId:      rec.id,
+          recurringPrevDate: rec.nextDate,
         })
         await applyBalanceEffect({ type: 'expense', amount: rec.amount, account: rec.account })
         await db.recurring.update(rec.id, { nextDate: newNextDate })

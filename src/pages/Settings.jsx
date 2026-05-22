@@ -2347,14 +2347,6 @@ export default function Settings() {
         <SectionHeader>Data & Reports</SectionHeader>
         <SectionCard>
           <SettingsRow
-            iconEl={<RowIcon color="blue"><IconUpload /></RowIcon>}
-            label="Import Data"
-            sublabel="Import transactions from a CSV export"
-            right={<IconChevronRight />}
-            onTap={() => navigate('/import')}
-          />
-          <RowDivider />
-          <SettingsRow
             iconEl={<RowIcon color="green"><IconDownload /></RowIcon>}
             label="Export Transactions (CSV)"
             sublabel={exporting ? 'Preparing download…' : `${txCount ?? 0} transactions`}

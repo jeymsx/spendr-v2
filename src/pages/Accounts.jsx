@@ -749,12 +749,7 @@ export default function Accounts() {
                 {fmt(groupTotal)}
               </span>
             </div>
-            <div
-              className="mx-5 rounded-2xl overflow-hidden
-                bg-white border border-slate-100
-                dark:bg-primary/[0.07] dark:border-primary/[0.14]
-                shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]"
-            >
+            <div className="card mx-5 rounded-2xl overflow-hidden">
               {/* Parent itself as first row (it holds real money) */}
               <AccountCard
                 acct={parent}
@@ -794,12 +789,7 @@ export default function Accounts() {
             </span>
           </div>
 
-          <div
-            className="mx-5 rounded-2xl overflow-hidden
-              bg-white border border-slate-100
-              dark:bg-primary/[0.07] dark:border-primary/[0.14]
-              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]"
-          >
+          <div className="card mx-5 rounded-2xl overflow-hidden">
             {group.accounts.map((acct, i) => (
               <div key={acct.id}>
                 <AccountCard

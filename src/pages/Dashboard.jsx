@@ -4,6 +4,9 @@ import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCycleRange } from '../utils/creditCycle'
+import { applyBalanceEffect } from '../db/txHelpers'
+import { advanceNextDate } from '../utils/recurring'
+import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -138,10 +141,14 @@ function cardGradient(accentColor, theme) {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { accentColor, theme } = useTheme()
+  const { showToast } = useToast()
   const [balanceHidden,    setBalanceHidden]    = useState(true)
   const [peek,             setPeek]             = useState(false)
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
+  const [postTarget,       setPostTarget]       = useState(null)
+  const [postSheetOpen,    setPostSheetOpen]    = useState(false)
+  const [posting,          setPosting]          = useState(false)
 
   // ── Live queries ─────────────────────────────────────────────────────────────
   const accounts   = useLiveQuery(() => db.accounts.toArray())
@@ -202,8 +209,9 @@ export default function Dashboard() {
 
   const upcomingRecurring = useMemo(() =>
     (recurring || [])
-      .filter(r => r.active && inNext7Days(r.nextDate))
-      .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? '')),
+      .filter(r => r.active && r.nextDate)
+      .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? ''))
+      .slice(0, 3),
     [recurring],
   )
 
@@ -246,6 +254,38 @@ export default function Dashboard() {
 
   // ── Animated net worth ────────────────────────────────────────────────────────
   const animatedNetWorth = useCountUp(netWorth)
+
+  async function handlePostRecurring(rec) {
+    setPosting(true)
+    try {
+      const now         = new Date().toISOString().slice(0, 10)
+      const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
+      await db.transaction('rw', [db.transactions, db.accounts, db.recurring], async () => {
+        await db.transactions.add({
+          txId:             crypto.randomUUID(),
+          type:             'expense',
+          amount:           rec.amount,
+          description:      rec.name,
+          category:         rec.category,
+          account:          rec.account,
+          date:             now,
+          synced:           false,
+          updatedAt:        new Date().toISOString(),
+          recurringId:      rec.id,
+          recurringPrevDate: rec.nextDate,
+        })
+        await applyBalanceEffect({ type: 'expense', amount: rec.amount, account: rec.account })
+        await db.recurring.update(rec.id, { nextDate: newNextDate })
+      })
+      showToast(`${rec.name} posted!`)
+      setPostSheetOpen(false)
+    } catch (e) {
+      console.error('[Dashboard] post recurring failed:', e)
+      showToast('Failed to post', 'error')
+    } finally {
+      setPosting(false)
+    }
+  }
 
   // ── Loading skeleton ──────────────────────────────────────────────────────────
   if (accounts === undefined || txAll === undefined) {
@@ -369,7 +409,9 @@ export default function Dashboard() {
             const allAccts    = accounts || []
             const parentNames = new Set(allAccts.filter(a => a.parentName).map(a => a.parentName))
             // Show parent accounts (combined balance) + flat accounts; exclude child accounts
-            const cardAccts   = allAccts.filter(a => parentNames.has(a.name) || !a.parentName)
+            const cardAccts   = allAccts
+              .filter(a => parentNames.has(a.name) || !a.parentName)
+              .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
             return cardAccts.map(acct => {
               const isParent = parentNames.has(acct.name)
               const displayAcct = isParent
@@ -448,7 +490,7 @@ export default function Dashboard() {
             <EmptyCard label="No upcoming payments" />
           ) : (
             upcomingRecurring.map(r => (
-              <RecurringRow key={r.id} item={r} />
+              <RecurringRow key={r.id} item={r} onClick={() => { setPostTarget(r); setPostSheetOpen(true) }} />
             ))
           )}
         </div>
@@ -459,6 +501,13 @@ export default function Dashboard() {
         open={quickConfirmOpen}
         onClose={() => setQuickConfirmOpen(false)}
         template={quickTemplate}
+      />
+      <RecurringPostSheet
+        open={postSheetOpen}
+        item={postTarget}
+        posting={posting}
+        onClose={() => setPostSheetOpen(false)}
+        onPost={handlePostRecurring}
       />
 
       <section className="px-5 mt-8 pb-nav">
@@ -679,13 +728,13 @@ function BudgetRow({ cat }) {
 
 // ── Recurring row ──────────────────────────────────────────────────────────────
 
-function RecurringRow({ item }) {
+function RecurringRow({ item, onClick }) {
   const daysUntil = item.nextDate
     ? Math.ceil((new Date(item.nextDate) - new Date()) / 864e5)
     : null
 
   return (
-    <div className="card flex items-center gap-3 px-4 py-3 rounded-2xl">
+    <button onClick={onClick} className="card flex items-center gap-3 px-4 py-3 rounded-2xl w-full text-left active:scale-[0.98] transition-transform duration-100">
       <div className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0">
         <span className="text-base">🔄</span>
       </div>
@@ -695,11 +744,11 @@ function RecurringRow({ item }) {
       </div>
       <div className="text-right shrink-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white tabular-nums">{fmt(item.amount)}</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+        <p className={`text-[11px] ${daysUntil === 0 ? 'text-red-500 dark:text-red-400' : daysUntil <= 2 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
           {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `in ${daysUntil}d`}
         </p>
       </div>
-    </div>
+    </button>
   )
 }
 
@@ -829,6 +878,72 @@ function DebtsSection({ debts }) {
         </div>
       </Link>
     </section>
+  )
+}
+
+// ── Recurring Post Sheet ───────────────────────────────────────────────────────
+
+function RecurringPostSheet({ open, item, posting, onClose, onPost }) {
+  const [closing, setClosing] = useState(false)
+
+  function close() {
+    setClosing(true)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[100]">
+      <div className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+          'bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]',
+        ].join(' ')}
+        style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="pt-4 px-5 pb-2">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
+
+          {/* Item info */}
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-11 h-11 rounded-2xl bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0">
+              <span className="text-xl">🔄</span>
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-slate-800 dark:text-white truncate">{item?.name}</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500">{item?.account} · {item?.frequency}</p>
+            </div>
+            <p className="text-lg font-bold text-slate-800 dark:text-white tabular-nums">{fmt(item?.amount ?? 0)}</p>
+          </div>
+
+          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mb-5">
+            Posts as an expense today and advances the next due date.
+          </p>
+
+          <div className="flex gap-3">
+            <button
+              onClick={close}
+              className="flex-1 py-3.5 rounded-2xl text-sm font-semibold text-slate-600 dark:text-slate-300
+                bg-slate-100 dark:bg-white/[0.07] active:opacity-70 transition-opacity"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={() => onPost(item)}
+              disabled={posting}
+              className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+                bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                active:scale-[0.98] transition-all disabled:opacity-40"
+            >
+              {posting ? 'Posting…' : 'Post Now'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
   )
 }
 

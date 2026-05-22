@@ -115,7 +115,7 @@ function StepName({ value, onChange, onNext }) {
   return (
     <div className="flex-1 flex flex-col gap-8">
       <div>
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 1 of 7</p>
+        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 1 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           What should<br />we call you?
         </h2>
@@ -157,7 +157,7 @@ function StepCurrency({ value, onChange, onNext }) {
   return (
     <div className="flex-1 flex flex-col gap-8">
       <div>
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 2 of 7</p>
+        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 2 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           Your main<br />currency?
         </h2>
@@ -233,7 +233,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
   return (
     <div className="flex-1 flex flex-col gap-4 min-h-0">
       <div className="shrink-0">
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 3 of 7</p>
+        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 3 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           Which accounts<br />do you use?
         </h2>
@@ -510,7 +510,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
   return (
     <div className="flex-1 flex flex-col gap-5 min-h-0">
       <div className="shrink-0">
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 4 of 7</p>
+        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 4 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           Set starting<br />balances
         </h2>
@@ -646,7 +646,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
   return (
     <div className="flex-1 flex flex-col gap-4 min-h-0">
       <div className="shrink-0">
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step {stepNum} of 7</p>
+        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step {stepNum} of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           {isExpense ? <>What do you<br />spend on?</> : <>What are your<br />income sources?</>}
         </h2>
@@ -841,48 +841,64 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
   )
 }
 
-// ── Step 7: Import or start fresh ─────────────────────────────────────────────
+// ── Step 7: Done / celebration ─────────────────────────────────────────────────
 
-function StepImport({ onImport, onFresh, saving }) {
+const CONFETTI_COLORS = ['#2D9DFF', '#34D399', '#F472B6', '#FBBF24', '#A78BFA', '#FB7185', '#38BDF8']
+
+function StepDone({ onFinish, saving }) {
+  const particles = useState(() =>
+    Array.from({ length: 70 }, (_, i) => ({
+      id: i,
+      x: Math.random() * 100,
+      delay: Math.random() * 0.8,
+      duration: 0.8 + Math.random() * 0.7,
+      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+      w: 6 + Math.random() * 7,
+      h: 4 + Math.random() * 5,
+      rotation: Math.random() * 360,
+      spin: Math.random() > 0.5 ? 360 : -360,
+    }))
+  )[0]
+
   return (
-    <div className="flex-1 flex flex-col gap-8">
-      <div>
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 7 of 7</p>
-        <h2 className="text-[28px] font-semibold leading-tight text-white">
-          Have existing<br />data?
-        </h2>
-        <p className="text-slate-500 mt-2 text-sm">Import from a previous Spendr CSV export, or start fresh.</p>
+    <div className="flex-1 flex flex-col items-center justify-center gap-8 relative overflow-hidden text-center px-2">
+      {/* confetti */}
+      <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
+        {particles.map(p => (
+          <div
+            key={p.id}
+            className="absolute rounded-[2px]"
+            style={{
+              left: `${p.x}%`,
+              top: '-12px',
+              width: p.w,
+              height: p.h,
+              backgroundColor: p.color,
+              animation: `confettiFall ${p.duration}s ${p.delay}s ease-in forwards`,
+            }}
+          />
+        ))}
       </div>
 
-      <div className="flex flex-col gap-4 mt-2">
-        <button
-          onClick={onImport}
-          disabled={saving}
-          className="w-full p-5 rounded-2xl border-2 border-primary/30 bg-primary/[0.08] text-left
-            active:scale-[0.98] transition-all duration-100 disabled:opacity-50 active:border-primary/50"
-        >
-          <div className="text-2xl mb-3">📁</div>
-          <div className="font-bold text-[16px] text-white">Import from old Spendr</div>
-          <div className="text-sm text-slate-400 mt-1">Upload a CSV export file to restore your history</div>
-        </button>
-
-        <button
-          onClick={onFresh}
-          disabled={saving}
-          className="w-full p-5 rounded-2xl border-2 border-white/[0.08] bg-white/[0.03] text-left
-            active:scale-[0.98] transition-all duration-100 disabled:opacity-50 active:bg-white/[0.07]"
-        >
-          <div className="text-2xl mb-3">✨</div>
-          <div className="font-bold text-[16px] text-white">Start fresh</div>
-          <div className="text-sm text-slate-400 mt-1">Begin with a clean slate</div>
-        </button>
+      <div style={{ animation: 'pageFadeIn 0.5s ease both' }}>
+        <div className="text-[64px] leading-none mb-6">🎉</div>
+        <h2 className="text-[32px] font-bold text-white leading-tight">You're all set!</h2>
+        <p className="text-slate-400 mt-3 text-[15px] leading-relaxed">
+          Welcome to Spendr.<br />Time to take control of your money.
+        </p>
       </div>
 
-      {saving && (
-        <div className="flex justify-center">
-          <div className="w-6 h-6 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-        </div>
-      )}
+      <button
+        onClick={onFinish}
+        disabled={saving}
+        className="w-full py-4 rounded-2xl bg-primary text-white font-semibold text-[15px]
+          shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.40)]
+          active:scale-[0.98] transition-all duration-100 disabled:opacity-60 flex items-center justify-center gap-2"
+      >
+        {saving
+          ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+          : 'Get started →'}
+      </button>
     </div>
   )
 }
@@ -1143,9 +1159,8 @@ export default function Onboarding() {
           />
         )}
         {step === 7 && (
-          <StepImport
-            onImport={() => completeOnboarding(true)}
-            onFresh={() => completeOnboarding(false)}
+          <StepDone
+            onFinish={() => completeOnboarding(false)}
             saving={saving}
           />
         )}

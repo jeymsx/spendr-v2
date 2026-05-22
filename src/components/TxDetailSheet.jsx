@@ -190,9 +190,12 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
         const list = existing?.value ?? []
         await db.meta.put({ key: 'deletedTxIds', value: [...list, tx.txId] })
       }
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+      await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
         await reverseBalanceEffect(tx)
         await db.transactions.delete(tx.id)
+        if (tx.recurringId && tx.recurringPrevDate) {
+          await db.recurring.update(tx.recurringId, { nextDate: tx.recurringPrevDate })
+        }
       })
       close()
     } catch (e) {
