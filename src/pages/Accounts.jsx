@@ -777,13 +777,15 @@ function QrCropSheet({ open, onClose, onConfirm }) {
   }
 
   function onImageLoad(e) {
-    const { naturalWidth: nw, naturalHeight: nh } = e.currentTarget
+    const img = e.currentTarget
+    const dw = img.width   // display (CSS) pixels
+    const dh = img.height
     const aspect = 5 / 4
     let w, h
-    if (nw / nh > aspect) { h = nh; w = h * aspect }
-    else { w = nw; h = w / aspect }
-    const x = (nw - w) / 2
-    const y = (nh - h) / 2
+    if (dw / dh > aspect) { h = dh; w = h * aspect }
+    else { w = dw; h = w / aspect }
+    const x = (dw - w) / 2
+    const y = (dh - h) / 2
     const initial = { unit: 'px', x, y, width: w, height: h }
     setCrop(initial)
     setCompletedCrop(initial)
@@ -1707,12 +1709,23 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
               {account.qrImage && (
                 <button
                   onClick={() => setQrVisible(true)}
-                  className="px-3 py-1.5 rounded-xl text-xs font-semibold
+                  className="w-9 h-9 rounded-xl flex items-center justify-center
                     text-emerald-600 dark:text-emerald-400
                     bg-emerald-50 dark:bg-emerald-500/10
                     active:bg-emerald-100 dark:active:bg-emerald-500/20 transition-colors"
+                  aria-label="Show Payment QR"
                 >
-                  Show QR
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7" rx="1" />
+                    <rect x="14" y="3" width="7" height="7" rx="1" />
+                    <rect x="3" y="14" width="7" height="7" rx="1" />
+                    <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" />
+                    <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" />
+                    <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
+                    <path d="M14 14h3v3" />
+                    <path d="M14 20h7" />
+                    <path d="M21 14v7" />
+                  </svg>
                 </button>
               )}
               <button
