@@ -32,6 +32,10 @@ db.version(6).stores({
   accounts: '++id, name, type, role, balance, currency, creditLimit, statementDate, dueDate, cutoffDate, minimumPayment, color, parentName',
 })
 
+db.version(7).stores({
+  accounts: '++id, name, type, role, balance, currency, creditLimit, statementDate, dueDate, cutoffDate, minimumPayment, color, parentName, sort_order',
+})
+
 // ── Seed data ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_ACCOUNTS = [

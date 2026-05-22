@@ -149,7 +149,7 @@ export default function Dashboard() {
   const debts      = useLiveQuery(() => db.debts.toArray(),      [], [])
   const recurring  = useLiveQuery(() => db.recurring.toArray(),  [], [])
   const txAll      = useLiveQuery(() => db.transactions.toArray())
-  const userMeta   = useLiveQuery(() => db.meta.get('displayName'), [], null)
+  const userMeta   = useLiveQuery(() => db.meta.get('displayName'))
   const templates  = useLiveQuery(() => db.templates.toArray(),  [], [])
 
   // ── Derived values ────────────────────────────────────────────────────────────
@@ -241,6 +241,7 @@ export default function Dashboard() {
 
   const netWorth = spendingBalance + savingsBalance - creditOutstanding
 
+  const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
 
   // ── Animated net worth ────────────────────────────────────────────────────────
@@ -259,7 +260,10 @@ export default function Dashboard() {
       <header className="flex items-center justify-between px-5 pt-safe-header pb-2">
         <div>
           <h1 className="text-xl tracking-tight text-slate-500 dark:text-slate-400">
-            {getGreeting()}, <span className="font-semibold text-slate-900 dark:text-white">{userName}</span>!
+            {getGreeting()},{' '}
+            <span className={`font-semibold text-slate-900 dark:text-white transition-opacity duration-150 ${userMetaLoaded ? 'opacity-100' : 'opacity-0'}`}>
+              {userName}
+            </span>!
           </h1>
           <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
             {getContextHint(txAll, budgetCategories, upcomingRecurring)}
@@ -585,7 +589,7 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
       className="card shrink-0 w-40 h-[116px] rounded-2xl p-4 text-left flex flex-col
         active:scale-[0.97] transition-transform duration-100"
     >
-      {/* icon + type */}
+      {/* icon + label row */}
       <div className="flex items-center gap-2 mb-3">
         <span
           className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm shrink-0"
@@ -594,7 +598,7 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
           {meta.icon}
         </span>
         <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate">
-          {isCredit ? 'Credit' : meta.label}
+          {meta.label}
         </p>
       </div>
 
@@ -602,12 +606,12 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
 
       <div className="mt-auto">
         {isCredit ? (
-          <>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 mb-0.5">Available</p>
+          <div className="flex items-baseline gap-1.5">
             <p className="text-sm font-bold text-slate-800 dark:text-white tabular-nums">
               {hidden ? '₱ ••••' : fmt(available)}
             </p>
-          </>
+            <p className="text-[10px] text-slate-400 dark:text-slate-500">avail.</p>
+          </div>
         ) : (
           <p className="text-sm font-bold text-slate-800 dark:text-white tabular-nums">
             {hidden ? '₱ ••••' : fmt(acct.balance)}
@@ -706,7 +710,7 @@ function TxRow({ tx, cat, isLast }) {
   const isInflow   = tx.type === 'inflow'
   const amountCls  = isExpense  ? 'text-red-500 dark:text-red-400'
     : isInflow  ? 'text-emerald-600 dark:text-emerald-400'
-    : 'text-slate-500 dark:text-slate-400'
+    : 'text-primary'
   const amountSign = isExpense ? '-' : isInflow ? '+' : ''
 
   return (
@@ -728,7 +732,7 @@ function TxRow({ tx, cat, isLast }) {
       {/* description + account */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
-          {tx.description || tx.category || '—'}
+          {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
         </p>
         <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
           {tx.type === 'transfer'

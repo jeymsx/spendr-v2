@@ -1,7 +1,7 @@
 ﻿import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
-  useSensor, useSensors, DragOverlay,
+  useSensor, useSensors,
 } from '@dnd-kit/core'
 import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
@@ -798,16 +798,19 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
 
 // ── Sortable category row (for drag-to-reorder) ────────────────────────────────
 
-function SortableCategoryRow({ cat, onTap, onLongPressDelete, isDragging }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: cat.id })
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  }
+function SortableCategoryRow({ cat, onTap, onLongPressDelete }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: cat.id })
+  const style = { transform: CSS.Transform.toString(transform), transition }
 
   return (
-    <div ref={setNodeRef} style={style} className="flex items-center">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={[
+        'flex items-center',
+        isDragging ? 'relative z-10 rounded-2xl bg-white dark:bg-[#1a2130] shadow-2xl ring-1 ring-primary/30 opacity-95 scale-[1.02]' : '',
+      ].join(' ')}
+    >
       {/* Drag handle */}
       <button
         {...attributes}
@@ -840,7 +843,6 @@ function CategoryManagerSheet({ open, onClose }) {
   const [editingCat,     setEditingCat]     = useState(null)
   const [formStartDelete, setFormStartDelete] = useState(false)
   const [browseOpen,     setBrowseOpen]     = useState(false)
-  const [activeDragId,   setActiveDragId]   = useState(null)
   const isDraggingRef = useRef(false)
   // Local ordered list used during and after drag (separate per tab)
   const [localExpense,   setLocalExpense]   = useState([])
@@ -870,13 +872,11 @@ function CategoryManagerSheet({ open, onClose }) {
     useSensor(TouchSensor,   { activationConstraint: { delay: 150, tolerance: 5 } }),
   )
 
-  function handleDragStart({ active }) {
+  function handleDragStart() {
     isDraggingRef.current = true
-    setActiveDragId(active.id)
   }
 
   async function handleDragEnd({ active, over }) {
-    setActiveDragId(null)
     if (!over || active.id === over.id) {
       isDraggingRef.current = false
       return
@@ -977,22 +977,11 @@ function CategoryManagerSheet({ open, onClose }) {
                           cat={cat}
                           onTap={openEdit}
                           onLongPressDelete={openDelete}
-                          isDragging={activeDragId === cat.id}
                         />
                         {i < visibleCats.length - 1 && <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />}
                       </div>
                     ))}
                   </SortableContext>
-                  <DragOverlay>
-                    {activeDragId ? (() => {
-                      const cat = visibleCats.find(c => c.id === activeDragId)
-                      return cat ? (
-                        <div className="bg-white dark:bg-[#1a2130] rounded-2xl shadow-2xl border border-primary/30 opacity-95">
-                          <CategoryRow cat={cat} onTap={() => {}} onLongPressDelete={() => {}} />
-                        </div>
-                      ) : null
-                    })() : null}
-                  </DragOverlay>
                 </DndContext>
               )}
             </div>

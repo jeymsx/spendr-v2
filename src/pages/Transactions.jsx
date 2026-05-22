@@ -333,7 +333,7 @@ function TxRow({ tx, catMap, onClick }) {
       {/* description + account */}
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
-          {tx.description || tx.category || '—'}
+          {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
         </p>
         <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
           {tx.type === 'transfer'

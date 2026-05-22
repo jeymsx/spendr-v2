@@ -44,17 +44,25 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
   const active = selected != null ? segments[selected] : null
 
   return (
-    <div className="[&_*]:outline-none [&_*]:focus:outline-none" style={{ position: 'relative', width: '100%', maxWidth: 240, margin: '0 auto', height: 220 }}>
-      <ResponsiveContainer width="100%" height={220}>
+    <div className="[&_*]:outline-none [&_*]:focus:outline-none" style={{ position: 'relative', width: '100%', maxWidth: 280, margin: '0 auto', height: 270 }}>
+      <ResponsiveContainer width="100%" height={270}>
         <PieChart>
+          <defs>
+            {segments.map((seg, i) => (
+              <linearGradient key={i} id={`sg-${animKey}-${i}`} x1="0%" y1="0%" x2="100%" y2="100%">
+                <stop offset="0%"   stopColor={seg.color} stopOpacity={0.5} />
+                <stop offset="100%" stopColor={seg.color} stopOpacity={1}   />
+              </linearGradient>
+            ))}
+          </defs>
           <Pie
             key={animKey}
             data={segments}
             dataKey="value"
             cx="50%"
             cy="50%"
-            innerRadius={74}
-            outerRadius={92}
+            innerRadius={90}
+            outerRadius={116}
             paddingAngle={3}
             cornerRadius={6}
             startAngle={90}
@@ -68,8 +76,8 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
             {segments.map((seg, i) => (
               <Cell
                 key={i}
-                fill={seg.color}
-                opacity={selected != null && selected !== i ? 0.35 : 1}
+                fill={`url(#sg-${animKey}-${i})`}
+                opacity={selected != null && selected !== i ? 0.3 : 1}
                 style={{ cursor: 'pointer', outline: 'none' }}
               />
             ))}
@@ -90,20 +98,20 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
       }}>
         {active ? (
           <>
-            <span style={{ fontSize: 22, lineHeight: 1 }}>{active.icon}</span>
-            <span className="text-base font-bold text-slate-800 dark:text-white tabular-nums mt-1">
+            <span style={{ fontSize: 26, lineHeight: 1 }}>{active.icon}</span>
+            <span className="text-xl font-bold text-slate-800 dark:text-white tabular-nums mt-1.5">
               {fmtK(active.value)}
             </span>
-            <span className="text-xs text-slate-400 dark:text-slate-500">
+            <span className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
               {total > 0 ? (active.value / total * 100).toFixed(1) : 0}%
             </span>
           </>
         ) : (
           <>
-            <span className="text-[10px] font-semibold text-slate-400 dark:text-slate-500">
+            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">
               Total spent
             </span>
-            <span className="text-lg font-bold text-slate-800 dark:text-white tabular-nums mt-0.5">
+            <span className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums mt-1">
               {fmtK(total)}
             </span>
           </>
@@ -358,26 +366,18 @@ function SpendingByCategory({ segments, total, animKey }) {
           animKey={animKey} selected={selected} onSelect={setSelected}
         />
       </div>
-      <div className="px-4 pb-3 flex flex-col divide-y divide-slate-100 dark:divide-white/[0.05]">
-        {segments.map((seg, i) => {
-          const pctNum = total > 0 ? (seg.value / total * 100) : 0
-          return (
-            <button
-              key={i}
-              onClick={() => setSelected(selected === i ? null : i)}
-              className={`flex flex-col gap-2 py-3 text-left transition-opacity w-full ${selected != null && selected !== i ? 'opacity-35' : ''}`}
-            >
-              <div className="flex items-center gap-3">
-                <span className="text-base w-7 text-center leading-none shrink-0">{seg.icon}</span>
-                <span className="flex-1 text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{seg.name}</span>
-                <span className="text-sm font-semibold text-slate-800 dark:text-white tabular-nums shrink-0">{fmt(seg.value)}</span>
-              </div>
-              <div className="h-1 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
-                <div className="h-full rounded-full" style={{ width: `${pctNum}%`, backgroundColor: seg.color }} />
-              </div>
-            </button>
-          )
-        })}
+      <div className="px-4 pb-4 grid grid-cols-2 gap-x-3 gap-y-3">
+        {segments.map((seg, i) => (
+          <button
+            key={i}
+            onClick={() => setSelected(selected === i ? null : i)}
+            className={`flex items-center gap-2 text-left transition-opacity duration-150 min-w-0 ${selected != null && selected !== i ? 'opacity-30' : ''}`}
+          >
+            <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} />
+            <span className="text-xs font-medium text-slate-600 dark:text-slate-400 truncate">{seg.name}</span>
+            <span className="text-xs font-semibold text-slate-800 dark:text-white tabular-nums shrink-0 ml-auto">{fmt(seg.value)}</span>
+          </button>
+        ))}
       </div>
     </Section>
   )
@@ -407,7 +407,7 @@ function TopTransactions({ txs, catMap }) {
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-medium text-slate-800 dark:text-white truncate leading-snug">
-                  {tx.description || tx.category || '—'}
+                  {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
                 </p>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{tx.category} · {date}</p>
               </div>

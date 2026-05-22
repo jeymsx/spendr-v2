@@ -37,11 +37,17 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
   const parentNames = new Set((accounts || []).filter(a => a.parentName).map(a => a.parentName))
   const selectable = (accounts || []).filter(a => !exclude.includes(a.id))
 
-  const parentAccts      = selectable.filter(a => parentNames.has(a.name))
-  const visibleParentSet = new Set(parentAccts.map(a => a.name))
-  const flatSelectable   = selectable.filter(a =>
+  const sortByOrder = (arr) => [...arr].sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
+
+  // Visible parent accounts (selectable parents whose children exist)
+  const visibleParents    = selectable.filter(a => parentNames.has(a.name))
+  const visibleParentSet  = new Set(visibleParents.map(a => a.name))
+  // Flat: not a parent, and either no parentName or parent is excluded (orphaned child)
+  const flatAccts         = selectable.filter(a =>
     !parentNames.has(a.name) && (!a.parentName || !visibleParentSet.has(a.parentName))
   )
+  // Single globally-ordered top-level list — respects sort_order across parents + flat
+  const topLevelItems = sortByOrder([...visibleParents, ...flatAccts])
 
   if (!open && !closing) return null
 
@@ -72,60 +78,56 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           <div className="flex flex-col gap-2">
-
-            {/* ── Parent groups: one card per group ── */}
-            {parentAccts.map(parent => {
-              const children = selectable.filter(a => a.parentName === parent.name)
+            {topLevelItems.map(item => {
+              const isParent = parentNames.has(item.name)
+              if (isParent) {
+                const children = sortByOrder(selectable.filter(a => a.parentName === item.name))
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl overflow-hidden
+                      bg-slate-50 dark:bg-white/[0.04]
+                      border border-slate-200/60 dark:border-white/[0.08]"
+                  >
+                    <AccountRow
+                      acct={item}
+                      selected={selected}
+                      creditAvailMap={creditAvailMap}
+                      onPick={pick}
+                      roundedTop
+                      roundedBottom={children.length === 0}
+                    />
+                    {children.map((acct, i) => (
+                      <ChildRow
+                        key={acct.id}
+                        acct={acct}
+                        selected={selected}
+                        creditAvailMap={creditAvailMap}
+                        onPick={pick}
+                        isLast={i === children.length - 1}
+                      />
+                    ))}
+                  </div>
+                )
+              }
               return (
                 <div
-                  key={parent.id}
+                  key={item.id}
                   className="rounded-2xl overflow-hidden
                     bg-slate-50 dark:bg-white/[0.04]
                     border border-slate-200/60 dark:border-white/[0.08]"
                 >
-                  {/* Parent row */}
                   <AccountRow
-                    acct={parent}
+                    acct={item}
                     selected={selected}
                     creditAvailMap={creditAvailMap}
                     onPick={pick}
                     roundedTop
-                    roundedBottom={children.length === 0}
+                    roundedBottom
                   />
-
-                  {/* Child rows */}
-                  {children.map((acct, i) => (
-                    <ChildRow
-                      key={acct.id}
-                      acct={acct}
-                      selected={selected}
-                      creditAvailMap={creditAvailMap}
-                      onPick={pick}
-                      isLast={i === children.length - 1}
-                    />
-                  ))}
                 </div>
               )
             })}
-
-            {/* ── Flat accounts — same card style as parent groups ── */}
-            {flatSelectable.map(acct => (
-              <div
-                key={acct.id}
-                className="rounded-2xl overflow-hidden
-                  bg-slate-50 dark:bg-white/[0.04]
-                  border border-slate-200/60 dark:border-white/[0.08]"
-              >
-                <AccountRow
-                  acct={acct}
-                  selected={selected}
-                  creditAvailMap={creditAvailMap}
-                  onPick={pick}
-                  roundedTop
-                  roundedBottom
-                />
-              </div>
-            ))}
           </div>
           <div className="h-8 shrink-0" />
         </div>

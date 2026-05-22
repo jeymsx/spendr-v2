@@ -43,6 +43,7 @@ function accountToRow(r, userId) {
     color:           r.color,
     qr_image:        r.qrImage        ?? null,
     parent_name:     r.parentName     ?? null,
+    sort_order:      r.sort_order     ?? 0,
     updated_at:      r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -143,6 +144,7 @@ function rowToAccount(row) {
     color:          row.color,
     qrImage:        row.qr_image    ?? null,
     parentName:     row.parent_name ?? null,
+    sort_order:     row.sort_order  ?? 0,
     updatedAt:      row.updated_at,
   }
 }
@@ -449,8 +451,8 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
 
 export async function fullSync(userId) {
   if (!userId) throw new Error('Not authenticated')
-  await syncFromSupabase(userId)
   await syncToSupabase(userId)
+  await syncFromSupabase(userId)
 }
 
 // ── Deletion helpers (call these alongside the local db.delete) ───────────────

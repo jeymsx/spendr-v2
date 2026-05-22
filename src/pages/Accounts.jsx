@@ -1,4 +1,12 @@
 ﻿import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import {
+  DndContext, closestCenter, PointerSensor, TouchSensor,
+  useSensor, useSensors,
+} from '@dnd-kit/core'
+import {
+  SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
+} from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { useTheme } from '../context/ThemeContext'
@@ -581,6 +589,7 @@ export default function Accounts() {
   const [quickAddOpen,    setQuickAddOpen]    = useState(false)
   const [selectedAccount, setSelectedAccount] = useState(null)
   const [detailOpen,      setDetailOpen]      = useState(false)
+  const [sortOpen,        setSortOpen]        = useState(false)
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
@@ -608,12 +617,16 @@ export default function Accounts() {
   )
 
   const parentAccts = useMemo(() =>
-    (accounts ?? []).filter(a => parentNames.has(a.name)),
+    (accounts ?? [])
+      .filter(a => parentNames.has(a.name))
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999)),
     [accounts, parentNames],
   )
 
   const flatAccts = useMemo(() =>
-    (accounts ?? []).filter(a => !a.parentName && !parentNames.has(a.name)),
+    (accounts ?? [])
+      .filter(a => !a.parentName && !parentNames.has(a.name))
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999)),
     [accounts, parentNames],
   )
 
@@ -668,15 +681,35 @@ export default function Accounts() {
       {/* ── Header ── */}
       <div className="flex items-center justify-between px-5 pt-safe-header pb-5">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Accounts</h1>
-        <button
-          onClick={openAdd}
-          className="flex items-center gap-1.5 pl-3 pr-4 h-9 rounded-2xl text-sm font-semibold
-            bg-primary text-white
-            active:scale-95 transition-transform duration-100"
-        >
-          <IconPlus />
-          Add Account
-        </button>
+        <div className="flex items-center gap-2">
+          {(accounts ?? []).length > 1 && (
+            <button
+              onClick={() => setSortOpen(true)}
+              className="w-9 h-9 rounded-2xl flex items-center justify-center transition-colors duration-150
+                border shadow-sm
+                bg-white dark:bg-primary/[0.10]
+                border-slate-200/80 dark:border-primary/[0.20]
+                text-slate-500 dark:text-slate-300
+                dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]
+                active:scale-95"
+              aria-label="Sort accounts"
+            >
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M8 18V6M8 6L5 9M8 6l3 3" />
+                <path d="M16 6v12M16 18l-3-3M16 18l3-3" />
+              </svg>
+            </button>
+          )}
+          <button
+            onClick={openAdd}
+            className="flex items-center gap-1.5 pl-3 pr-4 h-9 rounded-2xl text-sm font-semibold
+              bg-primary text-white
+              active:scale-95 transition-transform duration-100"
+          >
+            <IconPlus />
+            Add Account
+          </button>
+        </div>
       </div>
 
       {/* ── Summary ── */}
@@ -755,7 +788,9 @@ export default function Accounts() {
             </span>
             <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
             <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
-              {group.accounts.length}
+              {group.label === 'Credit Cards'
+                ? fmt(group.accounts.reduce((s, a) => s + (creditStmtMap[a.name]?.thisTotal ?? 0) + (creditStmtMap[a.name]?.nextTotal ?? 0), 0))
+                : fmt(group.accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}
             </span>
           </div>
 
@@ -783,6 +818,11 @@ export default function Accounts() {
       ))}
 
       {/* ── Sheets ── */}
+      <AccountSortSheet
+        open={sortOpen}
+        onClose={() => setSortOpen(false)}
+        accounts={accounts ?? []}
+      />
       <QuickAddSheet
         open={quickAddOpen}
         onClose={() => setQuickAddOpen(false)}
@@ -812,6 +852,174 @@ export default function Accounts() {
           setFormOpen(true)
         }}
       />
+    </div>
+  )
+}
+
+// ── Account Sort Sheet ─────────────────────────────────────────────────────────
+
+function SortableAccountItem({ acct, childCount }) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: acct.id })
+  const style = { transform: CSS.Transform.toString(transform), transition }
+
+  return (
+    <div
+      ref={setNodeRef}
+      style={style}
+      className={[
+        'flex items-center',
+        isDragging ? 'relative z-10 rounded-2xl bg-white dark:bg-[#1a2130] shadow-2xl ring-1 ring-primary/30 opacity-95 scale-[1.02]' : '',
+      ].join(' ')}
+    >
+      <button
+        {...attributes}
+        {...listeners}
+        className="pl-3 pr-1 py-4 text-slate-300 dark:text-slate-600 touch-none shrink-0 cursor-grab active:cursor-grabbing"
+        tabIndex={-1}
+        aria-label="Drag to reorder"
+      >
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="9" cy="5" r="1.5"/><circle cx="15" cy="5" r="1.5"/>
+          <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+          <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
+        </svg>
+      </button>
+      <div className="flex-1 flex items-center gap-3 px-3 py-3">
+        <span
+          className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center"
+          style={{ backgroundColor: (acct.color ?? '#2D9DFF') + '28' }}
+        >
+          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: acct.color ?? '#2D9DFF' }} />
+        </span>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{acct.name}</p>
+          {childCount > 0 && (
+            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{childCount} sub-account{childCount !== 1 ? 's' : ''}</p>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AccountSortSheet({ open, onClose, accounts }) {
+  const [closing,   setClosing]   = useState(false)
+  const [localList, setLocalList] = useState([])
+  const isDraggingRef = useRef(false)
+  useScrollLock(open)
+
+  const parentNames = useMemo(() =>
+    new Set(accounts.filter(a => a.parentName).map(a => a.parentName)),
+    [accounts],
+  )
+
+  const topLevel = useMemo(() =>
+    accounts
+      .filter(a => parentNames.has(a.name) || !a.parentName)
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999)),
+    [accounts, parentNames],
+  )
+
+  const childCountMap = useMemo(() => {
+    const map = {}
+    accounts.filter(a => a.parentName).forEach(a => {
+      map[a.parentName] = (map[a.parentName] ?? 0) + 1
+    })
+    return map
+  }, [accounts])
+
+  useEffect(() => {
+    if (open && !isDraggingRef.current) setLocalList(topLevel)
+  }, [open, topLevel])
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 150, tolerance: 5 } }),
+  )
+
+  function handleDragStart() {
+    isDraggingRef.current = true
+  }
+
+  async function handleDragEnd({ active, over }) {
+    if (!over || active.id === over.id) { isDraggingRef.current = false; return }
+    const oldIdx = localList.findIndex(a => a.id === active.id)
+    const newIdx = localList.findIndex(a => a.id === over.id)
+    if (oldIdx === -1 || newIdx === -1) { isDraggingRef.current = false; return }
+    const reordered = arrayMove(localList, oldIdx, newIdx)
+    setLocalList(reordered)
+    const now = new Date().toISOString()
+    await Promise.all(reordered.map((acct, i) =>
+      db.accounts.update(acct.id, { sort_order: i, updatedAt: now })
+    ))
+    isDraggingRef.current = false
+  }
+
+  const close = () => {
+    setClosing(true)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
+      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+          'bg-slate-50 dark:bg-[#0d1117]',
+          'border-t border-slate-100 dark:border-white/[0.07]',
+          'max-h-[80vh] flex flex-col',
+        ].join(' ')}
+      >
+        {/* Header */}
+        <div className="pt-5 px-5 pb-3 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Sort Accounts</h3>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag to reorder — affects picker order</p>
+            </div>
+            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+              Done
+            </button>
+          </div>
+        </div>
+
+        {/* List */}
+        <div
+          className="overflow-y-auto flex-1 px-5 pt-4 pb-8"
+          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+        >
+          <div className="rounded-2xl overflow-hidden
+            bg-white border border-slate-100
+            dark:bg-white/[0.04] dark:border-white/[0.07]
+            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none">
+            <DndContext
+              sensors={sensors}
+              collisionDetection={closestCenter}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+            >
+              <SortableContext items={localList.map(a => a.id)} strategy={verticalListSortingStrategy}>
+                {localList.map((acct, i) => (
+                  <div key={acct.id}>
+                    <SortableAccountItem
+                      acct={acct}
+                      childCount={childCountMap[acct.name] ?? 0}
+                    />
+                    {i < localList.length - 1 && (
+                      <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />
+                    )}
+                  </div>
+                ))}
+              </SortableContext>
+            </DndContext>
+          </div>
+        </div>
+      </div>
     </div>
   )
 }
@@ -1804,10 +2012,8 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
   const isChild       = !!account.parentName
 
   const isCredit    = account.type === 'credit'
-  const combinedBal = isParent
-    ? (account.balance ?? 0) + childAccounts.reduce((s, a) => s + (a.balance ?? 0), 0)
-    : (account.balance ?? 0)
-  const totalUsed   = isCredit ? (creditData?.thisTotal ?? 0) + (creditData?.nextTotal ?? 0) : combinedBal
+  const ownBal      = account.balance ?? 0
+  const totalUsed   = isCredit ? (creditData?.thisTotal ?? 0) + (creditData?.nextTotal ?? 0) : ownBal
   const usedPct     = isCredit && (account.creditLimit ?? 0) > 0
     ? Math.min((totalUsed / account.creditLimit) * 100, 100) : 0
 
@@ -1885,7 +2091,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
               : 'bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]'
           }`}>
             <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-              {isCredit ? 'Balance Used' : isParent ? 'Combined Balance' : 'Current Balance'}
+              {isCredit ? 'Balance Used' : 'Current Balance'}
             </p>
             <p className={`text-2xl font-bold tabular-nums ${
               isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
