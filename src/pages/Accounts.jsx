@@ -1035,6 +1035,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
         cutoffDate:     isCredit ? (parseInt(cutoffDay)      || null)  : null,
         minimumPayment: isCredit ? (parseMoney(minPayment)   || 0)    : null,
         qrImage:        qrImage ?? null,
+        updatedAt:      new Date().toISOString(),
       }
 
       if (isEdit) {
