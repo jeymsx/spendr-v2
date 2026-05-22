@@ -90,7 +90,7 @@ export default function Navbar({ onAddClick }) {
         'dark:bg-navy/90 dark:border-white/[0.06]',
         'backdrop-filter backdrop-blur-xl',
       ].join(' ')}
-      style={{ paddingTop: '8px', paddingBottom: 'calc(8px + env(safe-area-inset-bottom))' }}
+      style={{ paddingTop: '8px', paddingBottom: 'calc(8px + max(0px, env(safe-area-inset-bottom) - 14px))' }}
     >
       {/* left tabs */}
       {LEFT_TABS.map(t => (
