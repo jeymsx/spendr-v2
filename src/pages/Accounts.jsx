@@ -1,4 +1,6 @@
 ﻿import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import ReactCrop from 'react-image-crop'
+import 'react-image-crop/dist/ReactCrop.css'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -745,6 +747,206 @@ export default function Accounts() {
   )
 }
 
+// ── QR Crop Sheet ─────────────────────────────────────────────────────────────
+
+function QrCropSheet({ open, onClose, onConfirm }) {
+  const [closing,       setClosing]       = useState(false)
+  const [imgSrc,        setImgSrc]        = useState(null)
+  const [crop,          setCrop]          = useState(null)
+  const [completedCrop, setCompletedCrop] = useState(null)
+  const imgRef    = useRef(null)
+  const fileRef   = useRef(null)
+  useScrollLock(open)
+
+  useEffect(() => {
+    if (!open) { setImgSrc(null); setCrop(null); setCompletedCrop(null) }
+  }, [open])
+
+  const close = () => {
+    setClosing(true)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }
+
+  function onFileChange(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => setImgSrc(reader.result)
+    reader.readAsDataURL(file)
+    e.target.value = ''
+  }
+
+  function onImageLoad(e) {
+    const { naturalWidth: nw, naturalHeight: nh } = e.currentTarget
+    const aspect = 5 / 4
+    let w, h
+    if (nw / nh > aspect) { h = nh; w = h * aspect }
+    else { w = nw; h = w / aspect }
+    const x = (nw - w) / 2
+    const y = (nh - h) / 2
+    const initial = { unit: 'px', x, y, width: w, height: h }
+    setCrop(initial)
+    setCompletedCrop(initial)
+  }
+
+  function handleConfirm() {
+    if (!completedCrop || !imgRef.current) return
+    const img = imgRef.current
+    const scaleX = img.naturalWidth  / img.width
+    const scaleY = img.naturalHeight / img.height
+    const canvas = document.createElement('canvas')
+    canvas.width  = 800
+    canvas.height = 640
+    const ctx = canvas.getContext('2d')
+    ctx.drawImage(
+      img,
+      completedCrop.x * scaleX, completedCrop.y * scaleY,
+      completedCrop.width * scaleX, completedCrop.height * scaleY,
+      0, 0, 800, 640,
+    )
+    onConfirm(canvas.toDataURL('image/jpeg', 0.82))
+    close()
+  }
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[150]" style={{ touchAction: 'none' }}>
+      <div className="sheet-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+          'bg-white dark:bg-[#111820]',
+          'border-t border-slate-100 dark:border-white/[0.07]',
+          'max-h-[92vh] flex flex-col overflow-hidden',
+        ].join(' ')}
+        style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+      >
+        {/* Header */}
+        <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04] shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Crop QR Photo</h3>
+              {imgSrc && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag to reposition · 5:4 ratio</p>}
+            </div>
+            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+              Cancel
+            </button>
+          </div>
+        </div>
+
+        {/* Body */}
+        <div className="flex-1 overflow-y-auto flex flex-col items-center justify-center px-5 py-6 gap-5"
+          style={{ touchAction: 'pan-y' }}>
+          {!imgSrc ? (
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="w-full flex flex-col items-center gap-3 py-12 rounded-3xl
+                border-2 border-dashed border-slate-200 dark:border-white/10
+                text-slate-400 dark:text-slate-500
+                active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+            >
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+              </svg>
+              <p className="text-sm font-medium">Choose a photo</p>
+              <p className="text-xs">Select a screenshot containing your QR code</p>
+            </button>
+          ) : (
+            <div className="w-full flex justify-center" style={{ touchAction: 'none' }}>
+              <ReactCrop
+                crop={crop}
+                onChange={c => setCrop(c)}
+                onComplete={c => setCompletedCrop(c)}
+                aspect={5 / 4}
+                keepSelection
+              >
+                <img
+                  ref={imgRef}
+                  src={imgSrc}
+                  alt="QR source"
+                  onLoad={onImageLoad}
+                  className="max-w-full max-h-[52vh] object-contain"
+                />
+              </ReactCrop>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="px-5 pt-2 shrink-0 flex gap-3">
+          {!imgSrc ? (
+            <button
+              onClick={() => fileRef.current?.click()}
+              className="flex-1 py-3.5 rounded-2xl text-sm font-semibold text-white
+                bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                active:scale-[0.98] transition-all duration-100"
+            >
+              Choose Photo
+            </button>
+          ) : (
+            <>
+              <button
+                onClick={() => setImgSrc(null)}
+                className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
+                  active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
+              >
+                Change
+              </button>
+              <button
+                onClick={handleConfirm}
+                disabled={!completedCrop}
+                className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                  disabled:opacity-40 disabled:shadow-none
+                  active:scale-[0.98] transition-all duration-100"
+              >
+                Use Photo
+              </button>
+            </>
+          )}
+        </div>
+        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+      </div>
+    </div>
+  )
+}
+
+// ── QR Viewer Modal ────────────────────────────────────────────────────────────
+
+function QrViewerModal({ open, onClose, qrImage, accountName }) {
+  useScrollLock(open)
+  if (!open) return null
+  return (
+    <div
+      className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90"
+      style={{ touchAction: 'none' }}
+      onClick={onClose}
+    >
+      <p className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-5">
+        {accountName}
+      </p>
+      <img
+        src={qrImage}
+        alt="Payment QR"
+        className="w-full max-w-sm rounded-3xl shadow-2xl"
+        style={{ aspectRatio: '5/4', objectFit: 'cover' }}
+        onClick={e => e.stopPropagation()}
+      />
+      <button
+        onClick={onClose}
+        className="mt-8 px-8 py-3 rounded-2xl text-sm font-semibold text-white
+          bg-white/10 active:bg-white/20 transition-colors"
+      >
+        Done
+      </button>
+    </div>
+  )
+}
+
 // ── Account form sheet ─────────────────────────────────────────────────────────
 
 function AccountFormSheet({ open, onClose, account, prefill = null }) {
@@ -767,6 +969,8 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [cutoffDay,      setCutoffDay]      = useState('')
   const [minPayment,     setMinPayment]     = useState('0')
   const [nameError,      setNameError]      = useState(false)
+  const [qrImage,        setQrImage]        = useState(null)
+  const [qrCropOpen,     setQrCropOpen]     = useState(false)
 
   const isEdit = !!account?.id
 
@@ -788,6 +992,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setDueDay(account.dueDate != null ? String(account.dueDate) : '')
       setCutoffDay(account.cutoffDate != null ? String(account.cutoffDate) : '')
       setMinPayment(numToMoneyStr(account.minimumPayment ?? 0))
+      setQrImage(account.qrImage ?? null)
     } else {
       const t = prefill?.type ?? 'cash'
       setName(prefill?.name ?? '')
@@ -800,6 +1005,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setDueDay('')
       setCutoffDay('')
       setMinPayment('0')
+      setQrImage(null)
     }
   }, [open, account?.id])
 
@@ -826,6 +1032,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
         dueDate:        isCredit ? (parseInt(dueDay)         || null)  : null,
         cutoffDate:     isCredit ? (parseInt(cutoffDay)      || null)  : null,
         minimumPayment: isCredit ? (parseMoney(minPayment)   || 0)    : null,
+        qrImage:        qrImage ?? null,
       }
 
       if (isEdit) {
@@ -927,6 +1134,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
   if (!open && !closing) return null
 
   return (
+    <>
     <div className="fixed inset-0 z-[100]">
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
       <div
@@ -1167,6 +1375,55 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
               </div>
             )}
 
+            {/* Payment QR */}
+            <div>
+              <Label>Payment QR <span className="font-normal text-slate-400 normal-case">(optional)</span></Label>
+              {qrImage ? (
+                <div className="flex items-center gap-3">
+                  <img
+                    src={qrImage}
+                    alt="Payment QR"
+                    className="rounded-2xl object-cover"
+                    style={{ width: 120, height: 96, aspectRatio: '5/4' }}
+                  />
+                  <div className="flex flex-col gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setQrCropOpen(true)}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold
+                        text-primary bg-primary/[0.08] dark:bg-primary/[0.12]
+                        active:bg-primary/[0.15] transition-colors"
+                    >
+                      Change
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setQrImage(null)}
+                      className="px-4 py-2 rounded-xl text-xs font-semibold
+                        text-red-500 bg-red-50 dark:bg-red-500/10
+                        active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setQrCropOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl
+                    border-2 border-dashed border-slate-200 dark:border-white/10
+                    text-slate-400 dark:text-slate-500
+                    active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+                >
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+                  </svg>
+                  <span className="text-sm font-medium">Add Payment QR</span>
+                </button>
+              )}
+            </div>
+
             {/* Action buttons */}
             <div className="flex gap-3 pt-2">
               <button
@@ -1321,13 +1578,21 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
         <div className="h-8" />
       </div>
     </div>
+
+    <QrCropSheet
+      open={qrCropOpen}
+      onClose={() => setQrCropOpen(false)}
+      onConfirm={base64 => setQrImage(base64)}
+    />
+    </>
   )
 }
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
 
 function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
-  const [closing, setClosing] = useState(false)
+  const [closing,   setClosing]   = useState(false)
+  const [qrVisible, setQrVisible] = useState(false)
   useScrollLock(open)
 
   const close = () => {
@@ -1409,6 +1674,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
     ? Math.min((totalUsed / account.creditLimit) * 100, 100) : 0
 
   return (
+    <>
     <div className="fixed inset-0 z-[100]">
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
       <div
@@ -1437,14 +1703,27 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
               <h3 className="text-base font-semibold text-slate-800 dark:text-white truncate">{account.name}</h3>
               <p className="text-xs text-slate-400 dark:text-slate-500">{TYPE_LABEL[account.type]}</p>
             </div>
-            <button
-              onClick={() => { close(); setTimeout(() => onEdit(account), 260) }}
-              className="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0
-                text-primary bg-primary/[0.08] dark:bg-primary/[0.15]
-                active:bg-primary/[0.15] transition-colors"
-            >
-              Edit
-            </button>
+            <div className="flex items-center gap-2 shrink-0">
+              {account.qrImage && (
+                <button
+                  onClick={() => setQrVisible(true)}
+                  className="px-3 py-1.5 rounded-xl text-xs font-semibold
+                    text-emerald-600 dark:text-emerald-400
+                    bg-emerald-50 dark:bg-emerald-500/10
+                    active:bg-emerald-100 dark:active:bg-emerald-500/20 transition-colors"
+                >
+                  Show QR
+                </button>
+              )}
+              <button
+                onClick={() => { close(); setTimeout(() => onEdit(account), 260) }}
+                className="px-3 py-1.5 rounded-xl text-xs font-semibold
+                  text-primary bg-primary/[0.08] dark:bg-primary/[0.15]
+                  active:bg-primary/[0.15] transition-colors"
+              >
+                Edit
+              </button>
+            </div>
           </div>
 
           {/* balance card */}
@@ -1591,6 +1870,14 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
         <div className="h-8" />
       </div>
     </div>
+
+    <QrViewerModal
+      open={qrVisible}
+      onClose={() => setQrVisible(false)}
+      qrImage={account?.qrImage}
+      accountName={account?.name}
+    />
+    </>
   )
 }
 

@@ -41,6 +41,7 @@ function accountToRow(r, userId) {
     cutoff_date:     r.cutoffDate     ?? null,
     minimum_payment: r.minimumPayment ?? null,
     color:           r.color,
+    qr_image:        r.qrImage        ?? null,
     updated_at:      r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -139,6 +140,7 @@ function rowToAccount(row) {
     cutoffDate:     row.cutoff_date,
     minimumPayment: row.minimum_payment,
     color:          row.color,
+    qrImage:        row.qr_image ?? null,
     updatedAt:      row.updated_at,
   }
 }
