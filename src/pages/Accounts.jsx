@@ -857,7 +857,7 @@ function QrCropSheet({ open, onClose, onConfirm }) {
               <p className="text-xs">Select a screenshot containing your QR code</p>
             </button>
           ) : (
-            <div className="w-full min-h-0 flex items-center justify-center" style={{ touchAction: 'none' }}>
+            <div className="w-full flex items-center justify-center" style={{ touchAction: 'none' }}>
               <ReactCrop
                 crop={crop}
                 onChange={c => setCrop(c)}
@@ -870,7 +870,13 @@ function QrCropSheet({ open, onClose, onConfirm }) {
                   src={imgSrc}
                   alt="QR source"
                   onLoad={onImageLoad}
-                  style={{ maxWidth: '100%', maxHeight: '100%', display: 'block', objectFit: 'contain' }}
+                  style={{
+                    display: 'block',
+                    maxWidth: '100%',
+                    // Cap image to available space: sheet is 92vh, header ~100px, footer ~84px, body padding 48px
+                    maxHeight: 'calc(92dvh - 232px)',
+                    objectFit: 'contain',
+                  }}
                 />
               </ReactCrop>
             </div>
