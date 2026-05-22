@@ -435,28 +435,6 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
             />
           </div>
 
-          <div>
-            <FieldLabel>Default Currency</FieldLabel>
-            <div className="grid grid-cols-2 gap-2">
-              {CURRENCIES.map(c => (
-                <button
-                  key={c.code}
-                  onClick={() => setCurrency(c.code)}
-                  className={[
-                    'py-3 px-4 rounded-2xl text-left transition-all duration-75 active:scale-[0.97]',
-                    currency === c.code
-                      ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
-                      : 'bg-slate-100 dark:bg-white/[0.07] text-slate-700 dark:text-slate-300',
-                  ].join(' ')}
-                >
-                  <p className="text-sm font-bold">{c.symbol} {c.code}</p>
-                  <p className={`text-[11px] mt-0.5 ${currency === c.code ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {c.label}
-                  </p>
-                </button>
-              ))}
-            </div>
-          </div>
 
           <div className="flex gap-3 pt-1">
             <button
@@ -473,7 +451,7 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
               onClick={handleSave}
               disabled={saving}
               className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                bg-primary
                 disabled:opacity-40 disabled:shadow-none
                 active:scale-[0.98] transition-all duration-100"
             >
@@ -1245,7 +1223,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
                       className={[
                         'py-3 rounded-2xl text-sm font-semibold transition-all duration-75 active:scale-[0.97]',
                         type === o.value
-                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
+                          ? 'bg-primary text-white'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400',
                       ].join(' ')}>
                       {o.label}
@@ -1323,7 +1301,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               </button>
               <button onClick={handleSave} disabled={saving}
                 className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                  bg-primary
                   disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Category'}
               </button>
@@ -1647,7 +1625,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                   {['expense', 'inflow', 'transfer'].map(t => (
                     <button key={t} onClick={() => { setType(t); setCategory(null); setAccount(null); setFromAcct(null); setToAcct(null) }}
                       className={`py-2.5 rounded-2xl text-xs font-semibold transition-all duration-75 active:scale-[0.97]
-                        ${type === t ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
+                        ${type === t ? 'bg-primary text-white'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400'}`}>
                       {TMPL_TYPE_STYLE[t]?.label}
                     </button>
@@ -1756,7 +1734,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
               </button>
               <button onClick={handleSave} disabled={saving}
                 className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                  bg-primary
                   disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Template'}
               </button>
@@ -1965,7 +1943,7 @@ const PRIVACY_SECTIONS = [
   { h: 'Cloud Sync',          b: 'If you sign in with Google and enable Supabase sync, your data is stored in Supabase under your own credentials. The developer has no access to your cloud data.' },
   { h: 'What We Don\'t Collect', b: 'We collect no analytics, usage telemetry, advertising identifiers, or personal information beyond what you voluntarily enter in the app.' },
   { h: 'How Data Is Used',    b: 'All data exists solely to provide the app\'s budgeting and tracking functionality. Your data is never sold, shared, or transmitted to any third party.' },
-  { h: 'Data Deletion',       b: 'You can permanently delete all local data at any time via Settings → Reset App. To remove cloud-synced data, delete the relevant tables from your Supabase project.' },
+  { h: 'Data Deletion',       b: 'You can permanently delete all local data at any time via Settings → Reset App. To remove cloud-synced data, contact us at jamesandgen111@gmail.com and we will delete your data from our servers.' },
   { h: 'Security',            b: 'Local data security depends on your device\'s own security settings. Cloud-synced data is protected by Supabase\'s infrastructure and your Google account credentials.' },
   { h: 'Changes',             b: 'This policy may be updated from time to time. Continued use of the app after changes are posted constitutes acceptance of the updated policy.' },
   { h: 'Contact',             b: 'Questions or concerns? Email us at jamesandgen111@gmail.com' },

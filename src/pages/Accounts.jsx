@@ -653,7 +653,7 @@ export default function Accounts() {
         <button
           onClick={openAdd}
           className="flex items-center gap-1.5 pl-3 pr-4 h-9 rounded-2xl text-sm font-semibold
-            bg-primary text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.4)]
+            bg-primary text-white
             active:scale-95 transition-transform duration-100"
         >
           <IconPlus />
@@ -889,7 +889,7 @@ function QrCropSheet({ open, onClose, onConfirm }) {
             <button
               onClick={() => fileRef.current?.click()}
               className="flex-1 py-3.5 rounded-2xl text-sm font-semibold text-white
-                bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                bg-primary
                 active:scale-[0.98] transition-all duration-100"
             >
               Choose Photo
@@ -908,7 +908,7 @@ function QrCropSheet({ open, onClose, onConfirm }) {
                 onClick={handleConfirm}
                 disabled={!completedCrop}
                 className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                  bg-primary
                   disabled:opacity-40 disabled:shadow-none
                   active:scale-[0.98] transition-all duration-100"
               >
@@ -1237,7 +1237,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                       className={[
                         'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
                         type === o.value
-                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.4)]'
+                          ? 'bg-primary text-white'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
                       ].join(' ')}
                     >
@@ -1263,7 +1263,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                       className={[
                         'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-75 active:scale-95',
                         role === o.value
-                          ? 'bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]'
+                          ? 'bg-primary text-white'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
                       ].join(' ')}
                     >
@@ -1449,7 +1449,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 onClick={handleSave}
                 disabled={saving}
                 className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                  bg-primary
                   disabled:opacity-40 disabled:shadow-none
                   active:scale-[0.98] transition-all duration-100"
               >
@@ -1518,7 +1518,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                   onClick={handleAdjust}
                   disabled={saving || diff === 0}
                   className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                    bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                    bg-primary
                     disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100"
                 >
                   {saving ? 'Adjusting…' : 'Apply Adjustment'}
@@ -1716,10 +1716,9 @@ function AccountDetailSheet({ open, onClose, account, transactions, onEdit }) {
               {account.qrImage && (
                 <button
                   onClick={() => setQrVisible(true)}
-                  className="w-9 h-9 rounded-xl flex items-center justify-center
-                    text-emerald-600 dark:text-emerald-400
-                    bg-emerald-50 dark:bg-emerald-500/10
-                    active:bg-emerald-100 dark:active:bg-emerald-500/20 transition-colors"
+                  className="w-9 h-9 flex items-center justify-center
+                    text-emerald-500 dark:text-emerald-400
+                    active:opacity-60 transition-opacity"
                   aria-label="Show Payment QR"
                 >
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">

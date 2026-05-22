@@ -29,7 +29,7 @@ export function AuthProvider({ children }) {
   }
 
   function signOut() {
-    return supabase.auth.signOut()
+    return supabase.auth.signOut({ scope: 'local' })
   }
 
   return (

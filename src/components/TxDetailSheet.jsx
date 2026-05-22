@@ -299,7 +299,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 <button
                   onClick={enterEdit}
                   className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                    bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                    bg-primary
                     active:scale-[0.98] transition-transform duration-100"
                 >
                   Edit
@@ -398,7 +398,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   onClick={handleSave}
                   disabled={saving || !parseFloat(editAmount)}
                   className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                    bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                    bg-primary
                     disabled:opacity-40 disabled:shadow-none
                     active:scale-[0.98] transition-all duration-100"
                 >

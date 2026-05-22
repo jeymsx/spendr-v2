@@ -481,7 +481,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                 disabled={!customName.trim()}
                 className="flex-[2] py-3 rounded-2xl text-sm font-semibold text-white
                   bg-primary disabled:opacity-40
-                  shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.4)]
+                 
                   active:scale-[0.98] transition-all duration-100"
               >
                 Add Account
@@ -818,7 +818,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
                 disabled={!customName.trim()}
                 className="flex-[2] py-3 rounded-2xl text-sm font-semibold text-white
                   bg-primary disabled:opacity-40 disabled:shadow-none
-                  shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.4)]
+                 
                   active:scale-[0.98] transition-all duration-100"
               >
                 Add Category

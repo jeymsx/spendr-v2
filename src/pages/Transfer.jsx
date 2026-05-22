@@ -375,7 +375,7 @@ export default function Transfer() {
           onClick={onConfirmPress}
           disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id}
           className="w-full py-4 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+            bg-primary
             disabled:opacity-40 disabled:shadow-none
             active:scale-[0.98] transition-all duration-100"
         >

@@ -13,6 +13,12 @@ import { useTheme } from '../context/ThemeContext'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt  = (v) => '₱' + _phpFmt.format(v ?? 0)
+function fmtCompact(v) {
+  const abs = Math.abs(v ?? 0)
+  if (abs >= 1_000_000) return '₱' + ((v ?? 0) / 1_000_000).toFixed(1) + 'M'
+  if (abs >= 1_000)     return '₱' + ((v ?? 0) / 1_000).toFixed(1) + 'K'
+  return fmt(v)
+}
 const fmtK = (v) => {
   const abs = Math.abs(v ?? 0)
   if (abs >= 1_000_000) return '₱' + ((v ?? 0) / 1_000_000).toFixed(1) + 'M'
@@ -501,45 +507,39 @@ function BudgetVsActual({ data, animKey }) {
   }, [animKey])
 
   return (
-    <Section title="Budget">
-      <div className="px-4 py-3 flex flex-col gap-4">
+    <div className="px-4">
+      <h2 className="text-base font-semibold text-slate-800 dark:text-white mb-3 px-0.5">Budget</h2>
+      <div className="grid grid-cols-2 gap-2.5">
         {data.map((d, i) => {
-          const pct      = d.budget > 0 ? Math.min((d.spent / d.budget) * 100, 100) : 0
-          const over     = d.spent > d.budget
-          const warn     = pct >= 75 && !over
-          const barColor = over ? '#ef4444' : warn ? '#f59e0b' : d.color
-          const valClass = over
-            ? 'text-red-500 dark:text-red-400'
-            : warn ? 'text-amber-500 dark:text-amber-400'
-            : 'text-slate-500 dark:text-slate-400'
+          const pct    = d.budget > 0 ? Math.min((d.spent / d.budget) * 100, 100) : 0
+          const over   = d.spent > d.budget
+          const warn   = pct >= 75 && !over
+          const accent = over ? '#ef4444' : warn ? '#f59e0b' : '#22c55e'
           return (
-            <div key={i}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm leading-none">{d.icon}</span>
-                  <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300">{d.name}</span>
-                </div>
-                <span className={`text-[11px] font-semibold tabular-nums ${valClass}`}>
-                  {fmt(d.spent)}{' '}
-                  <span className="font-normal text-slate-400 dark:text-slate-500">/ {fmt(d.budget)}</span>
+            <div key={i} className="card relative rounded-2xl overflow-hidden flex flex-col gap-1.5 px-3 pt-2.5 pb-0">
+              <div className="flex items-center gap-1.5">
+                <span className="text-[13px] leading-none shrink-0">{d.icon}</span>
+                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-200 truncate">{d.name}</span>
+              </div>
+              <div className="flex items-baseline justify-between gap-1 mb-2">
+                <span className="text-[13px] font-bold tabular-nums" style={{ color: accent }}>
+                  {fmtCompact(d.spent)}
+                </span>
+                <span className="text-[10px] text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
+                  /{fmtCompact(d.budget)}
                 </span>
               </div>
-              <div className="h-1.5 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
+              <div className="absolute bottom-0 inset-x-0 h-[3px] bg-black/[0.06] dark:bg-white/[0.08]">
                 <div
-                  className="h-full rounded-full transition-all duration-700 ease-out"
-                  style={{ width: ready ? `${pct}%` : '0%', backgroundColor: barColor }}
+                  className="h-full transition-all duration-700 ease-out"
+                  style={{ width: ready ? `${pct}%` : '0%', backgroundColor: accent }}
                 />
               </div>
-              {over && (
-                <p className="text-[10px] text-red-500 dark:text-red-400 mt-1">
-                  Over by {fmt(d.spent - d.budget)}
-                </p>
-              )}
             </div>
           )
         })}
       </div>
-    </Section>
+    </div>
   )
 }
 

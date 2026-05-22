@@ -142,7 +142,7 @@ function DebtCard({ debt, onEdit, onPayment }) {
     'bg-blue-400'
 
   return (
-    <div className="bg-white dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.07] rounded-2xl overflow-hidden shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none">
+    <div className="card rounded-2xl overflow-hidden">
       <div className="px-4 pt-4 pb-3">
         {/* Top row */}
         <div className="flex items-start gap-3">
@@ -242,10 +242,7 @@ function SummaryRow({ debts, tab }) {
   const amountColor = tab === 'i_owe' ? 'text-red-500 dark:text-red-400' : 'text-emerald-600 dark:text-emerald-500'
 
   return (
-    <div className="mx-4 mb-3 px-4 py-3 rounded-2xl
-      bg-white dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.07]
-      flex items-center justify-between gap-3
-      shadow-[0_1px_3px_rgba(0,0,0,0.04)] dark:shadow-none">
+    <div className="card mx-4 mb-3 px-4 py-3 rounded-2xl flex items-center justify-between gap-3">
       <div>
         <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-0.5">{label}</p>
         <p className={`text-xl font-bold tabular-nums ${amountColor}`}>{fmtCompact(outstanding)}</p>
@@ -305,7 +302,7 @@ function EmptyState({ tab, onAdd }) {
       <button
         onClick={onAdd}
         className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-white
-          bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+          bg-primary
           active:scale-95 transition-transform duration-75"
       >
         Add Debt
@@ -339,8 +336,7 @@ function SettledSection({ debts, onEdit }) {
           {debts.map(d => (
             <div
               key={d.id}
-              className="flex items-center gap-3 px-4 py-3 rounded-2xl opacity-55
-                bg-white dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.06]"
+              className="card flex items-center gap-3 px-4 py-3 rounded-2xl opacity-55"
             >
               <div
                 className="w-8 h-8 rounded-full flex items-center justify-center text-white text-xs font-bold shrink-0"
@@ -897,7 +893,7 @@ export default function Debts() {
         <button
           onClick={openAdd}
           className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+            bg-primary
             active:scale-95 transition-transform duration-75"
         >
           <IconPlus />

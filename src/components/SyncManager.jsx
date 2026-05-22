@@ -91,6 +91,10 @@ function SyncIndicator({ status, errMsg }) {
   )
 }
 
+// Module-level lock — survives React StrictMode double-mount so two concurrent
+// fullSync calls never race on the same empty IndexedDB and create duplicates.
+let _syncLocked = false
+
 // ── SyncManager ───────────────────────────────────────────────────────────────
 // Acts as both a React Router layout route (renders <Outlet />) and a
 // context provider. Manages auto-sync on mount and window-focus.
@@ -103,9 +107,10 @@ export default function SyncManager() {
   const dismissRef = useRef(null)
 
   const runSync = useCallback(async ({ silent = false } = {}) => {
-    if (!user?.id || syncingRef.current) return
+    if (!user?.id || syncingRef.current || _syncLocked) return
 
     syncingRef.current = true
+    _syncLocked = true
     clearTimeout(dismissRef.current)
 
     if (!silent) {
@@ -133,6 +138,7 @@ export default function SyncManager() {
       dismissRef.current = setTimeout(() => setStatus('idle'), 8000)
     } finally {
       syncingRef.current = false
+      _syncLocked = false
     }
   }, [user?.id])
 

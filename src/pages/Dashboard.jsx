@@ -11,6 +11,13 @@ import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt     = (v) => '₱' + _phpFmt.format(v ?? 0)
 
+function fmtCompact(v) {
+  const abs = Math.abs(v ?? 0)
+  if (abs >= 1_000_000) return '₱' + ((v ?? 0) / 1_000_000).toFixed(1) + 'M'
+  if (abs >= 1_000)     return '₱' + ((v ?? 0) / 1_000).toFixed(1) + 'K'
+  return fmt(v)
+}
+
 function fmtDate(dateStr) {
   if (!dateStr) return ''
   const d    = new Date(dateStr)
@@ -35,10 +42,10 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
 
   // Budget warnings take top priority
   const overBudget = (budgetCategories ?? []).find(c => c.spent > c.budget)
-  if (overBudget) return `${overBudget.icon ?? '⚠️'} Over budget on ${overBudget.name}`
+  if (overBudget) return `${overBudget.icon ?? '⚠️'} Over budget on ${overBudget.name.toLowerCase()}`
 
   const nearBudget = (budgetCategories ?? []).find(c => c.budget > 0 && (c.spent / c.budget) >= 0.85)
-  if (nearBudget) return `${nearBudget.icon ?? '📊'} ${nearBudget.name} budget almost full`
+  if (nearBudget) return `${nearBudget.icon ?? '📊'} ${nearBudget.name.toLowerCase()} budget almost full`
 
   // Bill due today or tomorrow
   const urgentBill = (upcomingRecurring ?? []).find(r => {
@@ -395,7 +402,7 @@ export default function Dashboard() {
       {budgetCategories.length > 0 && (
         <section className="px-5 mt-8">
           <SectionHeader title="Budget" subtitle="This month" />
-          <div className="flex flex-col gap-3 mt-3">
+          <div className="grid grid-cols-2 gap-2.5 mt-3">
             {budgetCategories.map(cat => (
               <BudgetRow key={cat.id} cat={cat} />
             ))}
@@ -599,34 +606,41 @@ function QuickAddBtn({ label, to, className }) {
   )
 }
 
-// ── Budget row ─────────────────────────────────────────────────────────────────
+// ── Budget chip (compact 2-col grid) ──────────────────────────────────────────
 
 function BudgetRow({ cat }) {
-  const pct   = cat.budget > 0 ? Math.min((cat.spent / cat.budget) * 100, 100) : 0
-  const over  = cat.spent > cat.budget
-  const warn  = pct >= 75 && !over
-  const color = over ? '#ef4444' : warn ? '#f59e0b' : '#22c55e'
+  const pct    = cat.budget > 0 ? Math.min((cat.spent / cat.budget) * 100, 100) : 0
+  const over   = cat.spent > cat.budget
+  const warn   = pct >= 75 && !over
+  const accent = over ? '#ef4444' : warn ? '#f59e0b' : '#22c55e'
 
   return (
-    <div className="card px-4 py-3.5 rounded-2xl">
-      <div className="flex items-center justify-between mb-2">
-        <div className="flex items-center gap-2">
-          <span className="text-base leading-none">{cat.icon}</span>
-          <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{cat.name}</span>
-          {over && (
-            <span className="text-[10px] font-semibold text-red-500 bg-red-50 dark:bg-red-500/10 px-1.5 py-0.5 rounded-full">
-              Over
-            </span>
-          )}
-        </div>
-        <span className="text-xs text-slate-500 dark:text-slate-400 tabular-nums">
-          {fmt(cat.spent)} / {fmt(cat.budget)}
+    <div
+      className="card relative rounded-2xl overflow-hidden flex flex-col gap-1.5 px-3 pt-2.5 pb-0"
+    >
+      {/* icon + name */}
+      <div className="flex items-center gap-1.5">
+        <span className="text-[13px] leading-none shrink-0">{cat.icon}</span>
+        <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-200 truncate">
+          {cat.name}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+
+      {/* spent vs budget */}
+      <div className="flex items-baseline justify-between gap-1 mb-2">
+        <span className="text-[13px] font-bold tabular-nums" style={{ color: accent }}>
+          {fmtCompact(cat.spent)}
+        </span>
+        <span className="text-[10px] text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
+          /{fmtCompact(cat.budget)}
+        </span>
+      </div>
+
+      {/* progress track flush to bottom — no padding-bottom on card so this hugs the edge */}
+      <div className="absolute bottom-0 inset-x-0 h-[3px] bg-black/[0.06] dark:bg-white/[0.08]">
         <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${pct}%`, backgroundColor: color }}
+          className="h-full transition-all duration-700 ease-out"
+          style={{ width: `${pct}%`, backgroundColor: accent }}
         />
       </div>
     </div>

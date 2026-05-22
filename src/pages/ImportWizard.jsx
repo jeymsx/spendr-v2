@@ -563,7 +563,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
         <button
           onClick={onNext}
           className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+            bg-primary
             active:scale-[0.98] transition-all duration-100"
         >
           Continue →
@@ -698,7 +698,7 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
         <button
           onClick={handleContinue}
           className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+            bg-primary
             active:scale-[0.98] transition-all duration-100"
         >
           Continue →
@@ -933,7 +933,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
           onClick={handleImport}
           disabled={importing}
           className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+            bg-primary
             disabled:opacity-50 disabled:shadow-none
             active:scale-[0.98] transition-all duration-100"
         >
@@ -986,7 +986,7 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
         <button
           onClick={() => navigate('/')}
           className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white
-            bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+            bg-primary
             active:scale-[0.98] transition-all duration-100"
         >
           Go to Dashboard

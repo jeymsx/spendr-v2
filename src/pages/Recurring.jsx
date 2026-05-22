@@ -157,11 +157,8 @@ function UpcomingCard({ rec, onEdit, onPost, posting }) {
 
   return (
     <div className={[
-      'bg-white dark:bg-white/[0.05] border rounded-2xl overflow-hidden',
-      'shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none',
-      isUrgent
-        ? 'border-red-200 dark:border-red-500/20'
-        : 'border-slate-200/80 dark:border-white/[0.07]',
+      'card rounded-2xl overflow-hidden',
+      isUrgent ? 'dark:border-red-500/20' : '',
     ].join(' ')}>
       <div className="px-4 pt-4 pb-3">
         <div className="flex items-start gap-3">
