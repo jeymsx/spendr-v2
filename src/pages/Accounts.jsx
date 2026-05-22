@@ -780,7 +780,7 @@ function QrCropSheet({ open, onClose, onConfirm }) {
     const img = e.currentTarget
     const dw = img.width   // display (CSS) pixels
     const dh = img.height
-    const aspect = 5 / 4
+    const aspect = 5 / 7
     let w, h
     if (dw / dh > aspect) { h = dh; w = h * aspect }
     else { w = dw; h = w / aspect }
@@ -797,14 +797,14 @@ function QrCropSheet({ open, onClose, onConfirm }) {
     const scaleX = img.naturalWidth  / img.width
     const scaleY = img.naturalHeight / img.height
     const canvas = document.createElement('canvas')
-    canvas.width  = 800
-    canvas.height = 640
+    canvas.width  = 500
+    canvas.height = 700
     const ctx = canvas.getContext('2d')
     ctx.drawImage(
       img,
       completedCrop.x * scaleX, completedCrop.y * scaleY,
       completedCrop.width * scaleX, completedCrop.height * scaleY,
-      0, 0, 800, 640,
+      0, 0, 500, 700,
     )
     onConfirm(canvas.toDataURL('image/jpeg', 0.82))
     close()
@@ -831,7 +831,7 @@ function QrCropSheet({ open, onClose, onConfirm }) {
           <div className="flex items-center justify-between">
             <div>
               <h3 className="text-base font-semibold text-slate-800 dark:text-white">Crop QR Photo</h3>
-              {imgSrc && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag to reposition · 5:4 ratio</p>}
+              {imgSrc && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag to reposition · 5:7 ratio</p>}
             </div>
             <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
               Cancel
@@ -862,7 +862,7 @@ function QrCropSheet({ open, onClose, onConfirm }) {
                 crop={crop}
                 onChange={c => setCrop(c)}
                 onComplete={c => setCompletedCrop(c)}
-                aspect={5 / 4}
+                aspect={5 / 7}
                 keepSelection
               >
                 <img
@@ -935,7 +935,7 @@ function QrViewerModal({ open, onClose, qrImage, accountName }) {
         src={qrImage}
         alt="Payment QR"
         className="w-full max-w-sm rounded-3xl shadow-2xl"
-        style={{ aspectRatio: '5/4', objectFit: 'cover' }}
+        style={{ aspectRatio: '5/7', objectFit: 'cover' }}
         onClick={e => e.stopPropagation()}
       />
       <button
@@ -1386,7 +1386,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
                     src={qrImage}
                     alt="Payment QR"
                     className="rounded-2xl object-cover"
-                    style={{ width: 120, height: 96, aspectRatio: '5/4' }}
+                    style={{ width: 80, height: 112, aspectRatio: '5/7' }}
                   />
                   <div className="flex flex-col gap-2">
                     <button
