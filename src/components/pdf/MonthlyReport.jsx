@@ -272,7 +272,7 @@ function HeaderBar({ subtitle, colors }) {
 
 // ── Page 1: Cover & Summary ────────────────────────────────────────────────────
 
-function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, generatedAt, colors }) {
+function CoverPage({ year, month, userName, summary, accounts, endingBalances, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, generatedAt, colors }) {
   const monthName = MONTH_NAMES[month - 1]
   const { totalIncome, totalExpenses, netSavings, savingsRate } = summary
 
@@ -331,8 +331,8 @@ function CoverPage({ year, month, userName, summary, accounts, creditDetailMap, 
         <View key={acct.id ?? i} style={[styles.tableRow, { backgroundColor: i % 2 === 0 ? WHITE : '#fafafa' }]}>
           <Text style={[styles.tableCell, { flex: 2, fontFamily: 'Helvetica-Bold' }]}>{acct.name}</Text>
           <Text style={[styles.tableCell, { flex: 1, color: GRAY_TEXT, textTransform: 'capitalize' }]}>{acct.type}</Text>
-          <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: (acct.balance ?? 0) >= 0 ? DARK_TEXT : RED }]}>
-            {fmt(acct.balance ?? 0)}
+          <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: (endingBalances?.[acct.name] ?? acct.balance ?? 0) >= 0 ? DARK_TEXT : RED }]}>
+            {fmt(endingBalances?.[acct.name] ?? acct.balance ?? 0)}
           </Text>
         </View>
       ))}
@@ -646,6 +646,7 @@ export default function MonthlyReport(props) {
     userName,
     summary,
     accounts,
+    endingBalances,
     creditDetailMap,
     totalAssets,
     totalCreditUsed,
@@ -671,6 +672,7 @@ export default function MonthlyReport(props) {
         userName={userName}
         summary={summary}
         accounts={accounts}
+        endingBalances={endingBalances}
         creditDetailMap={creditDetailMap}
         totalAssets={totalAssets}
         totalCreditUsed={totalCreditUsed}

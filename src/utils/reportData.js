@@ -113,7 +113,28 @@ export async function fetchReportData(year, month) {
     }
   }
 
-  const totalAssets      = nonCreditAccounts.reduce((s, a) => s + (a.balance ?? 0), 0)
+  // Reconstruct each account's balance at month-end by reversing
+  // all transactions that happened after the report period.
+  const afterMonthTxs = allTxs.filter(tx => new Date(tx.date) >= end)
+  const endingBalances = {}
+  for (const acct of accounts) {
+    let bal = acct.balance ?? 0
+    for (const tx of afterMonthTxs) {
+      const a = tx.amount ?? 0
+      if (tx.type === 'expense') {
+        if (tx.account === acct.name) bal += a      // reverse: expense reduced balance
+      } else if (tx.type === 'inflow') {
+        if (tx.account === acct.name) bal -= a      // reverse: inflow increased balance
+      } else if (tx.type === 'transfer') {
+        const from = tx.fromAccount || tx.account
+        if (from          === acct.name) bal += a   // reverse: transfer out reduced balance
+        if (tx.toAccount  === acct.name) bal -= a   // reverse: transfer in increased balance
+      }
+    }
+    endingBalances[acct.name] = bal
+  }
+
+  const totalAssets      = nonCreditAccounts.reduce((s, a) => s + (endingBalances[a.name] ?? 0), 0)
   const totalCreditUsed  = creditAccounts.reduce((s, a) => s + (creditDetailMap[a.name]?.balanceUsed ?? 0), 0)
   const totalCreditLimit = creditAccounts.reduce((s, a) => s + (a.creditLimit ?? 0), 0)
   const netWorth         = totalAssets - totalCreditUsed
@@ -131,6 +152,7 @@ export async function fetchReportData(year, month) {
     userName,
     summary: { totalIncome, totalExpenses, netSavings, savingsRate },
     accounts,
+    endingBalances,
     creditDetailMap,
     totalAssets,
     totalCreditUsed,

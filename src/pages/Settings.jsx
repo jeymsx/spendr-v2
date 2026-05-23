@@ -19,6 +19,7 @@ import AccountPickerSheet from '../components/AccountPickerSheet'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { useScrollLock } from '../hooks/useScrollLock'
+import { syncToSheets } from '../lib/sheetsSync'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -210,6 +211,17 @@ function IconTrash() {
   )
 }
 
+function IconSheets() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="3" width="18" height="18" rx="2" />
+      <line x1="3" y1="9" x2="21" y2="9" />
+      <line x1="3" y1="15" x2="21" y2="15" />
+      <line x1="9" y1="9" x2="9" y2="21" />
+    </svg>
+  )
+}
+
 function IconCloud() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -366,6 +378,112 @@ function FieldLabel({ children }) {
 }
 
 // ── Profile sheet ──────────────────────────────────────────────────────────────
+
+function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
+  const [closing,  setClosing]  = useState(false)
+  const [url,      setUrl]      = useState('')
+  const [saving,   setSaving]   = useState(false)
+  const [lastSync, setLastSync] = useState(null)
+  useScrollLock(open)
+
+  useEffect(() => {
+    if (!open) return
+    db.meta.get('sheetsUrl').then(r => setUrl(r?.value ?? ''))
+    db.meta.get('sheetsLastSynced').then(r => setLastSync(r?.value ?? null))
+  }, [open])
+
+  const close = useCallback(() => {
+    setClosing(true)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }, [onClose])
+
+  async function handleSave() {
+    setSaving(true)
+    await db.meta.put({ key: 'sheetsUrl', value: url.trim() })
+    setSaving(false)
+  }
+
+  async function handleSync() {
+    await handleSave()
+    await onSync(url.trim())
+    db.meta.get('sheetsLastSynced').then(r => setLastSync(r?.value ?? null))
+  }
+
+  const fmtLast = lastSync
+    ? new Date(lastSync).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+    : null
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
+      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+          'bg-white dark:bg-[#111820]',
+          'border-t border-slate-100 dark:border-white/[0.07]',
+        ].join(' ')}
+        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
+      >
+        <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04]">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+          <h3 className="text-base font-semibold text-slate-800 dark:text-white">Google Sheets Sync</h3>
+          <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-0.5">
+            Paste your Apps Script Web App URL to enable syncing.
+          </p>
+        </div>
+
+        <div className="px-5 py-5 flex flex-col gap-4">
+          <div>
+            <label className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 block">
+              Apps Script URL
+            </label>
+            <input
+              type="url"
+              value={url}
+              onChange={e => setUrl(e.target.value)}
+              placeholder="https://script.google.com/macros/s/…/exec"
+              className="w-full h-[48px] rounded-xl px-4 text-[13px]
+                bg-slate-50 dark:bg-white/[0.05]
+                border border-slate-200 dark:border-white/[0.10]
+                text-slate-800 dark:text-white
+                placeholder:text-slate-400 dark:placeholder:text-slate-600
+                focus:outline-none focus:ring-2 focus:ring-primary/40"
+            />
+            <button
+              onClick={handleSave}
+              disabled={saving || !url.trim()}
+              className="mt-2 text-[12px] font-medium text-primary disabled:opacity-40"
+            >
+              {saving ? 'Saving…' : 'Save URL'}
+            </button>
+          </div>
+
+          {fmtLast && (
+            <p className="text-[12px] text-slate-400 dark:text-slate-500">
+              Last synced: {fmtLast}
+            </p>
+          )}
+
+          <button
+            onClick={handleSync}
+            disabled={syncing || !url.trim()}
+            className="w-full py-4 rounded-2xl bg-primary text-white font-semibold text-[15px]
+              shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+              active:scale-[0.98] transition-all duration-100
+              disabled:opacity-50 flex items-center justify-center gap-2"
+          >
+            {syncing
+              ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Syncing…</>
+              : 'Sync Now'}
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function ProfileSheet({ open, onClose, displayName: initName, currency: initCurrency }) {
   const [closing,  setClosing]  = useState(false)
@@ -2108,14 +2226,18 @@ export default function Settings() {
   const [legalOpen,    setLegalOpen]    = useState(false)
   const [exporting,    setExporting]    = useState(false)
   const [backingUp,    setBackingUp]    = useState(false)
+  const [sheetsOpen,   setSheetsOpen]   = useState(false)
+  const [syncing,      setSyncing]      = useState(false)
   const [loggingOut,        setLoggingOut]        = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
 
   const meta        = useLiveQuery(() => db.meta.toArray(), [], [])
   const displayName = useMemo(() => (meta ?? []).find(m => m.key === 'displayName')?.value ?? '', [meta])
   const currency    = useMemo(() => (meta ?? []).find(m => m.key === 'currency')?.value ?? 'PHP',  [meta])
-  const lastSync    = useMemo(() => (meta ?? []).find(m => m.key === 'lastSync')?.value  ?? null,  [meta])
-  const skipConfirm = useMemo(() => (meta ?? []).find(m => m.key === 'skipConfirm')?.value ?? false, [meta])
+  const lastSync       = useMemo(() => (meta ?? []).find(m => m.key === 'lastSync')?.value       ?? null,  [meta])
+  const skipConfirm    = useMemo(() => (meta ?? []).find(m => m.key === 'skipConfirm')?.value    ?? false, [meta])
+  const sheetsUrl      = useMemo(() => (meta ?? []).find(m => m.key === 'sheetsUrl')?.value      ?? null,  [meta])
+  const sheetsLastSync = useMemo(() => (meta ?? []).find(m => m.key === 'sheetsLastSynced')?.value ?? null, [meta])
 
   const txCount     = useLiveQuery(() => db.transactions.count(), [], 0)
 
@@ -2169,6 +2291,20 @@ export default function Settings() {
   async function handleRedoOnboarding() {
     await db.meta.delete('onboarded')
     navigate('/onboarding', { replace: true })
+  }
+
+  async function handleSheetsSync(url) {
+    if (syncing) return
+    setSyncing(true)
+    try {
+      const { txCount, accountCount } = await syncToSheets(url)
+      await db.meta.put({ key: 'sheetsLastSynced', value: new Date().toISOString() })
+      showToast(`Synced ${txCount} transactions & ${accountCount} accounts to Google Sheets`, 'success')
+    } catch (e) {
+      showToast('Sync failed: ' + e.message, 'error')
+    } finally {
+      setSyncing(false)
+    }
   }
 
   async function handleExport() {
@@ -2462,6 +2598,39 @@ export default function Settings() {
               onTap={() => navigate('/login')}
             />
           )}
+          {user?.email === 'sablayjames@gmail.com' && (<>
+            <RowDivider />
+            <div className="flex items-center gap-4 px-4 py-3.5">
+              <RowIcon color="green">
+                <span className={syncing ? 'animate-spin inline-block' : ''}><IconSheets /></span>
+              </RowIcon>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">Google Sheets</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  {syncing        ? 'Syncing…'
+                  : sheetsLastSync ? `Last synced: ${fmtRelTime(sheetsLastSync)}`
+                  : sheetsUrl      ? 'Ready to sync'
+                  :                  'Tap Set up to configure'}
+                </p>
+              </div>
+              <div className="flex items-center gap-2.5 shrink-0">
+                <span className={`w-2 h-2 rounded-full ${
+                  syncing          ? 'bg-primary animate-pulse'
+                  : sheetsLastSync ? 'bg-emerald-400'
+                  :                  'bg-slate-300 dark:bg-slate-600'
+                }`} />
+                <button
+                  onClick={() => sheetsUrl ? handleSheetsSync(sheetsUrl) : setSheetsOpen(true)}
+                  disabled={syncing}
+                  className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
+                    bg-primary/[0.08] dark:bg-primary/[0.12]
+                    disabled:opacity-40 active:bg-primary/[0.15] transition-colors"
+                >
+                  {sheetsUrl ? 'Sync' : 'Set up'}
+                </button>
+              </div>
+            </div>
+          </>)}
         </SectionCard>
       </div>
 
@@ -2619,6 +2788,12 @@ export default function Settings() {
       </div>
 
       {/* ── Sheets & modals ── */}
+      <SheetsConfigSheet
+        open={sheetsOpen}
+        onClose={() => setSheetsOpen(false)}
+        onSync={handleSheetsSync}
+        syncing={syncing}
+      />
       <ProfileSheet
         open={profileOpen}
         onClose={() => setProfileOpen(false)}

@@ -25,11 +25,11 @@ function GlobalToast({ toast }) {
         transition-all duration-300 pointer-events-none
         ${toast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}`}
     >
-      <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl
+      <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl max-w-full
         bg-slate-900 dark:bg-white
         shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-        {v && <span className={v.iconClass}>{v.icon}</span>}
-        <p className="text-sm font-semibold text-white dark:text-slate-900 whitespace-nowrap">
+        {v && <span className={`${v.iconClass} shrink-0`}>{v.icon}</span>}
+        <p className="text-sm font-semibold text-white dark:text-slate-900 break-words leading-snug">
           {toast?.message}
         </p>
       </div>
