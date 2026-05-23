@@ -143,6 +143,7 @@ export default function Dashboard() {
   const { accentColor, theme } = useTheme()
   const { showToast } = useToast()
   const [balanceHidden,    setBalanceHidden]    = useState(true)
+  const [accountsHidden,   setAccountsHidden]   = useState(false)
   const [peek,             setPeek]             = useState(false)
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
@@ -398,7 +399,21 @@ export default function Dashboard() {
 
       {/* ── Account Cards ────────────────────────────────────────────────────── */}
       <section className="mt-6">
-        <SectionHeader title="Accounts" actionLabel="See all" actionTo="/accounts" px />
+        <div className="flex items-center justify-between px-5">
+          <div className="flex items-center gap-2">
+            <h2 className="text-base font-semibold text-slate-800 dark:text-white">Accounts</h2>
+            <button
+              onClick={() => setAccountsHidden(h => !h)}
+              className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors active:scale-95"
+              aria-label={accountsHidden ? 'Show account balances' : 'Hide account balances'}
+            >
+              {accountsHidden ? <IconEyeOff size={15} /> : <IconEye size={15} />}
+            </button>
+          </div>
+          <Link to="/accounts" className="text-xs font-medium text-primary dark:text-primary active:opacity-70">
+            See all
+          </Link>
+        </div>
         <div
           className="flex gap-3 overflow-x-auto mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4 no-scrollbar"
         >
@@ -421,8 +436,8 @@ export default function Dashboard() {
                 <AccountCard
                   key={acct.id}
                   acct={displayAcct}
-                  hidden={balanceHidden && !peek}
-                  onClick={() => navigate('/accounts')}
+                  hidden={accountsHidden}
+                  onClick={() => navigate('/accounts?open=' + encodeURIComponent(acct.name))}
                   stmt={creditStmtMap[acct.name]}
                 />
               )
@@ -958,18 +973,18 @@ function IconSettings() {
   )
 }
 
-function IconEye() {
+function IconEye({ size = 18 }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
       <circle cx="12" cy="12" r="3" />
     </svg>
   )
 }
 
-function IconEyeOff() {
+function IconEyeOff({ size = 18 }) {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M17.94 17.94A10.07 10.07 0 0112 20c-7 0-11-8-11-8a18.45 18.45 0 015.06-5.94M9.9 4.24A9.12 9.12 0 0112 4c7 0 11 8 11 8a18.5 18.5 0 01-2.16 3.19m-6.72-1.07a3 3 0 11-4.24-4.24" />
       <line x1="1" y1="1" x2="23" y2="23" />
     </svg>

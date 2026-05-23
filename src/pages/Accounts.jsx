@@ -1,4 +1,5 @@
 ﻿import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors,
@@ -582,6 +583,7 @@ function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
 
 export default function Accounts() {
   const { accentColor, theme } = useTheme()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [balanceHidden,   setBalanceHidden]   = useState(false)
   const [editingAccount,  setEditingAccount]  = useState(null)
   const [formOpen,        setFormOpen]        = useState(false)
@@ -648,12 +650,37 @@ export default function Accounts() {
     [flatAccts],
   )
 
+  // Merge parent sections and type groups into one list sorted by sort_order
+  const sections = useMemo(() => {
+    const list = []
+    for (const parent of parentAccts) {
+      list.push({ kind: 'parent', parent, order: parent.sort_order ?? 9999 })
+    }
+    for (const group of groups) {
+      const minOrder = Math.min(...group.accounts.map(a => a.sort_order ?? 9999))
+      list.push({ kind: 'group', group, order: minOrder })
+    }
+    return list.sort((a, b) => a.order - b.order)
+  }, [parentAccts, groups])
+
   // Keep selectedAccount in sync with live DB changes
   useEffect(() => {
     if (!selectedAccount || !accounts) return
     const updated = accounts.find(a => a.id === selectedAccount.id)
     if (updated) setSelectedAccount(updated)
   }, [accounts])
+
+  // Auto-open detail sheet when navigated here with ?open=<accountName>
+  useEffect(() => {
+    const name = searchParams.get('open')
+    if (!name || !accounts?.length) return
+    const acct = accounts.find(a => a.name === decodeURIComponent(name))
+    if (acct) {
+      setSelectedAccount(acct)
+      setDetailOpen(true)
+      setSearchParams({}, { replace: true })
+    }
+  }, [accounts, searchParams])
 
   function openAdd() {
     setQuickAddOpen(true)
@@ -734,78 +761,79 @@ export default function Accounts() {
         </div>
       )}
 
-      {/* ── Parent account groups ── */}
-      {parentAccts.map(parent => {
-        const children = (accounts ?? []).filter(a => a.parentName === parent.name)
-        const groupTotal = (parent.balance ?? 0) + children.reduce((s, a) => s + (a.balance ?? 0), 0)
+      {/* ── Account sections (parents + type groups, ordered by sort_order) ── */}
+      {sections.map(section => {
+        if (section.kind === 'parent') {
+          const { parent } = section
+          const children = (accounts ?? []).filter(a => a.parentName === parent.name)
+          const groupTotal = (parent.balance ?? 0) + children.reduce((s, a) => s + (a.balance ?? 0), 0)
+          return (
+            <section key={parent.id} className="mb-3">
+              <div className="flex items-center gap-3 px-5 py-2">
+                <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                  {parent.name}
+                </span>
+                <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
+                <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                  {fmt(groupTotal)}
+                </span>
+              </div>
+              <div className="card mx-5 rounded-2xl overflow-hidden">
+                <AccountCard
+                  acct={parent}
+                  hidden={balanceHidden}
+                  onTap={() => openDetail(parent)}
+                  stmt={creditStmtMap[parent.name]}
+                />
+                {children.map((acct) => (
+                  <div key={acct.id}>
+                    <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
+                    <AccountCard
+                      acct={acct}
+                      hidden={balanceHidden}
+                      onTap={() => openDetail(acct)}
+                      stmt={creditStmtMap[acct.name]}
+                      indent
+                    />
+                  </div>
+                ))}
+              </div>
+            </section>
+          )
+        }
+
+        const { group } = section
         return (
-          <section key={parent.id} className="mb-3">
+          <section key={group.label} className="mb-3">
             <div className="flex items-center gap-3 px-5 py-2">
               <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap">
-                {parent.name}
+                {group.label}
               </span>
               <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
               <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
-                {fmt(groupTotal)}
+                {group.label === 'Credit Cards'
+                  ? fmt(group.accounts.reduce((s, a) => s + (creditStmtMap[a.name]?.thisTotal ?? 0) + (creditStmtMap[a.name]?.nextTotal ?? 0), 0))
+                  : fmt(group.accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}
               </span>
             </div>
             <div className="card mx-5 rounded-2xl overflow-hidden">
-              {/* Parent itself as first row (it holds real money) */}
-              <AccountCard
-                acct={parent}
-                hidden={balanceHidden}
-                onTap={() => openDetail(parent)}
-                stmt={creditStmtMap[parent.name]}
-              />
-              {children.map((acct) => (
+              {group.accounts.map((acct, i) => (
                 <div key={acct.id}>
-                  <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
                   <AccountCard
                     acct={acct}
                     hidden={balanceHidden}
                     onTap={() => openDetail(acct)}
                     stmt={creditStmtMap[acct.name]}
-                    indent
                   />
+                  {i < group.accounts.length - 1 && (
+                    <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
+                  )}
                 </div>
               ))}
             </div>
           </section>
         )
       })}
-
-      {/* ── Account groups ── */}
-      {groups.map(group => (
-        <section key={group.label} className="mb-3">
-          <div className="flex items-center gap-3 px-5 py-2">
-            <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap">
-              {group.label}
-            </span>
-            <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
-            <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
-              {group.label === 'Credit Cards'
-                ? fmt(group.accounts.reduce((s, a) => s + (creditStmtMap[a.name]?.thisTotal ?? 0) + (creditStmtMap[a.name]?.nextTotal ?? 0), 0))
-                : fmt(group.accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}
-            </span>
-          </div>
-
-          <div className="card mx-5 rounded-2xl overflow-hidden">
-            {group.accounts.map((acct, i) => (
-              <div key={acct.id}>
-                <AccountCard
-                  acct={acct}
-                  hidden={balanceHidden}
-                  onTap={() => openDetail(acct)}
-                  stmt={creditStmtMap[acct.name]}
-                />
-                {i < group.accounts.length - 1 && (
-                  <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
-                )}
-              </div>
-            ))}
-          </div>
-        </section>
-      ))}
 
       {/* ── Sheets ── */}
       <AccountSortSheet
