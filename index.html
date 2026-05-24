@@ -10,21 +10,31 @@
     <meta name="apple-mobile-web-app-title" content="Spendr" />
     <link rel="icon" type="image/png" href="/icons/icon-512.png" />
     <link rel="apple-touch-icon" href="/icons/icon-512.png" />
+    <link rel="dns-prefetch" href="https://supabase.co" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap"
       rel="stylesheet"
     />
     <title>Spendr</title>
     <script>
       (function(){
-        var a=localStorage.getItem('accentColor')||'#2D9DFF';
-        var h=a.replace('#','');
-        var r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
-        document.documentElement.style.setProperty('--color-primary',a);
-        document.documentElement.style.setProperty('--color-primary-rgb',r+', '+g+', '+b);
-        document.documentElement.classList.add(a==='#2D9DFF'?'accent-blue':'accent-custom');
+        try {
+          var t=localStorage.getItem('spendr-theme')||'dark';
+          var a=localStorage.getItem('accentColor')||'#2D9DFF';
+          var d=document.documentElement;
+          // Apply theme class immediately so dark: variants work on first paint
+          if(t==='dark') d.classList.add('dark');
+          // Set background so there's no white flash while JS is parsing
+          d.style.background=t==='dark'?'#0b0f14':'#f8fafc';
+          // Apply accent color
+          var h=a.replace('#','');
+          var r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);
+          d.style.setProperty('--color-primary',a);
+          d.style.setProperty('--color-primary-rgb',r+','+g+','+b);
+          d.classList.add(a==='#2D9DFF'?'accent-blue':'accent-custom');
+        } catch(e) {}
       })();
     </script>
   </head>

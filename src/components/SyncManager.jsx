@@ -73,8 +73,8 @@ function SyncIndicator({ status, errMsg }) {
 
   return (
     <div
-      className={`fixed top-14 right-4 z-[400] flex flex-col items-end gap-0.5
-        transition-all duration-300`}
+      className="fixed right-4 z-[400] flex flex-col items-end gap-0.5 transition-all duration-300"
+      style={{ top: 'max(3.5rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
     >
       <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full
         text-[11px] font-semibold shadow-lg ${styles.pill}`}
@@ -121,7 +121,7 @@ export default function SyncManager() {
     try {
       // Refresh the session first — iOS Safari PWA can have stale tokens
       const { error: sessionErr } = await supabase.auth.refreshSession()
-      if (sessionErr) console.warn('[SyncManager] session refresh:', sessionErr.message)
+      if (sessionErr) throw new Error(`Session expired: ${sessionErr.message}`)
 
       await fullSync(user.id)
       await db.meta.put({ key: 'lastSync', value: new Date().toISOString() })

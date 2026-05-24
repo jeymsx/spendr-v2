@@ -34,9 +34,11 @@ export async function fetchReportData(year, month) {
   const expenses = monthTxs.filter(tx => tx.type === 'expense')
   const inflows  = monthTxs.filter(tx => tx.type === 'inflow')
 
-  const totalIncome   = inflows.reduce((s, t)  => s + (t.amount ?? 0), 0)
-  const totalExpenses = expenses.reduce((s, t) => s + (t.amount ?? 0), 0)
-  const netSavings    = totalIncome - totalExpenses
+  const r2 = (v) => Math.round(v * 100) / 100
+
+  const totalIncome   = r2(inflows.reduce((s, t)  => s + (t.amount ?? 0), 0))
+  const totalExpenses = r2(expenses.reduce((s, t) => s + (t.amount ?? 0), 0))
+  const netSavings    = r2(totalIncome - totalExpenses)
   const savingsRate   = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0
 
   // Category breakdown
@@ -127,8 +129,11 @@ export async function fetchReportData(year, month) {
         if (tx.account === acct.name) bal -= a      // reverse: inflow increased balance
       } else if (tx.type === 'transfer') {
         const from = tx.fromAccount || tx.account
-        if (from          === acct.name) bal += a   // reverse: transfer out reduced balance
-        if (tx.toAccount  === acct.name) bal -= a   // reverse: transfer in increased balance
+        if (from === acct.name) bal += a  // reverse: transfer out reduced balance
+        if (tx.toAccount === acct.name) {
+          // For credit accounts, transfer-in is a payment (applied as -a), so reversal adds back
+          bal += acct.type === 'credit' ? a : -a
+        }
       }
     }
     endingBalances[acct.name] = bal

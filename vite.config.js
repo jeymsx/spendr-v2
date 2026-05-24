@@ -4,6 +4,21 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  build: {
+    // Explicit vendor chunks → stable filenames → better long-term caching
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
+          'vendor-supabase': ['@supabase/supabase-js'],
+          'vendor-dexie':    ['dexie'],
+          'vendor-dnd':      ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+        },
+      },
+    },
+    // Modern target — smaller output, no legacy polyfills
+    target: 'esnext',
+  },
   plugins: [
     react(),
     tailwindcss(),

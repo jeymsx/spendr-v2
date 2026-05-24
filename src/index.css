@@ -16,6 +16,10 @@
 html {
   -webkit-tap-highlight-color: transparent;
   min-height: 100dvh;
+  background-color: #f8fafc; /* light default */
+}
+
+html.dark {
   background-color: #0b0f14;
 }
 

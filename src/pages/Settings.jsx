@@ -48,14 +48,14 @@ const CAT_COLORS = [
 const DEFAULT_CAT_NAMES = new Set(['Others', 'Income', 'Transfer', 'Transfer Fee'])
 
 const ACCENT_COLORS = [
-  { hex: '#2D9DFF', name: 'Blue'   },
-  { hex: '#845EF7', name: 'Purple' },
-  { hex: '#F06595', name: 'Pink'   },
-  { hex: '#51CF66', name: 'Green'  },
-  { hex: '#20C997', name: 'Teal'   },
-  { hex: '#FFB347', name: 'Orange' },
-  { hex: '#FF6B6B', name: 'Red'    },
-  { hex: '#FCC419', name: 'Yellow' },
+  { hex: '#2D9DFF', name: 'Azure'  },
+  { hex: '#845EF7', name: 'Cosmos' },
+  { hex: '#F06595', name: 'Blush'  },
+  { hex: '#51CF66', name: 'Sage'   },
+  { hex: '#20C997', name: 'Lagoon' },
+  { hex: '#FFB347', name: 'Amber'  },
+  { hex: '#FF6B6B', name: 'Ember'  },
+  { hex: '#FCC419', name: 'Honey'  },
 ]
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -1972,6 +1972,65 @@ function TemplateManagerSheet({ open, onClose }) {
   )
 }
 
+// ── Month picker (custom — avoids browser native dropdown dark-mode issues) ───
+
+function MonthPicker({ months, value, onChange }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+  const selected = months.find(m => m.year === value.year && m.month === value.month) ?? months[0]
+
+  useEffect(() => {
+    if (!open) return
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
+    document.addEventListener('mousedown', handler)
+    document.addEventListener('touchstart', handler)
+    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('touchstart', handler) }
+  }, [open])
+
+  return (
+    <div ref={ref} className="flex-1 relative">
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-center justify-between gap-2 px-3 h-10 rounded-xl text-sm font-medium
+          bg-white dark:bg-primary/[0.07]
+          border border-slate-200/80 dark:border-primary/[0.14]
+          text-slate-800 dark:text-white
+          active:opacity-70 transition-opacity"
+      >
+        <span>{selected?.label}</span>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}>
+          <polyline points="6 9 12 15 18 9" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute left-0 right-0 bottom-full mb-1.5 z-[200] rounded-xl overflow-hidden
+          bg-white dark:bg-[#1a2332]
+          border border-slate-200/80 dark:border-white/[0.08]
+          shadow-[0_8px_32px_rgba(0,0,0,0.28)]
+          max-h-52 overflow-y-auto no-scrollbar">
+          {months.map(({ year, month, label }) => {
+            const active = year === value.year && month === value.month
+            return (
+              <button
+                key={`${year}-${month}`}
+                onClick={() => { onChange({ year, month }); setOpen(false) }}
+                className={`w-full text-left px-4 py-2.5 text-sm transition-colors
+                  ${active
+                    ? 'font-semibold text-primary bg-primary/[0.08] dark:bg-primary/[0.12]'
+                    : 'font-medium text-slate-700 dark:text-slate-300 active:bg-slate-50 dark:active:bg-white/[0.05]'
+                  }`}
+              >
+                {label}
+              </button>
+            )
+          })}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ── Accent color sheet ────────────────────────────────────────────────────────
 
 function AccentColorSheet({ open, onClose, accentColor, setAccentColor }) {
@@ -2007,31 +2066,41 @@ function AccentColorSheet({ open, onClose, accentColor, setAccentColor }) {
           </div>
         </div>
 
-        <div className="px-5 pt-6 pb-2">
-          <div className="grid grid-cols-4 gap-5">
+        <div className="px-5 pt-5 pb-3">
+          <div className="grid grid-cols-2 gap-2.5">
             {ACCENT_COLORS.map(({ hex, name }) => {
               const active = accentColor === hex
               return (
                 <button
                   key={hex}
                   aria-label={name}
-                  onClick={() => { setAccentColor(hex); close() }}
-                  className="flex flex-col items-center gap-2.5 active:scale-95 transition-transform duration-100"
+                  onClick={() => setAccentColor(hex)}
+                  className="flex items-center gap-3 px-4 py-3.5 rounded-2xl active:scale-[0.97] transition-all duration-150"
+                  style={{
+                    backgroundColor: active ? `${hex}22` : 'transparent',
+                    border: `1.5px solid ${active ? hex : 'transparent'}`,
+                    boxShadow: active ? `inset 0 1px 0 ${hex}33` : undefined,
+                  }}
                 >
-                  <div
-                    className="w-14 h-14 rounded-full"
+                  <span
+                    className="w-7 h-7 rounded-xl shrink-0"
                     style={{
                       backgroundColor: hex,
-                      boxShadow: active
-                        ? `0 0 0 2.5px white, 0 0 0 4.5px ${hex}, 0 4px 12px rgba(0,0,0,0.2)`
-                        : '0 2px 8px rgba(0,0,0,0.18)',
-                      transform: active ? 'scale(1.08)' : undefined,
-                      transition: 'transform 150ms, box-shadow 150ms',
+                      boxShadow: `0 2px 8px ${hex}55`,
                     }}
                   />
-                  <span className={`text-[11px] font-medium ${active ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {name}
+                  <span
+                    className="text-sm font-semibold"
+                    style={{ color: active ? hex : undefined }}
+                  >
+                    {!active && <span className="text-slate-700 dark:text-slate-200">{name}</span>}
+                    {active && name}
                   </span>
+                  {active && (
+                    <svg className="ml-auto shrink-0" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: hex }}>
+                      <polyline points="20 6 9 17 4 12" />
+                    </svg>
+                  )}
                 </button>
               )
             })}
@@ -2243,7 +2312,6 @@ export default function Settings() {
 
   const [reportMonth, setReportMonth] = useState(() => {
     const d = new Date()
-    d.setMonth(d.getMonth() - 1)
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
   })
   const [generatingReport, setGeneratingReport] = useState(false)
@@ -2524,7 +2592,8 @@ export default function Settings() {
                   const [y, m] = e.target.value.split('-').map(Number)
                   setReportMonth({ year: y, month: m })
                 }}
-                className="flex-1 text-sm bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 text-slate-800 dark:text-white outline-none dark:[color-scheme:dark]"
+                className="flex-1 text-sm bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 outline-none"
+                style={{ colorScheme: theme === 'dark' ? 'dark' : 'light' }}
               >
                 {getLast12Months().map(({ year, month, label }) => (
                   <option key={`${year}-${month}`} value={`${year}-${month}`}>{label}</option>
