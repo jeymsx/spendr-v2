@@ -62,6 +62,6 @@ async function seed() {
   })
 }
 
-seed().catch(err => console.error('[SpendrDB] seed failed:', err))
+export const dbReady = seed().catch(err => console.error('[SpendrDB] seed failed:', err))
 
 export default db

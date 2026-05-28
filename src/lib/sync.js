@@ -1,4 +1,4 @@
-import db from '../db/db'
+import db, { dbReady } from '../db/db'
 import { supabase } from './supabase'
 
 // ── Row mapping: Dexie → Supabase ─────────────────────────────────────────────
@@ -442,14 +442,39 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
   }
 }
 
+// ── Deduplicate local accounts ────────────────────────────────────────────────
+// Seed and pull can race on a fresh device, both creating a Cash record.
+// Keep the record with the most recent updatedAt (the one from pull has the
+// correct balance); delete any extras with the same name.
+
+async function deduplicateLocalAccounts() {
+  const accounts = await db.accounts.toArray()
+  const seen = {}
+  for (const acct of accounts) {
+    const prev = seen[acct.name]
+    if (!prev) { seen[acct.name] = acct; continue }
+    const prevTs = prev.updatedAt ? new Date(prev.updatedAt).getTime() : 0
+    const currTs = acct.updatedAt ? new Date(acct.updatedAt).getTime() : 0
+    if (currTs > prevTs || (currTs === prevTs && (acct.balance ?? 0) > (prev.balance ?? 0))) {
+      await db.accounts.delete(prev.id)
+      seen[acct.name] = acct
+    } else {
+      await db.accounts.delete(acct.id)
+    }
+  }
+}
+
 // ── Full sync ─────────────────────────────────────────────────────────────────
 
 export async function fullSync(userId) {
   if (!userId) throw new Error('Not authenticated')
+  // Wait for the initial seed to complete so the pull doesn't race with it
+  // and create duplicate seeded records (e.g. two Cash accounts).
+  await dbReady
   // Pull first so a fresh device gets correct remote state before pushing.
-  // Seeded/default local records (no updatedAt) would otherwise overwrite
-  // Supabase with stale data because push uses new Date() as the timestamp.
   await syncFromSupabase(userId)
+  // Clean up any duplicates that seed vs. pull races may have left behind.
+  await deduplicateLocalAccounts()
   await syncToSupabase(userId)
 }
 
