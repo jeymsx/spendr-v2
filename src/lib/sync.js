@@ -433,23 +433,10 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
     const localts  = target?.updatedAt ? new Date(target.updatedAt).getTime() : 0
 
     if (!target) {
-      // Create the local record; Dexie assigns a new auto-increment id
-      const newId = await dexieTable.add(fromRow(row))
-      // If the Supabase local_id doesn't match what Dexie assigned, the Supabase row is
-      // stale (came from a different device). Delete it — syncToSupabase will re-push with
-      // the correct local_id, preventing a duplicate from accumulating.
-      if (localId && localId !== newId) {
-        await supabase.from(tableName).delete().eq('user_id', userId).eq('local_id', localId)
-      }
+      await dexieTable.add(fromRow(row))
     } else {
       if (remotets > localts) {
         await dexieTable.update(target.id, fromRow(row))
-      }
-      // Found by secondary key (byName): the Supabase row carries a stale local_id that
-      // no longer matches the local record. Delete the stale Supabase row so it doesn't
-      // keep creating duplicates; syncToSupabase will re-push with the correct local_id.
-      if (byName && localId != null && localId !== target.id) {
-        await supabase.from(tableName).delete().eq('user_id', userId).eq('local_id', localId)
       }
     }
   }
