@@ -359,9 +359,17 @@ export async function syncFromSupabase(userId) {
   await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
     row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first())
   await pullSimpleTable('debts', db.debts, rowToDebt, null, userId,
-    row => row.contact
-      ? db.debts.where('contact').equals(row.contact).and(d => d.type === row.type && d.amount === row.amount).first()
-      : null)
+    row => {
+      if (row.contact) {
+        return db.debts.where('contact').equals(row.contact)
+          .and(d => d.type === row.type && d.amount === row.amount).first()
+      }
+      if (row.name) {
+        return db.debts.where('name').equals(row.name)
+          .and(d => d.type === row.type).first()
+      }
+      return null
+    })
   await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
     row => row.name
       ? db.recurring.where('name').equals(row.name).and(r => r.amount === row.amount).first()
@@ -451,8 +459,11 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
 
 export async function fullSync(userId) {
   if (!userId) throw new Error('Not authenticated')
-  await syncToSupabase(userId)
+  // Pull first so a fresh device gets correct remote state before pushing.
+  // Seeded/default local records (no updatedAt) would otherwise overwrite
+  // Supabase with stale data because push uses new Date() as the timestamp.
   await syncFromSupabase(userId)
+  await syncToSupabase(userId)
 }
 
 // ── Deletion helpers (call these alongside the local db.delete) ───────────────
