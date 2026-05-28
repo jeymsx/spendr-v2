@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { getCycleRange } from '../utils/creditCycle'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
@@ -114,13 +115,39 @@ export default function Transfer() {
   const [showTemplates,  setShowTemplates]  = useState(false)
   const [saving,         setSaving]         = useState(false)
 
-  const accounts = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
+  const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false
 
   const amountInputRef = useRef(null)
   const amount = parseMoney(amountStr)
   const fee    = parseMoney(feeStr)
+
+  // Compute net outstanding on the destination credit card (charges − payments)
+  const creditOutstanding = useMemo(() => {
+    if (!toAccount || toAccount.type !== 'credit') return null
+    const { cycleStart, cycleEnd } = getCycleRange(toAccount.cutoffDate)
+    const chargeTxs = (transactions ?? []).filter(tx => tx.account === toAccount.name && tx.type === 'expense')
+    const thisTotal = chargeTxs
+      .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
+      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    const nextTotal = chargeTxs
+      .filter(tx => new Date(tx.date) > cycleEnd)
+      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    const totalPayments = (transactions ?? [])
+      .filter(tx =>
+        (tx.type === 'inflow'   && tx.account   === toAccount.name) ||
+        (tx.type === 'transfer' && tx.toAccount === toAccount.name)
+      )
+      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    return Math.max(0, thisTotal + nextTotal - totalPayments)
+  }, [toAccount, transactions])
+
+  const overpayWarning = toAccount?.type === 'credit'
+    && creditOutstanding !== null
+    && amount > 0
+    && amount > creditOutstanding
 
   useEffect(() => {
     const t = setTimeout(() => amountInputRef.current?.focus(), 80)
@@ -321,6 +348,19 @@ export default function Transfer() {
           <p className="text-xs text-amber-600 dark:text-amber-400 text-center px-2 -mt-2">
             From and To accounts must be different.
           </p>
+        )}
+
+        {/* credit card overpayment warning */}
+        {overpayWarning && (
+          <div className="px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-200 dark:border-amber-500/20 -mt-1">
+            <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+              ⚠️ Payment exceeds outstanding balance
+            </p>
+            <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
+              {fmt(creditOutstanding)} is currently owed on {toAccount.name}.
+              {' '}Paying {fmt(amount)} will overpay by {fmt(amount - creditOutstanding)} — excess won't increase available credit beyond the card limit.
+            </p>
+          </div>
         )}
 
         {/* Transfer Fee */}

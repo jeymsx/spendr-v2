@@ -275,12 +275,11 @@ function SummaryBar({ summary, hidden, onToggleHide, accentColor, theme }) {
 // ── Account card ───────────────────────────────────────────────────────────────
 
 function AccountCard({ acct, hidden, onTap, stmt, indent = false }) {
-  const isCredit    = acct.type === 'credit'
-  const thisTotal   = stmt?.thisTotal ?? 0
-  const nextTotal   = stmt?.nextTotal ?? 0
-  const available   = isCredit ? (acct.creditLimit ?? 0) - thisTotal - nextTotal : null
-  const stmtPct     = isCredit && (acct.creditLimit ?? 0) > 0
-    ? Math.min((thisTotal / acct.creditLimit) * 100, 100) : 0
+  const isCredit       = acct.type === 'credit'
+  const currentBalance = stmt?.currentBalance ?? 0
+  const available      = isCredit ? (acct.creditLimit ?? 0) - currentBalance : null
+  const stmtPct        = isCredit && (acct.creditLimit ?? 0) > 0
+    ? Math.min((currentBalance / acct.creditLimit) * 100, 100) : 0
   const barColor    = stmtPct > 80 ? '#ef4444' : stmtPct > 60 ? '#f59e0b' : (acct.color ?? '#2D9DFF')
   const nextDue     = isCredit ? nextOccurrence(acct.dueDate) : null
 
@@ -302,7 +301,7 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false }) {
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{acct.name}</p>
           <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-            {isCredit ? 'Statement balance' : TYPE_LABEL[acct.type]}
+            {isCredit ? 'Balance used' : TYPE_LABEL[acct.type]}
           </p>
         </div>
 
@@ -310,7 +309,7 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false }) {
           <p className={`text-sm font-bold tabular-nums ${
             isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
           }`}>
-            {hidden ? '••••' : isCredit ? fmt(thisTotal) : fmt(acct.balance)}
+            {hidden ? '••••' : isCredit ? fmt(currentBalance) : fmt(acct.balance)}
           </p>
           <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
         </div>
@@ -600,15 +599,24 @@ export default function Accounts() {
     const map = {}
     ;(accounts ?? []).filter(a => a.type === 'credit').forEach(acct => {
       const { cycleStart, cycleEnd } = getCycleRange(acct.cutoffDate)
-      const txs = (transactions ?? []).filter(tx => tx.account === acct.name && tx.type === 'expense')
-      map[acct.name] = {
-        thisTotal: txs
-          .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
-          .reduce((s, tx) => s + (tx.amount ?? 0), 0),
-        nextTotal: txs
-          .filter(tx => new Date(tx.date) > cycleEnd)
-          .reduce((s, tx) => s + (tx.amount ?? 0), 0),
-      }
+      const chargeTxs = (transactions ?? []).filter(tx => tx.account === acct.name && tx.type === 'expense')
+      const thisTotal = chargeTxs
+        .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
+        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      const nextTotal = chargeTxs
+        .filter(tx => new Date(tx.date) > cycleEnd)
+        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      const totalPayments = (transactions ?? [])
+        .filter(tx =>
+          (tx.type === 'inflow'   && tx.account   === acct.name) ||
+          (tx.type === 'transfer' && tx.toAccount === acct.name)
+        )
+        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      const stmtPaid       = totalPayments >= thisTotal
+      const currentBalance = stmtPaid
+        ? nextTotal
+        : Math.max(0, thisTotal + nextTotal - totalPayments)
+      map[acct.name] = { thisTotal, nextTotal, totalPayments, currentBalance, stmtPaid }
     })
     return map
   }, [accounts, transactions])
@@ -638,7 +646,7 @@ export default function Accounts() {
     const assets     = allAccts.filter(a => a.type !== 'credit').reduce((s, a) => s + (a.balance ?? 0), 0)
     const creditUsed = allAccts.filter(a => a.type === 'credit').reduce((s, a) => {
       const stmt = creditStmtMap[a.name]
-      return s + (stmt?.thisTotal ?? 0) + (stmt?.nextTotal ?? 0)
+      return s + (stmt?.currentBalance ?? 0)
     }, 0)
     return { assets, creditUsed, net: assets - creditUsed }
   }, [accounts, creditStmtMap])
@@ -812,7 +820,7 @@ export default function Accounts() {
               <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
               <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
                 {group.label === 'Credit Cards'
-                  ? fmt(group.accounts.reduce((s, a) => s + (creditStmtMap[a.name]?.thisTotal ?? 0) + (creditStmtMap[a.name]?.nextTotal ?? 0), 0))
+                  ? fmt(group.accounts.reduce((s, a) => s + (creditStmtMap[a.name]?.currentBalance ?? 0), 0))
                   : fmt(group.accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}
               </span>
             </div>
@@ -2005,17 +2013,24 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
       (tx.type === 'transfer' && tx.toAccount  === account.name)
     )
 
-    const thisTotal = thisCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    const nextTotal = nextCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    const thisTotal     = thisCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    const nextTotal     = nextCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    const totalPayments = payments.reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    const stmtPaid      = totalPayments >= thisTotal
+    // When statement is fully paid, only the new cycle's charges are outstanding.
+    // When partially paid, net remaining from statement + new charges.
+    const currentBalance = stmtPaid
+      ? nextTotal
+      : Math.max(0, thisTotal + nextTotal - totalPayments)
 
     const dueDate    = nextOccurrenceDate(account.dueDate)
     const dueSoon    = dueDate && ((dueDate - new Date()) / 864e5) <= 7
 
     return {
       thisCharges, nextCharges, payments,
-      thisTotal, nextTotal,
+      thisTotal, nextTotal, totalPayments, currentBalance, stmtPaid,
       cycleStart, cycleEnd, nextStart, nextEnd,
-      availableCredit: (account.creditLimit ?? 0) - thisTotal - nextTotal,
+      availableCredit: (account.creditLimit ?? 0) - currentBalance,
       minimumDue:      account.minimumPayment ?? 0,
       nextDue:         nextOccurrence(account.dueDate),
       dueSoon,
@@ -2031,7 +2046,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
 
   const isCredit    = account.type === 'credit'
   const ownBal      = account.balance ?? 0
-  const totalUsed   = isCredit ? (creditData?.thisTotal ?? 0) + (creditData?.nextTotal ?? 0) : ownBal
+  const totalUsed   = isCredit ? (creditData?.currentBalance ?? 0) : ownBal
   const usedPct     = isCredit && (account.creditLimit ?? 0) > 0
     ? Math.min((totalUsed / account.creditLimit) * 100, 100) : 0
 
@@ -2142,22 +2157,40 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
             <>
               {/* ── Statement summary ── */}
               <div className="mb-5">
-                {creditData.dueSoon && creditData.nextDue && (
+                {creditData.stmtPaid ? (
+                  <div className="mb-3 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-2">
+                    <span className="text-base">✅</span>
+                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
+                      Statement balance paid
+                    </p>
+                  </div>
+                ) : creditData.dueSoon && creditData.nextDue ? (
                   <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-100 dark:border-amber-500/20 flex items-center gap-2">
                     <span className="text-base">⚠️</span>
                     <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                      Payment due {creditData.nextDue} — pay at least {fmt(creditData.minimumDue)}
+                      Payment due {creditData.nextDue}
+                      {creditData.minimumDue > 0 && ` — pay at least ${fmt(creditData.minimumDue)}`}
                     </p>
                   </div>
-                )}
+                ) : null}
                 <div className="grid grid-cols-2 gap-2">
-                  <div className="col-span-2 px-4 py-3 rounded-2xl bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20 flex items-center justify-between">
+                  <div className={`col-span-2 px-4 py-3 rounded-2xl flex items-center justify-between ${
+                    creditData.stmtPaid
+                      ? 'bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20'
+                      : 'bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20'
+                  }`}>
                     <div>
-                      <p className="text-[10px] font-semibold uppercase tracking-wider text-red-400 dark:text-red-500 mb-0.5">Statement Balance</p>
-                      <p className="text-xl font-bold text-red-500 dark:text-red-400 tabular-nums">{fmt(creditData.thisTotal)}</p>
-                      {creditData.nextDue && (
+                      <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${
+                        creditData.stmtPaid ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-400 dark:text-red-500'
+                      }`}>Statement Balance</p>
+                      <p className={`text-xl font-bold tabular-nums ${
+                        creditData.stmtPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                      }`}>{fmt(creditData.thisTotal)}</p>
+                      {creditData.stmtPaid ? (
+                        <p className="text-[10px] text-emerald-500 dark:text-emerald-400 mt-0.5">Paid ✓</p>
+                      ) : creditData.nextDue ? (
                         <p className="text-[10px] text-red-400 dark:text-red-500 mt-0.5">Due {creditData.nextDue}</p>
-                      )}
+                      ) : null}
                     </div>
                     {creditData.nextTotal > 0 && (
                       <div className="text-right">
