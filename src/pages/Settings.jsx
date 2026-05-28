@@ -588,6 +588,7 @@ function ResetConfirmModal({ open, onClose }) {
   const [step,    setStep]    = useState(1) // 1=warn 2=typing-confirm
   const [input,   setInput]   = useState('')
   const [loading, setLoading] = useState(false)
+  const { signOut } = useAuth()
 
   useEffect(() => {
     if (!open) { setStep(1); setInput(''); setLoading(false) }
@@ -609,8 +610,8 @@ function ResetConfirmModal({ open, onClose }) {
         await db.templates.clear()
         await db.meta.clear()
       })
-      // Full reload re-imports db.js and triggers seed() on empty DB.
-      // Do NOT clear localStorage — Supabase stores the auth token there.
+      // Sign out so the Onboarding auto-sign-in effect doesn't fire on reload
+      await signOut()
       window.location.replace('/')
     } catch (e) {
       console.error('[Settings] reset failed:', e)
