@@ -3,10 +3,18 @@ import { Outlet, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import AddActionSheet from '../components/AddActionSheet'
 import { useSyncManager } from '../components/SyncManager'
+import WhatsNewModal, { CURRENT_VERSION } from '../components/WhatsNewModal'
+import db from '../db/db'
+import { useLiveQuery } from '../hooks/useLiveQuery'
 
 export default function AppLayout() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const { runSync } = useSyncManager()
+
+  const whatsNewMeta = useLiveQuery(async () => (await db.meta.get('whatsNewSeen')) ?? null, [], undefined)
+  // undefined = still loading, null = key missing, object = key found
+  const showWhatsNew = whatsNewMeta !== undefined && whatsNewMeta?.value !== CURRENT_VERSION
+  const [whatsNewDismissed, setWhatsNewDismissed] = useState(false)
   const location = useLocation()
   const mainRef = useRef(null)
   const touchStartY = useRef(-1)
@@ -93,6 +101,9 @@ export default function AppLayout() {
 
       <Navbar onAddClick={() => setSheetOpen(true)} />
       <AddActionSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+      {showWhatsNew && !whatsNewDismissed && (
+        <WhatsNewModal onClose={() => setWhatsNewDismissed(true)} />
+      )}
     </div>
   )
 }
