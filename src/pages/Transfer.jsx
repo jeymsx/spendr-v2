@@ -9,6 +9,7 @@ import { getCycleRange } from '../utils/creditCycle'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
+import DupWarningSheet from '../components/DupWarningSheet'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -114,6 +115,7 @@ export default function Transfer() {
   const [showConfirm,    setShowConfirm]    = useState(false)
   const [showTemplates,  setShowTemplates]  = useState(false)
   const [saving,         setSaving]         = useState(false)
+  const [dupWarning,     setDupWarning]     = useState(false)
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
@@ -157,7 +159,7 @@ export default function Transfer() {
   const handleAmountChange = moneyChangeHandler(setAmountStr)
   const handleFeeChange    = moneyChangeHandler(setFeeStr)
 
-  function onConfirmPress() {
+  async function onConfirmPress() {
     let err = false
     if (!fromAccount) { setFromError(true); err = true }
     if (!toAccount)   { setToError(true);   err = true }
@@ -165,6 +167,19 @@ export default function Transfer() {
     if (fromAccount.type !== 'credit' && amount + fee > (fromAccount.balance ?? 0)) {
       showToast(`Low balance in ${fromAccount.name}`, 'warning')
     }
+    const [y, m, d] = date.split('-').map(Number)
+    const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
+    const dayEnd   = new Date(y, m - 1, d, 23, 59, 59, 999)
+    const sameDayTxs = await db.transactions
+      .where('date').between(dayStart.toISOString(), dayEnd.toISOString(), true, true)
+      .toArray()
+    const isDup = sameDayTxs.some(tx =>
+      tx.type === 'transfer' &&
+      tx.amount === amount &&
+      tx.fromAccount === fromAccount.name &&
+      tx.toAccount === toAccount.name
+    )
+    if (isDup) { setDupWarning(true); return }
     if (skipConfirm) { handleSave(); return }
     setShowConfirm(true)
   }
@@ -457,6 +472,13 @@ export default function Transfer() {
         onClose={() => setShowTemplates(false)}
         type="transfer"
         onSelect={applyTemplate}
+      />
+      <DupWarningSheet
+        open={dupWarning}
+        onClose={() => setDupWarning(false)}
+        onSaveAnyway={() => { if (skipConfirm) { handleSave() } else { setShowConfirm(true) } }}
+        amount={amount}
+        type="transfer"
       />
     </div>
   )

@@ -1,7 +1,9 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import * as RadixSlider from '@radix-ui/react-slider'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import TxDetailSheet from '../components/TxDetailSheet'
+import CalendarView from '../components/CalendarView'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -129,6 +131,131 @@ function QuickTypeFilter({ typeFilter, setTypeFilter }) {
   )
 }
 
+// ── Amount range histogram + slider ───────────────────────────────────────────
+
+const BUCKETS = 28
+
+function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmountMax }) {
+  // Compute p1 and p99 of transaction amounts — the slider spans this range
+  const { scaleMin, scaleMax } = useMemo(() => {
+    const amounts = (allTxs ?? []).map(t => t.amount ?? 0).filter(a => a > 0).sort((a, b) => a - b)
+    if (!amounts.length) return { scaleMin: 1, scaleMax: 10000 }
+    const p1  = amounts[Math.max(0, Math.floor(amounts.length * 0.01) - 1)]
+    const p99 = amounts[Math.min(Math.floor(amounts.length * 0.99), amounts.length - 1)]
+    return {
+      scaleMin: Math.max(1, Math.floor(p1)),
+      scaleMax: Math.ceil(p99 / 10) * 10,
+    }
+  }, [allTxs])
+
+  // Log scale helpers: map amount ↔ slider position 0–100
+  const toPos   = useCallback((amt) => {
+    if (amt <= scaleMin) return 0
+    if (amt >= scaleMax) return 100
+    return Math.log(amt / scaleMin) / Math.log(scaleMax / scaleMin) * 100
+  }, [scaleMin, scaleMax])
+
+  const fromPos = useCallback((pos) => {
+    if (pos <= 0)   return scaleMin
+    if (pos >= 100) return scaleMax
+    return Math.round(Math.exp(pos / 100 * Math.log(scaleMax / scaleMin)) * scaleMin)
+  }, [scaleMin, scaleMax])
+
+  // Histogram buckets on log scale — each bucket covers equal log-space
+  const buckets = useMemo(() => {
+    const counts = Array(BUCKETS).fill(0)
+    ;(allTxs ?? []).forEach(tx => {
+      const a = tx.amount ?? 0
+      if (a <= 0) return
+      const pos = toPos(a)
+      const idx = Math.min(Math.floor(pos / 100 * BUCKETS), BUCKETS - 1)
+      counts[idx]++
+    })
+    return counts
+  }, [allTxs, toPos])
+
+  const maxCount = Math.max(...buckets, 1)
+
+  const loPos = amountMin != null ? toPos(amountMin) : 0
+  const hiPos = amountMax != null ? toPos(amountMax) : 100
+
+  const fmtAmt = (v) => {
+    if (v >= 1_000_000) return '₱' + (v / 1_000_000).toFixed(1) + 'M'
+    if (v >= 1_000)     return '₱' + (v / 1_000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k'
+    return '₱' + Math.round(v)
+  }
+
+  return (
+    <div>
+      {/* Histogram */}
+      <div className="flex items-end gap-[2px] h-14 mb-1 px-0.5">
+        {buckets.map((count, i) => {
+          const bucketLoPos = i / BUCKETS * 100
+          const bucketHiPos = (i + 1) / BUCKETS * 100
+          const inRange     = bucketHiPos > loPos && bucketLoPos < hiPos
+          const heightPct   = count === 0 ? 4 : Math.max(8, (count / maxCount) * 100)
+          return (
+            <div
+              key={i}
+              className="flex-1 rounded-sm transition-colors duration-150"
+              style={{
+                height: `${heightPct}%`,
+                backgroundColor: inRange
+                  ? 'rgba(var(--color-primary-rgb), 0.75)'
+                  : 'rgba(var(--color-primary-rgb), 0.15)',
+              }}
+            />
+          )
+        })}
+      </div>
+
+      {/* Dual slider — internal 0–100 log-scale position */}
+      <RadixSlider.Root
+        className="relative flex items-center select-none touch-none w-full h-5 mt-1"
+        min={0}
+        max={100}
+        step={0.5}
+        value={[loPos, hiPos]}
+        onValueChange={([lo, hi]) => {
+          onAmountMin(lo <= 0.5 ? null : fromPos(lo))
+          onAmountMax(hi >= 99.5 ? null : fromPos(hi))
+        }}
+        minStepsBetweenThumbs={2}
+      >
+        <RadixSlider.Track className="relative grow rounded-full h-[3px] bg-slate-200 dark:bg-white/[0.12]">
+          <RadixSlider.Range className="absolute rounded-full h-full" style={{ backgroundColor: 'rgb(var(--color-primary-rgb))' }} />
+        </RadixSlider.Track>
+        {[0, 1].map(i => (
+          <RadixSlider.Thumb
+            key={i}
+            className="block w-5 h-5 rounded-full bg-white shadow-[0_1px_6px_rgba(0,0,0,0.25)] border border-slate-200 dark:border-white/20 outline-none focus:ring-2 focus:ring-primary/40 cursor-grab active:cursor-grabbing transition-transform active:scale-110"
+          />
+        ))}
+      </RadixSlider.Root>
+
+      {/* Min / Max labels */}
+      <div className="flex justify-between mt-3">
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Min</span>
+          <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.07]">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              {amountMin == null ? 'Any' : fmtAmt(amountMin)}
+            </span>
+          </div>
+        </div>
+        <div className="flex flex-col gap-1 items-end">
+          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Max</span>
+          <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.07]">
+            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
+              {amountMax == null ? 'Any' : fmtAmt(amountMax) + '+'}
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── Filter sheet ───────────────────────────────────────────────────────────────
 
 function FilterModal({
@@ -139,7 +266,9 @@ function FilterModal({
   customTo, setCustomTo,
   accountFilter, setAccountFilter,
   categoryFilter, setCategoryFilter,
-  accounts, categories,
+  amountMin, setAmountMin,
+  amountMax, setAmountMax,
+  accounts, categories, allTxs,
   activeCount, onClear,
   filteredCount,
 }) {
@@ -225,6 +354,18 @@ function FilterModal({
           className="overflow-y-auto flex-1 px-5 pb-4 flex flex-col gap-6"
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
+
+          {/* Amount Range */}
+          <div>
+            <SectionLabel>Amount Range</SectionLabel>
+            <AmountRangeFilter
+              allTxs={allTxs}
+              amountMin={amountMin}
+              amountMax={amountMax}
+              onAmountMin={setAmountMin}
+              onAmountMax={setAmountMax}
+            />
+          </div>
 
           {/* Date Range */}
           <div>
@@ -440,10 +581,16 @@ export default function Transactions() {
   const [filterOpen,     setFilterOpen]     = useState(false)
   const [visibleCount,   setVisibleCount]   = useState(PAGE_SIZE)
   const [selectedTx,     setSelectedTx]     = useState(null)
+  const [amountMin,      setAmountMin]      = useState(null)
+  const [amountMax,      setAmountMax]      = useState(null)
+  const [viewMode,       setViewMode]       = useState('list')
+  const [calYear,        setCalYear]        = useState(() => new Date().getFullYear())
+  const [calMonth,       setCalMonth]       = useState(() => new Date().getMonth())
+  const [calSelected,    setCalSelected]    = useState(null)
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [search, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo])
+  }, [search, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])),
@@ -461,9 +608,11 @@ export default function Transactions() {
                            tx.toAccount   !== accountFilter) return false
       if (categoryFilter && tx.category !== categoryFilter) return false
       if (!inDateRange(tx, dateRange, customFrom, customTo)) return false
+      if (amountMin != null && (tx.amount ?? 0) < amountMin) return false
+      if (amountMax != null && (tx.amount ?? 0) > amountMax) return false
       return true
     })
-  }, [txAll, search, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo])
+  }, [txAll, search, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
   const visibleTx = useMemo(() => filteredTx.slice(0, visibleCount), [filteredTx, visibleCount])
   const groups    = useMemo(() => groupByDate(visibleTx), [visibleTx])
@@ -472,7 +621,20 @@ export default function Transactions() {
   // Type is now inline — only count date/account/category as "hidden" filter state
   const activeFilterCount = (dateRange !== 'all' ? 1 : 0) +
     (accountFilter ? 1 : 0) +
-    (categoryFilter ? 1 : 0)
+    (categoryFilter ? 1 : 0) +
+    (amountMin != null || amountMax != null ? 1 : 0)
+
+  function handlePrevMonth() {
+    if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) }
+    else setCalMonth(m => m - 1)
+    setCalSelected(null)
+  }
+
+  function handleNextMonth() {
+    if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) }
+    else setCalMonth(m => m + 1)
+    setCalSelected(null)
+  }
 
   function clearFilters() {
     setTypeFilter('all')
@@ -481,6 +643,8 @@ export default function Transactions() {
     setCustomTo('')
     setAccountFilter(null)
     setCategoryFilter(null)
+    setAmountMin(null)
+    setAmountMax(null)
   }
 
   return (
@@ -491,28 +655,64 @@ export default function Transactions() {
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">
           Transactions
         </h1>
-        <button
-          onClick={() => setFilterOpen(true)}
-          className={[
-            'relative w-9 h-9 rounded-2xl flex items-center justify-center transition-colors duration-150',
-            'border shadow-sm',
-            activeFilterCount > 0
-              ? 'bg-primary border-primary text-white'
-              : 'bg-white dark:bg-primary/[0.10] border-slate-200/80 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
-          ].join(' ')}
-          aria-label="Filters"
-        >
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <line x1="4" y1="6" x2="20" y2="6" />
-            <line x1="8" y1="12" x2="16" y2="12" />
-            <line x1="11" y1="18" x2="13" y2="18" />
-          </svg>
-          {activeFilterCount > 0 && (
-            <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-primary text-[9px] font-bold flex items-center justify-center shadow">
-              {activeFilterCount}
-            </span>
-          )}
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Single view mode toggle — icon swaps between list and calendar */}
+          <button
+            onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
+            className={[
+              'w-9 h-9 rounded-2xl flex items-center justify-center transition-colors duration-150',
+              'border shadow-sm',
+              viewMode === 'calendar'
+                ? 'bg-primary border-primary text-white'
+                : 'bg-white dark:bg-primary/[0.10] border-slate-200/80 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
+            ].join(' ')}
+            aria-label={viewMode === 'list' ? 'Switch to calendar view' : 'Switch to list view'}
+          >
+            {viewMode === 'list' ? (
+              /* Calendar icon — shown in list mode to indicate "switch to calendar" */
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                <line x1="16" y1="2" x2="16" y2="6" />
+                <line x1="8" y1="2" x2="8" y2="6" />
+                <line x1="3" y1="10" x2="21" y2="10" />
+              </svg>
+            ) : (
+              /* List icon — shown in calendar mode to indicate "switch to list" */
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="8" y1="6" x2="21" y2="6" />
+                <line x1="8" y1="12" x2="21" y2="12" />
+                <line x1="8" y1="18" x2="21" y2="18" />
+                <line x1="3" y1="6" x2="3.01" y2="6" />
+                <line x1="3" y1="12" x2="3.01" y2="12" />
+                <line x1="3" y1="18" x2="3.01" y2="18" />
+              </svg>
+            )}
+          </button>
+
+          {/* Filter button */}
+          <button
+            onClick={() => setFilterOpen(true)}
+            className={[
+              'relative w-9 h-9 rounded-2xl flex items-center justify-center transition-colors duration-150',
+              'border shadow-sm',
+              activeFilterCount > 0
+                ? 'bg-primary border-primary text-white'
+                : 'bg-white dark:bg-primary/[0.10] border-slate-200/80 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
+            ].join(' ')}
+            aria-label="Filters"
+          >
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="4" y1="6" x2="20" y2="6" />
+              <line x1="8" y1="12" x2="16" y2="12" />
+              <line x1="11" y1="18" x2="13" y2="18" />
+            </svg>
+            {activeFilterCount > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white text-primary text-[9px] font-bold flex items-center justify-center shadow">
+                {activeFilterCount}
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* ── Search bar (always visible) ── */}
@@ -572,11 +772,38 @@ export default function Transactions() {
               <button onClick={() => setCategoryFilter(null)} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
             </span>
           )}
+          {(amountMin != null || amountMax != null) && (
+            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+              bg-primary/10 dark:bg-primary/20 text-primary">
+              {amountMin != null ? `₱${amountMin.toLocaleString()}` : '₱0'}
+              {' – '}
+              {amountMax != null ? `₱${amountMax.toLocaleString()}` : 'any'}
+              <button onClick={() => { setAmountMin(null); setAmountMax(null) }} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+            </span>
+          )}
         </div>
       )}
 
-      {/* ── Transaction list ── */}
-      {filteredTx.length === 0 ? (
+      {/* ── Transaction list / Calendar view ── */}
+      {viewMode === 'calendar' ? (
+        <CalendarView
+          transactions={filteredTx}
+          year={calYear}
+          month={calMonth}
+          onPrevMonth={handlePrevMonth}
+          onNextMonth={handleNextMonth}
+          onGoToNow={() => {
+            const n = new Date()
+            setCalYear(n.getFullYear())
+            setCalMonth(n.getMonth())
+            setCalSelected(null)
+          }}
+          selectedDate={calSelected}
+          onSelectDate={setCalSelected}
+          catMap={catMap}
+          onTxClick={setSelectedTx}
+        />
+      ) : filteredTx.length === 0 ? (
         <EmptyState />
       ) : (
         <>
@@ -631,8 +858,11 @@ export default function Transactions() {
         customTo={customTo}           setCustomTo={setCustomTo}
         accountFilter={accountFilter} setAccountFilter={setAccountFilter}
         categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
+        amountMin={amountMin}         setAmountMin={setAmountMin}
+        amountMax={amountMax}         setAmountMax={setAmountMax}
         accounts={accounts ?? []}
         categories={categories ?? []}
+        allTxs={txAll ?? []}
         activeCount={activeFilterCount}
         onClear={clearFilters}
         filteredCount={filteredTx.length}

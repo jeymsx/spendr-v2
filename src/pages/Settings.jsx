@@ -286,6 +286,25 @@ function IconFileText() {
   )
 }
 
+function IconTarget() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  )
+}
+
+function IconPencil() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+    </svg>
+  )
+}
+
 // ── UI primitives ──────────────────────────────────────────────────────────────
 
 function SectionHeader({ children }) {
@@ -754,6 +773,245 @@ function BudgetSummaryCard({ categories, transactions }) {
       <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 tabular-nums">
         {fmt(Math.max(0, totalBudgeted - totalSpent))} remaining · {pct.toFixed(0)}% used
       </p>
+    </div>
+  )
+}
+
+// ── Budget manager sheet ───────────────────────────────────────────────────────
+
+function BudgetManagerSheet({ open, onClose }) {
+  const [closing,      setClosing]      = useState(false)
+  const [editingId,    setEditingId]    = useState(null)
+  const [localBudgets, setLocalBudgets] = useState({})
+  const [saving,       setSaving]       = useState(false)
+  const inputRef = useRef(null)
+  useScrollLock(open)
+
+  const categories   = useLiveQuery(() => db.categories.toArray(), [], [])
+  const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
+
+  const expenseCats = useMemo(() =>
+    (categories ?? [])
+      .filter(c => c.type === 'expense')
+      .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name)),
+    [categories],
+  )
+
+  const monthlySpend = useMemo(() => {
+    const pfx = monthPrefix()
+    const map = {}
+    for (const tx of (transactions ?? [])) {
+      if (tx.type === 'expense' && (tx.date ?? '').startsWith(pfx)) {
+        map[tx.category] = (map[tx.category] ?? 0) + (tx.amount ?? 0)
+      }
+    }
+    return map
+  }, [transactions])
+
+  const hasPendingChanges = useMemo(() =>
+    Object.entries(localBudgets).some(([id, str]) => {
+      const cat = (categories ?? []).find(c => String(c.id) === String(id))
+      return cat && parseMoney(str) !== (cat.budget ?? 0)
+    }),
+    [localBudgets, categories],
+  )
+
+  const close = () => {
+    setClosing(true)
+    setEditingId(null)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }
+
+  function startEdit(cat) {
+    setEditingId(cat.id)
+    setLocalBudgets(prev => ({
+      ...prev,
+      [cat.id]: prev[cat.id] ?? numToMoneyStr(cat.budget ?? 0),
+    }))
+    setTimeout(() => inputRef.current?.focus(), 50)
+  }
+
+  function handleLocalChange(catId, str) {
+    setLocalBudgets(prev => ({ ...prev, [catId]: str }))
+  }
+
+  function removeLimit(catId) {
+    setLocalBudgets(prev => ({ ...prev, [catId]: '0' }))
+    setEditingId(null)
+  }
+
+  async function saveAll() {
+    setSaving(true)
+    try {
+      await Promise.all(
+        Object.entries(localBudgets).map(([id, str]) => {
+          const cat = (categories ?? []).find(c => String(c.id) === String(id))
+          if (!cat) return Promise.resolve()
+          const newBudget = parseMoney(str) || 0
+          if (newBudget === (cat.budget ?? 0)) return Promise.resolve()
+          return db.categories.update(Number(id), { budget: newBudget })
+        })
+      )
+      setLocalBudgets({})
+      setEditingId(null)
+      close()
+    } catch (e) {
+      console.error('[BudgetManager] save failed:', e)
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
+      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px] flex flex-col',
+          'bg-slate-50 dark:bg-[#0d1117]',
+          'border-t border-slate-100 dark:border-white/[0.04]',
+        ].join(' ')}
+        style={{ maxHeight: '88vh', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
+      >
+        {/* Header */}
+        <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Monthly Budgets</h3>
+            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+              {hasPendingChanges ? 'Discard' : 'Done'}
+            </button>
+          </div>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            Tap a category to set its monthly limit
+          </p>
+        </div>
+
+        {/* Scrollable list */}
+        <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+          <BudgetSummaryCard categories={categories} transactions={transactions} />
+
+          <div className="mx-4 flex flex-col gap-2 mb-6">
+            {expenseCats.length === 0 ? (
+              <div className="py-10 text-center">
+                <p className="text-sm text-slate-400 dark:text-slate-500">No expense categories yet</p>
+              </div>
+            ) : expenseCats.map((cat) => {
+              const localStr  = localBudgets[cat.id]
+              const budget    = localStr !== undefined ? parseMoney(localStr) || 0 : (cat.budget ?? 0)
+              const spent     = monthlySpend[cat.name] ?? 0
+              const pct       = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0
+              const over      = budget > 0 && spent > budget
+              const warn      = pct >= 75 && !over
+              const accentHex = over ? '#ef4444' : warn ? '#f59e0b' : null
+              const isEditing = editingId === cat.id
+              const isDirty   = localStr !== undefined && (parseMoney(localStr) || 0) !== (cat.budget ?? 0)
+
+              return (
+                <div
+                  key={cat.id}
+                  className={[
+                    'rounded-2xl overflow-hidden transition-all duration-200',
+                    isEditing
+                      ? 'bg-white dark:bg-[#131c28] border-2 border-primary/40 dark:border-primary/30 shadow-[0_0_0_4px_rgba(var(--color-primary-rgb),0.08)]'
+                      : isDirty
+                        ? 'bg-white dark:bg-white/[0.04] border border-primary/30 dark:border-primary/20 shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]'
+                        : 'bg-white dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07] shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]',
+                  ].join(' ')}
+                >
+                  {isEditing ? (
+                    /* ── Inline edit state ── */
+                    <div className="px-4 pt-4 pb-3">
+                      <div className="flex items-center gap-2.5 mb-4">
+                        <span className="text-xl leading-none">{cat.icon}</span>
+                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{cat.name}</span>
+                        <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-auto">monthly limit</span>
+                      </div>
+                      <div className="flex items-baseline gap-1.5 mb-3 px-1">
+                        <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 leading-none mb-0.5">₱</span>
+                        <input
+                          ref={inputRef}
+                          type="text"
+                          inputMode="decimal"
+                          value={(localBudgets[cat.id] ?? '0') === '0' ? '' : (localBudgets[cat.id] ?? '')}
+                          onChange={e => {
+                            const handler = moneyChangeHandler(str => handleLocalChange(cat.id, str))
+                            handler(e)
+                          }}
+                          placeholder="0"
+                          className="flex-1 bg-transparent text-3xl font-bold tabular-nums text-slate-900 dark:text-white outline-none min-w-0 tracking-tight"
+                        />
+                      </div>
+                      {(cat.budget ?? 0) > 0 && (
+                        <button
+                          onClick={() => removeLimit(cat.id)}
+                          className="text-[11px] font-semibold text-red-400 active:opacity-50">
+                          Remove limit
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    /* ── Display state ── */
+                    <button onClick={() => startEdit(cat)} className="w-full text-left px-4 py-3.5">
+                      <div className="flex items-center gap-3 mb-2">
+                        <span className="text-[22px] leading-none shrink-0 w-9 text-center">{cat.icon}</span>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
+                          {budget > 0 && (
+                            <p className="text-[10px] tabular-nums mt-0.5" style={{ color: accentHex ?? 'rgb(148 163 184)' }}>
+                              {fmt(spent)} spent
+                            </p>
+                          )}
+                        </div>
+                        <div className={[
+                          'shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums',
+                          over ? 'bg-red-50 dark:bg-red-500/15 text-red-500 dark:text-red-400'
+                            : warn ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                            : budget > 0 ? 'bg-primary/[0.08] dark:bg-primary/[0.14] text-primary'
+                            : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500',
+                        ].join(' ')}>
+                          {budget > 0 ? fmt(budget) : '+ Limit'}
+                        </div>
+                      </div>
+                      {budget > 0 && (
+                        <div className="ml-12 h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                          <div
+                            className="h-full rounded-full transition-all duration-700"
+                            style={{
+                              width: `${pct}%`,
+                              background: accentHex
+                                ? `linear-gradient(90deg, ${accentHex}88, ${accentHex})`
+                                : 'linear-gradient(90deg, rgba(var(--color-primary-rgb),0.5), rgba(var(--color-primary-rgb),1))',
+                            }}
+                          />
+                        </div>
+                      )}
+                    </button>
+                  )}
+                </div>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* Bottom save bar */}
+        <div className="shrink-0 px-5 pt-3 pb-1 border-t border-slate-100 dark:border-white/[0.04]">
+          <button
+            onClick={saveAll}
+            disabled={!hasPendingChanges || saving}
+            className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white
+              bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.3)]
+              disabled:opacity-30 disabled:shadow-none
+              active:scale-[0.98] transition-all duration-100 flex items-center justify-center gap-2">
+            {saving
+              ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving…</>
+              : 'Save Changes'}
+          </button>
+        </div>
+      </div>
     </div>
   )
 }
@@ -2289,13 +2547,16 @@ export default function Settings() {
 
   const [profileOpen,  setProfileOpen]  = useState(false)
   const [catMgrOpen,   setCatMgrOpen]   = useState(false)
+  const [budgetMgrOpen, setBudgetMgrOpen] = useState(false)
   const [tmplMgrOpen,  setTmplMgrOpen]  = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
   const [accentOpen,   setAccentOpen]   = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
   const [legalOpen,    setLegalOpen]    = useState(false)
-  const [exporting,    setExporting]    = useState(false)
-  const [backingUp,    setBackingUp]    = useState(false)
+  const [exporting,          setExporting]          = useState(false)
+  const [backingUp,          setBackingUp]          = useState(false)
+  const [showExportConfirm,  setShowExportConfirm]  = useState(false)
+  const [showBackupConfirm,  setShowBackupConfirm]  = useState(false)
   const [sheetsOpen,   setSheetsOpen]   = useState(false)
   const [syncing,      setSyncing]      = useState(false)
   const [loggingOut,        setLoggingOut]        = useState(false)
@@ -2522,19 +2783,19 @@ export default function Settings() {
         <SectionHeader>Manage</SectionHeader>
         <SectionCard>
           <SettingsRow
-            iconEl={<RowIcon color="green"><IconWallet /></RowIcon>}
-            label="Accounts"
-            sublabel="Add, edit, or remove accounts"
-            right={<IconChevronRight />}
-            onTap={() => navigate('/accounts')}
-          />
-          <RowDivider />
-          <SettingsRow
             iconEl={<RowIcon color="amber"><IconTag /></RowIcon>}
             label="Categories"
             sublabel="Customize expense and inflow categories"
             right={<IconChevronRight />}
             onTap={() => setCatMgrOpen(true)}
+          />
+          <RowDivider />
+          <SettingsRow
+            iconEl={<RowIcon color="green"><IconTarget /></RowIcon>}
+            label="Monthly Budgets"
+            sublabel="Set spending limits per category"
+            right={<IconChevronRight />}
+            onTap={() => setBudgetMgrOpen(true)}
           />
           <RowDivider />
           <SettingsRow
@@ -2560,7 +2821,7 @@ export default function Settings() {
                 ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                 : <IconChevronRight />
             }
-            onTap={handleExport}
+            onTap={() => setShowExportConfirm(true)}
             disabled={exporting}
           />
           <RowDivider />
@@ -2573,7 +2834,7 @@ export default function Settings() {
                 ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
                 : <IconChevronRight />
             }
-            onTap={handleFullBackup}
+            onTap={() => setShowBackupConfirm(true)}
             disabled={backingUp}
           />
           <RowDivider />
@@ -2773,6 +3034,84 @@ export default function Settings() {
         </div>
       )}
 
+      {/* Export CSV confirm */}
+      {showExportConfirm && (
+        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowExportConfirm(false)} />
+          <div className="relative w-full max-w-sm rounded-3xl
+            bg-white dark:bg-[#111820]
+            border border-slate-100 dark:border-white/[0.07]
+            shadow-[0_20px_60px_rgba(0,0,0,0.3)]
+            p-6 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-500/15
+              flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+              <IconDownload />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Export Transactions?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                This will download all {txCount ?? 0} transactions as a CSV file.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowExportConfirm(false)}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold
+                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
+                  active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowExportConfirm(false); handleExport() }}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold text-white
+                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                  active:scale-[0.98] transition-all duration-100">
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full Backup confirm */}
+      {showBackupConfirm && (
+        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBackupConfirm(false)} />
+          <div className="relative w-full max-w-sm rounded-3xl
+            bg-white dark:bg-[#111820]
+            border border-slate-100 dark:border-white/[0.07]
+            shadow-[0_20px_60px_rgba(0,0,0,0.3)]
+            p-6 space-y-4">
+            <div className="w-14 h-14 rounded-2xl bg-teal-100 dark:bg-teal-500/15
+              flex items-center justify-center mx-auto text-teal-600 dark:text-teal-400">
+              <IconDownload />
+            </div>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Download Full Backup?</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Exports all accounts, categories, transactions, templates, recurring, and debts as a JSON file.
+              </p>
+            </div>
+            <div className="flex gap-3 pt-1">
+              <button
+                onClick={() => setShowBackupConfirm(false)}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold
+                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
+                  active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors">
+                Cancel
+              </button>
+              <button
+                onClick={() => { setShowBackupConfirm(false); handleFullBackup() }}
+                className="flex-1 py-3 rounded-2xl text-sm font-semibold text-white
+                  bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+                  active:scale-[0.98] transition-all duration-100">
+                Download
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ══ 8. DANGER ZONE ══ */}
       <div className="mb-8">
         <SectionHeader>Danger Zone</SectionHeader>
@@ -2873,6 +3212,10 @@ export default function Settings() {
       <CategoryManagerSheet
         open={catMgrOpen}
         onClose={() => setCatMgrOpen(false)}
+      />
+      <BudgetManagerSheet
+        open={budgetMgrOpen}
+        onClose={() => setBudgetMgrOpen(false)}
       />
       <TemplateManagerSheet
         open={tmplMgrOpen}

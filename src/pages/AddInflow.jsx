@@ -9,6 +9,7 @@ import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
+import DupWarningSheet from '../components/DupWarningSheet'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -96,6 +97,7 @@ export default function AddInflow() {
   const [showConfirm,    setShowConfirm]    = useState(false)
   const [showTemplates,  setShowTemplates]  = useState(false)
   const [saving,         setSaving]         = useState(false)
+  const [dupWarning,     setDupWarning]     = useState(false)
 
   const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
   const categories = useLiveQuery(
@@ -117,11 +119,21 @@ export default function AddInflow() {
 
   const handleAmountChange = moneyChangeHandler(setAmountStr)
 
-  function onConfirmPress() {
+  async function onConfirmPress() {
     let err = false
     if (!category) { setCatError(true);  err = true }
     if (!account)  { setAcctError(true); err = true }
     if (err) return
+    const [y, m, d] = date.split('-').map(Number)
+    const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
+    const dayEnd   = new Date(y, m - 1, d, 23, 59, 59, 999)
+    const sameDayTxs = await db.transactions
+      .where('date').between(dayStart.toISOString(), dayEnd.toISOString(), true, true)
+      .toArray()
+    const isDup = sameDayTxs.some(tx =>
+      tx.type === 'inflow' && tx.amount === amount && tx.account === account.name
+    )
+    if (isDup) { setDupWarning(true); return }
     if (skipConfirm) { handleSave(null); return }
     setShowConfirm(true)
   }
@@ -349,6 +361,13 @@ export default function AddInflow() {
         onClose={() => setShowTemplates(false)}
         type="inflow"
         onSelect={applyTemplate}
+      />
+      <DupWarningSheet
+        open={dupWarning}
+        onClose={() => setDupWarning(false)}
+        onSaveAnyway={() => { if (skipConfirm) { handleSave(null) } else { setShowConfirm(true) } }}
+        amount={amount}
+        type="inflow"
       />
     </div>
   )
