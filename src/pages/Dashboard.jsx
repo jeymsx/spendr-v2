@@ -225,15 +225,24 @@ export default function Dashboard() {
     const map = {}
     ;(accounts || []).filter(a => a.type === 'credit').forEach(acct => {
       const { cycleStart, cycleEnd } = getCycleRange(acct.cutoffDate)
-      const txs = (txAll || []).filter(tx => tx.account === acct.name && tx.type === 'expense')
-      map[acct.name] = {
-        thisTotal: txs
-          .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
-          .reduce((s, tx) => s + (tx.amount ?? 0), 0),
-        nextTotal: txs
-          .filter(tx => new Date(tx.date) > cycleEnd)
-          .reduce((s, tx) => s + (tx.amount ?? 0), 0),
-      }
+      const chargeTxs = (txAll || []).filter(tx => tx.account === acct.name && tx.type === 'expense')
+      const thisTotal = chargeTxs
+        .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
+        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      const nextTotal = chargeTxs
+        .filter(tx => new Date(tx.date) > cycleEnd)
+        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      const totalPayments = (txAll || [])
+        .filter(tx =>
+          (tx.type === 'inflow'   && tx.account   === acct.name) ||
+          (tx.type === 'transfer' && tx.toAccount === acct.name)
+        )
+        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+      const stmtPaid       = totalPayments >= thisTotal
+      const currentBalance = stmtPaid
+        ? nextTotal
+        : Math.max(0, thisTotal + nextTotal - totalPayments)
+      map[acct.name] = { thisTotal, nextTotal, totalPayments, currentBalance }
     })
     return map
   }, [accounts, txAll])
@@ -241,10 +250,7 @@ export default function Dashboard() {
   const creditOutstanding = useMemo(() =>
     (accounts || [])
       .filter(a => a.type === 'credit')
-      .reduce((s, a) => {
-        const stmt = creditStmtMap[a.name]
-        return s + (stmt?.thisTotal ?? 0) + (stmt?.nextTotal ?? 0)
-      }, 0),
+      .reduce((s, a) => s + (creditStmtMap[a.name]?.currentBalance ?? 0), 0),
     [accounts, creditStmtMap],
   )
 

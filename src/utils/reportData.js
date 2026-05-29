@@ -90,8 +90,18 @@ export async function fetchReportData(year, month) {
       .filter(tx => { const d = localDate(tx.date); return d >= nextStart && d <= nextEnd })
       .reduce((s, tx) => s + (tx.amount ?? 0), 0)
 
-    const limit       = acct.creditLimit ?? 0
-    const balanceUsed = stmtTotal + nextTotal
+    const totalPayments = allTxs
+      .filter(tx =>
+        (tx.type === 'inflow'   && tx.account   === acct.name) ||
+        (tx.type === 'transfer' && tx.toAccount === acct.name)
+      )
+      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
+    const stmtPaid    = totalPayments >= stmtTotal
+    const balanceUsed = stmtPaid
+      ? nextTotal
+      : Math.max(0, stmtTotal + nextTotal - totalPayments)
+
+    const limit = acct.creditLimit ?? 0
     const available   = Math.max(limit - balanceUsed, 0)
     const usedPct     = limit > 0 ? Math.min((balanceUsed / limit) * 100, 100) : 0
 
