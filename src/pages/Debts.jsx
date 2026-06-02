@@ -1,4 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import db from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -848,7 +849,11 @@ function PaymentSheet({ open, onClose, debt }) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function Debts() {
-  const [tab,         setTab]         = useState('i_owe')
+  const [searchParams] = useSearchParams()
+  const [tab,         setTab]         = useState(() => {
+    const t = searchParams.get('tab')
+    return t === 'owed_to_me' ? 'owed_to_me' : 'i_owe'
+  })
   const [showForm,    setShowForm]    = useState(false)
   const [editDebt,    setEditDebt]    = useState(null)
   const [paymentDebt, setPaymentDebt] = useState(null)

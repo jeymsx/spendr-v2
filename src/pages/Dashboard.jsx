@@ -854,7 +854,7 @@ function DebtsSection({ debts }) {
     list.filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0))
         .reduce((s, d) => s + Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)), 0)
 
-  const overdueCount = (debts ?? []).filter(d => {
+  const overdueCount = owedToMe.filter(d => {
     if ((d.amountPaid ?? 0) >= (d.amount ?? 0)) return false
     if (!d.dueDate) return false
     const due = new Date(d.dueDate); due.setHours(0, 0, 0, 0)
@@ -868,12 +868,12 @@ function DebtsSection({ debts }) {
   return (
     <section className="px-5 mt-8">
       <SectionHeader title="Debts" actionLabel="See all" actionTo="/debts" />
-      <Link
-        to="/debts"
-        className="card mt-3 flex gap-3 rounded-2xl overflow-hidden active:opacity-80 transition-opacity block"
-      >
+      <div className="card mt-3 flex rounded-2xl overflow-hidden">
         {/* I Owe */}
-        <div className="flex-1 px-4 py-3.5 border-r border-slate-100 dark:border-white/[0.12]">
+        <Link
+          to="/debts?tab=i_owe"
+          className="flex-1 px-4 py-3.5 border-r border-slate-100 dark:border-white/[0.12] active:opacity-70 transition-opacity"
+        >
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">I Owe</p>
           <p className={`text-base font-bold tabular-nums ${iOweTotal > 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-300 dark:text-slate-600'}`}>
             {fmt(iOweTotal)}
@@ -881,10 +881,13 @@ function DebtsSection({ debts }) {
           <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
             {iOwe.filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0)).length} active
           </p>
-        </div>
+        </Link>
 
         {/* Owed to Me */}
-        <div className="flex-1 px-4 py-3.5">
+        <Link
+          to="/debts?tab=owed_to_me"
+          className="flex-1 px-4 py-3.5 active:opacity-70 transition-opacity"
+        >
           <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">Owed to Me</p>
           <p className={`text-base font-bold tabular-nums ${owedTotal > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-600'}`}>
             {fmt(owedTotal)}
@@ -896,8 +899,8 @@ function DebtsSection({ debts }) {
               {owedToMe.filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0)).length} active
             </p>
           )}
-        </div>
-      </Link>
+        </Link>
+      </div>
     </section>
   )
 }
