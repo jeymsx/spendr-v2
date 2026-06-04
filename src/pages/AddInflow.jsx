@@ -5,6 +5,7 @@ import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
@@ -99,7 +100,8 @@ export default function AddInflow() {
   const [saving,         setSaving]         = useState(false)
   const [dupWarning,     setDupWarning]     = useState(false)
 
-  const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const creditAvailMap = useCreditAvailMap(accounts)
   const categories = useLiveQuery(
     () => db.categories.where('type').equals('inflow').toArray()
       .then(cs => cs.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))),
@@ -290,7 +292,11 @@ export default function AddInflow() {
             }
             right={
               account
-                ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{fmt(account.balance)}</span>
+                ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
+                    {account.type === 'credit'
+                      ? fmt(creditAvailMap?.[account.name] ?? 0) + ' avail.'
+                      : fmt(account.balance)}
+                  </span>
                 : <IconChevronRight />
             }
           />

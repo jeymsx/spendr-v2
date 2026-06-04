@@ -5,6 +5,7 @@ import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
@@ -101,7 +102,8 @@ export default function AddExpense() {
   const [saving,         setSaving]         = useState(false)
   const [dupWarning,     setDupWarning]     = useState(false)
 
-  const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const creditAvailMap = useCreditAvailMap(accounts)
   const categories = useLiveQuery(
     () => db.categories.where('type').equals('expense').toArray()
       .then(cs => cs.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))),
@@ -295,7 +297,7 @@ export default function AddExpense() {
               account ? (
                 <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
                   {account.type === 'credit'
-                    ? fmt((account.creditLimit ?? 0) + (account.balance ?? 0)) + ' avail.'
+                    ? fmt(creditAvailMap?.[account.name] ?? 0) + ' avail.'
                     : fmt(account.balance)}
                 </span>
               ) : <IconChevronRight />

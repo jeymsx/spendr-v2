@@ -648,7 +648,7 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
   const thisTotal = stmt?.thisTotal ?? 0
   const nextTotal = stmt?.nextTotal ?? 0
   const available = isCredit
-    ? (acct.creditLimit ?? 0) - thisTotal - nextTotal
+    ? (acct.creditLimit ?? 0) - (stmt?.currentBalance ?? 0)
     : null
 
   const meta = ACCOUNT_ICON[acct.type] ?? ACCOUNT_ICON.bank
