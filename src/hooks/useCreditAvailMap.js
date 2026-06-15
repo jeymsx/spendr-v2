@@ -27,10 +27,13 @@ export function useCreditAvailMap(accounts) {
         .filter(tx => new Date(tx.date) > cycleEnd)
         .reduce((s, tx) => s + (tx.amount ?? 0), 0)
       const totalPayments = allTxs
-        .filter(tx =>
-          (tx.type === 'inflow'   && tx.account   === acct.name) ||
-          (tx.type === 'transfer' && tx.toAccount === acct.name)
-        )
+        .filter(tx => {
+          const d = new Date(tx.date)
+          return d > cycleEnd && (
+            (tx.type === 'inflow'   && tx.account   === acct.name) ||
+            (tx.type === 'transfer' && tx.toAccount === acct.name)
+          )
+        })
         .reduce((s, tx) => s + (tx.amount ?? 0), 0)
 
       const stmtPaid       = totalPayments >= thisTotal

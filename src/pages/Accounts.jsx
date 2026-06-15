@@ -609,7 +609,7 @@ export default function Accounts() {
       const totalPayments = (transactions ?? [])
         .filter(tx => {
           const d = new Date(tx.date)
-          return d >= cycleStart && (
+          return d > cycleEnd && (
             (tx.type === 'inflow'   && tx.account   === acct.name) ||
             (tx.type === 'transfer' && tx.toAccount === acct.name)
           )
@@ -2013,7 +2013,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
     })
     const payments = txsWithRunning.filter(tx => {
       const d = new Date(tx.date)
-      return d >= cycleStart && (
+      return d > cycleEnd && (
         (tx.type === 'inflow'   && tx.account    === account.name) ||
         (tx.type === 'transfer' && tx.toAccount  === account.name)
       )

@@ -235,7 +235,7 @@ export default function Dashboard() {
       const totalPayments = (txAll || [])
         .filter(tx => {
           const d = new Date(tx.date)
-          return d >= cycleStart && (
+          return d > cycleEnd && (
             (tx.type === 'inflow'   && tx.account   === acct.name) ||
             (tx.type === 'transfer' && tx.toAccount === acct.name)
           )
