@@ -27,3 +27,5 @@ dev-dist/
 
 # Claude Code local settings
 .claude/
+CASE_STUDY.md
+

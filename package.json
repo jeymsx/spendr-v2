@@ -1,5 +1,6 @@
 {
   "name": "spendr",
+  "description": "Mobile-first personal finance PWA for Filipinos — offline-first, multi-account, with Supabase sync",
   "private": true,
   "version": "0.1.0",
   "type": "module",
