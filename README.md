@@ -55,4 +55,6 @@
 
 ---
 
-*Built by [James Sablay](https://github.com/jeymsx) · 2024–2025*
+## License
+
+© 2024–2025 James Sablay. All rights reserved.
