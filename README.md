@@ -1,5 +1,5 @@
 <div align="center">
-  <img src="public/favicon.svg" alt="Spendr Logo" width="64" height="64"/>
+  <img src="public/icons/icon-512.png" alt="Spendr Logo" width="64" height="64"/>
   <h1>Spendr</h1>
   <p>A mobile-first personal finance PWA built for Filipinos — track expenses, manage credit cards, log debts, and visualize spending, all offline and synced across devices.</p>
 
