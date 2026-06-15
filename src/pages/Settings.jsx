@@ -819,6 +819,7 @@ function BudgetManagerSheet({ open, onClose }) {
   const close = () => {
     setClosing(true)
     setEditingId(null)
+    setLocalBudgets({})
     setTimeout(() => { setClosing(false); onClose() }, 240)
   }
 
