@@ -1,17 +1,21 @@
-# Spendr
+<div align="center">
+  <img src="public/favicon.svg" alt="Spendr Logo" width="64" height="64"/>
+  <h1>Spendr</h1>
+  <p>A mobile-first personal finance PWA built for Filipinos — track expenses, manage credit cards, log debts, and visualize spending, all offline and synced across devices.</p>
 
-**A mobile-first personal finance PWA built for Filipinos.**
+  <p>
+    <img src="https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React"/>
+    <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite"/>
+    <img src="https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS"/>
+    <img src="https://img.shields.io/badge/Dexie.js_(IndexedDB)-FF6B35?style=flat-square" alt="Dexie.js"/>
+    <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase"/>
+    <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=googlechrome&logoColor=white" alt="PWA"/>
+  </p>
+</div>
 
-![React](https://img.shields.io/badge/React_18-20232A?style=flat&logo=react&logoColor=61DAFB)
-![Vite](https://img.shields.io/badge/Vite-646CFF?style=flat&logo=vite&logoColor=white)
-![Tailwind CSS](https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat&logo=tailwindcss&logoColor=white)
-![Dexie.js](https://img.shields.io/badge/Dexie.js_(IndexedDB)-FF6B35?style=flat)
-![Supabase](https://img.shields.io/badge/Supabase-3FCF8E?style=flat&logo=supabase&logoColor=white)
-![PWA](https://img.shields.io/badge/PWA-5A0FC8?style=flat&logo=pwa&logoColor=white)
+---
 
-> Track expenses, manage credit cards, log debts, and visualize spending — all offline, synced when you're back online.
-
-![App screenshot](assets/spendr-main.png)
+![Spendr App](assets/spendr-main.png)
 
 ---
 
@@ -48,45 +52,6 @@
 | Drag & Drop | @dnd-kit/core + @dnd-kit/sortable |
 | Image Crop | react-image-crop |
 | PWA | vite-plugin-pwa + Workbox |
-
----
-
-## Getting Started
-
-```bash
-git clone https://github.com/jeymsx/spendr-v2.git
-cd spendr-v2
-npm install
-cp .env.example .env.local   # add your Supabase keys (optional)
-npm run dev
-```
-
-The app runs fully offline without Supabase keys. Auth and sync features are simply unavailable.
-
----
-
-## Environment Variables
-
-```
-VITE_SUPABASE_URL=
-VITE_SUPABASE_ANON_KEY=
-```
-
-See `.env.example` for the full list.
-
----
-
-## Supabase Setup (optional)
-
-If you want sync, run these migrations in your Supabase SQL editor:
-
-```sql
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS parent_name TEXT;
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS sort_order   INT DEFAULT 0;
-ALTER TABLE accounts ADD COLUMN IF NOT EXISTS qr_image     TEXT;
-```
-
-Tables: `transactions`, `accounts`, `categories`, `debts`, `recurring`, `templates`, `user_preferences`
 
 ---
 
