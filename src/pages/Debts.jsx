@@ -404,6 +404,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
       }
       setErrors({})
       setConfirmDel(false)
+      setDeleting(false)
     }
   }, [open, editDebt, defaultTab])
 

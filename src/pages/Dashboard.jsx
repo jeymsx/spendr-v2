@@ -233,10 +233,13 @@ export default function Dashboard() {
         .filter(tx => new Date(tx.date) > cycleEnd)
         .reduce((s, tx) => s + (tx.amount ?? 0), 0)
       const totalPayments = (txAll || [])
-        .filter(tx =>
-          (tx.type === 'inflow'   && tx.account   === acct.name) ||
-          (tx.type === 'transfer' && tx.toAccount === acct.name)
-        )
+        .filter(tx => {
+          const d = new Date(tx.date)
+          return d >= cycleStart && (
+            (tx.type === 'inflow'   && tx.account   === acct.name) ||
+            (tx.type === 'transfer' && tx.toAccount === acct.name)
+          )
+        })
         .reduce((s, tx) => s + (tx.amount ?? 0), 0)
       const stmtPaid       = totalPayments >= thisTotal
       const currentBalance = stmtPaid

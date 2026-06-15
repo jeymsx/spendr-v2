@@ -1,4 +1,4 @@
-﻿import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
@@ -607,10 +607,13 @@ export default function Accounts() {
         .filter(tx => new Date(tx.date) > cycleEnd)
         .reduce((s, tx) => s + (tx.amount ?? 0), 0)
       const totalPayments = (transactions ?? [])
-        .filter(tx =>
-          (tx.type === 'inflow'   && tx.account   === acct.name) ||
-          (tx.type === 'transfer' && tx.toAccount === acct.name)
-        )
+        .filter(tx => {
+          const d = new Date(tx.date)
+          return d >= cycleStart && (
+            (tx.type === 'inflow'   && tx.account   === acct.name) ||
+            (tx.type === 'transfer' && tx.toAccount === acct.name)
+          )
+        })
         .reduce((s, tx) => s + (tx.amount ?? 0), 0)
       const stmtPaid       = totalPayments >= thisTotal
       const currentBalance = stmtPaid
@@ -2008,10 +2011,13 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
       if (tx.type !== 'expense' || tx.account !== account.name) return false
       return new Date(tx.date) > cycleEnd
     })
-    const payments = txsWithRunning.filter(tx =>
-      (tx.type === 'inflow'   && tx.account    === account.name) ||
-      (tx.type === 'transfer' && tx.toAccount  === account.name)
-    )
+    const payments = txsWithRunning.filter(tx => {
+      const d = new Date(tx.date)
+      return d >= cycleStart && (
+        (tx.type === 'inflow'   && tx.account    === account.name) ||
+        (tx.type === 'transfer' && tx.toAccount  === account.name)
+      )
+    })
 
     const thisTotal     = thisCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
     const nextTotal     = nextCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
