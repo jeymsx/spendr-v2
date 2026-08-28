@@ -45,8 +45,11 @@ function IconCalendar() {
   )
 }
 
-// Terms offered by SPayLater and most PH card issuers.
-const INSTALLMENT_TERMS = [2, 3, 6, 9, 12]
+// Shortcuts only. Issuers vary and change their offers, so any term from
+// MIN_TERM to MAX_TERM can be typed in rather than picked from this list.
+const INSTALLMENT_TERMS = [3, 6, 9, 12, 18, 24, 36]
+const MIN_TERM = 2
+const MAX_TERM = 60
 
 /** Advance a YYYY-MM-DD string by n months, clamping short months. */
 function addMonths(dateStr, n) {
@@ -113,6 +116,7 @@ export default function AddExpense() {
   const [saving,         setSaving]         = useState(false)
   const [dupWarning,     setDupWarning]     = useState(false)
   const [installMonths,  setInstallMonths]  = useState(0) // 0 = not an installment
+  const [customTerm,     setCustomTerm]     = useState(false)
 
   const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
@@ -135,10 +139,12 @@ export default function AddExpense() {
   const isInstallment = isCredit && installMonths > 1
   const installTotal  = Math.round(amount * installMonths * 100) / 100
   const installLast   = isInstallment ? addMonths(date, installMonths - 1) : null
+  const termIsCustom  = customTerm
+    || (installMonths > 1 && !INSTALLMENT_TERMS.includes(installMonths))
 
   // Picking a non-credit account cancels any term already chosen.
   useEffect(() => {
-    if (!isCredit && installMonths !== 0) setInstallMonths(0)
+    if (!isCredit && installMonths !== 0) { setInstallMonths(0); setCustomTerm(false) }
   }, [isCredit, installMonths])
 
   useEffect(() => {
@@ -364,11 +370,11 @@ export default function AddExpense() {
               {[0, ...INSTALLMENT_TERMS].map(n => (
                 <button
                   key={n}
-                  onClick={() => setInstallMonths(n)}
+                  onClick={() => { setCustomTerm(false); setInstallMonths(n) }}
                   className={[
                     'shrink-0 px-3.5 h-[38px] rounded-xl text-xs font-semibold',
                     'border transition-colors duration-150 active:scale-95',
-                    installMonths === n
+                    !termIsCustom && installMonths === n
                       ? 'bg-primary border-primary text-white'
                       : 'bg-white dark:bg-primary/[0.07] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-primary/[0.14]',
                   ].join(' ')}
@@ -376,7 +382,45 @@ export default function AddExpense() {
                   {n === 0 ? 'Off' : `${n} mo`}
                 </button>
               ))}
+              <button
+                onClick={() => setCustomTerm(true)}
+                className={[
+                  'shrink-0 px-3.5 h-[38px] rounded-xl text-xs font-semibold',
+                  'border transition-colors duration-150 active:scale-95',
+                  termIsCustom
+                    ? 'bg-primary border-primary text-white'
+                    : 'bg-white dark:bg-primary/[0.07] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-primary/[0.14]',
+                ].join(' ')}
+              >
+                Custom
+              </button>
             </div>
+
+            {termIsCustom && (
+              <div className="flex items-center gap-2 mt-2">
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  autoFocus
+                  placeholder="24"
+                  value={installMonths > 1 ? String(installMonths) : ''}
+                  onChange={e => {
+                    const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2)
+                    setInstallMonths(digits ? Math.min(Number(digits), MAX_TERM) : 0)
+                  }}
+                  className="w-20 px-3 h-[38px] rounded-xl text-sm font-semibold tabular-nums text-center
+                    bg-white dark:bg-primary/[0.07] text-slate-800 dark:text-white outline-none
+                    border border-slate-200/80 dark:border-primary/[0.14]
+                    focus:border-primary dark:focus:border-primary"
+                />
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  months{' '}
+                  <span className="text-slate-400 dark:text-slate-500">
+                    ({MIN_TERM}–{MAX_TERM})
+                  </span>
+                </span>
+              </div>
+            )}
             {isInstallment && (
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
                 {installMonths} × {fmt(amount)} ={' '}
