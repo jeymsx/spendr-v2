@@ -39,6 +39,8 @@ export const EXPENSE_PRESETS = [
   { name: 'Baby/Kids',     icon: '🍼', color: '#FFB347', type: 'expense' },
   { name: 'Donations',     icon: '🙏', color: '#51CF66', type: 'expense' },
   { name: 'Vices',         icon: '🚬', color: '#FF6B6B', type: 'expense' },
+  { name: 'Fees & Charges', icon: '⚠️', color: '#FF6B6B', type: 'expense' },
+  { name: 'Card Interest', icon: '📉', color: '#F06595', type: 'expense' },
 ]
 
 export const INFLOW_PRESETS = [

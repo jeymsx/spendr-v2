@@ -1,5 +1,9 @@
 import db, { dbReady } from '../db/db'
 import { supabase } from './supabase'
+// Single definition, shared with onboarding — the two lists used to be
+// separate copies, so a system category added to one was missing from the
+// other and new users ended up with a different set than syncing users.
+import { SYSTEM_CATS } from './phCategories'
 
 // ── Row mapping: Dexie → Supabase ─────────────────────────────────────────────
 
@@ -332,20 +336,13 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
 
 // ── Pull from Supabase ────────────────────────────────────────────────────────
 
-const SYSTEM_CATS = [
-  { name: 'Others',       icon: '📦', color: '#6b7280', type: 'expense',  budget: 0 },
-  { name: 'Income',       icon: '💰', color: '#22c55e', type: 'inflow',   budget: 0 },
-  { name: 'Transfer',     icon: '🔄', color: '#2D9DFF', type: 'transfer', budget: 0 },
-  { name: 'Transfer Fee', icon: '💸', color: '#f59e0b', type: 'expense',  budget: 0 },
-]
-
 async function ensureSystemCategories() {
   for (const cat of SYSTEM_CATS) {
     const exists = await db.categories
       .where('name').equals(cat.name)
       .and(c => c.type === cat.type)
       .first()
-    if (!exists) await db.categories.add(cat)
+    if (!exists) await db.categories.add({ ...cat, budget: 0 })
   }
 }
 
