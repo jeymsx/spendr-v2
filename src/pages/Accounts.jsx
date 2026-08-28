@@ -37,10 +37,18 @@ function fmtTxDate(isoStr) {
   if (!isoStr) return ''
   const d    = new Date(isoStr)
   const now  = new Date(); now.setHours(0, 0, 0, 0)
+  const tmrw = new Date(now); tmrw.setDate(now.getDate() + 1)
   const yest = new Date(now); yest.setDate(now.getDate() - 1)
-  if (d >= now)  return 'Today'
-  if (d >= yest) return 'Yesterday'
-  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+  // Both bounds matter. `d >= now` alone labelled every future date "Today",
+  // which went unnoticed while nothing could be dated ahead — installments
+  // schedule charges months out, so the whole plan read as "Today".
+  if (d >= now  && d < tmrw) return 'Today'
+  if (d >= yest && d < now)  return 'Yesterday'
+  // Include the year once it differs: a 24- or 36-month plan runs past it.
+  const sameYear = d.getFullYear() === new Date().getFullYear()
+  return d.toLocaleDateString('en-PH',
+    sameYear ? { month: 'short', day: 'numeric' }
+             : { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
 function fmtTxTime(isoStr) {
@@ -2121,7 +2129,9 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
               {creditData.nextCharges.length > 0 && (
                 <CreditTxSection
                   title="Next Statement"
-                  dateRange={`${fmtCycleDate(creditData.nextStart)} – ${fmtCycleDate(creditData.nextEnd)}`}
+                  /* nextCharges is open-ended — future-dated installments land
+                     here too — so a closed window would understate the total. */
+                  dateRange={`From ${fmtCycleDate(creditData.nextStart)}`}
                   txs={creditData.nextCharges}
                   total={creditData.nextTotal}
                   accountName={account.name}
