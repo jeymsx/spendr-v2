@@ -60,6 +60,7 @@ export default function TxConfirmSheet({
   fromAccount,
   toAccount,
   onSaveTemplate = null,  // if provided, shows save-as-template toggle
+  installment    = null,  // { months, monthly, total, firstLabel, lastLabel }
 }) {
   const [closing,       setClosing]       = useState(false)
   useScrollLock(open)
@@ -117,6 +118,11 @@ export default function TxConfirmSheet({
               +{fmt(fee)} transfer fee · {fmt(amount + fee)} total deducted
             </p>
           )}
+          {installment && (
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
+              per month · {installment.months} months · {fmt(installment.total)} total
+            </p>
+          )}
         </div>
 
         {/* detail rows */}
@@ -129,6 +135,18 @@ export default function TxConfirmSheet({
           )}
           {account && (
             <DetailRow label="Account" value={account.name} dot={account.color} />
+          )}
+
+          {/* Installment schedule */}
+          {installment && (
+            <>
+              <Divider />
+              <DetailRow label="Per month"      value={fmt(installment.monthly)} />
+              <DetailRow label="Months"         value={`${installment.months}`} />
+              <DetailRow label="Total"          value={fmt(installment.total)} accent />
+              <DetailRow label="First payment"  value={installment.firstLabel} />
+              <DetailRow label="Last payment"   value={installment.lastLabel} />
+            </>
           )}
 
           {/* Transfer rows */}
@@ -221,7 +239,7 @@ export default function TxConfirmSheet({
               disabled:opacity-50 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >
-            {saving ? 'Saving…' : 'Save Transaction'}
+            {saving ? 'Saving…' : installment ? `Schedule ${installment.months} Payments` : 'Save Transaction'}
           </button>
         </div>
       </div>

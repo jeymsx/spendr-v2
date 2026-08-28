@@ -5,6 +5,7 @@ import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { advanceNextDate } from '../utils/recurring'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
@@ -42,6 +43,16 @@ function IconCalendar() {
       <line x1="3" y1="10" x2="21" y2="10" />
     </svg>
   )
+}
+
+// Terms offered by SPayLater and most PH card issuers.
+const INSTALLMENT_TERMS = [2, 3, 6, 9, 12]
+
+/** Advance a YYYY-MM-DD string by n months, clamping short months. */
+function addMonths(dateStr, n) {
+  let d = dateStr
+  for (let i = 0; i < n; i++) d = advanceNextDate(d, 'monthly')
+  return d
 }
 
 function localDateStr(d) {
@@ -101,6 +112,7 @@ export default function AddExpense() {
   const [showTemplates,  setShowTemplates]  = useState(false)
   const [saving,         setSaving]         = useState(false)
   const [dupWarning,     setDupWarning]     = useState(false)
+  const [installMonths,  setInstallMonths]  = useState(0) // 0 = not an installment
 
   const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
@@ -114,6 +126,20 @@ export default function AddExpense() {
 
   const amountInputRef = useRef(null)
   const amount = parseMoney(amountStr)
+
+  // Installments only exist on credit accounts. `amount` is the monthly figure
+  // the card or BNPL app quotes -- interest already baked in -- so a 0% term and
+  // an interest-bearing term are entered exactly the same way, and the total is
+  // always what they actually bill rather than a number we derived.
+  const isCredit      = account?.type === 'credit'
+  const isInstallment = isCredit && installMonths > 1
+  const installTotal  = Math.round(amount * installMonths * 100) / 100
+  const installLast   = isInstallment ? addMonths(date, installMonths - 1) : null
+
+  // Picking a non-credit account cancels any term already chosen.
+  useEffect(() => {
+    if (!isCredit && installMonths !== 0) setInstallMonths(0)
+  }, [isCredit, installMonths])
 
   useEffect(() => {
     const t = setTimeout(() => amountInputRef.current?.focus(), 80)
@@ -147,29 +173,50 @@ export default function AddExpense() {
   async function handleSave(templateData) {
     setSaving(true)
     try {
-      const now     = new Date()
-      const [y,m,d] = date.split('-').map(Number)
-      const txDate  = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
-      const dateISO = txDate.toISOString()
-      const updISO  = now.toISOString()
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
-        await db.transactions.add({
+      const now    = new Date()
+      const updISO = now.toISOString()
+      const count  = isInstallment ? installMonths : 1
+      const note   = description.trim()
+
+      // One charge per month, each dated a month after the last. Future dating
+      // is the point: getCreditStatus treats everything past the cutoff as
+      // outstanding, so the whole plan reduces available credit immediately
+      // while only the current month's charge lands on this statement.
+      const rows  = []
+      let   dueOn = date
+      for (let i = 0; i < count; i++) {
+        const [y, m, d] = dueOn.split('-').map(Number)
+        const txDate = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
+        rows.push({
           txId:        crypto.randomUUID(),
           type:        'expense',
           amount,
-          description: description.trim(),
+          description: count > 1
+            ? `${note || category.name} (${i + 1}/${count})`
+            : note,
           category:    category.name,
           account:     account.name,
-          date:        dateISO,
+          date:        txDate.toISOString(),
           synced:      false,
           updatedAt:   updISO,
         })
-        await applyBalanceEffect({ type: 'expense', amount, account: account.name })
+        dueOn = advanceNextDate(dueOn, 'monthly')
+      }
+
+      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+        await db.transactions.bulkAdd(rows)
+        // One adjustment for the whole plan -- same net effect as applying each
+        // row, without re-reading the account once per month.
+        await applyBalanceEffect({
+          type:    'expense',
+          amount:  Math.round(amount * count * 100) / 100,
+          account: account.name,
+        })
       })
       if (templateData) {
         await db.templates.add({ ...templateData, createdAt: new Date().toISOString() })
       }
-      showToast('Expense saved')
+      showToast(count > 1 ? `${count} payments scheduled` : 'Expense saved')
       navigate('/')
     } catch (e) {
       console.error('[AddExpense] save failed:', e)
@@ -224,7 +271,9 @@ export default function AddExpense() {
             text-slate-900 dark:text-white outline-none
             placeholder-slate-200 dark:placeholder-slate-800"
         />
-        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">Amount</p>
+        <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">
+          {isInstallment ? 'Amount per month' : 'Amount'}
+        </p>
       </div>
 
       {/* ── Form fields ── */}
@@ -305,9 +354,44 @@ export default function AddExpense() {
           />
         </div>
 
+        {/* Installment — credit accounts only */}
+        {isCredit && (
+          <div>
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">
+              Installment
+            </p>
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+              {[0, ...INSTALLMENT_TERMS].map(n => (
+                <button
+                  key={n}
+                  onClick={() => setInstallMonths(n)}
+                  className={[
+                    'shrink-0 px-3.5 h-[38px] rounded-xl text-xs font-semibold',
+                    'border transition-colors duration-150 active:scale-95',
+                    installMonths === n
+                      ? 'bg-primary border-primary text-white'
+                      : 'bg-white dark:bg-primary/[0.07] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-primary/[0.14]',
+                  ].join(' ')}
+                >
+                  {n === 0 ? 'Off' : `${n} mo`}
+                </button>
+              ))}
+            </div>
+            {isInstallment && (
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
+                {installMonths} × {fmt(amount)} ={' '}
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(installTotal)}</span> total
+                {' · '}{fmtDateLabel(date)} → {fmtDateLabel(installLast)}
+              </p>
+            )}
+          </div>
+        )}
+
         {/* Date — last */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Date</p>
+          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">
+            {isInstallment ? 'First payment' : 'Date'}
+          </p>
           <div className="flex items-center gap-3 px-4 h-[52px] rounded-2xl
             bg-white dark:bg-primary/[0.07]
             border border-slate-200/80 dark:border-primary/[0.14]
@@ -316,7 +400,9 @@ export default function AddExpense() {
             <input
               type="date"
               value={date}
-              max={localDateStr(new Date())}
+              /* An installment's first payment is normally next month, so the
+                 future is allowed here and nowhere else. */
+              max={isInstallment ? undefined : localDateStr(new Date())}
               onChange={e => e.target.value && setDate(e.target.value)}
               className="flex-1 min-w-0 bg-transparent text-sm font-medium text-slate-800 dark:text-white outline-none"
             />
@@ -334,7 +420,7 @@ export default function AddExpense() {
             disabled:opacity-40 disabled:shadow-none
             active:scale-[0.98] transition-all duration-100"
         >
-          Review Expense
+          {isInstallment ? 'Review Installment' : 'Review Expense'}
         </button>
       </div>
 
@@ -364,6 +450,13 @@ export default function AddExpense() {
         category={category}
         account={account}
         onSaveTemplate={() => {}}
+        installment={isInstallment ? {
+          months:     installMonths,
+          monthly:    amount,
+          total:      installTotal,
+          firstLabel: fmtDateLabel(date),
+          lastLabel:  fmtDateLabel(installLast),
+        } : null}
       />
       <TemplatePickerSheet
         open={showTemplates}
