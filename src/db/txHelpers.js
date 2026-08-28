@@ -1,6 +1,30 @@
 import db, { UNSYNCED } from './db'
 import { advanceNextDate } from '../utils/recurring'
 
+/** Thrown when a spend would take a non-credit account below zero. */
+export class OverdrawError extends Error {
+  constructor(account, balance, amount) {
+    super(`Insufficient balance in ${account}`)
+    this.name    = 'OverdrawError'
+    this.account = account
+    this.balance = balance
+    this.amount  = amount
+  }
+}
+
+/**
+ * Returns the account row when spending `amount` from it would overdraw it,
+ * otherwise null. Credit accounts are exempt — they're bounded by their limit,
+ * which getCreditStatus tracks, not by a stored balance.
+ */
+export async function checkOverdraw(accountName, amount) {
+  if (!accountName || !(amount > 0)) return null
+  const acct = await db.accounts.where('name').equals(accountName).first()
+  if (!acct || acct.type === 'credit') return null
+  if (amount <= (acct.balance ?? 0)) return null
+  return acct
+}
+
 async function adjustBalance(accountName, delta) {
   if (!accountName || !delta) return
   const acct = await db.accounts.where('name').equals(accountName).first()
@@ -67,7 +91,15 @@ export async function applyBalanceEffect(tx) {
  *
  * @returns the new nextDate
  */
-export async function postRecurringCharge(rec) {
+export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
+  // Pay Now is a single tap with no confirm step, so this is the only place an
+  // overdraw can be caught. Callers surface OverdrawError as a sheet and retry
+  // with allowOverdraw when the user confirms.
+  if (!allowOverdraw) {
+    const over = await checkOverdraw(rec.account, rec.amount)
+    if (over) throw new OverdrawError(over.name, over.balance ?? 0, rec.amount)
+  }
+
   const nowISO      = new Date().toISOString()
   const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
 

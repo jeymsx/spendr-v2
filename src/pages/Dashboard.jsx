@@ -7,6 +7,7 @@ import { getCreditStatus } from '../utils/creditCycle'
 import { postRecurringCharge } from '../db/txHelpers'
 import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
+import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconBank, IconCard, IconPhone, IconWallet } from '../components/icons'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -156,6 +157,7 @@ export default function Dashboard() {
   const [postTarget,       setPostTarget]       = useState(null)
   const [postSheetOpen,    setPostSheetOpen]    = useState(false)
   const [posting,          setPosting]          = useState(false)
+  const [overdraw,         setOverdraw]         = useState(null)
 
   // ── Live queries ─────────────────────────────────────────────────────────────
   const accounts   = useLiveQuery(() => db.accounts.toArray())
@@ -250,13 +252,17 @@ export default function Dashboard() {
   // ── Animated net worth ────────────────────────────────────────────────────────
   const animatedNetWorth = useCountUp(netWorth)
 
-  async function handlePostRecurring(rec) {
+  async function handlePostRecurring(rec, { force = false } = {}) {
     setPosting(true)
     try {
-      await postRecurringCharge(rec)
+      await postRecurringCharge(rec, { allowOverdraw: force })
       showToast(`${rec.name} posted!`)
       setPostSheetOpen(false)
     } catch (e) {
+      if (e?.name === 'OverdrawError') {
+        setOverdraw({ rec, accountName: e.account, balance: e.balance, amount: e.amount })
+        return
+      }
       console.error('[Dashboard] post recurring failed:', e)
       showToast('Failed to post', 'error')
     } finally {
@@ -488,6 +494,18 @@ export default function Dashboard() {
       </section>
 
       {/* ── Recent Transactions ──────────────────────────────────────────────── */}
+      <OverdrawWarningSheet
+        open={!!overdraw}
+        onClose={() => setOverdraw(null)}
+        onSaveAnyway={() => {
+          const pending = overdraw
+          setOverdraw(null)
+          if (pending) handlePostRecurring(pending.rec, { force: true })
+        }}
+        accountName={overdraw?.accountName}
+        balance={overdraw?.balance}
+        amount={overdraw?.amount}
+      />
       <TemplateConfirmSheet
         open={quickConfirmOpen}
         onClose={() => setQuickConfirmOpen(false)}

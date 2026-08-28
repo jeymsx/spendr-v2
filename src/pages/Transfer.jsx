@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect } from '../db/txHelpers'
+import { applyBalanceEffect, checkOverdraw } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -10,6 +10,7 @@ import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
+import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconCalendar, IconChevronLeft, IconChevronRight } from '../components/icons'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -95,6 +96,7 @@ export default function Transfer() {
   const [showTemplates,  setShowTemplates]  = useState(false)
   const [saving,         setSaving]         = useState(false)
   const [dupWarning,     setDupWarning]     = useState(false)
+  const [overdraw,       setOverdraw]       = useState(null)
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
@@ -132,9 +134,16 @@ export default function Transfer() {
     if (!fromAccount) { setFromError(true); err = true }
     if (!toAccount)   { setToError(true);   err = true }
     if (err) return
-    if (fromAccount.type !== 'credit' && amount + fee > (fromAccount.balance ?? 0)) {
-      showToast(`Low balance in ${fromAccount.name}`, 'warning')
+    // The fee leaves the same account, so it counts toward the overdraw.
+    const over = await checkOverdraw(fromAccount.name, amount + fee)
+    if (over) {
+      setOverdraw({ accountName: over.name, balance: over.balance ?? 0, amount: amount + fee })
+      return
     }
+    return continueAfterBalanceCheck()
+  }
+
+  async function continueAfterBalanceCheck() {
     const [y, m, d] = date.split('-').map(Number)
     const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
     const dayEnd   = new Date(y, m - 1, d, 23, 59, 59, 999)
@@ -440,6 +449,14 @@ export default function Transfer() {
         onClose={() => setShowTemplates(false)}
         type="transfer"
         onSelect={applyTemplate}
+      />
+      <OverdrawWarningSheet
+        open={!!overdraw}
+        onClose={() => setOverdraw(null)}
+        onSaveAnyway={() => { setOverdraw(null); continueAfterBalanceCheck() }}
+        accountName={overdraw?.accountName}
+        balance={overdraw?.balance}
+        amount={overdraw?.amount}
       />
       <DupWarningSheet
         open={dupWarning}

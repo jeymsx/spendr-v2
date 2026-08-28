@@ -6,6 +6,7 @@ import { toMonthlyAmount } from '../utils/recurring'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
+import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
@@ -633,6 +634,18 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
       </div>
 
       {/* Nested pickers at z-[110] */}
+      <OverdrawWarningSheet
+        open={!!overdraw}
+        onClose={() => setOverdraw(null)}
+        onSaveAnyway={() => {
+          const pending = overdraw
+          setOverdraw(null)
+          if (pending) handlePost(pending.rec, { force: true })
+        }}
+        accountName={overdraw?.accountName}
+        balance={overdraw?.balance}
+        amount={overdraw?.amount}
+      />
       <CategoryPickerSheet
         open={showCatPick}
         onClose={() => setShowCatPick(false)}
@@ -658,6 +671,7 @@ export default function Recurring() {
   const [showForm, setShowForm] = useState(false)
   const [editRec,  setEditRec]  = useState(null)
   const [posting,  setPosting]  = useState(null)
+  const [overdraw, setOverdraw] = useState(null)
   const [toggling, setToggling] = useState(null)
 
   const allRec    = useLiveQuery(() => db.recurring.toArray(), [], [])
@@ -699,12 +713,16 @@ export default function Recurring() {
     [enriched],
   )
 
-  async function handlePost(rec) {
+  async function handlePost(rec, { force = false } = {}) {
     setPosting(rec.id)
     try {
-      await postRecurringCharge(rec)
+      await postRecurringCharge(rec, { allowOverdraw: force })
       showToast(`${rec.name} posted!`)
     } catch (e) {
+      if (e?.name === 'OverdrawError') {
+        setOverdraw({ rec, accountName: e.account, balance: e.balance, amount: e.amount })
+        return
+      }
       // Was swallowed silently, so a failed post looked like nothing happened.
       console.error('[Recurring] post failed:', e)
       showToast('Failed to post', 'error')
