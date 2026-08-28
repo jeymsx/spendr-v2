@@ -5,7 +5,7 @@ import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
-import { getCycleRange } from '../utils/creditCycle'
+import { getCreditStatus } from '../utils/creditCycle'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
@@ -126,24 +126,13 @@ export default function Transfer() {
   const amount = parseMoney(amountStr)
   const fee    = parseMoney(feeStr)
 
-  // Compute net outstanding on the destination credit card (charges − payments)
+  // Net outstanding on the destination credit card, matching what Accounts and
+  // Dashboard show. This previously subtracted every payment ever made to the
+  // card, so after a few months of use it always read zero and the overpay
+  // warning fired on every payment.
   const creditOutstanding = useMemo(() => {
     if (!toAccount || toAccount.type !== 'credit') return null
-    const { cycleStart, cycleEnd } = getCycleRange(toAccount.cutoffDate)
-    const chargeTxs = (transactions ?? []).filter(tx => tx.account === toAccount.name && tx.type === 'expense')
-    const thisTotal = chargeTxs
-      .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
-      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    const nextTotal = chargeTxs
-      .filter(tx => new Date(tx.date) > cycleEnd)
-      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    const totalPayments = (transactions ?? [])
-      .filter(tx =>
-        (tx.type === 'inflow'   && tx.account   === toAccount.name) ||
-        (tx.type === 'transfer' && tx.toAccount === toAccount.name)
-      )
-      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    return Math.max(0, thisTotal + nextTotal - totalPayments)
+    return getCreditStatus(toAccount, transactions ?? []).currentBalance
   }, [toAccount, transactions])
 
   const overpayWarning = toAccount?.type === 'credit'

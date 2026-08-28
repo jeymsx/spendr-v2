@@ -1,24 +1,11 @@
 import db from '../db/db'
+import { getCreditStatus } from '../utils/creditCycle'
 
 export async function syncToSheets(url) {
   const [transactions, accounts] = await Promise.all([
     db.transactions.toArray(),
     db.accounts.toArray(),
   ])
-
-  // Build outstanding balance map for credit accounts from transactions
-  const creditOutstanding = {}
-  for (const tx of transactions) {
-    if (tx.type === 'expense' && tx.account) {
-      creditOutstanding[tx.account] = (creditOutstanding[tx.account] ?? 0) + (tx.amount ?? 0)
-    }
-    if (tx.type === 'transfer' && tx.toAccount) {
-      const toAcct = accounts.find(a => a.name === tx.toAccount)
-      if (toAcct?.type === 'credit') {
-        creditOutstanding[tx.toAccount] = (creditOutstanding[tx.toAccount] ?? 0) - (tx.amount ?? 0)
-      }
-    }
-  }
 
   const txRows = transactions.map(tx => ({
     date:        tx.date        || '',
@@ -35,8 +22,10 @@ export async function syncToSheets(url) {
 
   const accountRows = accounts.map(a => {
     const isCredit = a.type === 'credit'
+    // Was summing every expense and payment ever recorded, ignoring the billing
+    // cycle entirely — so the exported figure disagreed with the app.
     const balance  = isCredit
-      ? Math.max(0, (a.creditLimit ?? 0) - Math.max(0, creditOutstanding[a.name] ?? 0))
+      ? Math.max(0, getCreditStatus(a, transactions).availableCredit)
       : (a.balance ?? 0)
     return {
       name:        a.name,

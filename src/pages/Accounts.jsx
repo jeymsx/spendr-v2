@@ -13,7 +13,7 @@ import 'react-image-crop/dist/ReactCrop.css'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { getCycleRange, getNextCycleRange } from '../utils/creditCycle'
+import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
 import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON } from '../lib/phAccounts'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
@@ -598,28 +598,7 @@ export default function Accounts() {
   const creditStmtMap = useMemo(() => {
     const map = {}
     ;(accounts ?? []).filter(a => a.type === 'credit').forEach(acct => {
-      const { cycleStart, cycleEnd } = getCycleRange(acct.cutoffDate)
-      const chargeTxs = (transactions ?? []).filter(tx => tx.account === acct.name && tx.type === 'expense')
-      const thisTotal = chargeTxs
-        .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
-        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-      const nextTotal = chargeTxs
-        .filter(tx => new Date(tx.date) > cycleEnd)
-        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-      const totalPayments = (transactions ?? [])
-        .filter(tx => {
-          const d = new Date(tx.date)
-          return d > cycleEnd && (
-            (tx.type === 'inflow'   && tx.account   === acct.name) ||
-            (tx.type === 'transfer' && tx.toAccount === acct.name)
-          )
-        })
-        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-      const stmtPaid       = totalPayments >= thisTotal
-      const currentBalance = stmtPaid
-        ? nextTotal
-        : Math.max(0, thisTotal + nextTotal - totalPayments)
-      map[acct.name] = { thisTotal, nextTotal, totalPayments, currentBalance, stmtPaid }
+      map[acct.name] = getCreditStatus(acct, transactions ?? [])
     })
     return map
   }, [accounts, transactions])
@@ -1999,44 +1978,17 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
 
   const creditData = useMemo(() => {
     if (!account || account.type !== 'credit') return null
-    const { cycleStart, cycleEnd } = getCycleRange(account.cutoffDate)
+    // Pass txsWithRunning (not raw transactions) so the returned charge/payment
+    // buckets keep the running-balance field the ledger rows render.
+    const status = getCreditStatus(account, txsWithRunning)
     const { cycleStart: nextStart, cycleEnd: nextEnd } = getNextCycleRange(account.cutoffDate)
-
-    const thisCharges = txsWithRunning.filter(tx => {
-      if (tx.type !== 'expense' || tx.account !== account.name) return false
-      const d = new Date(tx.date)
-      return d >= cycleStart && d <= cycleEnd
-    })
-    const nextCharges = txsWithRunning.filter(tx => {
-      if (tx.type !== 'expense' || tx.account !== account.name) return false
-      return new Date(tx.date) > cycleEnd
-    })
-    const payments = txsWithRunning.filter(tx => {
-      const d = new Date(tx.date)
-      return d > cycleEnd && (
-        (tx.type === 'inflow'   && tx.account    === account.name) ||
-        (tx.type === 'transfer' && tx.toAccount  === account.name)
-      )
-    })
-
-    const thisTotal     = thisCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    const nextTotal     = nextCharges.reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    const totalPayments = payments.reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    const stmtPaid      = totalPayments >= thisTotal
-    // When statement is fully paid, only the new cycle's charges are outstanding.
-    // When partially paid, net remaining from statement + new charges.
-    const currentBalance = stmtPaid
-      ? nextTotal
-      : Math.max(0, thisTotal + nextTotal - totalPayments)
 
     const dueDate    = nextOccurrenceDate(account.dueDate)
     const dueSoon    = dueDate && ((dueDate - new Date()) / 864e5) <= 7
 
     return {
-      thisCharges, nextCharges, payments,
-      thisTotal, nextTotal, totalPayments, currentBalance, stmtPaid,
-      cycleStart, cycleEnd, nextStart, nextEnd,
-      availableCredit: (account.creditLimit ?? 0) - currentBalance,
+      ...status,
+      nextStart, nextEnd,
       minimumDue:      account.minimumPayment ?? 0,
       nextDue:         nextOccurrence(account.dueDate),
       dueSoon,

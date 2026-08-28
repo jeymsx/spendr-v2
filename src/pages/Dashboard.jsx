@@ -3,7 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { getCycleRange } from '../utils/creditCycle'
+import { getCreditStatus } from '../utils/creditCycle'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { advanceNextDate } from '../utils/recurring'
 import { useToast } from '../context/ToastContext'
@@ -224,28 +224,7 @@ export default function Dashboard() {
   const creditStmtMap = useMemo(() => {
     const map = {}
     ;(accounts || []).filter(a => a.type === 'credit').forEach(acct => {
-      const { cycleStart, cycleEnd } = getCycleRange(acct.cutoffDate)
-      const chargeTxs = (txAll || []).filter(tx => tx.account === acct.name && tx.type === 'expense')
-      const thisTotal = chargeTxs
-        .filter(tx => { const d = new Date(tx.date); return d >= cycleStart && d <= cycleEnd })
-        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-      const nextTotal = chargeTxs
-        .filter(tx => new Date(tx.date) > cycleEnd)
-        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-      const totalPayments = (txAll || [])
-        .filter(tx => {
-          const d = new Date(tx.date)
-          return d > cycleEnd && (
-            (tx.type === 'inflow'   && tx.account   === acct.name) ||
-            (tx.type === 'transfer' && tx.toAccount === acct.name)
-          )
-        })
-        .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-      const stmtPaid       = totalPayments >= thisTotal
-      const currentBalance = stmtPaid
-        ? nextTotal
-        : Math.max(0, thisTotal + nextTotal - totalPayments)
-      map[acct.name] = { thisTotal, nextTotal, totalPayments, currentBalance }
+      map[acct.name] = getCreditStatus(acct, txAll || [])
     })
     return map
   }, [accounts, txAll])

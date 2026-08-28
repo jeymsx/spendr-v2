@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import db from '../db/db'
-import { getCycleRange, getNextCycleRange } from './creditCycle'
+import { getCreditStatus, getNextCycleRange } from './creditCycle'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
@@ -76,30 +76,9 @@ export async function fetchReportData(year, month) {
 
   const creditDetailMap = {}
   for (const acct of creditAccounts) {
-    const { cycleStart, cycleEnd }           = getCycleRange(acct.cutoffDate)
-    const { cycleStart: nextStart, cycleEnd: nextEnd } = getNextCycleRange(acct.cutoffDate)
-
-    const acctExpenses = allTxs.filter(tx => tx.account === acct.name && tx.type === 'expense')
-    const localDate = (s) => { const [y, mo, dy] = String(s || '').slice(0, 10).split('-').map(Number); return new Date(y, mo - 1, dy) }
-
-    const stmtTotal = acctExpenses
-      .filter(tx => { const d = localDate(tx.date); return d >= cycleStart && d <= cycleEnd })
-      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-
-    const nextTotal = acctExpenses
-      .filter(tx => { const d = localDate(tx.date); return d >= nextStart && d <= nextEnd })
-      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-
-    const totalPayments = allTxs
-      .filter(tx =>
-        (tx.type === 'inflow'   && tx.account   === acct.name) ||
-        (tx.type === 'transfer' && tx.toAccount === acct.name)
-      )
-      .reduce((s, tx) => s + (tx.amount ?? 0), 0)
-    const stmtPaid    = totalPayments >= stmtTotal
-    const balanceUsed = stmtPaid
-      ? nextTotal
-      : Math.max(0, stmtTotal + nextTotal - totalPayments)
+    const { cycleStart, cycleEnd, thisTotal: stmtTotal, nextTotal, currentBalance: balanceUsed }
+      = getCreditStatus(acct, allTxs)
+    const { cycleStart: nextStart } = getNextCycleRange(acct.cutoffDate)
 
     const limit = acct.creditLimit ?? 0
     const available   = Math.max(limit - balanceUsed, 0)
@@ -115,7 +94,7 @@ export async function fetchReportData(year, month) {
       stmtTotal,
       stmtRange:    `${fmtDate(cycleStart)} – ${fmtDate(cycleEnd)}`,
       nextTotal,
-      nextRange:    `${fmtDate(nextStart)} – ${fmtDate(nextEnd)}`,
+      nextRange:    `From ${fmtDate(nextStart)}`,
       balanceUsed,
       available,
       usedPct,

@@ -70,3 +70,76 @@ export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
     cycleEnd:   eod(ey, em, clampDay(ey, em, d) - 1),
   }
 }
+
+/**
+ * Single source of truth for a credit account's standing.
+ *
+ * Two windows matter:
+ *   thisTotal — charges inside the statement cycle that most recently closed;
+ *               this is what's actually due.
+ *   nextTotal — charges after that cycle closed; owed, but not yet billed.
+ *
+ * `nextTotal` is deliberately unbounded. A future-dated charge (an installment
+ * amortisation several months out) is already committed against the limit, so
+ * it has to reduce available credit today even though it won't be billed for
+ * months.
+ *
+ * Payments only count after `cycleEnd`. A payment made before the cutoff was
+ * settling the *previous* statement — crediting it against this one would
+ * double-count it and make the card look paid when it isn't.
+ *
+ * @param {object} account       A credit account row.
+ * @param {object[]} txs         Any transaction list; filtered by account here.
+ * @param {Date} [referenceDate] "Now", for testing or historical views.
+ */
+export function getCreditStatus(account, txs, referenceDate = new Date()) {
+  const { cycleStart, cycleEnd } = getCycleRange(account?.cutoffDate, referenceDate)
+  const name = account?.name
+
+  const thisCharges = []
+  const nextCharges = []
+  const payments    = []
+
+  // Single pass. The previous copies of this ran three or four .filter()
+  // sweeps over every transaction, per card, on every render.
+  for (const tx of txs ?? []) {
+    const isCharge  = tx.type === 'expense' && tx.account === name
+    const isPayment = (tx.type === 'inflow'   && tx.account   === name)
+                   || (tx.type === 'transfer' && tx.toAccount === name)
+    if (!isCharge && !isPayment) continue
+
+    // tx.date is a UTC ISO string. new Date() restores the exact instant, which
+    // is what the local-time cycle boundaries need to compare against; slicing
+    // the string to YYYY-MM-DD instead would shift any PH-morning transaction
+    // back a day.
+    const d = new Date(tx.date)
+
+    if (isCharge) {
+      if (d >= cycleStart && d <= cycleEnd) thisCharges.push(tx)
+      else if (d > cycleEnd)                nextCharges.push(tx)
+      // Charges older than the closed cycle are already settled — ignored.
+    } else if (d > cycleEnd) {
+      payments.push(tx)
+    }
+  }
+
+  const sum           = (arr) => arr.reduce((s, tx) => s + (tx.amount ?? 0), 0)
+  const thisTotal     = sum(thisCharges)
+  const nextTotal     = sum(nextCharges)
+  const totalPayments = sum(payments)
+
+  const stmtPaid = totalPayments >= thisTotal
+  // Statement settled → only the unbilled charges remain outstanding.
+  // Partially paid → statement remainder plus the unbilled charges.
+  const currentBalance = stmtPaid
+    ? nextTotal
+    : Math.max(0, thisTotal + nextTotal - totalPayments)
+
+  return {
+    cycleStart, cycleEnd,
+    thisCharges, nextCharges, payments,
+    thisTotal, nextTotal, totalPayments,
+    stmtPaid, currentBalance,
+    availableCredit: (account?.creditLimit ?? 0) - currentBalance,
+  }
+}
