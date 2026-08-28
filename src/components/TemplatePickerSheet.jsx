@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useScrollLock } from '../hooks/useScrollLock'
+import { deleteTemplateRemote } from '../lib/sync'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -91,6 +92,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
   async function confirmDelete(tpl) {
     setDeleting(tpl.id)
     await db.templates.delete(tpl.id)
+    await deleteTemplateRemote(tpl.id, tpl.name)
     setDeleting(null)
   }
 

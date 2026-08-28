@@ -21,6 +21,7 @@ import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { syncToSheets } from '../lib/sheetsSync'
 import { IconCheck, IconChevronRight, IconPlus } from '../components/icons'
+import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -1480,6 +1481,8 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
     setSaving(true)
     try {
       await db.categories.delete(category.id)
+      // Without this the next pull re-adds the category from Supabase.
+      await deleteCategoryRemote(category.name, category.type)
       close()
     } catch (e) {
       console.error('[CategoryForm] delete failed:', e)
@@ -1496,6 +1499,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
         await db.transactions.where('category').equals(category.name).modify({ category: reassignTarget.name })
         await db.categories.delete(category.id)
       })
+      await deleteCategoryRemote(category.name, category.type)
       close()
     } catch (e) {
       console.error('[CategoryForm] reassign+delete failed:', e)
@@ -1911,7 +1915,11 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
   async function handleDelete() {
     if (!isEdit) return
     setSaving(true)
-    try { await db.templates.delete(template.id); close() }
+    try {
+      await db.templates.delete(template.id)
+      await deleteTemplateRemote(template.id, template.name)
+      close()
+    }
     catch (e) {
       console.error('[TemplateForm] delete failed:', e)
       showToast('Failed to delete template', 'error')
@@ -2135,7 +2143,15 @@ function TemplateManagerSheet({ open, onClose }) {
 
   function openAdd()       { setEditingTpl(null); setTimeout(() => setFormOpen(true), 0) }
   function openEdit(tpl)   { setEditingTpl(tpl);  setTimeout(() => setFormOpen(true), 0) }
-  async function deleteTpl(tpl) { await db.templates.delete(tpl.id) }
+  async function deleteTpl(tpl) {
+    try {
+      await db.templates.delete(tpl.id)
+      await deleteTemplateRemote(tpl.id, tpl.name)
+    } catch (e) {
+      console.error('[TemplateManager] delete failed:', e)
+      showToast('Failed to delete template', 'error')
+    }
+  }
 
   if (!open && !closing) return null
 

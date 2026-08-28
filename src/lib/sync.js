@@ -5,6 +5,60 @@ import { supabase } from './supabase'
 // other and new users ended up with a different set than syncing users.
 import { SYSTEM_CATS } from './phCategories'
 
+// ── Pending remote deletes ────────────────────────────────────────────────────
+// Deleting a row locally has to delete it remotely too, or the next pull re-adds
+// it — pullSimpleTable inserts any remote row it can't match locally. Doing that
+// delete inline fails silently when offline, which on a phone is most of the
+// time, so deletions are queued and retried until they land. Transactions
+// already worked this way via deletedTxIds; this generalises it.
+
+const PENDING_KEY = 'pendingDeletes'
+
+/**
+ * Record that a row must be deleted from Supabase.
+ * @param {string} table  Supabase table name.
+ * @param {object} match  Column/value pairs identifying the row, e.g. { name }.
+ */
+export async function queueRemoteDelete(table, match) {
+  const meta = await db.meta.get(PENDING_KEY)
+  const list = meta?.value ?? []
+  list.push({ table, match })
+  await db.meta.put({ key: PENDING_KEY, value: list })
+}
+
+async function getPendingDeletes() {
+  const meta = await db.meta.get(PENDING_KEY)
+  return meta?.value ?? []
+}
+
+/** True when a pulled row is one we're still trying to delete. */
+function isPendingDelete(pending, table, row) {
+  return pending.some(p =>
+    p.table === table &&
+    Object.entries(p.match ?? {}).every(([k, v]) => row[k] === v),
+  )
+}
+
+// Runs before the pull so a queued delete can't be undone by this very sync.
+// Entries that fail stay queued; over-deleting is safe because the push that
+// follows re-uploads every surviving local row.
+async function flushPendingDeletes(userId) {
+  const list = await getPendingDeletes()
+  if (!list.length) return
+
+  const remaining = []
+  for (const entry of list) {
+    let q = supabase.from(entry.table).delete().eq('user_id', userId)
+    for (const [col, val] of Object.entries(entry.match ?? {})) q = q.eq(col, val)
+    const { error } = await q
+    if (error) {
+      console.error('[sync] delete %s failed:', entry.table, error.message)
+      remaining.push(entry)
+    }
+  }
+  await db.meta.put({ key: PENDING_KEY, value: remaining })
+}
+
 // ── Row mapping: Dexie → Supabase ─────────────────────────────────────────────
 
 function toSupabaseRow(r, userId) {
@@ -349,12 +403,15 @@ async function ensureSystemCategories() {
 export async function syncFromSupabase(userId) {
   if (!userId) return
 
+  // Rows we're still trying to delete must not be re-added by this pull.
+  const pending = await getPendingDeletes()
+
   await pullPreferences(userId)
   await pullTxs(userId)
-  await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId)
+  await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId, null, pending)
   // Categories: match on name+type to avoid confusing same-named categories of different types
   await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
-    row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first())
+    row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first(), pending)
   await pullSimpleTable('debts', db.debts, rowToDebt, null, userId,
     row => {
       if (row.contact) {
@@ -366,12 +423,12 @@ export async function syncFromSupabase(userId) {
           .and(d => d.type === row.type).first()
       }
       return null
-    })
+    }, pending)
   await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
     row => row.name
       ? db.recurring.where('name').equals(row.name).and(r => r.amount === row.amount).first()
-      : null)
-  await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId)
+      : null, pending)
+  await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending)
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()
@@ -428,7 +485,7 @@ async function pullTxs(userId) {
 
 // findFn: optional async (row) => existing local record | null
 // Used when a simple single-key lookup isn't enough (e.g. categories: name+type).
-async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, findFn) {
+async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, findFn, pending = []) {
   const { data, error } = await supabase
     .from(tableName)
     .select('*')
@@ -437,6 +494,8 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
   if (!data?.length) return
 
   for (const row of data) {
+    if (isPendingDelete(pending, tableName, row)) continue
+
     const localId = row.local_id
     const existing = localId ? await dexieTable.get(localId) : null
 
@@ -490,7 +549,9 @@ export async function fullSync(userId) {
   // Wait for the initial seed to complete so the pull doesn't race with it
   // and create duplicate seeded records (e.g. two Cash accounts).
   await dbReady
-  // Pull first so a fresh device gets correct remote state before pushing.
+  // Land queued deletions first, so the pull below can't resurrect them.
+  await flushPendingDeletes(userId)
+  // Pull so a fresh device gets correct remote state before pushing.
   await syncFromSupabase(userId)
   // Clean up any duplicates that seed vs. pull races may have left behind.
   await deduplicateLocalAccounts()
@@ -499,16 +560,33 @@ export async function fullSync(userId) {
 
 // ── Deletion helpers (call these alongside the local db.delete) ───────────────
 
-export async function deleteDebtRemote(userId, debtId) {
-  if (!userId) return
-  const { error } = await supabase.from('debts').delete()
-    .eq('user_id', userId).eq('local_id', debtId)
-  if (error) console.error('[sync] deleteDebtRemote:', error.message)
+// These queue rather than delete inline, so a deletion made offline still lands
+// on the next successful sync instead of being quietly reverted by the pull.
+
+export async function deleteDebtRemote(_userId, debtId) {
+  await queueRemoteDelete('debts', { local_id: debtId })
 }
 
-export async function deleteRecurringRemote(userId, recurringId) {
-  if (!userId) return
-  const { error } = await supabase.from('recurring').delete()
-    .eq('user_id', userId).eq('local_id', recurringId)
-  if (error) console.error('[sync] deleteRecurringRemote:', error.message)
+export async function deleteRecurringRemote(_userId, recurringId) {
+  await queueRemoteDelete('recurring', { local_id: recurringId })
+}
+
+/** Accounts are unique on (user_id, name). */
+export async function deleteAccountRemote(name) {
+  if (name) await queueRemoteDelete('accounts', { name })
+}
+
+/** Categories are unique on (user_id, name, type). */
+export async function deleteCategoryRemote(name, type) {
+  if (name) await queueRemoteDelete('categories', { name, type })
+}
+
+/**
+ * Templates push on local_id but pull matches on name, so queue both: missing
+ * the row means it resurrects, while deleting one row too many is repaired by
+ * the push that re-uploads every surviving local template.
+ */
+export async function deleteTemplateRemote(localId, name) {
+  if (localId != null) await queueRemoteDelete('templates', { local_id: localId })
+  if (name)            await queueRemoteDelete('templates', { name })
 }

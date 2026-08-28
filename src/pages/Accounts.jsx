@@ -19,6 +19,7 @@ import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { IconBank, IconCard, IconCheck, IconChevronRight, IconPhone, IconPlus, IconWallet } from '../components/icons'
+import { deleteAccountRemote } from '../lib/sync'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -1329,6 +1330,8 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
         await db.accounts.delete(account.id)
         await db.balances.delete(account.name)
       })
+      // Without this the next pull re-adds the account from Supabase.
+      await deleteAccountRemote(account.name)
       close()
     } catch (e) {
       console.error('[AccountForm] delete failed:', e)
