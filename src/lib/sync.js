@@ -391,20 +391,42 @@ async function pullTxs(userId) {
   const deletedMeta = await db.meta.get('deletedTxIds')
   const deletedSet = new Set(deletedMeta?.value ?? [])
 
+  // Read local rows once and index them by txId. The previous version ran one
+  // awaited indexed lookup per remote row, so a year of history meant thousands
+  // of sequential IndexedDB round-trips on every sync.
+  const byTxId = new Map()
+  for (const t of await db.transactions.toArray()) {
+    if (t.txId) byTxId.set(t.txId, t)
+  }
+
+  const toAdd = []
+  const toPut = []
+  const seen  = new Set() // guards against duplicate tx_ids inside one payload
+
   for (const row of data) {
     if (!row.tx_id) continue // skip rows without a stable key
     if (deletedSet.has(row.tx_id)) continue // skip locally-deleted transactions
+    if (seen.has(row.tx_id)) continue
+    seen.add(row.tx_id)
 
-    const existing = await db.transactions.where('txId').equals(row.tx_id).first()
+    const existing = byTxId.get(row.tx_id)
     const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0
     const localts  = existing?.updatedAt ? new Date(existing.updatedAt).getTime() : 0
 
     if (!existing) {
-      await db.transactions.add({ ...toDexieRecord(row) })
+      toAdd.push({ ...toDexieRecord(row) })
     } else if (remotets > localts) {
-      await db.transactions.update(existing.id, { ...toDexieRecord(row) })
+      // Spread `existing` first to mirror Dexie's partial .update(): fields the
+      // remote row doesn't carry (recurringId, recurringPrevDate, …) survive.
+      toPut.push({ ...existing, ...toDexieRecord(row) })
     }
   }
+
+  // Two bulk writes instead of N single writes. Besides the IndexedDB savings,
+  // this collapses N liveQuery notifications into 2, so the UI stops re-running
+  // every transactions query once per synced row.
+  if (toAdd.length) await db.transactions.bulkAdd(toAdd)
+  if (toPut.length) await db.transactions.bulkPut(toPut)
 }
 
 // findFn: optional async (row) => existing local record | null

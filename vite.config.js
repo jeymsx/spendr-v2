@@ -55,7 +55,24 @@ export default defineConfig({
       workbox: {
         // Precache all static build output
         globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        // …except the PDF renderer. It is ~1.4 MB — nearly half the precache —
+        // and is already dynamically imported (see utils/reportData.js), so
+        // precaching it forces every install to pay for a feature most sessions
+        // never touch. The runtimeCaching rule below picks it up on first use.
+        globIgnores: ['**/react-pdf.browser-*.js'],
         runtimeCaching: [
+          {
+            // PDF renderer chunk: fetched on the first monthly-report export,
+            // then cached so later exports work offline. Filenames are
+            // content-hashed, so CacheFirst can never serve a stale build.
+            urlPattern: /\/assets\/react-pdf\.browser-[^/]+\.js$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'pdf-renderer',
+              expiration: { maxEntries: 2 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
           {
             // Supabase REST + Auth: network-first, fall back to cache when offline
             urlPattern: /^https:\/\/[^/]+\.supabase\.co\//i,

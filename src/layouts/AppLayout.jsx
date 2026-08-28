@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import AddActionSheet from '../components/AddActionSheet'
@@ -6,6 +6,16 @@ import { useSyncManager } from '../components/SyncManager'
 import WhatsNewModal, { CURRENT_VERSION } from '../components/WhatsNewModal'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+
+// Shown while a lazy route chunk loads. Sized to roughly a screen so the
+// navbar and scroll position stay stable instead of collapsing to zero height.
+function PageFallback() {
+  return (
+    <div className="flex items-center justify-center" style={{ minHeight: '60dvh' }}>
+      <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+    </div>
+  )
+}
 
 export default function AppLayout() {
   const [sheetOpen, setSheetOpen] = useState(false)
@@ -95,7 +105,14 @@ export default function AppLayout() {
 
         {/* pb-nav ensures content isn't hidden under the fixed navbar */}
         <div key={location.pathname} className="page-enter pb-nav">
-          <Outlet />
+          {/*
+            Inner Suspense boundary for the lazy route chunks. It sits inside the
+            layout on purpose — suspending here keeps the Navbar mounted, so a
+            route's first visit never flashes the whole shell away.
+          */}
+          <Suspense fallback={<PageFallback />}>
+            <Outlet />
+          </Suspense>
         </div>
       </main>
 
