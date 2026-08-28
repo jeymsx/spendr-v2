@@ -8,7 +8,10 @@ import { IconCheck, IconUpload } from '../components/icons'
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 const NEW_REQUIRED_COLS    = ['tx_id', 'type', 'transaction_date', 'description', 'category', 'from_account', 'to_account', 'amount']
-const LEGACY_REQUIRED_COLS = ['txId', 'type', 'date', 'description', 'category', 'payment', 'account', 'fromAccount', 'toAccount', 'amount', 'synced']
+// No 'synced' here on purpose. The app's own CSV export never writes that
+// column, and mapLegacyRows sets synced: UNSYNCED itself rather than reading
+// it — so requiring it made Spendr reject its own export file.
+const LEGACY_REQUIRED_COLS = ['txId', 'type', 'date', 'description', 'category', 'payment', 'account', 'fromAccount', 'toAccount', 'amount']
 const VALID_TYPES = new Set(['expense', 'inflow', 'transfer'])
 
 const TRANSFER_RE = /Transfer:\s*(.+?)\s*→\s*(.+)/
