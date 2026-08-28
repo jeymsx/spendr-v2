@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext'
 import { fullSync } from '../lib/sync'
 import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON, CUSTOM_PALETTE } from '../lib/phAccounts'
 import { EXPENSE_PRESETS, INFLOW_PRESETS, SYSTEM_CATS, EMOJI_SUGGESTIONS, CAT_PALETTE, LOCKED_EXPENSE, LOCKED_INFLOW } from '../lib/phCategories'
+import { useToast } from '../context/ToastContext'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -906,6 +907,7 @@ function StepDone({ onFinish, saving }) {
 // ── Main Onboarding component ──────────────────────────────────────────────────
 
 export default function Onboarding() {
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const { user, signInWithGoogle } = useAuth()
   const [step,                setStep]                = useState(0)
@@ -941,6 +943,7 @@ export default function Onboarding() {
         navigate('/', { replace: true })
       } catch (e) {
         console.error('[Onboarding] sign-in sync failed:', e)
+        showToast('Signed in, but sync failed', 'warning')
         setSigningIn(false)
       }
     })
@@ -953,6 +956,7 @@ export default function Onboarding() {
       // OAuth redirect will take over; setSigningIn stays true during redirect
     } catch (e) {
       console.error('[Onboarding] sign in failed:', e)
+      showToast('Sign-in failed', 'error')
       setSigningIn(false)
     }
   }
@@ -1066,6 +1070,7 @@ export default function Onboarding() {
       navigate(goToImport ? '/import' : '/', { replace: true, state: goToImport ? { from: 'onboarding' } : undefined })
     } catch (e) {
       console.error('[Onboarding]', e)
+      showToast('Setup failed - please retry', 'error')
       setSaving(false)
     }
   }

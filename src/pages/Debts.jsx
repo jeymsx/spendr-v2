@@ -460,6 +460,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
       handleClose()
     } catch (e) {
       console.error('[DebtForm] delete failed:', e)
+      showToast('Failed to delete debt', 'error')
       setDeleting(false)
     }
   }

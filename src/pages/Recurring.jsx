@@ -398,6 +398,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
       handleClose()
     } catch (e) {
       console.error('[RecurringForm] delete failed:', e)
+      showToast('Failed to delete', 'error')
       setDeleting(false)
     }
   }
@@ -667,6 +668,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function Recurring() {
+  const { showToast } = useToast()
   const [tab,      setTab]      = useState('upcoming')
   const [showForm, setShowForm] = useState(false)
   const [editRec,  setEditRec]  = useState(null)
@@ -737,6 +739,7 @@ export default function Recurring() {
       await db.recurring.update(rec.id, { active: !rec.active })
     } catch (e) {
       console.error('[Recurring] toggle failed:', e)
+      showToast('Failed to update', 'error')
     } finally {
       setToggling(null)
     }

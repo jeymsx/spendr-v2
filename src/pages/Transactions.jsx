@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue } from 'react'
 import * as RadixSlider from '@radix-ui/react-slider'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -597,8 +597,13 @@ export default function Transactions() {
     [categories],
   )
 
+  // The filter re-scans the whole history, so let React keep the input
+  // responsive and apply results a tick behind rather than blocking every
+  // keystroke on a full pass.
+  const deferredSearch = useDeferredValue(search)
+
   const filteredTx = useMemo(() => {
-    const q = search.trim().toLowerCase()
+    const q = deferredSearch.trim().toLowerCase()
     return (txAll ?? []).filter(tx => {
       if (q && !(tx.description ?? '').toLowerCase().includes(q) &&
                !(tx.category   ?? '').toLowerCase().includes(q)) return false
@@ -612,7 +617,7 @@ export default function Transactions() {
       if (amountMax != null && (tx.amount ?? 0) > amountMax) return false
       return true
     })
-  }, [txAll, search, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
+  }, [txAll, deferredSearch, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
   const visibleTx = useMemo(() => filteredTx.slice(0, visibleCount), [filteredTx, visibleCount])
   const groups    = useMemo(() => groupByDate(visibleTx), [visibleTx])

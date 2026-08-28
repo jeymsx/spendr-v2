@@ -1332,6 +1332,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
       close()
     } catch (e) {
       console.error('[AccountForm] delete failed:', e)
+      showToast('Failed to delete account', 'error')
       setSaving(false)
     }
   }

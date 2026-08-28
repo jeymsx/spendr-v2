@@ -4,6 +4,7 @@ import db, { UNSYNCED } from '../db/db'
 import { reverseBalanceEffect, applyBalanceEffect } from '../db/txHelpers'
 import CategoryPickerSheet from './CategoryPickerSheet'
 import AccountPickerSheet from './AccountPickerSheet'
+import { useToast } from '../context/ToastContext'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
@@ -103,6 +104,7 @@ function EditPickerBtn({ label, dot, placeholder, onClick }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [] }) {
+  const { showToast } = useToast()
   const [closing,         setClosing]         = useState(false)
   useScrollLock(open)
   const [mode,            setMode]            = useState('detail')   // 'detail' | 'edit' | 'confirm-delete'
@@ -177,6 +179,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
       close()
     } catch (e) {
       console.error('[TxDetailSheet] save failed:', e)
+      showToast('Failed to save changes', 'error')
       setSaving(false)
     }
   }
@@ -200,6 +203,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
       close()
     } catch (e) {
       console.error('[TxDetailSheet] delete failed:', e)
+      showToast('Failed to delete transaction', 'error')
       setSaving(false)
     }
   }

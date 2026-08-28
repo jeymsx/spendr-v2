@@ -474,6 +474,7 @@ function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
 }
 
 function ProfileSheet({ open, onClose, displayName: initName, currency: initCurrency }) {
+  const { showToast } = useToast()
   const [closing,  setClosing]  = useState(false)
   useScrollLock(open)
   const [saving,   setSaving]   = useState(false)
@@ -501,6 +502,7 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
       close()
     } catch (e) {
       console.error('[ProfileSheet] save failed:', e)
+      showToast('Failed to save profile', 'error')
       setSaving(false)
     }
   }
@@ -573,6 +575,7 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
 // ── Reset confirm modal ────────────────────────────────────────────────────────
 
 function ResetConfirmModal({ open, onClose }) {
+  const { showToast } = useToast()
   const [step,    setStep]    = useState(1) // 1=warn 2=typing-confirm
   const [input,   setInput]   = useState('')
   const [loading, setLoading] = useState(false)
@@ -603,6 +606,7 @@ function ResetConfirmModal({ open, onClose }) {
       window.location.replace('/')
     } catch (e) {
       console.error('[Settings] reset failed:', e)
+      showToast('Reset failed', 'error')
       setLoading(false)
     }
   }
@@ -749,6 +753,7 @@ function BudgetSummaryCard({ categories, transactions }) {
 // ── Budget manager sheet ───────────────────────────────────────────────────────
 
 function BudgetManagerSheet({ open, onClose }) {
+  const { showToast } = useToast()
   const [closing,      setClosing]      = useState(false)
   const [editingId,    setEditingId]    = useState(null)
   const [localBudgets, setLocalBudgets] = useState({})
@@ -827,6 +832,7 @@ function BudgetManagerSheet({ open, onClose }) {
       close()
     } catch (e) {
       console.error('[BudgetManager] save failed:', e)
+      showToast('Failed to save budgets', 'error')
     } finally {
       setSaving(false)
     }
@@ -1052,6 +1058,7 @@ function CategoryRow({ cat, onTap, onLongPressDelete }) {
 // ── Category presets sheet ─────────────────────────────────────────────────────
 
 function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) {
+  const { showToast } = useToast()
   const [closing, setClosing] = useState(false)
   useScrollLock(open)
   const [adding,  setAdding]  = useState(null)
@@ -1073,6 +1080,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
       await db.categories.add({ ...preset, budget: 0 })
     } catch (e) {
       console.error('[CategoryPresets] add failed:', e)
+      showToast('Failed to add categories', 'error')
     } finally {
       setAdding(null)
     }
@@ -1384,6 +1392,7 @@ function CategoryManagerSheet({ open, onClose }) {
 // ── Category form sheet ────────────────────────────────────────────────────────
 
 function CategoryFormSheet({ open, onClose, category, defaultType, allCategories, startAtDelete, zIndex = 100 }) {
+  const { showToast } = useToast()
   const [closing,        setClosing]        = useState(false)
   useScrollLock(open)
   const [saving,         setSaving]         = useState(false)
@@ -1462,6 +1471,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
       close()
     } catch (e) {
       console.error('[CategoryForm] save failed:', e)
+      showToast('Failed to save category', 'error')
       setSaving(false)
     }
   }
@@ -1473,6 +1483,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
       close()
     } catch (e) {
       console.error('[CategoryForm] delete failed:', e)
+      showToast('Failed to delete category', 'error')
       setSaving(false)
     }
   }
@@ -1488,6 +1499,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
       close()
     } catch (e) {
       console.error('[CategoryForm] reassign+delete failed:', e)
+      showToast('Failed to delete category', 'error')
       setSaving(false)
     }
   }
@@ -1823,6 +1835,7 @@ function TemplateRow({ tpl, catIcon, onTap, onLongPressDelete }) {
 // ── Template form sheet ────────────────────────────────────────────────────────
 
 function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories }) {
+  const { showToast } = useToast()
   const [closing,   setClosing]   = useState(false)
   useScrollLock(open)
   const [saving,    setSaving]    = useState(false)
@@ -1890,6 +1903,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
       close()
     } catch (e) {
       console.error('[TemplateForm] save failed:', e)
+      showToast('Failed to save template', 'error')
       setSaving(false)
     }
   }
@@ -1898,7 +1912,11 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
     if (!isEdit) return
     setSaving(true)
     try { await db.templates.delete(template.id); close() }
-    catch (e) { console.error('[TemplateForm] delete failed:', e); setSaving(false) }
+    catch (e) {
+      console.error('[TemplateForm] delete failed:', e)
+      showToast('Failed to delete template', 'error')
+      setSaving(false)
+    }
   }
 
   if (!open && !closing) return null
@@ -2584,6 +2602,7 @@ export default function Settings() {
       setLoggingOut(false)
     } catch (e) {
       console.error('[Settings] logout failed:', e)
+      showToast('Sign-out failed', 'error')
       setLoggingOut(false)
     }
   }
@@ -2616,6 +2635,7 @@ export default function Settings() {
       showToast(`${txs.length} transaction${txs.length !== 1 ? 's' : ''} exported`)
     } catch (e) {
       console.error('[Settings] export failed:', e)
+      showToast('Export failed', 'error')
     } finally {
       setExporting(false)
     }
