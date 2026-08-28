@@ -2124,6 +2124,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 // ── Template manager sheet ─────────────────────────────────────────────────────
 
 function TemplateManagerSheet({ open, onClose }) {
+  const { showToast } = useToast()
   const [closing,    setClosing]    = useState(false)
   useScrollLock(open)
   const [formOpen,   setFormOpen]   = useState(false)
