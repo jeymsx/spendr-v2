@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
 import db, { UNSYNCED } from '../db/db'
-import { reverseBalanceEffect, applyBalanceEffect } from '../db/txHelpers'
+import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx } from '../db/txHelpers'
 import CategoryPickerSheet from './CategoryPickerSheet'
 import AccountPickerSheet from './AccountPickerSheet'
 import { useToast } from '../context/ToastContext'
@@ -186,21 +186,42 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
   async function handleDelete() {
     setSaving(true)
+    // Snapshot before deleting — this is what Undo replays.
+    const snapshot = { ...tx }
     try {
-      // Add to tombstone so sync doesn't resurrect it
-      if (tx.txId) {
-        const existing = await db.meta.get('deletedTxIds')
-        const list = existing?.value ?? []
-        await db.meta.put({ key: 'deletedTxIds', value: [...list, tx.txId] })
-      }
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
-        await reverseBalanceEffect(tx)
-        await db.transactions.delete(tx.id)
-        if (tx.recurringId && tx.recurringPrevDate) {
-          await db.recurring.update(tx.recurringId, { nextDate: tx.recurringPrevDate })
-        }
-      })
+      // The tombstone write used to sit outside the transaction, so a failure
+      // below left the txId marked deleted while the row survived locally —
+      // and the next sync then removed it remotely. It's inside now.
+      await db.transaction('rw',
+        [db.transactions, db.accounts, db.balances, db.recurring, db.meta],
+        async () => {
+          if (tx.txId) {
+            const existing = await db.meta.get('deletedTxIds')
+            const list = existing?.value ?? []
+            if (!list.includes(tx.txId)) {
+              await db.meta.put({ key: 'deletedTxIds', value: [...list, tx.txId] })
+            }
+          }
+          await reverseBalanceEffect(tx)
+          await db.transactions.delete(tx.id)
+          if (tx.recurringId && tx.recurringPrevDate) {
+            await db.recurring.update(tx.recurringId, { nextDate: tx.recurringPrevDate })
+          }
+        })
       close()
+      showToast('Transaction deleted', 'success', {
+        actionLabel: 'Undo',
+        onAction: async () => {
+          try {
+            const ok = await restoreDeletedTx(snapshot)
+            showToast(ok ? 'Transaction restored' : 'Already restored',
+                      ok ? 'success' : 'warning')
+          } catch (err) {
+            console.error('[TxDetailSheet] undo failed:', err)
+            showToast('Undo failed', 'error')
+          }
+        },
+      })
     } catch (e) {
       console.error('[TxDetailSheet] delete failed:', e)
       showToast('Failed to delete transaction', 'error')

@@ -124,3 +124,71 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
 
   return newNextDate
 }
+
+/**
+ * Undo a transaction deletion, reversing everything the delete did: re-insert
+ * the row, re-apply its balance effect, roll the recurring bill it came from
+ * forward again, and drop the sync tombstone.
+ *
+ * The txId is preserved deliberately. Supabase upserts transactions on
+ * (user_id, tx_id), so pushing the restored row recreates the original remote
+ * row rather than a duplicate — and that holds whether or not a sync has
+ * already deleted it. Nothing here needs the network.
+ *
+ * Safe to call more than once: if the row is already back it returns false
+ * without touching anything, so a double-tapped Undo cannot double-apply the
+ * balance.
+ *
+ * @returns true if this call restored it, false if it was already present.
+ */
+export async function restoreDeletedTx(tx) {
+  if (!tx) return false
+  let restored = false
+
+  await db.transaction('rw',
+    [db.transactions, db.accounts, db.balances, db.recurring, db.meta],
+    async () => {
+      // Idempotence guard — by local id and by txId, since either could
+      // identify an already-restored row.
+      if (tx.id != null && await db.transactions.get(tx.id)) return
+      if (tx.txId && await db.transactions.where('txId').equals(tx.txId).first()) return
+
+      // Keeps the original id and txId; marked unsynced so the next push
+      // recreates the remote row.
+      await db.transactions.add({
+        ...tx,
+        synced:    UNSYNCED,
+        updatedAt: new Date().toISOString(),
+      })
+      await applyBalanceEffect(tx)
+
+      // The delete rolled this bill's nextDate back to the posted date; roll it
+      // forward again — but only if nothing else has moved it since, so a bill
+      // re-posted in the meantime isn't clobbered.
+      if (tx.recurringId && tx.recurringPrevDate) {
+        const rec = await db.recurring.get(tx.recurringId)
+        if (rec && rec.nextDate === tx.recurringPrevDate) {
+          await db.recurring.update(tx.recurringId, {
+            nextDate: advanceNextDate(tx.recurringPrevDate, rec.frequency),
+          })
+        }
+      }
+
+      // Critical: leaving the tombstone in place would make the next sync
+      // delete the row we just restored.
+      if (tx.txId) {
+        const meta = await db.meta.get('deletedTxIds')
+        const list = meta?.value ?? []
+        if (list.includes(tx.txId)) {
+          await db.meta.put({
+            key:   'deletedTxIds',
+            value: list.filter(id => id !== tx.txId),
+          })
+        }
+      }
+
+      restored = true
+    })
+
+  return restored
+}
