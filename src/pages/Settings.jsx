@@ -20,8 +20,9 @@ import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { syncToSheets } from '../lib/sheetsSync'
-import { IconCheck, IconChevronRight, IconPlus } from '../components/icons'
+import { IconCheck, IconChevronRight, IconPlus, IconUpload } from '../components/icons'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
+import { inspectBackup, restoreBackup } from '../lib/backup'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -568,6 +569,183 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
             </button>
           </div>
         </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Restore-from-backup sheet ──────────────────────────────────────────────────
+
+function RestoreBackupSheet({ open, onClose }) {
+  const { showToast } = useToast()
+  const [step,    setStep]    = useState(1) // 1=pick file, 2=typed confirm
+  const [info,    setInfo]    = useState(null)
+  const [raw,     setRaw]     = useState(null)
+  const [error,   setError]   = useState('')
+  const [input,   setInput]   = useState('')
+  const [loading, setLoading] = useState(false)
+  const fileRef = useRef(null)
+  useScrollLock(open)
+
+  useEffect(() => {
+    if (!open) { setStep(1); setInfo(null); setRaw(null); setError(''); setInput(''); setLoading(false) }
+  }, [open])
+
+  function handleFile(e) {
+    const file = e.target.files?.[0]
+    if (!file) return
+    setError('')
+    if (!file.name.toLowerCase().endsWith('.json')) {
+      setError('Pick the .json backup file.')
+      return
+    }
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const text = String(reader.result)
+        setInfo(inspectBackup(text))
+        setRaw(text)
+        setStep(2)
+      } catch (err) {
+        setError(err.message)
+      }
+    }
+    reader.onerror = () => setError('Could not read that file.')
+    reader.readAsText(file)
+  }
+
+  async function handleRestore() {
+    setLoading(true)
+    try {
+      const res = await restoreBackup(raw)
+      showToast(`Restored ${res.counts.transactions} transactions`)
+      // Reload so every live query re-reads from scratch rather than
+      // reconciling a wholesale table replacement.
+      window.location.replace('/')
+    } catch (err) {
+      console.error('[Restore] failed:', err)
+      showToast('Restore failed', 'error')
+      setLoading(false)
+    }
+  }
+
+  if (!open) return null
+
+  const c = info?.counts ?? {}
+  const summary = [
+    [c.transactions, 'transactions'], [c.accounts, 'accounts'],
+    [c.categories, 'categories'], [c.recurring, 'recurring'],
+    [c.debts, 'debts'], [c.templates, 'templates'],
+  ].filter(([n]) => n > 0)
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative w-full max-w-sm rounded-3xl
+        bg-white dark:bg-[#111820]
+        border border-slate-100 dark:border-white/[0.07]
+        shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 space-y-4">
+
+        <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-500/15
+          flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400">
+          <IconUpload />
+        </div>
+
+        {step === 1 && (
+          <>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Restore Backup</h3>
+              <p className="text-sm text-slate-500 dark:text-slate-400">
+                Pick a <span className="font-semibold">.json</span> backup. Its contents replace
+                what's on this device — anything not in the file is removed.
+              </p>
+            </div>
+            {error && (
+              <p className="text-xs text-red-500 dark:text-red-400 text-center px-2">{error}</p>
+            )}
+            <input ref={fileRef} type="file" accept=".json,application/json"
+              onChange={handleFile} className="hidden" />
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={() => fileRef.current?.click()}
+                className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white bg-primary
+                  active:scale-[0.98] transition-transform duration-100"
+              >
+                Choose file
+              </button>
+              <button
+                onClick={onClose}
+                className="w-full py-3.5 rounded-2xl text-sm font-semibold
+                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
+                  active:scale-[0.98] transition-transform duration-100"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
+
+        {step === 2 && (
+          <>
+            <div className="text-center">
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Replace all data?</h3>
+              {info?.exportedAt && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">
+                  Backup from {new Date(info.exportedAt).toLocaleString('en-PH', {
+                    dateStyle: 'medium', timeStyle: 'short' })}
+                </p>
+              )}
+            </div>
+
+            <div className="rounded-2xl bg-slate-50 dark:bg-white/[0.04] px-4 py-3 flex flex-col gap-1.5">
+              {summary.map(([n, label]) => (
+                <div key={label} className="flex items-center justify-between">
+                  <span className="text-xs text-slate-400 dark:text-slate-500">{label}</span>
+                  <span className="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">{n}</span>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-xs text-slate-500 dark:text-slate-400 text-center px-1">
+              Your name, currency and theme are kept. If you're signed in, the next
+              sync pushes this state to the cloud.
+            </p>
+
+            <div>
+              <FieldLabel>Type RESTORE to confirm</FieldLabel>
+              <input
+                value={input}
+                onChange={e => setInput(e.target.value)}
+                placeholder="RESTORE"
+                autoCapitalize="characters"
+                className="w-full px-4 py-3 rounded-2xl text-sm font-semibold tracking-wide
+                  bg-slate-50 dark:bg-white/[0.05] text-slate-800 dark:text-white
+                  border border-slate-200 dark:border-white/[0.09] outline-none
+                  focus:border-primary dark:focus:border-primary"
+              />
+            </div>
+
+            <div className="flex flex-col gap-2.5">
+              <button
+                onClick={handleRestore}
+                disabled={input.trim().toUpperCase() !== 'RESTORE' || loading}
+                className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white bg-red-500
+                  disabled:opacity-40 active:scale-[0.98] transition-all duration-100"
+              >
+                {loading ? 'Restoring…' : 'Replace my data'}
+              </button>
+              <button
+                onClick={onClose}
+                disabled={loading}
+                className="w-full py-3.5 rounded-2xl text-sm font-semibold
+                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
+                  active:scale-[0.98] transition-transform duration-100"
+              >
+                Cancel
+              </button>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
@@ -2547,6 +2725,7 @@ export default function Settings() {
   const navigate               = useNavigate()
   const { theme, toggleTheme, accentColor, setAccentColor } = useTheme()
   const { showToast }          = useToast()
+  const [restoreOpen, setRestoreOpen] = useState(false)
   const { user, signOut }      = useAuth()
   const { status: syncStatus, runSync } = useSyncManager()
 
@@ -2843,6 +3022,14 @@ export default function Settings() {
             }
             onTap={() => setShowBackupConfirm(true)}
             disabled={backingUp}
+          />
+          <RowDivider />
+          <SettingsRow
+            iconEl={<RowIcon color="amber"><IconUpload /></RowIcon>}
+            label="Restore Backup (JSON)"
+            sublabel="Replace this device's data with a backup file"
+            right={<IconChevronRight size={14} strokeWidth="2" />}
+            onTap={() => setRestoreOpen(true)}
           />
           <RowDivider />
           {/* PDF Report inline */}
@@ -3228,6 +3415,7 @@ export default function Settings() {
         open={tmplMgrOpen}
         onClose={() => setTmplMgrOpen(false)}
       />
+      <RestoreBackupSheet open={restoreOpen} onClose={() => setRestoreOpen(false)} />
       <ResetConfirmModal
         open={resetOpen}
         onClose={() => setResetOpen(false)}
