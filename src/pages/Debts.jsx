@@ -1,6 +1,6 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -716,7 +716,7 @@ function PaymentSheet({ open, onClose, debt }) {
           category,
           account:     account.name,
           date:        now.toISOString(),
-          synced:      false,
+          synced:      UNSYNCED,
           updatedAt:   now.toISOString(),
         })
         await applyBalanceEffect({ type: txType, amount: paymentAmount, account: account.name })

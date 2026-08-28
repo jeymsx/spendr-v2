@@ -11,7 +11,7 @@ import { CSS } from '@dnd-kit/utilities'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { useTheme } from '../context/ThemeContext'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
 import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON } from '../lib/phAccounts'
@@ -1420,7 +1420,7 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
           category:    diff > 0 ? 'Income' : 'Others',
           account:     account.name,
           amount:      Math.abs(diff),
-          synced:      false,
+          synced:      UNSYNCED,
           updatedAt:   updISO,
         })
         await db.accounts.update(account.id, { balance: newBal, updatedAt: updISO })

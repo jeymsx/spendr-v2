@@ -1,7 +1,7 @@
 ﻿import { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import Papa from 'papaparse'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -163,7 +163,7 @@ function mapNewRows(data) {
       fromAccount,
       toAccount,
       amount:      parseFloat(row.amount) || 0,
-      synced:      false,
+      synced:      UNSYNCED,
     }
   })
 }
@@ -180,7 +180,7 @@ function mapLegacyRows(data) {
     fromAccount: String(row.fromAccount ?? '').trim() || null,
     toAccount:   String(row.toAccount   ?? '').trim() || null,
     amount:      parseFloat(row.amount) || 0,
-    synced:      false,
+    synced:      UNSYNCED,
   }))
 }
 
@@ -775,7 +775,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
           fromAccount: r.fromAccount ?? null,
           toAccount:   r.toAccount ?? null,
           amount:      r.amount,
-          synced:      false,
+          synced:      UNSYNCED,
           updatedAt:   new Date().toISOString(),
         }))
         await db.transactions.bulkAdd(records)

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useScrollLock } from '../hooks/useScrollLock'
@@ -63,7 +63,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           await db.transactions.add({
             txId: crypto.randomUUID(), type: 'transfer', amount,
             fromAccount: template.fromAccount, toAccount: template.toAccount,
-            date: dateISO, synced: false, updatedAt: updISO,
+            date: dateISO, synced: UNSYNCED, updatedAt: updISO,
           })
           await applyBalanceEffect({ type: 'transfer', amount, fromAccount: template.fromAccount, toAccount: template.toAccount })
         })
@@ -72,7 +72,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           await db.transactions.add({
             txId: crypto.randomUUID(), type: template.type, amount,
             description: description.trim(), category: template.category,
-            account: template.account, date: dateISO, synced: false, updatedAt: updISO,
+            account: template.account, date: dateISO, synced: UNSYNCED, updatedAt: updISO,
           })
           await applyBalanceEffect({ type: template.type, amount, account: template.account })
         })

@@ -1,6 +1,6 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { reverseBalanceEffect, applyBalanceEffect } from '../db/txHelpers'
 import CategoryPickerSheet from './CategoryPickerSheet'
 import AccountPickerSheet from './AccountPickerSheet'
@@ -159,7 +159,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
         ? editDate + (tx.date?.slice(10) ?? 'T00:00:00.000Z')
         : tx.date
 
-      const patch = { amount: newAmount, description: editDescription.trim(), date: newDateISO, updatedAt: now, synced: false }
+      const patch = { amount: newAmount, description: editDescription.trim(), date: newDateISO, updatedAt: now, synced: UNSYNCED }
 
       if (tx.type !== 'transfer') {
         patch.category = editCategory?.name ?? tx.category

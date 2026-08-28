@@ -1,7 +1,7 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus } from '../utils/creditCycle'
 import { applyBalanceEffect } from '../db/txHelpers'
@@ -258,7 +258,7 @@ export default function Dashboard() {
           category:         rec.category,
           account:          rec.account,
           date:             now,
-          synced:           false,
+          synced:           UNSYNCED,
           updatedAt:        new Date().toISOString(),
           recurringId:      rec.id,
           recurringPrevDate: rec.nextDate,

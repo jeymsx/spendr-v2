@@ -1,5 +1,5 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { advanceNextDate, toMonthlyAmount } from '../utils/recurring'
@@ -728,7 +728,7 @@ export default function Recurring() {
           payment:          rec.account,
           account:          rec.account,
           date:             now,
-          synced:           false,
+          synced:           UNSYNCED,
           updatedAt:        now,
           recurringId:      rec.id,
           recurringPrevDate: rec.nextDate,

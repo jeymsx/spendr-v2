@@ -11,7 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useSyncManager } from '../components/SyncManager'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -1484,7 +1484,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
         await db.transaction('rw', [db.categories, db.transactions], async () => {
           await db.categories.update(category.id, data)
           if (oldName !== newName) {
-            await db.transactions.where('category').equals(oldName).modify({ category: newName, synced: false, updatedAt: renamedAt })
+            await db.transactions.where('category').equals(oldName).modify({ category: newName, synced: UNSYNCED, updatedAt: renamedAt })
           }
         })
       } else {

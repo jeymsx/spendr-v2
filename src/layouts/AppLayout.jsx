@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useLayoutEffect, Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import Navbar from '../components/Navbar'
+import ErrorBoundary from '../components/ErrorBoundary'
 import AddActionSheet from '../components/AddActionSheet'
 import { useSyncManager } from '../components/SyncManager'
 import WhatsNewModal, { CURRENT_VERSION } from '../components/WhatsNewModal'
@@ -110,9 +111,16 @@ export default function AppLayout() {
             layout on purpose — suspending here keeps the Navbar mounted, so a
             route's first visit never flashes the whole shell away.
           */}
-          <Suspense fallback={<PageFallback />}>
-            <Outlet />
-          </Suspense>
+          {/*
+            Page-level boundary, inside the layout: a page that throws keeps the
+            Navbar so you can navigate away. resetKeys clears the error on
+            navigation, so a bad page doesn't poison the next one.
+          */}
+          <ErrorBoundary compact resetKeys={[location.pathname]}>
+            <Suspense fallback={<PageFallback />}>
+              <Outlet />
+            </Suspense>
+          </ErrorBoundary>
         </div>
       </main>
 

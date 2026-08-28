@@ -1,4 +1,4 @@
-import db, { dbReady } from '../db/db'
+import db, { dbReady, getUnsyncedTxs, SYNCED } from '../db/db'
 import { supabase } from './supabase'
 // Single definition, shared with onboarding — the two lists used to be
 // separate copies, so a system category added to one was missing from the
@@ -128,7 +128,7 @@ function toDexieRecord(row) {
     fromAccount: type === 'transfer' ? row.from_account : null,
     toAccount:   type === 'transfer' ? row.to_account   : null,
     amount:      row.amount,
-    synced:      true,
+    synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
 }
@@ -262,7 +262,7 @@ export async function syncToSupabase(userId) {
   if (!userId) return
 
   // Transactions: only push unsynced (falsy synced field = unsynced)
-  const unsyncedTxs = await db.transactions.filter(t => !t.synced).toArray()
+  const unsyncedTxs = await getUnsyncedTxs()
 
   // Push tombstoned deletions first
   const deletedMeta = await db.meta.get('deletedTxIds')
@@ -292,7 +292,7 @@ export async function syncToSupabase(userId) {
     // Mark as synced locally
     const ids = unsyncedTxs.map(r => r.id).filter(Boolean)
     if (ids.length) {
-      await db.transactions.where('id').anyOf(ids).modify({ synced: true })
+      await db.transactions.where('id').anyOf(ids).modify({ synced: SYNCED })
     }
   }
 

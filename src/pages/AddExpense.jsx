@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -203,7 +203,7 @@ export default function AddExpense() {
           category:    category.name,
           account:     account.name,
           date:        txDate.toISOString(),
-          synced:      false,
+          synced:      UNSYNCED,
           updatedAt:   updISO,
         })
         dueOn = advanceNextDate(dueOn, 'monthly')

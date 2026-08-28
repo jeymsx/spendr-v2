@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -197,7 +197,7 @@ export default function Transfer() {
           fromAccount: fromAccount.name,
           toAccount:   toAccount.name,
           date:        dateISO,
-          synced:      false,
+          synced:      UNSYNCED,
           updatedAt:   updISO,
         })
         await applyBalanceEffect({ type: 'transfer', amount, fromAccount: fromAccount.name, toAccount: toAccount.name })
@@ -211,7 +211,7 @@ export default function Transfer() {
             category:    'Transfer Fee',
             account:     fromAccount.name,
             date:        dateISO,
-            synced:      false,
+            synced:      UNSYNCED,
             updatedAt:   updISO,
           })
           await applyBalanceEffect({ type: 'expense', amount: fee, account: fromAccount.name })

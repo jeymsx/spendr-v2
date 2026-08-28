@@ -62,6 +62,48 @@ async function seed() {
   })
 }
 
-export const dbReady = seed().catch(err => console.error('[SpendrDB] seed failed:', err))
+// ── Sync flag ─────────────────────────────────────────────────────────────────
+// IndexedDB rejects booleans as keys, so records written with `synced: false`
+// were absent from the `synced` index entirely and every push had to full-scan
+// the table. Storing 0/1 makes the existing index usable — no schema change,
+// since `synced` is already declared above.
+
+export const UNSYNCED = 0
+export const SYNCED   = 1
+
+// Rewrites pre-existing boolean flags. Guarded by a meta key and only marked
+// done once it completes, so a failure part-way through is simply retried on
+// the next launch. Until it succeeds, getUnsyncedTxs() keeps using the scan.
+async function normalizeSyncedFlags() {
+  const done = await db.meta.get('syncedNormalized')
+  if (done?.value) return
+
+  const stale = await db.transactions
+    .filter(t => typeof t.synced !== 'number')
+    .toArray()
+
+  if (stale.length) {
+    // `synced ? 1 : 0` preserves the old `!t.synced` semantics exactly,
+    // including records predating the field, which counted as unsynced.
+    // updatedAt is left alone so this doesn't look like a real edit.
+    await db.transactions.bulkPut(stale.map(t => ({ ...t, synced: t.synced ? SYNCED : UNSYNCED })))
+  }
+
+  await db.meta.put({ key: 'syncedNormalized', value: true })
+}
+
+/** Transactions still needing a push. Uses the index once normalised. */
+export async function getUnsyncedTxs() {
+  const done = await db.meta.get('syncedNormalized')
+  if (done?.value) {
+    return db.transactions.where('synced').equals(UNSYNCED).toArray()
+  }
+  // Booleans aren't in the index, so an indexed query would silently miss them.
+  return db.transactions.filter(t => !t.synced).toArray()
+}
+
+export const dbReady = seed()
+  .then(normalizeSyncedFlags)
+  .catch(err => console.error('[SpendrDB] init failed:', err))
 
 export default db
