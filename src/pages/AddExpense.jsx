@@ -394,33 +394,28 @@ export default function AddExpense() {
               >
                 Custom
               </button>
-            </div>
 
-            {termIsCustom && (
-              <div className="flex items-center gap-2 mt-2">
+              {/* Sits inside the same scrolling row so the control stays one line. */}
+              {termIsCustom && (
                 <input
                   type="text"
                   inputMode="numeric"
                   autoFocus
                   placeholder="24"
+                  title={`${MIN_TERM}–${MAX_TERM} months`}
+                  aria-label={`Custom term in months, ${MIN_TERM} to ${MAX_TERM}`}
                   value={installMonths > 1 ? String(installMonths) : ''}
                   onChange={e => {
                     const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2)
                     setInstallMonths(digits ? Math.min(Number(digits), MAX_TERM) : 0)
                   }}
-                  className="w-20 px-3 h-[38px] rounded-xl text-sm font-semibold tabular-nums text-center
+                  className="shrink-0 w-[72px] px-2 h-[38px] rounded-xl text-xs font-semibold tabular-nums text-center
                     bg-white dark:bg-primary/[0.07] text-slate-800 dark:text-white outline-none
-                    border border-slate-200/80 dark:border-primary/[0.14]
-                    focus:border-primary dark:focus:border-primary"
+                    border border-primary/60 dark:border-primary/60
+                    placeholder-slate-300 dark:placeholder-slate-600"
                 />
-                <span className="text-xs text-slate-500 dark:text-slate-400">
-                  months{' '}
-                  <span className="text-slate-400 dark:text-slate-500">
-                    ({MIN_TERM}–{MAX_TERM})
-                  </span>
-                </span>
-              </div>
-            )}
+              )}
+            </div>
             {isInstallment && (
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
                 {installMonths} × {fmt(amount)} ={' '}
