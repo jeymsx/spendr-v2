@@ -1,13 +1,13 @@
 import { useMemo, useRef, useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
-import db, { UNSYNCED } from '../db/db'
+import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus } from '../utils/creditCycle'
-import { applyBalanceEffect } from '../db/txHelpers'
-import { advanceNextDate } from '../utils/recurring'
+import { postRecurringCharge } from '../db/txHelpers'
 import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
+import { IconBank, IconCard, IconPhone, IconWallet } from '../components/icons'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -50,13 +50,19 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
   const nearBudget = (budgetCategories ?? []).find(c => c.budget > 0 && (c.spent / c.budget) >= 0.85)
   if (nearBudget) return `${nearBudget.icon ?? '📊'} ${nearBudget.name.toLowerCase()} budget almost full`
 
-  // Bill due today or tomorrow
-  const urgentBill = (upcomingRecurring ?? []).find(r => {
-    if (!r.nextDate) return false
-    const diff = (new Date(r.nextDate) - new Date()) / 864e5
-    return diff <= 1
-  })
-  if (urgentBill) return `🔔 ${urgentBill.name} due today`
+  // Overdue bills first, then ones due today or tomorrow. The previous check
+  // was `diff <= 1`, which is also true for anything long overdue — so a bill
+  // three weeks late still read "due today".
+  const bills = (upcomingRecurring ?? []).filter(r => r.nextDate)
+  const daysAway = (r) => {
+    const [y, mo, d] = String(r.nextDate).slice(0, 10).split('-').map(Number)
+    const start = new Date(); start.setHours(0, 0, 0, 0)
+    return Math.round((new Date(y, mo - 1, d) - start) / 864e5)
+  }
+  const overdue = bills.find(r => daysAway(r) < 0)
+  if (overdue) return `⚠️ ${overdue.name} is overdue`
+  const urgentBill = bills.find(r => daysAway(r) <= 1)
+  if (urgentBill) return `🔔 ${urgentBill.name} due ${daysAway(urgentBill) === 0 ? 'today' : 'tomorrow'}`
 
   // Today's spending
   const todayTotal = (txAll ?? [])
@@ -247,25 +253,7 @@ export default function Dashboard() {
   async function handlePostRecurring(rec) {
     setPosting(true)
     try {
-      const now         = new Date().toISOString().slice(0, 10)
-      const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
-      await db.transaction('rw', [db.transactions, db.accounts, db.recurring], async () => {
-        await db.transactions.add({
-          txId:             crypto.randomUUID(),
-          type:             'expense',
-          amount:           rec.amount,
-          description:      rec.name,
-          category:         rec.category,
-          account:          rec.account,
-          date:             now,
-          synced:           UNSYNCED,
-          updatedAt:        new Date().toISOString(),
-          recurringId:      rec.id,
-          recurringPrevDate: rec.nextDate,
-        })
-        await applyBalanceEffect({ type: 'expense', amount: rec.amount, account: rec.account })
-        await db.recurring.update(rec.id, { nextDate: newNextDate })
-      })
+      await postRecurringCharge(rec)
       showToast(`${rec.name} posted!`)
       setPostSheetOpen(false)
     } catch (e) {
@@ -982,43 +970,4 @@ function IconEyeOff({ size = 18 }) {
   )
 }
 
-function IconWallet() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
-      <path d="M16 13a1 1 0 100 2 1 1 0 000-2z" fill="currentColor" />
-      <path d="M20 7V5a2 2 0 00-2-2H6a2 2 0 00-2 2v2" />
-    </svg>
-  )
-}
 
-function IconBank() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="3" y1="22" x2="21" y2="22" />
-      <line x1="6" y1="18" x2="6" y2="11" />
-      <line x1="10" y1="18" x2="10" y2="11" />
-      <line x1="14" y1="18" x2="14" y2="11" />
-      <line x1="18" y1="18" x2="18" y2="11" />
-      <polygon points="12 2 20 7 4 7" fill="currentColor" fillOpacity="0.3" />
-    </svg>
-  )
-}
-
-function IconCard() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="1" y="4" width="22" height="16" rx="3" />
-      <line x1="1" y1="10" x2="23" y2="10" />
-    </svg>
-  )
-}
-
-function IconPhone() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="5" y="2" width="14" height="20" rx="3" />
-      <line x1="12" y1="18" x2="12.01" y2="18" strokeWidth="2.5" />
-    </svg>
-  )
-}

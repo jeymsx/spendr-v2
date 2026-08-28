@@ -1,14 +1,15 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
-import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect } from '../db/txHelpers'
+import db from '../db/db'
+import { postRecurringCharge } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { advanceNextDate, toMonthlyAmount } from '../utils/recurring'
+import { toMonthlyAmount } from '../utils/recurring'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
+import { IconChevronRight, IconPlus } from '../components/icons'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -68,21 +69,6 @@ const FREQ_SHORT = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.short]))
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
-function IconPlus() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  )
-}
-
-function IconChevronRight() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  )
-}
 
 function IconRepeat() {
   return (
@@ -270,7 +256,7 @@ function RecurringRow({ rec, onEdit, onToggle, toggling }) {
         ].join(' ')} />
       </button>
 
-      <IconChevronRight />
+      <IconChevronRight size={15} strokeWidth="2" />
     </button>
   )
 }
@@ -554,7 +540,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
                 ) : (
                   <span className="flex-1 text-sm text-slate-400 dark:text-slate-500">Select category</span>
                 )}
-                <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={15} strokeWidth="2" /></span>
               </button>
               {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
             </div>
@@ -581,7 +567,7 @@ function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
                 ) : (
                   <span className="flex-1 text-sm text-slate-400 dark:text-slate-500">Select account</span>
                 )}
-                <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={15} strokeWidth="2" /></span>
               </button>
               {errors.account && <p className="mt-1 text-xs text-red-500">{errors.account}</p>}
             </div>
@@ -716,28 +702,12 @@ export default function Recurring() {
   async function handlePost(rec) {
     setPosting(rec.id)
     try {
-      const now         = new Date().toISOString()
-      const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
-        await db.transactions.add({
-          txId:             crypto.randomUUID(),
-          type:             'expense',
-          amount:           rec.amount,
-          description:      rec.name,
-          category:         rec.category,
-          payment:          rec.account,
-          account:          rec.account,
-          date:             now,
-          synced:           UNSYNCED,
-          updatedAt:        now,
-          recurringId:      rec.id,
-          recurringPrevDate: rec.nextDate,
-        })
-        await applyBalanceEffect({ type: 'expense', amount: rec.amount, account: rec.account })
-        await db.recurring.update(rec.id, { nextDate: newNextDate })
-      })
+      await postRecurringCharge(rec)
+      showToast(`${rec.name} posted!`)
     } catch (e) {
+      // Was swallowed silently, so a failed post looked like nothing happened.
       console.error('[Recurring] post failed:', e)
+      showToast('Failed to post', 'error')
     } finally {
       setPosting(null)
     }

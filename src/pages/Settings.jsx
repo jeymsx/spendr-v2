@@ -20,6 +20,7 @@ import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { syncToSheets } from '../lib/sheetsSync'
+import { IconCheck, IconChevronRight, IconPlus } from '../components/icons'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -190,15 +191,6 @@ function IconDownload() {
   )
 }
 
-function IconUpload() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
-      <polyline points="17 8 12 3 7 8" />
-      <line x1="12" y1="3" x2="12" y2="15" />
-    </svg>
-  )
-}
 
 function IconTrash() {
   return (
@@ -250,29 +242,6 @@ function IconInfo() {
   )
 }
 
-function IconChevronRight() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="9 18 15 12 9 6" />
-    </svg>
-  )
-}
-
-function IconPlus() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-    </svg>
-  )
-}
-
-function IconCheck() {
-  return (
-    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="20 6 9 17 4 12" />
-    </svg>
-  )
-}
 
 function IconFileText() {
   return (
@@ -1074,7 +1043,7 @@ function CategoryRow({ cat, onTap, onLongPressDelete }) {
       </div>
       <div className="flex items-center gap-2 shrink-0">
         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: cat.color ?? '#2D9DFF' }} />
-        <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+        <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
       </div>
     </div>
   )
@@ -1372,7 +1341,7 @@ function CategoryManagerSheet({ open, onClose }) {
                   border border-primary/20 dark:border-primary/30
                   active:scale-[0.98] transition-transform duration-100"
               >
-                <IconPlus />
+                <IconPlus size={15} strokeWidth="2.5" />
                 Add {activeTab === 'expense' ? 'Expense' : 'Inflow'} Category
               </button>
               <button
@@ -1627,7 +1596,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
                   <button key={c} onClick={() => setColor(c)}
                     className="flex-1 h-10 rounded-xl flex items-center justify-center active:scale-90 transition-transform duration-75 shadow-sm"
                     style={{ backgroundColor: c }}>
-                    {color === c && <IconCheck />}
+                    {color === c && <IconCheck size={13} strokeWidth="3" stroke="white" />}
                   </button>
                 ))}
               </div>
@@ -1774,7 +1743,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
                     <p className="flex-1 text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
                     {reassignTarget?.id === cat.id && (
                       <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center shrink-0">
-                        <IconCheck />
+                        <IconCheck size={13} strokeWidth="3" stroke="white" />
                       </span>
                     )}
                   </button>
@@ -1846,7 +1815,7 @@ function TemplateRow({ tpl, catIcon, onTap, onLongPressDelete }) {
         </p>
       </div>
       <p className={`text-sm font-bold tabular-nums shrink-0 ${ts.text}`}>{tfmt(tpl.amount)}</p>
-      <span className="text-slate-300 dark:text-slate-600 shrink-0"><IconChevronRight /></span>
+      <span className="text-slate-300 dark:text-slate-600 shrink-0"><IconChevronRight size={14} strokeWidth="2" /></span>
     </div>
   )
 }
@@ -2034,7 +2003,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                   <span className={`flex-1 text-sm ${category ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                     {category?.name ?? 'Select category'}
                   </span>
-                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                 </button>
               </div>
             )}
@@ -2053,7 +2022,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                   <span className={`flex-1 text-sm ${account ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                     {account?.name ?? 'Select account'}
                   </span>
-                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                 </button>
               </div>
             ) : (
@@ -2070,7 +2039,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                     <span className={`flex-1 text-sm ${fromAcct ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                       {fromAcct?.name ?? 'Select account'}
                     </span>
-                    <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                    <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                   </button>
                 </div>
                 <div>
@@ -2085,7 +2054,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                     <span className={`flex-1 text-sm ${toAcct ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                       {toAcct?.name ?? 'Select account'}
                     </span>
-                    <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                    <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                   </button>
                 </div>
               </>
@@ -2209,7 +2178,7 @@ function TemplateManagerSheet({ open, onClose }) {
                   text-primary bg-primary/[0.07] dark:bg-primary/[0.12]
                   border border-primary/20 dark:border-primary/30
                   active:scale-[0.98] transition-transform duration-100">
-                <IconPlus />
+                <IconPlus size={15} strokeWidth="2.5" />
                 Add Template
               </button>
               <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-2.5">
@@ -2727,7 +2696,7 @@ export default function Settings() {
             </div>
           </div>
           <span className="text-slate-300 dark:text-slate-600 shrink-0">
-            <IconChevronRight />
+            <IconChevronRight size={14} strokeWidth="2" />
           </span>
         </button>
       </div>
@@ -2751,7 +2720,7 @@ export default function Settings() {
             right={
               <div className="flex items-center gap-2.5">
                 <span className="w-5 h-5 rounded-full shrink-0" style={{ backgroundColor: accentColor }} />
-                <IconChevronRight />
+                <IconChevronRight size={14} strokeWidth="2" />
               </div>
             }
             onTap={() => setAccentOpen(true)}
@@ -2787,7 +2756,7 @@ export default function Settings() {
             iconEl={<RowIcon color="amber"><IconTag /></RowIcon>}
             label="Categories"
             sublabel="Customize expense and inflow categories"
-            right={<IconChevronRight />}
+            right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setCatMgrOpen(true)}
           />
           <RowDivider />
@@ -2795,7 +2764,7 @@ export default function Settings() {
             iconEl={<RowIcon color="green"><IconTarget /></RowIcon>}
             label="Monthly Budgets"
             sublabel="Set spending limits per category"
-            right={<IconChevronRight />}
+            right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setBudgetMgrOpen(true)}
           />
           <RowDivider />
@@ -2803,7 +2772,7 @@ export default function Settings() {
             iconEl={<RowIcon color="amber"><span className="text-base">⚡</span></RowIcon>}
             label="Quick Templates"
             sublabel="One-tap repeat transactions"
-            right={<IconChevronRight />}
+            right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setTmplMgrOpen(true)}
           />
         </SectionCard>
@@ -2820,7 +2789,7 @@ export default function Settings() {
             right={
               exporting
                 ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                : <IconChevronRight />
+                : <IconChevronRight size={14} strokeWidth="2" />
             }
             onTap={() => setShowExportConfirm(true)}
             disabled={exporting}
@@ -2833,7 +2802,7 @@ export default function Settings() {
             right={
               backingUp
                 ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                : <IconChevronRight />
+                : <IconChevronRight size={14} strokeWidth="2" />
             }
             onTap={() => setShowBackupConfirm(true)}
             disabled={backingUp}
@@ -2878,7 +2847,7 @@ export default function Settings() {
             iconEl={<RowIcon color="slate"><IconRefresh /></RowIcon>}
             label="Redo Onboarding"
             sublabel="Restart the setup flow"
-            right={<IconChevronRight />}
+            right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={handleRedoOnboarding}
           /> */}
         </SectionCard>
@@ -2926,7 +2895,7 @@ export default function Settings() {
               iconEl={<RowIcon color="violet"><IconCloud /></RowIcon>}
               label="Enable Cloud Sync"
               sublabel="Sign in with Google to sync across devices"
-              right={<IconChevronRight />}
+              right={<IconChevronRight size={14} strokeWidth="2" />}
               onTap={() => navigate('/login')}
             />
           )}
@@ -2977,7 +2946,7 @@ export default function Settings() {
               sublabel={user.email ?? ''}
               right={loggingOut
                 ? <span className="w-4 h-4 border-2 border-red-300 border-t-red-500 rounded-full animate-spin" />
-                : <IconChevronRight />
+                : <IconChevronRight size={14} strokeWidth="2" />
               }
               onTap={() => setShowSignOutConfirm(true)}
               destructive
@@ -3121,7 +3090,7 @@ export default function Settings() {
             iconEl={<RowIcon color="red"><IconTrash /></RowIcon>}
             label="Reset App"
             sublabel="Permanently delete all local data"
-            right={<IconChevronRight />}
+            right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setResetOpen(true)}
             destructive
           />
@@ -3135,7 +3104,7 @@ export default function Settings() {
             iconEl={<RowIcon color="slate"><IconFileText /></RowIcon>}
             label="Legal"
             sublabel="Privacy Policy & Terms of Use"
-            right={<IconChevronRight />}
+            right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setLegalOpen(true)}
           />
         </SectionCard>
@@ -3163,7 +3132,7 @@ export default function Settings() {
                 >
                   <RowIcon color="slate"><IconFileText /></RowIcon>
                   <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Privacy Policy</span>
-                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                 </button>
                 <button
                   onClick={() => { setLegalOpen(false); setTimeout(() => setPolicyOpen('terms'), 60) }}
@@ -3173,7 +3142,7 @@ export default function Settings() {
                 >
                   <RowIcon color="slate"><IconInfo /></RowIcon>
                   <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Terms of Use</span>
-                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight /></span>
+                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                 </button>
               </div>
             </div>

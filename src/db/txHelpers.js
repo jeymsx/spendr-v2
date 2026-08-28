@@ -1,4 +1,5 @@
-import db from './db'
+import db, { UNSYNCED } from './db'
+import { advanceNextDate } from '../utils/recurring'
 
 async function adjustBalance(accountName, delta) {
   if (!accountName || !delta) return
@@ -50,4 +51,44 @@ export async function applyBalanceEffect(tx) {
     const toCredit = await isCredit(tx.toAccount)
     await adjustBalance(tx.toAccount, toCredit ? -a : +a)
   }
+}
+
+/**
+ * Post one occurrence of a recurring bill: write the charge, apply the balance
+ * effect, and advance nextDate — all inside one transaction, so a failure can't
+ * leave the bill advanced without a matching charge.
+ *
+ * Both the Dashboard widget and the Recurring page call this. They previously
+ * had their own copies and had drifted: the Dashboard's transaction scope left
+ * out db.balances, which applyBalanceEffect writes to, so Dexie rejected every
+ * post from the home screen and rolled the whole thing back. Its copy also
+ * stored a date-only string instead of a full ISO timestamp, and omitted the
+ * `payment` field.
+ *
+ * @returns the new nextDate
+ */
+export async function postRecurringCharge(rec) {
+  const nowISO      = new Date().toISOString()
+  const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
+
+  await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
+    await db.transactions.add({
+      txId:              crypto.randomUUID(),
+      type:              'expense',
+      amount:            rec.amount,
+      description:       rec.name,
+      category:          rec.category,
+      payment:           rec.account,
+      account:           rec.account,
+      date:              nowISO,
+      synced:            UNSYNCED,
+      updatedAt:         nowISO,
+      recurringId:       rec.id,
+      recurringPrevDate: rec.nextDate,
+    })
+    await applyBalanceEffect({ type: 'expense', amount: rec.amount, account: rec.account })
+    await db.recurring.update(rec.id, { nextDate: newNextDate })
+  })
+
+  return newNextDate
 }
