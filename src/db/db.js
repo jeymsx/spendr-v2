@@ -36,6 +36,22 @@ db.version(7).stores({
   accounts: '++id, name, type, role, balance, currency, creditLimit, statementDate, dueDate, cutoffDate, minimumPayment, color, parentName, sort_order',
 })
 
+// v8 — drop transaction indexes nothing queries. `description`, `payment`,
+// `amount` and `updatedAt` never appear in a where() or orderBy(), so every
+// write was maintaining four extra B-trees for nothing, and `description` is
+// the worst of them: a long free-text string indexed on every insert.
+//
+// Removing an index does not touch stored data — the properties stay on every
+// record, only the ability to query by them goes, and nothing does. `type` is
+// kept despite also being unqueried: it's the one plausible future filter
+// (the Transactions page filters by it in JS today).
+//
+// Only `transactions` is listed, so every other table carries its v7 schema
+// forward unchanged.
+db.version(8).stores({
+  transactions: '++id, txId, type, date, category, account, fromAccount, toAccount, synced',
+})
+
 // ── Seed data ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_ACCOUNTS = [
