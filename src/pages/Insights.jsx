@@ -6,6 +6,7 @@ import {
 } from 'recharts'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { scheduledCutoff } from '../utils/scheduled'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -650,8 +651,15 @@ export default function Insights() {
   const catMap  = useMemo(() => Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
   const acctMap = useMemo(() => Object.fromEntries((accounts ?? []).map(a => [a.name, a])), [accounts])
 
-  const expenses = useMemo(() => (rangeTxs ?? []).filter(t => t.type === 'expense'), [rangeTxs])
-  const inflows  = useMemo(() => (rangeTxs ?? []).filter(t => t.type === 'inflow'),  [rangeTxs])
+  // Charges dated beyond today are committed, not spent — an installment
+  // scheduled later this month must not count against this month's totals.
+  const postedTxs = useMemo(() => {
+    const cutoff = scheduledCutoff()
+    return (rangeTxs ?? []).filter(t => (t.date ?? '') <= cutoff)
+  }, [rangeTxs])
+
+  const expenses = useMemo(() => postedTxs.filter(t => t.type === 'expense'), [postedTxs])
+  const inflows  = useMemo(() => postedTxs.filter(t => t.type === 'inflow'),  [postedTxs])
 
   const totalSpent  = useMemo(() => expenses.reduce((s, t) => s + (t.amount ?? 0), 0), [expenses])
   const totalEarned = useMemo(() => inflows.reduce((s, t)  => s + (t.amount ?? 0), 0), [inflows])
@@ -711,7 +719,7 @@ export default function Insights() {
       return Array.from({ length: numMonths }, (_, i) => {
         const d = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1 - i), 1)
         const { start, end } = monthBounds(d.getFullYear(), d.getMonth())
-        const txs = (rangeTxs ?? []).filter(t => t.date >= start && t.date < end)
+        const txs = postedTxs.filter(t => t.date >= start && t.date < end)
         return {
           label:   MONTHS_SHORT[d.getMonth()],
           income:  txs.filter(t => t.type === 'inflow').reduce((s, t)  => s + (t.amount ?? 0), 0),
@@ -720,7 +728,7 @@ export default function Insights() {
       })
     }
     if (range === 'all') {
-      const txs = rangeTxs ?? []
+      const txs = postedTxs
       if (!txs.length) return []
       const dates = txs.map(t => t.date ?? '').filter(Boolean).sort()
       const firstDate = dates[0], lastDate = dates[dates.length - 1]
@@ -756,7 +764,7 @@ export default function Insights() {
       }
     }
     return []
-  }, [range, rangeTxs])
+  }, [range, postedTxs])
 
   const topExpenses = useMemo(() =>
     [...expenses].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)).slice(0, 5),

@@ -9,6 +9,7 @@ import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconBank, IconCard, IconPhone, IconWallet } from '../components/icons'
+import { scheduledCutoff } from '../utils/scheduled'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -195,14 +196,22 @@ export default function Dashboard() {
     return map
   }, [accounts])
 
-  const recentTx = useMemo(() =>
-    [...(txAll || [])].sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')).slice(0, 10),
-    [txAll],
-  )
+  // Scheduled installments are deliberately excluded here but NOT from
+  // creditStmtMap below — what you owe includes them, what you've spent doesn't.
+  // Without this they'd sort to the top of Recent and sit there for months.
+  const recentTx = useMemo(() => {
+    const cutoff = scheduledCutoff()
+    return (txAll || [])
+      .filter(t => (t.date ?? '') <= cutoff)
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+      .slice(0, 10)
+  }, [txAll])
 
   const monthExpenses = useMemo(() => {
     const pfx = monthPrefix()
-    return (txAll || []).filter(t => t.type === 'expense' && (t.date ?? '').startsWith(pfx))
+    const cutoff = scheduledCutoff()
+    return (txAll || []).filter(t =>
+      t.type === 'expense' && (t.date ?? '').startsWith(pfx) && (t.date ?? '') <= cutoff)
   }, [txAll])
 
   const budgetCategories = useMemo(() => {

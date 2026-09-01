@@ -4,6 +4,7 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import TxDetailSheet from '../components/TxDetailSheet'
 import CalendarView from '../components/CalendarView'
+import { scheduledCutoff } from '../utils/scheduled'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -604,7 +605,11 @@ export default function Transactions() {
 
   const filteredTx = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase()
+    // Installments write their whole schedule up front; a charge dated beyond
+    // today is committed, not spent, so it stays out of the history until then.
+    const cutoff = scheduledCutoff()
     return (txAll ?? []).filter(tx => {
+      if ((tx.date ?? '') > cutoff) return false
       if (q && !(tx.description ?? '').toLowerCase().includes(q) &&
                !(tx.category   ?? '').toLowerCase().includes(q)) return false
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false
