@@ -73,22 +73,22 @@ export default function WebDebts() {
         <div className="flex items-start justify-between gap-3 mb-2">
           <div className="min-w-0">
             <p className={`text-sm font-semibold truncate ${dim
-              ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white'}`}>
+              ? 'text-slate-500 dark:text-slate-400' : 'text-slate-800 dark:text-white'}`}>
               {d.name || d.contact || 'Unnamed'}
             </p>
             {d.contact && d.name && (
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{d.contact}</p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{d.contact}</p>
             )}
           </div>
           <div className="text-right shrink-0">
             <p className={`text-sm font-bold tabular-nums ${dim
-              ? 'text-slate-400 dark:text-slate-500'
-              : tab === 'i_owe' ? 'text-red-500 dark:text-red-400'
-                                : 'text-emerald-600 dark:text-emerald-400'}`}>
+              ? 'text-slate-500 dark:text-slate-400'
+              : tab === 'i_owe' ? 'text-red-600 dark:text-red-400'
+                                : 'text-emerald-700 dark:text-emerald-400'}`}>
               {money(dim ? d.amount : rem)}
             </p>
             {!dim && paid > 0 && (
-              <p className="text-[10px] text-slate-400 dark:text-slate-500">
+              <p className="text-[10px] text-slate-500 dark:text-slate-400">
                 {money(paid)} of {money(d.amount)} paid
               </p>
             )}
@@ -99,8 +99,8 @@ export default function WebDebts() {
 
         <div className="flex items-center justify-between gap-3">
           <p className={`text-[11px] ${due?.overdue
-            ? 'text-red-500 dark:text-red-400 font-semibold'
-            : 'text-slate-400 dark:text-slate-500'}`}>
+            ? 'text-red-600 dark:text-red-400 font-semibold'
+            : 'text-slate-500 dark:text-slate-400'}`}>
             {dim ? 'Settled' : (due?.label ?? 'No due date')}
           </p>
           <div className="flex items-center gap-2">
@@ -125,7 +125,7 @@ export default function WebDebts() {
         </div>
 
         {d.notes && !dim && (
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2 line-clamp-2">{d.notes}</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 line-clamp-2">{d.notes}</p>
         )}
       </div>
     )
@@ -145,7 +145,7 @@ export default function WebDebts() {
                     'px-3 h-7 rounded-lg text-xs font-semibold transition-colors duration-150',
                     tab === t.key
                       ? 'bg-white dark:bg-white/[0.12] text-slate-800 dark:text-white shadow-sm'
-                      : 'text-slate-500 dark:text-slate-400',
+                      : 'text-slate-600 dark:text-slate-400',
                   ].join(' ')}
                 >
                   {t.label}
@@ -176,7 +176,7 @@ export default function WebDebts() {
           rather than matching a long list of open debts. */}
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         <WebPanel title={tab === 'i_owe' ? 'I owe' : 'Owed to me'}
-          action={<span className="text-[11px] text-slate-400 dark:text-slate-500">
+          action={<span className="text-[11px] text-slate-500 dark:text-slate-400">
             {openItems.length} open</span>}>
           {openItems.length === 0 ? <WebEmpty>Nothing outstanding here</WebEmpty> : (
             <div className="flex flex-col gap-3">
@@ -186,7 +186,7 @@ export default function WebDebts() {
         </WebPanel>
 
         <WebPanel title="Settled"
-          action={<span className="text-[11px] text-slate-400 dark:text-slate-500">
+          action={<span className="text-[11px] text-slate-500 dark:text-slate-400">
             {settled.length}</span>}>
           {settled.length === 0 ? <WebEmpty>Nothing settled yet</WebEmpty> : (
             <div className="flex flex-col gap-3">

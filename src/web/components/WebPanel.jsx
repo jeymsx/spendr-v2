@@ -70,9 +70,9 @@ export function WebPanel({ title, action, to, children, className = '', bodyClas
  * indistinguishable from a transfer at a glance.
  */
 export const AMOUNT_TONE = {
-  expense:  { cls: 'text-red-500 dark:text-red-400',         sign: '\u2212' },
-  inflow:   { cls: 'text-emerald-600 dark:text-emerald-400', sign: '+' },
-  transfer: { cls: 'text-blue-500 dark:text-blue-400',       sign: ''  },
+  expense:  { cls: 'text-red-600 dark:text-red-400',         sign: '\u2212' },
+  inflow:   { cls: 'text-emerald-700 dark:text-emerald-400', sign: '+' },
+  transfer: { cls: 'text-blue-600 dark:text-blue-400',       sign: ''  },
 }
 
 export const amountTone = (type) =>
@@ -82,25 +82,25 @@ export const amountTone = (type) =>
 export function WebStat({ label, value, hint, tone = 'default' }) {
   const toneClass = {
     default: 'text-slate-900 dark:text-white',
-    good:    'text-emerald-600 dark:text-emerald-400',
-    bad:     'text-red-500 dark:text-red-400',
+    good:    'text-emerald-700 dark:text-emerald-400',
+    bad:     'text-red-600 dark:text-red-400',
     accent:  'text-primary',
   }[tone] ?? 'text-slate-900 dark:text-white'
 
   return (
     <div className="card rounded-2xl px-5 py-4 min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {label}
       </p>
       <p className={`text-2xl font-bold tabular-nums mt-1.5 truncate ${toneClass}`}>{value}</p>
-      {hint && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1 truncate">{hint}</p>}
+      {hint && <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">{hint}</p>}
     </div>
   )
 }
 
 export function WebEmpty({ children }) {
   return (
-    <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">{children}</p>
+    <p className="text-sm text-slate-500 dark:text-slate-400 text-center py-8">{children}</p>
   )
 }
 

@@ -391,6 +391,20 @@ html.web .web-embed .sticky.top-0 {
   background: transparent;
 }
 
+/* The importer is mobile code reused inside a desktop card, and it carries the
+   same inverted muted tier the web layer used to: slate-400 in light (2.4-2.6
+   against the card) and slate-500 in dark (3.3-3.7), both under AA at the
+   10-12px sizes it uses for step labels, hints and the .csv pill. The web
+   files were fixed by swapping the two steps; this applies the same swap to
+   the embedded wizard, desktop-only, without editing the component.
+
+   Every text-slate-400 in ImportWizard is either bare or paired with
+   dark:text-slate-500 - there is no combination that wants a lighter dark
+   step - so one rule per mode is enough, and each outranks the utility it
+   overrides on specificity rather than source order. */
+html.web .web-embed .text-slate-400      { color: rgb(90 106 130); }  /* just past slate-500, to clear the slate-100 pill too */
+html.web.dark .web-embed .text-slate-400 { color: rgb(144 161 185); } /* slate-400 */
+
 /* Onboarding is the phone flow shown as-is on desktop: full-bleed on a
    1500px screen it left the heading, the account search and the Continue
    button stretched edge to edge. Capping the two stacked children - the step

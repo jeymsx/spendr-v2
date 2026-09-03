@@ -46,11 +46,11 @@ function nextOccurrence(day) {
 /** One row of an account's ledger. Tappable so it reaches TxDetailSheet. */
 function LedgerRow({ tx, accountName, catMap, onSelect }) {
   let sign = '', tone = 'text-slate-700 dark:text-slate-200'
-  if (tx.type === 'expense' && tx.account === accountName) { sign = '−'; tone = 'text-red-500 dark:text-red-400' }
-  else if (tx.type === 'inflow' && tx.account === accountName) { sign = '+'; tone = 'text-emerald-600 dark:text-emerald-400' }
+  if (tx.type === 'expense' && tx.account === accountName) { sign = '−'; tone = 'text-red-600 dark:text-red-400' }
+  else if (tx.type === 'inflow' && tx.account === accountName) { sign = '+'; tone = 'text-emerald-700 dark:text-emerald-400' }
   else if (tx.type === 'transfer') {
-    if (tx.fromAccount === accountName) { sign = '−'; tone = 'text-red-500 dark:text-red-400' }
-    if (tx.toAccount === accountName)   { sign = '+'; tone = 'text-emerald-600 dark:text-emerald-400' }
+    if (tx.fromAccount === accountName) { sign = '−'; tone = 'text-red-600 dark:text-red-400' }
+    if (tx.toAccount === accountName)   { sign = '+'; tone = 'text-emerald-700 dark:text-emerald-400' }
   }
   const label = tx.description || (tx.type === 'transfer'
     ? (tx.fromAccount === accountName ? `→ ${tx.toAccount}` : `← ${tx.fromAccount}`)
@@ -66,7 +66,7 @@ function LedgerRow({ tx, accountName, catMap, onSelect }) {
       <span className="w-6 text-base shrink-0">{catMap[tx.category]?.icon ?? '📦'}</span>
       <span className="flex-1 min-w-0">
         <span className="block text-[13px] font-medium text-slate-800 dark:text-slate-100 truncate">{label}</span>
-        <span className="block text-[10px] text-slate-400 dark:text-slate-500">
+        <span className="block text-[10px] text-slate-500 dark:text-slate-400">
           {fmtDay(tx.date)}{isInstallmentRow(tx) ? ' · installment' : ''}
         </span>
       </span>
@@ -186,7 +186,7 @@ export default function WebAccounts() {
         <div className="w-full xl:w-[320px] shrink-0 flex flex-col gap-6">
           {grouped.map(g => (
             <WebPanel key={g.key} title={g.label} bodyClass="px-2 pb-2"
-              action={<span className="text-[11px] font-semibold tabular-nums text-slate-400 dark:text-slate-500">
+              action={<span className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
                 {moneyCompact(g.key === 'credit'
                   ? g.items.reduce((s, a) => s + (creditStatus[a.name]?.currentBalance ?? 0), 0)
                   : g.items.reduce((s, a) => s + (a.balance ?? 0), 0))}
@@ -213,13 +213,13 @@ export default function WebAccounts() {
                         {a.name}
                       </span>
                       {a.type === 'credit' && (
-                        <span className="block text-[10px] text-slate-400 dark:text-slate-500">
+                        <span className="block text-[10px] text-slate-500 dark:text-slate-400">
                           {money((a.creditLimit ?? 0) - (cs?.currentBalance ?? 0))} avail
                         </span>
                       )}
                     </span>
                     <span className={`text-[13px] font-bold tabular-nums shrink-0
-                      ${a.type === 'credit' ? 'text-red-500 dark:text-red-400'
+                      ${a.type === 'credit' ? 'text-red-600 dark:text-red-400'
                                             : 'text-slate-700 dark:text-slate-200'}`}>
                       {moneyCompact(a.type === 'credit' ? (cs?.currentBalance ?? 0) : (a.balance ?? 0))}
                     </span>
@@ -251,14 +251,14 @@ export default function WebAccounts() {
                   <>
                     <div className="flex items-end justify-between gap-4 mb-3">
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Balance used
                         </p>
-                        <p className="text-3xl font-bold tabular-nums text-red-500 dark:text-red-400">
+                        <p className="text-3xl font-bold tabular-nums text-red-600 dark:text-red-400">
                           {money(st.currentBalance ?? 0)}
                         </p>
                       </div>
-                      <p className="text-xs text-slate-400 dark:text-slate-500 text-right">
+                      <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
                         {money((selected.creditLimit ?? 0) - (st.currentBalance ?? 0))} available
                         <br />of {money(selected.creditLimit)} limit
                       </p>
@@ -270,37 +270,37 @@ export default function WebAccounts() {
                     />
                     <div className="grid grid-cols-4 gap-3 mt-5">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Statement</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Statement</p>
                         <p className={`text-sm font-bold tabular-nums mt-0.5 ${st.stmtPaid
-                          ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
+                          ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
                           {st.stmtPaid ? 'Paid' : money(st.thisTotal ?? 0)}
                         </p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
                           {cycleDay(st.cycleStart)} – {cycleDay(st.cycleEnd)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Unbilled</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Unbilled</p>
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-slate-800 dark:text-white">
                           {money(st.nextTotal ?? 0)}
                         </p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
                           from {cycleDay(getNextCycleRange(selected.cutoffDate).cycleStart)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Paid</p>
-                        <p className="text-sm font-bold tabular-nums mt-0.5 text-emerald-600 dark:text-emerald-400">
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Paid</p>
+                        <p className="text-sm font-bold tabular-nums mt-0.5 text-emerald-700 dark:text-emerald-400">
                           {money(st.totalPayments ?? 0)}
                         </p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500">since cutoff</p>
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">since cutoff</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">Due</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Due</p>
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-slate-800 dark:text-white">
                           {cycleDay(nextOccurrence(selected.dueDate))}
                         </p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500">
+                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
                           min {moneyCompact(selected.minimumPayment ?? 0)}
                         </p>
                       </div>
@@ -309,14 +309,14 @@ export default function WebAccounts() {
                 ) : (
                   <div className="flex items-end justify-between gap-4">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
+                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         Balance
                       </p>
                       <p className="text-3xl font-bold tabular-nums text-slate-900 dark:text-white">
                         {money(selected.balance)}
                       </p>
                     </div>
-                    <p className="text-xs text-slate-400 dark:text-slate-500 text-right capitalize">
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-right capitalize">
                       {selected.type}{selected.role ? ` · ${selected.role}` : ''}
                       <br />{ledger.length} transaction{ledger.length === 1 ? '' : 's'}
                     </p>
@@ -327,7 +327,7 @@ export default function WebAccounts() {
               <WebPanel
                 title="Ledger"
                 flush
-                action={<span className="text-[11px] text-slate-400 dark:text-slate-500">
+                action={<span className="text-[11px] text-slate-500 dark:text-slate-400">
                   {ledger.length} entr{ledger.length === 1 ? 'y' : 'ies'}
                 </span>}
               >

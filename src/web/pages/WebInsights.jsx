@@ -203,7 +203,7 @@ export default function WebInsights() {
                     'px-3 h-7 rounded-lg text-xs font-semibold transition-colors duration-150',
                     range === r.key
                       ? 'bg-white dark:bg-white/[0.12] text-slate-800 dark:text-white shadow-sm'
-                      : 'text-slate-500 dark:text-slate-400',
+                      : 'text-slate-600 dark:text-slate-400',
                   ].join(' ')}
                 >
                   {r.label}
@@ -249,7 +249,7 @@ export default function WebInsights() {
                     <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200 shrink-0">
                       {moneyCompact(c.value)}
                     </span>
-                    <span className="text-[10px] text-slate-400 dark:text-slate-500 w-9 text-right shrink-0">
+                    <span className="text-[10px] text-slate-500 dark:text-slate-400 w-9 text-right shrink-0">
                       {spent > 0 ? Math.round((c.value / spent) * 100) : 0}%
                     </span>
                   </div>
@@ -261,7 +261,7 @@ export default function WebInsights() {
 
         <WebPanel title={range === '1m' ? 'Daily flow' : 'Monthly flow'}>
           {series.length === 0 ? <WebEmpty>Nothing to chart yet</WebEmpty> : (
-            <div className="h-[190px] text-slate-400 dark:text-slate-500">
+            <div className="h-[190px] text-slate-500 dark:text-slate-400">
               <ResponsiveContainer width="100%" height="100%">
                 {/* barCategoryGap/barGap and the two fills match the mobile
                     chart, so a month reads the same in either layout - the
@@ -300,7 +300,7 @@ export default function WebInsights() {
                       <p className="font-medium text-slate-800 dark:text-slate-100 truncate max-w-[300px]">
                         {t.description || t.category || '—'}
                       </p>
-                      <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
                         {t.account} · {new Date(t.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                       </p>
                     </td>
@@ -350,9 +350,9 @@ export default function WebInsights() {
                           {c.icon} {c.name}
                         </span>
                         <span className={`text-xs font-bold tabular-nums shrink-0 ${
-                          over ? 'text-red-500 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
+                          over ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>
                           {moneyCompact(c.spent)}
-                          <span className="font-medium text-slate-400 dark:text-slate-500">
+                          <span className="font-medium text-slate-500 dark:text-slate-400">
                             {' / '}{moneyCompact(c.budget)}
                           </span>
                         </span>

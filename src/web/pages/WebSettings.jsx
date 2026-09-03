@@ -51,10 +51,10 @@ function Row({ label, hint, children, danger }) {
       border-b border-slate-100 dark:border-white/[0.05] last:border-0">
       <div className="min-w-0">
         <p className={`text-sm font-medium ${danger
-          ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
+          ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}>
           {label}
         </p>
-        {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{hint}</p>}
+        {hint && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>}
       </div>
       <div className="shrink-0 flex items-center gap-2">{children}</div>
     </div>
@@ -66,7 +66,7 @@ function StackRow({ label, hint, children }) {
   return (
     <div className="py-3.5 border-b border-slate-100 dark:border-white/[0.05] last:border-0">
       <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{label}</p>
-      {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{hint}</p>}
+      {hint && <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>}
       <div className="mt-3">{children}</div>
     </div>
   )
@@ -215,7 +215,7 @@ export default function WebSettings() {
                 section === s.key
                   ? 'bg-primary/[0.12] text-primary dark:bg-primary/[0.18]'
                   : s.key === 'danger'
-                    ? 'text-red-500/80 hover:bg-red-50 dark:text-red-400/80 dark:hover:bg-red-500/[0.08]'
+                    ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/[0.08]'
                     : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/[0.05]',
               ].join(' ')}
             >
@@ -341,7 +341,7 @@ export default function WebSettings() {
             <div className="flex flex-col gap-6">
               <WebPanel title="Cloud sync">
                 {!isSupabaseConfigured ? (
-                  <p className="text-xs text-amber-600 dark:text-amber-400 py-2">
+                  <p className="text-xs text-amber-700 dark:text-amber-400 py-2">
                     Not configured on this device — VITE_SUPABASE_URL and
                     VITE_SUPABASE_ANON_KEY are unset, so Spendr is running offline-only
                     against local storage. Everything else works.
@@ -392,7 +392,7 @@ export default function WebSettings() {
                 hint="Permanently deletes every transaction, account, category, debt and recurring payment on this device">
                 <Btn tone="danger" onClick={() => setSheet('reset')}>Reset…</Btn>
               </Row>
-              <p className="text-xs text-slate-400 dark:text-slate-500 pt-3">
+              <p className="text-xs text-slate-500 dark:text-slate-400 pt-3">
                 If you're signed in, your cloud copy is separate — resetting here does not
                 delete it, and signing back in re-downloads it. Export a backup first if
                 you want a local copy.

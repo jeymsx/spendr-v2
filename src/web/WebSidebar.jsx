@@ -63,7 +63,7 @@ export default function WebSidebar() {
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{name}</p>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{name}</p>
           </div>
         </div>
       </div>
@@ -88,7 +88,7 @@ export default function WebSidebar() {
           onClick={() => setViewMode('mobile')}
           className="w-full flex items-center gap-3 px-3 h-9 rounded-xl text-xs font-medium
             text-slate-500 hover:bg-slate-100 hover:text-slate-700
-            dark:text-slate-500 dark:hover:bg-white/[0.05] dark:hover:text-slate-300
+            dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-slate-200
             transition-colors duration-150"
         >
           <WebIconPhone />

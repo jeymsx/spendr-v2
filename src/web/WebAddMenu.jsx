@@ -4,8 +4,8 @@ import { useAddFlow } from './AddFlow'
 import { WebIconPlus } from './WebIcons'
 
 const FLOWS = [
-  { key: 'expense',  label: 'Expense',  hint: 'Money out',    sign: '−', tone: 'text-red-500 dark:text-red-400' },
-  { key: 'inflow',   label: 'Income',   hint: 'Money in',     sign: '+', tone: 'text-emerald-600 dark:text-emerald-400' },
+  { key: 'expense',  label: 'Expense',  hint: 'Money out',    sign: '−', tone: 'text-red-600 dark:text-red-400' },
+  { key: 'inflow',   label: 'Income',   hint: 'Money in',     sign: '+', tone: 'text-emerald-700 dark:text-emerald-400' },
   { key: 'transfer', label: 'Transfer', hint: 'Between accounts', sign: '⇄', tone: 'text-primary' },
 ]
 
@@ -138,7 +138,7 @@ export default function WebAddMenu() {
                 <span className="block text-[13px] font-semibold text-slate-800 dark:text-white leading-tight">
                   {f.label}
                 </span>
-                <span className="block text-[10px] text-slate-400 dark:text-slate-500 truncate">
+                <span className="block text-[10px] text-slate-500 dark:text-slate-400 truncate">
                   {f.hint}
                 </span>
               </span>

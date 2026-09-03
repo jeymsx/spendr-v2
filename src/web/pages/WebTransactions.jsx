@@ -191,18 +191,18 @@ export default function WebTransactions() {
             placeholder="Search description, category or account…  ( / )"
             className="w-full h-9 pl-9 pr-8 rounded-xl text-xs font-medium
               bg-white dark:bg-white/[0.06] text-slate-700 dark:text-slate-200
-              placeholder-slate-400 dark:placeholder-slate-500
+              placeholder-slate-500 dark:placeholder-slate-400
               border border-slate-200 dark:border-white/[0.09] outline-none
               focus:border-primary dark:focus:border-primary"
           />
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
             strokeWidth="2" strokeLinecap="round"
-            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
+            className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">
             <circle cx="11" cy="11" r="7" /><line x1="16.5" y1="16.5" x2="21" y2="21" />
           </svg>
           {search && (
             <button onClick={() => setSearch('')} aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                 strokeWidth="2.4" strokeLinecap="round">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -220,7 +220,7 @@ export default function WebTransactions() {
                 'px-3 h-7 rounded-lg text-xs font-semibold transition-colors duration-150',
                 type === t.key
                   ? 'bg-white dark:bg-white/[0.12] text-slate-800 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400',
+                  : 'text-slate-600 dark:text-slate-400',
               ].join(' ')}
             >
               {t.label}
@@ -247,7 +247,7 @@ export default function WebTransactions() {
               <table className="w-full text-sm min-w-[680px]">
                 <thead>
                   <tr className="text-[10px] font-semibold uppercase tracking-wide
-                    text-slate-400 dark:text-slate-500">
+                    text-slate-500 dark:text-slate-400">
                     <th className="text-left font-semibold px-5 py-2.5 w-[152px]">Date</th>
                     <th className="text-left font-semibold px-3 py-2.5">Description</th>
                     <th className="text-left font-semibold px-3 py-2.5 w-[148px]">Category</th>
@@ -290,7 +290,7 @@ export default function WebTransactions() {
                           <span className="text-[13px] font-medium text-slate-700 dark:text-slate-200">
                             {fmtDay(t.date)}
                           </span>
-                          <span className="ml-1.5 text-[11px] text-slate-400 dark:text-slate-500">
+                          <span className="ml-1.5 text-[11px] text-slate-500 dark:text-slate-400">
                             {fmtTime(t.date)}
                           </span>
                         </td>
@@ -345,7 +345,7 @@ export default function WebTransactions() {
                     active:scale-[0.99] transition-transform duration-100"
                 >
                   Show {Math.min(PAGE, filtered.length - visible)} more
-                  <span className="text-slate-400 dark:text-slate-500 font-medium">
+                  <span className="text-slate-500 dark:text-slate-400 font-medium">
                     {' '}· {filtered.length - visible} remaining
                   </span>
                 </button>
@@ -358,11 +358,16 @@ export default function WebTransactions() {
         <aside className="w-full xl:w-[340px] shrink-0 xl:sticky xl:top-0">
           {!selected ? (
             <WebPanel title="Details">
-              <p className="text-xs text-slate-400 dark:text-slate-500 py-6 text-center leading-relaxed">
+              <p className="text-xs text-slate-500 dark:text-slate-400 py-6 text-center leading-relaxed">
                 Select a transaction to see its details.
                 <br />
-                <span className="text-[11px]">Press <kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-white/[0.08] font-mono">/</kbd> to search,
-                {' '}<kbd className="px-1 py-0.5 rounded bg-slate-100 dark:bg-white/[0.08] font-mono">Esc</kbd> to clear.</span>
+                <span className="text-[11px]">Press{' '}
+                <kbd className="px-1 py-0.5 rounded font-mono
+                  bg-slate-100 dark:bg-white/[0.08]
+                  text-slate-600 dark:text-slate-300">/</kbd> to search,{' '}
+                <kbd className="px-1 py-0.5 rounded font-mono
+                  bg-slate-100 dark:bg-white/[0.08]
+                  text-slate-600 dark:text-slate-300">Esc</kbd> to clear.</span>
               </p>
             </WebPanel>
           ) : (
@@ -370,7 +375,7 @@ export default function WebTransactions() {
               title="Details"
               action={
                 <button onClick={() => setSelected(null)} aria-label="Close details"
-                  className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300">
+                  className="text-slate-500 dark:text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
                   <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     strokeWidth="2.2" strokeLinecap="round">
                     <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
@@ -396,7 +401,7 @@ export default function WebTransactions() {
                   ...(selected.synced === 1 ? [] : [['Sync', 'Pending upload']]),
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-start justify-between gap-3">
-                    <dt className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">{k}</dt>
+                    <dt className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">{k}</dt>
                     <dd className="text-xs font-medium text-slate-700 dark:text-slate-200 text-right capitalize">{v}</dd>
                   </div>
                 ))}
