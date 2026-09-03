@@ -141,3 +141,39 @@ export async function restoreBackup(raw) {
     removedCategories: oldCategories.filter(c => c.name && !keptCategoryKeys.has(`${c.name}|${c.type}`)).length,
   }
 }
+
+/**
+ * Build the JSON backup payload. Same shape the mobile Settings page writes
+ * inline — kept here so the desktop page doesn't grow a second copy of the
+ * table list, which is the part that would drift if a table were added.
+ */
+export async function buildBackupPayload() {
+  const [transactions, accounts, categories, templates, recurring, debts] = await Promise.all([
+    db.transactions.toArray(),
+    db.accounts.toArray(),
+    db.categories.toArray(),
+    db.templates.toArray(),
+    db.recurring.toArray(),
+    db.debts.toArray(),
+  ])
+  return {
+    version: 1,
+    exportedAt: new Date().toISOString(),
+    transactions, accounts, categories, templates, recurring, debts,
+  }
+}
+
+/** Trigger a browser download of the JSON backup. Returns the row counts. */
+export async function downloadBackupJson() {
+  const payload = await buildBackupPayload()
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `spendr-backup-${new Date().toISOString().slice(0, 10)}.json`
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+  URL.revokeObjectURL(url)
+  return { transactions: payload.transactions.length, accounts: payload.accounts.length }
+}

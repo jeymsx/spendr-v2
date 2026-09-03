@@ -85,7 +85,7 @@ function fmtRelTime(isoStr) {
 
 // ── CSV export ─────────────────────────────────────────────────────────────────
 
-function buildAndDownloadCSV(transactions) {
+export function buildAndDownloadCSV(transactions) {
   const headers = [
     'txId', 'type', 'date', 'description', 'category',
     'payment', 'account', 'fromAccount', 'toAccount', 'amount',
@@ -369,7 +369,7 @@ function FieldLabel({ children }) {
 
 // ── Profile sheet ──────────────────────────────────────────────────────────────
 
-function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
+export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
   const [closing,  setClosing]  = useState(false)
   const [url,      setUrl]      = useState('')
   const [saving,   setSaving]   = useState(false)
@@ -475,7 +475,7 @@ function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
   )
 }
 
-function ProfileSheet({ open, onClose, displayName: initName, currency: initCurrency }) {
+export function ProfileSheet({ open, onClose, displayName: initName, currency: initCurrency }) {
   const { showToast } = useToast()
   const [closing,  setClosing]  = useState(false)
   useScrollLock(open)
@@ -576,7 +576,7 @@ function ProfileSheet({ open, onClose, displayName: initName, currency: initCurr
 
 // ── Restore-from-backup sheet ──────────────────────────────────────────────────
 
-function RestoreBackupSheet({ open, onClose }) {
+export function RestoreBackupSheet({ open, onClose }) {
   const { showToast } = useToast()
   const [step,    setStep]    = useState(1) // 1=pick file, 2=typed confirm
   const [info,    setInfo]    = useState(null)
@@ -753,7 +753,7 @@ function RestoreBackupSheet({ open, onClose }) {
 
 // ── Reset confirm modal ────────────────────────────────────────────────────────
 
-function ResetConfirmModal({ open, onClose }) {
+export function ResetConfirmModal({ open, onClose }) {
   const { showToast } = useToast()
   const [step,    setStep]    = useState(1) // 1=warn 2=typing-confirm
   const [input,   setInput]   = useState('')
@@ -931,7 +931,7 @@ function BudgetSummaryCard({ categories, transactions }) {
 
 // ── Budget manager sheet ───────────────────────────────────────────────────────
 
-function BudgetManagerSheet({ open, onClose }) {
+export function BudgetManagerSheet({ open, onClose }) {
   const { showToast } = useToast()
   const [closing,      setClosing]      = useState(false)
   const [editingId,    setEditingId]    = useState(null)
@@ -1369,7 +1369,7 @@ function SortableCategoryRow({ cat, onTap, onLongPressDelete }) {
 
 // ── Category manager sheet ─────────────────────────────────────────────────────
 
-function CategoryManagerSheet({ open, onClose }) {
+export function CategoryManagerSheet({ open, onClose }) {
   const [closing,        setClosing]        = useState(false)
   useScrollLock(open)
   const [activeTab,      setActiveTab]      = useState('expense')
@@ -2301,7 +2301,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
 // ── Template manager sheet ─────────────────────────────────────────────────────
 
-function TemplateManagerSheet({ open, onClose }) {
+export function TemplateManagerSheet({ open, onClose }) {
   const { showToast } = useToast()
   const [closing,    setClosing]    = useState(false)
   useScrollLock(open)
@@ -2475,7 +2475,7 @@ function MonthPicker({ months, value, onChange }) {
 
 // ── Accent color sheet ────────────────────────────────────────────────────────
 
-function AccentColorSheet({ open, onClose, accentColor, setAccentColor }) {
+export function AccentColorSheet({ open, onClose, accentColor, setAccentColor }) {
   const [closing, setClosing] = useState(false)
   useScrollLock(open)
 
@@ -2580,7 +2580,7 @@ const TERMS_SECTIONS = [
   { h: 'Contact',                    b: 'Questions? Email us at jamesandgen111@gmail.com' },
 ]
 
-function PolicySheet({ open, type, onClose }) {
+export function PolicySheet({ open, type, onClose }) {
   const [closing, setClosing] = useState(false)
   useScrollLock(open)
 

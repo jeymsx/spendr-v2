@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useViewMode } from './web/useViewMode'
 import App from './App'
 
@@ -24,6 +24,16 @@ function Booting() {
  */
 export default function Shell() {
   const mode = useViewMode()
+
+  // Marks the document so index.css can restyle the shared sheets as centred
+  // modals on desktop. Doing it in CSS rather than in each component keeps one
+  // implementation of every sheet — the alternative was a desktop copy of
+  // fifteen of them.
+  useEffect(() => {
+    const root = document.documentElement
+    root.classList.toggle('web', mode === 'desktop')
+    return () => root.classList.remove('web')
+  }, [mode])
 
   if (mode === 'desktop') {
     return (

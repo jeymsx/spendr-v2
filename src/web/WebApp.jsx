@@ -4,6 +4,7 @@ import { OnboardingGuard } from '../App'
 import SyncManager from '../components/SyncManager'
 import WebLayout from './WebLayout'
 import MobileFallback from './MobileFallback'
+import WebFormPage from './WebFormPage'
 
 // Public routes are full-screen flows in both UIs, so the mobile components are
 // used unchanged and outside the shell.
@@ -18,14 +19,16 @@ const WebInsights     = lazy(() => import('./pages/WebInsights'))
 const WebAccounts     = lazy(() => import('./pages/WebAccounts'))
 const WebRecurring    = lazy(() => import('./pages/WebRecurring'))
 const WebDebts        = lazy(() => import('./pages/WebDebts'))
+const WebSettings     = lazy(() => import('./pages/WebSettings'))
 
-// Still on the mobile layout, in a compact column.
-const Settings     = lazy(() => import('../pages/Settings'))
+// Single-column forms, reused whole inside desktop chrome (see WebFormPage).
 const ImportWizard = lazy(() => import('../pages/ImportWizard'))
 const AddExpense   = lazy(() => import('../pages/AddExpense'))
 const AddInflow    = lazy(() => import('../pages/AddInflow'))
 const Transfer     = lazy(() => import('../pages/Transfer'))
 
+// Retained as a safety net: any route added later without a desktop layout
+// still renders rather than 404-ing.
 function Compact({ title, children }) {
   return <MobileFallback title={title}>{children}</MobileFallback>
 }
@@ -57,11 +60,23 @@ export default function WebApp() {
               <Route path="/insights"     element={<WebInsights />} />
               <Route path="/debts"        element={<WebDebts />} />
               <Route path="/recurring"    element={<WebRecurring />} />
-              <Route path="/settings"     element={<Compact title="Settings"><Settings /></Compact>} />
-              <Route path="/import"       element={<Compact title="Import"><ImportWizard /></Compact>} />
-              <Route path="/expense"      element={<Compact title="Add Expense"><AddExpense /></Compact>} />
-              <Route path="/inflow"       element={<Compact title="Add Income"><AddInflow /></Compact>} />
-              <Route path="/transfer"     element={<Compact title="Transfer"><Transfer /></Compact>} />
+              <Route path="/settings"     element={<WebSettings />} />
+              <Route path="/expense"  element={
+                <WebFormPage title="Add expense" subtitle="Log a purchase, or schedule an installment plan">
+                  <AddExpense />
+                </WebFormPage>} />
+              <Route path="/inflow"   element={
+                <WebFormPage title="Add income" subtitle="Record money coming in">
+                  <AddInflow />
+                </WebFormPage>} />
+              <Route path="/transfer" element={
+                <WebFormPage title="Transfer" subtitle="Move money between accounts, or pay a credit card">
+                  <Transfer />
+                </WebFormPage>} />
+              <Route path="/import"   element={
+                <WebFormPage title="Import" subtitle="Bring in a Spendr CSV export" width={720}>
+                  <ImportWizard />
+                </WebFormPage>} />
             </Route>
           </Route>
         </Route>

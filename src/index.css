@@ -288,3 +288,69 @@ input, textarea, [contenteditable] {
   from { opacity: 1; }
   to   { opacity: 0; }
 }
+
+/* ── Desktop (web) overrides ───────────────────────────────────────────────
+   Applied only when Shell has put `web` on <html>, so the mobile UI is
+   untouched. Everything here is presentation: the sheets stay one
+   implementation, shared by both layouts.
+
+   Bottom sheets read as a phone affordance on a 1500px screen, so on desktop
+   they become centred modals instead. These rules beat the inline Tailwind
+   utilities (`absolute bottom-0 inset-x-0 rounded-t-[28px]`) on specificity —
+   `html.web .sheet-panel` is (0,2,1) against a utility's (0,1,0) — rather than
+   relying on source order.                                                */
+
+html.web .sheet-panel,
+html.web .sheet-panel-exit {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  right: auto;
+  bottom: auto;
+  width: min(600px, calc(100vw - 4rem));
+  max-height: min(84vh, 900px);
+  border-radius: 20px;
+  box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
+}
+
+html.web .sheet-panel      { animation: webModalIn  0.18s cubic-bezier(0.32, 0.72, 0, 1) forwards; }
+html.web .sheet-panel-exit { animation: webModalOut 0.14s ease forwards; }
+
+/* The translate stays in every keyframe — otherwise the centring transform is
+   replaced by the animation's and the panel jumps to the corner. */
+@keyframes webModalIn {
+  from { opacity: 0; transform: translate(-50%, -50%) scale(0.965); }
+  to   { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+}
+
+@keyframes webModalOut {
+  from { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  to   { opacity: 0; transform: translate(-50%, -50%) scale(0.975); }
+}
+
+/* The grab handle is a drag affordance for a bottom sheet; a centred modal
+   isn't draggable, so it would just be a stray pill. */
+html.web .sheet-panel .w-10.h-1,
+html.web .sheet-panel-exit .w-10.h-1 {
+  display: none;
+}
+
+/* Wider windows get a slightly wider modal — a category manager with a grid
+   inside is cramped at 600px on a 1500px screen. */
+@media (min-width: 1440px) {
+  html.web .sheet-panel,
+  html.web .sheet-panel-exit {
+    width: min(680px, calc(100vw - 6rem));
+  }
+}
+
+/* Native controls should follow the app's theme in both layouts, but it only
+   shows up on desktop where selects and date inputs are visible chrome. */
+html.web select,
+html.web input[type="date"] {
+  color-scheme: light;
+}
+html.web.dark select,
+html.web.dark input[type="date"] {
+  color-scheme: dark;
+}
