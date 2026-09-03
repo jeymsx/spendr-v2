@@ -192,3 +192,49 @@ export async function restoreDeletedTx(tx) {
 
   return restored
 }
+
+/**
+ * Delete several transactions as one unit — used for installment plans, where
+ * removing a single month would leave a broken schedule behind.
+ *
+ * Everything happens in one Dexie transaction, so a failure part-way cannot
+ * leave some months deleted and others not. Tombstones are merged in the same
+ * write, so the next sync removes exactly this set remotely.
+ */
+export async function deleteTxGroup(txs) {
+  const list = (txs ?? []).filter(Boolean)
+  if (!list.length) return 0
+
+  await db.transaction('rw',
+    [db.transactions, db.accounts, db.balances, db.recurring, db.meta],
+    async () => {
+      const meta = await db.meta.get('deletedTxIds')
+      const tombstones = new Set(meta?.value ?? [])
+
+      for (const tx of list) {
+        if (tx.txId) tombstones.add(tx.txId)
+        await reverseBalanceEffect(tx)
+        await db.transactions.delete(tx.id)
+        if (tx.recurringId && tx.recurringPrevDate) {
+          await db.recurring.update(tx.recurringId, { nextDate: tx.recurringPrevDate })
+        }
+      }
+
+      await db.meta.put({ key: 'deletedTxIds', value: [...tombstones] })
+    })
+
+  return list.length
+}
+
+/**
+ * Undo a group deletion. Restores whatever is still missing and reports the
+ * count, so a double-tapped Undo is harmless — rows already back are skipped
+ * by restoreDeletedTx's own guard.
+ */
+export async function restoreDeletedTxs(txs) {
+  let restored = 0
+  for (const tx of (txs ?? [])) {
+    if (await restoreDeletedTx(tx)) restored++
+  }
+  return restored
+}

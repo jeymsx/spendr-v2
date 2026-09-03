@@ -1,7 +1,10 @@
 import { useEffect, useState, useMemo } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
 import db, { UNSYNCED } from '../db/db'
-import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx } from '../db/txHelpers'
+import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx,
+         deleteTxGroup, restoreDeletedTxs } from '../db/txHelpers'
+import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
+import { useLiveQuery } from '../hooks/useLiveQuery'
 import CategoryPickerSheet from './CategoryPickerSheet'
 import AccountPickerSheet from './AccountPickerSheet'
 import { useToast } from '../context/ToastContext'
@@ -105,6 +108,19 @@ function EditPickerBtn({ label, dot, placeholder, onClick }) {
 
 export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [], zIndex = 100 }) {
   const { showToast } = useToast()
+
+  // The sheet is handed a single transaction, so the plan's other months are
+  // looked up here rather than threaded in from both call sites.
+  const planRows = useLiveQuery(async () => {
+    if (!tx || !isInstallmentRow(tx)) return null
+    const all = await db.transactions.toArray()
+    const group = findInstallmentGroup(tx, all)
+    return group.length > 1 ? group : null
+  }, [tx?.id, tx?.installmentId, tx?.description], null)
+
+  const planCount = planRows?.length ?? 0
+  const planTotal = (planRows ?? []).reduce((s, t) => s + (t.amount ?? 0), 0)
+
   const [closing,         setClosing]         = useState(false)
   useScrollLock(open)
   const [mode,            setMode]            = useState('detail')   // 'detail' | 'edit' | 'confirm-delete'
@@ -186,9 +202,29 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
   async function handleDelete() {
     setSaving(true)
-    // Snapshot before deleting — this is what Undo replays.
+    // Snapshot before deleting — this is what Undo replays. For an installment
+    // plan that's every month, since deleting one would strand the rest.
+    const group    = planCount > 1 ? planRows.map(t => ({ ...t })) : null
     const snapshot = { ...tx }
     try {
+      if (group) {
+        await deleteTxGroup(group)
+        close()
+        showToast(`${group.length} payments deleted`, 'success', {
+          actionLabel: 'Undo',
+          onAction: async () => {
+            try {
+              const n = await restoreDeletedTxs(group)
+              showToast(n ? `${n} payments restored` : 'Already restored',
+                        n ? 'success' : 'warning')
+            } catch (err) {
+              console.error('[TxDetailSheet] group undo failed:', err)
+              showToast('Undo failed', 'error')
+            }
+          },
+        })
+        return
+      }
       // The tombstone write used to sit outside the transaction, so a failure
       // below left the txId marked deleted while the row survived locally —
       // and the next sync then removed it remotely. It's inside now.
@@ -286,7 +322,9 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
           {mode === 'confirm-delete' && (
             <div className="text-center pb-1">
               <span className="text-2xl">🗑️</span>
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">Delete Transaction?</h3>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">
+                {planCount > 1 ? 'Delete Whole Plan?' : 'Delete Transaction?'}
+              </h3>
             </div>
           )}
         </div>
@@ -443,10 +481,18 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 This will permanently remove:
               </p>
               <p className="text-base font-semibold text-slate-800 dark:text-white mb-0.5">
-                {cfg.sign}{fmt(tx.amount)}
+                {planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(tx.amount)}`}
               </p>
               {tx.description && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">{tx.description}</p>
+                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">{tx.description}</p>
+              )}
+              {/* Deleting one month would strand the rest, so the whole plan goes.
+                  Say so before it happens rather than after. */}
+              {planCount > 1 && (
+                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">
+                  All {planCount} payments in this installment plan
+                  {' '}({fmt(tx.amount)} × {planCount}) will be deleted.
+                </p>
               )}
               <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
                 Account balances will be reversed automatically.
@@ -471,7 +517,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                     disabled:opacity-40 disabled:shadow-none
                     active:scale-[0.98] transition-all duration-100"
                 >
-                  {saving ? 'Deleting…' : 'Delete'}
+                  {saving ? 'Deleting…' : planCount > 1 ? `Delete all ${planCount}` : 'Delete'}
                 </button>
               </div>
             </div>

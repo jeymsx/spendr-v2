@@ -173,6 +173,10 @@ export default function AddExpense() {
       // is the point: getCreditStatus treats everything past the cutoff as
       // outstanding, so the whole plan reduces available credit immediately
       // while only the current month's charge lands on this statement.
+      // Shared across the plan's rows so deleting one can remove them all
+      // without relying on the "(n/N)" label. Plain property, no index needed.
+      const installmentId = count > 1 ? crypto.randomUUID() : null
+
       const rows  = []
       let   dueOn = date
       for (let i = 0; i < count; i++) {
@@ -190,6 +194,7 @@ export default function AddExpense() {
           date:        txDate.toISOString(),
           synced:      UNSYNCED,
           updatedAt:   updISO,
+          ...(installmentId ? { installmentId } : {}),
         })
         dueOn = advanceNextDate(dueOn, 'monthly')
       }
