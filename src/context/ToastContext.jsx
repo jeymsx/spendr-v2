@@ -23,7 +23,7 @@ function GlobalToast({ toast, onAction }) {
 
   return (
     <div
-      className={`fixed bottom-28 inset-x-0 z-[300] flex justify-center px-6
+      className={`toast-host fixed bottom-28 inset-x-0 z-[300] flex justify-center px-6
         transition-all duration-300
         ${toast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}
         ${hasAction ? '' : 'pointer-events-none'}`}

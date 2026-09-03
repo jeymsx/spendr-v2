@@ -426,6 +426,21 @@ html.web .onboarding-shell > div:last-child {
   padding-bottom: 32px !important;
 }
 
+/* The toast sits 112px up from the bottom, full-width and centred, because on
+   a phone it has to clear the bottom nav and there is no room to be subtle.
+   On desktop there is no bottom nav, and a 1512px bar floating mid-screen -
+   across the sidebar as well - reads like a system banner rather than a
+   confirmation. It becomes a corner card instead, which is also where the
+   eye is not: the content stays unobscured. */
+html.web .toast-host {
+  bottom: 1.5rem;
+  left: auto;
+  right: 1.5rem;
+  justify-content: flex-end;
+  padding-left: 0;
+  padding-right: 0;
+}
+
 /* A phone has no cursor, so the mobile UI never needed this. On desktop an
    element that responds to a click has to say so, and these components are
    built from <button> and role=button rather than links. :disabled keeps its
