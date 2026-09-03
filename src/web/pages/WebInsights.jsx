@@ -295,11 +295,11 @@ export default function WebInsights() {
         <WebPanel title="Biggest expenses" className="xl:col-span-2" flush>
           {topExpenses.length === 0 ? <WebEmpty>No expenses in this period</WebEmpty> : (
             <div className="overflow-x-auto">
-            <table className="w-full text-sm min-w-[420px]">
+            <table className="w-full table-fixed text-sm min-w-[420px]">
               <tbody>
                 {topExpenses.map(t => (
                   <tr key={t.id} className="border-t border-slate-100 dark:border-white/[0.05]">
-                    <td className="px-5 py-2.5 w-8 text-base">{catMap[t.category]?.icon ?? '📦'}</td>
+                    <td className="px-5 py-2.5 w-[52px] text-base">{catMap[t.category]?.icon ?? '📦'}</td>
                     <td className="px-2 py-2.5 min-w-0">
                       <p className="font-medium text-slate-800 dark:text-slate-100 truncate max-w-[300px]">
                         {t.description || t.category || '—'}
@@ -308,7 +308,7 @@ export default function WebInsights() {
                         {t.account} · {new Date(t.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                       </p>
                     </td>
-                    <td className="px-5 py-2.5 text-right font-bold tabular-nums
+                    <td className="px-5 py-2.5 w-[136px] text-right font-bold tabular-nums
                       text-slate-800 dark:text-slate-100 whitespace-nowrap">
                       {money(t.amount)}
                     </td>

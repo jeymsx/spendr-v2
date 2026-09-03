@@ -151,7 +151,7 @@ export default function WebDashboard() {
           <WebPanel title="Recent activity" to="/transactions" flush>
             {s.recent.length === 0 ? <WebEmpty>No transactions yet</WebEmpty> : (
               <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[520px]">
+              <table className="w-full table-fixed text-sm min-w-[520px]">
                 <tbody>
                   {s.recent.slice(0, 12).map(t => {
                     const cat = s.catMap[t.category]
@@ -173,17 +173,17 @@ export default function WebDashboard() {
                           focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset
                           transition-colors duration-150"
                       >
-                        <td className="px-5 py-2.5 w-8 text-base">{cat?.icon ?? (t.type === 'transfer' ? '🔄' : '📦')}</td>
+                        <td className="px-5 py-2.5 w-[52px] text-base">{cat?.icon ?? (t.type === 'transfer' ? '🔄' : '📦')}</td>
                         <td className="px-2 py-2.5 min-w-0">
                           <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                             {t.description || t.category || '—'}
                           </p>
                           <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{acct}</p>
                         </td>
-                        <td className="px-2 py-2.5 text-right whitespace-nowrap text-[11px] text-slate-500 dark:text-slate-400">
+                        <td className="px-2 py-2.5 w-[92px] text-right whitespace-nowrap text-[11px] text-slate-500 dark:text-slate-400">
                           {relDay(t.date)}
                         </td>
-                        <td className={`px-5 py-2.5 text-right font-bold tabular-nums whitespace-nowrap
+                        <td className={`px-5 py-2.5 w-[136px] text-right font-bold tabular-nums whitespace-nowrap
                           ${amountTone(t.type).cls}`}>
                           {amountTone(t.type).sign}{money(t.amount)}
                         </td>

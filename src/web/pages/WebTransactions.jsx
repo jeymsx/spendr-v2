@@ -244,7 +244,7 @@ export default function WebTransactions() {
           <WebPanel bodyClass="px-0 pb-0">
             {rows.length === 0 ? <WebEmpty>Nothing matches those filters</WebEmpty> : (
               <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[680px]">
+              <table className="w-full table-fixed text-sm min-w-[680px]">
                 <thead>
                   <tr className="text-[10px] font-semibold uppercase tracking-wide
                     text-slate-500 dark:text-slate-400">

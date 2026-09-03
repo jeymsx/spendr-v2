@@ -107,10 +107,10 @@ export default function WebRecurring() {
             </div>
           </div>
         </td>
-        <td className="px-2 py-3 text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
+        <td className="px-2 py-3 w-[110px] text-xs text-slate-500 dark:text-slate-400 whitespace-nowrap">
           {FREQ_LABEL[r.frequency] ?? r.frequency}
         </td>
-        <td className="px-2 py-3 whitespace-nowrap">
+        <td className="px-2 py-3 w-[120px] whitespace-nowrap">
           <span className={`text-xs font-medium ${late
             ? 'text-red-600 dark:text-red-400'
             : due ? 'text-amber-700 dark:text-amber-400'
@@ -118,11 +118,11 @@ export default function WebRecurring() {
             {dueLabel(d)}
           </span>
         </td>
-        <td className="px-2 py-3 text-right font-bold tabular-nums whitespace-nowrap
+        <td className="px-2 py-3 w-[130px] text-right font-bold tabular-nums whitespace-nowrap
           text-slate-800 dark:text-slate-100">
           {money(r.amount)}
         </td>
-        <td className="px-5 py-3 text-right whitespace-nowrap">
+        <td className="px-5 py-3 w-[240px] text-right whitespace-nowrap">
           <div className="flex items-center justify-end gap-2">
             {!dim && (
               <button
@@ -184,14 +184,14 @@ export default function WebRecurring() {
       <WebPanel title="Active" flush>
         {sorted.length === 0 ? <WebEmpty>No recurring payments yet</WebEmpty> : (
           <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[720px]">
+          <table className="w-full table-fixed text-sm min-w-[720px]">
             <thead>
               <tr className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <th className="text-left font-semibold px-5 py-2.5">Bill</th>
-                <th className="text-left font-semibold px-2 py-2.5">Frequency</th>
-                <th className="text-left font-semibold px-2 py-2.5">Next</th>
-                <th className="text-right font-semibold px-2 py-2.5">Amount</th>
-                <th className="text-right font-semibold px-5 py-2.5">Actions</th>
+                <th className="text-left font-semibold px-2 py-2.5 w-[110px]">Frequency</th>
+                <th className="text-left font-semibold px-2 py-2.5 w-[120px]">Next</th>
+                <th className="text-right font-semibold px-2 py-2.5 w-[130px]">Amount</th>
+                <th className="text-right font-semibold px-5 py-2.5 w-[240px]">Actions</th>
               </tr>
             </thead>
             <tbody>{sorted.map(r => <Row key={r.id} r={r} />)}</tbody>
@@ -204,7 +204,7 @@ export default function WebRecurring() {
         <div className="mt-6">
           <WebPanel title="Paused" flush>
             <div className="overflow-x-auto">
-              <table className="w-full text-sm min-w-[720px]">
+              <table className="w-full table-fixed text-sm min-w-[720px]">
                 <tbody>{paused.map(r => <Row key={r.id} r={r} dim />)}</tbody>
               </table>
             </div>
