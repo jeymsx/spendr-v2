@@ -83,21 +83,27 @@ export default function WebTransactions() {
 
   useEffect(() => { setVisible(PAGE) }, [deferred, type, account, category, month])
 
+  // Charges dated ahead are committed, not spent — the same rule the mobile
+  // history uses, so both agree on what "happened". Everything this page
+  // counts or offers as a filter derives from `posted`, never from txAll.
+  const posted = useMemo(() => {
+    const cutoff = scheduledCutoff()
+    return (txAll ?? []).filter(t => (t.date ?? '') <= cutoff)
+  }, [txAll])
+
+  const scheduledCount = (txAll ?? []).length - posted.length
+
   // Months present in the data, newest first — beats a free date picker when
   // you mostly want "show me August".
   const months = useMemo(() => {
     const set = new Set()
-    ;(txAll ?? []).forEach(t => { if (t.date) set.add(t.date.slice(0, 7)) })
+    posted.forEach(t => { if (t.date) set.add(t.date.slice(0, 7)) })
     return [...set].sort().reverse()
-  }, [txAll])
+  }, [posted])
 
   const filtered = useMemo(() => {
     const q = deferred.trim().toLowerCase()
-    // Charges dated ahead are committed, not spent — same rule the mobile
-    // history uses, so both agree on what "happened".
-    const cutoff = scheduledCutoff()
-    return (txAll ?? []).filter(t => {
-      if ((t.date ?? '') > cutoff) return false
+    return posted.filter(t => {
       if (type !== 'all' && t.type !== type) return false
       if (account && t.account !== account && t.fromAccount !== account && t.toAccount !== account) return false
       if (category && t.category !== category) return false
@@ -108,7 +114,7 @@ export default function WebTransactions() {
       }
       return true
     })
-  }, [txAll, deferred, type, account, category, month])
+  }, [posted, deferred, type, account, category, month])
 
   const totals = useMemo(() => {
     let out = 0, inn = 0
@@ -153,7 +159,16 @@ export default function WebTransactions() {
     <>
       <WebPageHeader
         title="Transactions"
-        subtitle={`${filtered.length} of ${(txAll ?? []).length} · ${money(totals.out)} out · ${money(totals.inn)} in`}
+        subtitle={[
+          activeFilters > 0 || deferred.trim()
+            ? `${filtered.length} of ${posted.length}`
+            : `${posted.length} transaction${posted.length === 1 ? '' : 's'}`,
+          `${money(totals.out)} out`,
+          `${money(totals.inn)} in`,
+          ...(scheduledCount > 0
+            ? [`${scheduledCount} scheduled ahead — see the account's ledger`]
+            : []),
+        ].join(' · ')}
         actions={activeFilters > 0 ? (
           <button
             onClick={() => { setType('all'); setAccount(''); setCategory(''); setMonth('') }}
