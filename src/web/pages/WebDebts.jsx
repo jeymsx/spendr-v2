@@ -172,7 +172,9 @@ export default function WebDebts() {
                  tone={totals.owedToMe - totals.iOwe >= 0 ? 'good' : 'bad'} />
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+      {/* items-start so an empty Settled panel sizes to its own content
+          rather than matching a long list of open debts. */}
+      <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 items-start">
         <WebPanel title={tab === 'i_owe' ? 'I owe' : 'Owed to me'}
           action={<span className="text-[11px] text-slate-400 dark:text-slate-500">
             {openItems.length} open</span>}>

@@ -263,14 +263,21 @@ export default function WebInsights() {
           {series.length === 0 ? <WebEmpty>Nothing to chart yet</WebEmpty> : (
             <div className="h-[190px] text-slate-400 dark:text-slate-500">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={series} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}>
+                {/* barCategoryGap/barGap and the two fills match the mobile
+                    chart, so a month reads the same in either layout - the
+                    expense bar was the accent blue here, which made it look
+                    like a second income series. */}
+                <BarChart data={series} margin={{ top: 4, right: 4, left: -18, bottom: 0 }}
+                  barCategoryGap="28%" barGap={2}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="currentColor" opacity={0.12} />
                   <XAxis dataKey="label" tick={axis} axisLine={false} tickLine={false} />
                   <YAxis tick={axis} axisLine={false} tickLine={false}
                     tickFormatter={v => v >= 1000 ? `${Math.round(v / 1000)}k` : v} />
                   <Tooltip content={<ChartTooltip />} cursor={{ fill: 'currentColor', opacity: 0.06 }} />
-                  <Bar dataKey="income"  name="Income"  fill="#22c55e" radius={[3, 3, 0, 0]} maxBarSize={22} />
-                  <Bar dataKey="expense" name="Expense" fill="var(--color-primary)" radius={[3, 3, 0, 0]} maxBarSize={22} />
+                  <Bar dataKey="income"  name="Income"  fill="#22c55e" fillOpacity={0.85}
+                    radius={[4, 4, 0, 0]} maxBarSize={44} />
+                  <Bar dataKey="expense" name="Expense" fill="#ef4444" fillOpacity={0.85}
+                    radius={[4, 4, 0, 0]} maxBarSize={44} />
                 </BarChart>
               </ResponsiveContainer>
             </div>
@@ -278,7 +285,9 @@ export default function WebInsights() {
         </WebPanel>
       </div>
 
-      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
+      {/* items-start: without it an empty Biggest expenses stretches to the
+          height of the three-panel column beside it. */}
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <WebPanel title="Biggest expenses" className="xl:col-span-2" flush>
           {topExpenses.length === 0 ? <WebEmpty>Nothing in this period</WebEmpty> : (
             <table className="w-full text-sm">
