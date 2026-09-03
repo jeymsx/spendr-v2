@@ -61,10 +61,10 @@ export default function WebImport() {
         subtitle="Bring transactions in from a CSV file. Nothing is written until the last step."
       />
 
-      <div className="flex gap-6 items-start min-w-0">
+      <div className="flex flex-col xl:flex-row gap-6 xl:items-start min-w-0">
         {/* The wizard. Capped rather than full-width: it is a single column of
             fields and a wide one is harder to read, not easier. */}
-        <div className="flex-1 min-w-0 max-w-[720px]">
+        <div className="w-full xl:flex-1 min-w-0 xl:max-w-[720px]">
           <div className="web-embed card-solid rounded-2xl">
             <Suspense fallback={
               <div className="flex items-center justify-center py-24">
@@ -77,7 +77,7 @@ export default function WebImport() {
         </div>
 
         {/* Reference — the thing a phone has no room for. */}
-        <aside className="w-[340px] shrink-0 flex flex-col gap-6 sticky top-0">
+        <aside className="w-full xl:w-[340px] shrink-0 flex flex-col gap-6 xl:sticky xl:top-0">
           <RefPanel title="What you can import">
             <ul className="flex flex-col gap-3 text-xs leading-relaxed
               text-slate-600 dark:text-slate-300">

@@ -290,7 +290,8 @@ export default function WebInsights() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <WebPanel title="Biggest expenses" className="xl:col-span-2" flush>
           {topExpenses.length === 0 ? <WebEmpty>Nothing in this period</WebEmpty> : (
-            <table className="w-full text-sm">
+            <div className="overflow-x-auto">
+            <table className="w-full text-sm min-w-[420px]">
               <tbody>
                 {topExpenses.map(t => (
                   <tr key={t.id} className="border-t border-slate-100 dark:border-white/[0.05]">
@@ -311,6 +312,7 @@ export default function WebInsights() {
                 ))}
               </tbody>
             </table>
+            </div>
           )}
         </WebPanel>
 

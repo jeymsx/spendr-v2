@@ -183,7 +183,8 @@ export default function WebRecurring() {
 
       <WebPanel title="Active" flush>
         {sorted.length === 0 ? <WebEmpty>No recurring payments yet</WebEmpty> : (
-          <table className="w-full text-sm">
+          <div className="overflow-x-auto">
+          <table className="w-full text-sm min-w-[720px]">
             <thead>
               <tr className="text-[10px] font-semibold uppercase tracking-wide text-slate-400 dark:text-slate-500">
                 <th className="text-left font-semibold px-5 py-2.5">Bill</th>
@@ -195,15 +196,18 @@ export default function WebRecurring() {
             </thead>
             <tbody>{sorted.map(r => <Row key={r.id} r={r} />)}</tbody>
           </table>
+          </div>
         )}
       </WebPanel>
 
       {paused.length > 0 && (
         <div className="mt-6">
           <WebPanel title="Paused" flush>
-            <table className="w-full text-sm">
-              <tbody>{paused.map(r => <Row key={r.id} r={r} dim />)}</tbody>
-            </table>
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[720px]">
+                <tbody>{paused.map(r => <Row key={r.id} r={r} dim />)}</tbody>
+              </table>
+            </div>
           </WebPanel>
         </div>
       )}

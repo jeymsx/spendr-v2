@@ -150,7 +150,8 @@ export default function WebDashboard() {
 
           <WebPanel title="Recent activity" to="/transactions" flush>
             {s.recent.length === 0 ? <WebEmpty>Nothing logged yet</WebEmpty> : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[520px]">
                 <tbody>
                   {s.recent.slice(0, 12).map(t => {
                     const cat = s.catMap[t.category]
@@ -191,6 +192,7 @@ export default function WebDashboard() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
           </WebPanel>
         </div>

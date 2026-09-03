@@ -238,12 +238,13 @@ export default function WebTransactions() {
           options={monthOpts} ariaLabel="Filter by month" minWidth={160} />
       </div>
 
-      <div className="flex gap-6 items-start min-w-0">
+      <div className="flex flex-col xl:flex-row gap-6 xl:items-start min-w-0">
         {/* Table */}
         <div className="flex-1 min-w-0">
           <WebPanel bodyClass="px-0 pb-0">
             {rows.length === 0 ? <WebEmpty>Nothing matches those filters</WebEmpty> : (
-              <table className="w-full text-sm">
+              <div className="overflow-x-auto">
+              <table className="w-full text-sm min-w-[680px]">
                 <thead>
                   <tr className="text-[10px] font-semibold uppercase tracking-wide
                     text-slate-400 dark:text-slate-500">
@@ -332,6 +333,7 @@ export default function WebTransactions() {
                   })}
                 </tbody>
               </table>
+              </div>
             )}
 
             {filtered.length > visible && (
@@ -353,7 +355,7 @@ export default function WebTransactions() {
         </div>
 
         {/* Detail pane — the landscape win: inspect without losing your place */}
-        <aside className="w-[340px] shrink-0 sticky top-0">
+        <aside className="w-full xl:w-[340px] shrink-0 xl:sticky xl:top-0">
           {!selected ? (
             <WebPanel title="Details">
               <p className="text-xs text-slate-400 dark:text-slate-500 py-6 text-center leading-relaxed">

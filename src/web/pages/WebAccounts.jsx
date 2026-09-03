@@ -181,9 +181,9 @@ export default function WebAccounts() {
         <WebStat label="Net worth"   value={money(totals.net)} tone={totals.net < 0 ? 'bad' : 'default'} />
       </div>
 
-      <div className="flex gap-6 items-start min-w-0">
+      <div className="flex flex-col xl:flex-row gap-6 xl:items-start min-w-0">
         {/* Master */}
-        <div className="w-[320px] shrink-0 flex flex-col gap-6">
+        <div className="w-full xl:w-[320px] shrink-0 flex flex-col gap-6">
           {grouped.map(g => (
             <WebPanel key={g.key} title={g.label} bodyClass="px-2 pb-2"
               action={<span className="text-[11px] font-semibold tabular-nums text-slate-400 dark:text-slate-500">
