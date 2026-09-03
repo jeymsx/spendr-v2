@@ -172,7 +172,7 @@ export default function WebRecurring() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-6 mb-6">
         <WebStat label="Monthly commitment" value={money(monthlyTotal)}
                  hint="All frequencies normalised" />
         <WebStat label="Due now" value={String(dueNow.length)}

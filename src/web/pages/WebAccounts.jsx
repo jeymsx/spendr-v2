@@ -154,7 +154,7 @@ export default function WebAccounts() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-6 mb-6">
         <WebStat label="Assets"      value={money(totals.assets)} hint="Cash, wallets & banks" />
         <WebStat label="Credit used" value={money(totals.credit)} tone={totals.credit > 0 ? 'bad' : 'good'}
                  hint="Outstanding on cards" />
@@ -163,7 +163,7 @@ export default function WebAccounts() {
 
       <div className="flex gap-6 items-start min-w-0">
         {/* Master */}
-        <div className="w-[320px] shrink-0 flex flex-col gap-4">
+        <div className="w-[320px] shrink-0 flex flex-col gap-6">
           {grouped.map(g => (
             <WebPanel key={g.key} title={g.label} bodyClass="px-2 pb-2"
               action={<span className="text-[11px] font-semibold tabular-nums text-slate-400 dark:text-slate-500">

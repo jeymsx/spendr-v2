@@ -163,7 +163,7 @@ export default function WebDebts() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-6 mb-6">
         <WebStat label="I owe"      value={money(totals.iOwe)}
                  tone={totals.iOwe > 0 ? 'bad' : 'good'} hint="Outstanding" />
         <WebStat label="Owed to me" value={money(totals.owedToMe)}

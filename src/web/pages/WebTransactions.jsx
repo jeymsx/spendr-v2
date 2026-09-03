@@ -5,6 +5,7 @@ import { scheduledCutoff } from '../../utils/scheduled'
 import { isInstallmentRow } from '../../utils/installments'
 import TxDetailSheet from '../../components/TxDetailSheet'
 import { WebPageHeader, WebPanel, WebEmpty, money } from '../components/WebPanel'
+import WebSelect from '../components/WebSelect'
 
 const PAGE = 100
 
@@ -33,11 +34,6 @@ const fmtTime = (s) => s
   ? new Date(s).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })
   : ''
 
-const selectClass = `h-9 px-3 rounded-xl text-xs font-medium min-w-0
-  bg-white dark:bg-white/[0.06] text-slate-700 dark:text-slate-200
-  border border-slate-200 dark:border-white/[0.09] outline-none
-  focus:border-primary dark:focus:border-primary`
-
 export default function WebTransactions() {
   const txAll      = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray(), [], undefined)
   const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
@@ -58,9 +54,20 @@ export default function WebTransactions() {
     Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
 
   // Desktop conventions: "/" jumps to search, Escape steps back out.
+  //
+  // Both are suppressed while the edit sheet is open — it is a modal with its
+  // own inputs and its own Escape — and "/" is suppressed whenever a field has
+  // focus, or typing a slash anywhere would yank the caret into the search box.
   useEffect(() => {
+    if (sheetOpen) return
+    const isTyping = () => {
+      const el = document.activeElement
+      if (!el) return false
+      return el.isContentEditable
+        || ['INPUT', 'TEXTAREA', 'SELECT'].includes(el.tagName)
+    }
     const onKey = (e) => {
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT') {
+      if (e.key === '/' && !isTyping()) {
         e.preventDefault(); searchRef.current?.focus()
       }
       if (e.key === 'Escape') {
@@ -70,7 +77,7 @@ export default function WebTransactions() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [sheetOpen])
 
   useEffect(() => { setVisible(PAGE) }, [deferred, type, account, category, month])
 
@@ -109,6 +116,25 @@ export default function WebTransactions() {
     })
     return { out, inn }
   }, [filtered])
+
+  const accountOpts = useMemo(() => [
+    { value: '', label: 'All accounts' },
+    ...(accounts ?? []).map(a => ({ value: a.name, label: a.name })),
+  ], [accounts])
+
+  const categoryOpts = useMemo(() => [
+    { value: '', label: 'All categories' },
+    ...(categories ?? []).map(c => ({ value: c.name, label: `${c.icon ?? ''} ${c.name}`.trim() })),
+  ], [categories])
+
+  const monthOpts = useMemo(() => [
+    { value: '', label: 'All time' },
+    ...months.map(m => ({
+      value: m,
+      label: new Date(`${m}-01T00:00:00`)
+        .toLocaleDateString('en-PH', { month: 'long', year: 'numeric' }),
+    })),
+  ], [months])
 
   const rows = filtered.slice(0, visible)
   const activeFilters = (type !== 'all') + !!account + !!category + !!month
@@ -185,29 +211,14 @@ export default function WebTransactions() {
           ))}
         </div>
 
-        <select value={account} onChange={e => setAccount(e.target.value)}
-          aria-label="Filter by account" className={selectClass}>
-          <option value="">All accounts</option>
-          {(accounts ?? []).map(a => <option key={a.id} value={a.name}>{a.name}</option>)}
-        </select>
+        <WebSelect value={account} onChange={setAccount}
+          options={accountOpts} ariaLabel="Filter by account" minWidth={160} />
 
-        <select value={category} onChange={e => setCategory(e.target.value)}
-          aria-label="Filter by category" className={selectClass}>
-          <option value="">All categories</option>
-          {(categories ?? []).map(c => (
-            <option key={`${c.name}-${c.type}`} value={c.name}>{c.name}</option>
-          ))}
-        </select>
+        <WebSelect value={category} onChange={setCategory}
+          options={categoryOpts} ariaLabel="Filter by category" minWidth={170} />
 
-        <select value={month} onChange={e => setMonth(e.target.value)}
-          aria-label="Filter by month" className={selectClass}>
-          <option value="">All time</option>
-          {months.map(m => (
-            <option key={m} value={m}>
-              {new Date(`${m}-01T00:00:00`).toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })}
-            </option>
-          ))}
-        </select>
+        <WebSelect value={month} onChange={setMonth}
+          options={monthOpts} ariaLabel="Filter by month" minWidth={160} />
       </div>
 
       <div className="flex gap-6 items-start min-w-0">
@@ -234,11 +245,25 @@ export default function WebTransactions() {
                     const acct = isTr ? `${t.fromAccount ?? '—'} → ${t.toAccount ?? '—'}` : (t.account ?? '—')
                     const active = selected?.id === t.id
                     return (
+                      // Rows are the only way into the detail pane, so they
+                      // have to be reachable without a mouse: focusable, with
+                      // Enter/Space selecting and a visible focus ring.
                       <tr
                         key={t.id}
+                        tabIndex={0}
+                        role="button"
+                        aria-pressed={active}
+                        aria-label={`${t.description || t.category || 'Transaction'}, ${money(t.amount)}`}
                         onClick={() => setSelected(t)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter' || e.key === ' ') {
+                            e.preventDefault(); setSelected(t)
+                          }
+                        }}
                         className={[
                           'border-t border-slate-100 dark:border-white/[0.05] cursor-pointer',
+                          'outline-none focus-visible:ring-2 focus-visible:ring-primary',
+                          'focus-visible:ring-inset',
                           active
                             ? 'bg-primary/[0.07] dark:bg-primary/[0.12]'
                             : 'hover:bg-slate-50 dark:hover:bg-white/[0.03]',

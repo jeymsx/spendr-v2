@@ -208,7 +208,7 @@ export default function WebInsights() {
         }
       />
 
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-6 mb-6">
         <WebStat label="Spent"  value={money(spent)}  tone="bad"
                  hint={`${expenses.length} transaction${expenses.length === 1 ? '' : 's'}`} />
         <WebStat label="Earned" value={money(earned)} tone="good"

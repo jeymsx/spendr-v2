@@ -51,7 +51,7 @@ export default function WebDashboard() {
       />
 
       {/* Top line: the four numbers worth seeing at a glance */}
-      <div className="grid grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
+      <div className="grid grid-cols-2 xl:grid-cols-4 gap-6 mb-6">
         <WebStat label="Net worth"   value={money(s.netWorth)} tone={s.netWorth < 0 ? 'bad' : 'default'}
                  hint="Assets minus credit owed" />
         <WebStat label="Spending"    value={money(s.balances.spending)} hint="Cash & e-wallets" />
