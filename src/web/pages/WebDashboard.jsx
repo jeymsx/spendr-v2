@@ -149,7 +149,7 @@ export default function WebDashboard() {
           )}
 
           <WebPanel title="Recent activity" to="/transactions" flush>
-            {s.recent.length === 0 ? <WebEmpty>Nothing logged yet</WebEmpty> : (
+            {s.recent.length === 0 ? <WebEmpty>No transactions yet</WebEmpty> : (
               <div className="overflow-x-auto">
               <table className="w-full text-sm min-w-[520px]">
                 <tbody>
@@ -227,7 +227,7 @@ export default function WebDashboard() {
           </WebPanel>
 
           <WebPanel title="Upcoming bills" to="/recurring">
-            {s.upcoming.length === 0 ? <WebEmpty>Nothing scheduled</WebEmpty> : (
+            {s.upcoming.length === 0 ? <WebEmpty>No upcoming bills</WebEmpty> : (
               <div className="flex flex-col gap-3">
                 {s.upcoming.slice(0, 6).map(r => {
                   const d = daysAway(r.nextDate)

@@ -264,7 +264,7 @@ export default function WebInsights() {
         </WebPanel>
 
         <WebPanel title={range === '1m' ? 'Daily flow' : 'Monthly flow'}>
-          {series.length === 0 ? <WebEmpty>Nothing to chart yet</WebEmpty> : (
+          {series.length === 0 ? <WebEmpty>No activity in this period</WebEmpty> : (
             <div className="h-[190px] text-slate-500 dark:text-slate-400">
               <ResponsiveContainer width="100%" height="100%">
                 {/* barCategoryGap/barGap and the two fills match the mobile
@@ -293,7 +293,7 @@ export default function WebInsights() {
           height of the three-panel column beside it. */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 items-start">
         <WebPanel title="Biggest expenses" className="xl:col-span-2" flush>
-          {topExpenses.length === 0 ? <WebEmpty>Nothing in this period</WebEmpty> : (
+          {topExpenses.length === 0 ? <WebEmpty>No expenses in this period</WebEmpty> : (
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[420px]">
               <tbody>
@@ -322,7 +322,7 @@ export default function WebInsights() {
 
         <div className="flex flex-col gap-6 min-w-0">
           <WebPanel title="By account">
-            {byAccount.length === 0 ? <WebEmpty>No spending</WebEmpty> : (
+            {byAccount.length === 0 ? <WebEmpty>No spending in this period</WebEmpty> : (
               <div className="flex flex-col gap-3">
                 {byAccount.map(a => (
                   <div key={a.name} className="min-w-0">

@@ -178,7 +178,7 @@ export default function WebDebts() {
         <WebPanel title={tab === 'i_owe' ? 'I owe' : 'Owed to me'}
           action={<span className="text-[11px] text-slate-500 dark:text-slate-400">
             {openItems.length} open</span>}>
-          {openItems.length === 0 ? <WebEmpty>Nothing outstanding here</WebEmpty> : (
+          {openItems.length === 0 ? <WebEmpty>No open debts</WebEmpty> : (
             <div className="flex flex-col gap-3">
               {openItems.map(d => <Card key={d.id} d={d} />)}
             </div>
@@ -188,7 +188,7 @@ export default function WebDebts() {
         <WebPanel title="Settled"
           action={<span className="text-[11px] text-slate-500 dark:text-slate-400">
             {settled.length}</span>}>
-          {settled.length === 0 ? <WebEmpty>Nothing settled yet</WebEmpty> : (
+          {settled.length === 0 ? <WebEmpty>No settled debts yet</WebEmpty> : (
             <div className="flex flex-col gap-3">
               {settled.map(d => <Card key={d.id} d={d} dim />)}
             </div>

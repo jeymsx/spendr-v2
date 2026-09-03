@@ -72,14 +72,14 @@ function StackRow({ label, hint, children }) {
   )
 }
 
-function Btn({ children, onClick, tone = 'neutral', disabled }) {
+function Btn({ children, onClick, tone = 'neutral', disabled, ariaLabel }) {
   const cls = {
     neutral: 'text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.07]',
     primary: 'text-white bg-primary',
     danger:  'text-white bg-red-500',
   }[tone]
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button onClick={onClick} disabled={disabled} aria-label={ariaLabel}
       className={`h-9 px-4 rounded-xl text-xs font-semibold whitespace-nowrap
         disabled:opacity-40 active:scale-95 transition-transform duration-100 ${cls}`}>
       {children}
@@ -285,13 +285,16 @@ export default function WebSettings() {
           {section === 'manage' && (
             <WebPanel title="Manage">
               <Row label="Categories" hint={`${catCount ?? '—'} categories`}>
-                <Btn onClick={() => setSheet('categories')}>Open manager</Btn>
+                <Btn ariaLabel="Open the category manager"
+                  onClick={() => setSheet('categories')}>Open manager</Btn>
               </Row>
               <Row label="Monthly budgets" hint="Per-category spending limits">
-                <Btn onClick={() => setSheet('budgets')}>Open manager</Btn>
+                <Btn ariaLabel="Open the budget manager"
+                  onClick={() => setSheet('budgets')}>Open manager</Btn>
               </Row>
               <Row label="Quick templates" hint="One-tap repeat transactions">
-                <Btn onClick={() => setSheet('templates')}>Open manager</Btn>
+                <Btn ariaLabel="Open the template manager"
+                  onClick={() => setSheet('templates')}>Open manager</Btn>
               </Row>
               <Row label="Accounts" hint={`${acctCount ?? '—'} accounts`}>
                 <Btn onClick={() => navigate('/accounts')}>Go to accounts</Btn>
@@ -378,10 +381,12 @@ export default function WebSettings() {
               <Row label="Spendr" hint="Offline-first personal finance, built for the Philippines" />
               <Row label="Stored locally" hint={`${txCount ?? '—'} transactions · ${acctCount ?? '—'} accounts · ${catCount ?? '—'} categories`} />
               <Row label="Privacy policy">
-                <Btn onClick={() => setPolicy('privacy')}>Read</Btn>
+                <Btn ariaLabel="Read the privacy policy"
+                  onClick={() => setPolicy('privacy')}>Read</Btn>
               </Row>
               <Row label="Terms of use">
-                <Btn onClick={() => setPolicy('terms')}>Read</Btn>
+                <Btn ariaLabel="Read the terms of use"
+                  onClick={() => setPolicy('terms')}>Read</Btn>
               </Row>
             </WebPanel>
           )}
