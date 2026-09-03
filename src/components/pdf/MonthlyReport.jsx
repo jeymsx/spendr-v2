@@ -275,7 +275,7 @@ function HeaderBar({ subtitle, colors }) {
 
 // ── Page 1: Cover & Summary ────────────────────────────────────────────────────
 
-function CoverPage({ year, month, userName, summary, accounts, endingBalances, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, generatedAt, colors }) {
+function CoverPage({ year, month, userName, summary, accounts, endingBalances, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, generatedAt, asOfLabel, colors }) {
   const monthName = MONTH_NAMES[month - 1]
   const { totalIncome, totalExpenses, netSavings, savingsRate } = summary
 
@@ -319,7 +319,9 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
 
       {/* Account Balances */}
       <View style={[styles.sectionHeader, { backgroundColor: colors.lightBg }]}>
-        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>Account Balances</Text>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>
+          Account Balances{asOfLabel ? `  ·  as of ${asOfLabel}` : ''}
+        </Text>
       </View>
 
       {/* Table header */}
@@ -413,7 +415,9 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
 
       {/* Net Worth section header */}
       <View style={[styles.sectionHeader, { marginTop: 14, backgroundColor: colors.lightBg }]}>
-        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>Overall Financial Position</Text>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>
+          Overall Financial Position{asOfLabel ? `  ·  as of ${asOfLabel}` : ''}
+        </Text>
       </View>
 
       {/* Net Worth row */}
@@ -659,6 +663,7 @@ export default function MonthlyReport(props) {
     transactions,
     accentColor = '#2D9DFF',
     generatedAt = '',
+    asOf,
   } = props
 
   const colors = computePdfColors(accentColor)
@@ -682,6 +687,9 @@ export default function MonthlyReport(props) {
         totalCreditLimit={totalCreditLimit}
         netWorth={netWorth}
         generatedAt={generatedAt}
+        asOfLabel={asOf
+          ? new Date(asOf).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
+          : ''}
         colors={colors}
       />
       <SpendingPage

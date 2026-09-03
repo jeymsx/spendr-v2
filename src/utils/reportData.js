@@ -34,14 +34,27 @@ export async function fetchReportData(year, month) {
   // This report carries a Budget column per category and a spend total, and
   // the current month is the default selection, so an installment dated later
   // this month was being reported as money already gone and could flag a
-  // category over budget. allTxs stays unfiltered below: getCreditStatus has
-  // to see future charges, because the issuer really has locked that credit.
+  // category over budget.
   const cutoff    = scheduledCutoff()
   const monthTxs  = allTxs.filter(tx => {
     if ((tx.date ?? '') > cutoff) return false
     const d = new Date(tx.date)
     return d >= start && d < end
   })
+
+  // The instant this report describes. A report for a finished month is a
+  // snapshot of that month's last moment; a report for the month in progress
+  // can only be a snapshot of now, which is also where the spend figures above
+  // stop. Everything time-dependent below derives from this one value, so the
+  // balances, the credit cycles and the totals all describe the same moment.
+  const asOf = new Date(Math.min(end.getTime() - 1, new Date(cutoff).getTime()))
+
+  // Credit math must not see anything that had not happened yet. Passing only
+  // a reference date is not enough: getCreditStatus treats every charge after
+  // the closed cycle as unbilled and every payment after it as settling the
+  // statement, both unbounded forward, so a July report would otherwise absorb
+  // August's charges and payments.
+  const txsAsOf = allTxs.filter(tx => new Date(tx.date) <= asOf)
 
   const accounts   = await db.accounts.toArray()
   const categories = await db.categories.toArray()
@@ -96,8 +109,8 @@ export async function fetchReportData(year, month) {
   const creditDetailMap = {}
   for (const acct of creditAccounts) {
     const { cycleStart, cycleEnd, thisTotal: stmtTotal, nextTotal, currentBalance: balanceUsed }
-      = getCreditStatus(acct, allTxs)
-    const { cycleStart: nextStart } = getNextCycleRange(acct.cutoffDate)
+      = getCreditStatus(acct, txsAsOf, asOf)
+    const { cycleStart: nextStart } = getNextCycleRange(acct.cutoffDate, asOf)
 
     const limit = acct.creditLimit ?? 0
     const available   = Math.max(limit - balanceUsed, 0)
@@ -123,9 +136,12 @@ export async function fetchReportData(year, month) {
     }
   }
 
-  // Reconstruct each account's balance at month-end by reversing
-  // all transactions that happened after the report period.
-  const afterMonthTxs = allTxs.filter(tx => new Date(tx.date) >= end)
+  // Reconstruct each account's balance as of the same instant, by reversing
+  // everything that happened after it. For a finished month this is identical
+  // to reversing everything from the next month on; for the month in progress
+  // it also backs out charges dated later this month, which the stored balance
+  // already includes because an installment plan writes every row up front.
+  const afterMonthTxs = allTxs.filter(tx => new Date(tx.date) > asOf)
   const endingBalances = {}
   for (const acct of accounts) {
     let bal = acct.balance ?? 0
@@ -163,6 +179,7 @@ export async function fetchReportData(year, month) {
     year,
     month,
     userName,
+    asOf,
     summary: { totalIncome, totalExpenses, netSavings, savingsRate },
     accounts,
     endingBalances,
