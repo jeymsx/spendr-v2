@@ -14,10 +14,10 @@ const Onboarding = lazy(() => import('../pages/Onboarding'))
 // mobile page inside MobileFallback so every route works from day one.
 const WebDashboard    = lazy(() => import('./pages/WebDashboard'))
 const WebTransactions = lazy(() => import('./pages/WebTransactions'))
+const WebInsights     = lazy(() => import('./pages/WebInsights'))
 
 // Still on the mobile layout, in a compact column.
 const Accounts     = lazy(() => import('../pages/Accounts'))
-const Insights     = lazy(() => import('../pages/Insights'))
 const Debts        = lazy(() => import('../pages/Debts'))
 const Recurring    = lazy(() => import('../pages/Recurring'))
 const Settings     = lazy(() => import('../pages/Settings'))
@@ -54,7 +54,7 @@ export default function WebApp() {
 
               <Route path="/transactions" element={<WebTransactions />} />
               <Route path="/accounts"     element={<Compact title="Accounts"><Accounts /></Compact>} />
-              <Route path="/insights"     element={<Compact title="Insights"><Insights /></Compact>} />
+              <Route path="/insights"     element={<WebInsights />} />
               <Route path="/debts"        element={<Compact title="Debts"><Debts /></Compact>} />
               <Route path="/recurring"    element={<Compact title="Recurring"><Recurring /></Compact>} />
               <Route path="/settings"     element={<Compact title="Settings"><Settings /></Compact>} />
