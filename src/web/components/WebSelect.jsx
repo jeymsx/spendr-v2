@@ -187,13 +187,10 @@ export default function WebSelect({
           aria-label={ariaLabel}
           tabIndex={-1}
           onKeyDown={onKeyDown}
-          className="fixed z-[250] p-1 overflow-y-auto no-scrollbar
-            rounded-xl border border-slate-200/80 dark:border-white/[0.08]
-            bg-white dark:bg-[#111820]"
+          className="card-solid fixed z-[250] p-1 overflow-y-auto no-scrollbar rounded-xl"
           style={{
             top: pos.top, bottom: pos.bottom, left: pos.left,
             width: pos.width, maxHeight: pos.maxHeight,
-            boxShadow: '0 16px 40px rgba(0,0,0,0.32)',
           }}
         >
           {options.map((o, i) => {

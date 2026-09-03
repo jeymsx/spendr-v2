@@ -635,18 +635,6 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
       </div>
 
       {/* Nested pickers at z-[110] */}
-      <OverdrawWarningSheet
-        open={!!overdraw}
-        onClose={() => setOverdraw(null)}
-        onSaveAnyway={() => {
-          const pending = overdraw
-          setOverdraw(null)
-          if (pending) handlePost(pending.rec, { force: true })
-        }}
-        accountName={overdraw?.accountName}
-        balance={overdraw?.balance}
-        amount={overdraw?.amount}
-      />
       <CategoryPickerSheet
         open={showCatPick}
         onClose={() => setShowCatPick(false)}
@@ -865,6 +853,21 @@ export default function Recurring() {
         editRec={editRec}
         categories={categories ?? []}
         accounts={accounts ?? []}
+      />
+
+      {/* Posting a charge early can overdraw the funding account. The guard
+          lives here because handlePost and its pending state do. */}
+      <OverdrawWarningSheet
+        open={!!overdraw}
+        onClose={() => setOverdraw(null)}
+        onSaveAnyway={() => {
+          const pending = overdraw
+          setOverdraw(null)
+          if (pending) handlePost(pending.rec, { force: true })
+        }}
+        accountName={overdraw?.accountName}
+        balance={overdraw?.balance}
+        amount={overdraw?.amount}
       />
     </div>
   )

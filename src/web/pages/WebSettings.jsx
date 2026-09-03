@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useTheme } from '../../context/ThemeContext'
@@ -14,9 +15,24 @@ import { setViewMode, getViewPreference } from '../useViewMode'
 import {
   ProfileSheet, SheetsConfigSheet, ResetConfirmModal, RestoreBackupSheet,
   BudgetManagerSheet, CategoryManagerSheet, TemplateManagerSheet,
-  AccentColorSheet, PolicySheet, buildAndDownloadCSV,
+  PolicySheet, buildAndDownloadCSV, ACCENT_COLORS,
 } from '../../pages/Settings'
-import { WebPageHeader, WebPanel, money } from '../components/WebPanel'
+import { WebPageHeader, WebPanel } from '../components/WebPanel'
+import WebSelect from '../components/WebSelect'
+
+/** The twelve months ending with the current one, newest first. */
+function last12Months() {
+  const out = []
+  const now = new Date()
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+    out.push({
+      value: `${d.getFullYear()}-${d.getMonth() + 1}`,
+      label: d.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' }),
+    })
+  }
+  return out
+}
 
 const SECTIONS = [
   { key: 'general',    label: 'General' },
@@ -41,6 +57,17 @@ function Row({ label, hint, children, danger }) {
         {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{hint}</p>}
       </div>
       <div className="shrink-0 flex items-center gap-2">{children}</div>
+    </div>
+  )
+}
+
+/** A row whose control is too wide to sit on the right, so it goes below. */
+function StackRow({ label, hint, children }) {
+  return (
+    <div className="py-3.5 border-b border-slate-100 dark:border-white/[0.05] last:border-0">
+      <p className="text-sm font-medium text-slate-800 dark:text-slate-100">{label}</p>
+      {hint && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{hint}</p>}
+      <div className="mt-3">{children}</div>
     </div>
   )
 }
@@ -72,6 +99,7 @@ function Toggle({ on, onChange, label }) {
 }
 
 export default function WebSettings() {
+  const navigate = useNavigate()
   const [section, setSection] = useState('general')
   const { theme, toggleTheme, accentColor, setAccentColor } = useTheme()
   const { user, signOut, signInWithGoogle } = useAuth()
@@ -87,6 +115,7 @@ export default function WebSettings() {
   const skipMeta     = useLiveQuery(() => db.meta.get('skipConfirm'),      [], null)
   const lastSyncMeta = useLiveQuery(() => db.meta.get('lastSync'),         [], null)
   const sheetsUrl    = useLiveQuery(() => db.meta.get('sheetsUrl'),        [], null)
+  const sheetsSynced = useLiveQuery(() => db.meta.get('sheetsLastSynced'), [], null)
   const txCount      = useLiveQuery(() => db.transactions.count(),         [], undefined)
   const acctCount    = useLiveQuery(() => db.accounts.count(),             [], undefined)
   const catCount     = useLiveQuery(() => db.categories.count(),           [], undefined)
@@ -97,6 +126,31 @@ export default function WebSettings() {
     : 'Never'
 
   const viewPref = useMemo(() => getViewPreference(), [])
+  const monthOpts = useMemo(last12Months, [])
+
+  const [reportMonth, setReportMonth] = useState(() => {
+    const d = new Date()
+    return `${d.getFullYear()}-${d.getMonth() + 1}`
+  })
+
+  const sheetsLastSync = sheetsSynced?.value
+    ? new Date(sheetsSynced.value).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' })
+    : null
+
+  // The PDF renderer and the month's aggregation are both heavy, so they load
+  // on demand rather than riding in the Settings bundle.
+  async function downloadReport() {
+    setBusy('report')
+    try {
+      const [year, month] = reportMonth.split('-').map(Number)
+      const { downloadMonthlyReport } = await import('../../utils/reportData.js')
+      await downloadMonthlyReport(year, month, accentColor)
+      showToast('Report downloaded')
+    } catch (e) {
+      console.error('[WebSettings] report failed:', e)
+      showToast('Could not generate the report', 'error')
+    } finally { setBusy(null) }
+  }
 
   async function exportCsv() {
     setBusy('csv')
@@ -191,11 +245,40 @@ export default function WebSettings() {
               <Row label="Theme" hint={theme === 'dark' ? 'Dark' : 'Light'}>
                 <Toggle on={theme === 'light'} onChange={toggleTheme} label="Light mode" />
               </Row>
-              <Row label="Accent colour" hint={accentColor}>
-                <span className="w-6 h-6 rounded-lg border border-black/10 dark:border-white/20"
-                  style={{ background: accentColor }} />
-                <Btn onClick={() => setSheet('accent')}>Change</Btn>
-              </Row>
+              {/* On a phone the eight accents live behind a sheet because there
+                  is nowhere else to put them. Here they all fit, so choosing
+                  one is a single click and the result shows immediately in the
+                  sidebar and the cards around it. */}
+              <StackRow
+                label="Accent colour"
+                hint={ACCENT_COLORS.find(c => c.hex === accentColor)?.name ?? accentColor}
+              >
+                <div role="radiogroup" aria-label="Accent colour" className="flex flex-wrap gap-2">
+                  {ACCENT_COLORS.map(({ hex, name }) => {
+                    const on = hex === accentColor
+                    return (
+                      <button
+                        key={hex}
+                        role="radio"
+                        aria-checked={on}
+                        aria-label={name}
+                        onClick={() => setAccentColor(hex)}
+                        className={[
+                          'flex items-center gap-2 h-9 pl-2 pr-3 rounded-xl text-xs font-semibold',
+                          'border transition-colors duration-150',
+                          on
+                            ? 'border-primary text-primary bg-primary/[0.08] dark:bg-primary/[0.14]'
+                            : 'border-slate-200 dark:border-white/[0.09] text-slate-600 dark:text-slate-300 hover:border-slate-300 dark:hover:border-white/[0.18]',
+                        ].join(' ')}
+                      >
+                        <span className="w-5 h-5 rounded-lg shrink-0 border border-black/10 dark:border-white/20"
+                          style={{ background: hex }} />
+                        {name}
+                      </button>
+                    )
+                  })}
+                </div>
+              </StackRow>
             </WebPanel>
           )}
 
@@ -211,7 +294,7 @@ export default function WebSettings() {
                 <Btn onClick={() => setSheet('templates')}>Open manager</Btn>
               </Row>
               <Row label="Accounts" hint={`${acctCount ?? '—'} accounts`}>
-                <Btn onClick={() => { window.location.href = '/accounts' }}>Go to accounts</Btn>
+                <Btn onClick={() => navigate('/accounts')}>Go to accounts</Btn>
               </Row>
             </WebPanel>
           )}
@@ -232,8 +315,25 @@ export default function WebSettings() {
                 <Btn tone="neutral" onClick={() => setSheet('restore')}>Restore…</Btn>
               </Row>
               <Row label="Import CSV" hint="Spendr export or the newer column format">
-                <Btn onClick={() => { window.location.href = '/import' }}>Open importer</Btn>
+                <Btn onClick={() => navigate('/import')}>Open importer</Btn>
               </Row>
+              <StackRow
+                label="Monthly PDF report"
+                hint="Spending by category, income, account balances and the month's transactions"
+              >
+                <div className="flex items-center gap-2">
+                  <WebSelect
+                    value={reportMonth}
+                    onChange={setReportMonth}
+                    options={monthOpts}
+                    ariaLabel="Report month"
+                    minWidth={190}
+                  />
+                  <Btn tone="primary" onClick={downloadReport} disabled={busy === 'report'}>
+                    {busy === 'report' ? 'Generating…' : 'Download PDF'}
+                  </Btn>
+                </div>
+              </StackRow>
             </WebPanel>
           )}
 
@@ -264,7 +364,9 @@ export default function WebSettings() {
 
               <WebPanel title="Google Sheets">
                 <Row label="Apps Script endpoint"
-                  hint={sheetsUrl?.value ? 'Configured' : 'Not configured'}>
+                  hint={sheetsUrl?.value
+                    ? (sheetsLastSync ? `Configured · last pushed ${sheetsLastSync}` : 'Configured · never pushed')
+                    : 'Not configured'}>
                   <Btn onClick={() => setSheet('sheets')}>Configure</Btn>
                 </Row>
               </WebPanel>
@@ -304,8 +406,6 @@ export default function WebSettings() {
           as bottom sheets — see index.css, html.web overrides. */}
       <ProfileSheet open={sheet === 'profile'} onClose={() => setSheet(null)}
         displayName={nameMeta?.value ?? ''} currency={currencyMeta?.value ?? 'PHP'} />
-      <AccentColorSheet open={sheet === 'accent'} onClose={() => setSheet(null)}
-        accentColor={accentColor} setAccentColor={setAccentColor} />
       <CategoryManagerSheet open={sheet === 'categories'} onClose={() => setSheet(null)} />
       <BudgetManagerSheet   open={sheet === 'budgets'}    onClose={() => setSheet(null)} />
       <TemplateManagerSheet open={sheet === 'templates'}  onClose={() => setSheet(null)} />

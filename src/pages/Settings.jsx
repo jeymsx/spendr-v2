@@ -51,7 +51,7 @@ const CAT_COLORS = [
 
 const DEFAULT_CAT_NAMES = new Set(['Others', 'Income', 'Transfer', 'Transfer Fee'])
 
-const ACCENT_COLORS = [
+export const ACCENT_COLORS = [
   { hex: '#2D9DFF', name: 'Azure'  },
   { hex: '#845EF7', name: 'Cosmos' },
   { hex: '#F06595', name: 'Blush'  },

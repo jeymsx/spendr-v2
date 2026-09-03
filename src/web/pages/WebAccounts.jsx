@@ -81,7 +81,7 @@ export default function WebAccounts() {
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
   const categories   = useLiveQuery(() => db.categories.toArray(),   [], [])
 
-  const [selectedName, setSelectedName] = useState(null)
+  const [selectedId, setSelectedId] = useState(null)
   const [selectedTx,   setSelectedTx]   = useState(null)
   const [quickOpen,    setQuickOpen]    = useState(false)
   const [formOpen,     setFormOpen]     = useState(false)
@@ -91,13 +91,17 @@ export default function WebAccounts() {
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
 
-  // Select the first account once loaded so the detail side is never blank.
-  useEffect(() => {
-    if (!selectedName && (accounts ?? []).length) setSelectedName(accounts[0].name)
-  }, [accounts, selectedName])
-
   const selected = useMemo(() =>
-    (accounts ?? []).find(a => a.name === selectedName) ?? null, [accounts, selectedName])
+    (accounts ?? []).find(a => a.id === selectedId) ?? null, [accounts, selectedId])
+
+  // Fall back to the first account whenever the selection doesn't resolve -
+  // on first load, and again after the selected account is deleted from the
+  // form sheet. Keying on id means a rename keeps the selection instead.
+  useEffect(() => {
+    const list = accounts ?? []
+    if (!list.length) return
+    if (!list.some(a => a.id === selectedId)) setSelectedId(list[0].id)
+  }, [accounts, selectedId])
 
   // Unfiltered on purpose — available credit must see future installments,
   // which is exactly what the history hides.
@@ -172,12 +176,12 @@ export default function WebAccounts() {
                   : g.items.reduce((s, a) => s + (a.balance ?? 0), 0))}
               </span>}>
               {g.items.map(a => {
-                const active = a.name === selectedName
+                const active = a.id === selectedId
                 const cs = creditStatus[a.name]
                 return (
                   <button
                     key={a.id}
-                    onClick={() => setSelectedName(a.name)}
+                    onClick={() => setSelectedId(a.id)}
                     className={[
                       'w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl',
                       'transition-colors duration-150',

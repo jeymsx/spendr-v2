@@ -20,6 +20,7 @@ const WebAccounts     = lazy(() => import('./pages/WebAccounts'))
 const WebRecurring    = lazy(() => import('./pages/WebRecurring'))
 const WebDebts        = lazy(() => import('./pages/WebDebts'))
 const WebSettings     = lazy(() => import('./pages/WebSettings'))
+const WebImport       = lazy(() => import('./pages/WebImport'))
 
 // Single-column forms, reused whole inside desktop chrome (see WebFormPage).
 const ImportWizard = lazy(() => import('../pages/ImportWizard'))
@@ -66,7 +67,7 @@ export default function WebApp() {
               <Route path="/expense"  element={<WebFormPage><AddExpense /></WebFormPage>} />
               <Route path="/inflow"   element={<WebFormPage><AddInflow /></WebFormPage>} />
               <Route path="/transfer" element={<WebFormPage><Transfer /></WebFormPage>} />
-              <Route path="/import"   element={<WebFormPage width={760}><ImportWizard /></WebFormPage>} />
+              <Route path="/import"   element={<WebImport />} />
             </Route>
           </Route>
         </Route>

@@ -5,20 +5,8 @@ const AddExpense = lazy(() => import('../pages/AddExpense'))
 const AddInflow  = lazy(() => import('../pages/AddInflow'))
 const Transfer   = lazy(() => import('../pages/Transfer'))
 
-/**
- * Modal surfaces are opaque and carry NO backdrop-filter, unlike the .card
- * class the pages use. Two reasons, and both matter:
- *
- *  - A translucent, blurred panel floating over a full page reads as washed
- *    out; .dark .card is rgba(40,60,95,0.2), so the table behind shows through.
- *  - backdrop-filter makes an element a containing block for position:fixed
- *    descendants. These forms open their own pickers and confirm sheets, which
- *    are `fixed inset-0` and centred by the html.web .sheet-panel rules — on a
- *    .card host those would centre against this 560px box instead of the
- *    viewport, and get clipped.
- */
-const OPAQUE_SURFACE =
-  'rounded-2xl border border-slate-200/80 dark:border-white/[0.08] bg-white dark:bg-[#111820]'
+/** .card-solid is the page cards' material, composited opaque — see index.css. */
+const OPAQUE_SURFACE = 'card-solid rounded-2xl'
 
 const AddFlowContext = createContext(null)
 
@@ -77,21 +65,32 @@ export function AddFlowProvider({ children }) {
       {children}
 
       {flow && (
-        <div className="fixed inset-0 z-[220] flex items-center justify-center p-6">
-          <Backdrop onClick={closeAdd} />
-            <div
-              className={`relative w-full max-w-[560px] max-h-[88vh] overflow-y-auto
-                no-scrollbar ${OPAQUE_SURFACE}`}
-              style={{ boxShadow: '0 24px 64px rgba(0,0,0,0.44)' }}
-            >
-              <Suspense fallback={
-                <div className="flex items-center justify-center py-20">
-                  <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-                </div>
-              }>
-                <Form />
-              </Suspense>
-            </div>
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label={`Add ${flow}`}
+          className="fixed inset-0 z-[220] flex items-center justify-center p-6"
+        >
+          {/* Clicking away cancels. aria-hidden because the dialog's own
+              header already offers a labelled way out. */}
+          <button
+            aria-hidden="true"
+            tabIndex={-1}
+            onClick={closeAdd}
+            className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-default"
+          />
+          <div
+            className={`relative w-full max-w-[560px] max-h-[88vh] overflow-y-auto
+              no-scrollbar ${OPAQUE_SURFACE}`}
+          >
+            <Suspense fallback={
+              <div className="flex items-center justify-center py-20">
+                <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              </div>
+            }>
+              <Form />
+            </Suspense>
+          </div>
         </div>
       )}
     </AddFlowContext.Provider>

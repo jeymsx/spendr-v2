@@ -147,14 +147,20 @@ export default function WebInsights() {
   const topExpenses = useMemo(() =>
     [...expenses].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)).slice(0, 8), [expenses])
 
+  // Budgets are monthly, so they only mean anything against a single month's
+  // spend. On a 3m/6m/12m window the same figure would read as wildly over
+  // budget when nothing is wrong. The expense filter matches mobile: an inflow
+  // category with a budget field set is not a spending limit.
+  const budgetsApply = range === '1m'
   const budgets = useMemo(() => {
+    if (!budgetsApply) return []
     const bySpent = {}
     expenses.forEach(t => { bySpent[t.category] = (bySpent[t.category] ?? 0) + (t.amount ?? 0) })
     return (categories ?? [])
-      .filter(c => (c.budget ?? 0) > 0)
+      .filter(c => c.type === 'expense' && (c.budget ?? 0) > 0)
       .map(c => ({ ...c, spent: bySpent[c.name] ?? 0 }))
       .sort((a, b) => (b.spent / b.budget) - (a.spent / a.budget))
-  }, [categories, expenses])
+  }, [categories, expenses, budgetsApply])
 
   if (txAll === undefined) {
     return (
@@ -319,7 +325,9 @@ export default function WebInsights() {
           </WebPanel>
 
           <WebPanel title="Budgets">
-            {budgets.length === 0 ? <WebEmpty>No budgets set</WebEmpty> : (
+            {!budgetsApply ? (
+              <WebEmpty>Budgets are monthly — switch to This month to see them</WebEmpty>
+            ) : budgets.length === 0 ? <WebEmpty>No budgets set</WebEmpty> : (
               <div className="flex flex-col gap-3">
                 {budgets.map(c => {
                   const pct = c.budget > 0 ? (c.spent / c.budget) * 100 : 0

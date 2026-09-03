@@ -119,6 +119,38 @@ html.dark body {
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
+/* Opaque twin of .card, for anything that floats over a full page: menus,
+   dropdown lists and desktop modals.
+ 
+   It has to be the same material as the dashboard cards — same blue tint,
+   same accent-derived border, same inset highlight — but it cannot be
+   translucent or blurred. Two reasons:
+     - a 20%-opacity panel over a populated page shows the table through it;
+     - backdrop-filter makes an element the containing block for its
+       position:fixed descendants, so a form's own pickers would centre
+       against the panel instead of the viewport and get clipped.
+   So the tint is composited against the page base here rather than sampled
+   from what happens to be behind it. The overlay uses --color-primary-rgb, so
+   a non-blue accent tints this the same way .accent-custom tints .card. */
+.card-solid {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.14),
+    0 2px 6px rgba(0, 0, 0, 0.06);
+}
+
+.dark .card-solid {
+  background:
+    linear-gradient(rgba(var(--color-primary-rgb), 0.06),
+                    rgba(var(--color-primary-rgb), 0.06)),
+    #121a26;
+  border: 1px solid rgba(var(--color-primary-rgb), 0.16);
+  box-shadow:
+    0 16px 40px rgba(0, 0, 0, 0.40),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
 /* Non-blue accents: shift card tint to match the chosen accent */
 .dark.accent-custom .card {
   background: rgba(var(--color-primary-rgb), 0.04);
@@ -342,6 +374,43 @@ html.web .sheet-panel-exit .w-10.h-1 {
   html.web .sheet-panel-exit {
     width: min(680px, calc(100vw - 6rem));
   }
+}
+
+/* The CSV importer is reused whole inside a desktop card, and it brings its
+   phone chrome with it: a min-h-screen root, and a sticky header painted with
+   the page background so it can slide under content. Inside a card neither
+   applies — the card isn't the scroll container, and that background is a
+   different colour from the card's. */
+html.web .web-embed > .page-enter {
+  min-height: 0;
+  padding-bottom: 0;
+}
+
+html.web .web-embed .sticky.top-0 {
+  position: static;
+  background: transparent;
+}
+
+/* A phone has no cursor, so the mobile UI never needed this. On desktop an
+   element that responds to a click has to say so, and these components are
+   built from <button> and role=button rather than links. :disabled keeps its
+   default so a dimmed Save doesn't invite a click. */
+html.web button:not(:disabled),
+html.web summary,
+html.web label[for],
+html.web [role="button"]:not([aria-disabled="true"]),
+html.web [role="menuitem"],
+html.web [role="option"],
+html.web [role="tab"],
+html.web input[type="checkbox"],
+html.web input[type="radio"],
+html.web input[type="file"] {
+  cursor: pointer;
+}
+
+html.web button:disabled,
+html.web [aria-disabled="true"] {
+  cursor: not-allowed;
 }
 
 /* Native controls should follow the app's theme in both layouts, but it only

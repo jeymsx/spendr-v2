@@ -112,14 +112,11 @@ export default function WebAddMenu() {
           aria-label="Add transaction"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
-          className="fixed z-[240] w-[224px] p-1.5
-            rounded-xl border border-slate-200/80 dark:border-white/[0.08]
-            bg-white dark:bg-[#111820]"
+          className="card-solid fixed z-[240] w-[224px] p-1.5 rounded-xl"
           style={{
             top: rect.top,
             // 8px gap; the wrapper's own padded strip bridges it for the pointer.
             left: rect.left + 8,
-            boxShadow: '0 16px 40px rgba(0,0,0,0.32)',
           }}
         >
           {FLOWS.map(f => (
