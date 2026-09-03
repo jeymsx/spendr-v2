@@ -12,10 +12,10 @@ const Onboarding = lazy(() => import('../pages/Onboarding'))
 
 // Desktop pages, added one per phase. Anything not yet converted renders the
 // mobile page inside MobileFallback so every route works from day one.
-const WebDashboard = lazy(() => import('./pages/WebDashboard'))
+const WebDashboard    = lazy(() => import('./pages/WebDashboard'))
+const WebTransactions = lazy(() => import('./pages/WebTransactions'))
 
 // Still on the mobile layout, in a compact column.
-const Transactions = lazy(() => import('../pages/Transactions'))
 const Accounts     = lazy(() => import('../pages/Accounts'))
 const Insights     = lazy(() => import('../pages/Insights'))
 const Debts        = lazy(() => import('../pages/Debts'))
@@ -52,7 +52,7 @@ export default function WebApp() {
             <Route element={<WebLayout />}>
               <Route path="/"             element={<WebDashboard />} />
 
-              <Route path="/transactions" element={<Compact title="Transactions"><Transactions /></Compact>} />
+              <Route path="/transactions" element={<WebTransactions />} />
               <Route path="/accounts"     element={<Compact title="Accounts"><Accounts /></Compact>} />
               <Route path="/insights"     element={<Compact title="Insights"><Insights /></Compact>} />
               <Route path="/debts"        element={<Compact title="Debts"><Debts /></Compact>} />
