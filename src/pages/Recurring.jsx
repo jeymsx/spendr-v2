@@ -296,7 +296,7 @@ function EmptyState({ onAdd }) {
 
 // ── Recurring Form Sheet ───────────────────────────────────────────────────────
 
-function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
+export function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
   const [closing,      setClosing]      = useState(false)
   const { showToast } = useToast()
   const { user } = useAuth()

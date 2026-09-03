@@ -364,7 +364,7 @@ function SettledSection({ debts, onEdit }) {
 
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
 
-function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
+export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
   const [closing,    setClosing]    = useState(false)
   const { showToast } = useToast()
   const { user } = useAuth()
@@ -652,7 +652,7 @@ function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
 
 // ── Payment Sheet ──────────────────────────────────────────────────────────────
 
-function PaymentSheet({ open, onClose, debt }) {
+export function PaymentSheet({ open, onClose, debt }) {
   const [closing,       setClosing]       = useState(false)
   const { showToast } = useToast()
   const [amountStr,     setAmountStr]     = useState('0')
