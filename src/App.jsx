@@ -38,7 +38,7 @@ function LoadingScreen() {
 // ── Onboarding guard ───────────────────────────────────────────────────────────
 // Redirects to /onboarding until meta 'onboarded' is truthy.
 
-function OnboardingGuard() {
+export function OnboardingGuard() {
   // db.meta.get() returns `undefined` for missing keys AND useLiveQuery starts
   // with `undefined` while the query is in-flight — use null as the "not found"
   // sentinel so we can tell the two apart.
