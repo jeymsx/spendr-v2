@@ -73,7 +73,21 @@ function FieldButton({ onClick, error, left, center, right }) {
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
-export default function AddExpense() {
+/**
+ * onCancel / onSaved let a host close this form instead of navigating.
+ *
+ * As a route the form IS the page, so back means navigate(-1) and saving means
+ * going to the dashboard. The desktop layout renders the same component as an
+ * overlay on top of whatever page you were on, where both are wrong:
+ * navigate(-1) pops the history entry of the page BEHIND the modal, so
+ * dismissing an expense opened over Settings landed you on whatever you had
+ * visited before Settings. Saving likewise threw you to the dashboard instead
+ * of leaving you where you were.
+ *
+ * Neither prop is passed by the mobile routes, so the phone behaviour is
+ * unchanged by construction.
+ */
+export default function AddExpense({ onCancel, onSaved } = {}) {
   const navigate = useNavigate()
   const { showToast } = useToast()
 
@@ -213,7 +227,7 @@ export default function AddExpense() {
         await db.templates.add({ ...templateData, createdAt: new Date().toISOString() })
       }
       showToast(count > 1 ? `${count} payments scheduled` : 'Expense saved')
-      navigate('/')
+      if (onSaved) onSaved(); else navigate('/')
     } catch (e) {
       console.error('[AddExpense] save failed:', e)
       showToast('Failed to save expense', 'error')
@@ -235,7 +249,7 @@ export default function AddExpense() {
       {/* ── Header ── */}
       <header className="flex items-center gap-3 px-4 pt-safe-header pb-2 shrink-0">
         <button
-          onClick={() => navigate(-1)}
+          onClick={() => (onCancel ? onCancel() : navigate(-1))}
           className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
             bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
             text-slate-600 dark:text-slate-300 shadow-sm

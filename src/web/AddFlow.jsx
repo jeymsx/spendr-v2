@@ -45,7 +45,9 @@ export function AddFlowProvider({ children }) {
   const openAdd = useCallback((type) => setFlow(type ?? 'expense'), [])
   const closeAdd = useCallback(() => setFlow(null), [])
 
-  // The reused forms navigate when they finish; that's the close signal.
+  // Belt and braces: the forms are handed onCancel/onSaved so they close the
+  // overlay directly, but if anything inside one does navigate, the overlay
+  // must not be left floating over a page that has changed underneath it.
   useEffect(() => { setFlow(null) }, [location.key])
 
   useEffect(() => {
@@ -88,7 +90,9 @@ export function AddFlowProvider({ children }) {
                 <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
               </div>
             }>
-              <Form />
+              {/* Closing the overlay is not a navigation: the page underneath
+                  stays exactly where it was, and its history is untouched. */}
+              <Form onCancel={closeAdd} onSaved={closeAdd} />
             </Suspense>
           </div>
         </div>
