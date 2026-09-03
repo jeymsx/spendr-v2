@@ -1,8 +1,8 @@
-import { useState, useRef, useLayoutEffect, Suspense } from 'react'
+import { useRef, useLayoutEffect, Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import WebSidebar from './WebSidebar'
-import AddActionSheet from '../components/AddActionSheet'
 import ErrorBoundary from '../components/ErrorBoundary'
+import { AddFlowProvider, useAddFlow } from './AddFlow'
 
 function PageFallback() {
   return (
@@ -19,8 +19,8 @@ function PageFallback() {
  * placement, so a page that throws or is still loading keeps the sidebar
  * mounted and navigable, and the boundary resets on navigation.
  */
-export default function WebLayout() {
-  const [sheetOpen, setSheetOpen] = useState(false)
+function Chrome() {
+  const { openAdd } = useAddFlow()
   const location = useLocation()
   const mainRef = useRef(null)
 
@@ -31,7 +31,7 @@ export default function WebLayout() {
 
   return (
     <div className="h-[100dvh] flex overflow-hidden">
-      <WebSidebar onAddClick={() => setSheetOpen(true)} />
+      <WebSidebar onAddClick={() => openAdd()} />
 
       <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto">
         <div className="mx-auto w-full max-w-[1400px] px-8 py-8">
@@ -45,9 +45,16 @@ export default function WebLayout() {
         </div>
       </main>
 
-      {/* Reused as-is. It's a bottom sheet, which is the one visibly phone-ish
-          thing in the desktop shell until the add flows get their own modals. */}
-      <AddActionSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
     </div>
+  )
+}
+
+export default function WebLayout() {
+  // The provider wraps the chrome so both the sidebar and any page can open
+  // the add overlay through useAddFlow().
+  return (
+    <AddFlowProvider>
+      <Chrome />
+    </AddFlowProvider>
   )
 }

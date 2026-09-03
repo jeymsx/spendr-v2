@@ -12,6 +12,10 @@
  * stretching a labelled field row across a wide screen makes it harder to read,
  * not easier. This is different from MobileFallback: no "compact view" badge,
  * because this is the intended desktop presentation rather than a placeholder.
+ *
+ * `title` is optional and normally omitted: each of these forms renders its own
+ * header with a back button, and adding a second one above it reads as a
+ * duplicate. It exists for any future form that has no header of its own.
  */
 export default function WebFormPage({ title, subtitle, width = 560, children }) {
   return (

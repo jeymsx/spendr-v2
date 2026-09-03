@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useFinanceSummary } from '../../hooks/useFinanceSummary'
+import { useAddFlow } from '../AddFlow'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
 
 function greeting() {
@@ -31,6 +32,7 @@ function daysAway(nextDate) {
 
 export default function WebDashboard() {
   const s = useFinanceSummary()
+  const { openAdd } = useAddFlow()
 
   if (s.loading) {
     return (
@@ -51,11 +53,15 @@ export default function WebDashboard() {
           weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
         actions={
           <>
-            <Link to="/expense" className="h-9 px-4 rounded-xl text-xs font-semibold text-white bg-primary
-              flex items-center active:scale-95 transition-transform duration-100">Add expense</Link>
-            <Link to="/transfer" className="h-9 px-4 rounded-xl text-xs font-semibold
-              text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.07]
-              flex items-center active:scale-95 transition-transform duration-100">Transfer</Link>
+            {/* Overlays rather than navigating — the dashboard you were reading
+                stays behind the form. */}
+            <button onClick={() => openAdd('expense')}
+              className="h-9 px-4 rounded-xl text-xs font-semibold text-white bg-primary
+                active:scale-95 transition-transform duration-100">Add expense</button>
+            <button onClick={() => openAdd('transfer')}
+              className="h-9 px-4 rounded-xl text-xs font-semibold
+                text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.07]
+                active:scale-95 transition-transform duration-100">Transfer</button>
           </>
         }
       />

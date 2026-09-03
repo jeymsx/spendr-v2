@@ -61,22 +61,12 @@ export default function WebApp() {
               <Route path="/debts"        element={<WebDebts />} />
               <Route path="/recurring"    element={<WebRecurring />} />
               <Route path="/settings"     element={<WebSettings />} />
-              <Route path="/expense"  element={
-                <WebFormPage title="Add expense" subtitle="Log a purchase, or schedule an installment plan">
-                  <AddExpense />
-                </WebFormPage>} />
-              <Route path="/inflow"   element={
-                <WebFormPage title="Add income" subtitle="Record money coming in">
-                  <AddInflow />
-                </WebFormPage>} />
-              <Route path="/transfer" element={
-                <WebFormPage title="Transfer" subtitle="Move money between accounts, or pay a credit card">
-                  <Transfer />
-                </WebFormPage>} />
-              <Route path="/import"   element={
-                <WebFormPage title="Import" subtitle="Bring in a Spendr CSV export" width={720}>
-                  <ImportWizard />
-                </WebFormPage>} />
+              {/* No outer title: each of these forms renders its own header with
+                  a back button, so adding one above it reads as a duplicate. */}
+              <Route path="/expense"  element={<WebFormPage><AddExpense /></WebFormPage>} />
+              <Route path="/inflow"   element={<WebFormPage><AddInflow /></WebFormPage>} />
+              <Route path="/transfer" element={<WebFormPage><Transfer /></WebFormPage>} />
+              <Route path="/import"   element={<WebFormPage width={760}><ImportWizard /></WebFormPage>} />
             </Route>
           </Route>
         </Route>
