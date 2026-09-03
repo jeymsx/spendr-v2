@@ -342,7 +342,7 @@ function PopularCard({ acct, onPick }) {
 
 // ── Quick-add sheet ────────────────────────────────────────────────────────────
 
-function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
+export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
   const [closing,     setClosing]     = useState(false)
   const [query,       setQuery]       = useState('')
   const [recentNames, setRecentNames] = useState([])
@@ -1192,7 +1192,7 @@ function QrViewerModal({ open, onClose, qrImage, accountName }) {
 
 // ── Account form sheet ─────────────────────────────────────────────────────────
 
-function AccountFormSheet({ open, onClose, account, prefill = null }) {
+export function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [closing,    setClosing]    = useState(false)
   useScrollLock(open)
   const { showToast } = useToast()
