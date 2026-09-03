@@ -64,7 +64,10 @@ const MEDIUM_TEXT    = '#334155'
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => 'PHP ' + _phpFmt.format(v ?? 0)
+const fmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '-PHP ' : 'PHP ') + _phpFmt.format(Math.abs(n))
+}
 
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',

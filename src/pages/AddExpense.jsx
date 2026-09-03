@@ -18,7 +18,10 @@ import { IconCalendar, IconChevronLeft, IconChevronRight } from '../components/i
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
+const fmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
+}
 
 // Shortcuts only. Issuers vary and change their offers, so any term from
 // MIN_TERM to MAX_TERM can be typed in rather than picked from this list.

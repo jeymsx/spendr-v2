@@ -10,7 +10,10 @@ import AccountPickerSheet from './AccountPickerSheet'
 import { useToast } from '../context/ToastContext'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
+const fmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
+}
 
 const TYPE_CFG = {
   expense:  { label: 'Expense',  color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',      sign: '−' },

@@ -5,7 +5,10 @@ import { useScrollLock } from '../hooks/useScrollLock'
 import { deleteTemplateRemote } from '../lib/sync'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
+const fmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
+}
 
 const TYPE_COLOR = {
   expense:  { bg: 'bg-red-50 dark:bg-red-500/10',     text: 'text-red-500 dark:text-red-400'     },

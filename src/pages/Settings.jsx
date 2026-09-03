@@ -66,7 +66,10 @@ export const ACCENT_COLORS = [
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
+const fmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
+}
 
 function monthPrefix() {
   const n = new Date()
@@ -1985,7 +1988,10 @@ const TMPL_TYPE_STYLE = {
 }
 
 const _tFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const tfmt = (v) => '₱' + _tFmt.format(v ?? 0)
+const tfmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _tFmt.format(Math.abs(n))
+}
 
 function TemplateRow({ tpl, catIcon, onTap, onLongPressDelete }) {
   const timerRef = useRef(null)

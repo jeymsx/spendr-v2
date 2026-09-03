@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
+const fmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
+}
 
 const TYPE_LABEL = { expense: 'expense', inflow: 'inflow', transfer: 'transfer' }
 
