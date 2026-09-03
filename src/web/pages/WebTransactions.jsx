@@ -300,7 +300,7 @@ export default function WebTransactions() {
                               {t.description || (isTr ? 'Transfer' : t.category) || '—'}
                             </span>
                             {isInstallmentRow(t) && (
-                              <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide
+                              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide
                                 px-1.5 py-0.5 rounded-full bg-primary/[0.12] text-primary">
                                 Installment
                               </span>

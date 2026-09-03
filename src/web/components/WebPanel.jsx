@@ -50,7 +50,11 @@ export function WebPanel({ title, action, to, children, className = '', bodyClas
         <header className="flex items-center justify-between gap-3 px-5 pt-4 pb-3">
           <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200">{title}</h2>
           {action ?? (to && (
-            <Link to={to} className="text-xs font-semibold text-primary hover:underline">
+            <Link
+              to={to}
+              className="text-xs font-semibold text-primary hover:underline
+                py-1 -my-1 px-1 -mx-1 rounded"
+            >
               View all
             </Link>
           ))}

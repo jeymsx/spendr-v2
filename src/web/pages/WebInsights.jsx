@@ -221,7 +221,11 @@ export default function WebInsights() {
                  hint={`${inflows.length} deposit${inflows.length === 1 ? '' : 's'}`} />
         <WebStat label="Net"    value={money(earned - spent)}
                  tone={earned - spent >= 0 ? 'good' : 'bad'}
-                 hint={spent > 0 ? `${Math.round((spent / Math.max(earned, 1)) * 100)}% of income spent` : '—'} />
+                 hint={
+                   spent === 0 && earned === 0 ? '—'
+                   : earned > 0 ? `${Math.round((spent / earned) * 100)}% of income spent`
+                   : 'No income in this period'
+                 } />
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-2 gap-6 mb-6">

@@ -241,7 +241,8 @@ export default function WebAccounts() {
                 action={
                   <button
                     onClick={() => { setEditing(selected); setFormPrefill(null); setFormOpen(true) }}
-                    className="text-xs font-semibold text-primary hover:underline"
+                    className="text-xs font-semibold text-primary hover:underline
+                      py-1 -my-1 px-1.5 -mx-1.5 rounded"
                   >
                     Edit
                   </button>
