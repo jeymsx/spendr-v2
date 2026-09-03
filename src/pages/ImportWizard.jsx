@@ -477,13 +477,13 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
           {missingAccounts.size > 0 && (
             <WarnBanner
               title={`${missingAccounts.size} account${missingAccounts.size > 1 ? 's' : ''} not in your wallet`}
-              body={`"${[...missingAccounts].join('", "')}" will be auto-created as Cash accounts with ₱0 balance.`}
+              body={`"${[...missingAccounts].join('", "')}" will be auto-created as Cash account${missingAccounts.size > 1 ? 's' : ''} with ₱0 balance.`}
             />
           )}
           {missingCategories.size > 0 && (
             <WarnBanner
               title={`${missingCategories.size} categor${missingCategories.size > 1 ? 'ies' : 'y'} not found`}
-              body={`"${[...missingCategories].join('", "')}" will be auto-created as Expense categories.`}
+              body={`"${[...missingCategories].join('", "')}" will be auto-created as Expense categor${missingCategories.size > 1 ? 'ies' : 'y'}.`}
             />
           )}
         </div>
@@ -1108,6 +1108,7 @@ export default function ImportWizard() {
               if (step === 1 || step === 5) navigate(fromOnboarding ? '/' : '/settings')
               else setStep(s => s - 1)
             }}
+            aria-label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}
             className="w-9 h-9 rounded-xl flex items-center justify-center
               text-slate-500 dark:text-slate-400
               bg-slate-100 dark:bg-white/[0.06]
