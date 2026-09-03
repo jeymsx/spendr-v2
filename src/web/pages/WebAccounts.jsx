@@ -182,52 +182,69 @@ export default function WebAccounts() {
       </div>
 
       <div className="flex flex-col xl:flex-row gap-6 xl:items-start min-w-0">
-        {/* Master */}
-        <div className="w-full xl:w-[320px] shrink-0 flex flex-col gap-6">
-          {grouped.map(g => (
-            <WebPanel key={g.key} title={g.label} bodyClass="px-2 pb-2"
-              action={<span className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-                {moneyCompact(g.key === 'credit'
-                  ? g.items.reduce((s, a) => s + (creditStatus[a.name]?.currentBalance ?? 0), 0)
-                  : g.items.reduce((s, a) => s + (a.balance ?? 0), 0))}
-              </span>}>
-              {g.items.map(a => {
-                const active = a.id === selectedId
-                const cs = creditStatus[a.name]
-                return (
-                  <button
-                    key={a.id}
-                    onClick={() => setSelectedId(a.id)}
-                    className={[
-                      'w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl',
-                      'transition-colors duration-150',
-                      active ? 'bg-primary/[0.10] dark:bg-primary/[0.16]'
-                             : 'hover:bg-slate-50 dark:hover:bg-white/[0.04]',
-                    ].join(' ')}
-                  >
-                    <span className="w-2.5 h-2.5 rounded-full shrink-0"
-                      style={{ background: a.color || 'var(--color-primary)' }} />
-                    <span className="flex-1 min-w-0">
-                      <span className={`block text-[13px] font-medium truncate
-                        ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-200'}`}>
-                        {a.name}
-                      </span>
-                      {a.type === 'credit' && (
-                        <span className="block text-[10px] text-slate-500 dark:text-slate-400">
-                          {money((a.creditLimit ?? 0) - (cs?.currentBalance ?? 0))} avail
+        {/* Master — one list, grouped inline */}
+        <div className="w-full xl:w-[320px] shrink-0">
+          <WebPanel
+            title="All accounts"
+            bodyClass="px-2 pb-2"
+            action={<span className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+              {moneyCompact(totals.assets)} assets
+            </span>}
+          >
+            {grouped.map((g, gi) => (
+              <div key={g.key}>
+                <div className={`flex items-baseline justify-between gap-2 px-3 pb-1.5
+                  ${gi === 0 ? 'pt-1' : 'pt-4'}`}>
+                  <p className="text-[10px] font-semibold uppercase tracking-wide
+                    text-slate-500 dark:text-slate-400">
+                    {g.label}
+                  </p>
+                  <p className="text-[10px] font-semibold tabular-nums
+                    text-slate-500 dark:text-slate-400">
+                    {moneyCompact(g.key === 'credit'
+                      ? g.items.reduce((s, a) => s + (creditStatus[a.name]?.currentBalance ?? 0), 0)
+                      : g.items.reduce((s, a) => s + (a.balance ?? 0), 0))}
+                  </p>
+                </div>
+                {g.items.map(a => {
+                  const active = a.id === selectedId
+                  const cs = creditStatus[a.name]
+                  return (
+                    <button
+                      key={a.id}
+                      onClick={() => setSelectedId(a.id)}
+                      aria-current={active ? 'true' : undefined}
+                      className={[
+                        'w-full text-left flex items-center gap-3 px-3 py-2.5 rounded-xl',
+                        'transition-colors duration-150',
+                        active ? 'bg-primary/[0.10] dark:bg-primary/[0.16]'
+                               : 'hover:bg-slate-50 dark:hover:bg-white/[0.04]',
+                      ].join(' ')}
+                    >
+                      <span className="w-2.5 h-2.5 rounded-full shrink-0"
+                        style={{ background: a.color || 'var(--color-primary)' }} />
+                      <span className="flex-1 min-w-0">
+                        <span className={`block text-[13px] font-medium truncate
+                          ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-200'}`}>
+                          {a.name}
                         </span>
-                      )}
-                    </span>
-                    <span className={`text-[13px] font-bold tabular-nums shrink-0
-                      ${a.type === 'credit' ? 'text-red-600 dark:text-red-400'
-                                            : 'text-slate-700 dark:text-slate-200'}`}>
-                      {moneyCompact(a.type === 'credit' ? (cs?.currentBalance ?? 0) : (a.balance ?? 0))}
-                    </span>
-                  </button>
-                )
-              })}
-            </WebPanel>
-          ))}
+                        {a.type === 'credit' && (
+                          <span className="block text-[10px] text-slate-500 dark:text-slate-400">
+                            {money((a.creditLimit ?? 0) - (cs?.currentBalance ?? 0))} avail
+                          </span>
+                        )}
+                      </span>
+                      <span className={`text-[13px] font-bold tabular-nums shrink-0
+                        ${a.type === 'credit' ? 'text-red-600 dark:text-red-400'
+                                              : 'text-slate-700 dark:text-slate-200'}`}>
+                        {moneyCompact(a.type === 'credit' ? (cs?.currentBalance ?? 0) : (a.balance ?? 0))}
+                      </span>
+                    </button>
+                  )
+                })}
+              </div>
+            ))}
+          </WebPanel>
         </div>
 
         {/* Detail */}
@@ -317,9 +334,12 @@ export default function WebAccounts() {
                         {money(selected.balance)}
                       </p>
                     </div>
-                    <p className="text-xs text-slate-500 dark:text-slate-400 text-right capitalize">
-                      {selected.type}{selected.role ? ` · ${selected.role}` : ''}
-                      <br />{ledger.length} transaction{ledger.length === 1 ? '' : 's'}
+                    <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
+                      <span className="capitalize">
+                        {selected.type}{selected.role ? ` · ${selected.role}` : ''}
+                      </span>
+                      {' · '}
+                      {ledger.length} transaction{ledger.length === 1 ? '' : 's'}
                     </p>
                   </div>
                 )}
