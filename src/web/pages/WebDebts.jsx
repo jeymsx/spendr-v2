@@ -98,8 +98,9 @@ export default function WebDebts() {
         {!dim && paid > 0 && <div className="mb-2"><WebBar pct={pct} tone="good" /></div>}
 
         <div className="flex items-center justify-between gap-3">
-          <p className={`text-[11px] ${due?.overdue
-            ? 'text-red-600 dark:text-red-400 font-semibold'
+          <p className={`text-[11px] ${
+            dim ? 'text-emerald-700 dark:text-emerald-400 font-semibold'
+            : due?.overdue ? 'text-red-600 dark:text-red-400 font-semibold'
             : 'text-slate-500 dark:text-slate-400'}`}>
             {dim ? 'Settled' : (due?.label ?? 'No due date')}
           </p>

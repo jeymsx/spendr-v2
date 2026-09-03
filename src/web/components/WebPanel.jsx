@@ -9,13 +9,27 @@ import { Link } from 'react-router-dom'
  */
 
 const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-export const money = (v) => '₱' + _php.format(v ?? 0)
+
+/**
+ * The sign goes before the currency symbol, not between it and the digits.
+ * Intl formats -6000 as "-6,000.00", so prefixing the peso sign gave
+ * "PHP-6,000.00"; everywhere else in the app an amount reads as sign then
+ * symbol, via amountTone. Negatives reach here on the net tiles - Debts net,
+ * Insights net, and net worth when credit exceeds assets - and the minus is
+ * U+2212, matching amountTone rather than a hyphen.
+ */
+export const money = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _php.format(Math.abs(n))
+}
 
 export function moneyCompact(v) {
-  const abs = Math.abs(v ?? 0)
-  if (abs >= 1_000_000) return '₱' + ((v ?? 0) / 1_000_000).toFixed(1) + 'M'
-  if (abs >= 10_000)    return '₱' + ((v ?? 0) / 1_000).toFixed(1) + 'K'
-  return money(v)
+  const n = v ?? 0
+  const abs = Math.abs(n)
+  const sign = n < 0 ? '−₱' : '₱'
+  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
+  if (abs >= 10_000)    return sign + (abs / 1_000).toFixed(1) + 'K'
+  return money(n)
 }
 
 /** Page title row with optional right-hand actions. */
