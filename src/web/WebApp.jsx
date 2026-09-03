@@ -3,7 +3,6 @@ import { Routes, Route } from 'react-router-dom'
 import { OnboardingGuard } from '../App'
 import SyncManager from '../components/SyncManager'
 import WebLayout from './WebLayout'
-import MobileFallback from './MobileFallback'
 import WebFormPage from './WebFormPage'
 
 // Public routes are full-screen flows in both UIs, so the mobile components are
@@ -11,8 +10,7 @@ import WebFormPage from './WebFormPage'
 const Login      = lazy(() => import('../pages/Login'))
 const Onboarding = lazy(() => import('../pages/Onboarding'))
 
-// Desktop pages, added one per phase. Anything not yet converted renders the
-// mobile page inside MobileFallback so every route works from day one.
+// Desktop pages. Every route has one now.
 const WebDashboard    = lazy(() => import('./pages/WebDashboard'))
 const WebTransactions = lazy(() => import('./pages/WebTransactions'))
 const WebInsights     = lazy(() => import('./pages/WebInsights'))
@@ -23,16 +21,9 @@ const WebSettings     = lazy(() => import('./pages/WebSettings'))
 const WebImport       = lazy(() => import('./pages/WebImport'))
 
 // Single-column forms, reused whole inside desktop chrome (see WebFormPage).
-const ImportWizard = lazy(() => import('../pages/ImportWizard'))
 const AddExpense   = lazy(() => import('../pages/AddExpense'))
 const AddInflow    = lazy(() => import('../pages/AddInflow'))
 const Transfer     = lazy(() => import('../pages/Transfer'))
-
-// Retained as a safety net: any route added later without a desktop layout
-// still renders rather than 404-ing.
-function Compact({ title, children }) {
-  return <MobileFallback title={title}>{children}</MobileFallback>
-}
 
 function LoadingScreen() {
   return (
