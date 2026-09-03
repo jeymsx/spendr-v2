@@ -33,8 +33,17 @@ export function WebPageHeader({ title, subtitle, actions }) {
   )
 }
 
-/** A titled card. `to` turns the header into a link. */
-export function WebPanel({ title, action, to, children, className = '', bodyClass = '' }) {
+/**
+ * A titled card. `to` turns the header into a link.
+ *
+ * `flush` is for a table that should run to the card's edges: it removes the
+ * body's horizontal padding, and the table's own first and last cells carry
+ * px-5 so their content still lines up with the header above. Passing
+ * bodyClass by hand to achieve that is how one panel ended up with no
+ * horizontal padding at all, so prefer this.
+ */
+export function WebPanel({ title, action, to, children, className = '', bodyClass = '', flush = false }) {
+  const body = bodyClass || (flush ? 'px-0 pb-2' : 'px-5 pb-5')
   return (
     <section className={`card rounded-2xl flex flex-col min-w-0 ${className}`}>
       {(title || action) && (
@@ -47,7 +56,7 @@ export function WebPanel({ title, action, to, children, className = '', bodyClas
           ))}
         </header>
       )}
-      <div className={`min-w-0 ${bodyClass || 'px-5 pb-5'}`}>{children}</div>
+      <div className={`min-w-0 ${body}`}>{children}</div>
     </section>
   )
 }

@@ -273,7 +273,7 @@ export default function WebInsights() {
       </div>
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-        <WebPanel title="Biggest expenses" className="xl:col-span-2" bodyClass="px-0 pb-2">
+        <WebPanel title="Biggest expenses" className="xl:col-span-2" flush>
           {topExpenses.length === 0 ? <WebEmpty>Nothing in this period</WebEmpty> : (
             <table className="w-full text-sm">
               <tbody>

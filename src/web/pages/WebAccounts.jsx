@@ -306,7 +306,7 @@ export default function WebAccounts() {
 
               <WebPanel
                 title="Ledger"
-                bodyClass="px-0 pb-2"
+                flush
                 action={<span className="text-[11px] text-slate-400 dark:text-slate-500">
                   {ledger.length} entr{ledger.length === 1 ? 'y' : 'ies'}
                 </span>}

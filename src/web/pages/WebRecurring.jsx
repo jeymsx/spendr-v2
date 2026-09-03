@@ -181,7 +181,7 @@ export default function WebRecurring() {
         <WebStat label="Yearly" value={moneyCompact(monthlyTotal * 12)} hint="At current rate" />
       </div>
 
-      <WebPanel title="Active" bodyClass="px-0 pb-2">
+      <WebPanel title="Active" flush>
         {sorted.length === 0 ? <WebEmpty>No recurring payments yet</WebEmpty> : (
           <table className="w-full text-sm">
             <thead>
@@ -200,7 +200,7 @@ export default function WebRecurring() {
 
       {paused.length > 0 && (
         <div className="mt-6">
-          <WebPanel title="Paused" bodyClass="px-0 pb-2">
+          <WebPanel title="Paused" flush>
             <table className="w-full text-sm">
               <tbody>{paused.map(r => <Row key={r.id} r={r} dim />)}</tbody>
             </table>

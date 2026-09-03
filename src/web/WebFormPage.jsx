@@ -32,7 +32,12 @@ export default function WebFormPage({ title, subtitle, width = 560, children }) 
           </div>
         )}
         {/* The form's own back button and header sit inside; the card frames it. */}
-        <div className="card rounded-2xl overflow-hidden">
+        {/* Opaque and filter-free for the same reasons as AddFlow: a .card
+            host is translucent over content, and its backdrop-filter would
+            make it the containing block for the form's own fixed pickers.
+            overflow-hidden is gone because it clipped them. */}
+        <div className="rounded-2xl border border-slate-200/80 dark:border-white/[0.08]
+          bg-white dark:bg-[#111820]">
           {children}
         </div>
       </div>

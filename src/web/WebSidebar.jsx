@@ -2,10 +2,11 @@ import { NavLink } from 'react-router-dom'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import db from '../db/db'
 import { setViewMode } from './useViewMode'
+import WebAddMenu from './WebAddMenu'
 import {
   WebIconHome, WebIconList, WebIconWallet, WebIconChart,
   WebIconHandshake, WebIconRepeat, WebIconSettings, WebIconImport,
-  WebIconPlus, WebIconPhone,
+  WebIconPhone,
 } from './WebIcons'
 
 const MAIN = [
@@ -41,7 +42,7 @@ function NavItem({ to, label, Icon }) {
   )
 }
 
-export default function WebSidebar({ onAddClick }) {
+export default function WebSidebar() {
   const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
   const name = nameMeta?.value || 'there'
 
@@ -67,18 +68,10 @@ export default function WebSidebar({ onAddClick }) {
         </div>
       </div>
 
-      {/* Primary action — the bottom nav's centre button, given a real label */}
+      {/* Primary action. Hovering reveals the three transaction types, so a
+          form is one hover and one click away — no intermediate dialog. */}
       <div className="px-4 pb-4">
-        <button
-          onClick={onAddClick}
-          className="w-full h-10 rounded-xl flex items-center justify-center gap-2
-            text-sm font-semibold text-white
-            active:scale-[0.98] transition-transform duration-100"
-          style={{ background: 'var(--color-primary)' }}
-        >
-          <WebIconPlus />
-          Add transaction
-        </button>
+        <WebAddMenu />
       </div>
 
       {/* Nav */}

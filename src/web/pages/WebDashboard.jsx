@@ -81,7 +81,7 @@ export default function WebDashboard() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         <div className="xl:col-span-2 flex flex-col gap-6 min-w-0">
-          <WebPanel title="Accounts" to="/accounts" bodyClass="px-5 pb-5">
+          <WebPanel title="Accounts" to="/accounts">
             {assetAccounts.length === 0 ? <WebEmpty>No accounts yet</WebEmpty> : (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
                 {assetAccounts.map(a => (
@@ -135,7 +135,7 @@ export default function WebDashboard() {
             </WebPanel>
           )}
 
-          <WebPanel title="Recent activity" to="/transactions" bodyClass="pb-2">
+          <WebPanel title="Recent activity" to="/transactions" flush>
             {s.recent.length === 0 ? <WebEmpty>Nothing logged yet</WebEmpty> : (
               <table className="w-full text-sm">
                 <tbody>
@@ -147,17 +147,17 @@ export default function WebDashboard() {
                       : (t.account ?? '—')
                     return (
                       <tr key={t.id} className="border-t border-slate-100 dark:border-white/[0.05]">
-                        <td className="py-2.5 pr-3 w-8 text-base">{cat?.icon ?? (t.type === 'transfer' ? '🔄' : '📦')}</td>
-                        <td className="py-2.5 pr-3 min-w-0">
+                        <td className="px-5 py-2.5 w-8 text-base">{cat?.icon ?? (t.type === 'transfer' ? '🔄' : '📦')}</td>
+                        <td className="px-2 py-2.5 min-w-0">
                           <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                             {t.description || t.category || '—'}
                           </p>
                           <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">{acct}</p>
                         </td>
-                        <td className="py-2.5 pr-3 text-right whitespace-nowrap text-[11px] text-slate-400 dark:text-slate-500">
+                        <td className="px-2 py-2.5 text-right whitespace-nowrap text-[11px] text-slate-400 dark:text-slate-500">
                           {relDay(t.date)}
                         </td>
-                        <td className={`py-2.5 text-right font-bold tabular-nums whitespace-nowrap
+                        <td className={`px-5 py-2.5 text-right font-bold tabular-nums whitespace-nowrap
                           ${isIn ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
                           {isIn ? '+' : t.type === 'expense' ? '−' : ''}{money(t.amount)}
                         </td>

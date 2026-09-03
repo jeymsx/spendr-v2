@@ -23,6 +23,7 @@ import { syncToSheets } from '../lib/sheetsSync'
 import { IconCheck, IconChevronRight, IconPlus, IconUpload } from '../components/icons'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
+import { setViewMode, getViewPreference } from '../web/useViewMode'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -2960,6 +2961,29 @@ export default function Settings() {
             sublabel="Save instantly, no review step"
             right={<ToggleSwitch on={skipConfirm} />}
             onTap={() => db.meta.put({ key: 'skipConfirm', value: !skipConfirm })}
+          />
+          <RowDivider />
+          {/* Without this, choosing "switch to mobile" in the desktop sidebar
+              was a one-way door: the preference is stored per-device in
+              localStorage, and nothing in this UI could clear it. */}
+          <SettingsRow
+            iconEl={
+              <RowIcon color="blue">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="2" y="4" width="20" height="13" rx="2" />
+                  <line x1="8" y1="21" x2="16" y2="21" />
+                  <line x1="12" y1="17" x2="12" y2="21" />
+                </svg>
+              </RowIcon>
+            }
+            label="Desktop Layout"
+            sublabel={
+              getViewPreference() === 'mobile'
+                ? 'Forced to mobile on this device — tap to allow desktop'
+                : 'Wide screens use the desktop layout automatically'
+            }
+            right={<IconChevronRight size={14} strokeWidth="2" />}
+            onTap={() => setViewMode(getViewPreference() === 'mobile' ? 'auto' : 'desktop')}
           />
         </SectionCard>
       </div>

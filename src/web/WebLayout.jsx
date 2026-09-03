@@ -2,7 +2,7 @@ import { useRef, useLayoutEffect, Suspense } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import WebSidebar from './WebSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
-import { AddFlowProvider, useAddFlow } from './AddFlow'
+import { AddFlowProvider } from './AddFlow'
 
 function PageFallback() {
   return (
@@ -20,7 +20,6 @@ function PageFallback() {
  * mounted and navigable, and the boundary resets on navigation.
  */
 function Chrome() {
-  const { openAdd } = useAddFlow()
   const location = useLocation()
   const mainRef = useRef(null)
 
@@ -31,7 +30,7 @@ function Chrome() {
 
   return (
     <div className="h-[100dvh] flex overflow-hidden">
-      <WebSidebar onAddClick={() => openAdd()} />
+      <WebSidebar />
 
       <main ref={mainRef} className="flex-1 min-w-0 overflow-y-auto">
         <div className="mx-auto w-full max-w-[1400px] px-8 py-8">
