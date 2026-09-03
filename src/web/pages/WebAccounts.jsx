@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { getCreditStatus, getNextCycleRange } from '../../utils/creditCycle'
@@ -81,6 +82,7 @@ export default function WebAccounts() {
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
   const categories   = useLiveQuery(() => db.categories.toArray(),   [], [])
 
+  const [searchParams, setSearchParams] = useSearchParams()
   const [selectedId, setSelectedId] = useState(null)
   const [selectedTx,   setSelectedTx]   = useState(null)
   const [quickOpen,    setQuickOpen]    = useState(false)
@@ -94,14 +96,28 @@ export default function WebAccounts() {
   const selected = useMemo(() =>
     (accounts ?? []).find(a => a.id === selectedId) ?? null, [accounts, selectedId])
 
+  // Deep link from the dashboard: /accounts?open=<account name>. Same
+  // contract the mobile Accounts page honours. The param is cleared once
+  // consumed so a reload or a later rename doesn't keep re-forcing it.
+  const openParam = searchParams.get('open')
+  useEffect(() => {
+    if (!openParam || !(accounts ?? []).length) return
+    const hit = accounts.find(a => a.name === openParam)
+    if (hit) setSelectedId(hit.id)
+    setSearchParams({}, { replace: true })
+  }, [openParam, accounts, setSearchParams])
+
   // Fall back to the first account whenever the selection doesn't resolve -
   // on first load, and again after the selected account is deleted from the
   // form sheet. Keying on id means a rename keeps the selection instead.
+  // Skipped while a deep link is still pending, or it would claim the
+  // selection first and the link would appear to do nothing.
   useEffect(() => {
+    if (openParam) return
     const list = accounts ?? []
     if (!list.length) return
     if (!list.some(a => a.id === selectedId)) setSelectedId(list[0].id)
-  }, [accounts, selectedId])
+  }, [openParam, accounts, selectedId])
 
   // Unfiltered on purpose — available credit must see future installments,
   // which is exactly what the history hides.
