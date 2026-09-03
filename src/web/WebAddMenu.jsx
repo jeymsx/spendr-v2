@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import { useAddFlow } from './AddFlow'
 import { WebIconPlus } from './WebIcons'
 
@@ -20,12 +21,26 @@ const FLOWS = [
  * click toggles it too, focus opens it, and it closes on Escape, outside
  * click, or the pointer leaving. The leave has a short grace period because the
  * pointer has to cross a gap between button and menu.
+ *
+ * The menu is portalled to document.body and positioned from the button's
+ * rect. It can't simply be absolutely positioned inside the sidebar: the
+ * sidebar carries backdrop-blur-xl, and backdrop-filter creates a stacking
+ * context, so any z-index inside it is scoped to the sidebar and the page
+ * content — later in DOM order — paints over the menu.
  */
 export default function WebAddMenu() {
   const { openAdd } = useAddFlow()
   const [open, setOpen] = useState(false)
+  const [rect, setRect] = useState(null)
   const wrapRef = useRef(null)
+  const btnRef = useRef(null)
+  const menuRef = useRef(null)
   const closeTimer = useRef(null)
+
+  const measure = useCallback(() => {
+    const r = btnRef.current?.getBoundingClientRect()
+    if (r) setRect({ top: r.top, left: r.right, height: r.height })
+  }, [])
 
   const cancelClose = useCallback(() => {
     if (closeTimer.current) { clearTimeout(closeTimer.current); closeTimer.current = null }
@@ -42,17 +57,26 @@ export default function WebAddMenu() {
 
   useEffect(() => {
     if (!open) return
+    measure()
     const onKey = (e) => { if (e.key === 'Escape') setOpen(false) }
     const onDown = (e) => {
-      if (wrapRef.current && !wrapRef.current.contains(e.target)) setOpen(false)
+      const inWrap = wrapRef.current?.contains(e.target)
+      const inMenu = menuRef.current?.contains(e.target)
+      if (!inWrap && !inMenu) setOpen(false)
     }
+    // The menu is portalled, so it doesn't move with the sidebar on its own.
+    const onReflow = () => measure()
     window.addEventListener('keydown', onKey)
     window.addEventListener('mousedown', onDown)
+    window.addEventListener('resize', onReflow)
+    window.addEventListener('scroll', onReflow, true)
     return () => {
       window.removeEventListener('keydown', onKey)
       window.removeEventListener('mousedown', onDown)
+      window.removeEventListener('resize', onReflow)
+      window.removeEventListener('scroll', onReflow, true)
     }
-  }, [open])
+  }, [open, measure])
 
   function pick(key) {
     setOpen(false)
@@ -67,6 +91,7 @@ export default function WebAddMenu() {
       onMouseLeave={scheduleClose}
     >
       <button
+        ref={btnRef}
         onClick={() => setOpen(o => !o)}
         onFocus={() => setOpen(true)}
         aria-haspopup="menu"
@@ -80,14 +105,22 @@ export default function WebAddMenu() {
         Add transaction
       </button>
 
-      {open && (
+      {open && rect && createPortal(
         <div
+          ref={menuRef}
           role="menu"
           aria-label="Add transaction"
-          className="absolute left-0 right-0 top-full mt-1.5 z-50 p-1.5
+          onMouseEnter={cancelClose}
+          onMouseLeave={scheduleClose}
+          className="fixed z-[240] w-[224px] p-1.5
             rounded-xl border border-slate-200/80 dark:border-white/[0.08]
             bg-white dark:bg-[#111820]"
-          style={{ boxShadow: '0 16px 40px rgba(0,0,0,0.32)' }}
+          style={{
+            top: rect.top,
+            // 8px gap; the wrapper's own padded strip bridges it for the pointer.
+            left: rect.left + 8,
+            boxShadow: '0 16px 40px rgba(0,0,0,0.32)',
+          }}
         >
           {FLOWS.map(f => (
             <button
@@ -114,7 +147,13 @@ export default function WebAddMenu() {
               </span>
             </button>
           ))}
-        </div>
+        </div>,
+        document.body,
+      )}
+
+      {/* Keeps hover alive while the pointer crosses the gap to the menu. */}
+      {open && (
+        <span aria-hidden="true" className="absolute left-full top-0 w-3 h-full" />
       )}
     </div>
   )
