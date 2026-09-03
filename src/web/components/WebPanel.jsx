@@ -61,6 +61,23 @@ export function WebPanel({ title, action, to, children, className = '', bodyClas
   )
 }
 
+/**
+ * Colour and sign for a transaction amount.
+ *
+ * Mirrors AMOUNT_COLOR in the mobile Transactions page - red out, green in,
+ * blue for a transfer - so the same row reads the same in both layouts. The
+ * web pages had drifted to neutral slate for expenses, which made an outflow
+ * indistinguishable from a transfer at a glance.
+ */
+export const AMOUNT_TONE = {
+  expense:  { cls: 'text-red-500 dark:text-red-400',         sign: '\u2212' },
+  inflow:   { cls: 'text-emerald-600 dark:text-emerald-400', sign: '+' },
+  transfer: { cls: 'text-blue-500 dark:text-blue-400',       sign: ''  },
+}
+
+export const amountTone = (type) =>
+  AMOUNT_TONE[type] ?? { cls: 'text-slate-800 dark:text-slate-100', sign: '' }
+
 /** Big number tile for the top row of an overview. */
 export function WebStat({ label, value, hint, tone = 'default' }) {
   const toneClass = {

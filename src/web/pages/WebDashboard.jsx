@@ -1,5 +1,5 @@
 import { useFinanceSummary } from '../../hooks/useFinanceSummary'
-import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
+import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact, amountTone } from '../components/WebPanel'
 
 function greeting() {
   const h = new Date().getHours()
@@ -125,7 +125,6 @@ export default function WebDashboard() {
                 <tbody>
                   {s.recent.slice(0, 12).map(t => {
                     const cat = s.catMap[t.category]
-                    const isIn = t.type === 'inflow'
                     const acct = t.type === 'transfer'
                       ? `${t.fromAccount ?? '—'} → ${t.toAccount ?? '—'}`
                       : (t.account ?? '—')
@@ -142,8 +141,8 @@ export default function WebDashboard() {
                           {relDay(t.date)}
                         </td>
                         <td className={`px-5 py-2.5 text-right font-bold tabular-nums whitespace-nowrap
-                          ${isIn ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-slate-100'}`}>
-                          {isIn ? '+' : t.type === 'expense' ? '−' : ''}{money(t.amount)}
+                          ${amountTone(t.type).cls}`}>
+                          {amountTone(t.type).sign}{money(t.amount)}
                         </td>
                       </tr>
                     )

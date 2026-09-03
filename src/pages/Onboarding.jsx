@@ -1078,7 +1078,7 @@ export default function Onboarding() {
   const TOTAL_NON_WELCOME_STEPS = 7
 
   return (
-    <div className="h-dvh text-white relative flex flex-col overflow-hidden">
+    <div className="onboarding-shell h-dvh text-white relative flex flex-col overflow-hidden">
 
       {/* Top bar: back + step dots */}
       <div

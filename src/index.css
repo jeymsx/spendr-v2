@@ -391,6 +391,27 @@ html.web .web-embed .sticky.top-0 {
   background: transparent;
 }
 
+/* Onboarding is the phone flow shown as-is on desktop: full-bleed on a
+   1500px screen it left the heading, the account search and the Continue
+   button stretched edge to edge. Capping the two stacked children - the step
+   bar and the step content - centres the flow as a column without touching
+   the component, which is why the shell only carries an inert hook class.
+   min-height: 0 stays on the content child; it is what lets the inner lists
+   scroll instead of pushing the Continue button off-screen. */
+html.web .onboarding-shell > div {
+  width: 100%;
+  max-width: 620px;
+  margin-inline: auto;
+}
+
+/* Its steps end with a full-width primary button, which reads as a phone
+   affordance at 620px but is the intended shape of this flow, so it stays.
+   The safe-area padding underneath is zero on desktop; trim the reserve so
+   the button is not floating above dead space. */
+html.web .onboarding-shell > div:last-child {
+  padding-bottom: 32px !important;
+}
+
 /* A phone has no cursor, so the mobile UI never needed this. On desktop an
    element that responds to a click has to say so, and these components are
    built from <button> and role=button rather than links. :disabled keeps its
