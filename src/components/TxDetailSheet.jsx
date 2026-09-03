@@ -103,7 +103,7 @@ function EditPickerBtn({ label, dot, placeholder, onClick }) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [] }) {
+export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [], zIndex = 100 }) {
   const { showToast } = useToast()
   const [closing,         setClosing]         = useState(false)
   useScrollLock(open)
@@ -241,7 +241,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
     .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))
 
   return (
-    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
+    <div className="fixed inset-0" style={{ touchAction: 'none', zIndex }}>
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
 
       <div

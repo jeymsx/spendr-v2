@@ -8,6 +8,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
+import TxDetailSheet from '../components/TxDetailSheet'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { useTheme } from '../context/ThemeContext'
@@ -540,6 +541,8 @@ export default function Accounts() {
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
+  // Needed by the transaction detail sheet opened from an account's ledger.
+  const categories   = useLiveQuery(() => db.categories.toArray(),   [], [])
 
   const creditStmtMap = useMemo(() => {
     const map = {}
@@ -795,6 +798,7 @@ export default function Accounts() {
         account={selectedAccount}
         transactions={transactions ?? []}
         allAccounts={accounts ?? []}
+        categories={categories ?? []}
         onEdit={(acct) => {
           setEditingAccount(acct)
           setFormPrefill(null)
@@ -1886,8 +1890,9 @@ function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
 
-function AccountDetailSheet({ open, onClose, account, transactions, allAccounts = [], onEdit, onAddSubAccount }) {
+function AccountDetailSheet({ open, onClose, account, transactions, allAccounts = [], categories = [], onEdit, onAddSubAccount }) {
   const [closing,   setClosing]   = useState(false)
+  const [selectedTx, setSelectedTx] = useState(null)
   const [qrVisible, setQrVisible] = useState(false)
   useScrollLock(open)
 
@@ -2116,6 +2121,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
 
               {/* ── This Statement charges ── */}
               <CreditTxSection
+                onSelect={setSelectedTx}
                 title="This Statement"
                 dateRange={`${fmtCycleDate(creditData.cycleStart)} – ${fmtCycleDate(creditData.cycleEnd)}`}
                 txs={creditData.thisCharges}
@@ -2128,6 +2134,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
               {/* ── Next Statement charges ── */}
               {creditData.nextCharges.length > 0 && (
                 <CreditTxSection
+                  onSelect={setSelectedTx}
                   title="Next Statement"
                   /* nextCharges is open-ended — future-dated installments land
                      here too — so a closed window would understate the total. */
@@ -2142,6 +2149,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
               {/* ── Payments ── */}
               {creditData.payments.length > 0 && (
                 <CreditTxSection
+                  onSelect={setSelectedTx}
                   title="Payments"
                   txs={creditData.payments}
                   total={creditData.payments.reduce((s, tx) => s + (tx.amount ?? 0), 0)}
@@ -2209,7 +2217,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
                   >
                     {txsWithRunning.map((tx, i) => (
                       <div key={tx.id}>
-                        <DetailTxRow tx={tx} accountName={account.name} />
+                        <DetailTxRow tx={tx} accountName={account.name} onSelect={setSelectedTx} />
                         {i < txsWithRunning.length - 1 && (
                           <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
                         )}
@@ -2242,7 +2250,7 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
                 >
                   {txsWithRunning.map((tx, i) => (
                     <div key={tx.id}>
-                      <DetailTxRow tx={tx} accountName={account.name} />
+                      <DetailTxRow tx={tx} accountName={account.name} onSelect={setSelectedTx} />
                       {i < txsWithRunning.length - 1 && (
                         <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
                       )}
@@ -2263,6 +2271,16 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
       qrImage={account?.qrImage}
       accountName={account?.name}
     />
+
+    {/* Above this sheet's own z-[100] so it isn't buried behind it. */}
+    <TxDetailSheet
+      open={!!selectedTx}
+      onClose={() => setSelectedTx(null)}
+      transaction={selectedTx}
+      accounts={allAccounts}
+      categories={categories}
+      zIndex={160}
+    />
     </>
   )
 }
@@ -2282,7 +2300,7 @@ function StatCard({ label, value }) {
 
 // ── Credit statement transaction section ────────────────────────────────────────
 
-function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel, totalColor, totalSign = '' }) {
+function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel, totalColor, totalSign = '', onSelect }) {
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
@@ -2312,7 +2330,7 @@ function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel
         >
           {txs.map((tx, i) => (
             <div key={tx.id ?? i}>
-              <DetailTxRow tx={tx} accountName={accountName} />
+              <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} />
               {i < txs.length - 1 && (
                 <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
               )}
@@ -2326,7 +2344,7 @@ function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel
 
 // ── Detail transaction row ─────────────────────────────────────────────────────
 
-function DetailTxRow({ tx, accountName }) {
+function DetailTxRow({ tx, accountName, onSelect }) {
   let sign  = ''
   let color = 'text-slate-600 dark:text-slate-300'
 
@@ -2345,8 +2363,17 @@ function DetailTxRow({ tx, accountName }) {
     ? (tx.fromAccount === accountName ? `→ ${tx.toAccount}` : `← ${tx.fromAccount}`)
     : (tx.category ?? '—'))
 
+  // Tappable so charges reachable only from here can still be edited or
+  // deleted — scheduled installments are filtered out of the Transactions
+  // list, so this ledger is their only route to TxDetailSheet.
   return (
-    <div className="flex items-center gap-3 px-4 py-3.5">
+    <button
+      type="button"
+      onClick={() => onSelect?.(tx)}
+      disabled={!onSelect}
+      className="w-full text-left flex items-center gap-3 px-4 py-3.5
+        enabled:active:bg-slate-50 dark:enabled:active:bg-white/[0.04] transition-colors"
+    >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-2">
           <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">{label}</p>
@@ -2365,6 +2392,6 @@ function DetailTxRow({ tx, accountName }) {
           {sign}{fmt(tx.amount)}
         </p>
       </div>
-    </div>
+    </button>
   )
 }
