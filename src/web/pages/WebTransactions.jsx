@@ -355,7 +355,7 @@ export default function WebTransactions() {
         </div>
 
         {/* Detail pane — the landscape win: inspect without losing your place */}
-        <aside className="w-full xl:w-[340px] shrink-0 xl:sticky xl:top-0">
+        <aside className="w-full xl:w-[340px] shrink-0 xl:sticky xl:top-8">
           {!selected ? (
             <WebPanel title="Details">
               <p className="text-xs text-slate-500 dark:text-slate-400 py-6 text-center leading-relaxed">

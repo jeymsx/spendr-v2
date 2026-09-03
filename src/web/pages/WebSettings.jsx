@@ -205,7 +205,7 @@ export default function WebSettings() {
 
       <div className="flex gap-6 items-start min-w-0">
         {/* Section nav — replaces a phone's long single scroll */}
-        <nav className="w-[200px] shrink-0 flex flex-col gap-0.5 sticky top-0">
+        <nav className="w-[200px] shrink-0 flex flex-col gap-0.5 sticky top-8">
           {SECTIONS.map(s => (
             <button
               key={s.key}

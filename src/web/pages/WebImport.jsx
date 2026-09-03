@@ -77,7 +77,7 @@ export default function WebImport() {
         </div>
 
         {/* Reference — the thing a phone has no room for. */}
-        <aside className="w-full xl:w-[340px] shrink-0 flex flex-col gap-6 xl:sticky xl:top-0">
+        <aside className="w-full xl:w-[340px] shrink-0 flex flex-col gap-6 xl:sticky xl:top-8">
           <RefPanel title="What you can import">
             <ul className="flex flex-col gap-3 text-xs leading-relaxed
               text-slate-600 dark:text-slate-300">
