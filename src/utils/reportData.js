@@ -1,11 +1,20 @@
 import { createElement } from 'react'
 import db from '../db/db'
 import { getCreditStatus, getNextCycleRange } from './creditCycle'
+import { scheduledCutoff } from './scheduled'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-export const fmt = (v) => '₱' + _phpFmt.format(v ?? 0)
+
+// Sign before the symbol. Intl puts the minus before the digits, so prefixing
+// the peso sign rendered "PHP-5,000.00". Net savings is negative in any month
+// you outspend your income, and net worth is negative when credit owed exceeds
+// assets - both are printed on the report.
+export const fmt = (v) => {
+  const n = v ?? 0
+  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
+}
 
 // ── fetchReportData ────────────────────────────────────────────────────────────
 
@@ -19,7 +28,17 @@ export async function fetchReportData(year, month) {
   const end   = new Date(year, month, 1)
 
   const allTxs    = await db.transactions.toArray()
+
+  // A charge dated after today is committed, not spent - the rule in
+  // utils/scheduled, which names budgets among the surfaces that must hide it.
+  // This report carries a Budget column per category and a spend total, and
+  // the current month is the default selection, so an installment dated later
+  // this month was being reported as money already gone and could flag a
+  // category over budget. allTxs stays unfiltered below: getCreditStatus has
+  // to see future charges, because the issuer really has locked that credit.
+  const cutoff    = scheduledCutoff()
   const monthTxs  = allTxs.filter(tx => {
+    if ((tx.date ?? '') > cutoff) return false
     const d = new Date(tx.date)
     return d >= start && d < end
   })
