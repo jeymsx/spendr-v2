@@ -12,6 +12,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useSyncManager } from '../components/SyncManager'
 import db, { UNSYNCED } from '../db/db'
+import { scheduledCutoff } from '../utils/scheduled'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -885,9 +886,15 @@ export function ResetConfirmModal({ open, onClose }) {
 function BudgetSummaryCard({ categories, transactions }) {
   const { totalBudgeted, totalSpent, pct } = useMemo(() => {
     const pfx          = monthPrefix()
+    // A charge dated later this month is committed, not spent - see
+    // utils/scheduled, which lists budgets among the surfaces that hide it.
+    // Without this an installment plan booked the whole term against the
+    // month it was created in.
+    const cutoff       = scheduledCutoff()
     const budgetedCats = (categories ?? []).filter(c => c.type === 'expense' && (c.budget ?? 0) > 0)
     const totalBudgeted = budgetedCats.reduce((s, c) => s + (c.budget ?? 0), 0)
-    const monthTxs      = (transactions ?? []).filter(t => t.type === 'expense' && (t.date ?? '').startsWith(pfx))
+    const monthTxs      = (transactions ?? []).filter(t =>
+      t.type === 'expense' && (t.date ?? '').startsWith(pfx) && (t.date ?? '') <= cutoff)
     const totalSpent    = monthTxs.reduce((s, t) => s + (t.amount ?? 0), 0)
     const pct           = totalBudgeted > 0 ? Math.min((totalSpent / totalBudgeted) * 100, 100) : 0
     return { totalBudgeted, totalSpent, pct }
@@ -953,9 +960,11 @@ export function BudgetManagerSheet({ open, onClose }) {
 
   const monthlySpend = useMemo(() => {
     const pfx = monthPrefix()
+    // Same rule as BudgetSummaryCard: scheduled charges are not spend yet.
+    const cutoff = scheduledCutoff()
     const map = {}
     for (const tx of (transactions ?? [])) {
-      if (tx.type === 'expense' && (tx.date ?? '').startsWith(pfx)) {
+      if (tx.type === 'expense' && (tx.date ?? '').startsWith(pfx) && (tx.date ?? '') <= cutoff) {
         map[tx.category] = (map[tx.category] ?? 0) + (tx.amount ?? 0)
       }
     }
