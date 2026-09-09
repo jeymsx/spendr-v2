@@ -45,7 +45,6 @@ const FILTERS = [
   { value: 'E-Wallets',         label: 'Wallets' },
   { value: 'Traditional Banks', label: 'Banks' },
   { value: 'Digital Banks',     label: 'Digital' },
-  { value: 'Credit Cards',      label: 'Credit' },
 ]
 
 const TYPE_MARK_FOR = {
@@ -317,6 +316,10 @@ function Card({ children, className = '' }) {
   )
 }
 
+function Divider() {
+  return <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+}
+
 function SummaryRow({ label, value }) {
   return (
     <div className="flex items-baseline justify-between gap-3 px-4 py-3">
@@ -447,7 +450,7 @@ export default function AccountNew() {
   }[current]
 
   return (
-    <div className="pb-32">
+    <div className="pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
       {/* ── Header ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
         <button
@@ -468,7 +471,20 @@ export default function AccountNew() {
         </span>
       </header>
 
-      {/* ── The card being made, always on screen ── */}
+      {/* ── The card being made, always on screen ──
+
+          On the last step the card stops being a running preview and becomes
+          the subject of the screen: the label moves above it and centres, and
+          the step heading below is dropped rather than repeated. The screen
+          then reads as "here is the thing you are about to create" instead of
+          as one more form step. ── */}
+      {current === 'review' && (
+        <p className="text-center text-[11px] font-semibold uppercase tracking-widest
+          text-slate-500 dark:text-slate-400 mt-2 mb-3">
+          Ready to add
+        </p>
+      )}
+
       <section className="px-5 mt-1">
         <PreviewCard draft={draft} />
       </section>
@@ -487,9 +503,11 @@ export default function AccountNew() {
         ))}
       </div>
 
-      <h2 className="px-5 mt-4 text-[19px] font-semibold tracking-tight text-slate-900 dark:text-white">
-        {stepTitle}
-      </h2>
+      {current !== 'review' && (
+        <h2 className="px-5 mt-4 text-[19px] font-semibold tracking-tight text-slate-900 dark:text-white">
+          {stepTitle}
+        </h2>
+      )}
 
       {/* ── Step: institution ── */}
       {current === 'institution' && (
@@ -728,67 +746,92 @@ export default function AccountNew() {
 
       {/* ── Step: review ── */}
       {current === 'review' && (
-        <div className="px-5 mt-4">
+        <div className="px-5 mt-5 mx-auto w-full max-w-[340px]">
+          {/* Name and kind are deliberately NOT repeated here. The card sits
+              directly above this, in larger type, already showing both - the
+              same redundancy the detail page had when it printed the balance
+              twice. This lists only what the card face cannot show. */}
           <Card>
-            <SummaryRow label="Name" value={trimmed || '—'} />
-            <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-            <SummaryRow label="Kind" value={TYPE_LABEL[draft.type]} />
-            <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-            <SummaryRow label="Counts as" value={isCredit ? 'Credit' : (draft.role === 'savings' ? 'Savings' : 'Spending')} />
+            <SummaryRow
+              label="Counts as"
+              value={isCredit ? 'Credit' : (draft.role === 'savings' ? 'Savings' : 'Spending')}
+            />
             {!isCredit && (
               <>
-                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                <Divider />
                 <SummaryRow label="Opening balance" value={fmt(parseMoney(draft.startingBal))} />
               </>
             )}
             {isCredit && (
               <>
-                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                <Divider />
                 <SummaryRow label="Credit limit" value={fmt(parseMoney(draft.creditLimit))} />
-                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                <SummaryRow label="Cutoff / due" value={
-                  draft.cutoffDay || draft.dueDay
-                    ? `${draft.cutoffDay || '—'} / ${draft.dueDay || '—'}`
-                    : 'Not set'
-                } />
-                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                <Divider />
+                <SummaryRow label="Statement closes" value={draft.cutoffDay ? `Day ${draft.cutoffDay}` : 'Not set'} />
+                <Divider />
+                <SummaryRow label="Payment due" value={draft.dueDay ? `Day ${draft.dueDay}` : 'Not set'} />
+                <Divider />
                 <SummaryRow label="Minimum payment" value={fmt(parseMoney(draft.minPayment))} />
               </>
             )}
             {draft.scheme && (
               <>
-                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                <SummaryRow label="Network" value={SCHEME_OPTIONS.find(o => o.value === draft.scheme)?.label ?? draft.scheme} />
+                <Divider />
+                <SummaryRow
+                  label="Network"
+                  value={SCHEME_OPTIONS.find(o => o.value === draft.scheme)?.label ?? draft.scheme}
+                />
               </>
             )}
           </Card>
 
+          <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400 mt-4 px-1">
+            Anything here can be changed later from the account&rsquo;s own page.
+            {isCredit && ' A card starts at zero and fills in as you record charges against it.'}
+          </p>
+
           {nameProblem && (
-            <p className="text-xs text-red-500 dark:text-red-400 mt-3">{nameProblem}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 mt-3 px-1">{nameProblem}</p>
           )}
         </div>
       )}
 
-      {/* ── Footer: fixed above the nav, so the action is always reachable
-             without scrolling to the end of a step ── */}
-      <div className="fixed left-0 right-0 bottom-0 z-40 px-5 pb-[calc(env(safe-area-inset-bottom,0px)+76px)] pt-3
-        bg-white/85 dark:bg-[#0b0f14]/90 backdrop-blur-xl
-        border-t border-slate-200/70 dark:border-white/[0.07]">
+      {/* ── The action, as a floating pill ──
+
+          It was a full-width button on an opaque blurred bar. The bar was
+          there to stop content showing through, but it read as a slab bolted
+          to the bottom of the screen and it needed its height kept in step
+          with the navbar by hand - which is exactly what clipped the button
+          by 4px when I guessed 76px for an 80px navbar.
+
+          A pill needs no bar: its own fill is opaque, so whatever scrolls
+          behind it stays legible, and it sizes to its label rather than to
+          the viewport. The wrapper takes pointer-events-none so the strip
+          either side of the pill does not swallow taps meant for the content
+          underneath, and the pill turns them back on for itself. ── */}
+      <div
+        className="fixed left-0 right-0 z-40 flex justify-center px-5 pointer-events-none
+          bottom-[calc(5rem+env(safe-area-inset-bottom,0px)+0.75rem)]"
+      >
         {current === 'review' ? (
           <button
             onClick={save}
             disabled={saving || !!nameProblem}
-            className="w-full py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-primary
-              disabled:opacity-50 active:scale-[0.99] transition-transform duration-75"
+            className="pointer-events-auto min-w-[13rem] max-w-full px-8 py-3.5 rounded-full
+              text-[15px] font-semibold text-white bg-primary
+              shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
+              disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
           >
-            {saving ? 'Adding…' : 'Add account'}
+            {saving ? 'Adding\u2026' : 'Add account'}
           </button>
         ) : (
           <button
             onClick={next}
             disabled={!canAdvance}
-            className="w-full py-3.5 rounded-2xl text-[15px] font-semibold text-white bg-primary
-              disabled:opacity-50 active:scale-[0.99] transition-transform duration-75"
+            className="pointer-events-auto min-w-[13rem] max-w-full px-8 py-3.5 rounded-full
+              text-[15px] font-semibold text-white bg-primary
+              shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
+              disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
           >
             Continue
           </button>
