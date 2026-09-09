@@ -10,6 +10,9 @@ import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconBank, IconCard, IconPhone, IconWallet } from '../components/icons'
 import { scheduledCutoff } from '../utils/scheduled'
+import { accountBrand } from '../lib/accountBrands'
+import BrandMark from '../components/BrandMark'
+import BrandWatermark from '../components/BrandWatermark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -644,50 +647,49 @@ function SectionHeader({ title, subtitle, actionLabel, actionTo, px = false }) {
 
 // ── Account card ───────────────────────────────────────────────────────────────
 
+/**
+ * The home carousel card. Same brand face as the Accounts tab, at carousel
+ * size, so an account looks like the same object in both places - which is
+ * the point of giving them card identities at all.
+ */
 function AccountCard({ acct, hidden, onClick, stmt }) {
   const isCredit  = acct.type === 'credit'
-  const thisTotal = stmt?.thisTotal ?? 0
-  const nextTotal = stmt?.nextTotal ?? 0
   const available = isCredit
     ? (acct.creditLimit ?? 0) - (stmt?.currentBalance ?? 0)
     : null
 
-  const meta = ACCOUNT_ICON[acct.type] ?? ACCOUNT_ICON.bank
+  const meta  = ACCOUNT_ICON[acct.type] ?? ACCOUNT_ICON.bank
+  const brand = accountBrand(acct)
 
   return (
     <button
       onClick={onClick}
-      className="card shrink-0 w-40 h-[116px] rounded-2xl p-4 text-left flex flex-col
-        active:scale-[0.97] transition-transform duration-100"
+      className="acct-card shrink-0 w-[168px] rounded-2xl p-3.5 text-left flex flex-col
+        text-white active:scale-[0.97] transition-transform duration-100"
+      style={{
+        background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
+        // Same 1.586:1 as the Accounts tab, so a card is recognisably the
+        // same object in both places.
+        aspectRatio: '1.586',
+      }}
+      data-brand={brand.key}
     >
-      {/* icon + label row */}
-      <div className="flex items-center gap-2 mb-3">
-        <span
-          className="w-8 h-8 rounded-xl flex items-center justify-center text-white text-sm shrink-0"
-          style={{ backgroundColor: acct.color ?? '#2D9DFF' }}
-        >
-          {meta.icon}
-        </span>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 font-medium truncate">
-          {meta.label}
-        </p>
+      <BrandWatermark brand={brand} size={120} />
+
+      <div className="flex items-center gap-2">
+        <BrandMark mark={brand.mark} size={18} className="shrink-0" />
+        <p className="text-[10px] font-medium text-white/65 truncate">{meta.label}</p>
       </div>
 
-      <p className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate mb-1">{acct.name}</p>
+      <p className="text-[13px] font-semibold truncate mt-2">{acct.name}</p>
 
       <div className="mt-auto">
-        {isCredit ? (
-          <div className="flex items-baseline gap-1.5">
-            <p className="text-sm font-bold text-slate-800 dark:text-white tabular-nums">
-              {hidden ? '₱ ••••' : fmt(available)}
-            </p>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500">avail.</p>
-          </div>
-        ) : (
-          <p className="text-sm font-bold text-slate-800 dark:text-white tabular-nums">
-            {hidden ? '₱ ••••' : fmt(acct.balance)}
-          </p>
-        )}
+        <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60">
+          {isCredit ? 'Available' : 'Balance'}
+        </p>
+        <p className="text-[15px] font-bold tabular-nums leading-tight">
+          {hidden ? '₱ ••••' : fmt(isCredit ? available : acct.balance)}
+        </p>
       </div>
     </button>
   )

@@ -21,6 +21,9 @@ import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { IconBank, IconCard, IconCheck, IconChevronRight, IconPhone, IconPlus, IconWallet } from '../components/icons'
 import { deleteAccountRemote } from '../lib/sync'
+import { accountBrand } from '../lib/accountBrands'
+import BrandMark from '../components/BrandMark'
+import BrandWatermark from '../components/BrandWatermark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -225,65 +228,114 @@ function SummaryBar({ summary, hidden, onToggleHide, accentColor, theme }) {
 
 // ── Account card ───────────────────────────────────────────────────────────────
 
-function AccountCard({ acct, hidden, onTap, stmt, indent = false }) {
+/**
+ * A real payment card is 85.60 x 53.98 mm - a 1.586:1 landscape ratio. Using
+ * the actual ratio is most of what makes these read as cards rather than as
+ * coloured tiles, so the face is sized by aspect-ratio and never by a height.
+ */
+const CARD_RATIO = 1.586
+/** How much of each card in a stack stays visible above the next one. */
+const STACK_STRIP = 76
+
+/**
+ * One account, as a card face.
+ *
+ * The brand gradient and mark come from lib/accountBrands; text is white
+ * throughout, which is why every gradient stop there is darkened until white
+ * clears 5:1. `.acct-card` supplies the grain, sheen and moulded rim.
+ *
+ * Stacked, only the top STACK_STRIP pixels of each card show, so everything
+ * that has to be readable at a glance - mark, name, balance - lives in that
+ * strip. The lower half carries the detail that only matters once a card is
+ * the last in its stack, which is also why tapping opens the full sheet.
+ *
+ * The overlap is pure CSS: margin-top percentages resolve against the
+ * container's WIDTH, and the card's height is width / CARD_RATIO, so pulling
+ * up by `calc(STRIPpx - (100/RATIO)%)` leaves exactly STRIP visible at any
+ * screen size with nothing measured in JS.
+ */
+function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
   const isCredit       = acct.type === 'credit'
   const currentBalance = stmt?.currentBalance ?? 0
-  const available      = isCredit ? (acct.creditLimit ?? 0) - currentBalance : null
-  const stmtPct        = isCredit && (acct.creditLimit ?? 0) > 0
-    ? Math.min((currentBalance / acct.creditLimit) * 100, 100) : 0
-  const barColor    = stmtPct > 80 ? '#ef4444' : stmtPct > 60 ? '#f59e0b' : (acct.color ?? '#2D9DFF')
-  const nextDue     = isCredit ? nextOccurrence(acct.dueDate) : null
+  const limit          = acct.creditLimit ?? 0
+  const available      = isCredit ? limit - currentBalance : null
+  const stmtPct        = isCredit && limit > 0
+    ? Math.min((currentBalance / limit) * 100, 100) : 0
+  const nextDue        = isCredit ? nextOccurrence(acct.dueDate) : null
+  const brand          = accountBrand(acct)
+
+  const pullUp = `calc(${STACK_STRIP}px - ${(100 / CARD_RATIO).toFixed(2)}%)`
 
   return (
     <button
       onClick={onTap}
-      className={`w-full flex flex-col text-left
-        active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors
-        ${indent ? 'pl-10 pr-4 py-3.5' : 'px-4 py-4'}`}
+      className="acct-card w-full rounded-2xl px-4 pt-3.5 pb-4 flex flex-col text-left text-white
+        active:scale-[0.99] transition-transform duration-100"
+      style={{
+        background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
+        aspectRatio: String(CARD_RATIO),
+        marginTop: depth > 0 ? pullUp : 0,
+        // Later cards sit over earlier ones, so the strip you read belongs to
+        // the card it names.
+        zIndex: depth + 1,
+      }}
+      data-brand={brand.key}
     >
-      <div className="flex items-center gap-4 w-full">
-        <span
-          className={`${indent ? 'w-8 h-8 rounded-lg' : 'w-10 h-10 rounded-xl'} flex items-center justify-center shrink-0 text-white`}
-          style={{ backgroundColor: acct.color ?? '#2D9DFF' }}
-        >
-          {typeIcon(acct.type)}
+      {/* Brand watermark, clipped by the card's own overflow. Uses a real
+          logo if one has been dropped into assets/brand-logos. */}
+      <BrandWatermark brand={brand} size={200} />
+
+      {/* ── The strip: everything legible while stacked ── */}
+      <div className="flex items-start justify-between gap-3 w-full">
+        <span className="flex items-center gap-2.5 min-w-0">
+          <BrandMark mark={brand.mark} size={22} className="shrink-0" />
+          <span className="min-w-0">
+            <span className="block text-[14px] font-semibold leading-tight truncate">
+              {acct.name}
+            </span>
+            <span className="block text-[10px] text-white/65 truncate">
+              {isCredit
+                ? (nextDue ? `Due ${nextDue}` : 'Credit card')
+                : TYPE_LABEL[acct.type]}
+              {indent ? ' · sub-account' : ''}
+            </span>
+          </span>
         </span>
 
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{acct.name}</p>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-            {isCredit ? 'Balance used' : TYPE_LABEL[acct.type]}
-          </p>
-        </div>
-
-        <div className="shrink-0 flex items-center gap-2">
-          <p className={`text-sm font-bold tabular-nums ${
-            isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
-          }`}>
-            {hidden ? '••••' : isCredit ? fmt(currentBalance) : fmt(acct.balance)}
-          </p>
-          <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={15} strokeWidth="2" /></span>
-        </div>
+        <span className="text-right shrink-0">
+          <span className="block text-[16px] font-bold tabular-nums leading-tight">
+            {hidden ? '₱ ••••' : fmt(isCredit ? currentBalance : acct.balance)}
+          </span>
+          <span className="block text-[9px] text-white/65">
+            {isCredit
+              ? `${hidden ? '••••' : fmtCompact(available ?? 0)} left`
+              : 'Balance'}
+          </span>
+        </span>
       </div>
 
-      {isCredit && (
-        <div className="mt-2.5 w-full">
-          <div className="h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
-            <div
-              className="h-full rounded-full transition-all duration-700"
-              style={{ width: `${stmtPct}%`, backgroundColor: barColor }}
-            />
-          </div>
-          <div className="flex items-center justify-between mt-1.5">
-            <p className="text-[10px] text-slate-400 dark:text-slate-500">
-              {hidden ? '₱ ••••' : fmtCompact(available ?? 0)} avail
-            </p>
-            {nextDue && (
-              <p className="text-[10px] text-slate-400 dark:text-slate-500">Due {nextDue}</p>
-            )}
-          </div>
-        </div>
-      )}
+      {/* ── Below the fold: only seen on the last card of a stack ── */}
+      <div className="mt-auto w-full">
+        {isCredit ? (
+          <>
+            <div className="h-1 rounded-full bg-black/25 overflow-hidden">
+              <div
+                className="h-full rounded-full bg-white/85 transition-all duration-700"
+                style={{ width: `${stmtPct}%` }}
+              />
+            </div>
+            <div className="flex items-center justify-between mt-1.5 gap-2">
+              <span className="text-[9px] uppercase tracking-wider text-white/60">
+                {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit)} used
+              </span>
+            </div>
+          </>
+        ) : (
+          <span className="text-[9px] uppercase tracking-wider text-white/50">
+            {acct.currency ?? 'PHP'}
+          </span>
+        )}
+      </div>
     </button>
   )
 }
@@ -721,24 +773,27 @@ export default function Accounts() {
                   {fmt(groupTotal)}
                 </span>
               </div>
-              <div className="card mx-5 rounded-2xl overflow-hidden">
+              {/* Stacked, wallet-style: each card overlaps the one above it
+                  so a whole group is visible at once, and the strip that stays
+                  showing carries the name and balance. */}
+              <div className="mx-5 flex flex-col">
                 <AccountCard
                   acct={parent}
                   hidden={balanceHidden}
                   onTap={() => openDetail(parent)}
                   stmt={creditStmtMap[parent.name]}
+                  depth={0}
                 />
-                {children.map((acct) => (
-                  <div key={acct.id}>
-                    <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
-                    <AccountCard
-                      acct={acct}
-                      hidden={balanceHidden}
-                      onTap={() => openDetail(acct)}
-                      stmt={creditStmtMap[acct.name]}
-                      indent
-                    />
-                  </div>
+                {children.map((acct, i) => (
+                  <AccountCard
+                    key={acct.id}
+                    acct={acct}
+                    hidden={balanceHidden}
+                    onTap={() => openDetail(acct)}
+                    stmt={creditStmtMap[acct.name]}
+                    indent
+                    depth={i + 1}
+                  />
                 ))}
               </div>
             </section>
@@ -759,19 +814,16 @@ export default function Accounts() {
                   : fmt(group.accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}
               </span>
             </div>
-            <div className="card mx-5 rounded-2xl overflow-hidden">
+            <div className="mx-5 flex flex-col">
               {group.accounts.map((acct, i) => (
-                <div key={acct.id}>
-                  <AccountCard
-                    acct={acct}
-                    hidden={balanceHidden}
-                    onTap={() => openDetail(acct)}
-                    stmt={creditStmtMap[acct.name]}
-                  />
-                  {i < group.accounts.length - 1 && (
-                    <div className="h-px bg-slate-50 dark:bg-primary/[0.08] mx-4" />
-                  )}
-                </div>
+                <AccountCard
+                  key={acct.id}
+                  acct={acct}
+                  hidden={balanceHidden}
+                  onTap={() => openDetail(acct)}
+                  stmt={creditStmtMap[acct.name]}
+                  depth={i}
+                />
               ))}
             </div>
           </section>

@@ -158,6 +158,129 @@ html.dark body {
   -webkit-backdrop-filter: blur(16px) saturate(160%);
 }
 
+/* ── Account card face ─────────────────────────────────────────────────
+   Makes a brand-coloured panel read as a physical card, with no image
+   assets: the whole treatment is three stacked layers plus a rim.
+
+   The gradient itself is set inline per account (see lib/accountBrands.js),
+   because it is data, not style. What lives here is the material.
+
+   Layer 1, ::before — film grain. An feTurbulence data URI, ~230 bytes, is
+   what stops a flat CSS gradient looking like a flat CSS gradient. Scaled
+   to 180px and left to tile, so the noise stays fine rather than blocky.
+
+   Layer 2, ::after — the sheen. One soft diagonal band of white, angled
+   across the face the way light catches embossed plastic.
+
+   Layer 3, box-shadow — an inset top highlight and an inset hairline rim
+   for the moulded edge, over two drop shadows for lift.
+
+   Everything is inside overflow:hidden with isolation:isolate, so neither
+   pseudo-element escapes the radius or interferes with a stacking context
+   further up. */
+.acct-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 1px 2px rgba(0, 0, 0, 0.16),
+    0 6px 16px -4px rgba(0, 0, 0, 0.28);
+}
+
+.acct-card::before,
+.acct-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.acct-card::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+  opacity: 0.10;
+  z-index: 1;
+}
+
+.acct-card::after {
+  background: linear-gradient(
+    108deg,
+    rgba(255, 255, 255, 0) 24%,
+    rgba(255, 255, 255, 0.15) 42%,
+    rgba(255, 255, 255, 0.05) 52%,
+    rgba(255, 255, 255, 0) 68%
+  );
+  z-index: 2;
+}
+
+/* Card content sits above every overlay. */
+.acct-card > * {
+  position: relative;
+  z-index: 4;
+}
+
+/* The brand watermark: a big, faint, deliberately clipped glyph in the
+   bottom-right corner, which is where a real card puts its scheme mark.
+
+   Faintness is doing real work here. At 10% white only the silhouette
+   registers, so a simplified shape reads as card art rather than as a wrong
+   logo - the same shape at full opacity would just look incorrect. It also
+   keeps every gradient's white-text contrast untouched, because a 10% overlay
+   moves the background by a tenth of a step.
+
+   Sized in percentages of the card and pushed past two edges, so the clip
+   happens at any card size and `overflow: hidden` on the parent does the
+   cutting. The more specific selector is needed to beat the `> *` rule above,
+   which would otherwise float this over the text. */
+.acct-card > .acct-card-watermark {
+  position: absolute;
+  right: -9%;
+  bottom: -22%;
+  height: 86%;
+  width: auto;
+  z-index: 0;
+  opacity: 0.10;
+  color: #fff;
+  pointer-events: none;
+}
+
+/* A dropped-in brand file arrives with its own palette. A watermark wants one
+   silhouette, so everything inside it is flattened to white and sized to the
+   slot regardless of the file's own width/height attributes. */
+.acct-card > .acct-card-watermark > svg {
+  height: 100%;
+  width: auto;
+  display: block;
+}
+.acct-card > .acct-card-watermark svg * {
+  fill: #fff !important;
+  stroke: none !important;
+}
+
+/* On the near-black cards a white watermark is the only thing separating the
+   face from a flat rectangle, so it gets a little more presence. */
+.acct-card[data-brand='maya-credit'] > .acct-card-watermark {
+  opacity: 0.14;
+}
+
+/* The grain is the one part that costs a repaint on a long list, and it is
+   also the least essential layer, so it goes first when motion is reduced or
+   the device is telling us to be cheap. */
+@media (prefers-reduced-transparency: reduce) {
+  .acct-card::before { display: none; }
+}
+
+/* A pressed card should feel like plastic under a thumb: the sheen shifts and
+   the lift collapses, rather than the whole thing just scaling. */
+.acct-card:active {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
+    0 1px 1px rgba(0, 0, 0, 0.20);
+}
+
 /* ── Sheet scroll lock — prevents iOS scroll bleed-through */
 #app-main.scroll-locked {
   overflow: hidden;

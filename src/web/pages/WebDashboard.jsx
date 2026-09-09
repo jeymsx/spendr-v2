@@ -2,6 +2,8 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useFinanceSummary } from '../../hooks/useFinanceSummary'
 import TxDetailSheet from '../../components/TxDetailSheet'
+import BrandMark from '../../components/BrandMark'
+import { accountBrand } from '../../lib/accountBrands'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact, amountTone } from '../components/WebPanel'
 
 /**
@@ -85,25 +87,26 @@ export default function WebDashboard() {
           <WebPanel title="Accounts" to="/accounts">
             {assetAccounts.length === 0 ? <WebEmpty>No accounts yet</WebEmpty> : (
               <div className="grid grid-cols-2 lg:grid-cols-3 gap-3">
-                {assetAccounts.map(a => (
-                  <Link
-                    key={a.id}
-                    to={`/accounts?open=${encodeURIComponent(a.name)}`}
-                    className="rounded-xl px-3.5 py-3 min-w-0 block
-                      bg-slate-50 dark:bg-white/[0.04]
-                      hover:bg-slate-100 dark:hover:bg-white/[0.07]
-                      transition-colors duration-150"
-                  >
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ background: a.color || 'var(--color-primary)' }} />
-                      <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">{a.name}</p>
-                    </div>
-                    <p className="text-sm font-bold tabular-nums text-slate-800 dark:text-white truncate">
-                      {money(a.balance)}
-                    </p>
-                  </Link>
-                ))}
+                {assetAccounts.map(a => {
+                  const brand = accountBrand(a)
+                  return (
+                    <Link
+                      key={a.id}
+                      to={`/accounts?open=${encodeURIComponent(a.name)}`}
+                      className="acct-card rounded-xl px-3.5 py-3 min-w-0 block text-white
+                        hover:brightness-110 transition-[filter] duration-150"
+                      style={{ background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)` }}
+                    >
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <BrandMark mark={brand.mark} size={16} className="shrink-0" />
+                        <p className="text-xs font-medium text-white/70 truncate">{a.name}</p>
+                      </div>
+                      <p className="text-sm font-bold tabular-nums truncate">
+                        {money(a.balance)}
+                      </p>
+                    </Link>
+                  )
+                })}
               </div>
             )}
           </WebPanel>
@@ -125,7 +128,14 @@ export default function WebDashboard() {
                         transition-colors duration-150"
                     >
                       <div className="flex items-center justify-between gap-3 mb-1.5">
-                        <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{a.name}</p>
+                        <p className="text-sm font-semibold text-slate-800 dark:text-white truncate
+                          flex items-center gap-2">
+                          <span className="shrink-0 rounded-md p-1 text-white"
+                            style={{ background: `linear-gradient(135deg, ${accountBrand(a).from} 0%, ${accountBrand(a).to} 100%)` }}>
+                            <BrandMark mark={accountBrand(a).mark} size={12} />
+                          </span>
+                          {a.name}
+                        </p>
                         <p className="text-sm font-bold tabular-nums text-red-600 dark:text-red-400 shrink-0">
                           {money(used)}
                         </p>

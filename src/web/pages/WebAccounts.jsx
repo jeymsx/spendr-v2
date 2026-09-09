@@ -5,6 +5,8 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { getCreditStatus, getNextCycleRange } from '../../utils/creditCycle'
 import { isInstallmentRow } from '../../utils/installments'
 import TxDetailSheet from '../../components/TxDetailSheet'
+import BrandMark from '../../components/BrandMark'
+import { accountBrand } from '../../lib/accountBrands'
 // Reused rather than rebuilt — AccountFormSheet alone is ~700 lines of
 // validated form logic, and QuickAddSheet carries the 48 PH presets.
 import { AccountFormSheet, QuickAddSheet } from '../../pages/Accounts'
@@ -221,8 +223,13 @@ export default function WebAccounts() {
                                : 'hover:bg-slate-50 dark:hover:bg-white/[0.04]',
                       ].join(' ')}
                     >
-                      <span className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ background: a.color || 'var(--color-primary)' }} />
+                      <span
+                        className="acct-card w-7 h-7 rounded-lg shrink-0
+                          flex items-center justify-center text-white"
+                        style={{ background: `linear-gradient(135deg, ${accountBrand(a).from} 0%, ${accountBrand(a).to} 100%)` }}
+                      >
+                        <BrandMark mark={accountBrand(a).mark} size={14} />
+                      </span>
                       <span className="flex-1 min-w-0">
                         <span className={`block text-[13px] font-medium truncate
                           ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-200'}`}>
