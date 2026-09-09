@@ -24,6 +24,7 @@ import { deleteAccountRemote } from '../lib/sync'
 import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
+import SchemeMark, { SCHEME_OPTIONS } from '../components/SchemeMark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -86,12 +87,32 @@ function defaultRole(type) {
   return ['cash', 'ewallet'].includes(type) ? 'spending' : 'savings'
 }
 
+/**
+ * Grouped by what an account COUNTS AS, not by what kind of institution runs
+ * it. The app already had two taxonomies fighting each other: this page
+ * grouped by `type` into Cash / E-Wallets / Bank Accounts / Credit Cards,
+ * while the Dashboard tiles and useFinanceSummary bucket by `role` into
+ * Spending / Savings / Credit. Following role means the subtotals here tie
+ * back to the numbers on the home screen, a one-account "Cash" group stops
+ * costing a whole header, and the split honours the form's own "Counts As"
+ * field - so moving GCash to Savings actually moves it.
+ */
 const ACCOUNT_GROUPS = [
-  { label: 'Cash',          types: ['cash']            },
-  { label: 'E-Wallets',     types: ['ewallet']         },
-  { label: 'Bank Accounts', types: ['savings', 'bank'] },
-  { label: 'Credit Cards',  types: ['credit']          },
+  { label: 'Spending', roles: ['spending'] },
+  { label: 'Savings',  roles: ['savings']  },
+  { label: 'Credit',   roles: ['credit']   },
 ]
+
+/**
+ * What an account contributes to a group total. A credit card's `balance`
+ * column stays 0 - what it owes is derived from its statement - so summing
+ * `balance` across a mixed group quietly undercounts.
+ */
+function acctTotal(a, creditStmtMap) {
+  return a.type === 'credit'
+    ? (creditStmtMap[a.name]?.currentBalance ?? 0)
+    : (a.balance ?? 0)
+}
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
 
@@ -269,8 +290,7 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
   return (
     <button
       onClick={onTap}
-      className="acct-card w-full rounded-2xl px-4 pt-3.5 pb-4 flex flex-col text-left text-white
-        active:scale-[0.99] transition-transform duration-100"
+      className="acct-card w-full rounded-2xl px-4 pt-3.5 pb-4 flex flex-col text-left text-white"
       style={{
         background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
         aspectRatio: String(CARD_RATIO),
@@ -281,9 +301,10 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
       }}
       data-brand={brand.key}
     >
-      {/* Brand watermark, clipped by the card's own overflow. Uses a real
-          logo if one has been dropped into assets/brand-logos. */}
-      <BrandWatermark brand={brand} size={200} />
+      {/* Brand watermark bottom-right, network mark bottom-left. Both are
+          real institution art where it exists - see assets/ATTRIBUTION.md. */}
+      <BrandWatermark brand={brand} />
+      <SchemeMark scheme={acct.scheme} />
 
       {/* ── The strip: everything legible while stacked ── */}
       <div className="flex items-start justify-between gap-3 w-full">
@@ -640,7 +661,12 @@ export default function Accounts() {
 
   const groups = useMemo(() =>
     ACCOUNT_GROUPS
-      .map(g => ({ ...g, accounts: flatAccts.filter(a => g.types.includes(a.type)) }))
+      .map(g => ({
+        ...g,
+        // `role` is user-editable and may be unset on older rows, so fall back
+        // to what the type implies.
+        accounts: flatAccts.filter(a => g.roles.includes(a.role ?? defaultRole(a.type))),
+      }))
       .filter(g => g.accounts.length > 0),
     [flatAccts],
   )
@@ -761,7 +787,8 @@ export default function Accounts() {
         if (section.kind === 'parent') {
           const { parent } = section
           const children = (accounts ?? []).filter(a => a.parentName === parent.name)
-          const groupTotal = (parent.balance ?? 0) + children.reduce((s, a) => s + (a.balance ?? 0), 0)
+          const groupTotal = acctTotal(parent, creditStmtMap)
+            + children.reduce((s, a) => s + acctTotal(a, creditStmtMap), 0)
           return (
             <section key={parent.id} className="mb-3">
               <div className="flex items-center gap-3 px-5 py-2">
@@ -809,9 +836,7 @@ export default function Accounts() {
               </span>
               <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
               <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
-                {group.label === 'Credit Cards'
-                  ? fmt(group.accounts.reduce((s, a) => s + (creditStmtMap[a.name]?.currentBalance ?? 0), 0))
-                  : fmt(group.accounts.reduce((s, a) => s + (a.balance ?? 0), 0))}
+                {fmt(group.accounts.reduce((s, a) => s + acctTotal(a, creditStmtMap), 0))}
               </span>
             </div>
             <div className="mx-5 flex flex-col">
@@ -1271,6 +1296,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [qrImage,        setQrImage]        = useState(null)
   const [qrCropOpen,     setQrCropOpen]     = useState(false)
   const [parentName,     setParentName]     = useState(null)
+  const [scheme,         setScheme]         = useState('')
   const allAccounts = useLiveQuery(() => db.accounts.toArray(), [], [])
 
   const isEdit = !!account?.id
@@ -1295,6 +1321,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setMinPayment(numToMoneyStr(account.minimumPayment ?? 0))
       setQrImage(account.qrImage ?? null)
       setParentName(account.parentName ?? null)
+      setScheme(account.scheme ?? '')
     } else {
       const t = prefill?.type ?? 'cash'
       setName(prefill?.name ?? '')
@@ -1309,6 +1336,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setMinPayment('0')
       setQrImage(null)
       setParentName(prefill?.parentName ?? null)
+      setScheme('')
     }
   }, [open, account?.id])
 
@@ -1338,6 +1366,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
         qrImage:        qrImage ?? null,
         updatedAt:      new Date().toISOString(),
         parentName:     parentName ?? null,
+        // Unindexed on purpose: nothing queries by network, so this needed
+        // no db.version() bump.
+        scheme:         scheme || null,
       }
 
       if (isEdit) {
@@ -1556,6 +1587,31 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 </div>
               )}
             </div>
+
+            {/* Card network — what the plastic actually carries. Cash has no
+                network; everything else can, since PH e-wallets issue Visa and
+                Mastercard debit too. Stored unindexed, so no migration. */}
+            {type !== 'cash' && (
+              <div>
+                <Label>Card Network</Label>
+                <div className="flex flex-wrap gap-2">
+                  {SCHEME_OPTIONS.map(o => (
+                    <button
+                      key={o.value || 'none'}
+                      onClick={() => setScheme(o.value)}
+                      className={[
+                        'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
+                        scheme === o.value
+                          ? 'bg-primary text-white'
+                          : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
+                      ].join(' ')}
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Counts As — hidden for credit */}
             {type !== 'credit' && (
