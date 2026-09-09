@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useState } from 'react'
+import { useMemo, useRef, useEffect, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
@@ -144,6 +144,111 @@ function inNext7Days(dateStr) {
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
+/* ── The wallet silhouette ────────────────────────────────────────────────────
+   Builds the clip path for the net-worth wallet: a rounded body with a tab
+   hanging off the bottom edge, joined by concave fillets.
+
+   This measures the element, which is a deliberate reversal. The first
+   version used a percentage-sized SVG mask and needed no JS at all - but a
+   percentage-sized mask STRETCHES, and this card's height comes from its
+   content (~300px, near constant) while its width follows the viewport. Its
+   aspect ratio therefore swings from about 1.14 on a phone to 1.8 on a wide
+   screen, against the artwork's fixed 1.6, so the corner radii rendered up to
+   40% taller than they were wide and the tab changed shape with the window.
+
+   Real pixels fix that outright: every radius is exactly its stated radius at
+   every width, and the tab is the same size on a phone as on a desktop. The
+   cost is one ResizeObserver.
+
+   `clip-path` clips box decorations too, so the lift lives on a drop-shadow
+   on the .wallet wrapper - which follows the tab rather than squaring it off. */
+const TAB_W = 96      // tab width, capped below for very narrow cards
+const TAB_H = 22      // how far the tab hangs below the body
+const TAB_R = 10      // the tab's own bottom corners
+const FILLET = 8      // the concave curve where tab meets body
+const R_TOP = 28
+const R_BOT = 20
+
+function walletPath(w, h) {
+  const tabW = Math.min(TAB_W, w * 0.34)
+  const base = h - TAB_H                 // the body's bottom edge
+  const left = (w - tabW) / 2
+  const right = left + tabW
+  const n = (v) => Math.round(v * 100) / 100
+
+  // Clockwise from the top-left corner. Fillets use sweep-flag 0 so they
+  // curve INTO the corner; every other arc is a convex corner at sweep 1.
+  return [
+    `M${n(R_TOP)} 0`,
+    `H${n(w - R_TOP)}`,
+    `A${R_TOP} ${R_TOP} 0 0 1 ${n(w)} ${R_TOP}`,
+    `V${n(base - R_BOT)}`,
+    `A${R_BOT} ${R_BOT} 0 0 1 ${n(w - R_BOT)} ${n(base)}`,
+    `H${n(right + FILLET)}`,
+    `A${FILLET} ${FILLET} 0 0 0 ${n(right)} ${n(base + FILLET)}`,
+    `V${n(h - TAB_R)}`,
+    `A${TAB_R} ${TAB_R} 0 0 1 ${n(right - TAB_R)} ${n(h)}`,
+    `H${n(left + TAB_R)}`,
+    `A${TAB_R} ${TAB_R} 0 0 1 ${n(left)} ${n(h - TAB_R)}`,
+    `V${n(base + FILLET)}`,
+    `A${FILLET} ${FILLET} 0 0 0 ${n(left - FILLET)} ${n(base)}`,
+    `H${R_BOT}`,
+    `A${R_BOT} ${R_BOT} 0 0 1 0 ${n(base - R_BOT)}`,
+    `V${R_TOP}`,
+    `A${R_TOP} ${R_TOP} 0 0 1 ${R_TOP} 0`,
+    'Z',
+  ].join('')
+}
+
+/**
+ * The clip path for the wallet, kept in step with its rendered size.
+ * Returns undefined until measured, so the first paint is the plain rounded
+ * rectangle border-radius already gives - never an unclipped square.
+ *
+ * The observer is attached by a CALLBACK ref, not by an effect reading a ref
+ * object, and that distinction is the whole bug this had first time round.
+ * This page returns <DashboardSkeleton/> until its queries resolve, so on the
+ * first render the card is not in the tree at all: a mount effect ran against
+ * a null ref, attached nothing, and - with empty deps - never ran again once
+ * the real card appeared. A callback ref fires on every attach and detach, so
+ * it cannot miss a node that arrives late.
+ */
+function useWalletClip() {
+  const [box, setBox] = useState(null)
+  const roRef = useRef(null)
+
+  const ref = useCallback((el) => {
+    roRef.current?.disconnect()
+    roRef.current = null
+    if (!el || typeof ResizeObserver === 'undefined') return
+
+    const ro = new ResizeObserver(([entry]) => {
+      // borderBoxSize, not contentRect: clip-path coordinates are relative to
+      // the border box, while contentRect excludes this card's 24px of side
+      // padding and 30px of tab reserve. Measuring the content box would put
+      // the tab 30px too high and slice 48px off the width.
+      const b = entry.borderBoxSize?.[0]
+      const w = b ? b.inlineSize : el.offsetWidth
+      const h = b ? b.blockSize : el.offsetHeight
+      // The tab needs somewhere to hang; below that, skip the clip entirely
+      // and let border-radius stand in.
+      if (w > 80 && h > TAB_H + R_TOP + R_BOT) {
+        setBox(prev => (prev && prev.w === w && prev.h === h ? prev : { w, h }))
+      }
+    })
+    ro.observe(el)
+    roRef.current = ro
+  }, [])
+
+  useEffect(() => () => roRef.current?.disconnect(), [])
+
+  const clipPath = useMemo(
+    () => (box ? `path("${walletPath(box.w, box.h)}")` : undefined),
+    [box],
+  )
+  return [ref, clipPath]
+}
+
 function cardGradient(accentColor, theme) {
   const isBlue = accentColor === '#2D9DFF'
   const isDark = theme === 'dark'
@@ -166,6 +271,7 @@ export default function Dashboard() {
     try { return localStorage.getItem('netWorthBreakdown') !== 'closed' }
     catch { return true }
   })
+  const [walletRef, walletClip] = useWalletClip()
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
   const [postTarget,       setPostTarget]       = useState(null)
@@ -330,8 +436,9 @@ export default function Dashboard() {
           return (
             <div className="wallet">
             <div
+              ref={walletRef}
               className="wallet-card px-6 pt-6 select-none"
-              style={{ background: cardGradient(accentColor, theme) }}
+              style={{ background: cardGradient(accentColor, theme), clipPath: walletClip }}
               onPointerDown={() => setPeek(true)}
               onPointerUp={() => setPeek(false)}
               onPointerLeave={() => setPeek(false)}

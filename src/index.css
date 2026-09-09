@@ -361,48 +361,38 @@ html.dark body {
    3. Matte light. A wide overhead vignette with no specular edge, over a
       coarser and fainter grain than the cards use, so the two materials read
       as different even when they are stacked in the same screenshot. */
-/* The silhouette is not a rectangle: a tab hangs off the bottom edge, joined
-   to the body by concave fillets, and it holds the control that folds the
-   breakdown away.
+/* ── The net-worth wallet ─────────────────────────────────────────────────────
+   Deliberately NOT the same material as .acct-card, because it is not the
+   same object. The account faces are printed plastic: hard diagonal specular,
+   fine grain, a moulded rim. This is the wallet they live in, so it is
+   leather - matte, with light that falls off softly instead of streaking.
 
-   It has to be ONE element. The card's face is a gradient, and a tab built as
-   a second element would have to restart that gradient in its own box - CSS
-   gives no way to continue a parent's ramp into a sibling - so the join would
-   show as a colour step exactly where the eye is drawn. Masking one element
-   instead means the gradient, the grain and the vignette are all painted once
-   across the whole shape and the tab cannot mismatch.
+   The silhouette is not a rectangle either: a tab hangs off the bottom edge,
+   joined by concave fillets, and it holds the control that folds the
+   breakdown away. That shape is a `clip-path` built from the element's
+   measured size in Dashboard.jsx - see the note there for why a percentage
+   mask could not do it. border-radius stays as the pre-measure fallback, so
+   the first paint is a rounded rectangle rather than a square.
 
-   Percentage mask sizing stretches the art, which distorts a corner radius by
-   whatever the aspect mismatch is. The viewBox is therefore drawn at 400x250,
-   which is the ratio this card actually renders at, so both axes scale by
-   nearly the same factor and the radii stay round.
-
-   Masks clip box decorations too, so the lift moves to a drop-shadow on the
-   wrapper - which is the better result anyway, since a drop-shadow follows the
-   tab instead of squaring it off. The 1px inset rim had to go: it tracks the
-   rectangular border box, so it would have vanished along the body's bottom
-   edge and reappeared inside the tab. The stitching carries that edge now. */
+   Because clip-path also clips box decorations, the lift moved to a
+   drop-shadow on the .wallet wrapper, and the 1px inset rim had to go: it
+   tracks the rectangular border box, so it would have vanished along the
+   body's bottom edge only to reappear inside the tab. The stitching carries
+   that edge now. */
 .wallet-card {
   position: relative;
   isolation: isolate;
   overflow: hidden;
-  border-radius: 30px 30px 22px 22px;
+  border-radius: 28px 28px 20px 20px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 
-  /* Bottom 11.2% of the height is tab, so content is padded clear of it. */
-  --wallet-tab-reserve: 34px;
+  /* Keeps content out of the tab. Matches TAB_H in Dashboard.jsx plus air. */
+  --wallet-tab-reserve: 30px;
   padding-bottom: var(--wallet-tab-reserve);
-
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250' preserveAspectRatio='none'%3E%3Cpath d='M30 0H370A30 30 0 0 1 400 30V200A22 22 0 0 1 378 222H255A10 10 0 0 0 245 232V236A14 14 0 0 1 231 250H169A14 14 0 0 1 155 236V232A10 10 0 0 0 145 222H22A22 22 0 0 1 0 200V30A30 30 0 0 1 30 0Z' fill='%23fff'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250' preserveAspectRatio='none'%3E%3Cpath d='M30 0H370A30 30 0 0 1 400 30V200A22 22 0 0 1 378 222H255A10 10 0 0 0 245 232V236A14 14 0 0 1 231 250H169A14 14 0 0 1 155 236V232A10 10 0 0 0 145 222H22A22 22 0 0 1 0 200V30A30 30 0 0 1 30 0Z' fill='%23fff'/%3E%3C/svg%3E");
-  -webkit-mask-size: 100% 100%;
-  mask-size: 100% 100%;
-  -webkit-mask-repeat: no-repeat;
-  mask-repeat: no-repeat;
 }
 
-/* The lift, on a wrapper so it follows the masked silhouette rather than the
-   border box. */
+/* The lift, on a wrapper so it follows the clipped silhouette - including the
+   tab - rather than the rectangular border box. */
 .wallet {
   filter:
     drop-shadow(0 2px 4px rgba(0, 0, 0, 0.14))
@@ -460,7 +450,7 @@ html.dark body {
 .wallet-card::before {
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
   background-size: 260px 260px;
-  opacity: 0.06;
+  opacity: 0.11;
   z-index: 1;
 }
 
@@ -469,7 +459,7 @@ html.dark body {
 .wallet-card::after {
   background:
     radial-gradient(125% 72% at 50% -12%, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0) 68%),
-    linear-gradient(180deg, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.10) 100%);
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 34%, rgba(0, 0, 0, 0.20) 100%);
   z-index: 2;
 }
 
@@ -486,8 +476,8 @@ html.dark body {
   top: 10px;
   left: 10px;
   right: 10px;
-  bottom: calc(11.2% + 10px);
-  border: 1px dashed rgba(255, 255, 255, 0.20);
+  bottom: calc(var(--wallet-tab-reserve) + 8px);
+  border: 1px dashed rgba(255, 255, 255, 0.34);
   border-radius: 21px 21px 13px 13px;
   pointer-events: none;
   z-index: 5;
@@ -519,29 +509,17 @@ html.dark body {
   .wallet-fold { transition: none; }
 }
 
-/* The front pocket. It spans the card's full width - the bleed comes from the
-   fold wrapper around it - and its face is a pseudo-element rather than the
-   element's own background, so the thumb notch can be masked out of the face
-   WITHOUT masking the figures sitting on it. */
+/* The breakdown's fold line. This was a full panel with a thumb notch masked
+   out of it - which rendered as a pale blob poking up through the dark face,
+   and its hard top edge left a visible brightness step where the panel ended
+   and the tab began. A single hairline reads as a fold without either
+   problem, and the base darkening it used to provide now comes from the
+   card's own vignette, which ramps smoothly and carries through the tab. */
 .wallet-pocket {
   position: relative;
-  isolation: isolate;
-}
-
-/* The notch is a real hole, so the wallet's gradient shows through it rather
-   than a second translucent panel darkening that patch. The inset highlight
-   is the leather fold, and because a mask clips box decorations too, the fold
-   dips around the notch on its own. */
-.wallet-pocket::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  pointer-events: none;
-  background: linear-gradient(180deg, rgba(0, 0, 0, 0.10) 0%, rgba(0, 0, 0, 0.17) 100%);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
-  -webkit-mask-image: radial-gradient(24px 17px at 50% 0, rgba(0, 0, 0, 0) 98%, #000 100%);
-  mask-image: radial-gradient(24px 17px at 50% 0, rgba(0, 0, 0, 0) 98%, #000 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 8px 12px -8px rgba(0, 0, 0, 0.34);
 }
 
 /* The grain is the one part that costs a repaint on a long list, and it is

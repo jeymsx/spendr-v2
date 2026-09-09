@@ -39,12 +39,15 @@ const BY_KEY = Object.fromEntries(
  * widest compact one (GCash at 1.17), and well under the narrowest wordmark
  * (BPI at 2.12) - so no asset lands near the boundary.
  */
+function shapeOfBox(viewBox) {
+  const box = String(viewBox ?? '').trim().split(/[\s,]+/).map(Number)
+  if (box.length < 4 || !(box[2] > 0) || !(box[3] > 0)) return 'mark'
+  return box[2] / box[3] >= 1.8 ? 'word' : 'mark'
+}
+
 function shapeOf(svg) {
   const found = /viewBox\s*=\s*"([^"]+)"/.exec(svg)
-  if (!found) return 'mark'
-  const box = found[1].trim().split(/[\s,]+/).map(Number)
-  if (box.length < 4 || !(box[3] > 0) || !(box[2] > 0)) return 'mark'
-  return box[2] / box[3] >= 1.8 ? 'word' : 'mark'
+  return found ? shapeOfBox(found[1]) : 'mark'
 }
 
 const SHAPE_BY_KEY = Object.fromEntries(
@@ -60,9 +63,24 @@ const BRAND_ART = {
   // Mari is Sea Group's; its mark is an M built from water. The wave sits
   // under the letter so it is not just another M.
   maribank: {
+    viewBox: '0 0 120 60',
     text: 'M',
     art: 'M28 46q8-7 16 0t16 0 16 0 16 0v7q-8 7-16 0t-16 0-16 0-16 0z',
     textDy: -8,
+  },
+
+  // Plain cash has no institution and so no logo. It used to fall through to
+  // the category glyph, which is a banknote - and a banknote outline blown up
+  // to a third of a card reads as an empty placeholder box, because at that
+  // size all you see is its rectangle. The peso sign is the thing cash
+  // actually is, it is a letterform so it survives being clipped, and a square
+  // box gets it sized and bled like the other logomarks.
+  cash: {
+    viewBox: '0 0 64 64',
+    text: '₱',
+    fontSize: 58,
+    baseline: 54,
+    fontWeight: 600,
   },
 }
 
@@ -102,17 +120,20 @@ export default function BrandWatermark({ brand, className = 'acct-card-watermark
     )
   }
 
+  const box = art.viewBox ?? '0 0 120 60'
+  const [, , boxW, boxH] = box.trim().split(/[\s,]+/).map(Number)
+
   return (
-    <span className={className} data-wm="word" aria-hidden="true">
-      <svg viewBox="0 0 120 60" focusable="false" fill="currentColor">
+    <span className={className} data-wm={shapeOfBox(box)} aria-hidden="true">
+      <svg viewBox={box} focusable="false" fill="currentColor">
         {art.art && <path d={art.art} />}
         {art.text && (
           <text
-            x="60"
-            y={44 + (art.textDy ?? 0)}
+            x={boxW / 2}
+            y={(art.baseline ?? boxH * 0.73) + (art.textDy ?? 0)}
             textAnchor="middle"
-            fontSize={fontSizeFor(art.text)}
-            fontWeight="900"
+            fontSize={art.fontSize ?? fontSizeFor(art.text)}
+            fontWeight={art.fontWeight ?? 900}
             letterSpacing="-1"
             // Inter is the app's face and is already loaded; the fallbacks only
             // matter for the first paint before the webfont arrives, and a

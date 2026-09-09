@@ -342,18 +342,19 @@ export default function AccountDetail() {
   }
 
   const brand     = accountBrand(account)
-  // An account named after its own type - "Cash" - would otherwise label
-  // itself twice on the card face.
-  const typeLabel = TYPE_LABEL[account.type]
-  const cardSubtitle = isChild
-    ? `Part of ${account.parentName}`
-    : (typeLabel && typeLabel.toLowerCase() !== account.name.trim().toLowerCase() ? typeLabel : null)
   const limit     = account.creditLimit ?? 0
   const usedPct   = isCredit && limit > 0 ? Math.min((totalUsed / limit) * 100, 100) : 0
   const children  = (accounts ?? []).filter(a => a.parentName === account.name)
   const isParent  = children.length > 0
   const isChild   = !!account.parentName
   const trendColor = isCredit ? '#ef4444' : brand.from
+
+  // An account named after its own type - "Cash" - would otherwise label
+  // itself twice on the card face. Declared after isChild, which it reads.
+  const typeLabel = TYPE_LABEL[account.type]
+  const cardSubtitle = isChild
+    ? `Part of ${account.parentName}`
+    : (typeLabel && typeLabel.toLowerCase() !== (account.name ?? '').trim().toLowerCase() ? typeLabel : null)
 
   return (
     <div className="pb-10">
