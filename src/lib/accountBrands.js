@@ -223,8 +223,32 @@ export function logoCandidates(name) {
  * @param {{name?: string, type?: string, color?: string}} account
  * @returns {{key: string, mark: string, from: string, to: string}}
  */
+/**
+ * A credit card of the same institution, deepened.
+ *
+ * The picker no longer carries a separate "BPI Credit" template - you pick
+ * the bank once and say what kind of account it is - which would otherwise
+ * leave a BPI card and a BPI savings account rendering identically in the
+ * same list. Deepening the brand's own gradient keeps the institution
+ * recognisable while telling the two apart, and it is the direction real
+ * issuers go for their card products anyway.
+ *
+ * Only ever darker, so it cannot break the contrast solve: white text on a
+ * darker background is strictly safer than on the stop it was measured
+ * against.
+ */
+function asCredit(stops, isCredit) {
+  if (!isCredit) return stops
+  const deepen = (hex) => {
+    const rgb = parseHex(hex)
+    return rgb ? toHex(rgb.map(c => c * 0.74)) : hex
+  }
+  return { from: deepen(stops.from), to: deepen(stops.to) }
+}
+
 export function accountBrand(account) {
   const key = norm(account?.name)
+  const isCredit = account?.type === 'credit'
 
   for (const [pattern, brandKey, mark] of NAME_RULES) {
     if (pattern.test(key)) {
@@ -232,7 +256,12 @@ export function accountBrand(account) {
         key: brandKey, mark,
         monogram: monogram(account?.name),
         logoKeys: [brandKey, ...logoCandidates(account?.name)],
-        ...BRAND_GRADIENTS[brandKey],
+        // A brand whose own identity is already the card product - Maya's
+        // black card, SPayLater - is left alone; deepening it twice would
+        // take it to near-black.
+        ...(brandKey === 'maya-credit' || brandKey === 'spaylater'
+          ? BRAND_GRADIENTS[brandKey]
+          : asCredit(BRAND_GRADIENTS[brandKey], isCredit)),
       }
     }
   }
@@ -247,7 +276,7 @@ export function accountBrand(account) {
       key: 'custom', mark,
       monogram: monogram(account?.name),
       logoKeys: logoCandidates(account?.name),
-      ...own,
+      ...asCredit(own, isCredit),
     }
   }
 
@@ -255,7 +284,7 @@ export function accountBrand(account) {
     key: 'fallback', mark,
     monogram: monogram(account?.name),
     logoKeys: logoCandidates(account?.name),
-    from: '#3f4a5a', to: '#26303c',
+    ...asCredit({ from: '#3f4a5a', to: '#26303c' }, isCredit),
   }
 }
 

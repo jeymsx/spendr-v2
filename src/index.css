@@ -319,7 +319,7 @@ html.dark body {
 
 .brand-glyph[data-wm='mark'] { width: 58%; }
 .brand-glyph[data-wm='word'] { width: 84%; }
-.brand-glyph[data-wm='wide'] { width: 94%; }
+.brand-glyph[data-wm='wide'] { width: 76%; }
 
 .brand-glyph > svg {
   width: 100%;

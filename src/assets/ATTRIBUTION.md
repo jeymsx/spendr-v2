@@ -72,7 +72,7 @@ third-party file licence — the trademark position below still applies.
 | `hsbc.svg` | Wikimedia Commons, *Hsbc-logo.svg* | Public domain |
 | `ing.svg` | Wikimedia Commons, *ING Group (wordmark).svg* | Public domain |
 | `pnb.svg` | Wikimedia Commons, *Philippine-National-Bank-logo.svg* | Public domain |
-| `landbank.svg` | Wikimedia Commons, *Landbank.svg* | Public domain |
+| `landbank.svg` | English Wikipedia, *Landbank New.svg* | Public domain |
 | `rcbc.svg` | Wikimedia Commons, *RCBC logo.svg* | Public domain |
 | `robinsons-bank.svg` | Wikimedia Commons, *Robinsons Bank logo.svg* | Public domain |
 | `unionbank.svg` | Wikimedia Commons, *Unionbank 2018 logo.svg* | Public domain |
@@ -113,10 +113,42 @@ logos are wanted. They are the reason this directory is ~95 KB rather than
 `seabank.svg` was removed because SeaBank Philippines is now MariBank, and the
 template list was renamed to match. MariBank keeps its drawn mark.
 
+### From the institution's own website
+
+| File | Source | Licence |
+|---|---|---|
+| `security-bank.svg` | securitybank.com, `/wp-content/themes/sb/img/sbc-logo-short.svg` | **© Security Bank Corporation, all rights reserved** |
+| `tonik.svg` | tonikbank.com, `/sites/default/files/2024-02/toniklogo_0.svg` | **© Tonik Digital Bank, all rights reserved** |
+
+This one is **not** like the rest of this directory, and the distinction
+matters enough to keep it in its own section. Every Commons file above is
+public domain; this is the company's own copyrighted brand asset, taken from
+its own site because it is not on any free-licence source. It is included at
+the owner's request for a personal, undistributed build — see the trademark
+position at the end of this file, which applies with more force here than
+anywhere else.
+
+Its viewBox was **padded out to square** (`0 0 26 37` → `-5.5 0 37 37`, art
+unmoved). The mark is portrait at 0.70:1, and the compact-mark tier sizes by
+width on the assumption a logomark is roughly square — 40% of the card's
+width would have rendered this 90% of the card's *height*. Padding the box
+makes the existing tier correct rather than adding a fourth one for a single
+file.
+
+`landbank.svg` is the bank's **current** mark, from English Wikipedia rather
+than Commons - Wikipedia hosts non-free logos locally, so the licence had to
+be checked rather than assumed, and this one is tagged public domain. It
+replaced an older Commons file.
+
+Of the sites the owner supplied, two yielded nothing usable: **PalawanPay**
+and **PSBank** publish their logos only as PNG, which would blur as a
+watermark and cannot be recoloured by the single CSS rule the rest of this
+pipeline relies on, and **uno.bank** serves a 366-byte shell that renders its
+markup in JavaScript, so there is no asset reference to follow. Those keep
+their monograms.
+
 Institutions with **no usable file** fall back to a monogram in the app's own
-type: Coins.ph, PalawanPay, PSBank, Tonik, UNO Digital Bank and OwnBank are
-not on Commons at all, and Security Bank is there only as the defunct US
-Security Pacific. Searching for these turned up one more trap worth naming —
+type: Coins.ph, PalawanPay, PSBank, UNO Digital Bank and OwnBank. Searching for these turned up one more trap worth naming —
 *Netbank Logo 2006.svg* passed every automated check, and its description is
 entirely in German for a company that predates Netbank Philippines by well
 over a decade. Rejected.
@@ -127,6 +159,16 @@ the exact problem adopting real files solved. Facebook and image-search
 results were not used either — they are raster, so they would blur as
 watermarks, and they carry no verifiable licence, which is the one thing
 Commons guarantees.
+
+Four of the widest lockups - HSBC, UnionBank, CIMB and Landbank - were
+**cropped to their emblem and then un-cropped**, and the reason is worth
+keeping. The crop boxes came from `getBBox()` measured in the browser, which
+looked authoritative next to scraping svgo-optimised relative path data. But
+`getBBox` reports a shape's box in its OWN user space, before any ancestor
+transform, so on a file with a group transform the numbers describe a
+different coordinate system than the viewBox does. All four crops sliced
+their marks. They render at the wide tier instead, and in the picker's square
+tiles a wide mark is inset to 76% rather than run edge to edge.
 
 Files are matched to accounts by filename, not by a per-bank rule — see
 `logoCandidates` in `lib/accountBrands.js` — so "BDO Credit" finds `bdo.svg`

@@ -31,22 +31,11 @@ export const PH_ACCOUNTS = [
   { name: 'UNO Digital Bank',   type: 'bank',    color: '#f59e0b', group: 'Digital Banks',     popular: false },
   { name: 'OwnBank',            type: 'bank',    color: '#10b981', group: 'Digital Banks',     popular: false },
   { name: 'ING',                type: 'bank',    color: '#f97316', group: 'Digital Banks',     popular: false },
-
-  // Credit Cards
-  { name: 'Maya Credit',        type: 'credit',  color: '#06b6d4', group: 'Credit Cards',      popular: true  },
-  { name: 'BPI Credit',         type: 'credit',  color: '#ef4444', group: 'Credit Cards',      popular: true  },
-  { name: 'BDO Credit',         type: 'credit',  color: '#2D9DFF', group: 'Credit Cards',      popular: false },
-  { name: 'Metrobank Credit',   type: 'credit',  color: '#f59e0b', group: 'Credit Cards',      popular: false },
-  { name: 'UnionBank Credit',   type: 'credit',  color: '#f97316', group: 'Credit Cards',      popular: false },
-  { name: 'Security Bank Credit', type: 'credit',color: '#10b981', group: 'Credit Cards',      popular: false },
-  { name: 'RCBC Credit',        type: 'credit',  color: '#ec4899', group: 'Credit Cards',      popular: false },
-  { name: 'GoTyme Credit',      type: 'credit',  color: '#14b8a6', group: 'Credit Cards',      popular: false },
-  { name: 'CIMB Credit',        type: 'credit',  color: '#ef4444', group: 'Credit Cards',      popular: false },
-  { name: 'Citibank',           type: 'credit',  color: '#2D9DFF', group: 'Credit Cards',      popular: false },
-  { name: 'HSBC',               type: 'credit',  color: '#ef4444', group: 'Credit Cards',      popular: false },
+  { name: 'Citibank',           type: 'credit',  color: '#2D9DFF', group: 'Traditional Banks',      popular: false },
+  { name: 'HSBC',               type: 'credit',  color: '#ef4444', group: 'Traditional Banks',      popular: false },
 ]
 
-export const PH_GROUPS = ['E-Wallets', 'Traditional Banks', 'Digital Banks', 'Credit Cards']
+export const PH_GROUPS = ['E-Wallets', 'Traditional Banks', 'Digital Banks']
 
 export const POPULAR_ACCOUNTS = PH_ACCOUNTS.filter(a => a.popular)
 
