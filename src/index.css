@@ -192,7 +192,9 @@ html.dark body {
      durations in both directions is what makes a press feel rubbery. */
   transition:
     transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1),
-    box-shadow 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+    box-shadow 260ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    rotate 220ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    scale 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 .acct-card::before,
@@ -649,6 +651,37 @@ html.dark body {
   .wallet-card::before { display: none; }
 }
 
+/* Picking a card up loosens the deck: the held card tilts and lifts, and the
+   rest of its stack leans a degree with it, so the group reads as being
+   rearranged rather than as one card sliding through a rigid list.
+
+   The tilt uses the INDIVIDUAL transform properties `rotate` and `scale`,
+   not `transform`. dnd-kit owns `transform` for the drag translation and
+   rewrites it on every pointer move, so a tilt inside it could never carry
+   its own timing - it would either snap in instantly or drag the whole
+   translation through a transition and lag behind the finger. As separate
+   properties they compose with the translation (a rotation about the card's
+   own centre commutes with a translation) while easing in on their own.
+
+   Two classes, so this beats `.acct-card:active` - a class plus a
+   pseudo-class, otherwise more specific, which would keep the pressed shadow
+   on a card that is being carried. */
+.acct-card.acct-card-dragging {
+  rotate: -3deg;
+  scale: 1.04;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+    0 10px 20px rgba(0, 0, 0, 0.28),
+    0 32px 46px -18px rgba(0, 0, 0, 0.62);
+  cursor: grabbing;
+}
+
+/* Everything else in the stack the drag is happening in. */
+.acct-card.acct-card-sorting {
+  rotate: -1deg;
+}
+
 /* A pressed card should feel like plastic under a thumb: the sheen shifts and
    the lift collapses, rather than the whole thing just scaling. */
 .acct-card:active {
@@ -671,6 +704,9 @@ html.dark body {
   .acct-card,
   .acct-card:active { transition: none; }
   .acct-card:active { transform: none; }
+  /* Reordering still works; it just stops tilting about it. */
+  .acct-card.acct-card-dragging,
+  .acct-card.acct-card-sorting { rotate: 0deg; scale: 1; }
 }
 
 /* ── Sheet scroll lock — prevents iOS scroll bleed-through */

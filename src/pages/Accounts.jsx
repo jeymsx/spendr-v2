@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback, forwardRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
@@ -275,7 +275,10 @@ const STACK_STRIP = 76
  * up by `calc(STRIPpx - (100/RATIO)%)` leaves exactly STRIP visible at any
  * screen size with nothing measured in JS.
  */
-function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
+const AccountCard = forwardRef(function AccountCard({
+  acct, hidden, onTap, stmt, indent = false, depth = 0,
+  dragProps, dragStyle, isDragging = false, isSorting = false,
+}, ref) {
   const isCredit       = acct.type === 'credit'
   const currentBalance = stmt?.currentBalance ?? 0
   const limit          = acct.creditLimit ?? 0
@@ -299,8 +302,11 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
 
   return (
     <button
+      ref={ref}
       onClick={onTap}
-      className="acct-card w-full rounded-2xl px-4 pt-3.5 pb-4 flex flex-col text-left text-white"
+      className={`acct-card w-full rounded-2xl px-4 pt-3.5 pb-4 flex flex-col text-left text-white${
+        isDragging ? ' acct-card-dragging' : isSorting ? ' acct-card-sorting' : ''
+      }`}
       style={{
         background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
         aspectRatio: String(CARD_RATIO),
@@ -308,8 +314,12 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
         // Later cards sit over earlier ones, so the strip you read belongs to
         // the card it names.
         zIndex: depth + 1,
+        // Spread last: while dragging, dnd-kit's transform and a raised
+        // z-index have to beat both of the above.
+        ...dragStyle,
       }}
       data-brand={brand.key}
+      {...dragProps}
     >
       {/* Brand watermark bottom-right, network mark bottom-left. Both are
           real institution art where it exists - see assets/ATTRIBUTION.md. */}
@@ -369,9 +379,72 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
       </div>
     </button>
   )
-}
+})
 
 // ── Quick-add sheet helpers ────────────────────────────────────────────────────
+
+/**
+ * How far each card shifts while another is dragged past it.
+ *
+ * dnd-kit's built-in vertical strategy measures the gap between item rects
+ * and shifts by a whole item height. These cards OVERLAP - each is pulled up
+ * so only STACK_STRIP of it shows - so a whole-height shift sends them
+ * flying off in both directions. The pitch of this stack is the strip, not
+ * the card, and that is the only thing this changes.
+ *
+ * It is an approximation at the ends, because the last card in a stack is the
+ * only one showing its full height: drop something into that slot and the
+ * heights swap, which a translation cannot express. It settles correctly on
+ * drop, which is what dnd-kit strategies are for.
+ */
+function stackSortingStrategy({ activeIndex, overIndex, index }) {
+  if (activeIndex === -1 || overIndex === -1) return null
+  if (index === activeIndex) {
+    return { x: 0, y: (overIndex - activeIndex) * STACK_STRIP, scaleX: 1, scaleY: 1 }
+  }
+  if (activeIndex < overIndex && index > activeIndex && index <= overIndex) {
+    return { x: 0, y: -STACK_STRIP, scaleX: 1, scaleY: 1 }
+  }
+  if (activeIndex > overIndex && index < activeIndex && index >= overIndex) {
+    return { x: 0, y: STACK_STRIP, scaleX: 1, scaleY: 1 }
+  }
+  return null
+}
+
+/**
+ * A card you can pick up and reorder in place.
+ *
+ * The card is still a button that opens the account, so drag has to be told
+ * apart from tap: a pointer must travel 8px, and a finger must rest 180ms,
+ * before a drag begins. Anything shorter stays a tap.
+ */
+function SortableAccountCard(props) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isSorting } =
+    useSortable({ id: props.acct.id })
+
+  return (
+    <AccountCard
+      {...props}
+      ref={setNodeRef}
+      isDragging={isDragging}
+      isSorting={isSorting}
+      dragProps={{ ...attributes, ...listeners }}
+      dragStyle={{
+        transform: CSS.Transform.toString(transform),
+        // While held, `transform` must NOT be transitioned or the card lags
+        // behind the pointer - so the transition is narrowed to the tilt
+        // properties, which are `rotate` and `scale` rather than `transform`
+        // precisely so they can carry their own timing. Idle cards fall back
+        // to dnd-kit's own transform transition for the reflow.
+        transition: isDragging
+          ? 'rotate 200ms cubic-bezier(0.2, 0.7, 0.3, 1), scale 200ms cubic-bezier(0.2, 0.7, 0.3, 1)'
+          : transition,
+        // Above the whole stack, whose z-index climbs with depth.
+        zIndex: isDragging ? 999 : undefined,
+      }}
+    />
+  )
+}
 
 const RECENT_PRESETS_KEY = 'recentAccountPresets'
 
@@ -616,6 +689,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
 
 export default function Accounts() {
   const { accentColor, theme } = useTheme()
+  const { showToast } = useToast()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [balanceHidden,   setBalanceHidden]   = useState(false)
@@ -726,6 +800,45 @@ export default function Accounts() {
 
   // A route, not a sheet: the detail view is its own page, so the hardware
   // back button and a direct link both work. See pages/AccountDetail.jsx.
+  // Same thresholds the sort sheet uses: 8px of pointer travel, or 180ms of
+  // held finger. Below either, the gesture stays a tap and opens the account.
+  const cardSensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor,   { activationConstraint: { delay: 180, tolerance: 6 } }),
+  )
+
+  /**
+   * Persist a reorder made inside one group.
+   *
+   * sort_order is a single global sequence while the stacks are per-role, so
+   * renumbering just the moved group would interleave its indices with the
+   * other groups' and scramble them. This walks the whole displayed list and
+   * substitutes the moved group's new sequence at the positions that group
+   * already occupied, then renumbers everything 0..n - which leaves every
+   * other group exactly where it was and keeps the number meaning the same
+   * thing it does in the sort sheet.
+   */
+  async function reorderWithinGroup(groupAccounts, activeId, overId) {
+    const from = groupAccounts.findIndex(a => a.id === activeId)
+    const to   = groupAccounts.findIndex(a => a.id === overId)
+    if (from === -1 || to === -1 || from === to) return
+
+    const moved = arrayMove(groupAccounts, from, to)
+    const inGroup = new Set(moved.map(a => a.id))
+    let cursor = 0
+    const full = flatAccts.map(a => (inGroup.has(a.id) ? moved[cursor++] : a))
+
+    const now = new Date().toISOString()
+    try {
+      await Promise.all(full.map((a, i) =>
+        db.accounts.update(a.id, { sort_order: i, updatedAt: now })
+      ))
+    } catch (e) {
+      console.error('[Accounts] reorder failed:', e)
+      showToast('Could not save the new order', 'error')
+    }
+  }
+
   function openDetail(acct) {
     navigate(`/accounts/${acct.id}`)
   }
@@ -845,18 +958,36 @@ export default function Accounts() {
                 {fmt(group.accounts.reduce((s, a) => s + acctTotal(a, creditStmtMap), 0))}
               </span>
             </div>
-            <div className="mx-5 flex flex-col">
-              {group.accounts.map((acct, i) => (
-                <AccountCard
-                  key={acct.id}
-                  acct={acct}
-                  hidden={balanceHidden}
-                  onTap={() => openDetail(acct)}
-                  stmt={creditStmtMap[acct.name]}
-                  depth={i}
-                />
-              ))}
-            </div>
+            {/* One DndContext per group: reordering is within a group, since
+                which group a card lands in is decided by its role, not by
+                where you drop it. */}
+            <DndContext
+              sensors={cardSensors}
+              collisionDetection={closestCenter}
+              onDragEnd={({ active, over }) => {
+                if (over && active.id !== over.id) {
+                  reorderWithinGroup(group.accounts, active.id, over.id)
+                }
+              }}
+            >
+              <SortableContext
+                items={group.accounts.map(a => a.id)}
+                strategy={stackSortingStrategy}
+              >
+                <div className="mx-5 flex flex-col">
+                  {group.accounts.map((acct, i) => (
+                    <SortableAccountCard
+                      key={acct.id}
+                      acct={acct}
+                      hidden={balanceHidden}
+                      onTap={() => openDetail(acct)}
+                      stmt={creditStmtMap[acct.name]}
+                      depth={i}
+                    />
+                  ))}
+                </div>
+              </SortableContext>
+            </DndContext>
           </section>
         )
       })}
