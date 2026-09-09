@@ -461,7 +461,7 @@ export default function Dashboard() {
                   </button>
                 </div>
 
-                <div className="mt-2 mb-6">
+                <div className="mt-2">
                   {revealed ? (
                     <span className="text-4xl font-semibold tracking-tight text-white tabular-nums">
                       {fmt(animatedNetWorth)}

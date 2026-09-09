@@ -386,9 +386,11 @@ html.dark body {
   border-radius: 28px 28px 20px 20px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
 
-  /* Keeps content out of the tab. Matches TAB_H in Dashboard.jsx plus air. */
-  --wallet-tab-reserve: 30px;
-  padding-bottom: var(--wallet-tab-reserve);
+  /* --wallet-tab-h mirrors TAB_H in Dashboard.jsx: how far the tab hangs
+     below the body. The stitching is inset from the BODY, so it needs that
+     figure; content is padded clear of the stitching in turn. */
+  --wallet-tab-h: 22px;
+  padding-bottom: calc(var(--wallet-tab-h) + 18px);
 }
 
 /* The lift, on a wrapper so it follows the clipped silhouette - including the
@@ -476,7 +478,7 @@ html.dark body {
   top: 10px;
   left: 10px;
   right: 10px;
-  bottom: calc(var(--wallet-tab-reserve) + 8px);
+  bottom: calc(var(--wallet-tab-h) + 10px);
   border: 1px dashed rgba(255, 255, 255, 0.34);
   border-radius: 21px 21px 13px 13px;
   pointer-events: none;
