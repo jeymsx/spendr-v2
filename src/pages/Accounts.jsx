@@ -384,6 +384,18 @@ const AccountCard = forwardRef(function AccountCard({
 // ── Quick-add sheet helpers ────────────────────────────────────────────────────
 
 /**
+ * Pin a drag to the vertical axis.
+ *
+ * A stack is a vertical list, so sideways movement means nothing here - and
+ * it caused a real bug rather than just looking odd. <main> is the scroll
+ * container and its overflow-x computes to `auto`, so a card dragged
+ * sideways extended the scrollable width (measured: 725px inside a 500px
+ * viewport) and the whole page could be panned to the right. Pinning x
+ * removes the cause instead of clipping the symptom.
+ */
+const lockToVerticalAxis = ({ transform }) => ({ ...transform, x: 0 })
+
+/**
  * How far each card shifts while another is dragged past it.
  *
  * dnd-kit's built-in vertical strategy measures the gap between item rects
@@ -419,8 +431,33 @@ function stackSortingStrategy({ activeIndex, overIndex, index }) {
  * before a drag begins. Anything shorter stays a tap.
  */
 function SortableAccountCard(props) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isSorting } =
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging, isSorting, newIndex } =
     useSortable({ id: props.acct.id })
+
+  const dragStyle = {
+    transform: CSS.Transform.toString(transform),
+    // While held, `transform` must NOT be transitioned or the card lags
+    // behind the pointer - so the transition is narrowed to the tilt
+    // properties, which are `rotate` and `scale` rather than `transform`
+    // precisely so they can carry their own timing. Idle cards fall back to
+    // dnd-kit's own transform transition for the reflow.
+    transition: isDragging
+      ? 'rotate 200ms cubic-bezier(0.2, 0.7, 0.3, 1), scale 200ms cubic-bezier(0.2, 0.7, 0.3, 1)'
+      : transition,
+  }
+
+  // While a drag is in progress the WHOLE stack layers as it will be once
+  // dropped - newIndex is the post-move index of every card, not just the
+  // held one - so a card slid into the middle goes behind the card in front
+  // of it, the way it would if you pushed it into a real deck. Floating the
+  // held card over everything on a fixed z-index looked like it was being
+  // carried above the stack rather than into it.
+  //
+  // Set only while sorting, and as a key that is absent otherwise: this
+  // object is spread over the card's base style, and an explicit `undefined`
+  // would override the base `zIndex: depth + 1` rather than defer to it -
+  // which it silently did, leaving the whole stack on `z-index: auto`.
+  if (isSorting) dragStyle.zIndex = newIndex + 1
 
   return (
     <AccountCard
@@ -429,19 +466,7 @@ function SortableAccountCard(props) {
       isDragging={isDragging}
       isSorting={isSorting}
       dragProps={{ ...attributes, ...listeners }}
-      dragStyle={{
-        transform: CSS.Transform.toString(transform),
-        // While held, `transform` must NOT be transitioned or the card lags
-        // behind the pointer - so the transition is narrowed to the tilt
-        // properties, which are `rotate` and `scale` rather than `transform`
-        // precisely so they can carry their own timing. Idle cards fall back
-        // to dnd-kit's own transform transition for the reflow.
-        transition: isDragging
-          ? 'rotate 200ms cubic-bezier(0.2, 0.7, 0.3, 1), scale 200ms cubic-bezier(0.2, 0.7, 0.3, 1)'
-          : transition,
-        // Above the whole stack, whose z-index climbs with depth.
-        zIndex: isDragging ? 999 : undefined,
-      }}
+      dragStyle={dragStyle}
     />
   )
 }
@@ -964,6 +989,7 @@ export default function Accounts() {
             <DndContext
               sensors={cardSensors}
               collisionDetection={closestCenter}
+              modifiers={[lockToVerticalAxis]}
               onDragEnd={({ active, over }) => {
                 if (over && active.id !== over.id) {
                   reorderWithinGroup(group.accounts, active.id, over.id)
