@@ -386,6 +386,44 @@ html.dark body {
   opacity: 0.17;
 }
 
+/* The detail page lays its card back in perspective.
+
+   It earns its place rather than being decoration: foreshortening a card
+   costs real vertical space at the same width, which is the point - the
+   balance moved above the card, and a flat rectangle directly under a big
+   flat number wasted the top third of the screen. Laid back, the card reads
+   as an object the page is about rather than as a banner.
+
+   It is ONE rotation about the horizontal axis - the card hinging away from
+   the viewer, top edge receding and narrowing. An added rotateZ turns that
+   into a diagonal skew, which reads as a tilted flat rectangle rather than
+   as a card lying back in space.
+
+   The perspective lives on the WRAPPER, not the card, so there is a single
+   vanishing point for the whole card instead of one per element, and the
+   card's own transform stays a single rotation - which matters because
+   .acct-card already establishes a stacking context, and compounding onto
+   that is how the watermark and scheme mark start detaching from the face. */
+.card-tilt {
+  perspective: 620px;
+  perspective-origin: 50% 50%;
+}
+
+.card-tilt > .acct-card {
+  transform: rotateX(30deg);
+  /* A card lying back casts its shadow further and softer than one lying
+     flat, and the inset rim stays so the moulded edge survives the rotation. */
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.22),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.10),
+    0 4px 8px rgba(0, 0, 0, 0.22),
+    0 22px 34px -14px rgba(0, 0, 0, 0.55);
+}
+
+/* Rotation is the whole effect, so there is nothing to keep when motion is
+   reduced - but a transform is not motion, it is a static pose, and removing
+   it would change the layout rather than calm it. Left alone deliberately. */
+
 /* The home carousel's cards are half the width of an Accounts face, so a mark
    at full card-face strength competes with the balance instead of sitting
    behind it. Only the opacity changes - the bottom-right placement is shared

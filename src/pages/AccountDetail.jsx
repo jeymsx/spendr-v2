@@ -397,10 +397,39 @@ export default function AccountDetail() {
         </div>
       </header>
 
-      {/* ── The card itself, at a size worth looking at ── */}
-      <section className="px-5 mt-1">
+      {/* ── The one number, leading the page ── */}
+      <section className="px-5 mt-1 text-center">
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          {isCredit ? 'Balance Used' : 'Current Balance'}
+        </p>
+        <p className={`mt-1.5 text-[38px] leading-none font-semibold tracking-tight tabular-nums ${
+          isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
+        }`}>
+          {fmt(totalUsed)}
+        </p>
+
+        {isCredit && limit > 0 && (
+          <div className="mt-4 max-w-[320px] mx-auto">
+            <div className="h-1.5 rounded-full bg-red-100 dark:bg-red-500/20 overflow-hidden">
+              <div
+                className="h-full rounded-full transition-all duration-700"
+                style={{
+                  width: `${usedPct}%`,
+                  backgroundColor: usedPct > 80 ? '#ef4444' : '#f59e0b',
+                }}
+              />
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
+              {fmt(limit - totalUsed)} available of {fmt(limit)} limit ({usedPct.toFixed(0)}% used)
+            </p>
+          </div>
+        )}
+      </section>
+
+      {/* ── The card, laid back so it costs less height ── */}
+      <section className="px-5 mt-5 card-tilt">
         <div
-          className="acct-card mx-auto w-full max-w-[320px] rounded-2xl px-5 pt-4 pb-4
+          className="acct-card mx-auto w-full max-w-[300px] rounded-2xl px-5 pt-4 pb-4
             flex flex-col text-left text-white"
           style={{
             background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
@@ -429,38 +458,9 @@ export default function AccountDetail() {
             <span className="text-[9px] font-semibold uppercase tracking-wider text-white/50">
               {account.currency ?? 'PHP'}
             </span>
-            <SchemeMark scheme={account.scheme} className="h-[24px]" />
+            <SchemeMark scheme={account.scheme} className="h-[30px]" />
           </div>
         </div>
-      </section>
-
-      {/* ── The one number, set large and centred ── */}
-      <section className="px-5 mt-6 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-          {isCredit ? 'Balance Used' : 'Current Balance'}
-        </p>
-        <p className={`mt-1.5 text-[38px] leading-none font-semibold tracking-tight tabular-nums ${
-          isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
-        }`}>
-          {fmt(totalUsed)}
-        </p>
-
-        {isCredit && limit > 0 && (
-          <div className="mt-4 max-w-[320px] mx-auto">
-            <div className="h-1.5 rounded-full bg-red-100 dark:bg-red-500/20 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${usedPct}%`,
-                  backgroundColor: usedPct > 80 ? '#ef4444' : '#f59e0b',
-                }}
-              />
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              {fmt(limit - totalUsed)} available of {fmt(limit)} limit ({usedPct.toFixed(0)}% used)
-            </p>
-          </div>
-        )}
       </section>
 
       {/* ── 30-day trend ── */}

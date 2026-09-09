@@ -355,7 +355,7 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
               <span className="text-[9px] uppercase tracking-wider text-white/60">
                 {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit)} used
               </span>
-              <SchemeMark scheme={acct.scheme} className="h-[26px]" />
+              <SchemeMark scheme={acct.scheme} className="h-[34px]" />
             </div>
           </>
         ) : (
@@ -363,7 +363,7 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
             <span className="text-[9px] uppercase tracking-wider text-white/50">
               {acct.currency ?? 'PHP'}
             </span>
-            <SchemeMark scheme={acct.scheme} className="h-[26px]" />
+            <SchemeMark scheme={acct.scheme} className="h-[34px]" />
           </div>
         )}
       </div>
