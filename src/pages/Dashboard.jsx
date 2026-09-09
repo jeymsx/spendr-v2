@@ -472,8 +472,8 @@ export default function Dashboard() {
                 </div>
 
                 <div className="wallet-fold -mx-6" data-open={breakdownOpen}>
-                  <div>
-                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-7 pb-6">
+                  <div className="pt-5">
+                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-5 pb-6">
                   <div>
                     <p className="text-white/50 text-[11px] mb-1">Spending</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
