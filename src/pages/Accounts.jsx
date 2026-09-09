@@ -2111,10 +2111,18 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
                     {creditData.nextTotal > 0 && (
                       <div className="text-right">
                         <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">Next Statement</p>
-                        <p className="text-sm font-bold text-slate-600 dark:text-slate-300 tabular-nums">{fmt(creditData.nextTotal)}</p>
+                        {/* What the next bill will actually ask for. The wider
+                            nextTotal includes plan months billed later, and it
+                            still drives Available Credit below. */}
+                        <p className="text-sm font-bold text-slate-600 dark:text-slate-300 tabular-nums">{fmt(creditData.nextStatementTotal)}</p>
                         <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                           Closes {fmtCycleDate(creditData.nextEnd)}
                         </p>
+                        {creditData.laterTotal > 0 && (
+                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                            +{fmt(creditData.laterTotal)} on later bills
+                          </p>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2136,17 +2144,30 @@ function AccountDetailSheet({ open, onClose, account, transactions, allAccounts 
               />
 
               {/* ── Next Statement charges ── */}
-              {creditData.nextCharges.length > 0 && (
+              {creditData.nextStatementCharges.length > 0 && (
                 <CreditTxSection
                   onSelect={setSelectedTx}
                   title="Next Statement"
-                  /* nextCharges is open-ended — future-dated installments land
-                     here too — so a closed window would understate the total. */
-                  dateRange={`From ${fmtCycleDate(creditData.nextStart)}`}
-                  txs={creditData.nextCharges}
-                  total={creditData.nextTotal}
+                  dateRange={`${fmtCycleDate(creditData.nextStart)} – ${fmtCycleDate(creditData.nextCycleEnd)}`}
+                  txs={creditData.nextStatementCharges}
+                  total={creditData.nextStatementTotal}
                   accountName={account.name}
                   totalColor="text-slate-600 dark:text-slate-300"
+                />
+              )}
+
+              {/* ── Committed, but for bills after the next one ──
+                  Installment plans write every month up front, so these are
+                  already against the limit while being nowhere near due. */}
+              {creditData.laterCharges.length > 0 && (
+                <CreditTxSection
+                  onSelect={setSelectedTx}
+                  title="Scheduled Later"
+                  dateRange={`After ${fmtCycleDate(creditData.nextCycleEnd)}`}
+                  txs={creditData.laterCharges}
+                  total={creditData.laterTotal}
+                  accountName={account.name}
+                  totalColor="text-slate-400 dark:text-slate-500"
                 />
               )}
 

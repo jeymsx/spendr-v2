@@ -298,13 +298,21 @@ export default function WebAccounts() {
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Unbilled</p>
+                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Next bill</p>
+                        {/* The charges landing on the next statement, not every
+                            future plan month - that wider figure is nextTotal
+                            and it still drives Available below. */}
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-slate-800 dark:text-white">
-                          {money(st.nextTotal ?? 0)}
+                          {money(st.nextStatementTotal ?? 0)}
                         </p>
                         <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                          from {cycleDay(getNextCycleRange(selected.cutoffDate).cycleStart)}
+                          {cycleDay(getNextCycleRange(selected.cutoffDate).cycleStart)} – {cycleDay(st.nextCycleEnd)}
                         </p>
+                        {(st.laterTotal ?? 0) > 0 && (
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                            +{money(st.laterTotal)} later
+                          </p>
+                        )}
                       </div>
                       <div>
                         <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Paid</p>

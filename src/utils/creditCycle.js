@@ -74,15 +74,24 @@ export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
 /**
  * Single source of truth for a credit account's standing.
  *
- * Two windows matter:
- *   thisTotal — charges inside the statement cycle that most recently closed;
- *               this is what's actually due.
- *   nextTotal — charges after that cycle closed; owed, but not yet billed.
+ * Three windows matter:
+ *   thisTotal          — charges inside the statement cycle that most recently
+ *                        closed; this is what's actually due.
+ *   nextStatementTotal — charges that fall inside the cycle now accumulating,
+ *                        i.e. what the NEXT bill will actually ask for.
+ *   laterTotal         — charges dated beyond that cycle. An installment plan
+ *                        writes every month's charge up front, so these are
+ *                        committed but will not appear on the next bill.
  *
- * `nextTotal` is deliberately unbounded. A future-dated charge (an installment
- * amortisation several months out) is already committed against the limit, so
- * it has to reduce available credit today even though it won't be billed for
- * months.
+ * `nextTotal` is the sum of the last two and is deliberately unbounded: the
+ * issuer locks the whole plan against the limit at purchase, so every future
+ * amortisation has to reduce available credit today even though it will not be
+ * billed for months. currentBalance and availableCredit are built from it.
+ *
+ * That total is therefore right for "how much credit is left" and wrong for
+ * anything labelled "next statement" — a six-month plan made the next bill
+ * look like the entire remaining plan. Display code wants nextStatementTotal;
+ * only the limit math wants nextTotal.
  *
  * Payments only count after `cycleEnd`. A payment made before the cutoff was
  * settling the *previous* statement — crediting it against this one would
@@ -94,11 +103,16 @@ export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
  */
 export function getCreditStatus(account, txs, referenceDate = new Date()) {
   const { cycleStart, cycleEnd } = getCycleRange(account?.cutoffDate, referenceDate)
+  // The cycle now accumulating. Its end is the boundary between "on the next
+  // bill" and "committed, but for a later bill".
+  const { cycleEnd: nextCycleEnd } = getNextCycleRange(account?.cutoffDate, referenceDate)
   const name = account?.name
 
-  const thisCharges = []
-  const nextCharges = []
-  const payments    = []
+  const thisCharges          = []
+  const nextCharges          = []
+  const nextStatementCharges = []
+  const laterCharges         = []
+  const payments             = []
 
   // Single pass. The previous copies of this ran three or four .filter()
   // sweeps over every transaction, per card, on every render.
@@ -116,17 +130,24 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
 
     if (isCharge) {
       if (d >= cycleStart && d <= cycleEnd) thisCharges.push(tx)
-      else if (d > cycleEnd)                nextCharges.push(tx)
+      else if (d > cycleEnd) {
+        nextCharges.push(tx)
+        // Same charge, split by which bill it will land on.
+        if (d <= nextCycleEnd) nextStatementCharges.push(tx)
+        else                   laterCharges.push(tx)
+      }
       // Charges older than the closed cycle are already settled — ignored.
     } else if (d > cycleEnd) {
       payments.push(tx)
     }
   }
 
-  const sum           = (arr) => arr.reduce((s, tx) => s + (tx.amount ?? 0), 0)
-  const thisTotal     = sum(thisCharges)
-  const nextTotal     = sum(nextCharges)
-  const totalPayments = sum(payments)
+  const sum                = (arr) => arr.reduce((s, tx) => s + (tx.amount ?? 0), 0)
+  const thisTotal          = sum(thisCharges)
+  const nextTotal          = sum(nextCharges)
+  const nextStatementTotal = sum(nextStatementCharges)
+  const laterTotal         = sum(laterCharges)
+  const totalPayments      = sum(payments)
 
   const stmtPaid = totalPayments >= thisTotal
   // Statement settled → only the unbilled charges remain outstanding.
@@ -136,9 +157,10 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
     : Math.max(0, thisTotal + nextTotal - totalPayments)
 
   return {
-    cycleStart, cycleEnd,
-    thisCharges, nextCharges, payments,
-    thisTotal, nextTotal, totalPayments,
+    cycleStart, cycleEnd, nextCycleEnd,
+    thisCharges, nextCharges, nextStatementCharges, laterCharges, payments,
+    // nextTotal === nextStatementTotal + laterTotal, by construction.
+    thisTotal, nextTotal, nextStatementTotal, laterTotal, totalPayments,
     stmtPaid, currentBalance,
     availableCredit: (account?.creditLimit ?? 0) - currentBalance,
   }

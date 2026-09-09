@@ -345,7 +345,7 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
       {/* Credit accounts — detailed cards */}
       {creditAccounts.map((acct, i) => {
         const det     = creditDetailMap[acct.name] ?? {}
-        const { stmtTotal = 0, stmtRange = '', nextTotal = 0, nextRange = '',
+        const { stmtTotal = 0, stmtRange = '', nextTotal = 0, nextStatementTotal = 0, laterTotal = 0, nextRange = '',
                 balanceUsed = 0, available = 0, usedPct = 0, limit = 0,
                 dueDate = '—', minimumPayment = 0 } = det
         const barFill = Math.max((usedPct / 100) * 450, 0)
@@ -388,7 +388,7 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 7, color: GRAY_TEXT }}>NEXT STATEMENT</Text>
-                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(nextTotal)}</Text>
+                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(nextStatementTotal)}</Text>
                   <Text style={{ fontSize: 7, color: GRAY_TEXT, marginTop: 1 }}>{nextRange}</Text>
                 </View>
                 <View style={{ flex: 1 }}>

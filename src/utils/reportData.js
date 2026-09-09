@@ -108,7 +108,8 @@ export async function fetchReportData(year, month) {
 
   const creditDetailMap = {}
   for (const acct of creditAccounts) {
-    const { cycleStart, cycleEnd, thisTotal: stmtTotal, nextTotal, currentBalance: balanceUsed }
+    const { cycleStart, cycleEnd, thisTotal: stmtTotal, nextTotal,
+            nextStatementTotal, laterTotal, nextCycleEnd, currentBalance: balanceUsed }
       = getCreditStatus(acct, txsAsOf, asOf)
     const { cycleStart: nextStart } = getNextCycleRange(acct.cutoffDate, asOf)
 
@@ -125,8 +126,13 @@ export async function fetchReportData(year, month) {
     creditDetailMap[acct.name] = {
       stmtTotal,
       stmtRange:    `${fmtDate(cycleStart)} – ${fmtDate(cycleEnd)}`,
+      // nextTotal is every future plan month and is what balanceUsed and the
+      // limit are built from; nextStatementTotal is what the next bill asks
+      // for. The report shows the latter and names the remainder separately.
       nextTotal,
-      nextRange:    `From ${fmtDate(nextStart)}`,
+      nextStatementTotal,
+      laterTotal,
+      nextRange:    `${fmtDate(nextStart)} – ${fmtDate(nextCycleEnd)}`,
       balanceUsed,
       available,
       usedPct,
