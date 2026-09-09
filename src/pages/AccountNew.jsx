@@ -97,7 +97,7 @@ function IconCheck() {
  * material to the Accounts list, because the point is that this IS the card
  * you are about to get, not an illustration of one.
  */
-function PreviewCard({ draft }) {
+function PreviewCard({ draft, large = false }) {
   const brand = accountBrand({ name: draft.name, type: draft.type, color: draft.color })
   const isCredit = draft.type === 'credit'
   const typeLabel = TYPE_LABEL[draft.type]
@@ -109,8 +109,9 @@ function PreviewCard({ draft }) {
 
   return (
     <div
-      className="acct-card mx-auto w-full max-w-[300px] rounded-2xl px-5 pt-4 pb-4
-        flex flex-col text-left text-white"
+      className={`acct-card mx-auto w-full rounded-2xl flex flex-col text-left text-white ${
+        large ? 'max-w-[350px] px-6 pt-5 pb-5' : 'max-w-[300px] px-5 pt-4 pb-4'
+      }`}
       style={{
         background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
         aspectRatio: String(CARD_RATIO),
@@ -120,9 +121,9 @@ function PreviewCard({ draft }) {
       <BrandWatermark brand={brand} />
 
       <div className="flex items-center gap-2.5">
-        <BrandMark mark={brand.mark} size={22} className="shrink-0" />
+        <BrandMark mark={brand.mark} size={large ? 26 : 22} className="shrink-0" />
         <div className="min-w-0">
-          <p className="text-[13px] font-semibold leading-tight truncate">
+          <p className={`font-semibold leading-tight truncate ${large ? 'text-[15px]' : 'text-[13px]'}`}>
             {named || 'New account'}
           </p>
           {subtitle && <p className="text-[10px] text-white/65 truncate">{subtitle}</p>}
@@ -140,7 +141,7 @@ function PreviewCard({ draft }) {
             </p>
           )}
         </div>
-        <SchemeMark scheme={draft.scheme} className="h-[22px]" />
+        <SchemeMark scheme={draft.scheme} className={large ? 'h-[32px]' : 'h-[27px]'} />
       </div>
     </div>
   )
@@ -331,6 +332,23 @@ function SummaryRow({ label, value }) {
   )
 }
 
+/** The step indicator. Rendered above the card on the final step and below
+ *  it on the others, so it is a component rather than two copies. */
+function StepProgress({ steps, index, className = '' }) {
+  return (
+    <div className={`px-5 flex items-center gap-1.5 ${className}`} role="presentation">
+      {steps.map((s, i) => (
+        <span
+          key={s}
+          className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
+            i <= index ? 'bg-primary' : 'bg-slate-200 dark:bg-white/[0.10]'
+          }`}
+        />
+      ))}
+    </div>
+  )
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function AccountNew() {
@@ -449,10 +467,13 @@ export default function AccountNew() {
     review: 'Ready to add',
   }[current]
 
+  // min-h-full plus a flex column is what lets the review step centre
+  // itself: <main> is a definite-height scroller, so the flex child can take
+  // the leftover space between the progress bar and the pill.
   return (
-    <div className="pb-[calc(8.5rem+env(safe-area-inset-bottom,0px))]">
+    <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-[5.5rem]">
       {/* ── Header ── */}
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
+      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
         <button
           onClick={back}
           className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
@@ -471,42 +492,86 @@ export default function AccountNew() {
         </span>
       </header>
 
-      {/* ── The card being made, always on screen ──
+      {/* ── The final step: the card is the whole screen ──
 
-          On the last step the card stops being a running preview and becomes
-          the subject of the screen: the label moves above it and centres, and
-          the step heading below is dropped rather than repeated. The screen
-          then reads as "here is the thing you are about to create" instead of
-          as one more form step. ── */}
-      {current === 'review' && (
-        <p className="text-center text-[11px] font-semibold uppercase tracking-widest
-          text-slate-500 dark:text-slate-400 mt-2 mb-3">
-          Ready to add
-        </p>
-      )}
+          Progress moves to the top so nothing sits between the card and the
+          middle of the viewport, and the block centres in what is left. On
+          every other step the card stays a running preview pinned under the
+          header. ── */}
+      <StepProgress steps={steps} index={steps.indexOf(current)} className="mt-1 shrink-0" />
 
-      <section className="px-5 mt-1">
-        <PreviewCard draft={draft} />
-      </section>
+      {current === 'review' ? (
+        <>
+          <section className="flex-1 flex flex-col justify-center min-h-0 py-6">
+            <p className="text-center text-[11px] font-semibold uppercase tracking-widest
+              text-slate-500 dark:text-slate-400 mb-3">
+              Ready to add
+            </p>
 
-      {/* ── Progress ── */}
-      <div className="px-5 mt-5 flex items-center gap-1.5" role="presentation">
-        {steps.map((s, i) => (
-          <span
-            key={s}
-            className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-              i <= steps.indexOf(current)
-                ? 'bg-primary'
-                : 'bg-slate-200 dark:bg-white/[0.10]'
-            }`}
-          />
-        ))}
-      </div>
+            <div className="px-5">
+              <PreviewCard draft={draft} large />
+            </div>
 
-      {current !== 'review' && (
-        <h2 className="px-5 mt-4 text-[19px] font-semibold tracking-tight text-slate-900 dark:text-white">
-          {stepTitle}
-        </h2>
+            <div className="px-5 mx-auto w-full max-w-[350px] mt-5">
+            {/* Name and kind are deliberately NOT repeated here. The card sits
+                directly above this, in larger type, already showing both - the
+                same redundancy the detail page had when it printed the balance
+                twice. This lists only what the card face cannot show. */}
+            <Card>
+              <SummaryRow
+                label="Counts as"
+                value={isCredit ? 'Credit' : (draft.role === 'savings' ? 'Savings' : 'Spending')}
+              />
+              {!isCredit && (
+                <>
+                  <Divider />
+                  <SummaryRow label="Opening balance" value={fmt(parseMoney(draft.startingBal))} />
+                </>
+              )}
+              {isCredit && (
+                <>
+                  <Divider />
+                  <SummaryRow label="Credit limit" value={fmt(parseMoney(draft.creditLimit))} />
+                  <Divider />
+                  <SummaryRow label="Statement closes" value={draft.cutoffDay ? `Day ${draft.cutoffDay}` : 'Not set'} />
+                  <Divider />
+                  <SummaryRow label="Payment due" value={draft.dueDay ? `Day ${draft.dueDay}` : 'Not set'} />
+                  <Divider />
+                  <SummaryRow label="Minimum payment" value={fmt(parseMoney(draft.minPayment))} />
+                </>
+              )}
+              {draft.scheme && (
+                <>
+                  <Divider />
+                  <SummaryRow
+                    label="Network"
+                    value={SCHEME_OPTIONS.find(o => o.value === draft.scheme)?.label ?? draft.scheme}
+                  />
+                </>
+              )}
+            </Card>
+
+            <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400 mt-4 px-1">
+              Anything here can be changed later from the account&rsquo;s own page.
+              {isCredit && ' A card starts at zero and fills in as you record charges against it.'}
+            </p>
+
+            {nameProblem && (
+              <p className="text-xs text-red-500 dark:text-red-400 mt-3 px-1">{nameProblem}</p>
+            )}
+          </div>
+          </section>
+        </>
+      ) : (
+        <>
+          <section className="px-5 mt-4 shrink-0">
+            <PreviewCard draft={draft} />
+          </section>
+
+          <h2 className="px-5 mt-5 text-[19px] font-semibold tracking-tight text-slate-900 dark:text-white">
+            {stepTitle}
+          </h2>
+        </>
       )}
 
       {/* ── Step: institution ── */}
@@ -744,58 +809,6 @@ export default function AccountNew() {
         </div>
       )}
 
-      {/* ── Step: review ── */}
-      {current === 'review' && (
-        <div className="px-5 mt-5 mx-auto w-full max-w-[340px]">
-          {/* Name and kind are deliberately NOT repeated here. The card sits
-              directly above this, in larger type, already showing both - the
-              same redundancy the detail page had when it printed the balance
-              twice. This lists only what the card face cannot show. */}
-          <Card>
-            <SummaryRow
-              label="Counts as"
-              value={isCredit ? 'Credit' : (draft.role === 'savings' ? 'Savings' : 'Spending')}
-            />
-            {!isCredit && (
-              <>
-                <Divider />
-                <SummaryRow label="Opening balance" value={fmt(parseMoney(draft.startingBal))} />
-              </>
-            )}
-            {isCredit && (
-              <>
-                <Divider />
-                <SummaryRow label="Credit limit" value={fmt(parseMoney(draft.creditLimit))} />
-                <Divider />
-                <SummaryRow label="Statement closes" value={draft.cutoffDay ? `Day ${draft.cutoffDay}` : 'Not set'} />
-                <Divider />
-                <SummaryRow label="Payment due" value={draft.dueDay ? `Day ${draft.dueDay}` : 'Not set'} />
-                <Divider />
-                <SummaryRow label="Minimum payment" value={fmt(parseMoney(draft.minPayment))} />
-              </>
-            )}
-            {draft.scheme && (
-              <>
-                <Divider />
-                <SummaryRow
-                  label="Network"
-                  value={SCHEME_OPTIONS.find(o => o.value === draft.scheme)?.label ?? draft.scheme}
-                />
-              </>
-            )}
-          </Card>
-
-          <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400 mt-4 px-1">
-            Anything here can be changed later from the account&rsquo;s own page.
-            {isCredit && ' A card starts at zero and fills in as you record charges against it.'}
-          </p>
-
-          {nameProblem && (
-            <p className="text-xs text-red-500 dark:text-red-400 mt-3 px-1">{nameProblem}</p>
-          )}
-        </div>
-      )}
-
       {/* ── The action, as a floating pill ──
 
           It was a full-width button on an opaque blurred bar. The bar was
@@ -810,14 +823,26 @@ export default function AccountNew() {
           either side of the pill does not swallow taps meant for the content
           underneath, and the pill turns them back on for itself. ── */}
       <div
-        className="fixed left-0 right-0 z-40 flex justify-center px-5 pointer-events-none
-          bottom-[calc(5rem+env(safe-area-inset-bottom,0px)+0.75rem)]"
+        className="fixed left-0 right-0 z-40 flex flex-col items-center gap-2 px-5 pointer-events-none
+          bottom-[calc(5rem+env(safe-area-inset-bottom,0px)+1.75rem)]"
       >
+        {/* Why the button is dead, next to the dead button. Tapping a bank
+            you already have disables Continue, and the explanation used to
+            render under the manual-name field far down the page - so the
+            button greyed out for no visible reason. */}
+        {current === 'institution' && touchedName && nameProblem && (
+          <p className="pointer-events-none max-w-[20rem] text-center text-[12px] font-medium
+            text-red-500 dark:text-red-400
+            bg-white/90 dark:bg-[#0b0f14]/90 rounded-full px-3.5 py-1.5
+            shadow-[0_2px_10px_-2px_rgba(0,0,0,0.4)]">
+            {nameProblem}
+          </p>
+        )}
         {current === 'review' ? (
           <button
             onClick={save}
             disabled={saving || !!nameProblem}
-            className="pointer-events-auto min-w-[13rem] max-w-full px-8 py-3.5 rounded-full
+            className="pointer-events-auto min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
               text-[15px] font-semibold text-white bg-primary
               shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
               disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
@@ -828,7 +853,7 @@ export default function AccountNew() {
           <button
             onClick={next}
             disabled={!canAdvance}
-            className="pointer-events-auto min-w-[13rem] max-w-full px-8 py-3.5 rounded-full
+            className="pointer-events-auto min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
               text-[15px] font-semibold text-white bg-primary
               shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
               disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
