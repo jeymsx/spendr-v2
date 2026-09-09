@@ -95,7 +95,7 @@ export default function AppLayout() {
       <main
         id="app-main"
         ref={mainRef}
-        className="flex-1 overflow-y-auto min-h-0 relative no-scrollbar"
+        className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none min-h-0 relative no-scrollbar"
       >
         {/* Pull-to-refresh hint */}
         <div className={`flex items-center justify-center overflow-hidden transition-all duration-200 text-xs font-medium text-primary/70 ${

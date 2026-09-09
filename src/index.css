@@ -778,6 +778,12 @@ html.dark body {
 .no-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* ── Safe-area helpers ────────────────────────────────── */
+/* Nothing in this app scrolls sideways, so no horizontal gesture should
+   rubber-band or trigger a swipe-to-navigate anywhere in the chain. <body>
+   already declared this; <html> did not, and the real scroll container is
+   <main>, which is handled in AppLayout. */
+html { overscroll-behavior-x: none; }
+
 .safe-top    { padding-top:    env(safe-area-inset-top,    0px); }
 .safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .pb-safe     { padding-bottom: env(safe-area-inset-bottom, 0px); }
