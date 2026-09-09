@@ -20,6 +20,7 @@ const Insights     = lazy(() => import('./pages/Insights'))
 const Accounts     = lazy(() => import('./pages/Accounts'))
 const AccountDetail = lazy(() => import('./pages/AccountDetail'))
 const AccountNew    = lazy(() => import('./pages/AccountNew'))
+const Budget        = lazy(() => import('./pages/Budget'))
 const Debts        = lazy(() => import('./pages/Debts'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
 const Settings     = lazy(() => import('./pages/Settings'))
@@ -73,6 +74,7 @@ export default function App() {
               <Route path="/transfer"     element={<Transfer />} />
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/insights"     element={<Insights />} />
+              <Route path="/budget"       element={<Budget />} />
               <Route path="/accounts"     element={<Accounts />} />
               <Route path="/accounts/new" element={<AccountNew />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />

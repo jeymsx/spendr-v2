@@ -13,6 +13,7 @@ import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
+import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -344,6 +345,14 @@ export default function Dashboard() {
       .map(c => ({ ...c, spent: spentMap[c.name] ?? 0 }))
   }, [categories, monthExpenses])
 
+  // One figure for the whole month, for the home card. The per-category
+  // detail lives on /budget now rather than as eight chips here.
+  const budgetTotals = useMemo(() => {
+    const budget = budgetCategories.reduce((sum, c) => sum + (c.budget ?? 0), 0)
+    const spent  = budgetCategories.reduce((sum, c) => sum + (c.spent ?? 0), 0)
+    return { budget, spent, pct: budget > 0 ? (spent / budget) * 100 : 0 }
+  }, [budgetCategories])
+
   const upcomingRecurring = useMemo(() =>
     (recurring || [])
       .filter(r => r.active && r.nextDate)
@@ -579,6 +588,14 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/* ── Budget ────────────────────────────────────────────────────────────
+          One line and one meter, tapping through to the full breakdown. It
+          was a grid of eight per-category chips, which is a lot of screen
+          for a question you usually only want a yes-or-no answer to. ── */}
+      <section className="px-5 mt-8">
+        <BudgetSummaryTile totals={budgetTotals} count={budgetCategories.length} />
+      </section>
+
 {/* ── Quick Templates ─────────────────────────────────────────────────── */}
       {(templates ?? []).length > 0 && (
         <section className="mt-3">
@@ -615,18 +632,6 @@ export default function Dashboard() {
 
       {/* ── Debts ────────────────────────────────────────────────────────────── */}
       <DebtsSection debts={debts} />
-
-      {/* ── Budget Progress ───────────────────────────────────────────────────── */}
-      {budgetCategories.length > 0 && (
-        <section className="px-5 mt-8">
-          <SectionHeader title="Budget" subtitle="This month" />
-          <div className="grid grid-cols-2 gap-2.5 mt-3">
-            {budgetCategories.map(cat => (
-              <BudgetRow key={cat.id} cat={cat} />
-            ))}
-          </div>
-        </section>
-      )}
 
       {/* ── Upcoming Recurring ───────────────────────────────────────────────── */}
       <section className="px-5 mt-8">
@@ -840,6 +845,74 @@ function QuickAddBtn({ label, to, className }) {
     >
       {label}
     </button>
+  )
+}
+
+// ── Budget summary tile ───────────────────────────────────────────────────────
+
+/**
+ * The month's budget in one line.
+ *
+ * The headline is a percentage rather than an amount on purpose: "using 65%"
+ * is a judgement you can act on without doing arithmetic, where "₱13,400 of
+ * ₱20,600" is two numbers you have to divide first. The amounts are still
+ * there underneath for anyone who wants them.
+ *
+ * With no budgets set this becomes the prompt to set one, because an empty
+ * meter would imply everything is fine when nothing is being tracked at all.
+ */
+function BudgetSummaryTile({ totals, count }) {
+  const hasBudget = totals.budget > 0
+  const pct = Math.round(totals.pct)
+  const { color } = budgetTone(totals.pct)
+
+  if (!hasBudget) {
+    return (
+      <Link
+        to="/settings"
+        className="card block rounded-2xl px-4 py-4 active:scale-[0.99] transition-transform duration-100"
+      >
+        <p className="text-[15px] text-slate-800 dark:text-white">
+          No <span className="font-bold">spending budget</span> set
+        </p>
+        <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">
+          Set a monthly limit per category in <span className="font-semibold text-primary">Settings</span>
+        </p>
+        <BudgetMeter pct={0} className="mt-3.5" />
+      </Link>
+    )
+  }
+
+  return (
+    <Link
+      to="/budget"
+      className="card block rounded-2xl px-4 py-4 active:scale-[0.99] transition-transform duration-100"
+      aria-label={`Using ${pct}% of your spending budget. View the full breakdown.`}
+    >
+      <div className="flex items-start gap-3">
+        <div className="flex-1 min-w-0">
+          <p className="text-[15px] text-slate-800 dark:text-white">
+            Using <span className="font-bold" style={{ color }}>{pct}%</span> of spending budget
+          </p>
+          <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+            {fmt(totals.spent)} of {fmt(totals.budget)} across {count} categor{count === 1 ? 'y' : 'ies'}
+          </p>
+        </div>
+        <span
+          className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center
+            bg-white dark:bg-white/[0.08] border border-slate-200/80 dark:border-white/[0.10]
+            text-slate-500 dark:text-slate-300 shadow-sm"
+          aria-hidden="true"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M9 18l6-6-6-6" />
+          </svg>
+        </span>
+      </div>
+
+      <BudgetMeter pct={totals.pct} className="mt-3.5" />
+    </Link>
   )
 }
 

@@ -990,6 +990,7 @@ export default function Accounts() {
               sensors={cardSensors}
               collisionDetection={closestCenter}
               modifiers={[lockToVerticalAxis]}
+              autoScroll={{ threshold: { x: 0, y: 0.2 } }}
               onDragEnd={({ active, over }) => {
                 if (over && active.id !== over.id) {
                   reorderWithinGroup(group.accounts, active.id, over.id)
