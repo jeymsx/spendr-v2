@@ -1596,7 +1596,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
       if (isEdit) {
         const oldName = account.name
-        await db.transaction('rw', [db.accounts, db.balances, db.transactions], async () => {
+        await db.transaction('rw', [db.accounts, db.balances, db.transactions, db.goals], async () => {
           await db.accounts.update(account.id, data)
           if (oldName !== cleanName) {
             // Migrate balance record
@@ -1614,6 +1614,19 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
             for (const tx of byTo) await db.transactions.update(tx.id, { toAccount: cleanName })
             // Update children's parentName reference
             await db.accounts.where('parentName').equals(oldName).modify({ parentName: cleanName })
+            // Goals name their funding accounts. `accounts` is a multi-entry
+            // index, so where().equals() finds the goals holding this name
+            // without scanning the table - see the v9 comment in db/db.js.
+            // Missing this would leave a goal pointing at an account that no
+            // longer exists, and it would silently read as ₱0 funded.
+            const linked = await db.goals.where('accounts').equals(oldName).toArray()
+            for (const g of linked) {
+              await db.goals.update(g.id, {
+                accounts: (g.accounts ?? []).map(n => (n === oldName ? cleanName : n)),
+                updatedAt: new Date().toISOString(),
+                synced: 0,
+              })
+            }
           }
         })
       } else {
@@ -1643,8 +1656,18 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
     if (deleteBlocked) return
     setSaving(true)
     try {
-      await db.transaction('rw', [db.accounts, db.balances], async () => {
+      await db.transaction('rw', [db.accounts, db.balances, db.goals], async () => {
         await db.accounts.delete(account.id)
+        // Unhook it from any goal it was funding, so no goal is left
+        // pointing at an account that is gone.
+        const linked = await db.goals.where('accounts').equals(account.name).toArray()
+        for (const g of linked) {
+          await db.goals.update(g.id, {
+            accounts: (g.accounts ?? []).filter(n => n !== account.name),
+            updatedAt: new Date().toISOString(),
+            synced: 0,
+          })
+        }
         await db.balances.delete(account.name)
       })
       // Without this the next pull re-adds the account from Supabase.

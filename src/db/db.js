@@ -52,6 +52,32 @@ db.version(8).stores({
   transactions: '++id, txId, type, date, category, account, fromAccount, toAccount, synced',
 })
 
+// v9 — savings goals.
+//
+// A goal names its funding accounts inline, as `accounts: ['Maya Savings']`,
+// rather than through a join table. The relational shape would buy nothing
+// here: no query needs a link on its own, there are a handful of goals rather
+// than thousands, and a join table brings orphan rows, a second table to sync,
+// and two cascades to keep in step on every rename and delete instead of one
+// array to map over.
+//
+// `*accounts` is a MULTI-ENTRY index: Dexie indexes each name in the array
+// separately, so `where('accounts').equals('Maya Savings')` answers "which
+// goals does this account fund?" straight from the index. That is what the
+// account detail page asks, and it is the reason the array is indexed at all.
+//
+// Accounts are referenced by NAME because the rest of the schema already does
+// — transactions, balances and parentName all key on it, and Accounts.jsx has
+// a rename cascade that goals join. Referencing by id here would make goals
+// the only table with a different convention.
+//
+// `target` is the only figure stored. There is no `saved` column on purpose:
+// progress is derived from real balances (see lib/goals.js), so there is
+// nothing to top up and nothing that can drift.
+db.version(9).stores({
+  goals: '++id, name, priority, *accounts, archivedAt',
+})
+
 // ── Seed data ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_ACCOUNTS = [

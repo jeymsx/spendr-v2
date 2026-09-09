@@ -1,10 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { Link, useNavigate, useParams } from 'react-router-dom'
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { allocateGoals } from '../lib/goals'
 import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
 import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
@@ -217,6 +218,10 @@ export default function AccountDetail() {
   const accounts     = useLiveQuery(() => db.accounts.toArray(), [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [])
   const categories   = useLiveQuery(() => db.categories.toArray(), [])
+  // Every goal, not just this account's, because the split depends on them.
+  // A goal higher up the list can drain this balance before the goals shown
+  // here ever see it, so allocating from a filtered set would overstate them.
+  const goals        = useLiveQuery(() => db.goals.toArray(), [], [])
 
   // Category name -> {icon, color}, so a ledger row can show the same emoji
   // and tint the Transactions page shows.
@@ -300,6 +305,21 @@ export default function AccountDetail() {
     if (!account) return []
     return buildTrend(acctTxs, account.name, isCredit, totalUsed)
   }, [acctTxs, account?.name, isCredit, totalUsed])
+
+  // What this balance is already promised to. Every goal is passed in, not
+  // just this account's: a higher-ranked goal can drain the balance before the
+  // ones shown here see any of it, so allocating from a filtered set would
+  // overstate them. See lib/goals.js.
+  //
+  // Above the early returns with the rest of the hooks, and guarded inside the
+  // callback like its neighbours - a useMemo below them runs on the loaded
+  // render but not the loading one, which is a changed hook count and a hard
+  // React error rather than a glitch.
+  const goalSplit = useMemo(() => {
+    if (!account || account.type === 'credit') return null
+    const alloc = allocateGoals({ goals: goals ?? [], accounts: accounts ?? [] })
+    return alloc.byAccount[account.name] ?? null
+  }, [goals, accounts, account])
 
   // Still loading, or gone. Deleting from the edit sheet lands here, and so
   // does a stale link, so this has to be a real state rather than a crash.
@@ -468,6 +488,62 @@ export default function AccountDetail() {
         </div>
         <BalanceTrend data={trend} color={trendColor} isCredit={isCredit} />
       </section>
+
+      {/* ── What this balance is earmarked for ──────────────────────────────
+
+          The other half of a goal. On the Goals page you pick the account that
+          funds a goal; here you see what the money in front of you is already
+          promised to - otherwise the link only points one way and a balance
+          that looks spare on this screen is quietly someone's emergency fund.
+
+          Credit accounts are skipped: a card holds debt, and debt cannot fund
+          anything. ── */}
+      {goalSplit && goalSplit.goals.length > 0 && (
+        <section className="mt-7 px-5">
+          <div className="flex items-baseline justify-between mb-2">
+            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              Funding {goalSplit.goals.length} goal{goalSplit.goals.length === 1 ? '' : 's'}
+            </h2>
+            <Link to="/goals" className="text-[11px] font-medium text-primary active:opacity-70">
+              Manage
+            </Link>
+          </div>
+          <div
+            className="rounded-2xl overflow-hidden
+              bg-white border border-slate-100
+              dark:bg-white/[0.04] dark:border-white/[0.07]
+              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
+          >
+            {goalSplit.goals.map((g, i) => (
+              <div
+                key={g.goalId}
+                className={`flex items-baseline justify-between gap-3 px-4 py-3 ${
+                  i < goalSplit.goals.length - 1
+                    ? 'border-b border-slate-50 dark:border-white/[0.04]'
+                    : ''
+                }`}
+              >
+                <span className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
+                  {g.name}
+                </span>
+                <span className="text-[13px] font-bold tabular-nums text-slate-800 dark:text-slate-100 shrink-0">
+                  {fmt(g.amount)}
+                </span>
+              </div>
+            ))}
+            <div className="flex items-baseline justify-between gap-3 px-4 py-3
+              border-t border-slate-100 dark:border-white/[0.07]
+              bg-slate-50/60 dark:bg-white/[0.02]">
+              <span className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Unassigned
+              </span>
+              <span className="text-[13px] font-bold tabular-nums text-slate-600 dark:text-slate-300 shrink-0">
+                {fmt(goalSplit.unassigned)}
+              </span>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ── Everything below is the detail, unchanged from the sheet ── */}
       <div className="px-5 pt-7">

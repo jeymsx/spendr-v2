@@ -150,6 +150,26 @@ function recurringToRow(r, userId) {
   }
 }
 
+function goalToRow(r, userId) {
+  return {
+    user_id:     userId,
+    local_id:    r.id,
+    name:        r.name,
+    icon:        r.icon        ?? null,
+    target:      r.target      ?? 0,
+    // A jsonb array, not a join table. The local schema keeps funding accounts
+    // inline for the reasons in db/db.js v9; mirroring that here keeps goals a
+    // single row remotely too, so a goal and its accounts can never arrive
+    // half-synced.
+    accounts:    r.accounts    ?? [],
+    target_date: r.targetDate  ?? null,
+    priority:    r.priority    ?? 0,
+    archived_at: r.archivedAt  ?? null,
+    created_at:  r.createdAt   ?? null,
+    updated_at:  r.updatedAt   ?? new Date().toISOString(),
+  }
+}
+
 function templateToRow(r, userId) {
   return {
     user_id:     userId,
@@ -261,6 +281,25 @@ function rowToTemplate(row) {
   }
 }
 
+function rowToGoal(row) {
+  return {
+    name:       row.name,
+    icon:       row.icon,
+    target:     row.target ?? 0,
+    // Postgres can hand back null for an empty jsonb column, and every reader
+    // treats `accounts` as an array - Array.isArray rather than ?? [] so a
+    // malformed value degrades to "no account attached" instead of throwing
+    // inside the allocator.
+    accounts:   Array.isArray(row.accounts) ? row.accounts : [],
+    targetDate: row.target_date,
+    priority:   row.priority ?? 0,
+    archivedAt: row.archived_at ?? null,
+    createdAt:  row.created_at,
+    updatedAt:  row.updated_at,
+    synced:     SYNCED,
+  }
+}
+
 // ── User preferences ─────────────────────────────────────────────────────────
 
 async function pushPreferences(userId) {
@@ -310,6 +349,32 @@ async function pullPreferences(userId) {
   }
 }
 
+// ── Tables that may not exist remotely yet ───────────────────────────────────
+//
+// `goals` ships with a Supabase migration (supabase/migrations). Until that is
+// applied, every goals query comes back "relation does not exist" - and since
+// syncToSupabase awaits each push in sequence and pushTable throws, one missing
+// table would abort the whole sync and take transactions, accounts and
+// categories down with it.
+//
+// So goals sync is fault-isolated: a schema error is logged and stepped over,
+// anything else is re-thrown. The local database is the source of truth either
+// way, so the cost of the table being absent is that goals stay on the device -
+// not that the rest of the app stops syncing.
+const MISSING_TABLE = /relation .* does not exist|could not find the table|schema cache/i
+
+async function optionalSync(label, fn) {
+  try {
+    await fn()
+  } catch (e) {
+    if (MISSING_TABLE.test(e?.message ?? '')) {
+      console.warn('[sync] %s skipped - run the Supabase migration:', label, e.message)
+      return
+    }
+    throw e
+  }
+}
+
 // ── Push to Supabase ──────────────────────────────────────────────────────────
 
 export async function syncToSupabase(userId) {
@@ -356,6 +421,9 @@ export async function syncToSupabase(userId) {
   await pushTable('debts',      db.debts,      debtToRow,     userId)
   await pushTable('recurring',  db.recurring,  recurringToRow, userId)
   await pushTable('templates',  db.templates,  templateToRow,  userId)
+  // Last, and fault-isolated: see optionalSync above.
+  await optionalSync('goals push', () =>
+    pushTable('goals', db.goals, goalToRow, userId, 'user_id,name'))
   await pushPreferences(userId)
 }
 
@@ -429,6 +497,8 @@ export async function syncFromSupabase(userId) {
       ? db.recurring.where('name').equals(row.name).and(r => r.amount === row.amount).first()
       : null, pending)
   await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending)
+  await optionalSync('goals pull', () =>
+    pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()

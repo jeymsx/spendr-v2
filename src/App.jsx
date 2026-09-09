@@ -22,6 +22,7 @@ const AccountDetail = lazy(() => import('./pages/AccountDetail'))
 const AccountNew    = lazy(() => import('./pages/AccountNew'))
 const Budget        = lazy(() => import('./pages/Budget'))
 const Debts        = lazy(() => import('./pages/Debts'))
+const Goals        = lazy(() => import('./pages/Goals'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
 const Settings     = lazy(() => import('./pages/Settings'))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
@@ -79,6 +80,7 @@ export default function App() {
               <Route path="/accounts/new" element={<AccountNew />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/debts"        element={<Debts />} />
+              <Route path="/goals"        element={<Goals />} />
               <Route path="/recurring"    element={<Recurring />} />
               <Route path="/settings"     element={<Settings />} />
               <Route path="/import"       element={<ImportWizard />} />

@@ -4,16 +4,15 @@ import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus } from '../utils/creditCycle'
-import { postRecurringCharge } from '../db/txHelpers'
 import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
-import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconBank, IconCard, IconPhone, IconWallet } from '../components/icons'
 import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
+import { allocateGoals } from '../lib/goals'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -275,10 +274,6 @@ export default function Dashboard() {
   const [walletRef, walletClip] = useWalletClip()
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
-  const [postTarget,       setPostTarget]       = useState(null)
-  const [postSheetOpen,    setPostSheetOpen]    = useState(false)
-  const [posting,          setPosting]          = useState(false)
-  const [overdraw,         setOverdraw]         = useState(null)
 
   // ── Live queries ─────────────────────────────────────────────────────────────
   const accounts   = useLiveQuery(() => db.accounts.toArray())
@@ -288,6 +283,7 @@ export default function Dashboard() {
   const txAll      = useLiveQuery(() => db.transactions.toArray())
   const userMeta   = useLiveQuery(() => db.meta.get('displayName'))
   const templates  = useLiveQuery(() => db.templates.toArray(),  [], [])
+  const goals      = useLiveQuery(() => db.goals.toArray(),      [], [])
 
   // ── Derived values ────────────────────────────────────────────────────────────
   const { spendingBalance, savingsBalance } = useMemo(() => {
@@ -383,29 +379,19 @@ export default function Dashboard() {
 
   const netWorth = spendingBalance + savingsBalance - creditOutstanding
 
+  // Goal progress is derived, never stored - see lib/goals.js. Recomputed
+  // here rather than read from a column precisely so that spending from an
+  // account moves its goals on this screen with no extra bookkeeping.
+  const goalAlloc = useMemo(
+    () => allocateGoals({ goals: goals ?? [], accounts: accounts ?? [] }),
+    [goals, accounts],
+  )
+
   const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
 
   // ── Animated net worth ────────────────────────────────────────────────────────
   const animatedNetWorth = useCountUp(netWorth)
-
-  async function handlePostRecurring(rec, { force = false } = {}) {
-    setPosting(true)
-    try {
-      await postRecurringCharge(rec, { allowOverdraw: force })
-      showToast(`${rec.name} posted!`)
-      setPostSheetOpen(false)
-    } catch (e) {
-      if (e?.name === 'OverdrawError') {
-        setOverdraw({ rec, accountName: e.account, balance: e.balance, amount: e.amount })
-        return
-      }
-      console.error('[Dashboard] post recurring failed:', e)
-      showToast('Failed to post', 'error')
-    } finally {
-      setPosting(false)
-    }
-  }
 
   // ── Loading skeleton ──────────────────────────────────────────────────────────
   if (accounts === undefined || txAll === undefined) {
@@ -633,49 +619,24 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* ── Debts ────────────────────────────────────────────────────────────── */}
-      <DebtsSection debts={debts} />
+      {/* ── Planner: goals, debts, recurring ──────────────────────────────────
 
-      {/* ── Upcoming Recurring ───────────────────────────────────────────────── */}
-      <section className="px-5 mt-8">
-        <SectionHeader title="Upcoming" subtitle="Next 7 days" actionLabel="See all" actionTo="/recurring" />
-        <div className="flex flex-col gap-2 mt-3">
-          {upcomingRecurring.length === 0 ? (
-            <EmptyCard label="No upcoming payments" />
-          ) : (
-            upcomingRecurring.map(r => (
-              <RecurringRow key={r.id} item={r} onClick={() => { setPostTarget(r); setPostSheetOpen(true) }} />
-            ))
-          )}
-        </div>
-      </section>
+          Three tiles where a debts panel and a seven-day bill list used to be.
+          Both were roughly a screen of vertical space spent restating figures
+          that have their own pages, and they pushed Recent - the thing people
+          actually come to the home screen for - below the fold.
+
+          Bare icons were the ask; each tile carries one live figure as well,
+          because "Debts" alone answers nothing and the figure is the reason
+          you would tap through. Enough to decide, not enough to browse: that
+          is what earns the space. ── */}
+      <PlannerRow
+        goalAlloc={goalAlloc}
+        debts={debts}
+        upcoming={upcomingRecurring}
+      />
 
       {/* ── Recent Transactions ──────────────────────────────────────────────── */}
-      <OverdrawWarningSheet
-        open={!!overdraw}
-        onClose={() => setOverdraw(null)}
-        onSaveAnyway={() => {
-          const pending = overdraw
-          setOverdraw(null)
-          if (pending) handlePostRecurring(pending.rec, { force: true })
-        }}
-        accountName={overdraw?.accountName}
-        balance={overdraw?.balance}
-        amount={overdraw?.amount}
-      />
-      <TemplateConfirmSheet
-        open={quickConfirmOpen}
-        onClose={() => setQuickConfirmOpen(false)}
-        template={quickTemplate}
-      />
-      <RecurringPostSheet
-        open={postSheetOpen}
-        item={postTarget}
-        posting={posting}
-        onClose={() => setPostSheetOpen(false)}
-        onPost={handlePostRecurring}
-      />
-
       <section className="px-5 mt-8 pb-nav">
         <SectionHeader title="Recent" actionLabel="See all" actionTo="/transactions" />
         <div
@@ -760,6 +721,95 @@ function DashboardSkeleton() {
         </div>
       </div>
     </div>
+  )
+}
+
+// ── Planner row ────────────────────────────────────────────────────────────────
+
+/**
+ * One tile: an icon, what it is, and the single figure that would make you
+ * open it.
+ *
+ * The figure carries the colour, not the icon. Three differently-tinted icons
+ * read as a category legend - as if the hues meant something - when all they
+ * would be encoding is "these are different pages". Keeping the chrome neutral
+ * leaves red free to mean money owed and amber to mean a bill is late, which
+ * is worth more than decoration.
+ */
+function PlannerTile({ to, icon, label, value, valueClass = '', border = false }) {
+  return (
+    <Link
+      to={to}
+      className={`flex-1 min-w-0 px-3 py-3.5 flex flex-col items-center gap-1.5
+        active:opacity-70 transition-opacity ${
+          border ? 'border-r border-slate-100 dark:border-white/[0.12]' : ''
+        }`}
+    >
+      <span
+        className="w-9 h-9 rounded-full flex items-center justify-center text-[17px] leading-none
+          bg-slate-100 dark:bg-white/[0.07]"
+        aria-hidden="true"
+      >
+        {icon}
+      </span>
+      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">{label}</span>
+      <span className={`text-[12px] font-bold tabular-nums truncate max-w-full ${
+        valueClass || 'text-slate-800 dark:text-slate-100'
+      }`}>
+        {value}
+      </span>
+    </Link>
+  )
+}
+
+const _plannerMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
+
+function PlannerRow({ goalAlloc, debts, upcoming }) {
+  // Debts: what you owe is the actionable half, so it leads. Money owed TO you
+  // only takes the slot when you owe nothing - otherwise the tile would read
+  // green while you are in the red.
+  const { debtValue, debtClass } = useMemo(() => {
+    const outstanding = (list) => list
+      .filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0))
+      .reduce((s, d) => s + Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)), 0)
+    const iOwe = outstanding((debts ?? []).filter(d => d.type === 'i_owe'))
+    const owed = outstanding((debts ?? []).filter(d => d.type === 'owed_to_me'))
+    if (iOwe > 0) return { debtValue: fmtCompact(iOwe), debtClass: 'text-red-500 dark:text-red-400' }
+    if (owed > 0) return { debtValue: fmtCompact(owed), debtClass: 'text-emerald-600 dark:text-emerald-400' }
+    return { debtValue: 'Clear', debtClass: 'text-slate-400 dark:text-slate-500' }
+  }, [debts])
+
+  // Recurring: the next bill's date, or that it has already slipped past.
+  const { recValue, recClass } = useMemo(() => {
+    const next = (upcoming ?? [])[0]
+    if (!next?.nextDate) return { recValue: 'None due', recClass: 'text-slate-400 dark:text-slate-500' }
+    const d = new Date(`${next.nextDate}T00:00:00`)
+    if (Number.isNaN(d.getTime())) return { recValue: 'None due', recClass: 'text-slate-400 dark:text-slate-500' }
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const label = `${_plannerMonths[d.getMonth()]} ${d.getDate()}`
+    return d < today
+      ? { recValue: label, recClass: 'text-red-500 dark:text-red-400' }
+      : { recValue: label, recClass: '' }
+  }, [upcoming])
+
+  // Goals: percent funded across the whole plan. A goal with no target set
+  // contributes nothing to either side of that fraction, so it cannot quietly
+  // drag the figure down - see allocateGoals.
+  const { goalValue, goalClass } = useMemo(() => {
+    const t = goalAlloc?.totals
+    if (!t || t.count === 0) return { goalValue: 'Set one', goalClass: 'text-slate-400 dark:text-slate-500' }
+    if (t.complete === t.count) return { goalValue: 'All funded', goalClass: 'text-emerald-600 dark:text-emerald-400' }
+    return { goalValue: `${Math.round(t.pct)}%`, goalClass: '' }
+  }, [goalAlloc])
+
+  return (
+    <section className="px-5 mt-3">
+      <div className="card rounded-2xl overflow-hidden flex">
+        <PlannerTile to="/goals" icon="🎯" label="Goals" value={goalValue} valueClass={goalClass} border />
+        <PlannerTile to="/debts" icon="🧾" label="Debts" value={debtValue} valueClass={debtClass} border />
+        <PlannerTile to="/recurring" icon="🔁" label="Recurring" value={recValue} valueClass={recClass} />
+      </div>
+    </section>
   )
 }
 
@@ -960,34 +1010,6 @@ function BudgetRow({ cat }) {
   )
 }
 
-// ── Recurring row ──────────────────────────────────────────────────────────────
-
-function RecurringRow({ item, onClick }) {
-  const daysUntil = item.nextDate
-    ? Math.ceil((new Date(item.nextDate) - new Date()) / 864e5)
-    : null
-
-  return (
-    <button onClick={onClick} className="card flex items-center gap-3 px-4 py-3 rounded-2xl w-full text-left active:scale-[0.98] transition-transform duration-100">
-      <div className="w-9 h-9 rounded-xl bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0">
-        <span className="text-base">🔄</span>
-      </div>
-      <div className="flex-1 min-w-0">
-        <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{item.name}</p>
-        <p className="text-xs text-slate-400 dark:text-slate-500 truncate">{item.account}</p>
-      </div>
-      <div className="text-right shrink-0">
-        <p className="text-sm font-semibold text-slate-800 dark:text-white tabular-nums">{fmt(item.amount)}</p>
-        <p className={`text-[11px] ${daysUntil === 0 ? 'text-red-500 dark:text-red-400' : daysUntil <= 2 ? 'text-amber-500 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'}`}>
-          {daysUntil === 0 ? 'Today' : daysUntil === 1 ? 'Tomorrow' : `in ${daysUntil}d`}
-        </p>
-      </div>
-    </button>
-  )
-}
-
-// ── Transaction row ────────────────────────────────────────────────────────────
-
 function TxRow({ tx, cat, isLast }) {
   const isExpense  = tx.type === 'expense'
   const isInflow   = tx.type === 'inflow'
@@ -1054,137 +1076,6 @@ function EmptyPill({ label }) {
     </div>
   )
 }
-
-// ── Debts section ──────────────────────────────────────────────────────────────
-
-function DebtsSection({ debts }) {
-  const now = new Date(); now.setHours(0, 0, 0, 0)
-
-  const iOwe = (debts ?? []).filter(d => d.type === 'i_owe')
-  const owedToMe = (debts ?? []).filter(d => d.type === 'owed_to_me')
-
-  const outstanding = (list) =>
-    list.filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0))
-        .reduce((s, d) => s + Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)), 0)
-
-  const overdueCount = owedToMe.filter(d => {
-    if ((d.amountPaid ?? 0) >= (d.amount ?? 0)) return false
-    if (!d.dueDate) return false
-    const due = new Date(d.dueDate); due.setHours(0, 0, 0, 0)
-    return due < now
-  }).length
-
-  const iOweTotal    = outstanding(iOwe)
-  const owedTotal    = outstanding(owedToMe)
-  const hasAny       = iOweTotal > 0 || owedTotal > 0
-
-  return (
-    <section className="px-5 mt-8">
-      <SectionHeader title="Debts" actionLabel="See all" actionTo="/debts" />
-      <div className="card mt-3 flex rounded-2xl overflow-hidden">
-        {/* I Owe */}
-        <Link
-          to="/debts?tab=i_owe"
-          className="flex-1 px-4 py-3.5 border-r border-slate-100 dark:border-white/[0.12] active:opacity-70 transition-opacity"
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">I Owe</p>
-          <p className={`text-base font-bold tabular-nums ${iOweTotal > 0 ? 'text-red-500 dark:text-red-400' : 'text-slate-300 dark:text-slate-600'}`}>
-            {fmt(iOweTotal)}
-          </p>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-            {iOwe.filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0)).length} active
-          </p>
-        </Link>
-
-        {/* Owed to Me */}
-        <Link
-          to="/debts?tab=owed_to_me"
-          className="flex-1 px-4 py-3.5 active:opacity-70 transition-opacity"
-        >
-          <p className="text-[10px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">Owed to Me</p>
-          <p className={`text-base font-bold tabular-nums ${owedTotal > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-300 dark:text-slate-600'}`}>
-            {fmt(owedTotal)}
-          </p>
-          {overdueCount > 0 ? (
-            <p className="text-[11px] font-semibold text-red-500 dark:text-red-400 mt-0.5">{overdueCount} overdue</p>
-          ) : (
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-              {owedToMe.filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0)).length} active
-            </p>
-          )}
-        </Link>
-      </div>
-    </section>
-  )
-}
-
-// ── Recurring Post Sheet ───────────────────────────────────────────────────────
-
-function RecurringPostSheet({ open, item, posting, onClose, onPost }) {
-  const [closing, setClosing] = useState(false)
-
-  function close() {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  if (!open && !closing) return null
-
-  return (
-    <div className="fixed inset-0 z-[100]">
-      <div className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="pt-4 px-5 pb-2">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
-
-          {/* Item info */}
-          <div className="flex items-center gap-3 mb-4">
-            <div className="w-11 h-11 rounded-2xl bg-primary/10 dark:bg-primary/15 flex items-center justify-center shrink-0">
-              <span className="text-xl">🔄</span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="font-semibold text-slate-800 dark:text-white truncate">{item?.name}</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500">{item?.account} · {item?.frequency}</p>
-            </div>
-            <p className="text-lg font-bold text-slate-800 dark:text-white tabular-nums">{fmt(item?.amount ?? 0)}</p>
-          </div>
-
-          <p className="text-xs text-slate-400 dark:text-slate-500 text-center mb-5">
-            Posts as an expense today and advances the next due date.
-          </p>
-
-          <div className="flex gap-3">
-            <button
-              onClick={close}
-              className="flex-1 py-3.5 rounded-2xl text-sm font-semibold text-slate-600 dark:text-slate-300
-                bg-slate-100 dark:bg-white/[0.07] active:opacity-70 transition-opacity"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={() => onPost(item)}
-              disabled={posting}
-              className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
-                active:scale-[0.98] transition-all disabled:opacity-40"
-            >
-              {posting ? 'Posting…' : 'Post Now'}
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
-
-// ── SVG icons ──────────────────────────────────────────────────────────────────
 
 function IconSettings() {
   return (
