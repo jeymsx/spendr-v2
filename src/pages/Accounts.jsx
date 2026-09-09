@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef, useCallback, forwardRef } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
-  DndContext, closestCenter, PointerSensor, TouchSensor,
+  DndContext, closestCenter, MouseSensor, PointerSensor, TouchSensor,
   useSensor, useSensors,
 } from '@dnd-kit/core'
 import {
@@ -825,12 +825,49 @@ export default function Accounts() {
 
   // A route, not a sheet: the detail view is its own page, so the hardware
   // back button and a direct link both work. See pages/AccountDetail.jsx.
-  // Same thresholds the sort sheet uses: 8px of pointer travel, or 180ms of
-  // held finger. Below either, the gesture stays a tap and opens the account.
+  /* MouseSensor, NOT PointerSensor - and that is the whole fix for touch.
+     PointerSensor handles mouse, touch and pen alike, so on a phone it took
+     the gesture first and activated after 8px of finger travel, which is
+     indistinguishable from the start of a scroll. The TouchSensor beneath it
+     never ran at all, delay and everything - it was dead code. The result was
+     a stack that fought the page for every swipe and reordered by accident.
+
+     Split by input type and each gets the constraint that suits it. A mouse
+     drags after 8px of travel, as before. A finger has to REST on the card
+     first, and if it moves more than `tolerance` before the delay elapses the
+     activation is cancelled and the browser scrolls normally - so a swipe
+     scrolls, a tap opens the account, and only a deliberate hold picks a card
+     up.
+
+     500ms is the platform norm for press-and-hold (iOS and Android both);
+     longer reads as the app having missed the gesture. It is one number here
+     if it wants changing.
+
+     The sort sheet below keeps PointerSensor deliberately: its container sets
+     touch-action:none, so nothing there scrolls and there is no gesture to be
+     ambiguous with. That is also why reordering already worked there and not
+     here. */
   const cardSensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
-    useSensor(TouchSensor,   { activationConstraint: { delay: 180, tolerance: 6 } }),
+    useSensor(MouseSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 500, tolerance: 8 } }),
   )
+
+  /* A press-and-hold has no visible threshold, so the moment it takes needs
+     announcing. Android Chrome vibrates; iOS Safari has no Vibration API and
+     ignores this, which is why it is a bonus signal and not the only one -
+     the card also tilts and lifts as it is picked up. */
+  const buzz = useCallback(() => {
+    try { navigator.vibrate?.(12) } catch { /* unsupported, or denied */ }
+  }, [])
+
+  /* A long-press that is released without moving is still a tap as far as the
+     browser is concerned: it fires a click on the card, which would navigate
+     to the account page the instant you decided not to reorder after all.
+     dnd-kit does not suppress that, so the tap handler checks whether a drag
+     has only just finished. Only the touch path can hit this - a mouse drag
+     needs 8px of travel, which already cancels the click. */
+  const dragEndedAt = useRef(0)
+  const tapAfterDrag = () => performance.now() - dragEndedAt.current < 300
 
   /**
    * Persist a reorder made inside one group.
@@ -991,11 +1028,16 @@ export default function Accounts() {
               collisionDetection={closestCenter}
               modifiers={[lockToVerticalAxis]}
               autoScroll={{ threshold: { x: 0, y: 0.2 } }}
+              onDragStart={buzz}
               onDragEnd={({ active, over }) => {
+                dragEndedAt.current = performance.now()
                 if (over && active.id !== over.id) {
                   reorderWithinGroup(group.accounts, active.id, over.id)
                 }
               }}
+              // Held, then released without moving - or scrolled away from.
+              // Still has to block the click the browser is about to send.
+              onDragCancel={() => { dragEndedAt.current = performance.now() }}
             >
               <SortableContext
                 items={group.accounts.map(a => a.id)}
@@ -1007,7 +1049,7 @@ export default function Accounts() {
                       key={acct.id}
                       acct={acct}
                       hidden={balanceHidden}
-                      onTap={() => openDetail(acct)}
+                      onTap={() => { if (!tapAfterDrag()) openDetail(acct) }}
                       stmt={creditStmtMap[acct.name]}
                       depth={i}
                     />
