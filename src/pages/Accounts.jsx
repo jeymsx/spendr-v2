@@ -1,5 +1,5 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import {
   DndContext, closestCenter, PointerSensor, TouchSensor,
   useSensor, useSensors,
@@ -29,12 +29,12 @@ import SchemeMark, { SCHEME_OPTIONS } from '../components/SchemeMark'
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
+export const fmt = (v) => {
   const n = v ?? 0
   return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
 }
 
-function fmtCompact(v) {
+export function fmtCompact(v) {
   const abs = Math.abs(v ?? 0)
   const sign = (v ?? 0) < 0 ? '−₱' : '₱'
   if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
@@ -80,7 +80,7 @@ const TYPE_OPTIONS = [
   { value: 'credit',  label: 'Credit Card', shortLabel: 'Credit'   },
 ]
 
-const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map(t => [t.value, t.label]))
+export const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map(t => [t.value, t.label]))
 
 function defaultRole(type) {
   if (type === 'credit') return 'credit'
@@ -116,7 +116,7 @@ function acctTotal(a, creditStmtMap) {
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
 
-function nextOccurrence(dayOfMonth) {
+export function nextOccurrence(dayOfMonth) {
   if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) return null
   const now = new Date()
   let d = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
@@ -124,7 +124,7 @@ function nextOccurrence(dayOfMonth) {
   return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
 }
 
-function nextOccurrenceDate(dayOfMonth) {
+export function nextOccurrenceDate(dayOfMonth) {
   if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) return null
   const now = new Date()
   let d = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
@@ -132,7 +132,7 @@ function nextOccurrenceDate(dayOfMonth) {
   return d
 }
 
-function fmtCycleDate(date) {
+export function fmtCycleDate(date) {
   if (!date) return ''
   return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
 }
@@ -159,7 +159,7 @@ function IconEyeOff() {
 }
 
 
-function typeIcon(type) {
+export function typeIcon(type) {
   if (type === 'cash')    return <IconWallet />
   if (type === 'ewallet') return <IconPhone />
   if (type === 'credit')  return <IconCard />
@@ -606,14 +606,13 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
 
 export default function Accounts() {
   const { accentColor, theme } = useTheme()
+  const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const [balanceHidden,   setBalanceHidden]   = useState(false)
   const [editingAccount,  setEditingAccount]  = useState(null)
   const [formOpen,        setFormOpen]        = useState(false)
   const [formPrefill,     setFormPrefill]     = useState(null)
   const [quickAddOpen,    setQuickAddOpen]    = useState(false)
-  const [selectedAccount, setSelectedAccount] = useState(null)
-  const [detailOpen,      setDetailOpen]      = useState(false)
   const [sortOpen,        setSortOpen]        = useState(false)
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
@@ -684,23 +683,16 @@ export default function Accounts() {
     return list.sort((a, b) => a.order - b.order)
   }, [parentAccts, groups])
 
-  // Keep selectedAccount in sync with live DB changes
-  useEffect(() => {
-    if (!selectedAccount || !accounts) return
-    const updated = accounts.find(a => a.id === selectedAccount.id)
-    if (updated) setSelectedAccount(updated)
-  }, [accounts])
-
-  // Auto-open detail sheet when navigated here with ?open=<accountName>
+  // ?open=<accountName> used to pop the detail sheet. The detail view is a
+  // route now, so this forwards instead - the desktop shell still links this
+  // way, and so might a bookmark. `replace` keeps it out of the back stack,
+  // so back from the detail page lands on the list rather than bouncing.
   useEffect(() => {
     const name = searchParams.get('open')
     if (!name || !accounts?.length) return
     const acct = accounts.find(a => a.name === decodeURIComponent(name))
-    if (acct) {
-      setSelectedAccount(acct)
-      setDetailOpen(true)
-      setSearchParams({}, { replace: true })
-    }
+    if (acct) navigate(`/accounts/${acct.id}`, { replace: true })
+    else setSearchParams({}, { replace: true })
   }, [accounts, searchParams])
 
   function openAdd() {
@@ -719,9 +711,10 @@ export default function Accounts() {
     setFormOpen(true)
   }
 
+  // A route, not a sheet: the detail view is its own page, so the hardware
+  // back button and a direct link both work. See pages/AccountDetail.jsx.
   function openDetail(acct) {
-    setSelectedAccount(acct)
-    setDetailOpen(true)
+    navigate(`/accounts/${acct.id}`)
   }
 
   return (
@@ -872,24 +865,6 @@ export default function Accounts() {
         onClose={() => { setFormOpen(false); setFormPrefill(null) }}
         account={editingAccount}
         prefill={formPrefill}
-      />
-      <AccountDetailSheet
-        open={detailOpen}
-        onClose={() => setDetailOpen(false)}
-        account={selectedAccount}
-        transactions={transactions ?? []}
-        allAccounts={accounts ?? []}
-        categories={categories ?? []}
-        onEdit={(acct) => {
-          setEditingAccount(acct)
-          setFormPrefill(null)
-          setFormOpen(true)
-        }}
-        onAddSubAccount={(parentAcctName) => {
-          setEditingAccount(null)
-          setFormPrefill({ parentName: parentAcctName })
-          setFormOpen(true)
-        }}
       />
     </div>
   )
@@ -1241,7 +1216,7 @@ function QrCropSheet({ open, onClose, onConfirm }) {
 
 // ── QR Viewer Modal ────────────────────────────────────────────────────────────
 
-function QrViewerModal({ open, onClose, qrImage, accountName }) {
+export function QrViewerModal({ open, onClose, qrImage, accountName }) {
   useScrollLock(open)
   if (!open) return null
   return (
@@ -2002,425 +1977,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
 
-function AccountDetailSheet({ open, onClose, account, transactions, allAccounts = [], categories = [], onEdit, onAddSubAccount }) {
-  const [closing,   setClosing]   = useState(false)
-  const [selectedTx, setSelectedTx] = useState(null)
-  const [qrVisible, setQrVisible] = useState(false)
-  useScrollLock(open)
-
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  const acctTxs = useMemo(() => {
-    if (!account) return []
-    return transactions
-      .filter(tx =>
-        tx.account === account.name ||
-        tx.fromAccount === account.name ||
-        tx.toAccount === account.name
-      )
-      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
-  }, [transactions, account?.name])
-
-  // Running balance — newest first; start at current balance, reverse each tx to get prior balance
-  const txsWithRunning = useMemo(() => {
-    if (!account) return []
-    const acctIsCredit = account.type === 'credit'
-    let bal = account.balance ?? 0
-    return acctTxs.map(tx => {
-      const balAfter = bal
-      if (tx.type === 'expense' && tx.account === account.name)       bal += tx.amount ?? 0
-      else if (tx.type === 'inflow' && tx.account === account.name)   bal -= tx.amount ?? 0
-      else if (tx.type === 'transfer') {
-        if (tx.fromAccount === account.name) bal += tx.amount ?? 0
-        // Credit toAccount: payment reduces balance; backward pass adds it back
-        if (tx.toAccount   === account.name) bal += acctIsCredit ? (tx.amount ?? 0) : -(tx.amount ?? 0)
-      }
-      return { ...tx, balAfter }
-    })
-  }, [acctTxs, account])
-
-  const creditData = useMemo(() => {
-    if (!account || account.type !== 'credit') return null
-    // Pass txsWithRunning (not raw transactions) so the returned charge/payment
-    // buckets keep the running-balance field the ledger rows render.
-    const status = getCreditStatus(account, txsWithRunning)
-    const { cycleStart: nextStart, cycleEnd: nextEnd } = getNextCycleRange(account.cutoffDate)
-
-    const dueDate    = nextOccurrenceDate(account.dueDate)
-    const dueSoon    = dueDate && ((dueDate - new Date()) / 864e5) <= 7
-
-    return {
-      ...status,
-      nextStart, nextEnd,
-      minimumDue:      account.minimumPayment ?? 0,
-      nextDue:         nextOccurrence(account.dueDate),
-      dueSoon,
-    }
-  }, [account, txsWithRunning])
-
-  if (!open && !closing) return null
-  if (!account) return null
-
-  const childAccounts = allAccounts.filter(a => a.parentName === account.name)
-  const isParent      = childAccounts.length > 0
-  const isChild       = !!account.parentName
-
-  const isCredit    = account.type === 'credit'
-  const ownBal      = account.balance ?? 0
-  const totalUsed   = isCredit ? (creditData?.currentBalance ?? 0) : ownBal
-  const usedPct     = isCredit && (account.creditLimit ?? 0) > 0
-    ? Math.min((totalUsed / account.creditLimit) * 100, 100) : 0
-
-  return (
-    <>
-    <div className="fixed inset-0 z-[100]">
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[92vh] overflow-y-auto',
-        ].join(' ')}
-        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-      >
-        {/* sticky header */}
-        <div className="sticky top-0 pt-5 px-5 pb-4 bg-white dark:bg-[#111820] z-10
-          border-b border-slate-50 dark:border-white/[0.04]">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-
-          <div className="flex items-center gap-3 mb-4">
-            <span
-              className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
-              style={{ backgroundColor: account.color ?? '#2D9DFF' }}
-            >
-              {typeIcon(account.type)}
-            </span>
-            <div className="flex-1 min-w-0">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white truncate">{account.name}</h3>
-              {isChild ? (
-                <p className="text-xs text-primary/80 dark:text-primary/70 font-medium">Part of {account.parentName}</p>
-              ) : (
-                <p className="text-xs text-slate-400 dark:text-slate-500">{TYPE_LABEL[account.type]}</p>
-              )}
-            </div>
-            <div className="flex items-center gap-2 shrink-0">
-              {account.qrImage && (
-                <button
-                  onClick={() => setQrVisible(true)}
-                  className="w-9 h-9 flex items-center justify-center
-                    text-emerald-500 dark:text-emerald-400
-                    active:opacity-60 transition-opacity"
-                  aria-label="Show Payment QR"
-                >
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <rect x="3" y="3" width="7" height="7" rx="1" />
-                    <rect x="14" y="3" width="7" height="7" rx="1" />
-                    <rect x="3" y="14" width="7" height="7" rx="1" />
-                    <rect x="5" y="5" width="3" height="3" fill="currentColor" stroke="none" />
-                    <rect x="16" y="5" width="3" height="3" fill="currentColor" stroke="none" />
-                    <rect x="5" y="16" width="3" height="3" fill="currentColor" stroke="none" />
-                    <path d="M14 14h3v3" />
-                    <path d="M14 20h7" />
-                    <path d="M21 14v7" />
-                  </svg>
-                </button>
-              )}
-              <button
-                onClick={() => { close(); setTimeout(() => onEdit(account), 260) }}
-                className="px-3 py-1.5 rounded-xl text-xs font-semibold
-                  text-primary bg-primary/[0.08] dark:bg-primary/[0.15]
-                  active:bg-primary/[0.15] transition-colors"
-              >
-                Edit
-              </button>
-            </div>
-          </div>
-
-          {/* balance card */}
-          <div className={`px-4 py-3.5 rounded-2xl ${
-            isCredit
-              ? 'bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20'
-              : 'bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]'
-          }`}>
-            <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1">
-              {isCredit ? 'Balance Used' : 'Current Balance'}
-            </p>
-            <p className={`text-2xl font-bold tabular-nums ${
-              isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
-            }`}>
-              {fmt(totalUsed)}
-            </p>
-
-            {isCredit && (account.creditLimit ?? 0) > 0 && (
-              <>
-                <div className="mt-2.5 h-1.5 rounded-full bg-red-100 dark:bg-red-500/20 overflow-hidden">
-                  <div
-                    className="h-full rounded-full transition-all duration-700"
-                    style={{
-                      width: `${usedPct}%`,
-                      backgroundColor: usedPct > 80 ? '#ef4444' : '#f59e0b',
-                    }}
-                  />
-                </div>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1.5">
-                  {fmt((account.creditLimit ?? 0) - totalUsed)} available
-                  {' '}of {fmt(account.creditLimit)} limit ({usedPct.toFixed(0)}% used)
-                </p>
-              </>
-            )}
-          </div>
-        </div>
-
-        <div className="px-5 pt-5">
-          {isCredit && creditData ? (
-            <>
-              {/* ── Statement summary ── */}
-              <div className="mb-5">
-                {creditData.stmtPaid ? (
-                  <div className="mb-3 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-2">
-                    <span className="text-base">✅</span>
-                    <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
-                      Statement balance paid
-                    </p>
-                  </div>
-                ) : creditData.dueSoon && creditData.nextDue ? (
-                  <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-100 dark:border-amber-500/20 flex items-center gap-2">
-                    <span className="text-base">⚠️</span>
-                    <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-                      Payment due {creditData.nextDue}
-                      {creditData.minimumDue > 0 && ` — pay at least ${fmt(creditData.minimumDue)}`}
-                    </p>
-                  </div>
-                ) : null}
-                <div className="grid grid-cols-2 gap-2">
-                  <div className={`col-span-2 px-4 py-3 rounded-2xl flex items-center justify-between ${
-                    creditData.stmtPaid
-                      ? 'bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20'
-                      : 'bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20'
-                  }`}>
-                    <div>
-                      <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${
-                        creditData.stmtPaid ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-400 dark:text-red-500'
-                      }`}>Statement Balance</p>
-                      <p className={`text-xl font-bold tabular-nums ${
-                        creditData.stmtPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
-                      }`}>{fmt(creditData.thisTotal)}</p>
-                      {creditData.stmtPaid ? (
-                        <p className="text-[10px] text-emerald-500 dark:text-emerald-400 mt-0.5">Paid ✓</p>
-                      ) : creditData.nextDue ? (
-                        <p className="text-[10px] text-red-400 dark:text-red-500 mt-0.5">Due {creditData.nextDue}</p>
-                      ) : null}
-                    </div>
-                    {creditData.nextTotal > 0 && (
-                      <div className="text-right">
-                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">Next Statement</p>
-                        {/* What the next bill will actually ask for. The wider
-                            nextTotal includes plan months billed later, and it
-                            still drives Available Credit below. */}
-                        <p className="text-sm font-bold text-slate-600 dark:text-slate-300 tabular-nums">{fmt(creditData.nextStatementTotal)}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                          Closes {fmtCycleDate(creditData.nextEnd)}
-                        </p>
-                        {creditData.laterTotal > 0 && (
-                          <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
-                            +{fmt(creditData.laterTotal)} on later bills
-                          </p>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                  <StatCard label="Available Credit" value={fmt(creditData.availableCredit)} />
-                  <StatCard label="Minimum Due" value={fmt(creditData.minimumDue)} />
-                </div>
-              </div>
-
-              {/* ── This Statement charges ── */}
-              <CreditTxSection
-                onSelect={setSelectedTx}
-                title="This Statement"
-                dateRange={`${fmtCycleDate(creditData.cycleStart)} – ${fmtCycleDate(creditData.cycleEnd)}`}
-                txs={creditData.thisCharges}
-                total={creditData.thisTotal}
-                accountName={account.name}
-                emptyLabel="No charges this statement"
-                totalColor="text-red-500 dark:text-red-400"
-              />
-
-              {/* ── Next Statement charges ── */}
-              {creditData.nextStatementCharges.length > 0 && (
-                <CreditTxSection
-                  onSelect={setSelectedTx}
-                  title="Next Statement"
-                  dateRange={`${fmtCycleDate(creditData.nextStart)} – ${fmtCycleDate(creditData.nextCycleEnd)}`}
-                  txs={creditData.nextStatementCharges}
-                  total={creditData.nextStatementTotal}
-                  accountName={account.name}
-                  totalColor="text-slate-600 dark:text-slate-300"
-                />
-              )}
-
-              {/* ── Committed, but for bills after the next one ──
-                  Installment plans write every month up front, so these are
-                  already against the limit while being nowhere near due. */}
-              {creditData.laterCharges.length > 0 && (
-                <CreditTxSection
-                  onSelect={setSelectedTx}
-                  title="Scheduled Later"
-                  dateRange={`After ${fmtCycleDate(creditData.nextCycleEnd)}`}
-                  txs={creditData.laterCharges}
-                  total={creditData.laterTotal}
-                  accountName={account.name}
-                  totalColor="text-slate-400 dark:text-slate-500"
-                />
-              )}
-
-              {/* ── Payments ── */}
-              {creditData.payments.length > 0 && (
-                <CreditTxSection
-                  onSelect={setSelectedTx}
-                  title="Payments"
-                  txs={creditData.payments}
-                  total={creditData.payments.reduce((s, tx) => s + (tx.amount ?? 0), 0)}
-                  accountName={account.name}
-                  totalColor="text-emerald-600 dark:text-emerald-400"
-                  totalSign="−"
-                />
-              )}
-            </>
-          ) : isParent ? (
-            <>
-              {/* ── Parent: sub-accounts list ── */}
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2.5">
-                Sub-accounts · {childAccounts.length}
-              </p>
-              <div
-                className="rounded-2xl overflow-hidden mb-3
-                  bg-white border border-slate-100
-                  dark:bg-white/[0.04] dark:border-white/[0.07]
-                  shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
-              >
-                {childAccounts.map((child, i) => (
-                  <div key={child.id}>
-                    <div className="flex items-center gap-3 px-4 py-3.5">
-                      <span
-                        className="w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0"
-                        style={{ backgroundColor: child.color ?? '#2D9DFF' }}
-                      >
-                        {typeIcon(child.type)}
-                      </span>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate">{child.name}</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500">{TYPE_LABEL[child.type]}</p>
-                      </div>
-                      <p className="text-[13px] font-bold tabular-nums text-slate-700 dark:text-slate-200">
-                        {fmt(child.balance ?? 0)}
-                      </p>
-                    </div>
-                    {i < childAccounts.length - 1 && (
-                      <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button
-                onClick={() => { close(); setTimeout(() => onAddSubAccount?.(account.name), 250) }}
-                className="w-full py-3 rounded-2xl text-sm font-semibold text-primary
-                  bg-primary/[0.08] dark:bg-primary/[0.12]
-                  active:bg-primary/[0.15] transition-colors mb-4"
-              >
-                + Add Sub-account
-              </button>
-
-              {/* ── Direct transactions on the parent account ── */}
-              {acctTxs.length > 0 && (
-                <>
-                  <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2.5">
-                    Direct Transactions · {acctTxs.length}
-                  </p>
-                  <div
-                    className="rounded-2xl overflow-hidden mb-4
-                      bg-white border border-slate-100
-                      dark:bg-white/[0.04] dark:border-white/[0.07]
-                      shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
-                  >
-                    {txsWithRunning.map((tx, i) => (
-                      <div key={tx.id}>
-                        <DetailTxRow tx={tx} accountName={account.name} onSelect={setSelectedTx} />
-                        {i < txsWithRunning.length - 1 && (
-                          <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </>
-              )}
-            </>
-          ) : (
-            <>
-              {/* ── Regular transaction list ── */}
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2.5">
-                Transactions · {acctTxs.length}
-              </p>
-
-              {acctTxs.length === 0 ? (
-                <div className="py-12 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.03]">
-                  <p className="text-sm text-slate-400 dark:text-slate-500">No transactions yet</p>
-                  <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">
-                    Transactions using this account will appear here
-                  </p>
-                </div>
-              ) : (
-                <div
-                  className="rounded-2xl overflow-hidden mb-4
-                    bg-white border border-slate-100
-                    dark:bg-white/[0.04] dark:border-white/[0.07]
-                    shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
-                >
-                  {txsWithRunning.map((tx, i) => (
-                    <div key={tx.id}>
-                      <DetailTxRow tx={tx} accountName={account.name} onSelect={setSelectedTx} />
-                      {i < txsWithRunning.length - 1 && (
-                        <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </div>
-        <div className="h-8" />
-      </div>
-    </div>
-
-    <QrViewerModal
-      open={qrVisible}
-      onClose={() => setQrVisible(false)}
-      qrImage={account?.qrImage}
-      accountName={account?.name}
-    />
-
-    {/* Above this sheet's own z-[100] so it isn't buried behind it. */}
-    <TxDetailSheet
-      open={!!selectedTx}
-      onClose={() => setSelectedTx(null)}
-      transaction={selectedTx}
-      accounts={allAccounts}
-      categories={categories}
-      zIndex={160}
-    />
-    </>
-  )
-}
-
 // ── Stat card ──────────────────────────────────────────────────────────────────
 
-function StatCard({ label, value }) {
+export function StatCard({ label, value }) {
   return (
     <div className="px-4 py-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">
       <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
@@ -2433,7 +1992,7 @@ function StatCard({ label, value }) {
 
 // ── Credit statement transaction section ────────────────────────────────────────
 
-function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel, totalColor, totalSign = '', onSelect }) {
+export function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel, totalColor, totalSign = '', onSelect }) {
   return (
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
@@ -2477,7 +2036,7 @@ function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel
 
 // ── Detail transaction row ─────────────────────────────────────────────────────
 
-function DetailTxRow({ tx, accountName, onSelect }) {
+export function DetailTxRow({ tx, accountName, onSelect }) {
   let sign  = ''
   let color = 'text-slate-600 dark:text-slate-300'
 
