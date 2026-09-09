@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import {
-  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -129,32 +129,20 @@ function BalanceTrend({ data, color, isCredit }) {
     )
   }
 
-  // Sparse ticks: 30 dates will not fit, and a crowded axis is worse than a
-  // bare one. Always keep the last, so "today" is labelled.
-  const every = Math.ceil(data.length / 5)
-  const xTick = ({ x, y, payload }) => {
-    if (payload.index % every !== 0 && payload.index !== data.length - 1) return null
-    return <text x={x} y={y + 12} textAnchor="middle" fontSize={10} fill="#94a3b8">{payload.value}</text>
-  }
-  const yTickFmt = v => {
-    const a = Math.abs(v)
-    if (a >= 1_000_000) return `${(v / 1_000_000).toFixed(1)}M`
-    if (a >= 1_000)     return `${(v / 1_000).toFixed(0)}K`
-    return String(Math.round(v))
-  }
-
+  // No axes, no gridlines. This is a shape - "your balance did this over the
+  // last month" - and the exact figure behind any point is what the tooltip
+  // is for, so the scaffolding was only competing with the line. Both axes
+  // are still declared, because removing them would change the plot: the
+  // XAxis carries the dataKey the tooltip labels itself with, and the YAxis
+  // carries the domain. `hide` renders nothing and reserves no space, which
+  // is also what lets the line sit centred in the full width.
   return (
     <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
-      <ResponsiveContainer width="100%" height={170}>
-        <LineChart data={data} margin={{ top: 10, right: 6, left: -8, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="4 3" vertical={false} stroke="rgba(148,163,184,0.12)" />
-          <XAxis dataKey="day" tick={xTick} axisLine={false} tickLine={false} interval={0} />
+      <ResponsiveContainer width="100%" height={132}>
+        <LineChart data={data} margin={{ top: 10, right: 6, left: 6, bottom: 10 }}>
+          <XAxis dataKey="day" hide />
           <YAxis
-            tickFormatter={yTickFmt}
-            tick={{ fontSize: 10, fill: '#94a3b8' }}
-            axisLine={false}
-            tickLine={false}
-            width={44}
+            hide
             // A balance chart is about the shape of the change, and a forced
             // zero baseline flattens a month of movement on a large balance
             // into a straight line.
@@ -427,7 +415,7 @@ export default function AccountDetail() {
       </section>
 
       {/* ── The card, laid back so it costs less height ── */}
-      <section className="px-5 mt-5 card-tilt">
+      <section className="px-5 card-tilt">
         <div
           className="acct-card mx-auto w-full max-w-[300px] rounded-2xl px-5 pt-4 pb-4
             flex flex-col text-left text-white"

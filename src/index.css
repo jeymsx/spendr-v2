@@ -405,19 +405,44 @@ html.dark body {
    .acct-card already establishes a stacking context, and compounding onto
    that is how the watermark and scheme mark start detaching from the face. */
 .card-tilt {
-  perspective: 620px;
+  /* A LONG perspective distance, paired with a steep angle. The two do
+     different jobs: the angle foreshortens (which is the space saving), while
+     a short perspective mostly widens the near edge. At 620px a 300px card
+     projected 325px wide, and going steeper on that would have pushed the
+     bottom corners past the viewport on a narrow screen. At 1100px the
+     widening is about 7% and the angle carries the effect. */
+  perspective: 1100px;
   perspective-origin: 50% 50%;
+
+  /* A transform NEVER changes the layout box, so the rotation on its own
+     saved no vertical space whatsoever - the element went on reserving its
+     full upright height, leaving dead bands above and below the foreshortened
+     card. That is what these reclaim.
+
+     Measured in the browser on the 300x189 card this page renders: rotateX
+     leaves 35px dead above the receded top edge and 27px below the near
+     edge. The values here are those minus the gaps actually wanted - 10px
+     above the card, 16px below - so the section consumes 159px for a 127px
+     card instead of 209px for a 165px one.
+
+     Fixed pixels because the card is max-w-[300px]: at any width from 340px
+     up it is exactly 300x189 and these are exact. Below that the card
+     shrinks, the dead bands shrink with it, and this over-pulls by about 2px
+     - which is why it is expressed as a small negative rather than something
+     that would collapse the layout if it drifted. */
+  margin-top: -19px;
+  margin-bottom: -11px;
 }
 
 .card-tilt > .acct-card {
-  transform: rotateX(30deg);
+  transform: rotateX(48deg);
   /* A card lying back casts its shadow further and softer than one lying
      flat, and the inset rim stays so the moulded edge survives the rotation. */
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.22),
     inset 0 0 0 1px rgba(255, 255, 255, 0.10),
-    0 4px 8px rgba(0, 0, 0, 0.22),
-    0 22px 34px -14px rgba(0, 0, 0, 0.55);
+    0 3px 6px rgba(0, 0, 0, 0.20),
+    0 26px 38px -16px rgba(0, 0, 0, 0.58);
 }
 
 /* Rotation is the whole effect, so there is nothing to keep when motion is
