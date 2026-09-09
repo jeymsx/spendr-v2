@@ -531,12 +531,12 @@ function TxRow({ tx, catMap, onClick }) {
         <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
           {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
         </p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
           {tx.type === 'transfer'
             ? `${tx.fromAccount ?? ''} → ${tx.toAccount ?? ''}`
             : (tx.account ?? '')}
           {cat && tx.type !== 'transfer' && (
-            <span className="ml-1.5 text-slate-300 dark:text-slate-600">· {cat.name}</span>
+            <span className="ml-1.5 text-slate-400 dark:text-slate-500">· {cat.name}</span>
           )}
         </p>
       </div>
@@ -545,7 +545,7 @@ function TxRow({ tx, catMap, onClick }) {
         <p className={`text-[13px] font-bold tabular-nums ${cls}`}>
           {sign}{fmt(tx.amount)}
         </p>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{fmtTime(tx.date)}</p>
+        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{fmtTime(tx.date)}</p>
       </div>
     </button>
   )

@@ -218,6 +218,13 @@ export default function AccountDetail() {
   const transactions = useLiveQuery(() => db.transactions.toArray(), [])
   const categories   = useLiveQuery(() => db.categories.toArray(), [])
 
+  // Category name -> {icon, color}, so a ledger row can show the same emoji
+  // and tint the Transactions page shows.
+  const catMap = useMemo(
+    () => Object.fromEntries((categories ?? []).map(c => [c.name, c])),
+    [categories],
+  )
+
   const [selectedTx,  setSelectedTx]  = useState(null)
   const [qrVisible,   setQrVisible]   = useState(false)
   const [formOpen,    setFormOpen]    = useState(false)
@@ -526,6 +533,7 @@ export default function AccountDetail() {
 
             <CreditTxSection
               onSelect={setSelectedTx}
+              catMap={catMap}
               title="This Statement"
               dateRange={`${fmtCycleDate(creditData.cycleStart)} – ${fmtCycleDate(creditData.cycleEnd)}`}
               txs={creditData.thisCharges}
@@ -538,6 +546,7 @@ export default function AccountDetail() {
             {creditData.nextStatementCharges.length > 0 && (
               <CreditTxSection
                 onSelect={setSelectedTx}
+              catMap={catMap}
                 title="Next Statement"
                 dateRange={`${fmtCycleDate(creditData.nextStart)} – ${fmtCycleDate(creditData.nextCycleEnd)}`}
                 txs={creditData.nextStatementCharges}
@@ -552,6 +561,7 @@ export default function AccountDetail() {
             {creditData.laterCharges.length > 0 && (
               <CreditTxSection
                 onSelect={setSelectedTx}
+              catMap={catMap}
                 title="Scheduled Later"
                 dateRange={`After ${fmtCycleDate(creditData.nextCycleEnd)}`}
                 txs={creditData.laterCharges}
@@ -564,6 +574,7 @@ export default function AccountDetail() {
             {creditData.payments.length > 0 && (
               <CreditTxSection
                 onSelect={setSelectedTx}
+              catMap={catMap}
                 title="Payments"
                 txs={creditData.payments}
                 total={creditData.payments.reduce((s, tx) => s + (tx.amount ?? 0), 0)}
@@ -629,7 +640,7 @@ export default function AccountDetail() {
                 <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2.5">
                   Direct Transactions · {acctTxs.length}
                 </p>
-                <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} />
+                <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} catMap={catMap} />
               </>
             )}
           </>
@@ -646,7 +657,7 @@ export default function AccountDetail() {
                 </p>
               </div>
             ) : (
-              <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} />
+              <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} catMap={catMap} />
             )}
           </>
         )}
@@ -679,7 +690,7 @@ export default function AccountDetail() {
 
 // ── Bits ───────────────────────────────────────────────────────────────────────
 
-function TxList({ txs, accountName, onSelect }) {
+function TxList({ txs, accountName, onSelect, catMap }) {
   return (
     <div
       className="rounded-2xl overflow-hidden mb-4
@@ -689,7 +700,7 @@ function TxList({ txs, accountName, onSelect }) {
     >
       {txs.map((tx, i) => (
         <div key={tx.id ?? i}>
-          <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} />
+          <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} catMap={catMap} />
           {i < txs.length - 1 && (
             <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
           )}
