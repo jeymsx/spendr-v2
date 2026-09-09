@@ -149,6 +149,77 @@ function aaSafeStops(hex, target = 4.55) {
 }
 
 /**
+ * Initials for an institution with no logo file.
+ *
+ * There is no verifiable public-domain SVG for most Philippine banks, and
+ * hand-tracing thirty of them produces thirty slightly-wrong drawings - the
+ * exact failure the real logo files were adopted to fix. A monogram in the
+ * app's own type is never wrong: it is unmistakably a stand-in rather than a
+ * bad copy, and paired with the brand's colour it still identifies the
+ * account at a glance. It is what most banking apps fall back to.
+ *
+ * An acronym is already a monogram, so BDO and RCBC keep all their letters
+ * while Metrobank reduces to M. camelCase counts as a word break, so GrabPay
+ * gives GP rather than G.
+ */
+export function monogram(name) {
+  const tokens = String(name ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+  if (!tokens.length) return ''
+  const [first] = tokens
+  if (first.length <= 4 && /^[A-Z]+$/.test(first)) return first
+  if (tokens.length === 1) return first[0].toUpperCase()
+  return (tokens[0][0] + tokens[1][0]).toUpperCase()
+}
+
+/* Words that name a PRODUCT rather than an institution, so "BDO Credit"
+   still finds BDO's logo. "bank" is deliberately absent: it is load-bearing
+   in China Bank and Robinsons Bank. */
+const PRODUCT_WORDS = new Set([
+  'credit', 'card', 'savings', 'save', 'black', 'account',
+  'plus', 'gold', 'platinum', 'debit', 'wallet',
+])
+
+/**
+ * Asset filenames to try for an account, best guess first.
+ *
+ * Institution logos are keyed by filename rather than by adding a NAME_RULES
+ * entry per bank, because there are thirty-odd of them and each rule would
+ * also need a hand-solved gradient. A slug lookup means dropping
+ * `landbank.svg` into assets/brand-logos is the whole integration.
+ *
+ * Both the hyphenated and the run-together forms are tried, because the
+ * source files disagree: camelCase splitting turns UnionBank into
+ * "union-bank" while the file on Commons is "unionbank", and China Bank is
+ * the reverse.
+ */
+export function logoCandidates(name) {
+  const tokens = String(name ?? '')
+    .normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .replace(/([a-z0-9])([A-Z])/g, '$1 $2')
+    .split(/[^A-Za-z0-9]+/)
+    .filter(Boolean)
+    .map(t => t.toLowerCase())
+  if (!tokens.length) return []
+
+  const trimmed = [...tokens]
+  while (trimmed.length > 1 && PRODUCT_WORDS.has(trimmed[trimmed.length - 1])) trimmed.pop()
+
+  return [...new Set([
+    tokens.join('-'),
+    tokens.join(''),
+    trimmed.join('-'),
+    trimmed.join(''),
+    trimmed.slice(0, 2).join('-'),
+    trimmed.slice(0, 2).join(''),
+    trimmed[0],
+  ])].filter(Boolean)
+}
+
+/**
  * @param {{name?: string, type?: string, color?: string}} account
  * @returns {{key: string, mark: string, from: string, to: string}}
  */
@@ -157,7 +228,12 @@ export function accountBrand(account) {
 
   for (const [pattern, brandKey, mark] of NAME_RULES) {
     if (pattern.test(key)) {
-      return { key: brandKey, mark, ...BRAND_GRADIENTS[brandKey] }
+      return {
+        key: brandKey, mark,
+        monogram: monogram(account?.name),
+        logoKeys: [brandKey, ...logoCandidates(account?.name)],
+        ...BRAND_GRADIENTS[brandKey],
+      }
     }
   }
 
@@ -166,9 +242,21 @@ export function accountBrand(account) {
   // uses light Tailwind values, so using them raw would fail.
   const mark = TYPE_MARK[account?.type] ?? 'bank'
   const own = aaSafeStops(account?.color)
-  if (own) return { key: 'custom', mark, ...own }
+  if (own) {
+    return {
+      key: 'custom', mark,
+      monogram: monogram(account?.name),
+      logoKeys: logoCandidates(account?.name),
+      ...own,
+    }
+  }
 
-  return { key: 'fallback', mark, from: '#3f4a5a', to: '#26303c' }
+  return {
+    key: 'fallback', mark,
+    monogram: monogram(account?.name),
+    logoKeys: logoCandidates(account?.name),
+    from: '#3f4a5a', to: '#26303c',
+  }
 }
 
 /** `background` value for a card face. */

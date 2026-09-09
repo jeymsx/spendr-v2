@@ -806,6 +806,7 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
         aspectRatio: '1.45',
       }}
       data-brand={brand.key}
+      data-compact=""
     >
       <BrandWatermark brand={brand} />
 

@@ -42,7 +42,13 @@ const BY_KEY = Object.fromEntries(
 function shapeOfBox(viewBox) {
   const box = String(viewBox ?? '').trim().split(/[\s,]+/).map(Number)
   if (box.length < 4 || !(box[2] > 0) || !(box[3] > 0)) return 'mark'
-  return box[2] / box[3] >= 1.8 ? 'word' : 'mark'
+  const ratio = box[2] / box[3]
+  // Three tiers, because the real files span 1:1 to 11:1 and no single width
+  // suits that range: Shopee's bag, BPI's crest-and-letters, and China Bank's
+  // 11:1 strip each need their own treatment. See index.css.
+  if (ratio >= 4.5) return 'wide'
+  if (ratio >= 1.8) return 'word'
+  return 'mark'
 }
 
 function shapeOf(svg) {
@@ -95,23 +101,54 @@ function fontSizeFor(text) {
 export default function BrandWatermark({ brand, className = 'acct-card-watermark' }) {
   const key = brand?.key
 
-  // A real asset file, if one has been added, always wins.
-  const custom = BY_KEY[key]
-  if (custom) {
+  // A real asset file always wins. `logoKeys` is the brand key followed by
+  // filename guesses derived from the account's own name, so "BDO Credit"
+  // finds bdo.svg without anyone adding a rule for it.
+  const fileKey = (brand?.logoKeys ?? [key]).find(k => k && BY_KEY[k])
+  if (fileKey) {
     return (
       <span
         className={className}
-        data-wm={SHAPE_BY_KEY[key]}
+        data-wm={SHAPE_BY_KEY[fileKey]}
         aria-hidden="true"
-        dangerouslySetInnerHTML={{ __html: custom }}
+        dangerouslySetInnerHTML={{ __html: BY_KEY[fileKey] }}
       />
     )
   }
 
-  const art = BRAND_ART[key]
+  // By brand first, then by CATEGORY. The category fallback is what gives any
+  // cash-type account the peso sign - `key` is only 'cash' for an account
+  // actually named "Cash", so a custom cash account (an envelope, a tin, a
+  // joint pot) would otherwise drop through to the banknote glyph, which is
+  // the placeholder-looking box this art exists to replace.
+  const art = BRAND_ART[key] ?? BRAND_ART[brand?.mark]
 
-  // No brand art either (plain cash, or an institution we don't know): the
-  // category glyph, which is drawn on a 24x24 grid and so is a compact mark.
+  // Still nothing: an institution with no logo file and no drawn art gets its
+  // initials, which at least identify the card. The category glyph is the last
+  // resort, because every bank shares it - a wall of identical building icons
+  // tells you nothing about which card you are looking at.
+  if (!art && brand?.monogram) {
+    const letters = brand.monogram
+    const boxW = Math.max(64, letters.length * 34)
+    return (
+      <span className={className} data-wm={shapeOfBox(`0 0 ${boxW} 64`)} aria-hidden="true">
+        <svg viewBox={`0 0 ${boxW} 64`} focusable="false" fill="currentColor">
+          <text
+            x={boxW / 2}
+            y="46"
+            textAnchor="middle"
+            fontSize={letters.length <= 2 ? 46 : letters.length === 3 ? 40 : 34}
+            fontWeight="700"
+            letterSpacing="-1"
+            fontFamily="Inter, system-ui, -apple-system, sans-serif"
+          >
+            {letters}
+          </text>
+        </svg>
+      </span>
+    )
+  }
+
   if (!art) {
     return (
       <span className={className} data-wm="mark" aria-hidden="true">

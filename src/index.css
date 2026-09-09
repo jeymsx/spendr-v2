@@ -270,6 +270,18 @@ html.dark body {
   bottom: -12%;
 }
 
+/* A very wide lockup cannot be a corner mark at all. China Bank's is 11:1,
+   so at the wordmark width it renders a few pixels tall - a sliver, not a
+   logo. It takes nearly the full width instead and sits as a printed band
+   across the lower card, which is how a bank's name is actually laid on
+   plastic. Barely bled, because clipping a thin strip reads as a fault
+   rather than as art. */
+.acct-card > .acct-card-watermark[data-wm='wide'] {
+  width: 96%;
+  right: 2%;
+  bottom: 11%;
+}
+
 /* A wordmark - maya, GoTyme, BPI - is two to four times wider than it is
    tall, so the same width would leave it a third of the height of a compact
    mark. It gets much more of the card's width to compensate, and sits low
@@ -287,6 +299,36 @@ html.dark body {
    alone, because overriding it fills the holes in a mark. */
 .acct-card > .acct-card-watermark svg,
 .acct-card > .acct-card-watermark svg * {
+  fill: #fff !important;
+  stroke: none !important;
+}
+
+/* The same institution art as the card watermark, but at full strength, for
+   pickers and lists. The watermark rules are all corner positioning and 10%
+   opacity, which is exactly wrong in a 56px tile - so BrandWatermark is
+   handed this class instead and only its art-selection logic is reused.
+
+   Sized by shape for the same reason the watermark is: a wordmark set to a
+   compact mark's width is an unreadable sliver. data-wm comes from the
+   component. */
+.brand-glyph {
+  display: block;
+  color: #fff;
+  pointer-events: none;
+}
+
+.brand-glyph[data-wm='mark'] { width: 58%; }
+.brand-glyph[data-wm='word'] { width: 84%; }
+.brand-glyph[data-wm='wide'] { width: 94%; }
+
+.brand-glyph > svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.brand-glyph svg,
+.brand-glyph svg * {
   fill: #fff !important;
   stroke: none !important;
 }
@@ -342,6 +384,18 @@ html.dark body {
    face from a flat rectangle, so it gets a little more presence. */
 .acct-card[data-brand='maya-credit'] > .acct-card-watermark {
   opacity: 0.17;
+}
+
+/* The home carousel's cards are half the width of an Accounts face, so a mark
+   at full card-face strength competes with the balance instead of sitting
+   behind it. Only the opacity changes - the bottom-right placement is shared
+   with the Accounts and detail faces, which is where a card's art belongs.
+
+   (It was briefly moved to the top-right to clear the balance figure. At 7%
+   it does not need clearing, and the corner a card prints its art in is the
+   bottom one.) */
+.acct-card[data-compact] > .acct-card-watermark {
+  opacity: 0.07;
 }
 
 /* ── The net-worth wallet ─────────────────────────────────────────────────────

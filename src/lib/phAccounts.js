@@ -26,11 +26,10 @@ export const PH_ACCOUNTS = [
   { name: 'UnionBank',          type: 'bank',    color: '#f97316', group: 'Digital Banks',     popular: true  },
   { name: 'GoTyme',             type: 'bank',    color: '#14b8a6', group: 'Digital Banks',     popular: true  },
   { name: 'CIMB',               type: 'bank',    color: '#ef4444', group: 'Digital Banks',     popular: false },
-  { name: 'SeaBank',            type: 'bank',    color: '#2D9DFF', group: 'Digital Banks',     popular: false },
+  { name: 'MariBank',            type: 'bank',    color: '#2D9DFF', group: 'Digital Banks',     popular: false },
   { name: 'Tonik',              type: 'bank',    color: '#8b5cf6', group: 'Digital Banks',     popular: false },
   { name: 'UNO Digital Bank',   type: 'bank',    color: '#f59e0b', group: 'Digital Banks',     popular: false },
   { name: 'OwnBank',            type: 'bank',    color: '#10b981', group: 'Digital Banks',     popular: false },
-  { name: 'Netbank',            type: 'bank',    color: '#6366f1', group: 'Digital Banks',     popular: false },
   { name: 'ING',                type: 'bank',    color: '#f97316', group: 'Digital Banks',     popular: false },
 
   // Credit Cards
