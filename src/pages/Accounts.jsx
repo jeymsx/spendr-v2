@@ -285,6 +285,16 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
   const nextDue        = isCredit ? nextOccurrence(acct.dueDate) : null
   const brand          = accountBrand(acct)
 
+  // An account named after its own type - "Cash" - would otherwise label
+  // itself twice, reading "Cash" over "Cash".
+  const typeLabel = TYPE_LABEL[acct.type]
+  const subtitle = [
+    isCredit
+      ? (nextDue ? `Due ${nextDue}` : 'Credit card')
+      : (typeLabel && typeLabel.toLowerCase() !== (acct.name ?? '').trim().toLowerCase() ? typeLabel : ''),
+    indent ? 'sub-account' : '',
+  ].filter(Boolean).join(' · ')
+
   const pullUp = `calc(${STACK_STRIP}px - ${(100 / CARD_RATIO).toFixed(2)}%)`
 
   return (
@@ -313,12 +323,9 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
             <span className="block text-[14px] font-semibold leading-tight truncate">
               {acct.name}
             </span>
-            <span className="block text-[10px] text-white/65 truncate">
-              {isCredit
-                ? (nextDue ? `Due ${nextDue}` : 'Credit card')
-                : TYPE_LABEL[acct.type]}
-              {indent ? ' · sub-account' : ''}
-            </span>
+            {subtitle && (
+              <span className="block text-[10px] text-white/65 truncate">{subtitle}</span>
+            )}
           </span>
         </span>
 

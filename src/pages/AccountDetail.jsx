@@ -342,6 +342,12 @@ export default function AccountDetail() {
   }
 
   const brand     = accountBrand(account)
+  // An account named after its own type - "Cash" - would otherwise label
+  // itself twice on the card face.
+  const typeLabel = TYPE_LABEL[account.type]
+  const cardSubtitle = isChild
+    ? `Part of ${account.parentName}`
+    : (typeLabel && typeLabel.toLowerCase() !== account.name.trim().toLowerCase() ? typeLabel : null)
   const limit     = account.creditLimit ?? 0
   const usedPct   = isCredit && limit > 0 ? Math.min((totalUsed / limit) * 100, 100) : 0
   const children  = (accounts ?? []).filter(a => a.parentName === account.name)
@@ -407,21 +413,21 @@ export default function AccountDetail() {
             <BrandMark mark={brand.mark} size={22} className="shrink-0" />
             <div className="min-w-0">
               <p className="text-[13px] font-semibold leading-tight truncate">{account.name}</p>
-              <p className="text-[10px] text-white/65 truncate">
-                {isChild ? `Part of ${account.parentName}` : TYPE_LABEL[account.type]}
-              </p>
+              {cardSubtitle && (
+                <p className="text-[10px] text-white/65 truncate">{cardSubtitle}</p>
+              )}
             </div>
           </div>
 
+          {/* The face carries identity only. The balance used to be here too,
+              directly above the same figure set three times larger - the card
+              is what the account IS, the number below is what it currently
+              holds, and printing state on a card face is not what a card does
+              anyway. Currency in its place, matching the Accounts list. */}
           <div className="mt-auto flex items-end justify-between gap-3">
-            <div className="min-w-0">
-              <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60 mb-0.5">
-                {isCredit ? 'Available' : 'Balance'}
-              </p>
-              <p className="text-[19px] font-bold tabular-nums leading-none">
-                {fmt(isCredit ? (creditData?.availableCredit ?? 0) : (account.balance ?? 0))}
-              </p>
-            </div>
+            <span className="text-[9px] font-semibold uppercase tracking-wider text-white/50">
+              {account.currency ?? 'PHP'}
+            </span>
             <SchemeMark scheme={account.scheme} className="h-[24px]" />
           </div>
         </div>
