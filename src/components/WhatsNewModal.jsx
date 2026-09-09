@@ -1,33 +1,47 @@
 import { useState } from 'react'
 import db from '../db/db'
 
-const CURRENT_VERSION = '0.1.0'
+const CURRENT_VERSION = '0.2.0'
 
+/* Written from the user's side of the change, not the code's: what is
+   different when you open the app, and - for a money app - which numbers
+   were wrong before. The fixes are last but they are not filler; a wrong
+   figure on a statement matters more than a nicer card. */
 const WHATS_NEW = [
   {
-    icon: '📅',
-    title: 'Cash Flow Calendar',
-    desc: 'View transactions in a monthly calendar. Tap any date to see what you spent.',
+    icon: '\u{1F4B3}',
+    title: 'Your accounts look like your cards',
+    desc: 'Real bank logos and true card proportions, stacked like a wallet so a whole group fits on one screen.',
   },
   {
-    icon: '🎯',
-    title: 'Monthly Budgets',
-    desc: 'Set per-category spending limits in Settings. Track progress with live bars.',
+    icon: '\u{270B}',
+    title: 'Drag to reorder',
+    desc: 'Hold any card and drag it up or down. The order sticks.',
   },
   {
-    icon: '⚠️',
-    title: 'Duplicate Detection',
-    desc: 'Get warned before saving a transaction that looks like a double-entry.',
+    icon: '\u{1F4C4}',
+    title: 'Every account has its own page',
+    desc: 'Tap a card for its balance, a 30-day trend line and its full history - instead of a half-height sheet.',
   },
   {
-    icon: '🔍',
-    title: 'Amount Range Filter',
-    desc: 'Filter transactions by amount using a histogram slider in the Transactions page.',
+    icon: '\u{2728}',
+    title: 'Guided account setup',
+    desc: 'Adding an account shows the card you are making as you make it, and skips the credit fields for accounts that cannot have a statement.',
   },
   {
-    icon: '💾',
-    title: 'Export Confirmations',
-    desc: 'CSV and JSON backup exports now have a confirmation step to prevent accidents.',
+    icon: '\u{1F3AF}',
+    title: 'Budget, on the home screen',
+    desc: 'One line for how much of the month is gone. Tap through for the breakdown, including what you are spending with no limit set at all.',
+  },
+  {
+    icon: '\u{1F522}',
+    title: 'Two figures were wrong',
+    desc: 'Next Statement counted every future installment instead of just the next bill, and the Credit group total read zero. Both fixed.',
+  },
+  {
+    icon: '\u{1F441}',
+    title: 'Easier to read',
+    desc: 'Card and text colours now meet contrast standards in both light and dark themes.',
   },
 ]
 
@@ -89,20 +103,20 @@ export default function WhatsNewModal({ onClose }) {
           ))}
         </div>
 
-        {/* Actions */}
-        <div className="px-5 pb-5 pt-3 border-t border-slate-100 dark:border-white/[0.06] flex flex-col gap-2">
+        {/* Actions.
+
+            One button, and it persists. Before, "Got it" dismissed without
+            writing whatsNewSeen, so the modal came back on the very next app
+            load and the only way to stop it was a small grey link below -
+            which is not where anyone looks. This list is keyed to a version,
+            so acknowledging the version IS "don't show it again". */}
+        <div className="px-5 pb-5 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
           <button
-            onClick={() => dismiss(false)}
+            onClick={() => dismiss(true)}
             className="w-full py-3 rounded-2xl text-sm font-semibold text-white
               bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
               active:scale-[0.98] transition-all duration-100">
             Got it
-          </button>
-          <button
-            onClick={() => dismiss(true)}
-            className="w-full py-2.5 text-xs font-semibold text-slate-400 dark:text-slate-500
-              active:opacity-60 transition-opacity">
-            Don't show again
           </button>
         </div>
       </div>
