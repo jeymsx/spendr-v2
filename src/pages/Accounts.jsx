@@ -67,12 +67,12 @@ function fmtTxTime(isoStr) {
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-const PALETTE = [
+export const PALETTE = [
   '#10b981', '#2D9DFF', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#f97316',
   '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#a78bfa', '#64748b', '#0ea5e9',
 ]
 
-const TYPE_OPTIONS = [
+export const TYPE_OPTIONS = [
   { value: 'cash',    label: 'Cash',        shortLabel: 'Cash'     },
   { value: 'ewallet', label: 'E-Wallet',    shortLabel: 'E-Wallet' },
   { value: 'savings', label: 'Savings',     shortLabel: 'Savings'  },
@@ -82,7 +82,7 @@ const TYPE_OPTIONS = [
 
 export const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map(t => [t.value, t.label]))
 
-function defaultRole(type) {
+export function defaultRole(type) {
   if (type === 'credit') return 'credit'
   return ['cash', 'ewallet'].includes(type) ? 'spending' : 'savings'
 }
@@ -705,8 +705,11 @@ export default function Accounts() {
     else setSearchParams({}, { replace: true })
   }, [accounts, searchParams])
 
+  // Adding an account is its own page now - it shows the card you are making
+  // as you make it, and skips the credit fields for accounts that cannot have
+  // a statement. See pages/AccountNew.jsx.
   function openAdd() {
-    setQuickAddOpen(true)
+    navigate('/accounts/new')
   }
 
   function openFormWithPrefill(prefill) {
@@ -1258,6 +1261,54 @@ export function QrViewerModal({ open, onClose, qrImage, accountName }) {
 
 // ── Account form sheet ─────────────────────────────────────────────────────────
 
+/**
+ * Form values to an accounts row.
+ *
+ * Exported because two screens create accounts now - this sheet and the
+ * /accounts/new page - and they must not drift on the details that are easy
+ * to get subtly wrong: that a credit card forces role 'credit', that every
+ * non-credit account nulls all five credit fields rather than storing zeroes,
+ * that currency is always PHP, and that an empty network is null and not ''.
+ */
+export function buildAccountRow({
+  name, type, role, color, creditLimit,
+  statementDay, dueDay, cutoffDay, minPayment,
+  qrImage = null, parentName = null, scheme = '',
+}) {
+  const isCredit = type === 'credit'
+  return {
+    name:           String(name ?? '').trim(),
+    type,
+    role:           isCredit ? 'credit' : role,
+    color,
+    currency:       'PHP',
+    creditLimit:    isCredit ? (parseMoney(creditLimit) || 0)   : null,
+    statementDate:  isCredit ? (parseInt(statementDay) || null) : null,
+    dueDate:        isCredit ? (parseInt(dueDay)       || null) : null,
+    cutoffDate:     isCredit ? (parseInt(cutoffDay)    || null) : null,
+    minimumPayment: isCredit ? (parseMoney(minPayment) || 0)    : null,
+    qrImage:        qrImage ?? null,
+    updatedAt:      new Date().toISOString(),
+    parentName:     parentName ?? null,
+    // Unindexed on purpose: nothing queries by network, so this needed no
+    // db.version() bump.
+    scheme:         scheme || null,
+  }
+}
+
+/**
+ * Inserts a new account and its balance record together. The `balances` table
+ * is what the ledger reads, so writing one without the other leaves an
+ * account that exists but has no balance.
+ */
+export async function createAccount(row, balance) {
+  const opening = Number.isFinite(balance) ? balance : 0
+  await db.transaction('rw', [db.accounts, db.balances], async () => {
+    await db.accounts.add({ ...row, balance: opening })
+    await db.balances.put({ account: row.name, balance: opening })
+  })
+}
+
 export function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [closing,    setClosing]    = useState(false)
   useScrollLock(open)
@@ -1337,24 +1388,11 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
     try {
       const cleanName = name.trim()
       const isCredit  = type === 'credit'
-      const data = {
-        name:           cleanName,
-        type,
-        role:           isCredit ? 'credit' : role,
-        color,
-        currency:       'PHP',
-        creditLimit:    isCredit ? (parseMoney(creditLimit)  || 0)    : null,
-        statementDate:  isCredit ? (parseInt(statementDay)   || null)  : null,
-        dueDate:        isCredit ? (parseInt(dueDay)         || null)  : null,
-        cutoffDate:     isCredit ? (parseInt(cutoffDay)      || null)  : null,
-        minimumPayment: isCredit ? (parseMoney(minPayment)   || 0)    : null,
-        qrImage:        qrImage ?? null,
-        updatedAt:      new Date().toISOString(),
-        parentName:     parentName ?? null,
-        // Unindexed on purpose: nothing queries by network, so this needed
-        // no db.version() bump.
-        scheme:         scheme || null,
-      }
+      const data = buildAccountRow({
+        name: cleanName, type, role, color, creditLimit,
+        statementDay, dueDay, cutoffDay, minPayment,
+        qrImage, parentName, scheme,
+      })
 
       if (isEdit) {
         const oldName = account.name
@@ -1379,12 +1417,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
           }
         })
       } else {
-        const balance = parseMoney(startingBal)
-        await db.transaction('rw', [db.accounts, db.balances], async () => {
-          await db.accounts.add({ ...data, balance })
-          await db.balances.put({ account: cleanName, balance })
-        })
-        // If this new account has a parent, recompute the parent's balance
+        await createAccount(data, parseMoney(startingBal))
       }
       showToast(isEdit ? 'Account updated' : 'Account created')
       close()
