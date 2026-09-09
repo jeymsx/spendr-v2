@@ -304,7 +304,6 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
       {/* Brand watermark bottom-right, network mark bottom-left. Both are
           real institution art where it exists - see assets/ATTRIBUTION.md. */}
       <BrandWatermark brand={brand} />
-      <SchemeMark scheme={acct.scheme} />
 
       {/* ── The strip: everything legible while stacked ── */}
       <div className="flex items-start justify-between gap-3 w-full">
@@ -345,16 +344,20 @@ function AccountCard({ acct, hidden, onTap, stmt, indent = false, depth = 0 }) {
                 style={{ width: `${stmtPct}%` }}
               />
             </div>
-            <div className="flex items-center justify-between mt-1.5 gap-2">
+            <div className="flex items-end justify-between mt-1.5 gap-2">
               <span className="text-[9px] uppercase tracking-wider text-white/60">
                 {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit)} used
               </span>
+              <SchemeMark scheme={acct.scheme} className="h-[26px]" />
             </div>
           </>
         ) : (
-          <span className="text-[9px] uppercase tracking-wider text-white/50">
-            {acct.currency ?? 'PHP'}
-          </span>
+          <div className="flex items-end justify-between gap-2">
+            <span className="text-[9px] uppercase tracking-wider text-white/50">
+              {acct.currency ?? 'PHP'}
+            </span>
+            <SchemeMark scheme={acct.scheme} className="h-[26px]" />
+          </div>
         )}
       </div>
     </button>

@@ -291,25 +291,49 @@ html.dark body {
   stroke: none !important;
 }
 
-/* The network mark, bottom-left and meant to be read rather than sensed. */
-.acct-card > .scheme-mark {
-  position: absolute;
-  left: 16px;
-  bottom: 14px;
-  height: 18px;
-  width: auto;
-  z-index: 4;
-  opacity: 0.92;
-  pointer-events: none;
+/* The network mark. Bottom-right, opaque, and at the size a real card prints
+   it - but laid out IN FLOW rather than absolutely positioned, which is the
+   part that took two goes to get right.
+
+   Bottom-left put it under the balance figure and the currency label. Moving
+   it to an absolute bottom-right fixed that and broke something else: a credit
+   card's utilisation bar spans the full width down there, so an opaque mark
+   landed on top of it and the bar showed through the gaps in the letterforms.
+   Sitting in the flex row instead means the layout cannot overlap it at any
+   card size or for any account type, with no reserved gutters to keep in step.
+
+   That costs percentage sizing - a percentage height needs a definite parent -
+   so each call site passes its own height. Height is the right axis anyway:
+   it is what the networks hold constant, since Visa's wordmark and Amex's
+   square badge print the same height and nothing like the same width. Each
+   file's viewBox is cropped to its own ink for the same reason - simple-icons
+   pads every mark into a 24x24 box, and Visa fills 41% of that height against
+   Amex's 100%, so uncropped they render at four different apparent sizes.
+
+   The hairline shadow keeps the white crisp where it crosses the watermark,
+   which is card artwork at 10% and correctly sits underneath. */
+.scheme-mark {
   display: block;
+  width: auto;
+  flex: none;
+  opacity: 1;
+  color: #fff;
+  pointer-events: none;
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.28));
 }
-.acct-card > .scheme-mark > svg {
+
+.scheme-mark > svg {
   height: 100%;
   width: auto;
   display: block;
 }
-.acct-card > .scheme-mark svg,
-.acct-card > .scheme-mark svg * {
+
+/* Flatten the monochrome marks to one white silhouette; !important has to
+   beat any inline fill left on a downloaded file. Brand-coloured files -
+   Mastercard - are deliberately excluded, or its two circles would merge into
+   a single white blob. */
+.scheme-mark[data-tone='mono'] svg,
+.scheme-mark[data-tone='mono'] svg * {
   fill: #fff !important;
   stroke: none !important;
 }
@@ -462,7 +486,7 @@ html.dark body {
   top: 10px;
   left: 10px;
   right: 10px;
-  bottom: calc(var(--wallet-tab-reserve) + 10px);
+  bottom: calc(11.2% + 10px);
   border: 1px dashed rgba(255, 255, 255, 0.20);
   border-radius: 21px 21px 13px 13px;
   pointer-events: none;

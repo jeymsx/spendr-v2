@@ -402,7 +402,6 @@ export default function AccountDetail() {
           data-brand={brand.key}
         >
           <BrandWatermark brand={brand} />
-          <SchemeMark scheme={account.scheme} />
 
           <div className="flex items-center gap-2.5">
             <BrandMark mark={brand.mark} size={22} className="shrink-0" />
@@ -414,13 +413,16 @@ export default function AccountDetail() {
             </div>
           </div>
 
-          <div className="mt-auto">
-            <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60 mb-0.5">
-              {isCredit ? 'Available' : 'Balance'}
-            </p>
-            <p className="text-[19px] font-bold tabular-nums leading-none">
-              {fmt(isCredit ? (creditData?.availableCredit ?? 0) : (account.balance ?? 0))}
-            </p>
+          <div className="mt-auto flex items-end justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60 mb-0.5">
+                {isCredit ? 'Available' : 'Balance'}
+              </p>
+              <p className="text-[19px] font-bold tabular-nums leading-none">
+                {fmt(isCredit ? (creditData?.availableCredit ?? 0) : (account.balance ?? 0))}
+              </p>
+            </div>
+            <SchemeMark scheme={account.scheme} className="h-[24px]" />
           </div>
         </div>
       </section>

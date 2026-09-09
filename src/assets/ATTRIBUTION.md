@@ -24,12 +24,28 @@ so the box was tightened onto the ink.
 From [simple-icons](https://github.com/simple-icons/simple-icons), **CC0 1.0**
 (the icons; the repo's code is MIT).
 
-| File | Brand |
-|---|---|
-| `visa.svg` | Visa |
-| `mastercard.svg` | Mastercard |
-| `amex.svg` | American Express |
-| `jcb.svg` | JCB |
+| File | Brand | Source |
+|---|---|---|
+| `visa.svg` | Visa | simple-icons, CC0 |
+| `amex.svg` | American Express | simple-icons, CC0 |
+| `jcb.svg` | JCB | simple-icons, CC0 |
+| `mastercard.svg` | Mastercard | **constructed here** — see below |
+
+Each of these had its `viewBox` cropped to its own ink. simple-icons draws
+every mark into a 24×24 box, so each carries a different amount of padding —
+Visa fills 41% of the height, Amex 100% — and sizing them by height uncropped
+renders four marks at four different apparent sizes.
+
+`mastercard.svg` is **not** the traced file. Mastercard's mark is printed in
+full colour on essentially every real card, and simple-icons is monochrome by
+design — a single path, which flattens the two interlocking circles into one
+blob. The mark's geometry is exactly specified, though, so it is constructed
+rather than traced: two equal circles with their centres 0.6 of a diameter
+apart, and the lens of their intersection filled in the darker orange
+(`#EB001B`, `#F79E1B`, `#FF5F00`). The resulting 1.6:1 proportion matches the
+1.62 measured off the traced file, which is the check that the construction is
+faithful. Being a construction from public brand geometry, it carries no
+third-party file licence — the trademark position below still applies.
 
 ## Institutions — `brand-logos/`
 

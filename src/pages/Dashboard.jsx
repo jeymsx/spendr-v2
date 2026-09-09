@@ -13,7 +13,6 @@ import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
-import SchemeMark from '../components/SchemeMark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -702,7 +701,6 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
       data-brand={brand.key}
     >
       <BrandWatermark brand={brand} />
-      <SchemeMark scheme={acct.scheme} />
 
       <div className="flex items-center gap-2">
         <BrandMark mark={brand.mark} size={18} className="shrink-0" />
