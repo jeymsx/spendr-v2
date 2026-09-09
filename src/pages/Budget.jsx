@@ -5,6 +5,7 @@ import {
 } from 'recharts'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { useTheme } from '../context/ThemeContext'
 import { scheduledCutoff } from '../utils/scheduled'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
 
@@ -79,7 +80,7 @@ function Divider() {
 /** One budgeted category: how much of its limit is gone, and what is left. */
 function CategoryRow({ cat }) {
   const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0
-  const { color } = budgetTone(pct)
+  const { color, textClass } = budgetTone(pct)
   const left = cat.budget - cat.spent
 
   return (
@@ -101,7 +102,7 @@ function CategoryRow({ cat }) {
           </p>
         </div>
         <div className="text-right shrink-0">
-          <p className="text-[14px] font-bold tabular-nums" style={{ color }}>
+          <p className={`text-[14px] font-bold tabular-nums ${textClass}`}>
             {Math.round(pct)}%
           </p>
           <p className="text-[10px] tabular-nums mt-0.5 text-slate-500 dark:text-slate-400">
@@ -124,6 +125,7 @@ function CategoryRow({ cat }) {
 
 export default function Budget() {
   const navigate = useNavigate()
+  const { accentColor } = useTheme()
   const categories   = useLiveQuery(() => db.categories.toArray(), [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [])
 
@@ -179,7 +181,7 @@ export default function Budget() {
 
   const remaining = totals.budget - totals.spent
   const perDay = remaining > 0 ? remaining / daysLeft : 0
-  const tone = budgetTone(totals.pct)
+  const tone = budgetTone(totals.pct, accentColor)
   const over = budgeted.filter(c => c.spent > c.budget)
   const near = budgeted.filter(c => c.spent <= c.budget && c.budget > 0 && (c.spent / c.budget) >= 0.75)
 
@@ -188,9 +190,9 @@ export default function Budget() {
       name: c.name.length > 9 ? c.name.slice(0, 8) + '…' : c.name,
       spent: Math.round(c.spent),
       limit: Math.round(c.budget),
-      color: budgetTone(c.budget > 0 ? (c.spent / c.budget) * 100 : 0).color,
+      color: budgetTone(c.budget > 0 ? (c.spent / c.budget) * 100 : 0, accentColor).svgColor,
     })),
-    [budgeted],
+    [budgeted, accentColor],
   )
 
   const loading = !categories || !transactions
@@ -261,7 +263,7 @@ export default function Budget() {
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   {remaining >= 0 ? 'Remaining' : 'Over by'}
                 </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5" style={{ color: tone.color }}>
+                <p className={`text-[15px] font-bold tabular-nums mt-0.5 ${tone.textClass}`}>
                   {fmtCompact(Math.abs(remaining))}
                 </p>
               </div>

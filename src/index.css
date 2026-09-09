@@ -778,6 +778,22 @@ html.dark body {
 .no-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* ── Safe-area helpers ────────────────────────────────── */
+/* The accent, shifted until it is readable as small text.
+
+   The raw accent is a fill colour, not a text colour: #2D9DFF measures
+   2.85:1 on white, and the lighter accents are far worse - Honey is 1.6:1.
+   Mixing toward black in light mode and toward white in dark mode keeps the
+   hue while clearing AA: 5.1:1 and 7.1:1 respectively for the default blue.
+   Used for the budget figures, which are 14px bold and so do not qualify for
+   the large-text exemption. */
+.budget-tone-ok {
+  color: color-mix(in srgb, var(--color-primary) 72%, black);
+}
+
+.dark .budget-tone-ok {
+  color: color-mix(in srgb, var(--color-primary) 88%, white);
+}
+
 /* Nothing in this app scrolls sideways, so no horizontal gesture should
    rubber-band or trigger a swipe-to-navigate anywhere in the chain. <body>
    already declared this; <html> did not, and the real scroll container is

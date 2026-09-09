@@ -867,7 +867,7 @@ function QuickAddBtn({ label, to, className }) {
 function BudgetSummaryTile({ totals, count }) {
   const hasBudget = totals.budget > 0
   const pct = Math.round(totals.pct)
-  const { color } = budgetTone(totals.pct)
+  const { textClass } = budgetTone(totals.pct)
 
   if (!hasBudget) {
     return (
@@ -895,7 +895,7 @@ function BudgetSummaryTile({ totals, count }) {
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
           <p className="text-[15px] text-slate-800 dark:text-white">
-            Using <span className="font-bold" style={{ color }}>{pct}%</span> of spending budget
+            Using <span className={`font-bold ${textClass}`}>{pct}%</span> of spending budget
           </p>
           <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
             {fmt(totals.spent)} of {fmt(totals.budget)} across {count} categor{count === 1 ? 'y' : 'ies'}

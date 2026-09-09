@@ -13,11 +13,37 @@
  * between spending your last peso and spending twice your limit.
  */
 
-/** Green under three quarters, amber approaching the limit, red past it. */
-export function budgetTone(pct) {
-  if (pct > 100) return { key: 'over', color: '#ef4444' }
-  if (pct >= 75) return { key: 'warn', color: '#f59e0b' }
-  return { key: 'ok', color: '#22c55e' }
+/**
+ * The tone for a given percentage.
+ *
+ * "On track" takes the app's accent, so a blue theme gets a blue meter. The
+ * two warning states do NOT: amber and red are encoding state, not taste,
+ * and handing them to a user preference would break the encoding outright -
+ * with the Ember or Honey accent, an over-budget month would render the same
+ * colour as a healthy one. So the accent replaces the neutral colour only,
+ * and going over always looks like going over.
+ *
+ * `color` is for graphics - a CSS variable works in an inline style, which is
+ * where the meter pills and progress bars get it. `svgColor` is the same
+ * thing resolved to a hex, because Recharts writes `fill` as an SVG
+ * attribute and attributes do not resolve var(). `textClass` exists because
+ * the raw accent is not readable as small text: #2D9DFF is 2.85:1 on white,
+ * so the class shifts it darker in light mode and lighter in dark, which
+ * measures 5.1:1 and 7.1:1.
+ */
+export function budgetTone(pct, accentHex) {
+  if (pct > 100) {
+    return { key: 'over', color: '#ef4444', svgColor: '#ef4444', textClass: 'text-red-500 dark:text-red-400' }
+  }
+  if (pct >= 75) {
+    return { key: 'warn', color: '#f59e0b', svgColor: '#f59e0b', textClass: 'text-amber-600 dark:text-amber-400' }
+  }
+  return {
+    key: 'ok',
+    color: 'var(--color-primary)',
+    svgColor: accentHex || '#2D9DFF',
+    textClass: 'budget-tone-ok',
+  }
 }
 
 export default function BudgetMeter({
