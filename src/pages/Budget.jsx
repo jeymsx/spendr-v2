@@ -1,8 +1,5 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import {
-  BarChart, Bar, XAxis, YAxis, Cell, Tooltip, ResponsiveContainer,
-} from 'recharts'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useTheme } from '../context/ThemeContext'
@@ -111,11 +108,79 @@ function CategoryRow({ cat }) {
         </div>
       </div>
 
-      <div className="mt-2.5 h-1.5 rounded-full bg-slate-150 dark:bg-white/[0.10] overflow-hidden">
+      <div className="mt-2.5 h-1.5 rounded-full bg-slate-200 dark:bg-white/[0.10] overflow-hidden">
         <div
           className="h-full rounded-full transition-all duration-700"
           style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: color }}
         />
+      </div>
+    </div>
+  )
+}
+
+/**
+ * One category's limit and spend, drawn on a scale shared with every other
+ * row.
+ *
+ * This is the section's whole reason to exist next to "By category" above,
+ * which normalises each category to its own limit and answers "which is
+ * closest to breaking". Here the track length is the limit itself, so a
+ * category with three times the budget gets three times the track - which
+ * answers the different question of where the money is actually allocated,
+ * and which is impossible to see once every bar is normalised to 100%.
+ *
+ * It replaced a Recharts grouped bar chart that never did what its own
+ * caption claimed. Two <Bar> elements in one chart are laid out side by side
+ * within each category band, not overlaid, so the spend bar sat BELOW its
+ * limit track rather than on it. Two divs express it exactly, need no
+ * library, and let the numbers sit inline instead of behind a hover.
+ */
+function AllocationRow({ cat, maxLimit }) {
+  const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0
+  const { color, textClass } = budgetTone(pct)
+  const over = cat.spent > cat.budget
+
+  const trackPct = maxLimit > 0 ? (cat.budget / maxLimit) * 100 : 0
+  // Spend is measured on the SAME scale as the limit, so when it exceeds the
+  // limit the bar simply runs past the end of its own track. That overshoot
+  // is the point - a normalised bar can only ever fill up.
+  const spentPct = maxLimit > 0 ? (cat.spent / maxLimit) * 100 : 0
+
+  return (
+    <div>
+      <div className="flex items-baseline justify-between gap-3 mb-1.5">
+        <span className="flex items-center gap-1.5 min-w-0">
+          <span className="text-[13px] leading-none shrink-0" aria-hidden="true">{cat.icon ?? '\u{1F4B8}'}</span>
+          <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate">
+            {cat.name}
+          </span>
+        </span>
+        <span className="text-[11px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
+          <span className={`font-semibold ${textClass}`}>{fmtCompact(cat.spent)}</span>
+          {' of '}{fmtCompact(cat.budget)}
+        </span>
+      </div>
+
+      <div className="relative h-2.5">
+        {/* The limit, to scale. */}
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-slate-200 dark:bg-white/[0.10]"
+          style={{ width: `${trackPct}%` }}
+        />
+        {/* What was spent, on the same scale. */}
+        <div
+          className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
+          style={{ width: `${spentPct}%`, backgroundColor: color }}
+        />
+        {/* Once the bar has covered its own track, the limit needs marking or
+            the overshoot is invisible. */}
+        {over && (
+          <span
+            className="absolute -top-1 -bottom-1 w-[2px] rounded-full bg-slate-900/45 dark:bg-white/70"
+            style={{ left: `calc(${trackPct}% - 1px)` }}
+            aria-hidden="true"
+          />
+        )}
       </div>
     </div>
   )
@@ -185,14 +250,12 @@ export default function Budget() {
   const over = budgeted.filter(c => c.spent > c.budget)
   const near = budgeted.filter(c => c.spent <= c.budget && c.budget > 0 && (c.spent / c.budget) >= 0.75)
 
-  const chartData = useMemo(() =>
-    budgeted.slice(0, 8).map(c => ({
-      name: c.name.length > 9 ? c.name.slice(0, 8) + '…' : c.name,
-      spent: Math.round(c.spent),
-      limit: Math.round(c.budget),
-      color: budgetTone(c.budget > 0 ? (c.spent / c.budget) * 100 : 0, accentColor).svgColor,
-    })),
-    [budgeted, accentColor],
+  // The scale for every row: the largest limit OR spend, whichever is bigger.
+  // Limits alone would clip the overshoot of whichever category set the
+  // scale, which is exactly the category most worth seeing it on.
+  const maxLimit = useMemo(
+    () => budgeted.reduce((m, c) => Math.max(m, c.budget ?? 0, c.spent ?? 0), 0),
+    [budgeted],
   )
 
   const loading = !categories || !transactions
@@ -329,57 +392,20 @@ export default function Budget() {
             </div>
           </section>
 
-          {/* ── Spend against limit, side by side ── */}
-          {chartData.length > 1 && (
+          {/* ── Every limit on one scale ── */}
+          {budgeted.length > 1 && (
             <section className="mt-7">
-              <SectionLabel hint="Each bar is what you spent; the track behind it is the limit.">
-                Spend against limit
+              <SectionLabel
+                hint="One scale across every row, so a longer track means a bigger limit and a bar past its track means overspent."
+              >
+                Where the budget goes
               </SectionLabel>
               <div className="px-5">
-                <Card className="px-2 py-3">
-                  <div className="[&_*]:outline-none [&_*]:focus:outline-none">
-                    <ResponsiveContainer width="100%" height={Math.max(150, chartData.length * 34)}>
-                      <BarChart
-                        data={chartData}
-                        layout="vertical"
-                        margin={{ top: 4, right: 14, left: 4, bottom: 4 }}
-                        barCategoryGap="26%"
-                      >
-                        <XAxis type="number" hide />
-                        <YAxis
-                          type="category"
-                          dataKey="name"
-                          width={68}
-                          tick={{ fontSize: 11, fill: '#94a3b8' }}
-                          axisLine={false}
-                          tickLine={false}
-                        />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const d = payload[0].payload
-                            return (
-                              <div className="bg-white dark:bg-[#1a2130] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
-                                <p className="font-semibold text-slate-700 dark:text-white">{d.name}</p>
-                                <p className="tabular-nums text-slate-600 dark:text-slate-300 mt-0.5">
-                                  {fmt(d.spent)} of {fmt(d.limit)}
-                                </p>
-                              </div>
-                            )
-                          }}
-                          cursor={{ fill: 'rgba(148,163,184,0.10)' }}
-                        />
-                        {/* The limit sits behind as a track, so a bar that
-                            fills it is instantly readable as "at the limit"
-                            without reading either number. */}
-                        <Bar dataKey="limit" fill="rgba(148,163,184,0.22)" radius={[4, 4, 4, 4]} isAnimationActive={false} />
-                        <Bar dataKey="spent" radius={[4, 4, 4, 4]} animationDuration={700}
-                          // Overlaid on the track rather than beside it.
-                          background={false} barSize={10}>
-                          {chartData.map((d, i) => <Cell key={i} fill={d.color} />)}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+                <Card className="px-4 py-4">
+                  <div className="flex flex-col gap-4">
+                    {budgeted.map(cat => (
+                      <AllocationRow key={cat.id ?? cat.name} cat={cat} maxLimit={maxLimit} />
+                    ))}
                   </div>
                 </Card>
               </div>
