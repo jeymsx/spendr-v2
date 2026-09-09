@@ -337,16 +337,89 @@ html.dark body {
    3. Matte light. A wide overhead vignette with no specular edge, over a
       coarser and fainter grain than the cards use, so the two materials read
       as different even when they are stacked in the same screenshot. */
+/* The silhouette is not a rectangle: a tab hangs off the bottom edge, joined
+   to the body by concave fillets, and it holds the control that folds the
+   breakdown away.
+
+   It has to be ONE element. The card's face is a gradient, and a tab built as
+   a second element would have to restart that gradient in its own box - CSS
+   gives no way to continue a parent's ramp into a sibling - so the join would
+   show as a colour step exactly where the eye is drawn. Masking one element
+   instead means the gradient, the grain and the vignette are all painted once
+   across the whole shape and the tab cannot mismatch.
+
+   Percentage mask sizing stretches the art, which distorts a corner radius by
+   whatever the aspect mismatch is. The viewBox is therefore drawn at 400x250,
+   which is the ratio this card actually renders at, so both axes scale by
+   nearly the same factor and the radii stay round.
+
+   Masks clip box decorations too, so the lift moves to a drop-shadow on the
+   wrapper - which is the better result anyway, since a drop-shadow follows the
+   tab instead of squaring it off. The 1px inset rim had to go: it tracks the
+   rectangular border box, so it would have vanished along the body's bottom
+   edge and reappeared inside the tab. The stitching carries that edge now. */
 .wallet-card {
   position: relative;
   isolation: isolate;
   overflow: hidden;
   border-radius: 30px 30px 22px 22px;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
-    0 2px 6px rgba(0, 0, 0, 0.14),
-    0 14px 32px -10px rgba(0, 0, 0, 0.30);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18);
+
+  /* Bottom 11.2% of the height is tab, so content is padded clear of it. */
+  --wallet-tab-reserve: 34px;
+  padding-bottom: var(--wallet-tab-reserve);
+
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250' preserveAspectRatio='none'%3E%3Cpath d='M30 0H370A30 30 0 0 1 400 30V200A22 22 0 0 1 378 222H255A10 10 0 0 0 245 232V236A14 14 0 0 1 231 250H169A14 14 0 0 1 155 236V232A10 10 0 0 0 145 222H22A22 22 0 0 1 0 200V30A30 30 0 0 1 30 0Z' fill='%23fff'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 250' preserveAspectRatio='none'%3E%3Cpath d='M30 0H370A30 30 0 0 1 400 30V200A22 22 0 0 1 378 222H255A10 10 0 0 0 245 232V236A14 14 0 0 1 231 250H169A14 14 0 0 1 155 236V232A10 10 0 0 0 145 222H22A22 22 0 0 1 0 200V30A30 30 0 0 1 30 0Z' fill='%23fff'/%3E%3C/svg%3E");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+}
+
+/* The lift, on a wrapper so it follows the masked silhouette rather than the
+   border box. */
+.wallet {
+  filter:
+    drop-shadow(0 2px 4px rgba(0, 0, 0, 0.14))
+    drop-shadow(0 12px 20px rgba(0, 0, 0, 0.22));
+}
+
+/* The tab's control. The tab itself is only about 24px tall, so the button
+   reaches up into the card body to make a 44px target - the region it covers
+   is empty card face, and it is the only thing there to hit. */
+.wallet-card > .wallet-tab {
+  position: absolute;
+  left: 50%;
+  bottom: 0;
+  transform: translateX(-50%);
+  width: 22.5%;
+  min-width: 64px;
+  height: 46px;
+  z-index: 6;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  padding-bottom: 5px;
+  color: rgba(255, 255, 255, 0.75);
+  background: none;
+  border: 0;
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.wallet-tab:active { color: rgba(255, 255, 255, 0.95); }
+
+.wallet-tab > svg {
+  transition: transform 240ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.wallet-tab[aria-expanded='false'] > svg {
+  transform: rotate(-180deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-tab > svg { transition: none; }
 }
 
 .wallet-card::before,
@@ -386,15 +459,44 @@ html.dark body {
    inset keeps it in the padding gutter, clear of every glyph. */
 .wallet-card > .wallet-stitch {
   position: absolute;
-  inset: 10px;
+  top: 10px;
+  left: 10px;
+  right: 10px;
+  bottom: calc(var(--wallet-tab-reserve) + 10px);
   border: 1px dashed rgba(255, 255, 255, 0.20);
   border-radius: 21px 21px 13px 13px;
   pointer-events: none;
   z-index: 5;
 }
 
-/* The front pocket, full-bleed to the card edges so the wallet's own radius
-   clips it to the silhouette. Its face is a pseudo-element rather than the
+/* The fold. Animating grid-template-rows between 1fr and 0fr is the only way
+   to transition to a content-derived height without measuring anything in JS.
+   Where it is unsupported the row simply snaps, which is a degraded reveal
+   rather than a broken one. */
+.wallet-fold {
+  display: grid;
+  grid-template-rows: 1fr;
+  transition: grid-template-rows 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+.wallet-fold[data-open='false'] {
+  grid-template-rows: 0fr;
+}
+
+/* min-height:0 is load-bearing - without it a grid item refuses to shrink
+   below its content and the row collapses to nothing visually while still
+   taking space. */
+.wallet-fold > * {
+  overflow: hidden;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wallet-fold { transition: none; }
+}
+
+/* The front pocket. It spans the card's full width - the bleed comes from the
+   fold wrapper around it - and its face is a pseudo-element rather than the
    element's own background, so the thumb notch can be masked out of the face
    WITHOUT masking the figures sitting on it. */
 .wallet-pocket {

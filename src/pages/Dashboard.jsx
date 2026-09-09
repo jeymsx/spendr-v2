@@ -161,6 +161,12 @@ export default function Dashboard() {
   const [balanceHidden,    setBalanceHidden]    = useState(true)
   const [accountsHidden,   setAccountsHidden]   = useState(false)
   const [peek,             setPeek]             = useState(false)
+  // The wallet's tab folds the breakdown away. Remembered, because it is a
+  // preference about how much of your own finances you want on screen.
+  const [breakdownOpen,    setBreakdownOpen]    = useState(() => {
+    try { return localStorage.getItem('netWorthBreakdown') !== 'closed' }
+    catch { return true }
+  })
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
   const [postTarget,       setPostTarget]       = useState(null)
@@ -323,8 +329,9 @@ export default function Dashboard() {
         {(() => {
           const revealed = !balanceHidden || peek
           return (
+            <div className="wallet">
             <div
-              className="wallet-card p-6 select-none"
+              className="wallet-card px-6 pt-6 select-none"
               style={{ background: cardGradient(accentColor, theme) }}
               onPointerDown={() => setPeek(true)}
               onPointerUp={() => setPeek(false)}
@@ -358,7 +365,9 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <div className="wallet-pocket grid grid-cols-3 gap-3 -mx-6 -mb-6 px-6 pt-7 pb-6">
+                <div className="wallet-fold -mx-6" data-open={breakdownOpen}>
+                  <div>
+                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-7 pb-6">
                   <div>
                     <p className="text-white/50 text-[11px] mb-1">Spending</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
@@ -381,9 +390,33 @@ export default function Dashboard() {
                     <p className="text-white/35 text-[10px] mt-0.5">
                       {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}
                     </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
+
+              {/* The tab. A chevron in a pull-tab reads as "there is more
+                  here", so it does that rather than being decoration. */}
+              <button
+                type="button"
+                className="wallet-tab"
+                aria-expanded={breakdownOpen}
+                aria-controls="net-worth-breakdown"
+                aria-label={breakdownOpen ? 'Hide the breakdown' : 'Show the breakdown'}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={() => setBreakdownOpen(v => {
+                  const next = !v
+                  try { localStorage.setItem('netWorthBreakdown', next ? 'open' : 'closed') } catch { /* private mode */ }
+                  return next
+                })}
+              >
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </button>
+            </div>
             </div>
           )
         })()}
@@ -429,7 +462,7 @@ export default function Dashboard() {
                   key={acct.id}
                   acct={displayAcct}
                   hidden={accountsHidden}
-                  onClick={() => navigate('/accounts?open=' + encodeURIComponent(acct.name))}
+                  onClick={() => navigate(`/accounts/${acct.id}`)}
                   stmt={creditStmtMap[acct.name]}
                 />
               )
