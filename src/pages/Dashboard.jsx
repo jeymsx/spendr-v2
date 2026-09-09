@@ -593,7 +593,10 @@ export default function Dashboard() {
           was a grid of eight per-category chips, which is a lot of screen
           for a question you usually only want a yes-or-no answer to. ── */}
       <section className="px-5 mt-8">
-        <BudgetSummaryTile totals={budgetTotals} count={budgetCategories.length} />
+        <SectionHeader title="Budget" subtitle="This month" />
+        <div className="mt-3">
+          <BudgetSummaryTile totals={budgetTotals} count={budgetCategories.length} />
+        </div>
       </section>
 
 {/* ── Quick Templates ─────────────────────────────────────────────────── */}
