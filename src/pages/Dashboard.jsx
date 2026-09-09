@@ -13,6 +13,7 @@ import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
+import SchemeMark from '../components/SchemeMark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -323,25 +324,18 @@ export default function Dashboard() {
           const revealed = !balanceHidden || peek
           return (
             <div
-              className="rounded-3xl p-6 relative overflow-hidden select-none"
+              className="wallet-card p-6 select-none"
               style={{ background: cardGradient(accentColor, theme) }}
               onPointerDown={() => setPeek(true)}
               onPointerUp={() => setPeek(false)}
               onPointerLeave={() => setPeek(false)}
               onPointerCancel={() => setPeek(false)}
             >
-              {/* subtle glare overlay */}
-              <div
-                className="absolute inset-0 opacity-20 pointer-events-none"
-                style={{ background: 'radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255,255,255,0.5) 0%, transparent 60%)' }}
-              />
-              {/* dot grid texture */}
-              <div
-                className="absolute inset-0 opacity-[0.06] pointer-events-none"
-                style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '18px 18px' }}
-              />
+              {/* Perimeter stitching. Decorative, and drawn by CSS so it
+                  follows the wallet's asymmetric radius for free. */}
+              <span className="wallet-stitch" aria-hidden="true" />
 
-              <div className="relative">
+              <div>
                 <div className="flex items-center justify-between mb-1">
                   <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Net Worth</span>
                   <button
@@ -354,7 +348,7 @@ export default function Dashboard() {
                   </button>
                 </div>
 
-                <div className="mt-2 mb-5">
+                <div className="mt-2 mb-6">
                   {revealed ? (
                     <span className="text-4xl font-semibold tracking-tight text-white tabular-nums">
                       {fmt(animatedNetWorth)}
@@ -364,7 +358,7 @@ export default function Dashboard() {
                   )}
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 pt-4 border-t border-white/15">
+                <div className="wallet-pocket grid grid-cols-3 gap-3 -mx-6 -mb-6 px-6 pt-7 pb-6">
                   <div>
                     <p className="text-white/50 text-[11px] mb-1">Spending</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
@@ -664,17 +658,18 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
   return (
     <button
       onClick={onClick}
-      className="acct-card shrink-0 w-[168px] rounded-2xl p-3.5 text-left flex flex-col
-        text-white active:scale-[0.97] transition-transform duration-100"
+      className="acct-card shrink-0 w-[188px] rounded-2xl px-4 pt-3.5 pb-4 text-left flex flex-col
+        text-white"
       style={{
         background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
-        // Same 1.586:1 as the Accounts tab, so a card is recognisably the
-        // same object in both places.
-        aspectRatio: '1.586',
+        // Slightly taller than a card's true 1.586 so the balance and its
+        // label have room to breathe; the Accounts faces keep the exact ratio.
+        aspectRatio: '1.45',
       }}
       data-brand={brand.key}
     >
-      <BrandWatermark brand={brand} size={120} />
+      <BrandWatermark brand={brand} />
+      <SchemeMark scheme={acct.scheme} />
 
       <div className="flex items-center gap-2">
         <BrandMark mark={brand.mark} size={18} className="shrink-0" />
@@ -683,11 +678,11 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
 
       <p className="text-[13px] font-semibold truncate mt-2">{acct.name}</p>
 
-      <div className="mt-auto">
-        <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60">
+      <div className="mt-auto pt-1">
+        <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60 mb-0.5">
           {isCredit ? 'Available' : 'Balance'}
         </p>
-        <p className="text-[15px] font-bold tabular-nums leading-tight">
+        <p className="text-[17px] font-bold tabular-nums leading-none">
           {hidden ? '₱ ••••' : fmt(isCredit ? available : acct.balance)}
         </p>
       </div>

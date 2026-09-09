@@ -187,6 +187,12 @@ html.dark body {
     inset 0 0 0 1px rgba(255, 255, 255, 0.10),
     0 1px 2px rgba(0, 0, 0, 0.16),
     0 6px 16px -4px rgba(0, 0, 0, 0.28);
+  /* The RELEASE timing lives here and the press timing on :active, so the
+     card answers a thumb in ~110ms but settles back over ~260ms. Equal
+     durations in both directions is what makes a press feel rubbery. */
+  transition:
+    transform 260ms cubic-bezier(0.2, 0.7, 0.3, 1),
+    box-shadow 260ms cubic-bezier(0.2, 0.7, 0.3, 1);
 }
 
 .acct-card::before,
@@ -208,8 +214,8 @@ html.dark body {
   background: linear-gradient(
     108deg,
     rgba(255, 255, 255, 0) 24%,
-    rgba(255, 255, 255, 0.15) 42%,
-    rgba(255, 255, 255, 0.05) 52%,
+    rgba(255, 255, 255, 0.08) 42%,
+    rgba(255, 255, 255, 0.03) 52%,
     rgba(255, 255, 255, 0) 68%
   );
   z-index: 2;
@@ -236,25 +242,74 @@ html.dark body {
    which would otherwise float this over the text. */
 .acct-card > .acct-card-watermark {
   position: absolute;
-  right: -9%;
-  bottom: -22%;
-  height: 86%;
-  width: auto;
   z-index: 0;
   opacity: 0.10;
   color: #fff;
   pointer-events: none;
+  display: block;
 }
 
-/* A dropped-in brand file arrives with its own palette. A watermark wants one
-   silhouette, so everything inside it is flattened to white and sized to the
-   slot regardless of the file's own width/height attributes. */
+/* Both variants are sized off the card's WIDTH, with height following from
+   the viewBox ratio. Sizing by height instead would leave an auto-width
+   absolutely-positioned box resolving its width from a percentage height -
+   the kind of circular sizing that renders correctly in one engine and at
+   zero in another. One axis, no ambiguity. */
 .acct-card > .acct-card-watermark > svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* A compact logomark - Shopee's bag, GCash's G, Metrobank's M, the cash
+   glyph - is bled off BOTH the right and bottom edges, about a fifth cut on
+   each, so it reads as card art running off the plastic rather than as a
+   sticker placed near a corner. */
+.acct-card > .acct-card-watermark[data-wm='mark'] {
+  width: 40%;
+  right: -9%;
+  bottom: -12%;
+}
+
+/* A wordmark - maya, GoTyme, BPI - is two to four times wider than it is
+   tall, so the same width would leave it a third of the height of a compact
+   mark. It gets much more of the card's width to compensate, and sits low
+   with only a little bleed: slicing a third off a wordmark removes the
+   letterforms that make it recognisable, which reads as a mistake rather
+   than as art. */
+.acct-card > .acct-card-watermark[data-wm='word'] {
+  width: 74%;
+  right: -6%;
+  bottom: -3%;
+}
+
+/* Flatten whatever arrived to one white silhouette. !important is deliberate:
+   it has to beat any inline fill left on a downloaded file. fill-rule is left
+   alone, because overriding it fills the holes in a mark. */
+.acct-card > .acct-card-watermark svg,
+.acct-card > .acct-card-watermark svg * {
+  fill: #fff !important;
+  stroke: none !important;
+}
+
+/* The network mark, bottom-left and meant to be read rather than sensed. */
+.acct-card > .scheme-mark {
+  position: absolute;
+  left: 16px;
+  bottom: 14px;
+  height: 18px;
+  width: auto;
+  z-index: 4;
+  opacity: 0.92;
+  pointer-events: none;
+  display: block;
+}
+.acct-card > .scheme-mark > svg {
   height: 100%;
   width: auto;
   display: block;
 }
-.acct-card > .acct-card-watermark svg * {
+.acct-card > .scheme-mark svg,
+.acct-card > .scheme-mark svg * {
   fill: #fff !important;
   stroke: none !important;
 }
@@ -262,23 +317,137 @@ html.dark body {
 /* On the near-black cards a white watermark is the only thing separating the
    face from a flat rectangle, so it gets a little more presence. */
 .acct-card[data-brand='maya-credit'] > .acct-card-watermark {
-  opacity: 0.14;
+  opacity: 0.17;
+}
+
+/* ── The net-worth wallet ─────────────────────────────────────────────────────
+   Deliberately NOT the same material as .acct-card, because it is not the
+   same object. The account faces are printed plastic: hard diagonal specular,
+   fine grain, a moulded rim. This is the wallet they live in, so it is
+   leather - matte, with light that falls off softly instead of streaking.
+
+   Three things carry that, and none of them is a shine:
+
+   1. Shape. The bottom corners are tighter than the top, so the silhouette is
+      a billfold rather than a card, and a full-bleed pocket panel runs across
+      the bottom - the panel your cards actually slide behind.
+   2. Stitching. A dashed hairline inset from the edge, following the
+      silhouette. Nothing else in the app has it, and it is the single detail
+      that says "wallet" fastest.
+   3. Matte light. A wide overhead vignette with no specular edge, over a
+      coarser and fainter grain than the cards use, so the two materials read
+      as different even when they are stacked in the same screenshot. */
+.wallet-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  border-radius: 30px 30px 22px 22px;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.18),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 2px 6px rgba(0, 0, 0, 0.14),
+    0 14px 32px -10px rgba(0, 0, 0, 0.30);
+}
+
+.wallet-card::before,
+.wallet-card::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+/* Coarser and fainter than the cards' grain - 260px tiles at 6% against
+   their 180px at 10% - which is what separates brushed leather from the
+   tight grain of a printed card. */
+.wallet-card::before {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
+  background-size: 260px 260px;
+  opacity: 0.06;
+  z-index: 1;
+}
+
+/* Light from above with no hard edge anywhere in it, plus a slight settling
+   of shadow into the base. A matte surface has no highlight you can point at. */
+.wallet-card::after {
+  background:
+    radial-gradient(125% 72% at 50% -12%, rgba(255, 255, 255, 0.20) 0%, rgba(255, 255, 255, 0) 68%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 52%, rgba(0, 0, 0, 0.10) 100%);
+  z-index: 2;
+}
+
+.wallet-card > * {
+  position: relative;
+  z-index: 4;
+}
+
+/* Saddle stitching. It runs over the pocket as well as the body, the way a
+   real perimeter stitch does, so it sits above the content layer - the 10px
+   inset keeps it in the padding gutter, clear of every glyph. */
+.wallet-card > .wallet-stitch {
+  position: absolute;
+  inset: 10px;
+  border: 1px dashed rgba(255, 255, 255, 0.20);
+  border-radius: 21px 21px 13px 13px;
+  pointer-events: none;
+  z-index: 5;
+}
+
+/* The front pocket, full-bleed to the card edges so the wallet's own radius
+   clips it to the silhouette. Its face is a pseudo-element rather than the
+   element's own background, so the thumb notch can be masked out of the face
+   WITHOUT masking the figures sitting on it. */
+.wallet-pocket {
+  position: relative;
+  isolation: isolate;
+}
+
+/* The notch is a real hole, so the wallet's gradient shows through it rather
+   than a second translucent panel darkening that patch. The inset highlight
+   is the leather fold, and because a mask clips box decorations too, the fold
+   dips around the notch on its own. */
+.wallet-pocket::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(0, 0, 0, 0.10) 0%, rgba(0, 0, 0, 0.17) 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.26);
+  -webkit-mask-image: radial-gradient(24px 17px at 50% 0, rgba(0, 0, 0, 0) 98%, #000 100%);
+  mask-image: radial-gradient(24px 17px at 50% 0, rgba(0, 0, 0, 0) 98%, #000 100%);
 }
 
 /* The grain is the one part that costs a repaint on a long list, and it is
    also the least essential layer, so it goes first when motion is reduced or
    the device is telling us to be cheap. */
 @media (prefers-reduced-transparency: reduce) {
-  .acct-card::before { display: none; }
+  .acct-card::before,
+  .wallet-card::before { display: none; }
 }
 
 /* A pressed card should feel like plastic under a thumb: the sheen shifts and
    the lift collapses, rather than the whole thing just scaling. */
 .acct-card:active {
+  transition-duration: 110ms;
+  /* Lifted off the stack rather than pushed into it: the card rises a few
+     pixels while the shadow lengthens and softens, which is what picking a
+     real card out of a wallet looks like. The barely-there scale keeps the
+     lift from reading as a jump. 3px is deliberate - the carousel's pt-1
+     gutter is 4px, so the lift never clips or trips a scrollbar. */
+  transform: translateY(-3px) scale(0.995);
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.18),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.08),
-    0 1px 1px rgba(0, 0, 0, 0.20);
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 2px 4px rgba(0, 0, 0, 0.18),
+    0 12px 24px -6px rgba(0, 0, 0, 0.36);
+}
+
+/* Keep the feedback, drop the movement. */
+@media (prefers-reduced-motion: reduce) {
+  .acct-card,
+  .acct-card:active { transition: none; }
+  .acct-card:active { transform: none; }
 }
 
 /* ── Sheet scroll lock — prevents iOS scroll bleed-through */
