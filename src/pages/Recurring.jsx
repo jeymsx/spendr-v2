@@ -1,16 +1,18 @@
 import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
-import { postRecurringCharge } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { toMonthlyAmount } from '../utils/recurring'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
-import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
-import { IconChevronRight, IconPlus } from '../components/icons'
+import { IconChevronRight, IconChevronLeft, IconPlus } from '../components/icons'
+import {
+  FREQ_OPTIONS, FREQ_ORDER, FREQ_LABEL, FREQ_SHORT,
+  toMonthlyAmount, parseDateLocal, daysUntil, dueStatus, DUE_TONE,
+} from '../utils/recurring'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -28,279 +30,221 @@ function fmtCompact(v) {
   return fmt(v)
 }
 
-// ── Date helpers ───────────────────────────────────────────────────────────────
+// ── Pieces ─────────────────────────────────────────────────────────────────────
 
-function parseDateLocal(str) {
-  if (!str) return null
-  const [y, m, d] = str.split('-').map(Number)
-  return new Date(y, m - 1, d)
-}
-
-function daysUntil(dateStr) {
-  if (!dateStr) return null
-  const due = parseDateLocal(dateStr)
-  const now = new Date(); now.setHours(0, 0, 0, 0)
-  return Math.round((due - now) / 86400000)
-}
-
-function fmtDaysUntil(n) {
-  if (n == null) return null
-  if (n < 0)  return { label: `${Math.abs(n)}d overdue`, class: 'text-red-500 dark:text-red-400 font-semibold' }
-  if (n === 0) return { label: 'Today',                  class: 'text-red-500 dark:text-red-400 font-semibold' }
-  if (n === 1) return { label: 'Tomorrow',               class: 'text-amber-600 dark:text-amber-400 font-medium' }
-  if (n <= 7)  return { label: `${n} days`,              class: 'text-amber-600 dark:text-amber-400 font-medium' }
-  if (n <= 14) return { label: '1 week',                 class: 'text-slate-500 dark:text-slate-400' }
-  return       { label: `${Math.round(n / 7)}w`,         class: 'text-slate-400 dark:text-slate-500' }
-}
-
-function fmtDate(str) {
-  if (!str) return ''
-  return parseDateLocal(str).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
-}
-
-// ── Constants ──────────────────────────────────────────────────────────────────
-
-const FREQ_OPTIONS = [
-  { value: 'daily',   label: 'Daily',   short: 'day'  },
-  { value: 'weekly',  label: 'Weekly',  short: 'wk'   },
-  { value: 'monthly', label: 'Monthly', short: 'mo'   },
-  { value: 'yearly',  label: 'Yearly',  short: 'yr'   },
-]
-
-const FREQ_ORDER = ['monthly', 'weekly', 'yearly', 'daily']
-
-const FREQ_LABEL = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.label]))
-const FREQ_SHORT = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.short]))
-
-// ── Icons ──────────────────────────────────────────────────────────────────────
-
-
-function IconRepeat() {
+function SectionLabel({ children, hint }) {
   return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="17 1 21 5 17 9" />
-      <path d="M3 11V9a4 4 0 014-4h14" />
-      <polyline points="7 23 3 19 7 15" />
-      <path d="M21 13v2a4 4 0 01-4 4H3" />
-    </svg>
-  )
-}
-
-function IconFlash() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
-      <path d="M13 2L4.09 12.78A1 1 0 005 14h6v8l8.91-10.78A1 1 0 0019 10h-6V2z" />
-    </svg>
-  )
-}
-
-// ── Monthly Summary Card ───────────────────────────────────────────────────────
-
-function MonthlySummaryCard({ items }) {
-  const active = items.filter(r => r.active)
-  const totalMonthly = active.reduce((s, r) => s + toMonthlyAmount(r.amount, r.frequency), 0)
-  const byFreq = FREQ_ORDER.map(f => ({
-    freq:  f,
-    label: FREQ_LABEL[f],
-    count: active.filter(r => r.frequency === f).length,
-    total: active.filter(r => r.frequency === f).reduce((s, r) => s + (r.amount ?? 0), 0),
-  })).filter(g => g.count > 0)
-
-  return (
-    <div className="mx-4 mb-4 rounded-2xl overflow-hidden
-      bg-gradient-to-br from-violet-500 to-blue-500
-      shadow-[0_8px_32px_rgba(139,92,246,0.35)]">
-      <div className="px-5 pt-4 pb-3">
-        <p className="text-[10px] font-semibold uppercase tracking-widest text-white/60 mb-1">
-          Monthly Cost (Active)
-        </p>
-        <p className="text-3xl font-bold text-white tabular-nums">
-          {fmtCompact(totalMonthly)}
-          <span className="text-base font-medium text-white/60 ml-1">/mo</span>
-        </p>
-        <p className="text-xs text-white/60 mt-0.5">{active.length} active payment{active.length !== 1 ? 's' : ''}</p>
-      </div>
-
-      {byFreq.length > 0 && (
-        <div className="flex border-t border-white/10">
-          {byFreq.map((g, i) => (
-            <div
-              key={g.freq}
-              className={`flex-1 px-3 py-2.5 ${i > 0 ? 'border-l border-white/10' : ''}`}
-            >
-              <p className="text-[10px] text-white/50 uppercase tracking-wider font-semibold">{g.label}</p>
-              <p className="text-sm font-bold text-white tabular-nums mt-0.5">{fmtCompact(g.total)}</p>
-              <p className="text-[10px] text-white/50">{g.count} item{g.count !== 1 ? 's' : ''}</p>
-            </div>
-          ))}
-        </div>
+    <div className="px-5 mb-2.5">
+      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
+      {hint && (
+        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>
       )}
     </div>
   )
 }
 
-// ── Upcoming Card ──────────────────────────────────────────────────────────────
+function Card({ children, className = '' }) {
+  return <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
+}
 
-function UpcomingCard({ rec, onEdit, onPost, posting }) {
-  const days    = daysUntil(rec.nextDate)
-  const dueInfo = fmtDaysUntil(days)
-  const isUrgent = days != null && days <= 1
-
+/**
+ * Upcoming / All.
+ *
+ * Lifted from Insights, deliberately down to the mechanism: bare labels, no
+ * track, and one glass pill that slides between them. The page previously ran
+ * a slate-100 trough holding a white pill, which is a second segmented-control
+ * idiom in one app - and the one that reads as a web tab strip rather than an
+ * iOS control.
+ *
+ * Equal-width segments are what make the travel work: the thumb is 100%/N and
+ * moves by multiples of its own width, which only lands right if every segment
+ * is the same size.
+ *
+ * The colour arrives as --seg-color and the label class does the theme work.
+ * Measured on white, the accent is 2.85:1 as 11px bold text - .seg-active mixes
+ * it 65% into black to clear 4.5:1, and leaves it alone in dark mode where it
+ * already passes.
+ */
+function TabSwitch({ tabs, value, onChange }) {
+  const idx = Math.max(0, tabs.findIndex(t => t.value === value))
   return (
-    <div className={[
-      'card rounded-2xl overflow-hidden',
-      isUrgent ? 'dark:border-red-500/20' : '',
-    ].join(' ')}>
-      <div className="px-4 pt-4 pb-3">
-        <div className="flex items-start gap-3">
-          {/* Category icon */}
-          <div
-            className="w-10 h-10 rounded-2xl flex items-center justify-center text-xl shrink-0"
-            style={{ backgroundColor: (rec._catColor ?? '#6366f1') + '20' }}
-          >
-            {rec._catIcon ?? '🔄'}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-[15px] text-slate-800 dark:text-white truncate">{rec.name}</p>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-              {rec.account} · {FREQ_LABEL[rec.frequency] ?? rec.frequency}
-            </p>
-          </div>
-
-          <div className="text-right shrink-0">
-            <p className="font-bold text-[15px] text-slate-800 dark:text-white tabular-nums">{fmt(rec.amount)}</p>
-            {dueInfo && (
-              <p className={`text-[11px] mt-0.5 ${dueInfo.class}`}>{dueInfo.label}</p>
-            )}
-          </div>
-        </div>
-
-        <div className="mt-3 flex items-center gap-2">
-          <div className="flex-1 flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-slate-500">
-            <IconRepeat />
-            <span>Next: {fmtDate(rec.nextDate)}</span>
-          </div>
-
-          <button
-            onClick={() => onEdit(rec)}
-            className="text-[11px] font-medium text-slate-400 dark:text-slate-500 px-2 py-1 rounded-lg
-              active:bg-slate-100 dark:active:bg-white/[0.07] transition-colors"
-          >
-            Edit
-          </button>
-
-          <button
-            onClick={() => onPost(rec)}
-            disabled={posting === rec.id}
-            className={[
-              'flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-semibold',
-              'transition-all duration-100 active:scale-95',
-              'text-white shadow-[0_2px_8px_rgba(139,92,246,0.4)]',
-              posting === rec.id
-                ? 'bg-violet-400 opacity-60'
-                : 'bg-violet-500',
-            ].join(' ')}
-          >
-            <IconFlash />
-            {posting === rec.id ? 'Posting…' : 'Post now'}
-          </button>
-        </div>
-      </div>
+    <div className="relative flex items-center">
+      <div
+        className="absolute inset-y-0 left-0 rounded-full border backdrop-blur-md pointer-events-none"
+        style={{
+          width: `calc(100% / ${tabs.length})`,
+          transform: `translateX(${idx * 100}%)`,
+          transition: 'transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1)',
+          backgroundColor: 'color-mix(in srgb, var(--color-primary) 16%, transparent)',
+          borderColor: 'color-mix(in srgb, var(--color-primary) 40%, transparent)',
+        }}
+      />
+      {tabs.map(t => (
+        <button
+          key={t.value}
+          onClick={() => onChange(t.value)}
+          aria-pressed={value === t.value}
+          className={[
+            'relative z-10 flex-1 py-1.5 text-[12px] font-semibold rounded-full',
+            'transition-colors duration-200',
+            value === t.value ? 'seg-active' : 'text-slate-500 dark:text-slate-400',
+          ].join(' ')}
+          style={value === t.value ? { '--seg-color': 'var(--color-primary)' } : undefined}
+        >
+          {t.label}
+          {t.count > 0 && (
+            <span className="ml-1 tabular-nums opacity-60">{t.count}</span>
+          )}
+        </button>
+      ))}
     </div>
   )
 }
 
-// ── All Tab Row ────────────────────────────────────────────────────────────────
+/**
+ * One bill, as a row.
+ *
+ * A row and nothing else. This used to be a card carrying an Edit link, a
+ * "Post now" pill, an active toggle and a chevron - five targets for one bill,
+ * which is what made a list of three of them read as a control panel rather
+ * than a list. Every verb lives on the bill's own page now: pay, pause, edit,
+ * delete.
+ *
+ * So the row's whole job is to get you there, and what it shows is what you
+ * need in order to decide whether to go: what it is, when it lands, and how
+ * much. The due date leads the meta line because it is the part that changes.
+ * Same shape the home screen's Upcoming rows use ("Internet / Overdue ·
+ * GCash"), so a bill looks like the same object in both places.
+ */
+function BillRow({ rec, onOpen, isLast }) {
+  const due = rec.active ? dueStatus(rec.nextDate) : null
+  const dim = !rec.active
 
-function RecurringRow({ rec, onEdit, onToggle, toggling }) {
   return (
-    <button
-      onClick={() => onEdit(rec)}
-      className="w-full flex items-center gap-3 px-4 py-3 text-left
-        active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
-    >
-      <div
-        className="w-9 h-9 rounded-xl flex items-center justify-center text-lg shrink-0"
-        style={{ backgroundColor: (rec._catColor ?? '#6366f1') + '20' }}
-      >
-        {rec._catIcon ?? '🔄'}
-      </div>
-
-      <div className="flex-1 min-w-0">
-        <p className={`text-sm font-semibold truncate ${rec.active ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-          {rec.name}
-        </p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate">
-          {rec.account} · next {fmtDate(rec.nextDate)}
-        </p>
-      </div>
-
-      <div className="text-right shrink-0 mr-2">
-        <p className={`text-sm font-bold tabular-nums ${rec.active ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-          {fmt(rec.amount)}
-        </p>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500">/{FREQ_SHORT[rec.frequency] ?? rec.frequency}</p>
-      </div>
-
-      {/* Active toggle */}
+    <>
       <button
-        onClick={e => { e.stopPropagation(); onToggle(rec) }}
-        disabled={toggling === rec.id}
-        className={[
-          'w-11 h-6 rounded-full shrink-0 relative transition-all duration-200',
-          rec.active ? 'bg-violet-500' : 'bg-slate-200 dark:bg-white/[0.1]',
-          toggling === rec.id ? 'opacity-50' : '',
-        ].join(' ')}
-        aria-label={rec.active ? 'Pause' : 'Resume'}
+        onClick={() => onOpen(rec)}
+        className="w-full flex items-center gap-3 px-4 py-4 text-left
+          active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
       >
-        <span className={[
-          'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm',
-          'transition-all duration-200',
-          rec.active ? 'left-5' : 'left-0.5',
-        ].join(' ')} />
-      </button>
+        <span
+          className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
+          style={{ backgroundColor: (rec._catColor ?? '#64748b') + (dim ? '14' : '20') }}
+        >
+          {rec._catIcon ?? '🔁'}
+        </span>
 
-      <IconChevronRight size={15} strokeWidth="2" />
-    </button>
+        <span className="flex-1 min-w-0">
+          <span className={`block text-[14px] font-semibold truncate ${
+            dim ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white'
+          }`}>
+            {rec.name}
+          </span>
+          <span className="block text-[11.5px] truncate">
+            {/* Paused replaces the date rather than sitting beside it. A
+                paused bill's "next" date is not going to happen, and showing
+                one anyway is the kind of detail that quietly misleads. */}
+            {dim ? (
+              <span className="text-slate-500 dark:text-slate-400">{rec.account} · Paused</span>
+            ) : (
+              <>
+                <span className={DUE_TONE[due?.tone] ?? 'text-slate-500 dark:text-slate-400'}>
+                  {due?.label ?? 'No date'}
+                </span>
+                {/* The account, and not the frequency. "Monthly" here
+                    duplicated the /mo already sitting under the amount on
+                    the right - measured, carrying both pushed this line to
+                    165px in a 153px column and it rendered as "9d overdue ·
+                    GCash · Mont...". Dropping the duplicate is free. */}
+                <span className="text-slate-500 dark:text-slate-400">
+                  {' · '}{rec.account}
+                </span>
+              </>
+            )}
+          </span>
+        </span>
+
+        <span className="shrink-0 text-right">
+          <span className={`block text-[14px] font-semibold tabular-nums ${
+            dim ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white'
+          }`}>
+            {fmt(rec.amount)}
+          </span>
+          <span className="block text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+            /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
+          </span>
+        </span>
+
+        <span className="shrink-0 text-slate-300 dark:text-slate-600">
+          <IconChevronRight size={15} strokeWidth="2" />
+        </span>
+      </button>
+      {!isLast && <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4" />}
+    </>
   )
 }
 
-// ── Empty State ────────────────────────────────────────────────────────────────
-
-function EmptyState({ onAdd }) {
+/** A flat calendar page with nothing on it. */
+function IconNoBills() {
   return (
-    <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-      <div className="relative w-24 h-24 mb-5">
-        <div className="absolute inset-0 rounded-full bg-violet-400 opacity-10" />
-        <div className="absolute inset-0 flex items-center justify-center text-violet-400">
-          <svg width="44" height="44" viewBox="0 0 48 48" fill="none">
-            <path d="M24 8C15.16 8 8 15.16 8 24s7.16 16 16 16 16-7.16 16-16"
-              stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-            <path d="M32 8l4 4-4 4" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
-            <path d="M24 16v8l5 3" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" />
-          </svg>
-        </div>
+    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="18" height="16" rx="3" />
+      <path d="M3 10h18M8 3v4M16 3v4" />
+      <path d="M8.5 15.5h7" />
+    </svg>
+  )
+}
+
+/** A tick, for a week with nothing due. */
+function IconAllClear() {
+  return (
+    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 6 9 17l-5-5" />
+    </svg>
+  )
+}
+
+/**
+ * Empty states, in the app's own voice.
+ *
+ * This replaced a 96px violet blob with an animated ring in it. Every other
+ * empty state in the app - Goals, Accounts, the trend section - is a quiet
+ * glyph over two lines of plain sentence, and a page that shouts when it has
+ * nothing to say is the one that looks least finished.
+ */
+function EmptyBlock({ icon, title, body, action, tone = 'calm' }) {
+  return (
+    <div className="px-8 py-12 text-center">
+      <div className={[
+        'mx-auto w-14 h-14 rounded-full flex items-center justify-center',
+        tone === 'good'
+          ? 'bg-emerald-50 dark:bg-emerald-500/[0.12] text-emerald-600 dark:text-emerald-400'
+          : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500',
+      ].join(' ')}>
+        {icon}
       </div>
-      <p className="text-base font-semibold text-slate-700 dark:text-slate-200 mb-1">No recurring payments</p>
-      <p className="text-sm text-slate-400 dark:text-slate-500 mb-5 max-w-xs">
-        Track subscriptions, bills, and any payment that repeats on a schedule.
-      </p>
-      <button
-        onClick={onAdd}
-        className="px-5 py-2.5 rounded-2xl text-sm font-semibold text-white
-          bg-violet-500 shadow-[0_4px_16px_rgba(139,92,246,0.35)]
-          active:scale-95 transition-transform duration-75"
-      >
-        Add Recurring
-      </button>
+      <p className="mt-4 text-[15px] font-semibold text-slate-800 dark:text-white">{title}</p>
+      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">{body}</p>
+      {action}
     </div>
   )
 }
 
 // ── Recurring Form Sheet ───────────────────────────────────────────────────────
 
-export function RecurringFormSheet({ open, onClose, editRec, categories, accounts }) {
+/**
+ * The add/edit form.
+ *
+ * `showDelete` defaults to true because the web layer's table has no other
+ * way to remove a bill - its comment says so, it reuses this delete flow
+ * deliberately. The mobile detail page passes false: it owns deletion itself,
+ * at the bottom of the page where a destructive action belongs, and two
+ * delete buttons for one bill is one too many. Deleting from in here would
+ * also strand you on a detail page for a bill that no longer exists.
+ */
+export function RecurringFormSheet({ open, onClose, editRec, categories, accounts, showDelete = true }) {
   const [closing,      setClosing]      = useState(false)
   const { showToast } = useToast()
   const { user } = useAuth()
@@ -441,7 +385,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
               <h2 className="text-base font-semibold text-slate-800 dark:text-white">
                 {editRec ? 'Edit Recurring' : 'Add Recurring'}
               </h2>
-              {editRec && (
+              {editRec && showDelete && (
                 <button
                   onClick={handleDelete}
                   disabled={deleting}
@@ -514,9 +458,17 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                     className={[
                       'py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150',
                       frequency === opt.value
-                        ? 'border-violet-400 bg-violet-50 dark:bg-violet-500/10 text-violet-700 dark:text-violet-300'
+                        /* seg-active, not text-primary. Measured, the accent
+                           as text is 2.63:1 on its own 8% tint - worse than
+                           on bare white, and nowhere near the 4.5:1 that
+                           14px semibold needs. The class mixes it 65% into
+                           black for light mode and leaves it alone in dark,
+                           giving 5.53:1 and 5.59:1. Same mechanism as the
+                           Insights segmented control, for the same reason. */
+                        ? 'seg-active border-primary/40 bg-primary/[0.08] dark:bg-primary/[0.12]'
                         : 'border-slate-200 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 bg-white dark:bg-white/[0.03]',
                     ].join(' ')}
+                    style={frequency === opt.value ? { '--seg-color': 'var(--color-primary)' } : undefined}
                   >
                     {opt.label}
                   </button>
@@ -609,7 +561,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                 onClick={() => setActive(p => !p)}
                 className={[
                   'w-12 h-6.5 rounded-full relative transition-all duration-200 shrink-0',
-                  active ? 'bg-violet-500' : 'bg-slate-200 dark:bg-white/[0.1]',
+                  active ? 'bg-primary' : 'bg-slate-200 dark:bg-white/[0.1]',
                 ].join(' ')}
                 style={{ height: '26px', width: '46px' }}
               >
@@ -628,7 +580,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
               onClick={handleSave}
               disabled={saving}
               className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
-                bg-violet-500 shadow-[0_4px_20px_rgba(139,92,246,0.4)]
+                bg-primary shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.4)]
                 disabled:opacity-40 disabled:shadow-none
                 active:scale-[0.98] transition-all duration-100"
             >
@@ -657,222 +609,278 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
   )
 }
 
+
 // ── Main Page ──────────────────────────────────────────────────────────────────
 
 export default function Recurring() {
-  const { showToast } = useToast()
+  const navigate = useNavigate()
   const [tab,      setTab]      = useState('upcoming')
   const [showForm, setShowForm] = useState(false)
-  const [editRec,  setEditRec]  = useState(null)
-  const [posting,  setPosting]  = useState(null)
-  const [overdraw, setOverdraw] = useState(null)
-  const [toggling, setToggling] = useState(null)
 
-  const allRec    = useLiveQuery(() => db.recurring.toArray(), [], [])
+  const allRec     = useLiveQuery(() => db.recurring.toArray(),  [], undefined)
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
-  const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
 
-  // Enrich recurring items with category icon/color
+  // Enrich with the category's icon and colour, which is all the row needs
+  // from it.
   const enriched = useMemo(() => {
     const catMap = Object.fromEntries((categories ?? []).map(c => [c.name, c]))
     return (allRec ?? []).map(r => ({
       ...r,
-      _catIcon:  catMap[r.category]?.icon  ?? '🔄',
-      _catColor: catMap[r.category]?.color ?? '#6366f1',
+      _catIcon:  catMap[r.category]?.icon  ?? '🔁',
+      _catColor: catMap[r.category]?.color ?? '#64748b',
     }))
   }, [allRec, categories])
 
-  // Upcoming: active items due within 30 days, sorted by nextDate asc
-  const upcomingItems = useMemo(() => {
+  const active = useMemo(() => enriched.filter(r => r.active), [enriched])
+
+  /** Active bills falling due in the next 30 days, soonest first. */
+  const upcoming = useMemo(() => {
     const now   = new Date(); now.setHours(0, 0, 0, 0)
     const limit = new Date(now); limit.setDate(now.getDate() + 30)
-    return enriched
+    return active
       .filter(r => {
-        if (!r.active) return false
         const d = parseDateLocal(r.nextDate)
         return d != null && d <= limit
       })
       .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? ''))
-  }, [enriched])
+  }, [active])
 
-  // All tab: grouped by frequency
-  const groupedAll = useMemo(() =>
+  /**
+   * The three figures under the total.
+   *
+   * "Due now" is the same definition the home screen's badge uses - date
+   * arrived, not yet posted - because two screens disagreeing about what needs
+   * attention is worse than either number being slightly off.
+   */
+  const stats = useMemo(() => {
+    const dueNow  = active.filter(r => (daysUntil(r.nextDate) ?? 99) <= 0).length
+    const thisWeek = active.filter(r => {
+      const n = daysUntil(r.nextDate)
+      return n != null && n > 0 && n <= 7
+    }).length
+    return { dueNow, thisWeek, paused: enriched.length - active.length }
+  }, [active, enriched])
+
+  const totalMonthly = useMemo(
+    () => active.reduce((s, r) => s + toMonthlyAmount(r.amount, r.frequency), 0),
+    [active],
+  )
+
+  /** The All tab, grouped by how often each bill repeats. */
+  const groups = useMemo(() =>
     FREQ_ORDER
       .map(freq => ({
         freq,
         label: FREQ_LABEL[freq],
-        items: enriched.filter(r => r.frequency === freq),
+        items: enriched
+          .filter(r => r.frequency === freq)
+          // Paused sink to the bottom of their own group rather than being
+          // hidden: they are still bills you own, just not running.
+          .sort((a, b) =>
+            (a.active === b.active ? 0 : a.active ? -1 : 1) ||
+            (a.nextDate ?? '').localeCompare(b.nextDate ?? '')),
       }))
       .filter(g => g.items.length > 0),
     [enriched],
   )
 
-  async function handlePost(rec, { force = false } = {}) {
-    setPosting(rec.id)
-    try {
-      await postRecurringCharge(rec, { allowOverdraw: force })
-      showToast(`${rec.name} posted!`)
-    } catch (e) {
-      if (e?.name === 'OverdrawError') {
-        setOverdraw({ rec, accountName: e.account, balance: e.balance, amount: e.amount })
-        return
-      }
-      // Was swallowed silently, so a failed post looked like nothing happened.
-      console.error('[Recurring] post failed:', e)
-      showToast('Failed to post', 'error')
-    } finally {
-      setPosting(null)
-    }
-  }
+  const openDetail = useCallback(rec => navigate(`/recurring/${rec.id}`), [navigate])
 
-  async function handleToggle(rec) {
-    setToggling(rec.id)
-    try {
-      await db.recurring.update(rec.id, { active: !rec.active })
-    } catch (e) {
-      console.error('[Recurring] toggle failed:', e)
-      showToast('Failed to update', 'error')
-    } finally {
-      setToggling(null)
-    }
-  }
-
-  function openAdd() {
-    setEditRec(null)
-    setShowForm(true)
-  }
-
-  function openEdit(rec) {
-    setEditRec(rec)
-    setShowForm(true)
-  }
+  const loading = allRec === undefined
 
   return (
-    <div className="flex flex-col page-enter" style={{ minHeight: 'calc(100dvh - 80px)' }}>
+    <div className="pb-nav">
+      {/* ── Header ──
+          Back, centred title, accent +. Identical to Goals and AccountDetail,
+          which is the point: all three are reached from a quick-action disc
+          rather than the navbar, so all three need the same way out.
 
-      {/* Header */}
-      <header className="flex items-center justify-between px-4 pt-safe-header pb-4">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Recurring</h1>
+          Titled "Bills" because that is what the disc you tapped says. It was
+          "Recurring", and a door labelled one thing opening onto a page
+          labelled another is a small break you feel without being able to
+          name. */}
+      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
         <button
-          onClick={openAdd}
-          className="flex items-center gap-1.5 px-3.5 py-2 rounded-2xl text-sm font-semibold text-white
-            bg-violet-500 shadow-[0_4px_16px_rgba(139,92,246,0.3)]
-            active:scale-95 transition-transform duration-75"
+          onClick={() => navigate(-1)}
+          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
+            text-slate-600 dark:text-slate-300 shadow-sm
+            active:scale-90 transition-transform duration-75"
+          aria-label="Back"
+        >
+          <IconChevronLeft />
+        </button>
+        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
+          Bills
+        </h1>
+        <button
+          onClick={() => setShowForm(true)}
+          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+            bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]
+            active:scale-90 transition-transform duration-75"
+          aria-label="New bill"
         >
           <IconPlus />
-          <span>Add</span>
         </button>
       </header>
 
-      {/* Monthly summary — only when there are active items */}
-      {enriched.some(r => r.active) && (
-        <MonthlySummaryCard items={enriched} />
-      )}
-
-      {/* Tabs */}
-      <div className="px-4 mb-4">
-        <div className="flex gap-1 p-1 bg-slate-100 dark:bg-white/[0.06] rounded-2xl">
-          {[
-            { value: 'upcoming', label: 'Upcoming' },
-            { value: 'all',      label: 'All'      },
-          ].map(t => (
-            <button
-              key={t.value}
-              onClick={() => setTab(t.value)}
-              className={[
-                'flex-1 py-2 rounded-xl text-sm font-semibold transition-all duration-150',
-                tab === t.value
-                  ? 'bg-white dark:bg-white/[0.1] text-slate-800 dark:text-white shadow-sm'
-                  : 'text-slate-500 dark:text-slate-400',
-              ].join(' ')}
-            >
-              {t.label}
-              {t.value === 'upcoming' && upcomingItems.length > 0 && (
-                <span className="ml-1.5 inline-flex items-center justify-center w-4 h-4 rounded-full
-                  bg-violet-500 text-white text-[9px] font-bold">
-                  {upcomingItems.length}
-                </span>
-              )}
-            </button>
-          ))}
+      {loading ? (
+        <div className="px-5 mt-6 flex flex-col gap-3">
+          <div className="h-24 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
+          <div className="h-9 rounded-full bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
+          <div className="h-40 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
         </div>
-      </div>
+      ) : enriched.length === 0 ? (
+        <EmptyBlock
+          icon={<IconNoBills />}
+          title="No bills yet"
+          body="Track subscriptions, rent, utilities — anything that comes back on a schedule. Spendr will tell you before each one lands."
+          action={
+            <button
+              onClick={() => setShowForm(true)}
+              className="inline-block mt-5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary
+                active:scale-[0.97] transition-transform duration-75"
+            >
+              Add your first bill
+            </button>
+          }
+        />
+      ) : (
+        <>
+          {/* ── The whole commitment, in one figure ──
+              The same shape Goals and AccountDetail lead with: a small caps
+              label, the number, and a line of context. It replaced a violet
+              gradient panel with a white-on-violet frequency table in it -
+              the only violet surface in the app, and a second accent nothing
+              else answered to. */}
+          <section className="px-5">
+            <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+              Monthly cost
+            </p>
+            <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+              {fmt(totalMonthly)}
+            </p>
+            <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
+              {active.length} active {active.length === 1 ? 'bill' : 'bills'}
+              {/* Everything is normalised to a month, so a yearly bill's
+                  contribution is a twelfth of it. Worth saying plainly - the
+                  figure is otherwise a mystery to anyone with an annual
+                  subscription. */}
+              {active.some(r => r.frequency !== 'monthly') && ', normalised per month'}
+            </p>
 
-      {/* Content */}
-      <div className="flex-1 overflow-y-auto">
-        {enriched.length === 0 ? (
-          <EmptyState onAdd={openAdd} />
-        ) : tab === 'upcoming' ? (
-          upcomingItems.length === 0 ? (
-            <div className="flex flex-col items-center justify-center px-6 py-14 text-center">
-              <div className="w-16 h-16 rounded-full bg-emerald-50 dark:bg-emerald-500/10 flex items-center justify-center text-emerald-500 mb-4">
-                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="20 6 9 17 4 12" />
-                </svg>
+            <div className="grid grid-cols-3 gap-3 mt-5">
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Due now
+                </p>
+                <p className={`text-[15px] font-bold tabular-nums mt-0.5 ${
+                  stats.dueNow > 0
+                    ? 'text-red-500 dark:text-red-400'
+                    : 'text-slate-800 dark:text-slate-100'
+                }`}>
+                  {stats.dueNow}
+                </p>
               </div>
-              <p className="text-base font-semibold text-slate-700 dark:text-slate-200">All clear</p>
-              <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">No payments due in the next 30 days.</p>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  This week
+                </p>
+                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
+                  {stats.thisWeek}
+                </p>
+              </div>
+              <div>
+                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                  Paused
+                </p>
+                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
+                  {stats.paused}
+                </p>
+              </div>
             </div>
+          </section>
+
+          {/* ── Which list ── */}
+          <div className="px-5 mt-6">
+            <TabSwitch
+              tabs={[
+                { value: 'upcoming', label: 'Upcoming', count: upcoming.length },
+                { value: 'all',      label: 'All',      count: 0 },
+              ]}
+              value={tab}
+              onChange={setTab}
+            />
+          </div>
+
+          {tab === 'upcoming' ? (
+            <section className="mt-5">
+              <SectionLabel hint="Active bills falling due in the next 30 days.">
+                Coming up
+              </SectionLabel>
+              <div className="px-5">
+                <Card>
+                  {upcoming.length === 0 ? (
+                    <EmptyBlock
+                      tone="good"
+                      icon={<IconAllClear />}
+                      title="All clear"
+                      body="Nothing due in the next 30 days."
+                    />
+                  ) : (
+                    upcoming.map((r, i) => (
+                      <BillRow
+                        key={r.id}
+                        rec={r}
+                        onOpen={openDetail}
+                        isLast={i === upcoming.length - 1}
+                      />
+                    ))
+                  )}
+                </Card>
+              </div>
+            </section>
           ) : (
-            <div className="px-4 flex flex-col gap-3 pb-6">
-              {upcomingItems.map(r => (
-                <UpcomingCard
-                  key={r.id}
-                  rec={r}
-                  onEdit={openEdit}
-                  onPost={handlePost}
-                  posting={posting}
-                />
+            <div className="mt-5 flex flex-col gap-6">
+              {groups.map(({ freq, label, items }) => (
+                <section key={freq}>
+                  <SectionLabel
+                    hint={`${items.length} ${items.length === 1 ? 'bill' : 'bills'} · ${fmtCompact(
+                      items.filter(r => r.active).reduce((s, r) => s + (r.amount ?? 0), 0),
+                    )} each ${freq === 'daily' ? 'day' : freq === 'weekly' ? 'week' : freq === 'yearly' ? 'year' : 'month'}`}
+                  >
+                    {label}
+                  </SectionLabel>
+                  <div className="px-5">
+                    <Card>
+                      {items.map((r, i) => (
+                        <BillRow
+                          key={r.id}
+                          rec={r}
+                          onOpen={openDetail}
+                          isLast={i === items.length - 1}
+                        />
+                      ))}
+                    </Card>
+                  </div>
+                </section>
               ))}
             </div>
-          )
-        ) : (
-          <div className="pb-6">
-            {groupedAll.map(({ freq, label, items }) => (
-              <div key={freq} className="mb-2">
-                <p className="px-5 py-2 text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                  {label}
-                </p>
-                <div className="mx-4 bg-white dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.07] rounded-2xl overflow-hidden divide-y divide-slate-100 dark:divide-white/[0.05]">
-                  {items.map(r => (
-                    <RecurringRow
-                      key={r.id}
-                      rec={r}
-                      onEdit={openEdit}
-                      onToggle={handleToggle}
-                      toggling={toggling}
-                    />
-                  ))}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+          )}
+        </>
+      )}
 
-      {/* Form sheet */}
+      {/* Add only. Editing an existing bill happens on its own page, which is
+          also where posting, pausing and deleting live. */}
       <RecurringFormSheet
         open={showForm}
         onClose={() => setShowForm(false)}
-        editRec={editRec}
+        editRec={null}
         categories={categories ?? []}
         accounts={accounts ?? []}
       />
 
-      {/* Posting a charge early can overdraw the funding account. The guard
-          lives here because handlePost and its pending state do. */}
-      <OverdrawWarningSheet
-        open={!!overdraw}
-        onClose={() => setOverdraw(null)}
-        onSaveAnyway={() => {
-          const pending = overdraw
-          setOverdraw(null)
-          if (pending) handlePost(pending.rec, { force: true })
-        }}
-        accountName={overdraw?.accountName}
-        balance={overdraw?.balance}
-        amount={overdraw?.amount}
-      />
     </div>
   )
 }

@@ -13,6 +13,7 @@ import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
+import { allocateGoals } from '../lib/goals'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -283,6 +284,10 @@ export default function Dashboard() {
   const txAll      = useLiveQuery(() => db.transactions.toArray())
   const userMeta   = useLiveQuery(() => db.meta.get('displayName'))
   const templates  = useLiveQuery(() => db.templates.toArray(),  [], [])
+  // Only the quick-action badge needs these. A goal's progress is derived from
+  // real account balances, so "is it funded?" cannot be read off the row - it
+  // has to go through the allocator, the same one the Goals page uses.
+  const goalRows   = useLiveQuery(() => db.goals.toArray(),      [], [])
 
   // ── Derived values ────────────────────────────────────────────────────────────
   const { spendingBalance, savingsBalance } = useMemo(() => {
@@ -398,7 +403,11 @@ export default function Dashboard() {
         meta: r.account ?? '',
         icon: cat?.icon ?? '🔁',
         color: cat?.color ?? null,
-        to: '/recurring',
+        // Straight to the bill, not to the list. Tapping "Internet, overdue"
+        // and landing on a page of every bill you own makes you find the one
+        // you just pointed at - and the statement rows beside it already go
+        // to their own account, so the list was the odd one out.
+        to: `/recurring/${r.id}`,
       })
     }
 
@@ -449,6 +458,49 @@ export default function Dashboard() {
 
     return out.sort((x, y) => x.date - y.date).slice(0, 2)
   }, [recurring, accounts, creditStmtMap, catMap, debts])
+
+  /**
+   * What is waiting for you behind Goals, Debts and Bills.
+   *
+   * One rule decides every one of these: a badge may only count things you
+   * can DO something about, and doing it has to make the badge go away. A
+   * count that cannot be cleared is not a notification, it is decoration -
+   * and after a week of being ignored it trains you to ignore the real ones.
+   *
+   * So each is a definition that closes:
+   *
+   *   Bills  - a charge whose date has arrived and has not been posted.
+   *            "Post now" clears it. Due TOMORROW is deliberately not
+   *            counted: there is nothing to do about it yet, and a badge that
+   *            lights up for something you cannot action is noise.
+   *   Debts  - a settlement date that has passed with money still outstanding.
+   *            Recording the payment clears it. Both directions count; being
+   *            owed money past its date is equally something to chase.
+   *   Goals  - a goal whose target the real balance has already reached.
+   *            Archiving or spending it clears it, and until you do, money is
+   *            sitting there having quietly finished its job.
+   */
+  const actionCounts = useMemo(() => {
+    // One boundary for all three, so two badges cannot disagree about what
+    // "today" is if the clock ticks over mid-render.
+    const today = new Date(); today.setHours(0, 0, 0, 0)
+    const onOrBefore = (iso) => {
+      if (!iso) return false
+      const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`)
+      return !Number.isNaN(d.getTime()) && d <= today
+    }
+
+    const bills = (recurring ?? [])
+      .filter(r => r.active && onOrBefore(r.nextDate)).length
+
+    const debtCount = (debts ?? []).filter(d =>
+      Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)) > 0 && onOrBefore(d.dueDate)).length
+
+    const alloc = allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [] })
+    const goals = alloc.active.filter(g => g.complete).length
+
+    return { bills, debts: debtCount, goals }
+  }, [recurring, debts, goalRows, accounts])
 
   const creditOutstanding = useMemo(() =>
     (accounts || [])
@@ -655,7 +707,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <QuickActions />
+      <QuickActions counts={actionCounts} />
 
       {/* ── Budget ────────────────────────────────────────────────────────────
           One line and one meter, tapping through to the full breakdown. It
@@ -1017,9 +1069,16 @@ function IconTransfer() {
  * carries aria-hidden and the link needs no aria-label - a screen reader
  * reads "Goals, link" rather than "Goals Goals".
  */
-function QuickAction({ to, icon, label }) {
+function QuickAction({ to, icon, label, badge = 0 }) {
   return (
-    <Link to={to} className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-75">
+    <Link
+      to={to}
+      className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-75"
+      /* The count is part of the link's name, not a separate announcement:
+         "Bills, 2 need attention, link". A bare "2" floating next to the
+         label would be read out with no idea what it counted. */
+      aria-label={badge > 0 ? `${label}, ${badge} need${badge === 1 ? 's' : ''} attention` : undefined}
+    >
       {/* `card` rather than a bespoke fill: same glass as the budget and
           transaction panels, and it tracks that material if it ever changes.
 
@@ -1037,9 +1096,30 @@ function QuickAction({ to, icon, label }) {
           slate-500 works in BOTH themes, so there is no dark: variant here at
           all: 4.76:1 on the light card, 3.74:1 on the dark one, which is
           exactly the navbar's own dark weight. Same softness, no failure. */}
-      <span className="card w-11 h-11 rounded-full flex items-center justify-center
-        text-slate-500">
-        {icon}
+      <span className="relative">
+        <span className="card w-11 h-11 rounded-full flex items-center justify-center
+          text-slate-500">
+          {icon}
+        </span>
+        {/* Straddling the disc's edge rather than tucked inside it. Inside, an
+            18px disc on a 44px one eats a third of the glyph's room and reads
+            as part of the icon; on the corner it reads as applied to it,
+            which is what a notification is. -top/-right of 1.5 puts its
+            centre almost exactly on the circle's 45 degree point.
+
+            Capped at 9+. The disc has to stay a disc - a three-digit count
+            would stretch it into a pill, and past nine the exact number stops
+            being the point anyway. */}
+        {badge > 0 && (
+          <span
+            className="qa-badge absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1
+              rounded-full flex items-center justify-center
+              text-[10px] font-bold tabular-nums leading-none"
+            aria-hidden="true"
+          >
+            {badge > 9 ? '9+' : badge}
+          </span>
+        )}
       </span>
       <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
         {label}
@@ -1069,13 +1149,18 @@ function QuickAction({ to, icon, label }) {
  * sheet lists them, because the FAB already reaches all three; here they are
  * one tap instead of two.
  *
+ * Only the first three can carry a count, and that is not an oversight:
+ * Goals, Debts and Bills are PLACES, and a place can have a backlog. Expense,
+ * Inflow and Transfer are verbs - there is nothing waiting for you behind
+ * them, so a badge there would have nothing to count.
+ *
  * Every glyph is the accent, not red for Expense and green for Inflow the way
  * the add sheet colours them. Three hues among six discs would read as a
  * legend that means something, when the only thing being encoded is "these go
  * to different pages" - the labels already say that, and the destination
  * pages carry the semantics.
  */
-function QuickActions() {
+function QuickActions({ counts = {} }) {
   return (
     // mt-8, not mt-5. Measured: mt-5 left 20px between the account cards and
     // the discs while the Budget heading below sat 32px away, and the eye
@@ -1084,9 +1169,9 @@ function QuickActions() {
     // rather than an appendix - and makes the space above and below it equal.
     <section className="px-5 mt-8">
       <div className="grid grid-cols-6 gap-1">
-        <QuickAction to="/goals"     icon={<IconTarget />}    label="Goals" />
-        <QuickAction to="/debts"     icon={<IconBanknote />}  label="Debts" />
-        <QuickAction to="/recurring" icon={<IconRepeat />}    label="Bills" />
+        <QuickAction to="/goals"     icon={<IconTarget />}    label="Goals"    badge={counts.goals} />
+        <QuickAction to="/debts"     icon={<IconBanknote />}  label="Debts"    badge={counts.debts} />
+        <QuickAction to="/recurring" icon={<IconRepeat />}    label="Bills"    badge={counts.bills} />
         <QuickAction to="/expense"   icon={<IconArrowOut />}  label="Expense" />
         <QuickAction to="/inflow"    icon={<IconArrowIn />}   label="Inflow" />
         <QuickAction to="/transfer"  icon={<IconTransfer />}  label="Transfer" />

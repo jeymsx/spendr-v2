@@ -924,6 +924,35 @@ html.dark body {
   color: rgba(255, 255, 255, 0.52);
 }
 
+/* ── Quick-action count badge ──────────────────────────────────────────────────
+   The notification disc on a home-screen quick action: "there is something on
+   this tab you need to look at". It straddles the disc's edge, so it sits over
+   the glass on one side and the bare page on the other, and the ring in the
+   page colour is what makes it read as punched through rather than stuck on.
+
+   #dc2626 is not a guess. Measured, it is the ONE red in the scale that
+   answers both requirements at once:
+
+     white text on the fill   red-500 3.76:1  red-600 4.83:1  red-700 6.47:1
+     fill against the page    red-500 3.60 / 5.11             red-700 6.18 / 2.97
+                                        (light / dark)
+
+   red-500 fails the 4.5:1 that 10px bold white text needs; red-700 clears
+   that easily but falls to 2.97:1 against the dark page, under the 3:1 a
+   meaningful graphic needs - a badge you cannot find is not a badge. red-600
+   clears every bar in both themes (4.83 on the text, 4.62 light and 3.98 dark
+   on the fill), so one value covers the set and there is no dark: variant to
+   keep in step. Same outcome as the slate-500 glyph on the disc beneath it. */
+.qa-badge {
+  background: #dc2626;
+  color: #ffffff;
+  box-shadow: 0 0 0 2px #f8fafc;
+}
+
+.dark .qa-badge {
+  box-shadow: 0 0 0 2px #0b0f14;
+}
+
 /* ── Sheet scroll lock — prevents iOS scroll bleed-through */
 #app-main.scroll-locked {
   overflow: hidden;
