@@ -6,7 +6,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
 import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
-import { IconBank, IconCard, IconPhone, IconWallet } from '../components/icons'
+import { IconBank, IconCard, IconChevronRight, IconPhone, IconWallet } from '../components/icons'
 import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
@@ -423,8 +423,31 @@ export default function Dashboard() {
       })
     }
 
+    // Debts you owe, where a date was actually set. A dated debt is the same
+    // object as a bill: money committed, to a deadline.
+    //
+    // Only `i_owe`. Money owed TO you is not "about to leave", and netting an
+    // inflow into this section's total would make one figure answer two
+    // questions. It stays on the Debts page, where the distinction is the
+    // whole point.
+    for (const d of debts ?? []) {
+      const owed = Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0))
+      if (d.type !== 'i_owe' || owed <= 0 || !d.dueDate) continue
+      const when = new Date(`${String(d.dueDate).slice(0, 10)}T00:00:00`)
+      if (Number.isNaN(when.getTime())) continue
+      out.push({
+        key: `debt-${d.id}`, kind: 'debt', date: when,
+        name: d.name || d.contact || 'Debt',
+        amount: owed,
+        meta: d.contact && d.name !== d.contact ? d.contact : 'You owe',
+        icon: '🧾',
+        color: null,
+        to: '/debts?tab=i_owe',
+      })
+    }
+
     return out.sort((x, y) => x.date - y.date).slice(0, 2)
-  }, [recurring, accounts, creditStmtMap, catMap])
+  }, [recurring, accounts, creditStmtMap, catMap, debts])
 
   const creditOutstanding = useMemo(() =>
     (accounts || [])
@@ -675,18 +698,17 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* ── Planner: goals, debts, recurring ──────────────────────────────────
+      {/* ── Goals and Debts: two doors ─────────────────────────────────────
 
-          Three tiles where a debts panel and a seven-day bill list used to be.
-          Both were roughly a screen of vertical space spent restating figures
-          that have their own pages, and they pushed Recent - the thing people
-          actually come to the home screen for - below the fold.
+          Where a debts panel and a seven-day bill list used to be. Both were
+          roughly a screen of vertical space spent restating figures that have
+          their own pages, and they pushed Recent - the thing people actually
+          open the home screen for - below the fold.
 
-          Bare icons were the ask; each tile carries one live figure as well,
-          because "Debts" alone answers nothing and the figure is the reason
-          you would tap through. Enough to decide, not enough to browse: that
-          is what earns the space. ── */}
-      <PlannerRow goalAlloc={goalAlloc} debts={debts} />
+          Recurring left this group entirely: it is rows in Upcoming now,
+          which says what a tile could only point at. What is left is two
+          destinations, so they are a list rather than a grid. ── */}
+      <PlannerList goalAlloc={goalAlloc} debts={debts} />
 
       {/* ── Recent Transactions ──────────────────────────────────────────────── */}
       <UpcomingSection items={upcomingItems} />
@@ -920,78 +942,84 @@ function UpcomingSection({ items }) {
   )
 }
 
-// ── Planner row ────────────────────────────────────────────────────────────────
+// ── Planner list ───────────────────────────────────────────────────────────────
 
 /**
- * One tile: an icon, what it is, and the single figure that would make you
- * open it.
+ * One door: an icon, what is behind it, the figure that would make you open
+ * it, and a chevron.
  *
- * The figure carries the colour, not the icon. Three differently-tinted icons
- * read as a category legend - as if the hues meant something - when all they
- * would be encoding is "these are different pages". Keeping the chrome neutral
- * leaves red free to mean money owed and amber to mean a bill is late, which
- * is worth more than decoration.
+ * This replaced a row of tiles. The tiles were the problem rather than their
+ * number - two looked as lopsided as three looked junior - because a grid
+ * says "these are dashboard metrics" when they are actually just navigation.
+ * An inset grouped list is what iOS uses for exactly this, and it never looks
+ * unbalanced, holds a fourth row without a redesign, and reads as somewhere
+ * to go rather than something to read.
  */
-function PlannerTile({ to, icon, label, value, valueClass = '', border = false }) {
+function PlannerRow({ to, icon, label, value, valueClass = '', isLast = false }) {
   return (
     <Link
       to={to}
-      className={`flex-1 min-w-0 px-3 py-3.5 flex flex-col items-center gap-1.5
-        active:opacity-70 transition-opacity ${
-          border ? 'border-r border-slate-100 dark:border-white/[0.12]' : ''
-        }`}
+      className="flex items-center gap-3 pl-4 pr-3 py-3 active:bg-slate-50 dark:active:bg-white/[0.04]
+        transition-colors"
     >
       <span
-        className="w-9 h-9 rounded-full flex items-center justify-center text-[17px] leading-none
+        className="w-7 h-7 rounded-xl flex items-center justify-center text-[15px] leading-none shrink-0
           bg-slate-100 dark:bg-white/[0.07]"
         aria-hidden="true"
       >
         {icon}
       </span>
-      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">{label}</span>
-      <span className={`text-[12px] font-bold tabular-nums truncate max-w-full ${
-        valueClass || 'text-slate-800 dark:text-slate-100'
+      <span className="flex-1 min-w-0 text-[15px] font-medium text-slate-800 dark:text-white truncate">
+        {label}
+      </span>
+      <span className={`text-[13px] tabular-nums shrink-0 ${
+        valueClass || 'text-slate-500 dark:text-slate-400'
       }`}>
         {value}
       </span>
+      <span className="text-slate-300 dark:text-slate-600 shrink-0">
+        <IconChevronRight />
+      </span>
+      {/* Separator inset to start under the label, not the card edge - the
+          detail that makes a list read as iOS rather than as a table. Drawn
+          by the row so the last one simply omits it. */}
+      {!isLast && (
+        <span className="absolute left-[3.25rem] right-0 bottom-0 h-px
+          bg-slate-200/80 dark:bg-white/[0.09]" aria-hidden="true" />
+      )}
     </Link>
   )
 }
 
-function PlannerRow({ goalAlloc, debts }) {
-  // Debts: what you owe is the actionable half, so it leads. Money owed TO you
-  // only takes the slot when you owe nothing - otherwise the tile would read
-  // green while you are in the red.
+function PlannerList({ goalAlloc, debts }) {
+  // What you owe is the actionable half, so it leads. Money owed TO you only
+  // takes the slot when you owe nothing - otherwise the row would read green
+  // while you are in the red.
   const { debtValue, debtClass } = useMemo(() => {
     const outstanding = (list) => list
       .filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0))
       .reduce((s, d) => s + Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)), 0)
     const iOwe = outstanding((debts ?? []).filter(d => d.type === 'i_owe'))
     const owed = outstanding((debts ?? []).filter(d => d.type === 'owed_to_me'))
-    if (iOwe > 0) return { debtValue: fmtCompact(iOwe), debtClass: 'text-red-500 dark:text-red-400' }
-    if (owed > 0) return { debtValue: fmtCompact(owed), debtClass: 'text-emerald-600 dark:text-emerald-400' }
-    return { debtValue: 'Clear', debtClass: 'text-slate-400 dark:text-slate-500' }
+    if (iOwe > 0) return { debtValue: `${fmtCompact(iOwe)} owed`, debtClass: 'text-red-500 dark:text-red-400 font-semibold' }
+    if (owed > 0) return { debtValue: `${fmtCompact(owed)} to collect`, debtClass: 'text-emerald-600 dark:text-emerald-400 font-semibold' }
+    return { debtValue: 'Clear', debtClass: '' }
   }, [debts])
 
-  // Goals: percent funded across the whole plan. A goal with no target set
-  // contributes nothing to either side of that fraction, so it cannot quietly
-  // drag the figure down - see allocateGoals.
+  // A goal with no target set contributes to neither side of the fraction, so
+  // it cannot quietly drag the figure down - see allocateGoals.
   const { goalValue, goalClass } = useMemo(() => {
     const t = goalAlloc?.totals
-    if (!t || t.count === 0) return { goalValue: 'Set one', goalClass: 'text-slate-400 dark:text-slate-500' }
-    if (t.complete === t.count) return { goalValue: 'All funded', goalClass: 'text-emerald-600 dark:text-emerald-400' }
-    return { goalValue: `${Math.round(t.pct)}%`, goalClass: '' }
+    if (!t || t.count === 0) return { goalValue: 'None yet', goalClass: '' }
+    if (t.complete === t.count) return { goalValue: 'All funded', goalClass: 'text-emerald-600 dark:text-emerald-400 font-semibold' }
+    return { goalValue: `${Math.round(t.pct)}% funded`, goalClass: '' }
   }, [goalAlloc])
 
   return (
     <section className="px-5 mt-3">
-      <div className="card rounded-2xl overflow-hidden flex">
-        {/* Recurring used to be the third tile. It has a better home now:
-            UpcomingSection shows the actual next charge as a row, which is
-            the thing a tile could only ever point at. Goals and Debts are
-            still tiles pending a decision on what they should become. */}
-        <PlannerTile to="/goals" icon="🎯" label="Goals" value={goalValue} valueClass={goalClass} border />
-        <PlannerTile to="/debts" icon="🧾" label="Debts" value={debtValue} valueClass={debtClass} />
+      <div className="card rounded-2xl overflow-hidden [&>a]:relative">
+        <PlannerRow to="/goals" icon="🎯" label="Goals" value={goalValue} valueClass={goalClass} />
+        <PlannerRow to="/debts" icon="🧾" label="Debts" value={debtValue} valueClass={debtClass} isLast />
       </div>
     </section>
   )
