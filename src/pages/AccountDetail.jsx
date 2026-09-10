@@ -63,66 +63,183 @@ function forwardDelta(tx, name, isCredit) {
 }
 
 const DAY_MS = 864e5
+const HOUR_MS = 36e5
 
 /**
- * Daily closing figures for the last `days` days, ending today.
+ * The ranges the chart can show.
+ *
+ * `points` is the number of samples, not a bucket size, so each range gets a
+ * resolution that suits its span rather than a fixed one: five-minute steps
+ * across an hour, hourly across a day, daily across a month, weekly across a
+ * year. A fixed daily bucket would draw 1H as a single point and 1Y as 365
+ * of them.
+ *
+ * Be warned that 1H and 1D will usually be flat lines for a bank account -
+ * most people do not transact twice in an hour. They are here because the
+ * ranges are a familiar set and a missing one reads as broken, and because
+ * they are genuinely useful on the day you are watching a transfer land.
+ */
+const TREND_RANGES = [
+  { key: '1h',  label: '1H',  span: HOUR_MS,          points: 13 },
+  { key: '1d',  label: '1D',  span: 24 * HOUR_MS,     points: 25 },
+  { key: '7d',  label: '7D',  span: 7 * DAY_MS,       points: 29 },
+  { key: '1m',  label: '1M',  span: 30 * DAY_MS,      points: 31 },
+  { key: '3m',  label: '3M',  span: 90 * DAY_MS,      points: 46 },
+  { key: '6m',  label: '6M',  span: 180 * DAY_MS,     points: 61 },
+  { key: '1y',  label: '1Y',  span: 365 * DAY_MS,     points: 53 },
+  // Span is worked out from the oldest transaction on the account.
+  { key: 'all', label: 'ALL', span: null,             points: 60 },
+]
+
+const RANGE_TITLE = {
+  '1h': 'Last hour', '1d': 'Last 24 hours', '7d': 'Last 7 days',
+  '1m': 'Last 30 days', '3m': 'Last 3 months', '6m': 'Last 6 months',
+  '1y': 'Last year', all: 'All time',
+}
+
+/**
+ * A point's label, at a resolution the span justifies.
+ *
+ * An hour of five-minute samples all labelled "Sep 10" tells you nothing; a
+ * year of weekly ones labelled "3:20 PM" tells you less.
+ */
+function trendLabeller(span) {
+  if (span <= 2 * DAY_MS) {
+    return new Intl.DateTimeFormat('en-PH', { hour: 'numeric', minute: '2-digit' })
+  }
+  if (span <= 400 * DAY_MS) {
+    return new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' })
+  }
+  return new Intl.DateTimeFormat('en-PH', { month: 'short', year: 'numeric' })
+}
+
+/**
+ * The balance over time, as `points` samples ending now.
  *
  * Built by walking BACKWARDS from the figure the page already shows, undoing
- * one day of activity at a time. Anchoring to the displayed number rather than
+ * activity as it goes. Anchoring to the displayed number rather than
  * recomputing from some historic zero means the right-hand end of the line
  * always agrees with the big number above it - a chart that disagrees with the
  * balance beside it destroys trust in both.
  *
+ * This used to bucket by calendar day, which capped the resolution at one
+ * point per day and made 1H impossible. Now it sorts the movements once and
+ * sweeps a single pointer back through them, so the sample interval is just
+ * span/(points-1) and any range works the same way. A transaction's full
+ * timestamp is used rather than its date, which is what makes an hourly
+ * line meaningful.
+ *
  * Future-dated rows are excluded, so an installment plan booked months ahead
  * does not draw a cliff at today's edge.
  */
-function buildTrend(txs, name, isCredit, current, days = 30) {
-  const today = new Date(); today.setHours(0, 0, 0, 0)
-  const start = today.getTime() - (days - 1) * DAY_MS
-
-  // Net movement per day, for the window and for everything after it.
-  const perDay = new Map()
-  let afterWindow = 0
+function buildTrend(txs, name, isCredit, current, range, now = Date.now()) {
+  const moves = []
+  let oldest = Infinity
   for (const tx of txs) {
-    const d = new Date(tx.date ?? 0)
-    if (Number.isNaN(d.getTime())) continue
-    d.setHours(0, 0, 0, 0)
-    const t = d.getTime()
+    const t = new Date(tx.date ?? 0).getTime()
+    if (Number.isNaN(t)) continue
     const delta = forwardDelta(tx, name, isCredit)
     if (!delta) continue
-    if (t > today.getTime())     { afterWindow += delta; continue }
-    if (t < start)               continue
-    perDay.set(t, (perDay.get(t) ?? 0) + delta)
+    moves.push({ t, delta })
+    if (t < oldest) oldest = t
   }
+  moves.sort((a, b) => b.t - a.t)   // newest first
 
-  // `current` is the live figure, which already reflects any future-dated
-  // rows; take those back off so today's point is today's actual position.
-  let running = current - afterWindow
+  // ALL spans back to the oldest movement - plus exactly one sample step, so
+  // the first point sits BEFORE that movement rather than on it.
+  //
+  // Without the padding, "all time" starts at the instant of the first
+  // transaction, which means that transaction is already inside the first data
+  // point and you never see it arrive. Measured on a real account: ALL read
+  // −₱7.2K while 1Y read +₱32.8K on the same history, because 1Y's window
+  // began before the ₱40,000 payroll and ALL's began at it. Both figures were
+  // arithmetically right and one of them was useless - "all time" hiding the
+  // largest event in the account's life.
+  //
+  // Padding by one step is solved rather than fudged with a 1.02 multiplier:
+  // we want span = raw + span/(points-1), so span = raw·(points-1)/(points-2).
+  //
+  // The floor stops a day-old account rendering "all time" as a few hours.
+  const rawSpan = Number.isFinite(oldest) ? now - oldest : 30 * DAY_MS
+  const padded = rawSpan * (range.points - 1) / (range.points - 2)
+  const span = range.span ?? Math.max(7 * DAY_MS, padded)
+  const step = span / (range.points - 1)
+
+  // `current` is the live figure and already includes any future-dated rows,
+  // so take those back off before the sweep starts.
+  let running = current
+  let i = 0
+  while (i < moves.length && moves[i].t > now) { running -= moves[i].delta; i++ }
 
   const out = []
-  for (let i = 0; i < days; i++) {
-    const t = today.getTime() - i * DAY_MS
+  for (let k = 0; k < range.points; k++) {
+    const t = now - k * step
+    // Everything more recent than this sample has to come back off.
+    while (i < moves.length && moves[i].t > t) { running -= moves[i].delta; i++ }
     out.push({ t, value: running })
-    running -= perDay.get(t) ?? 0   // step back over that day's activity
   }
   out.reverse()
 
-  const label = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' })
-  return out.map(p => ({ ...p, day: label.format(new Date(p.t)) }))
+  const label = trendLabeller(span)
+  return out.map(pt => ({ ...pt, day: label.format(new Date(pt.t)) }))
 }
 
-function BalanceTrend({ data, color, isCredit }) {
+/** The Insights page's chip row, at eight options instead of five. */
+function TrendRangeChips({ range, onRange }) {
+  const activeIdx = TREND_RANGES.findIndex(r => r.key === range)
+  return (
+    <div className="relative flex items-center justify-center">
+      <div className="relative flex items-center">
+        {/* sliding frosted glass pill */}
+        <div
+          className="absolute top-0 bottom-0 rounded-xl border bg-primary/[0.10] dark:bg-primary/[0.12]
+            border-primary/30 dark:border-primary/[0.25] pointer-events-none"
+          style={{
+            width: `${100 / TREND_RANGES.length}%`,
+            transform: `translateX(${activeIdx * 100}%)`,
+            transition: 'transform 0.26s cubic-bezier(0.34, 1.4, 0.64, 1)',
+          }}
+        />
+        {TREND_RANGES.map(r => (
+          <button
+            key={r.key}
+            onClick={() => onRange(r.key)}
+            aria-pressed={range === r.key}
+            className={`relative z-10 w-[38px] py-1.5 text-[10px] font-bold text-center
+              transition-colors duration-200 ${
+                range === r.key ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
+              }`}
+          >{r.label}</button>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+function BalanceTrend({ data, color, isCredit, rangeKey, rangeTitle }) {
   const values = data.map(d => d.value)
   const min = Math.min(...values)
   const max = Math.max(...values)
   const flat = max - min < 0.005
 
   if (flat) {
+    // No filled panel behind this. A grey card reads as a component that
+    // failed to load - a thing gone wrong - when the truth is milder and
+    // more specific: the balance genuinely did not move. So the empty state
+    // is drawn in the chart's own language, as the line it would have been:
+    // a dashed baseline, flat, because flat is the answer.
+    //
+    // The height matches the real chart's 132px so switching ranges never
+    // shifts the page. Same margins too, so the dashed line starts and ends
+    // exactly where a real line would.
     return (
       <div className="px-5">
-        <div className="py-10 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.03]">
-          <p className="text-sm text-slate-500 dark:text-slate-400">No movement in 30 days</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+        <div className="h-[132px] flex flex-col items-center justify-center text-center">
+          <IconFlatChart />
+          <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400 mt-3">
+            Flat · {rangeTitle.toLowerCase()}
+          </p>
+          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
             {isCredit ? 'No charges or payments' : 'Nothing in or out of this account'}
           </p>
         </div>
@@ -140,7 +257,7 @@ function BalanceTrend({ data, color, isCredit }) {
   return (
     <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
       <ResponsiveContainer width="100%" height={132}>
-        <LineChart data={data} margin={{ top: 10, right: 6, left: 6, bottom: 10 }}>
+        <LineChart key={rangeKey} data={data} margin={{ top: 10, right: 6, left: 6, bottom: 10 }}>
           <XAxis dataKey="day" hide />
           <YAxis
             hide
@@ -182,6 +299,51 @@ function BalanceTrend({ data, color, isCredit }) {
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
+
+/**
+ * Empty-ledger glyph: a page with two ruled lines and a third left blank.
+ *
+ * 24x24 grid, 2px stroke on integer coordinates so the edges land on pixel
+ * boundaries at 1x, currentColor so it tracks the text beside it in both
+ * themes, and aria-hidden because the sentence under it already says this.
+ * The missing third line is the whole idea - the rows that would be here.
+ */
+/**
+ * Flat-chart glyph: an axis corner with a dashed, level series.
+ *
+ * Same family as IconEmptyLedger - 24x24, 2px stroke on integer coordinates
+ * so edges land on pixel boundaries at 1x, currentColor, no fill. A rising
+ * line would have been the wrong picture: it implies data. Level and dashed
+ * is the actual answer.
+ */
+function IconFlatChart() {
+  return (
+    <svg
+      width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      className="text-slate-300 dark:text-white/20"
+      aria-hidden="true" focusable="false"
+    >
+      <path d="M4 4v16h16" />
+      <path d="M8 13h9" strokeDasharray="3 3" />
+    </svg>
+  )
+}
+
+function IconEmptyLedger() {
+  return (
+    <svg
+      width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
+      className="text-slate-300 dark:text-white/20"
+      aria-hidden="true" focusable="false"
+    >
+      <rect x="4" y="3" width="16" height="18" rx="3" />
+      <path d="M8 9h8M8 13h5" />
+      <path d="M8 17h3" strokeDasharray="2 2" />
+    </svg>
+  )
+}
 
 function IconChevronLeft() {
   return (
@@ -230,6 +392,8 @@ export default function AccountDetail() {
     [categories],
   )
 
+  // 1m is the old fixed behaviour, so the page opens on what it always showed.
+  const [trendRange,  setTrendRange]  = useState('1m')
   const [selectedTx,  setSelectedTx]  = useState(null)
   const [qrVisible,   setQrVisible]   = useState(false)
   const [formOpen,    setFormOpen]    = useState(false)
@@ -301,10 +465,14 @@ export default function AccountDetail() {
   const isCredit  = account?.type === 'credit'
   const totalUsed = isCredit ? (creditData?.currentBalance ?? 0) : (account?.balance ?? 0)
 
+  const range = useMemo(
+    () => TREND_RANGES.find(r => r.key === trendRange) ?? TREND_RANGES[3],
+    [trendRange],
+  )
   const trend = useMemo(() => {
     if (!account) return []
-    return buildTrend(acctTxs, account.name, isCredit, totalUsed)
-  }, [acctTxs, account?.name, isCredit, totalUsed])
+    return buildTrend(acctTxs, account.name, isCredit, totalUsed, range)
+  }, [acctTxs, account?.name, isCredit, totalUsed, range])
 
   // What this balance is already promised to. Every goal is passed in, not
   // just this account's: a higher-ranked goal can drain the balance before the
@@ -478,15 +646,28 @@ export default function AccountDetail() {
         </div>
       </section>
 
-      {/* ── 30-day trend ── */}
+      {/* ── Balance over time ──────────────────────────────────────────────
+
+          Chips below the chart, not above it: the reading order is "here is
+          the shape, and here is the span it covers", and it keeps the tap
+          targets away from the thumb's path across the line itself. ── */}
       <section className="mt-7">
         <div className="flex items-baseline justify-between px-5 mb-1">
           <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-            Last 30 days
+            {RANGE_TITLE[range.key]}
           </h2>
           <TrendDelta data={trend} isCredit={isCredit} />
         </div>
-        <BalanceTrend data={trend} color={trendColor} isCredit={isCredit} />
+        <BalanceTrend
+          data={trend}
+          color={trendColor}
+          isCredit={isCredit}
+          rangeKey={range.key}
+          rangeTitle={RANGE_TITLE[range.key]}
+        />
+        <div className="mt-2.5">
+          <TrendRangeChips range={range.key} onRange={setTrendRange} />
+        </div>
       </section>
 
       {/* ── What this balance is earmarked for ──────────────────────────────
@@ -726,10 +907,13 @@ export default function AccountDetail() {
               Transactions · {acctTxs.length}
             </p>
             {acctTxs.length === 0 ? (
-              <div className="py-12 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.03]">
-                <p className="text-sm text-slate-500 dark:text-slate-400">No transactions yet</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  Transactions using this account will appear here
+              <div className="py-10 flex flex-col items-center text-center">
+                <IconEmptyLedger />
+                <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400 mt-3">
+                  No transactions yet
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  Anything you spend or receive here will show up
                 </p>
               </div>
             ) : (

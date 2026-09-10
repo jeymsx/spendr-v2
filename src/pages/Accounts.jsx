@@ -944,12 +944,12 @@ export default function Accounts() {
           )}
           <button
             onClick={openAdd}
-            className="flex items-center gap-1.5 pl-3 pr-4 h-9 rounded-2xl text-sm font-semibold
-              bg-primary text-white
-              active:scale-95 transition-transform duration-100"
+            className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+              bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]
+              active:scale-90 transition-transform duration-75"
+            aria-label="Add account"
           >
-            <IconPlus size={15} strokeWidth="2.5" />
-            Add Account
+            <IconPlus size={19} strokeWidth="2.5" />
           </button>
         </div>
       </div>
@@ -972,7 +972,7 @@ export default function Accounts() {
             </svg>
           </div>
           <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No accounts yet</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Tap "Add Account" to get started</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Tap + to get started</p>
         </div>
       )}
 
