@@ -202,10 +202,13 @@ Small, cheap, and each one removes a real papercut.
    with UNDO is faster and safer: it does not interrupt the common case, and it
    covers accidents the confirm dialog never sees.
 
-3. **The amount keypad should be everywhere money is entered.**
-   [NumericKeypad](src/components/NumericKeypad.jsx) exists and is good; the new
-   goal form uses a plain `inputMode="decimal"` field, as do several sheets. One
-   way to type an amount, not two.
+3. ~~**The amount keypad should be everywhere money is entered.**~~ *Done, the
+   other way round.* This asked for `NumericKeypad` to spread; the call went to
+   the plain `inputMode="decimal"` field instead, because that is what Add
+   Expense, Add Inflow, Transfer and every sheet already used - the keypad was
+   one screen out of many. A custom pad also cannot do what a real input does
+   for free: caret, select-all, paste, hardware keyboard on the desktop build,
+   dictation. The component is deleted; there is one way to type an amount.
 
 4. **Pull-to-refresh has no result.** The "↓ Pull to sync" affordance appears
    even when signed out, where syncing is impossible. Hide it, or say what it

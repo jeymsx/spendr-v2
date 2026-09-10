@@ -1,6 +1,10 @@
 import { useState } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
+import { accountBrand } from '../lib/accountBrands'
+import { normalizeDesign } from '../lib/cardDesigns'
+import BrandMark from './BrandMark'
+import FadeScroller from './FadeScroller'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -9,6 +13,42 @@ const fmt = (v) => {
 }
 
 const TYPE_LABEL = { cash: 'Cash', savings: 'Savings', credit: 'Credit', ewallet: 'E-Wallet', bank: 'Bank' }
+
+/**
+ * The account's own card face, at chip size.
+ *
+ * This replaced a coloured dot inside a tinted square - a generic swatch that
+ * said "this account is blue" and nothing else. Everywhere else in the app an
+ * account already HAS a face: the home carousel, the Accounts tab, the
+ * transaction filter. Picking one from a list of dots meant recognising a
+ * colour you had only ever seen as a card.
+ *
+ * Same class and the same custom properties as the real thing, `data-design`
+ * included, so a card you restyled is the card you see here. The brand mark
+ * survives a custom colour by design - accountBrand only overrides the
+ * gradient - so a repainted Metrobank card still carries the Metrobank mark.
+ *
+ * The row keeps the name, the type and the balance. A grid of full card faces
+ * was the other option and it is the wrong one for THIS sheet: choosing which
+ * account to pay from is a question about balances, and a face big enough to
+ * carry one legibly is a face too big to fit eight of on a screen.
+ */
+function AccountChip({ acct, size = 'md' }) {
+  const brand = accountBrand(acct)
+  const big = size === 'md'
+  return (
+    <span
+      className={`acct-card shrink-0 flex items-center justify-center text-white ${
+        big ? 'w-[46px] h-[32px] rounded-[9px]' : 'w-[40px] h-[28px] rounded-[8px]'
+      }`}
+      style={{ '--card-from': brand.from, '--card-to': brand.to }}
+      data-design={normalizeDesign(acct.design)}
+      aria-hidden="true"
+    >
+      <BrandMark mark={brand.mark} size={big ? 15 : 13} className="opacity-95" />
+    </span>
+  )
+}
 
 export default function AccountPickerSheet({ open, onClose, accounts, selected, onSelect, exclude = [] }) {
   const [closing, setClosing] = useState(false)
@@ -52,7 +92,12 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
           'border-t border-slate-100 dark:border-white/[0.07]',
           'flex flex-col overflow-hidden',
         ].join(' ')}
-        style={{ maxHeight: '60dvh' }}
+        /* 78dvh, up from 60. At 60 a seven-account list did not fit, so the
+           sheet opened already scrolled with a row sliced off at the top -
+           the state the fade below exists to soften, entered before you had
+           touched anything. 78 fits the common case outright and still reads
+           as a sheet rather than a takeover. */
+        style={{ maxHeight: '78dvh' }}
       >
         {/* handle + header */}
         <div className="pt-5 px-5 shrink-0">
@@ -63,8 +108,8 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
         </div>
 
         {/* scrollable list */}
-        <div
-          className="overflow-y-auto flex-1 px-5"
+        <FadeScroller
+          className="flex-1 px-5"
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           <div className="flex flex-col gap-2">
@@ -120,7 +165,7 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
             })}
           </div>
           <div className="h-8 shrink-0" />
-        </div>
+        </FadeScroller>
       </div>
     </div>
   )
@@ -147,12 +192,7 @@ function AccountRow({ acct, selected, creditAvailMap, onPick, roundedTop = false
           : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.07]',
       ].join(' ')}
     >
-      <span
-        className="w-10 h-10 rounded-xl shrink-0 flex items-center justify-center"
-        style={{ backgroundColor: (acct.color ?? '#2D9DFF') + '28' }}
-      >
-        <span className="w-3.5 h-3.5 rounded-full" style={{ backgroundColor: acct.color ?? '#2D9DFF' }} />
-      </span>
+      <AccountChip acct={acct} />
 
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{acct.name}</p>
@@ -193,13 +233,15 @@ function ChildRow({ acct, selected, creditAvailMap, onPick, isLast }) {
           : 'bg-white/60 dark:bg-white/[0.02] active:bg-slate-50 dark:active:bg-white/[0.05]',
       ].join(' ')}
     >
-      {/* Connector column — matches parent icon width (40px) */}
-      <div className="w-10 shrink-0 flex items-center justify-center">
-        <div
-          className="w-2.5 h-2.5 rounded-full border-2 bg-white dark:bg-[#111820]"
-          style={{ borderColor: acct.color ?? '#2D9DFF' }}
-        />
-      </div>
+      {/* A hairline connector, then the child's own face at the smaller size.
+          The indent and the shorter chip carry the hierarchy that the old
+          hollow dot carried - and the child gets to look like a card too,
+          which matters most here: a sub-account of "Maya" is exactly the case
+          where a name alone is ambiguous. */}
+      <span className="w-3 shrink-0 flex items-center justify-center" aria-hidden="true">
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-300 dark:bg-white/20" />
+      </span>
+      <AccountChip acct={acct} size="sm" />
 
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate">{acct.name}</p>

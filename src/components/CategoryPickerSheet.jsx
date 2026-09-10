@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
+import FadeScroller from './FadeScroller'
 
 export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect }) {
   const [closing, setClosing] = useState(false)
@@ -28,7 +29,10 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
           'border-t border-slate-100 dark:border-white/[0.07]',
           'flex flex-col overflow-hidden',
         ].join(' ')}
-        style={{ maxHeight: '60dvh' }}
+        /* Same 78dvh as the account picker. A four-column grid of every
+           expense category is the longest list in the app, so this is where
+           a short sheet forced the most scrolling. */
+        style={{ maxHeight: '78dvh' }}
       >
         {/* non-scrollable header */}
         <div className="pt-5 px-5 shrink-0">
@@ -38,9 +42,9 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
           </p>
         </div>
 
-        {/* scrollable grid */}
-        <div
-          className="overflow-y-auto flex-1 px-5"
+        {/* scrollable grid, feathered at whichever edge it runs past */}
+        <FadeScroller
+          className="flex-1 px-5"
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           <div className="grid grid-cols-4 gap-2.5">
@@ -70,7 +74,7 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
             })}
           </div>
           <div className="h-8 shrink-0" />
-        </div>
+        </FadeScroller>
       </div>
     </div>
   )

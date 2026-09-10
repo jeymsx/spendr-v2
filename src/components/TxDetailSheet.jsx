@@ -8,6 +8,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import CategoryPickerSheet from './CategoryPickerSheet'
 import AccountPickerSheet from './AccountPickerSheet'
 import { useToast } from '../context/ToastContext'
+import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -103,92 +104,6 @@ function IconClose() {
  * become typeable, which is what makes tapping Edit feel like a mode rather
  * than a different screen.
  */
-function EditRow({ label, isLast, children }) {
-  return (
-    <div className={`flex items-center justify-between gap-3 px-4 min-h-[48px] py-2 ${
-      isLast ? '' : 'border-b border-slate-100 dark:border-white/[0.06]'
-    }`}>
-      <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
-      <div className="flex-1 min-w-0 flex items-center justify-end gap-2">{children}</div>
-    </div>
-  )
-}
-
-/** Right-aligned, borderless, transparent: the row is the field. */
-function RowInput({ value, onChange, placeholder, inputMode = 'text', ...rest }) {
-  return (
-    <input
-      value={value}
-      onChange={onChange}
-      placeholder={placeholder}
-      inputMode={inputMode}
-      className="min-w-0 flex-1 bg-transparent outline-none text-right
-        text-[15px] font-medium text-slate-800 dark:text-white
-        placeholder-slate-300 dark:placeholder-slate-600"
-      {...rest}
-    />
-  )
-}
-
-/**
- * A row whose value opens the OS date picker.
- *
- * The date input is present but invisible, stretched over the whole row, with
- * the formatted date drawn underneath it. A raw <input type="date"> cannot be
- * made to look native here: the control has an intrinsic width wider than its
- * text and puts its own calendar button at its right edge, so inside a
- * right-aligned row the date sat hard against the label with dead space after
- * it, and `text-right` does not move text inside a date control on any engine
- * I would trust.
- *
- * Drawing the value ourselves gives the full "Wed, Sep 9, 2026" rather than
- * 09/09/2026, and tapping anywhere on the row still opens the real picker.
- */
-function RowDate({ value, onChange, display }) {
-  return (
-    <span className="relative flex-1 min-w-0 flex items-center justify-end gap-2">
-      <span className="text-[15px] font-medium text-slate-800 dark:text-white truncate">
-        {display || 'Pick a date'}
-      </span>
-      <IconChevron />
-      <input
-        type="date"
-        value={value}
-        onChange={onChange}
-        aria-label="Date"
-        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer
-          [color-scheme:light] dark:[color-scheme:dark]"
-      />
-    </span>
-  )
-}
-
-function IconChevron() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
-      className="text-slate-300 dark:text-slate-600 shrink-0" aria-hidden="true">
-      <path d="M9 18l6-6-6-6" />
-    </svg>
-  )
-}
-
-/** A value that opens a picker. Chevron included, because it goes somewhere. */
-function RowPicker({ label, dot, icon, placeholder, onClick }) {
-  return (
-    <button onClick={onClick} className="flex-1 min-w-0 flex items-center justify-end gap-2 active:opacity-60">
-      {dot && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />}
-      {icon && <span className="text-[15px] leading-none shrink-0">{icon}</span>}
-      <span className={`text-[15px] font-medium truncate ${
-        label ? 'text-slate-800 dark:text-white' : 'text-slate-300 dark:text-slate-600'
-      }`}>
-        {label ?? placeholder}
-      </span>
-      <IconChevron />
-    </button>
-  )
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [], zIndex = 100 }) {

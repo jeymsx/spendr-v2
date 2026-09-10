@@ -9,6 +9,7 @@ import AccountPickerSheet from '../components/AccountPickerSheet'
 import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import { IconChevronRight, IconChevronLeft, IconPlus } from '../components/icons'
+import SegTabs from '../components/SegTabs'
 import {
   FREQ_OPTIONS, FREQ_ORDER, FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, parseDateLocal, daysUntil, dueStatus, DUE_TONE,
@@ -32,12 +33,21 @@ function fmtCompact(v) {
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children, hint }) {
+/**
+ * A heading, and optionally a figure beside it.
+ *
+ * `hint` is gone. It held a sentence under the heading explaining what the
+ * heading meant - "Active bills falling due in the next 30 days." under
+ * "Coming up" - which is prose no native list view carries. A number on the
+ * right is the iOS shape for the same slot: it adds information rather than
+ * restating the label.
+ */
+function SectionLabel({ children, right = null }) {
   return (
-    <div className="px-5 mb-2.5">
+    <div className="px-5 mb-2.5 flex items-baseline justify-between gap-3">
       <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
-      {hint && (
-        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>
+      {right && (
+        <p className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
       )}
     </div>
   )
@@ -45,60 +55,6 @@ function SectionLabel({ children, hint }) {
 
 function Card({ children, className = '' }) {
   return <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
-}
-
-/**
- * Upcoming / All.
- *
- * Lifted from Insights, deliberately down to the mechanism: bare labels, no
- * track, and one glass pill that slides between them. The page previously ran
- * a slate-100 trough holding a white pill, which is a second segmented-control
- * idiom in one app - and the one that reads as a web tab strip rather than an
- * iOS control.
- *
- * Equal-width segments are what make the travel work: the thumb is 100%/N and
- * moves by multiples of its own width, which only lands right if every segment
- * is the same size.
- *
- * The colour arrives as --seg-color and the label class does the theme work.
- * Measured on white, the accent is 2.85:1 as 11px bold text - .seg-active mixes
- * it 65% into black to clear 4.5:1, and leaves it alone in dark mode where it
- * already passes.
- */
-function TabSwitch({ tabs, value, onChange }) {
-  const idx = Math.max(0, tabs.findIndex(t => t.value === value))
-  return (
-    <div className="relative flex items-center">
-      <div
-        className="absolute inset-y-0 left-0 rounded-full border backdrop-blur-md pointer-events-none"
-        style={{
-          width: `calc(100% / ${tabs.length})`,
-          transform: `translateX(${idx * 100}%)`,
-          transition: 'transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1)',
-          backgroundColor: 'color-mix(in srgb, var(--color-primary) 16%, transparent)',
-          borderColor: 'color-mix(in srgb, var(--color-primary) 40%, transparent)',
-        }}
-      />
-      {tabs.map(t => (
-        <button
-          key={t.value}
-          onClick={() => onChange(t.value)}
-          aria-pressed={value === t.value}
-          className={[
-            'relative z-10 flex-1 py-1.5 text-[12px] font-semibold rounded-full',
-            'transition-colors duration-200',
-            value === t.value ? 'seg-active' : 'text-slate-500 dark:text-slate-400',
-          ].join(' ')}
-          style={value === t.value ? { '--seg-color': 'var(--color-primary)' } : undefined}
-        >
-          {t.label}
-          {t.count > 0 && (
-            <span className="ml-1 tabular-nums opacity-60">{t.count}</span>
-          )}
-        </button>
-      ))}
-    </div>
-  )
 }
 
 /**
@@ -735,7 +691,7 @@ export default function Recurring() {
         <EmptyBlock
           icon={<IconNoBills />}
           title="No bills yet"
-          body="Track subscriptions, rent, utilities — anything that comes back on a schedule. Spendr will tell you before each one lands."
+          body="Subscriptions, rent, utilities — anything that repeats."
           action={
             <button
               onClick={() => setShowForm(true)}
@@ -763,11 +719,6 @@ export default function Recurring() {
             </p>
             <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
               {active.length} active {active.length === 1 ? 'bill' : 'bills'}
-              {/* Everything is normalised to a month, so a yearly bill's
-                  contribution is a twelfth of it. Worth saying plainly - the
-                  figure is otherwise a mystery to anyone with an annual
-                  subscription. */}
-              {active.some(r => r.frequency !== 'monthly') && ', normalised per month'}
             </p>
 
             {/* Three tiles, not three bare columns.
@@ -817,7 +768,7 @@ export default function Recurring() {
 
           {/* ── Which list ── */}
           <div className="px-5 mt-6">
-            <TabSwitch
+            <SegTabs
               tabs={[
                 { value: 'upcoming', label: 'Upcoming', count: upcoming.length },
                 { value: 'all',      label: 'All',      count: 0 },
@@ -829,9 +780,7 @@ export default function Recurring() {
 
           {tab === 'upcoming' ? (
             <section className="mt-5">
-              <SectionLabel hint="Active bills falling due in the next 30 days.">
-                Coming up
-              </SectionLabel>
+              <SectionLabel right="Next 30 days">Coming up</SectionLabel>
               <div className="px-5">
                 <Card>
                   {upcoming.length === 0 ? (
@@ -859,9 +808,9 @@ export default function Recurring() {
               {groups.map(({ freq, label, items }) => (
                 <section key={freq}>
                   <SectionLabel
-                    hint={`${items.length} ${items.length === 1 ? 'bill' : 'bills'} · ${fmtCompact(
+                    right={fmtCompact(
                       items.filter(r => r.active).reduce((s, r) => s + (r.amount ?? 0), 0),
-                    )} each ${freq === 'daily' ? 'day' : freq === 'weekly' ? 'week' : freq === 'yearly' ? 'year' : 'month'}`}
+                    )}
                   >
                     {label}
                   </SectionLabel>

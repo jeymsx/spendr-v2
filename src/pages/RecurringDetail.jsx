@@ -10,7 +10,7 @@ import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { RecurringFormSheet } from './Recurring'
 import { IconChevronLeft } from '../components/icons'
 import {
-  FREQ_LABEL, FREQ_SHORT, FREQ_EVERY,
+  FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
 } from '../utils/recurring'
 
@@ -61,12 +61,12 @@ function IconEmptyReceipt() {
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children, hint }) {
+function SectionLabel({ children, right = null }) {
   return (
-    <div className="px-5 mb-2.5">
+    <div className="px-5 mb-2.5 flex items-baseline justify-between gap-3">
       <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
-      {hint && (
-        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>
+      {right && (
+        <p className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
       )}
     </div>
   )
@@ -370,7 +370,7 @@ export default function RecurringDetail() {
                   down: it changes what every date on this page means. */}
               {!rec.active ? (
                 <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-0.5 font-medium">
-                  Paused — not counted in upcoming
+                  Paused
                 </p>
               ) : activeSince ? (
                 <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">
@@ -393,17 +393,18 @@ export default function RecurringDetail() {
 
       {/* ── The two verbs ── */}
       <section className="px-5 mt-4 grid grid-cols-2 gap-3">
+        {/* No sub-labels. They read "Stop reminders" and the amount - one
+            explaining a word that needs no explanation, the other repeating a
+            figure from the card directly above. */}
         <ActionTile
           icon={rec.active ? <IconPause /> : <IconPlay />}
           label={rec.active ? 'Pause' : 'Resume'}
-          sub={rec.active ? 'Stop reminders' : 'Start again'}
           onClick={handleToggle}
           disabled={toggling}
         />
         <ActionTile
           icon={<IconBolt />}
           label={posting ? 'Posting…' : 'Post now'}
-          sub={fmt(rec.amount)}
           onClick={() => handlePost()}
           disabled={posting}
           tone="accent"
@@ -417,10 +418,9 @@ export default function RecurringDetail() {
           <Card>
             <DetailRow label="Account"  value={rec.account || '—'} />
             <DetailRow label="Category" value={rec.category || '—'} />
-            <DetailRow
-              label="Repeats"
-              value={`${FREQ_LABEL[rec.frequency] ?? rec.frequency} · every ${FREQ_EVERY[rec.frequency] ?? 'period'}`}
-            />
+            {/* Just "Monthly". It read "Monthly · every month", which says
+                the same thing twice - the label is already "Repeats". */}
+            <DetailRow label="Repeats" value={FREQ_LABEL[rec.frequency] ?? rec.frequency} />
             <DetailRow
               label="Next charge"
               value={rec.nextDate ? fmtDateFull(rec.nextDate) : 'No date set'}
@@ -443,11 +443,7 @@ export default function RecurringDetail() {
 
       {/* ── What it has actually cost ── */}
       <section className="mt-7">
-        <SectionLabel
-          hint={history?.length
-            ? `${history.length} charge${history.length === 1 ? '' : 's'} · ${fmt(paidTotal)} paid so far`
-            : undefined}
-        >
+        <SectionLabel right={history?.length ? fmt(paidTotal) : undefined}>
           Billing history
         </SectionLabel>
         <div className="px-5">
@@ -465,9 +461,8 @@ export default function RecurringDetail() {
                 <p className="mt-3 text-[13px] font-semibold text-slate-700 dark:text-slate-200">
                   Nothing charged yet
                 </p>
-                <p className="mt-1 text-[12px] leading-snug text-slate-500 dark:text-slate-400 max-w-[16rem] mx-auto">
-                  Every charge you post lands here, so this becomes what the
-                  bill has really cost you.
+                <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
+                  Charges appear here once posted.
                 </p>
               </div>
             ) : (
@@ -488,7 +483,7 @@ export default function RecurringDetail() {
             {history && history.length > 6 && (
               <div className="px-4 py-3">
                 <p className="text-[12px] text-slate-500 dark:text-slate-400">
-                  and {history.length - 6} earlier
+                  {history.length - 6} earlier
                 </p>
               </div>
             )}
