@@ -1,4 +1,4 @@
-import { useEffect, useState, useMemo } from 'react'
+import { cloneElement, useEffect, useState, useMemo } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
 import db, { UNSYNCED } from '../db/db'
 import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx,
@@ -87,55 +87,104 @@ function IconClose() {
   )
 }
 
-// ── Edit field ─────────────────────────────────────────────────────────────────
+// ── Edit rows ──────────────────────────────────────────────────────────────────
 
-function EditField({ label, children }) {
+/**
+ * An editable row of the same inset group the detail view uses.
+ *
+ * The fields here were label-above-box: a stack of five captions each with a
+ * 48px bordered input under it, which is a web form wearing rounded corners.
+ * Native editing on iOS - Contacts, Settings - keeps the grouped list and just
+ * makes the right-hand value editable in place. Label left, value right, one
+ * container, hairline separators.
+ *
+ * That also means edit mode no longer reshapes the card. Detail and edit are
+ * the same layout with the same rows in the same places; only the values
+ * become typeable, which is what makes tapping Edit feel like a mode rather
+ * than a different screen.
+ */
+function EditRow({ label, isLast, children }) {
   return (
-    <div>
-      <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-1">
-        {label}
-      </p>
-      {children}
+    <div className={`flex items-center justify-between gap-3 px-4 min-h-[48px] py-2 ${
+      isLast ? '' : 'border-b border-slate-100 dark:border-white/[0.06]'
+    }`}>
+      <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
+      <div className="flex-1 min-w-0 flex items-center justify-end gap-2">{children}</div>
     </div>
   )
 }
 
-function EditInput({ value, onChange, placeholder, inputMode = 'text', ...rest }) {
+/** Right-aligned, borderless, transparent: the row is the field. */
+function RowInput({ value, onChange, placeholder, inputMode = 'text', ...rest }) {
   return (
     <input
       value={value}
       onChange={onChange}
       placeholder={placeholder}
       inputMode={inputMode}
-      className="w-full h-[48px] px-4 rounded-2xl text-sm font-medium
-        text-slate-800 dark:text-white
-        bg-white dark:bg-white/[0.06]
-        border border-slate-200/80 dark:border-white/[0.09]
-        placeholder-slate-400 dark:placeholder-slate-500
-        outline-none focus:ring-2 focus:ring-primary/30
-        shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none"
+      className="min-w-0 flex-1 bg-transparent outline-none text-right
+        text-[15px] font-medium text-slate-800 dark:text-white
+        placeholder-slate-300 dark:placeholder-slate-600"
       {...rest}
     />
   )
 }
 
-function EditPickerBtn({ label, dot, placeholder, onClick }) {
+/**
+ * A row whose value opens the OS date picker.
+ *
+ * The date input is present but invisible, stretched over the whole row, with
+ * the formatted date drawn underneath it. A raw <input type="date"> cannot be
+ * made to look native here: the control has an intrinsic width wider than its
+ * text and puts its own calendar button at its right edge, so inside a
+ * right-aligned row the date sat hard against the label with dead space after
+ * it, and `text-right` does not move text inside a date control on any engine
+ * I would trust.
+ *
+ * Drawing the value ourselves gives the full "Wed, Sep 9, 2026" rather than
+ * 09/09/2026, and tapping anywhere on the row still opens the real picker.
+ */
+function RowDate({ value, onChange, display }) {
   return (
-    <button
-      onClick={onClick}
-      className="w-full h-[48px] px-4 rounded-2xl text-sm font-medium text-left flex items-center gap-3
-        bg-white dark:bg-white/[0.06]
-        border border-slate-200/80 dark:border-white/[0.09]
-        active:bg-slate-50 dark:active:bg-white/[0.10] transition-colors
-        shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none"
-    >
-      {dot
-        ? <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: dot }} />
-        : <span className="text-base leading-none">{label?.icon ?? '🏷️'}</span>
-      }
-      <span className={label ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}>
-        {label?.name ?? placeholder}
+    <span className="relative flex-1 min-w-0 flex items-center justify-end gap-2">
+      <span className="text-[15px] font-medium text-slate-800 dark:text-white truncate">
+        {display || 'Pick a date'}
       </span>
+      <IconChevron />
+      <input
+        type="date"
+        value={value}
+        onChange={onChange}
+        aria-label="Date"
+        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer
+          [color-scheme:light] dark:[color-scheme:dark]"
+      />
+    </span>
+  )
+}
+
+function IconChevron() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      className="text-slate-300 dark:text-slate-600 shrink-0" aria-hidden="true">
+      <path d="M9 18l6-6-6-6" />
+    </svg>
+  )
+}
+
+/** A value that opens a picker. Chevron included, because it goes somewhere. */
+function RowPicker({ label, dot, icon, placeholder, onClick }) {
+  return (
+    <button onClick={onClick} className="flex-1 min-w-0 flex items-center justify-end gap-2 active:opacity-60">
+      {dot && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />}
+      {icon && <span className="text-[15px] leading-none shrink-0">{icon}</span>}
+      <span className={`text-[15px] font-medium truncate ${
+        label ? 'text-slate-800 dark:text-white' : 'text-slate-300 dark:text-slate-600'
+      }`}>
+        {label ?? placeholder}
+      </span>
+      <IconChevron />
     </button>
   )
 }
@@ -314,7 +363,15 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
   return (
     <div className="fixed inset-0" style={{ touchAction: 'none', zIndex }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+      {/* A heavier backdrop than the other sheets use, because this panel is
+          glass and glass needs something soft behind it. At black/45 with a
+          4px blur the transaction list was still legible THROUGH the card -
+          ghost rows and red amounts sitting under the detail group, which is
+          exactly what index.css warns about for translucent floating panels.
+          The answer is not to give up the glass but to obscure what it is
+          frosting: 24px of blur and 55% black leaves shapes and colour behind
+          the card, which is the point, and no readable text. */}
+      <div className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-xl" onClick={close} />
 
       {/* ── A floating card, not a slab ──
 
@@ -323,13 +380,20 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
           from every edge, rounded all the way round, so the page is visibly
           behind it rather than covered by it.
 
-          `card-solid` is the app's own material for exactly this - see
-          index.css, "opaque twin of .card, for anything that floats over a
-          full page". Opaque rather than blurred on purpose: a 20%-translucent
-          panel over a populated list shows the list through it, and
-          backdrop-filter would make this the containing block for the nested
-          pickers' position:fixed, so they would centre against this card
-          instead of the viewport.
+          `card` - the glass material, same as every panel on the home
+          screen - rather than `card-solid`.
+
+          index.css warns off translucency for floating panels on two counts,
+          and neither applies here. It says a 20%-opacity panel over a
+          populated page shows the page through it: true over a bare page, but
+          this one sits on the backdrop below, already blurred and darkened to
+          45% black, so the glass frosts that rather than the list. And it says
+          backdrop-filter makes an element the containing block for its
+          position:fixed descendants, which would centre the nested pickers
+          against this card instead of the viewport - but the pickers are
+          SIBLINGS of this panel inside the outer fixed wrapper, not
+          descendants, so the blur cannot capture them. Worth keeping in mind
+          if they are ever moved inside.
 
           The grab handle is gone with the slab. A handle says "drag me down
           from this edge", and there is no edge to drag from any more; the
@@ -341,7 +405,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
       <div
         className={[
           closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'card-solid absolute inset-x-3 rounded-[28px]',
+          'card absolute inset-x-3 rounded-[28px]',
           'bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
           'max-h-[86dvh] overflow-y-auto',
         ].join(' ')}
@@ -461,99 +525,105 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
           {/* ── EDIT MODE ── */}
           {mode === 'edit' && (
-            <div className="flex flex-col gap-3 mt-1">
-              <EditField label="Amount">
-                <EditInput
-                  value={editAmount}
-                  onChange={e => setEditAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                  placeholder="0.00"
-                  inputMode="decimal"
-                />
-              </EditField>
-
-              <EditField label="Description">
-                <EditInput
-                  value={editDescription}
-                  onChange={e => setEditDescription(e.target.value)}
-                  placeholder="Optional note"
-                  maxLength={100}
-                />
-              </EditField>
-
-              <EditField label="Date">
-                <input
-                  type="date"
-                  value={editDate}
-                  onChange={e => setEditDate(e.target.value)}
-                  className="block w-full h-[48px] px-4 rounded-2xl text-sm font-medium
-                    text-slate-800 dark:text-white
-                    bg-white dark:bg-white/[0.06]
-                    border border-slate-200/80 dark:border-white/[0.09]
-                    outline-none focus:ring-2 focus:ring-primary/30
-                    shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none
-                    [color-scheme:light] dark:[color-scheme:dark]"
-                />
-              </EditField>
-
-              {tx.type !== 'transfer' ? (
-                <>
-                  <EditField label="Category">
-                    <EditPickerBtn
-                      label={editCategory}
-                      placeholder="Select category"
-                      onClick={() => setShowCatPicker(true)}
+            <div className="mt-2">
+              {(() => {
+                const rows = [
+                  <EditRow key="amt" label="Amount">
+                    {/* The sign is part of the displayed value rather than a
+                        separate span. As a span it landed at the LEFT of the
+                        value column - the input is flex-1, so it claimed the
+                        space and pushed the ₱ back against the label, reading
+                        "Amount ₱      300". onChange already strips anything
+                        that is not a digit or a dot, so the prefix round-trips
+                        harmlessly. */}
+                    <RowInput
+                      value={editAmount ? `₱${editAmount}` : ''}
+                      onChange={e => setEditAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                      placeholder="₱0.00"
+                      inputMode="decimal"
+                      autoFocus
                     />
-                  </EditField>
-                  <EditField label="Account">
-                    <EditPickerBtn
-                      label={editAccount ? { name: editAccount.name } : null}
-                      dot={editAccount?.color}
-                      placeholder="Select account"
-                      onClick={() => setShowAcctPicker(true)}
+                  </EditRow>,
+                  <EditRow key="desc" label="Note">
+                    <RowInput
+                      value={editDescription}
+                      onChange={e => setEditDescription(e.target.value)}
+                      placeholder="Optional"
+                      maxLength={100}
                     />
-                  </EditField>
-                </>
-              ) : (
-                <>
-                  <EditField label="From Account">
-                    <EditPickerBtn
-                      label={editFrom ? { name: editFrom.name } : null}
-                      dot={editFrom?.color}
-                      placeholder="Select account"
-                      onClick={() => setShowFromPicker(true)}
+                  </EditRow>,
+                  <EditRow key="date" label="Date">
+                    <RowDate
+                      value={editDate}
+                      onChange={e => setEditDate(e.target.value)}
+                      display={editDate ? fmtDisplayDate(`${editDate}T00:00:00`) : ''}
                     />
-                  </EditField>
-                  <EditField label="To Account">
-                    <EditPickerBtn
-                      label={editTo ? { name: editTo.name } : null}
-                      dot={editTo?.color}
-                      placeholder="Select account"
-                      onClick={() => setShowToPicker(true)}
-                    />
-                  </EditField>
-                </>
-              )}
+                  </EditRow>,
+                  ...(tx.type !== 'transfer' ? [
+                    <EditRow key="cat" label="Category">
+                      <RowPicker
+                        label={editCategory?.name}
+                        icon={editCategory?.icon ?? '🏷️'}
+                        placeholder="Choose"
+                        onClick={() => setShowCatPicker(true)}
+                      />
+                    </EditRow>,
+                    <EditRow key="acct" label="Account">
+                      <RowPicker
+                        label={editAccount?.name}
+                        dot={editAccount?.color}
+                        placeholder="Choose"
+                        onClick={() => setShowAcctPicker(true)}
+                      />
+                    </EditRow>,
+                  ] : [
+                    <EditRow key="from" label="From">
+                      <RowPicker
+                        label={editFrom?.name}
+                        dot={editFrom?.color}
+                        placeholder="Choose"
+                        onClick={() => setShowFromPicker(true)}
+                      />
+                    </EditRow>,
+                    <EditRow key="to" label="To">
+                      <RowPicker
+                        label={editTo?.name}
+                        dot={editTo?.color}
+                        placeholder="Choose"
+                        onClick={() => setShowToPicker(true)}
+                      />
+                    </EditRow>,
+                  ]),
+                ]
+                return (
+                  <DetailGroup>
+                    {rows.map((row, i) =>
+                      // isLast is injected here so each row does not have to
+                      // be told the length of a list it cannot see.
+                      cloneElement(row, { isLast: i === rows.length - 1 }))}
+                  </DetailGroup>
+                )
+              })()}
 
-              <div className="flex gap-3 mt-1">
+              <div className="flex gap-2.5 mt-5">
                 <button
                   onClick={() => setMode('detail')}
                   disabled={saving}
-                  className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                  className="flex-1 py-3.5 rounded-2xl text-[15px] font-semibold
                     text-slate-600 dark:text-slate-300
-                    bg-slate-100 dark:bg-white/[0.06]
-                    disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
+                    bg-slate-100 dark:bg-white/[0.07]
+                    disabled:opacity-40 active:scale-[0.98] transition-transform duration-75"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleSave}
                   disabled={saving || !parseFloat(editAmount)}
-                  className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                    bg-primary
-                    disabled:opacity-40 disabled:shadow-none
-                    active:scale-[0.98] transition-all duration-100"
+                  className="flex-[1.6] py-3.5 rounded-2xl text-[15px] font-semibold text-white
+                    bg-primary disabled:opacity-40
+                    active:scale-[0.98] transition-transform duration-75"
                 >
-                  {saving ? 'Saving…' : 'Save Changes'}
+                  {saving ? 'Saving…' : 'Save'}
                 </button>
               </div>
             </div>
@@ -561,46 +631,56 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
           {/* ── CONFIRM DELETE MODE ── */}
           {mode === 'confirm-delete' && (
-            <div className="mt-2 text-center">
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">
-                This will permanently remove:
-              </p>
-              <p className="text-base font-semibold text-slate-800 dark:text-white mb-0.5">
-                {planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(tx.amount)}`}
-              </p>
-              {tx.description && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 mb-2">{tx.description}</p>
-              )}
-              {/* Deleting one month would strand the rest, so the whole plan goes.
-                  Say so before it happens rather than after. */}
-              {planCount > 1 && (
-                <p className="text-xs font-semibold text-amber-600 dark:text-amber-400 mb-2">
-                  All {planCount} payments in this installment plan
-                  {' '}({fmt(tx.amount)} × {planCount}) will be deleted.
-                </p>
-              )}
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-6">
-                Account balances will be reversed automatically.
+            <div className="mt-1">
+              <p className="text-[13px] text-center text-slate-500 dark:text-slate-400 mb-4 px-2">
+                This cannot be undone from here, though the toast afterwards
+                offers one.
               </p>
 
-              <div className="flex gap-3">
+              {/* What is about to go, shown as the object it is rather than
+                  three centred lines of prose. Same group as everywhere else,
+                  so the thing you are deleting looks like the thing you were
+                  just looking at. */}
+              <DetailGroup>
+                <DetailRow
+                  label={planCount > 1 ? `${planCount} payments` : 'Amount'}
+                  value={planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(tx.amount)}`}
+                />
+                {tx.description && (
+                  <DetailRow label="Note" value={tx.description} />
+                )}
+                <DetailRow
+                  label="Balance"
+                  value="Reversed automatically"
+                  isLast
+                />
+              </DetailGroup>
+
+              {/* Deleting one month would strand the rest, so the whole plan
+                  goes. Say so before it happens rather than after. */}
+              {planCount > 1 && (
+                <p className="text-[12px] font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
+                  All {planCount} payments in this plan ({fmt(tx.amount)} × {planCount}) will be deleted.
+                </p>
+              )}
+
+              <div className="flex gap-2.5 mt-5">
                 <button
                   onClick={() => setMode('detail')}
                   disabled={saving}
-                  className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                  className="flex-1 py-3.5 rounded-2xl text-[15px] font-semibold
                     text-slate-600 dark:text-slate-300
-                    bg-slate-100 dark:bg-white/[0.06]
-                    disabled:opacity-40 transition-colors"
+                    bg-slate-100 dark:bg-white/[0.07]
+                    disabled:opacity-40 active:scale-[0.98] transition-transform duration-75"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={handleDelete}
                   disabled={saving}
-                  className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                    bg-red-500 shadow-[0_4px_16px_rgba(239,68,68,0.35)]
-                    disabled:opacity-40 disabled:shadow-none
-                    active:scale-[0.98] transition-all duration-100"
+                  className="flex-[1.6] py-3.5 rounded-2xl text-[15px] font-semibold text-white
+                    bg-red-500 disabled:opacity-40
+                    active:scale-[0.98] transition-transform duration-75"
                 >
                   {saving ? 'Deleting…' : planCount > 1 ? `Delete all ${planCount}` : 'Delete'}
                 </button>
