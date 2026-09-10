@@ -717,27 +717,6 @@ html.dark body {
   .acct-card.acct-card-sorting { rotate: 0deg; scale: 1; }
 }
 
-/* ── Quick-action glyph ───────────────────────────────────────────────────────
-   The discs themselves are just .card + rounded-full, so they are the same
-   glass material as the budget and transaction panels and follow it if that
-   material is ever retuned. Only the glyph colour needs stating.
-
-   It needs stating because the accent cannot carry itself on white: measured,
-   #2D9DFF on the light card is 2.85:1, under the 3:1 that WCAG 1.4.11 asks of
-   a graphic conveying meaning. Mixing 12% black gives 3.62:1 - invisible next
-   to the brand colour, legible as a glyph.
-
-   Dark needs no correction at all: the card composites to rgb(17,24,35) and
-   the plain accent reads 6.26:1 on it. Same shape as .budget-tone-ok, which
-   solves the same problem for text. */
-.quick-action-icon {
-  color: color-mix(in srgb, var(--color-primary) 88%, black);
-}
-
-.dark .quick-action-icon {
-  color: var(--color-primary);
-}
-
 /* ── Upcoming-row badge ───────────────────────────────────────────────────────
    The little repeat/calendar dot on an upcoming charge's icon, bottom-right.
    It has to read as punched out of the row rather than stuck on top of it,

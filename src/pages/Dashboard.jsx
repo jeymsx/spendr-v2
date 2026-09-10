@@ -1012,8 +1012,24 @@ function QuickAction({ to, icon, label }) {
   return (
     <Link to={to} className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-75">
       {/* `card` rather than a bespoke fill: same glass as the budget and
-          transaction panels, and it tracks that material if it ever changes. */}
-      <span className="card quick-action-icon w-11 h-11 rounded-full flex items-center justify-center">
+          transaction panels, and it tracks that material if it ever changes.
+
+          The glyph is the navbar's inactive icon weight - soft grey, not solid
+          white - which took one utility rather than two because of how the
+          numbers fall.
+
+          The navbar itself uses `text-slate-400 dark:text-slate-500`, and
+          copying that pair verbatim would have shipped a failing graphic:
+          slate-400 on the white card is 2.56:1, under the 3:1 WCAG 1.4.11
+          asks of an icon that means something. (It is one of the 235
+          instances of that pair noted in plan.md - the shades are the wrong
+          way round app-wide.)
+
+          slate-500 works in BOTH themes, so there is no dark: variant here at
+          all: 4.76:1 on the light card, 3.74:1 on the dark one, which is
+          exactly the navbar's own dark weight. Same softness, no failure. */}
+      <span className="card w-11 h-11 rounded-full flex items-center justify-center
+        text-slate-500">
         {icon}
       </span>
       <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
@@ -1052,7 +1068,12 @@ function QuickAction({ to, icon, label }) {
  */
 function QuickActions() {
   return (
-    <section className="px-5 mt-5">
+    // mt-8, not mt-5. Measured: mt-5 left 20px between the account cards and
+    // the discs while the Budget heading below sat 32px away, and the eye
+    // reads that as the row belonging to the carousel. 32px is the gap every
+    // other section on this screen uses, so matching it makes the row a peer
+    // rather than an appendix - and makes the space above and below it equal.
+    <section className="px-5 mt-8">
       <div className="grid grid-cols-6 gap-1">
         <QuickAction to="/goals"     icon={<IconTarget />}    label="Goals" />
         <QuickAction to="/debts"     icon={<IconBanknote />}  label="Debts" />
