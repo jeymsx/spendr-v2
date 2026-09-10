@@ -1,48 +1,65 @@
 import { useState } from 'react'
 import db from '../db/db'
-import { IconSparkle } from './icons'
+import {
+  IconSparkle, IconBell, IconBillHistory, IconDebt, IconCategories,
+  IconDrawn, IconPalette, IconSettings, IconContrast,
+} from './icons'
 
-const CURRENT_VERSION = '0.2.0'
+const CURRENT_VERSION = '0.3.0'
 
 /* Written from the user's side of the change, not the code's: what is
-   different when you open the app, and - for a money app - which numbers
-   were wrong before. The fixes are last but they are not filler; a wrong
-   figure on a statement matters more than a nicer card. */
+   different when you open the app. Ordered by what you meet first - the home
+   screen, then the pages behind it, then settings - so reading the list walks
+   the app rather than the changelog.
+
+   What is NOT here: the 48 tests and the AST checks this release added. They
+   are the reason the figures stay right, but a test count is something the
+   person who wrote it wants to say, not something the person using it wants
+   to read. That belongs in plan.md.
+
+   `Icon` is a COMPONENT, not a string. This list held emoji until 0.3.0 -
+   which is the release that took the emoji out of the app, so it could hardly
+   keep rendering eight of them. */
 const WHATS_NEW = [
   {
-    icon: '\u{1F4B3}',
-    title: 'Your accounts look like your cards',
-    desc: 'Real bank logos and true card proportions, stacked like a wallet so a whole group fits on one screen.',
+    Icon: IconBell,
+    title: 'You can tell at a glance',
+    desc: 'A number appears on Bills, Debts and Goals the moment one of them needs you.',
   },
   {
-    icon: '\u{270B}',
-    title: 'Drag to reorder',
-    desc: 'Hold any card and drag it up or down. The order sticks.',
+    Icon: IconBillHistory,
+    title: 'Every bill has its own page',
+    desc: 'Tap one for what it costs you a year, when it last posted, and the button that posts the next charge.',
   },
   {
-    icon: '\u{1F4C4}',
-    title: 'Every account has its own page',
-    desc: 'Tap a card for its balance, a 30-day trend line and its full history - instead of a half-height sheet.',
+    Icon: IconDebt,
+    title: 'Debts, rebuilt',
+    desc: 'One list, or split by who owes whom. Recording a payment uses your keyboard now instead of a number pad of its own.',
   },
   {
-    icon: '\u{2728}',
-    title: 'Guided account setup',
-    desc: 'Adding an account shows the card you are making as you make it, and skips the credit fields for accounts that cannot have a statement.',
+    Icon: IconCategories,
+    title: 'Pick a category with your thumb',
+    desc: 'The category picker is a row you swipe, not a sheet that covers the form you were filling in. The filters use the same row.',
   },
   {
-    icon: '\u{1F3AF}',
-    title: 'Budget, on the home screen',
-    desc: 'One line for how much of the month is gone. Tap through for the breakdown, including what you are spending with no limit set at all.',
+    Icon: IconDrawn,
+    title: 'No more emoji',
+    desc: 'Every glyph in the app is drawn now, at one weight, matching the bar along the bottom. Categories carry their own colour.',
   },
   {
-    icon: '\u{1F522}',
-    title: 'Two figures were wrong',
-    desc: 'Next Statement counted every future installment instead of just the next bill, and the Credit group total read zero. Both fixed.',
+    Icon: IconPalette,
+    title: 'See the accent before you choose it',
+    desc: 'Accent colour is its own page, and each colour arrives as a card you swipe through showing the app wearing it.',
   },
   {
-    icon: '\u{1F441}',
-    title: 'Easier to read',
-    desc: 'Card and text colours now meet contrast standards in both light and dark themes.',
+    Icon: IconSettings,
+    title: 'Categories and Budgets are pages',
+    desc: 'Both open like everything else, with a back button - so editing one is no longer a sheet stacked on a sheet.',
+  },
+  {
+    Icon: IconContrast,
+    title: 'Readable in daylight',
+    desc: 'Accent-coloured text, category tiles and the new badges were all measured against the background they sit on, and moved until they passed.',
   },
 ]
 
@@ -82,20 +99,33 @@ export default function WhatsNewModal({ onClose }) {
         <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
-              <span className="text-primary"><IconSparkle size={20} /></span>
+              <span className="accent-ink"><IconSparkle size={20} /></span>
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">What's New</h2>
-              <p className="text-[11px] font-semibold text-primary">Version {CURRENT_VERSION}</p>
+              <p className="text-[11px] font-semibold accent-ink">Version {CURRENT_VERSION}</p>
             </div>
           </div>
         </div>
 
         {/* Feature list */}
         <div className="px-5 py-4 flex flex-col gap-3.5 max-h-[55vh] overflow-y-auto no-scrollbar">
-          {WHATS_NEW.map(({ icon, title, desc }) => (
+          {WHATS_NEW.map(({ Icon, title, desc }) => (
             <div key={title} className="flex items-start gap-3">
-              <span className="text-xl leading-none mt-0.5 shrink-0">{icon}</span>
+              {/* A tinted disc rather than a bare glyph. An 18px stroke icon
+                  on the card's own white sits too light next to a bold title
+                  and the column reads as unfinished; the disc gives it the
+                  same weight the emoji had.
+
+                  .accent-ink, not text-primary: the raw accent is a FILL
+                  colour and measures 2.85:1 on white at the default blue,
+                  1.6:1 on Honey. The disc is primary at 10% over white, so
+                  the glyph is effectively accent-on-white and needs the
+                  shifted ink to clear 3:1. */}
+              <span className="w-8 h-8 rounded-xl bg-primary/10 dark:bg-primary/20
+                accent-ink flex items-center justify-center shrink-0 mt-0.5">
+                <Icon size={17} />
+              </span>
               <div className="min-w-0">
                 <p className="text-sm font-semibold text-slate-800 dark:text-white leading-snug">{title}</p>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{desc}</p>

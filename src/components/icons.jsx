@@ -135,6 +135,8 @@ import {
   AlertTriangle, X as XClose, Check, Trash01, Download01, Scales02, Stars01,
   Bell01, Zap, Bank, Wallet01, CreditCard01, Phone01, BankNote01,
   Receipt, SwitchHorizontal01,
+  CalendarCheck01, CoinsHand, Grid01, Brush01, Palette, Settings01,
+  Contrast01,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -161,6 +163,18 @@ export const IconPhoneUI   = uui(Phone01)
 export const IconCashUI    = uui(BankNote01)
 export const IconReceipt   = uui(Receipt)            // a dated debt in Upcoming
 export const IconTransferUI = uui(SwitchHorizontal01) // a transfer template
+
+// Release-notes glyphs. Only What's New uses these, and only one row each -
+// which is why they are the vaguest names in this block. They stand for a
+// CHANGE ("bills got a page", "the colours are readable now") rather than for
+// a thing in the app, so there is nothing more concrete to call them.
+export const IconBillHistory = uui(CalendarCheck01)  // a bill and its posted charges
+export const IconDebt        = uui(CoinsHand)        // money owed, in either direction
+export const IconCategories  = uui(Grid01)
+export const IconDrawn       = uui(Brush01)          // the icon set replacing the emoji
+export const IconPalette     = uui(Palette)          // accent colour
+export const IconSettings    = uui(Settings01)
+export const IconContrast    = uui(Contrast01)       // the light-mode contrast pass
 
 /**
  * An account type's icon.
