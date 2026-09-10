@@ -36,6 +36,7 @@ export function useQuickPrefill({ categories, accounts, apply }) {
 
     applyRef.current({
       amount: prefill.amount,
+      fee: prefill.fee ?? null,
       description: prefill.description || '',
       date: prefill.date || null,
       category: byName(categories, prefill.category),

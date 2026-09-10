@@ -128,6 +128,9 @@ export default function Transfer({ onCancel, onSaved } = {}) {
       if (p.fromAccount) setFromAccount(p.fromAccount)
       if (p.toAccount) setToAccount(p.toAccount)
       if (p.date) setDate(p.date)
+      // "500 from gcash to maya, 18 tf" - the fee is the second half of how
+      // people actually say a transfer, so it should not need a second visit.
+      if (p.fee != null) setFeeStr(numToMoneyStr(p.fee))
     },
   })
 

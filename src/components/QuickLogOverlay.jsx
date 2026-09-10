@@ -203,6 +203,7 @@ export default function QuickLogOverlay({ onClose }) {
                 <>
                   {parsed.fromAccount && <Chip>from {parsed.fromAccount}</Chip>}
                   {parsed.toAccount && <Chip>to {parsed.toAccount}</Chip>}
+                  {parsed.fee != null && <Chip>{money(parsed.fee)} fee</Chip>}
                 </>
               ) : (
                 <>

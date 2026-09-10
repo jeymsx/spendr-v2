@@ -522,6 +522,56 @@ describe('quickParse with a learned ledger', () => {
   })
 })
 
+describe('transfer fees, typed the way people say them', () => {
+  const ctx = () => ({
+    accounts: FX_ACCOUNTS, categories: FX_CATEGORIES,
+    knowledge: KNOW, today: new Date(FIXTURE_NOW),
+  })
+
+  const FEES = [
+    '500 from gcash to maya savings, 18 tf',
+    '500 from gcash to maya savings, 18 fee',
+    '500 from gcash to maya savings, 18 transfer fee',
+    '500 from gcash to maya savings 18tf',
+    'transfer 500 from gcash to maya savings, tf 18',
+  ]
+
+  it.each(FEES)('reads the fee from: %s', (input) => {
+    const r = quickParse(input, ctx())
+    expect(r.type).toBe('transfer')
+    expect(r.amount).toBe(500)          // the fee must not become the amount
+    expect(r.fee).toBe(18)
+    expect(r.fromAccount).toBe('GCash')
+    expect(r.toAccount).toBe('Maya Savings')   // nor pollute the "to" capture
+  })
+
+  // "fee" is an ordinary English word inside real merchant names. Every one of
+  // these is a real description from a real ledger, and reading a fee out of
+  // any of them would silently swallow the amount.
+  const NOT_FEES = [
+    ['200 ppark entrance fee', 200],
+    ['300 vliner reservation fee', 300],
+    ['18 withdraw service fee', 18],
+    ['125 clearance fee to gelo', 125],
+    ['1500 entrance fee for 3 people', 1500],
+  ]
+
+  it.each(NOT_FEES)('leaves the amount alone in: %s', (input, amount) => {
+    const r = quickParse(input, ctx())
+    expect(r.amount).toBe(amount)
+    expect(r.fee).toBeNull()
+  })
+
+  it('needs two numbers before it will look for a fee at all', () => {
+    // One number cannot be both the amount and the fee.
+    expect(quickParse('18 tf', ctx()).fee).toBeNull()
+  })
+
+  it('leaves fee null on an ordinary expense', () => {
+    expect(quickParse('180 grab', ctx()).fee).toBeNull()
+  })
+})
+
 describe('the corpus - what must and must not be understood', () => {
   const ctx = {
     accounts: FX_ACCOUNTS, categories: FX_CATEGORIES,

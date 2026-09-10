@@ -192,6 +192,39 @@ function readAmount(text) {
   }
 }
 
+/**
+ * A transfer fee, tacked onto the end the way people actually write one:
+ * "500 from gcash to maya, 18 tf" - or "18 fee", or "18 transfer fee".
+ *
+ * Two guards, because "fee" is also an ordinary English word that shows up in
+ * real merchant names. This ledger has "PPark Entrance Fee", "VLiner
+ * Reservation Fee", "Withdraw Service Fee" and "Clearance Fee to Gelo", and
+ * reading a fee out of any of those would silently eat the amount.
+ *
+ *   1. The string must contain at least TWO numbers. "200 entrance fee" has
+ *      one, so there is nothing to be a fee ALONGSIDE, and it is left alone.
+ *   2. The number must be ADJACENT to the fee word. In "1500 entrance fee"
+ *      the word before "fee" is "entrance", not a number.
+ *
+ * Both orders are accepted - "18 tf" and "tf 18" - because the abbreviation
+ * invites either.
+ */
+/* Regex LITERALS, not new RegExp with a template string: inside a template
+   literal `\s` is just `s`, so building these by interpolation silently
+   produced `[s,]` and matched nothing. The duplication is the safer trade. */
+const FEE_AFTER  = /(?:^|[\s,])(?:₱\s*)?(\d[\d,]*(?:\.\d+)?)\s*(?:tf|transfer\s+fee|fee)\b/i
+const FEE_BEFORE = /(?:^|[\s,])(?:tf|transfer\s+fee|fee)\s*(?:₱\s*)?(\d[\d,]*(?:\.\d+)?)\b/i
+
+function readFee(text) {
+  const numbers = text.match(/\d[\d,]*(?:\.\d+)?/g) ?? []
+  if (numbers.length < 2) return null
+  const m = FEE_AFTER.exec(text) ?? FEE_BEFORE.exec(text)
+  if (!m) return null
+  const amount = parseFloat(m[1].replace(/,/g, ''))
+  if (!Number.isFinite(amount)) return null
+  return { amount, at: m.index, len: m[0].length }
+}
+
 /** Normalise for matching: lowercase, collapse whitespace, drop punctuation. */
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
 
@@ -558,6 +591,7 @@ export function quickParse(input, ctx = {}) {
     toAccount: null,
     description: '',
     date: null,
+    fee: null,            // a transfer fee typed alongside, "… 18 tf"
     confident: false,
     amountFlag: null,     // { median, n, phrase } when it is wildly off your usual
     recurringMatch: null, // an existing bill this probably IS
@@ -571,13 +605,25 @@ export function quickParse(input, ctx = {}) {
   const hasCategory = (name) => catNames.some(c => c === name)
   const hasAccount = (name) => acctNames.some(a => a === name)
 
+  // ── Fee, before anything else ──
+  // Removed from the string first so the fee's number cannot be read as THE
+  // amount, and so "18 tf" cannot end up inside the "to <account>" capture.
+  let working = text
+  const feeHit = readFee(text)
+  if (feeHit) {
+    result.fee = feeHit.amount
+    result.matched.fee = true
+    working = (text.slice(0, feeHit.at) + ' ' + text.slice(feeHit.at + feeHit.len))
+      .replace(/\s*,\s*$/, '').trim()
+  }
+
   // ── Amount ──
-  const amt = readAmount(text)
-  let rest = text
+  const amt = readAmount(working)
+  let rest = working
   if (amt) {
     result.amount = amt.amount
     result.matched.amount = amt.raw.trim()
-    rest = (text.slice(0, amt.at) + ' ' + text.slice(amt.at + amt.len)).trim()
+    rest = (working.slice(0, amt.at) + ' ' + working.slice(amt.at + amt.len)).trim()
   }
   // Kept before anything is stripped out, for matching bills and templates -
   // both of which are named after things that also look like accounts.
