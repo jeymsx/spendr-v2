@@ -2,9 +2,9 @@ import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { quickParse, learnMerchants } from '../lib/quickParse'
+import { quickParse, learnLedger } from '../lib/quickParse'
 import CategoryGlyph from './CategoryGlyph'
-import { IconTick, IconWarning } from './icons'
+import { IconTick, IconWarning, IconBell } from './icons'
 
 const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const money = (v) => '₱' + _php.format(Math.abs(v ?? 0))
@@ -15,22 +15,58 @@ const TYPE_COPY = {
   transfer: { verb: 'Transfer', to: '/transfer' },
 }
 
-/** One thing the parser worked out, as a chip. */
+/**
+ * One thing the parser worked out, as a chip.
+ *
+ * Three tones, and the distinction is honesty rather than decoration:
+ *
+ *   accent  the direction, which is the one thing it is always sure of
+ *   plain   FILLED - you said this. It is in the words you typed.
+ *   guess   OUTLINED - it inferred this from your history or a merchant list.
+ *
+ * Once the parser started filling in the account from what you usually do,
+ * a preview that rendered "GCash" identically whether you had typed it or not
+ * was claiming more than it knew. Filled means yours; outlined means ours.
+ */
 function Chip({ children, tone = 'plain', title }) {
+  const TONES = {
+    accent: 'bg-primary/[0.14] accent-ink',
+    plain:  'bg-white/[0.08] text-slate-200',
+    guess:  'border border-dashed border-white/25 text-slate-300',
+  }
   return (
     <span
       title={title}
       className={[
         'inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium',
-        tone === 'accent'
-          ? 'bg-primary/[0.14] accent-ink'
-          : 'bg-white/[0.08] text-slate-200 dark:text-slate-200',
+        TONES[tone] ?? TONES.plain,
       ].join(' ')}
     >
       {children}
     </span>
   )
 }
+
+/** Plain English for where a field came from, on hover / long-press. */
+function why(m) {
+  if (!m) return undefined
+  switch (m.via) {
+    case 'name':     return 'you typed this'
+    case 'history':  return `from your own history: "${m.value}"`
+    case 'typo':     return `you typed "${m.typed}" - taken as "${m.value}"`
+    case 'merchant': return `"${m.value}" is a known merchant`
+    case 'template': return `from your "${m.value}" template`
+    default:         return undefined
+  }
+}
+
+/** Filled when you said it, outlined when the parser inferred it. */
+const toneFor = (m) => (m?.via === 'name' ? 'plain' : 'guess')
+
+/* Learned phrases are stored normalised - lowercase, punctuation stripped -
+   because that is what matching needs. Showing one back to the user in that
+   form reads like a database dump, so it is capitalised on the way out. */
+const titleCase = (s) => String(s ?? '').replace(/\b\w/g, c => c.toUpperCase())
 
 /**
  * Hold the + and type a transaction.
@@ -52,26 +88,32 @@ export default function QuickLogOverlay({ onClose }) {
   const [text, setText] = useState('')
   const inputRef = useRef(null)
 
-  const accounts   = useLiveQuery(() => db.accounts.toArray(), [], [])
-  const categories = useLiveQuery(() => db.categories.toArray(), [], [])
+  const accounts   = useLiveQuery(() => db.accounts.toArray(),     [], [])
+  const categories = useLiveQuery(() => db.categories.toArray(),   [], [])
   const txAll      = useLiveQuery(() => db.transactions.toArray(), [], [])
+  const recurring  = useLiveQuery(() => db.recurring.toArray(),    [], [])
+  const templates  = useLiveQuery(() => db.templates.toArray(),    [], [])
 
   /**
-   * What this user files each merchant under, from their own ledger.
+   * Everything this user's own ledger can teach the parser: which category
+   * each merchant belongs to, which account pays for it, and what it usually
+   * costs.
    *
-   * Recomputed only when the transaction count changes rather than on every
-   * keystroke - it is a full pass over the table, and the answer does not
-   * change while you type.
+   * Recomputed only when the transaction COUNT changes, not on every
+   * keystroke. It is a full pass over the table plus a fuzzy-token index, and
+   * the answer cannot change while you are typing. On a nine-month ledger
+   * that is the difference between building the index once and building it
+   * once per character.
    */
-  const merchantMap = useMemo(
-    () => learnMerchants(txAll ?? []),
+  const knowledge = useMemo(
+    () => learnLedger(txAll ?? []),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [txAll?.length],
   )
 
   const parsed = useMemo(
-    () => quickParse(text, { accounts, categories, merchantMap }),
-    [text, accounts, categories, merchantMap],
+    () => quickParse(text, { accounts, categories, recurring, templates, knowledge }),
+    [text, accounts, categories, recurring, templates, knowledge],
   )
 
   // Mounted only while open (AppLayout guards it), so the field starts empty
@@ -98,6 +140,13 @@ export default function QuickLogOverlay({ onClose }) {
     navigate(dest.to, { state: { prefill: parsed } })
     onClose()
   }, [parsed, navigate, onClose])
+
+  /* Straight to the bill's own page, which is where posting a charge lives. */
+  const goBill = useCallback(() => {
+    if (!parsed.recurringMatch) return
+    navigate(`/recurring/${parsed.recurringMatch.id}`)
+    onClose()
+  }, [parsed.recurringMatch, navigate, onClose])
 
   const cat = (categories ?? []).find(c => c.name === parsed.category) ?? null
   const ready = parsed.amount != null
@@ -158,12 +207,16 @@ export default function QuickLogOverlay({ onClose }) {
               ) : (
                 <>
                   {parsed.category && (
-                    <Chip title={`matched by ${parsed.matched.category?.via}`}>
+                    <Chip tone={toneFor(parsed.matched.category)} title={why(parsed.matched.category)}>
                       <CategoryGlyph cat={cat} size={13} color={false} />
                       {parsed.category}
                     </Chip>
                   )}
-                  {parsed.account && <Chip>{parsed.account}</Chip>}
+                  {parsed.account && (
+                    <Chip tone={toneFor(parsed.matched.account)} title={why(parsed.matched.account)}>
+                      {parsed.account}
+                    </Chip>
+                  )}
                 </>
               )}
               {parsed.matched.date && <Chip>{parsed.matched.date}</Chip>}
@@ -187,6 +240,19 @@ export default function QuickLogOverlay({ onClose }) {
           </p>
         )}
 
+        {/* Your usual amount for this merchant, when what you typed is nowhere
+            near it. A hint, never a block: the parser has no idea whether
+            today's Grab really was nine thousand pesos. It exists for the
+            dropped or duplicated zero, which is the one typo that is cheap to
+            catch here and expensive to find in a statement three weeks on. */}
+        {parsed.amountFlag && (
+          <p className="mt-1 flex items-center justify-center gap-1.5 text-[12px] text-amber-300/80">
+            <IconWarning size={13} />
+            {parsed.amountFlag.direction === 'high' ? 'Much more' : 'Much less'} than
+            your usual {titleCase(parsed.amountFlag.phrase)} ({money(parsed.amountFlag.median)})
+          </p>
+        )}
+
         <button
           onClick={go}
           disabled={!ready}
@@ -199,6 +265,30 @@ export default function QuickLogOverlay({ onClose }) {
           <IconTick size={15} />
           Review {dest.verb.toLowerCase()}
         </button>
+
+        {/* You already have a bill by this name.
+
+            Offered rather than substituted: "549 netflix" might be the
+            monthly charge, or it might be a gift card bought at a counter.
+            Only you know which, so both routes stay one tap away and the
+            normal one keeps the primary button.
+
+            It matters because posting the bill is not the same as logging an
+            expense - it advances nextDate and stamps recurringId on the
+            transaction, which is what makes the bill's history real. Log it
+            by hand instead and the bill sits there looking unpaid. */}
+        {parsed.recurringMatch && (
+          <button
+            onClick={goBill}
+            className="mt-2 w-full py-3 rounded-2xl text-[14px] font-medium
+              text-white/85 bg-white/[0.08] border border-white/15
+              active:scale-[0.98] transition-all duration-100
+              flex items-center justify-center gap-2"
+          >
+            <IconBell size={14} />
+            Post the {parsed.recurringMatch.name} bill instead
+          </button>
+        )}
 
         <button
           onClick={onClose}

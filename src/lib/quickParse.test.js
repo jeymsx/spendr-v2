@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { quickParse, learnMerchants } from './quickParse'
+import { quickParse, learnMerchants, learnLedger } from './quickParse'
+import {
+  LEDGER, FIXTURE_NOW, ACCOUNTS as FX_ACCOUNTS, CATEGORIES as FX_CATEGORIES,
+  RECURRING, TEMPLATES, countOf,
+} from './quickParse.fixture'
 
 const ACCOUNTS = [
   { name: 'Cash' }, { name: 'GCash' }, { name: 'Maya' },
@@ -237,5 +241,293 @@ describe('the examples from the brief', () => {
       type: 'transfer', amount: 200,
       fromAccount: 'Maya Savings', toAccount: 'Maya',
     })
+  })
+})
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Everything above tests the parser against inputs written by hand, two or
+// three rows at a time. Everything below tests it against a ledger shaped like
+// a real one.
+//
+// That distinction is the point. All 38 tests above passed while the learner
+// was deriving "with" -> Food from "Lunch with team" and firing it on "800
+// with mom", because none of them fed it a description that was mostly
+// connective tissue - and real descriptions are mostly connective tissue.
+// ─────────────────────────────────────────────────────────────────────────────
+
+const KNOW = learnLedger(LEDGER, { now: FIXTURE_NOW })
+
+describe('learnLedger, against a real-shaped ledger', () => {
+  it('learns what a frequent merchant is filed under', () => {
+    expect(KNOW.category.grab).toBe('Transpo')
+    expect(KNOW.category.jollibee).toBe('Food')
+  })
+
+  it('learns which account each merchant is paid from', () => {
+    // Per merchant, not per user. This ledger pays Grab with GCash, Jollibee
+    // with Cash and SM with BPI, and all three have to survive together.
+    expect(KNOW.account.grab).toBe('GCash')
+    expect(KNOW.account.jollibee).toBe('Cash')
+    expect(KNOW.account['sm supermarket']).toBe('BPI')
+  })
+
+  it('learns a two-word merchant as one phrase', () => {
+    expect(KNOW.category['sm supermarket']).toBe('Groceries')
+  })
+
+  it('learns a short word once there is enough of it', () => {
+    // "sm" is two characters. The old learner threw away anything under three
+    // and so could never learn the one thing you would actually type. The
+    // guard is evidence, not length: six SM rows earn it.
+    expect(KNOW.category.sm).toBe('Groceries')
+  })
+
+  it('never turns a stopword into a rule, however often it appears', () => {
+    // "with" is in six rows, every one of them Food. Frequency is not the
+    // test - the word says nothing about what was bought.
+    expect(LEDGER.filter(r => / with /i.test(' ' + r.description + ' ')).length).toBeGreaterThan(3)
+    expect(KNOW.category.with).toBeUndefined()
+    expect(KNOW.category.the).toBeUndefined()
+    expect(KNOW.category.for).toBeUndefined()
+  })
+
+  it('does not turn a word seen once into a rule', () => {
+    // "run" comes from a single "Grocery run". Left as a rule it fires on
+    // "fun run registration", which was the measured failure.
+    expect(KNOW.category.run).toBeUndefined()
+    expect(KNOW.category.balance).toBeUndefined()
+  })
+
+  it('still believes a whole description seen once', () => {
+    // The counterpart to the rule above: you wrote the entire thing, so it
+    // means what it says even on one transaction.
+    expect(countOf('Haircut')).toBe(1)
+    expect(KNOW.category.haircut).toBe('Others')
+    expect(KNOW.category['team building']).toBe('Others')
+  })
+
+  it('refuses a merchant filed two ways in equal measure', () => {
+    expect(countOf('Milk tea', 'Food')).toBe(4)
+    expect(countOf('Milk tea', 'Others')).toBe(4)
+    expect(KNOW.category['milk tea']).toBeUndefined()
+  })
+
+  it('still learns the account for a merchant whose category it refuses', () => {
+    // Partial knowledge is not no knowledge. It cannot say what milk tea is,
+    // but it is quite sure which account pays for it.
+    expect(KNOW.account['milk tea']).toBe('GCash')
+  })
+
+  it('lets recent history outvote more numerous older history', () => {
+    // Load was Bills eight times last year and Transpo three times this
+    // month. Raw counts say Bills; a 90-day half-life says Transpo, which is
+    // what the user has actually been doing.
+    expect(countOf('Load', 'Bills')).toBe(8)
+    expect(countOf('Load', 'Transpo')).toBe(3)
+    expect(KNOW.category.load).toBe('Transpo')
+  })
+
+  it('records a typical amount only once there are enough samples', () => {
+    expect(KNOW.amount.grab).toMatchObject({ median: 165, n: 12 })
+    expect(KNOW.amount.haircut).toBeUndefined()   // one sample is not a habit
+  })
+
+  it('survives rows with no description, no category or a broken date', () => {
+    expect(() => learnLedger(LEDGER, { now: FIXTURE_NOW })).not.toThrow()
+    expect(KNOW.category.grab).toBe('Transpo')    // and does not corrupt the rest
+  })
+
+  it('is deterministic', () => {
+    expect(learnLedger(LEDGER, { now: FIXTURE_NOW })).toEqual(KNOW)
+  })
+})
+
+describe('quickParse with a learned ledger', () => {
+  const ctx = (extra = {}) => ({
+    accounts: FX_ACCOUNTS, categories: FX_CATEGORIES,
+    recurring: RECURRING, templates: TEMPLATES,
+    knowledge: KNOW, today: new Date(FIXTURE_NOW), ...extra,
+  })
+
+  it('fills in the account you always use for that merchant', () => {
+    const r = quickParse('180 grab', ctx())
+    expect(r.category).toBe('Transpo')
+    expect(r.account).toBe('GCash')
+    expect(r.matched.account.via).toBe('history')
+  })
+
+  it('never overrides an account you named yourself', () => {
+    const r = quickParse('180 grab bpi', ctx())
+    expect(r.account).toBe('BPI')
+    expect(r.matched.account.via).toBe('name')
+  })
+
+  it('does not infer an account from a category name', () => {
+    // "food" is a category, not a merchant. Its account history is whichever
+    // accounts happened to pay for food, which is not a useful answer.
+    const r = quickParse('500 food', ctx())
+    expect(r.matched.category.via).toBe('name')
+    expect(r.account).toBeNull()
+  })
+
+  it('prefers the longest phrase the ledger knows', () => {
+    // "team" alone leans Food. "team building" is Others, and is the more
+    // specific claim.
+    expect(KNOW.category.team).toBe('Food')
+    expect(quickParse('1500 team building', ctx()).category).toBe('Others')
+  })
+
+  it('flags an amount far above your usual', () => {
+    const r = quickParse('9000 grab', ctx())
+    expect(r.amountFlag).toMatchObject({ direction: 'high', median: 165 })
+  })
+
+  it('flags an amount far below your usual', () => {
+    // The dropped-zero case, which is the one that costs money to find late.
+    expect(quickParse('20 payroll', ctx()).amountFlag).toMatchObject({ direction: 'low' })
+  })
+
+  it('does not flag an ordinary amount', () => {
+    expect(quickParse('180 grab', ctx()).amountFlag).toBeNull()
+  })
+
+  it('does not flag when it has too few samples to have an opinion', () => {
+    expect(quickParse('99999 haircut', ctx()).amountFlag).toBeNull()
+  })
+
+  it('forgives one typo in a long merchant name', () => {
+    const r = quickParse('420 jolibee', ctx())
+    expect(r.category).toBe('Food')
+    expect(r.matched.category).toMatchObject({ via: 'typo', typed: 'jolibee' })
+    expect(r.account).toBe('Cash')      // and still fills the account in
+  })
+
+  it('reaches a phrase through one of its words', () => {
+    const r = quickParse('1940 supermrket', ctx())
+    expect(r.category).toBe('Groceries')
+    expect(r.matched.category.via).toBe('typo')
+  })
+
+  it('calls an exact match history, not a typo', () => {
+    // Both spellings resolve; only one of them is a misspelling, and telling
+    // the user they mistyped a word they typed correctly is its own bug.
+    expect(quickParse('1940 supermarket', ctx()).matched.category.via).toBe('history')
+  })
+
+  it('does not guess at a short mistyped word', () => {
+    // "grap" is one edit from "grab", and also from "gray", "grip" and "trap".
+    // Under five characters one edit reaches too much of the vocabulary.
+    expect(quickParse('300 grap', ctx()).category).toBeNull()
+  })
+
+  it('refuses a category you no longer have', () => {
+    const r = quickParse('180 grab', ctx({ categories: [{ name: 'Food' }] }))
+    expect(r.category).toBeNull()
+    expect(r.account).toBe('GCash')     // the account is still a fact
+  })
+
+  it('refuses an account you no longer have', () => {
+    const r = quickParse('180 grab', ctx({ accounts: [{ name: 'Cash' }] }))
+    expect(r.account).toBeNull()
+    expect(r.category).toBe('Transpo')
+  })
+
+  it('offers a bill you already have instead of a duplicate', () => {
+    expect(quickParse('549 netflix', ctx()).recurringMatch).toMatchObject({ name: 'Netflix', id: 1 })
+  })
+
+  it('ignores a paused bill', () => {
+    expect(quickParse('1500 gym', ctx()).recurringMatch).toBeNull()
+  })
+
+  it('offers a template by name', () => {
+    expect(quickParse('12000 rent', ctx()).templateMatch).toMatchObject({ name: 'Rent' })
+  })
+
+  it('fills a gap from a named template rather than only reporting it', () => {
+    // The Rent template names BPI. Nothing in "12000 rent" does, and the
+    // ledger has no rent history, so the template is the best answer going.
+    const r = quickParse('12000 rent', ctx())
+    expect(r.account).toBe('BPI')
+    expect(r.matched.account).toMatchObject({ via: 'template', value: 'Rent' })
+  })
+
+  it('lets what you typed beat the template', () => {
+    const r = quickParse('12000 rent gcash', ctx())
+    expect(r.account).toBe('GCash')
+    expect(r.matched.account.via).toBe('name')
+  })
+
+  it('finds no bill in an ordinary expense', () => {
+    expect(quickParse('180 grab', ctx()).recurringMatch).toBeNull()
+  })
+})
+
+describe('the corpus - what must and must not be understood', () => {
+  const ctx = {
+    accounts: FX_ACCOUNTS, categories: FX_CATEGORIES,
+    recurring: RECURRING, templates: TEMPLATES,
+    knowledge: KNOW, today: new Date(FIXTURE_NOW),
+  }
+
+  // A flat table, because the value here is breadth. Each row is one thing a
+  // person might actually type. `null` means "must not decide".
+  const CASES = [
+    // typed                       type        amount   category      account
+    ['180 grab',                   'expense',     180, 'Transpo',    'GCash'],
+    ['grab 180',                   'expense',     180, 'Transpo',    'GCash'],
+    ['1.2k grab',                  'expense',    1200, 'Transpo',    'GCash'],
+    ['260 jollibee',               'expense',     260, 'Food',       'Cash'],
+    ['260 jollibee gcash',         'expense',     260, 'Food',       'GCash'],
+    ['2100 sm supermarket',        'expense',    2100, 'Groceries',  'BPI'],
+    ['1300 shopee order',          'expense',    1300, 'Shopping',   'Maya'],
+    ['100 load',                   'expense',     100, 'Transpo',    'GCash'],
+    ['42000 salary',               'inflow',    42000, 'Salary',     null],
+    // must NOT decide
+    ['800 with mom',               'expense',     800, null,         null],
+    ['450 fun run',                'expense',     450, null,         null],
+    ['160 milk tea',               'expense',     160, null,         'GCash'],
+    ['300 grap',                   'expense',     300, null,         null],
+    ['500 zzqq',                   'expense',     500, null,         null],
+    ['1500 gym',                   'expense',    1500, null,         null],
+  ]
+
+  it.each(CASES)('%s', (input, type, amount, category, account) => {
+    const r = quickParse(input, ctx)
+    expect({ type: r.type, amount: r.amount, category: r.category, account: r.account })
+      .toEqual({ type, amount, category, account })
+  })
+
+  // Two distinct real accounts either side of "to" is the ONLY thing that
+  // makes a transfer, now that no keyword is required. So the cases that must
+  // still fail are the ones that carry the shape without the accounts - and
+  // ordinary English is full of them.
+  const NOT_TRANSFERS = [
+    '150 from jollibee to go',       // "to go" is not an account; this is lunch
+    '200 from maya to maya',         // the same account on both sides
+    '300 from cash to nowhere',      // one side does not resolve
+    '150 lunch to go',               // no keyword, and neither side resolves
+    '500 gift to mom',
+    '200 back to school',
+    '900 top to bottom',
+    '260 jollibee to cash',          // one real account is not enough
+  ]
+
+  it.each(NOT_TRANSFERS)('is not a transfer: %s', (input) => {
+    expect(quickParse(input, ctx).type).not.toBe('transfer')
+  })
+
+  const TRANSFERS = [
+    ['500 from gcash to bpi',         'GCash', 'BPI'],
+    ['transfer 500 from bpi to maya', 'BPI',   'Maya'],
+    ['200 from maya savings to maya', 'Maya Savings', 'Maya'],
+    ['1000 gcash to cash',            'GCash', 'Cash'],
+  ]
+
+  it.each(TRANSFERS)('is a transfer: %s', (input, from, to) => {
+    const r = quickParse(input, ctx)
+    expect(r.type).toBe('transfer')
+    expect(r.fromAccount).toBe(from)
+    expect(r.toAccount).toBe(to)
   })
 })
