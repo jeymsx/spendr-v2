@@ -455,6 +455,94 @@ function SpendingByCategory({ segments, total, animKey, rangeLabel }) {
   )
 }
 
+// ── Trend placeholder ──────────────────────────────────────────────────────────
+
+/* Lucide's own geometry, hand-drawn rather than installed.
+ 
+   lucide-react would be a ~30KB dependency and a second icon idiom for four
+   glyphs, in a file where every other icon is already a 24x24, 2px-stroke,
+   currentColor path. These are lucide's trending-down, trending-up, activity
+   and bar-chart with their half-integer vertices snapped to whole numbers -
+   lucide draws trending-down through 13.5,8.5, and a 2px stroke on a
+   half-integer coordinate is antialiased across two pixel rows at 1x. */
+
+function IconTrendDown() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 17L14 9l-5 5L2 7" />
+      <path d="M16 17h6v-6" />
+    </svg>
+  )
+}
+
+function IconTrendUp() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 7L14 15l-5-5L2 17" />
+      <path d="M16 7h6v6" />
+    </svg>
+  )
+}
+
+function IconActivity() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" />
+    </svg>
+  )
+}
+
+function IconBars() {
+  return (
+    <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M6 20v-4M12 20V10M18 20V4" />
+    </svg>
+  )
+}
+
+const TREND_EMPTY = {
+  expenses: { Icon: IconTrendDown, noun: 'expenses' },
+  income:   { Icon: IconTrendUp,   noun: 'income'   },
+  netflow:  { Icon: IconActivity,  noun: 'activity' },
+  bars:     { Icon: IconBars,      noun: 'activity' },
+}
+
+/**
+ * Holds the chart's exact height when there is nothing to draw.
+ *
+ * The empty state was a single `py-8` line, so switching Expenses -> Income on
+ * a month with no income collapsed the section from 160px to about 52px and
+ * shoved everything below it - Top Expenses, the whole rest of the page - up
+ * the screen. Toggling back shoved it down again. A control that makes the
+ * page jump is a control people stop touching.
+ *
+ * So the height is passed in from the caller rather than guessed: 160 for the
+ * area chart, 180 for the multi-month bars, matching each ResponsiveContainer
+ * exactly. The px-5 wrapper matches too, so the box is identical either way.
+ */
+function TrendEmpty({ kind, height }) {
+  const { Icon, noun } = TREND_EMPTY[kind] ?? TREND_EMPTY.expenses
+  return (
+    <div className="px-5">
+      <div
+        style={{ height }}
+        className="flex flex-col items-center justify-center gap-2 text-center"
+      >
+        <span className="text-slate-300 dark:text-white/20">
+          <Icon />
+        </span>
+        <p className="text-[13px] text-slate-400 dark:text-slate-500">
+          No {noun} in this period
+        </p>
+      </div>
+    </div>
+  )
+}
+
 // ── Spending Trend (adaptive) ──────────────────────────────────────────────────
 
 const CHART_TYPE_OPTS = [
@@ -536,7 +624,10 @@ function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDa
     <div>
       <SectionLabel action={typeFilter}>{label}</SectionLabel>
       {!hasData ? (
-        <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No data for this period</p>
+        <TrendEmpty
+          kind={isArea ? chartType : 'bars'}
+          height={isArea ? 160 : 180}
+        />
       ) : isArea ? (
         <DailyAreaChart data={activeData} chartType={chartType} />
       ) : (
