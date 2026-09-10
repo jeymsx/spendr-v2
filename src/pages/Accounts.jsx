@@ -263,11 +263,13 @@ const CARD_RATIO = 1.586
  * 28.5px of empty gradient under the text on every card but the last, which
  * read as the cards being spaced apart rather than stacked.
  *
- * 58 keeps 10.5px of clearance, near-symmetric with the card's own 14px of
- * top padding, and enough that the next card's drop shadow does not fall
- * across the subtitle above it. Below about 52 it does.
+ * 50 is the practical floor: 2.5px of clearance under the subtitle. The only
+ * real constraint is not clipping that text - an earlier version of this
+ * comment claimed the next card's drop shadow would wash over it, which was
+ * simply wrong. Both card shadows (0 1px 2px and 0 6px 16px -4px) are offset
+ * DOWNWARD, so they fall away from the card above, not onto it.
  */
-const STACK_STRIP = 58
+const STACK_STRIP = 50
 
 /**
  * One account, as a card face.
