@@ -39,13 +39,8 @@ export const PH_GROUPS = ['E-Wallets', 'Traditional Banks', 'Digital Banks']
 
 export const POPULAR_ACCOUNTS = PH_ACCOUNTS.filter(a => a.popular)
 
-export const TYPE_ICON = {
-  cash:    '💵',
-  ewallet: '📱',
-  bank:    '🏦',
-  savings: '🏦',
-  credit:  '💳',
-}
+// TYPE_ICON moved to components/icons.jsx as ACCOUNT_TYPE_ICON. Which glyph
+// stands for "savings" is presentation, and this file is data.
 
 export const CUSTOM_PALETTE = [
   '#10b981', '#2D9DFF', '#8b5cf6', '#f59e0b', '#ef4444',

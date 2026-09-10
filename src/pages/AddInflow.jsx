@@ -11,7 +11,7 @@ import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
-import { IconCalendar, IconChevronLeft, IconChevronRight } from '../components/icons'
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconTemplate} from '../components/icons'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -194,7 +194,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
             text-primary bg-primary/[0.08] dark:bg-primary/[0.12]
             border border-primary/20 active:scale-95 transition-transform duration-75"
         >
-          <span>⚡</span> Templates
+          <IconTemplate size={14} /> Templates
         </button>
       </header>
 

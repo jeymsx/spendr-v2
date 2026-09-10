@@ -3,7 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useAuth } from '../context/AuthContext'
 import { fullSync } from '../lib/sync'
-import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON, CUSTOM_PALETTE } from '../lib/phAccounts'
+import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, CUSTOM_PALETTE } from '../lib/phAccounts'
+import { ACCOUNT_TYPE_ICON, IconCashUI, IconTick, IconSparkle } from '../components/icons'
 import { EXPENSE_PRESETS, INFLOW_PRESETS, SYSTEM_CATS, EMOJI_SUGGESTIONS, CAT_PALETTE, LOCKED_EXPENSE, LOCKED_INFLOW } from '../lib/phCategories'
 import { useToast } from '../context/ToastContext'
 
@@ -71,7 +72,7 @@ function StepWelcome({ onNext, onSignIn, signingIn }) {
       <div className="flex flex-col items-center gap-2.5 text-sm text-slate-500 mt-2">
         {['Track spending & income', 'Manage multiple accounts', 'Sync across devices'].map(f => (
           <div key={f} className="flex items-center gap-2.5">
-            <span className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-primary text-[11px] font-bold">✓</span>
+            <span className="w-5 h-5 rounded-full bg-primary/15 flex items-center justify-center text-primary"><IconTick size={12} /></span>
             <span>{f}</span>
           </div>
         ))}
@@ -294,7 +295,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                     >
                       <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
                       {acct.name}
-                      {sel && <span className="text-[10px]">✓</span>}
+                      {sel && <IconTick size={11} />}
                     </button>
                   )
                 })}
@@ -311,7 +312,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                   bg-emerald-500/15 border border-emerald-500/35 text-emerald-400 text-sm font-medium">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
                   Cash
-                  <span className="text-[10px] opacity-70">✓</span>
+                  <span className="opacity-70"><IconTick size={11} /></span>
                 </span>
               </div>
             </div>
@@ -339,7 +340,11 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                       <span className={`text-sm font-semibold mt-2 leading-tight ${sel ? 'text-primary' : 'text-white'}`}>
                         {acct.name}
                       </span>
-                      {sel && <span className="text-[10px] text-primary/70">✓ Selected</span>}
+                      {sel && (
+                        <span className="text-[10px] text-primary/70 flex items-center gap-1">
+                          <IconTick size={10} /> Selected
+                        </span>
+                      )}
                     </button>
                   )
                 })}
@@ -366,7 +371,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                       >
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: acct.color }} />
                         {acct.name}
-                        {sel && <span className="text-[10px]">✓</span>}
+                        {sel && <IconTick size={11} />}
                       </button>
                     )
                   })}
@@ -523,16 +528,19 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
         <div className="divide-y divide-white/[0.06]">
           {allAccounts.map(acct => {
             const isCredit = acct.type === 'credit'
-            const icon     = TYPE_ICON[acct.type] ?? '💰'
+            const Icon     = ACCOUNT_TYPE_ICON[acct.type] ?? IconCashUI
             return (
               <div key={acct.name} className="py-3.5">
                 {/* Main row: icon + name + balance input */}
                 <div className="flex items-center gap-3">
+                  {/* The glow survives the swap - drop-shadow applies to
+                      an SVG the same as to a glyph - and the icon now takes
+                      the account's own colour, which the emoji could not. */}
                   <span
-                    className="text-base shrink-0 w-7 text-center"
-                    style={{ filter: `drop-shadow(0 0 6px ${acct.color}88)` }}
+                    className="shrink-0 w-7 flex items-center justify-center"
+                    style={{ color: acct.color, filter: `drop-shadow(0 0 6px ${acct.color}88)` }}
                   >
-                    {icon}
+                    <Icon size={18} />
                   </span>
 
                   <div className="flex items-center gap-1.5 shrink-0 mr-1">
@@ -664,7 +672,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
               bg-white/[0.08] border border-white/[0.15] text-slate-300 text-sm font-semibold">
               <span>{locked.icon}</span> {locked.name}
-              <span className="text-[10px] opacity-70 ml-0.5">✓</span>
+              <span className="opacity-70 ml-0.5"><IconTick size={11} /></span>
             </span>
           </div>
         </div>
@@ -688,7 +696,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
                 >
                   <span>{cat.icon}</span>
                   {cat.name}
-                  {sel && <span className="text-[10px] ml-0.5">✓</span>}
+                  {sel && <span className="ml-0.5"><IconTick size={11} /></span>}
                 </button>
               )
             })}
@@ -882,7 +890,9 @@ function StepDone({ onFinish, saving }) {
       </div>
 
       <div style={{ animation: 'pageFadeIn 0.5s ease both' }}>
-        <div className="text-[64px] leading-none mb-6">🎉</div>
+        {/* Stars, not a party popper. Untitled UI has no confetti, and a
+            gift box would have read as the Gifts category. */}
+        <div className="mb-6 flex justify-center text-primary"><IconSparkle size={64} /></div>
         <h2 className="text-[32px] font-bold text-white leading-tight">You're all set!</h2>
         <p className="text-slate-400 mt-3 text-[15px] leading-relaxed">
           Welcome to Spendr.<br />Time to take control of your money.

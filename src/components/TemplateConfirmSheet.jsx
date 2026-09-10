@@ -5,6 +5,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { IconTemplate } from './icons'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -106,7 +107,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
             {cfg.label}
           </span>
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
-            ⚡ {template.name}
+            <IconTemplate size={13} className="inline-block mr-1 -mt-px" /> {template.name}
           </span>
         </div>
 

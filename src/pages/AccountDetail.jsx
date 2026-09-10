@@ -13,7 +13,7 @@ import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark from '../components/SchemeMark'
 import TxDetailSheet from '../components/TxDetailSheet'
-import { IconChevronRight } from '../components/icons'
+import { IconChevronRight, IconTick, IconWarning} from '../components/icons'
 import {
   AccountFormSheet, QrViewerModal, StatCard, CreditTxSection, DetailTxRow,
   TYPE_LABEL, fmt, fmtCompact, fmtCycleDate, nextOccurrence, nextOccurrenceDate,
@@ -735,14 +735,14 @@ export default function AccountDetail() {
           <>
             {creditData.stmtPaid ? (
               <div className="mb-3 px-3 py-2 rounded-xl bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20 flex items-center gap-2">
-                <span className="text-base">✅</span>
+                <span className="text-emerald-500 dark:text-emerald-400"><IconTick size={16} /></span>
                 <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400">
                   Statement balance paid
                 </p>
               </div>
             ) : creditData.dueSoon && creditData.nextDue ? (
               <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-100 dark:border-amber-500/20 flex items-center gap-2">
-                <span className="text-base">⚠️</span>
+                <span className="text-amber-500 dark:text-amber-400"><IconWarning size={16} /></span>
                 <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
                   Payment due {creditData.nextDue}
                   {creditData.minimumDue > 0 && ` — pay at least ${fmt(creditData.minimumDue)}`}

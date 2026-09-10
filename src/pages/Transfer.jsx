@@ -11,7 +11,7 @@ import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
-import { IconCalendar, IconChevronLeft, IconChevronRight } from '../components/icons'
+import { IconCalendar, IconChevronLeft, IconChevronRight, IconTemplate, IconWarning} from '../components/icons'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -260,7 +260,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
             text-primary bg-primary/[0.08] dark:bg-primary/[0.12]
             border border-primary/20 active:scale-95 transition-transform duration-75"
         >
-          <span>⚡</span> Templates
+          <IconTemplate size={14} /> Templates
         </button>
       </header>
 
@@ -363,7 +363,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
         {overpayWarning && (
           <div className="px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-200 dark:border-amber-500/20 -mt-1">
             <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
-              ⚠️ Payment exceeds outstanding balance
+              <IconWarning size={13} className="inline-block mr-1 -mt-px" /> Payment exceeds outstanding balance
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
               {fmt(creditOutstanding)} is currently owed on {toAccount.name}.

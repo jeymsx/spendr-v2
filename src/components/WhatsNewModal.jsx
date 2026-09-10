@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import db from '../db/db'
+import { IconSparkle } from './icons'
 
 const CURRENT_VERSION = '0.2.0'
 
@@ -81,7 +82,7 @@ export default function WhatsNewModal({ onClose }) {
         <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
-              <span className="text-xl">🎉</span>
+              <span className="text-primary"><IconSparkle size={20} /></span>
             </div>
             <div>
               <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">What's New</h2>

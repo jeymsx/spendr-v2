@@ -3,6 +3,7 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { deleteTemplateRemote } from '../lib/sync'
+import { IconTemplate } from './icons'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -126,7 +127,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
         <div className="overflow-y-auto flex-1" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
           {templates.length === 0 ? (
             <div className="py-14 text-center px-8">
-              <p className="text-3xl mb-3">⚡</p>
+              <p className="mb-3 flex justify-center text-slate-400 dark:text-slate-500"><IconTemplate size={30} /></p>
               <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No templates yet</p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                 Save a transaction as a template to use it here

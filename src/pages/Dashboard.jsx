@@ -6,7 +6,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
 import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
-import { IconBank, IconCard, IconChevronRight, IconPhone, IconWallet } from '../components/icons'
+import { IconBank, IconCard, IconChevronRight, IconPhone, IconWallet, IconWarning, IconBell } from '../components/icons'
 import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
@@ -48,6 +48,19 @@ function getGreeting() {
   return 'Good evening'
 }
 
+/**
+ * The line under the greeting: {glyph?, Icon?, text}.
+ *
+ * It used to return one string with the glyph interpolated into it, which is
+ * why the home screen's first line of type carried a raw U+26A0 and U+1F514 -
+ * OS-font emoji sitting directly under a drawn settings icon.
+ *
+ * A shape rather than a string because a component cannot be interpolated into
+ * a template literal. `glyph` survives for the budget cases only: those
+ * showed the CATEGORY's own emoji when it had one, and that is user data with
+ * a sync path, so it keeps working until the category icons are decided. The
+ * hardcoded fallbacks are icons now.
+ */
 function getContextHint(txAll, budgetCategories, upcomingRecurring) {
   const _d    = new Date()
   const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`
@@ -55,10 +68,10 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
 
   // Budget warnings take top priority
   const overBudget = (budgetCategories ?? []).find(c => c.spent > c.budget)
-  if (overBudget) return `${overBudget.icon ?? '⚠️'} Over budget on ${overBudget.name.toLowerCase()}`
+  if (overBudget) return { glyph: overBudget.icon, Icon: IconWarning, text: `Over budget on ${overBudget.name.toLowerCase()}` }
 
   const nearBudget = (budgetCategories ?? []).find(c => c.budget > 0 && (c.spent / c.budget) >= 0.85)
-  if (nearBudget) return `${nearBudget.icon ?? '📊'} ${nearBudget.name.toLowerCase()} budget almost full`
+  if (nearBudget) return { glyph: nearBudget.icon, Icon: IconWarning, text: `${nearBudget.name.toLowerCase()} budget almost full` }
 
   // Overdue bills first, then ones due today or tomorrow. The previous check
   // was `diff <= 1`, which is also true for anything long overdue — so a bill
@@ -70,9 +83,9 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
     return Math.round((new Date(y, mo - 1, d) - start) / 864e5)
   }
   const overdue = bills.find(r => daysAway(r) < 0)
-  if (overdue) return `⚠️ ${overdue.name} is overdue`
+  if (overdue) return { Icon: IconWarning, text: `${overdue.name} is overdue` }
   const urgentBill = bills.find(r => daysAway(r) <= 1)
-  if (urgentBill) return `🔔 ${urgentBill.name} due ${daysAway(urgentBill) === 0 ? 'today' : 'tomorrow'}`
+  if (urgentBill) return { Icon: IconBell, text: `${urgentBill.name} due ${daysAway(urgentBill) === 0 ? 'today' : 'tomorrow'}` }
 
   // Today's spending
   const todayTotal = (txAll ?? [])
@@ -82,14 +95,26 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
     const compact = todayTotal >= 1000
       ? '₱' + (todayTotal / 1000).toFixed(1) + 'K'
       : '₱' + todayTotal.toFixed(0)
-    return `${compact} spent today`
+    return { text: `${compact} spent today` }
   }
 
   // Day-of-week fallbacks
-  if (dow === 1) return 'New week, fresh start'
-  if (dow === 5) return 'Almost the weekend'
-  if (dow === 0 || dow === 6) return 'Enjoy your day off'
-  return 'No spending yet today'
+  if (dow === 1) return { text: 'New week, fresh start' }
+  if (dow === 5) return { text: 'Almost the weekend' }
+  if (dow === 0 || dow === 6) return { text: 'Enjoy your day off' }
+  return { text: 'No spending yet today' }
+}
+
+function ContextHint({ hint }) {
+  const { glyph, Icon, text } = hint ?? {}
+  return (
+    <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
+      {glyph
+        ? <span className="leading-none">{glyph}</span>
+        : Icon ? <Icon size={12} className="shrink-0" /> : null}
+      <span className="truncate">{text}</span>
+    </p>
+  )
 }
 
 // ── Animated counter ───────────────────────────────────────────────────────────
@@ -536,9 +561,7 @@ export default function Dashboard() {
               {userName}
             </span>!
           </h1>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-            {getContextHint(txAll, budgetCategories, upcomingRecurring)}
-          </p>
+          <ContextHint hint={getContextHint(txAll, budgetCategories, upcomingRecurring)} />
         </div>
         <button
           onClick={() => navigate('/settings')}

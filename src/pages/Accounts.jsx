@@ -15,11 +15,11 @@ import { useTheme } from '../context/ThemeContext'
 import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, getNextCycleRange, nextDueDate } from '../utils/creditCycle'
-import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON } from '../lib/phAccounts'
+import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS } from '../lib/phAccounts'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
-import { IconBank, IconCard, IconCheck, IconChevronRight, IconPhone, IconPlus, IconWallet } from '../components/icons'
+import { IconBank, IconCard, IconCheck, IconChevronRight, IconPhone, IconPlus, IconWallet, IconWalletUI, IconBankUI, IconTrash} from '../components/icons'
 import { deleteAccountRemote } from '../lib/sync'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
@@ -1804,7 +1804,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
             </div>
           ) : (
             <div className="text-center">
-              <span className="text-2xl">🗑️</span>
+              <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
               <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">Delete Account?</h3>
             </div>
           )}
@@ -1887,8 +1887,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 <Label>Counts As</Label>
                 <div className="flex gap-2">
                   {[
-                    { value: 'spending', label: 'Spending', icon: '💸' },
-                    { value: 'savings',  label: 'Savings',  icon: '🏦' },
+                    { value: 'spending', label: 'Spending', Icon: IconWalletUI },
+                    { value: 'savings',  label: 'Savings',  Icon: IconBankUI   },
                   ].map(o => (
                     <button
                       key={o.value}
@@ -1900,7 +1900,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
                       ].join(' ')}
                     >
-                      <span>{o.icon}</span>
+                      <o.Icon size={15} />
                       <span>{o.label}</span>
                     </button>
                   ))}

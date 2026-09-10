@@ -3,7 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Papa from 'papaparse'
 import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { IconCheck, IconUpload } from '../components/icons'
+import { IconCheck, IconUpload, ACCOUNT_TYPE_ICON, IconCashUI, IconImport, IconBankUI, IconBalance, IconSparkle } from '../components/icons'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -446,7 +446,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
                   : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-300',
               ].join(' ')}
             >
-              {a}{missingAccounts.has(a) ? ' ✦' : ''}
+              {a}{missingAccounts.has(a) ? ' *' : ''}
             </span>
           ))}
         </div>
@@ -468,7 +468,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
                   : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-300',
               ].join(' ')}
             >
-              {c}{missingCategories.has(c) ? ' ✦' : ''}
+              {c}{missingCategories.has(c) ? ' *' : ''}
             </span>
           ))}
         </div>
@@ -568,7 +568,8 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 // Users set the balance each account had BEFORE the first transaction in the file.
 // recalcAllBalances() uses these as starting points instead of ₱0.
 
-const ACCT_EMOJI = { cash: '💵', savings: '🏦', credit: '💳', ewallet: '📱' }
+// Account glyphs come from ACCOUNT_TYPE_ICON in components/icons.jsx, so
+// the wizard and the rest of the app cannot drift apart.
 
 function StepOpeningBalances({ rows, onBack, onNext }) {
   const existingAccounts = useLiveQuery(() => db.accounts.toArray(), [], [])
@@ -647,7 +648,10 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
                   border: `1px solid ${acc?.color ?? '#6b7280'}44`,
                 }}
               >
-                {ACCT_EMOJI[acc?.type] ?? '💰'}
+                {(() => {
+                  const Icon = ACCOUNT_TYPE_ICON[acc?.type] ?? IconCashUI
+                  return <Icon size={18} />
+                })()}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-[15px] text-slate-800 dark:text-white truncate">{name}</p>
@@ -838,7 +842,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
           border border-slate-100 dark:border-white/[0.07]
           shadow-[0_1px_4px_rgba(0,0,0,0.04)] dark:shadow-none">
           <div className="flex items-center gap-3">
-            <span className="text-2xl">📥</span>
+            <span className="text-slate-500 dark:text-slate-400"><IconImport size={24} /></span>
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-white">
                 {rows.length} transactions will be processed
@@ -854,7 +858,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
           <div className="px-4 py-4 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.08]
             border border-amber-100 dark:border-amber-500/20">
             <div className="flex items-start gap-3">
-              <span className="text-xl shrink-0">🏦</span>
+              <span className="shrink-0 text-slate-500 dark:text-slate-400"><IconBankUI size={20} /></span>
               <div>
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
                   {missingAccounts.size} account{missingAccounts.size > 1 ? 's' : ''} will be created
@@ -871,7 +875,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
           <div className="px-4 py-4 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.08]
             border border-amber-100 dark:border-amber-500/20">
             <div className="flex items-start gap-3">
-              <span className="text-xl shrink-0">🏷️</span>
+              <span className="shrink-0 text-slate-500 dark:text-slate-400"><IconSparkle size={20} /></span>
               <div>
                 <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
                   {missingCategories.size} categor{missingCategories.size > 1 ? 'ies' : 'y'} will be created
@@ -887,7 +891,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
         <div className="px-4 py-4 rounded-2xl bg-blue-50 dark:bg-primary/[0.08]
           border border-blue-100 dark:border-primary/20">
           <div className="flex items-start gap-3">
-            <span className="text-xl shrink-0">⚖️</span>
+            <span className="shrink-0 text-slate-500 dark:text-slate-400"><IconBalance size={20} /></span>
             <div>
               <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
                 Balances recalculated from opening balances

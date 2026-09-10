@@ -102,3 +102,80 @@ export function IconWallet({ size = 16, strokeWidth = '2', stroke = 'currentColo
     </svg>
   )
 }
+
+// ── Untitled UI Icons, renamed to what this app calls things ──────────────────
+//
+// Re-exported here rather than imported from '@untitledui/icons' at each call
+// site, for two reasons.
+//
+// One: the choice of glyph is a design decision, and design decisions belong
+// somewhere you can find them. "Which icon means overdue?" is answerable by
+// reading this block; it is not answerable by grepping forty files for
+// `<AlertTriangle>`.
+//
+// Two: swapping a glyph becomes a one-line change. `Stars01` for "celebrate"
+// is the compromise in this list - Untitled UI has no confetti or party
+// popper, and a gift box would have read as the Gifts category - so if it ever
+// looks wrong it changes here and every site follows.
+//
+// ── Why this pack, and at 1.8 ──
+//
+// The set is 24x24 with round caps and joins, which is the same family the
+// bottom navbar was drawn in. The navbar is NOT a pack: it is hand-drawn at
+// 1.8 inactive / 2.2 active, with a duotone fill on the active tab that no
+// stroke-only pack offers. So the pack is matched TO the navbar rather than
+// the other way round, and the five navbar icons stay bespoke - their
+// outline-to-filled active state is real tab-bar behaviour worth keeping.
+//
+// Untitled UI ships at strokeWidth 2. Stock 2 sitting next to the navbar's 1.8
+// reads as two different sets, so `uui` overrides it once, here. It also sets
+// the default size to 18, which is what most call sites in this app want; a
+// call site can still pass either prop, because the spread comes last.
+import {
+  AlertTriangle, X as XClose, Check, Trash01, Download01, Scales02, Stars01,
+  Bell01, Zap, Bank, Wallet01, CreditCard01, Phone01, BankNote01,
+} from '@untitledui/icons'
+
+function uui(Cmp, defaultSize = 18) {
+  const Wrapped = ({ size = defaultSize, ...rest }) => (
+    <Cmp size={size} strokeWidth={1.8} {...rest} />
+  )
+  Wrapped.displayName = `Icon(${Cmp.displayName ?? 'uui'})`
+  return Wrapped
+}
+
+export const IconWarning   = uui(AlertTriangle)  // overdue, over budget, overdrawn
+export const IconX         = uui(XClose)         // dismiss, and the error toast
+export const IconTick      = uui(Check)          // distinct from IconCheck above, hand-drawn
+export const IconTrash     = uui(Trash01)
+export const IconImport    = uui(Download01)     // the import wizard's own affordance
+export const IconBalance   = uui(Scales02)       // reconciling two sides, in the import wizard
+export const IconSparkle   = uui(Stars01)        // "this row is new / unmatched", and celebrate
+export const IconBell      = uui(Bell01)         // a bill falling due
+export const IconTemplate  = uui(Zap)            // templates
+export const IconBankUI    = uui(Bank)           // account types, replacing the emoji map
+export const IconWalletUI  = uui(Wallet01)
+export const IconCardUI    = uui(CreditCard01)
+export const IconPhoneUI   = uui(Phone01)
+export const IconCashUI    = uui(BankNote01)
+
+/**
+ * An account type's icon.
+ *
+ * This lived in lib/phAccounts.js as a map of emoji strings, next to the bank
+ * lists and the colour palette. It has moved here because which glyph stands
+ * for "savings" is a presentation decision and phAccounts.js is data - and
+ * because a component map cannot live in a .js file without dragging
+ * presentation imports into the data layer.
+ *
+ * bank and savings deliberately share a glyph, as they did before: the
+ * distinction is what the money is FOR, not where it is, and inventing a
+ * second building would imply a difference the app does not model.
+ */
+export const ACCOUNT_TYPE_ICON = {
+  cash:    IconCashUI,
+  ewallet: IconPhoneUI,
+  bank:    IconBankUI,
+  savings: IconBankUI,
+  credit:  IconCardUI,
+}

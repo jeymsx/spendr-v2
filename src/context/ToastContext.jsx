@@ -1,20 +1,16 @@
 import { createContext, useContext, useState, useCallback, useRef } from 'react'
+import { IconTick, IconWarning, IconX } from '../components/icons'
 
 const ToastContext = createContext(null)
 
+/* Icons, not glyphs. These were the characters U+2713, U+26A0 and U+2715
+   with `font-bold` on them - a text tick rendered by whatever font the OS
+   picked, next to a toast whose every other element is drawn. font-bold also
+   did nothing an SVG can use; the weight now comes from the icon's stroke. */
 const VARIANTS = {
-  success: {
-    icon: '✓',
-    iconClass: 'text-emerald-400 dark:text-emerald-500 font-bold',
-  },
-  warning: {
-    icon: '⚠',
-    iconClass: 'text-amber-400 dark:text-amber-500 font-bold',
-  },
-  error: {
-    icon: '✕',
-    iconClass: 'text-red-400 dark:text-red-500 font-bold',
-  },
+  success: { Icon: IconTick,    iconClass: 'text-emerald-400 dark:text-emerald-500' },
+  warning: { Icon: IconWarning, iconClass: 'text-amber-400 dark:text-amber-500'    },
+  error:   { Icon: IconX,       iconClass: 'text-red-400 dark:text-red-500'        },
 }
 
 function GlobalToast({ toast, onAction }) {
@@ -31,7 +27,7 @@ function GlobalToast({ toast, onAction }) {
       <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl max-w-full
         bg-slate-900 dark:bg-white
         shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
-        {v && <span className={`${v.iconClass} shrink-0`}>{v.icon}</span>}
+        {v && <span className={`${v.iconClass} shrink-0`}><v.Icon size={16} /></span>}
         <p className="text-sm font-semibold text-white dark:text-slate-900 break-words leading-snug">
           {toast?.message}
         </p>
