@@ -12,7 +12,6 @@ import { accountBrand } from '../lib/accountBrands'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
-import { allocateGoals } from '../lib/goals'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -283,7 +282,6 @@ export default function Dashboard() {
   const txAll      = useLiveQuery(() => db.transactions.toArray())
   const userMeta   = useLiveQuery(() => db.meta.get('displayName'))
   const templates  = useLiveQuery(() => db.templates.toArray(),  [], [])
-  const goals      = useLiveQuery(() => db.goals.toArray(),      [], [])
 
   // ── Derived values ────────────────────────────────────────────────────────────
   const { spendingBalance, savingsBalance } = useMemo(() => {
@@ -320,7 +318,9 @@ export default function Dashboard() {
     return (txAll || [])
       .filter(t => (t.date ?? '') <= cutoff)
       .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
-      .slice(0, 10)
+      // Five. Ten was half a screen of scrolling for a list whose whole job
+      // is "does anything here look wrong", and "See all" is right there.
+      .slice(0, 5)
   }, [txAll])
 
   const monthExpenses = useMemo(() => {
@@ -458,13 +458,6 @@ export default function Dashboard() {
 
   const netWorth = spendingBalance + savingsBalance - creditOutstanding
 
-  // Goal progress is derived, never stored - see lib/goals.js. Recomputed
-  // here rather than read from a column precisely so that spending from an
-  // account moves its goals on this screen with no extra bookkeeping.
-  const goalAlloc = useMemo(
-    () => allocateGoals({ goals: goals ?? [], accounts: accounts ?? [] }),
-    [goals, accounts],
-  )
 
   const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
@@ -653,6 +646,8 @@ export default function Dashboard() {
         </div>
       </section>
 
+      <QuickActions />
+
       {/* ── Budget ────────────────────────────────────────────────────────────
           One line and one meter, tapping through to the full breakdown. It
           was a grid of eight per-category chips, which is a lot of screen
@@ -698,17 +693,6 @@ export default function Dashboard() {
         </section>
       )}
 
-      {/* ── Goals and Debts: two doors ─────────────────────────────────────
-
-          Where a debts panel and a seven-day bill list used to be. Both were
-          roughly a screen of vertical space spent restating figures that have
-          their own pages, and they pushed Recent - the thing people actually
-          open the home screen for - below the fold.
-
-          Recurring left this group entirely: it is rows in Upcoming now,
-          which says what a tile could only point at. What is left is two
-          destinations, so they are a list rather than a grid. ── */}
-      <PlannerList goalAlloc={goalAlloc} debts={debts} />
 
       {/* ── Recent Transactions ──────────────────────────────────────────────── */}
       <UpcomingSection items={upcomingItems} />
@@ -942,84 +926,140 @@ function UpcomingSection({ items }) {
   )
 }
 
-// ── Planner list ───────────────────────────────────────────────────────────────
+// ── Quick actions ──────────────────────────────────────────────────────────────
+
+/* Four glyphs, one set: 24x24, 2px stroke on integer coordinates so the edges
+   land on pixel boundaries at 1x, round caps, no fill, currentColor. Drawn
+   from primitives rather than freehand curves, which is what stops one of
+   four looking hand-made next to its neighbours. */
+
+function IconArrowOut() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 19V5" />
+      <path d="M5 12l7-7 7 7" />
+    </svg>
+  )
+}
+
+function IconArrowIn() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 5v14" />
+      <path d="M5 12l7 7 7-7" />
+    </svg>
+  )
+}
+
+function IconTarget() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      {/* Concentric at r=10/6/2. The outer ring overshoots an 18x18 square on
+          purpose: a circle drawn to the same box reads smaller than one. */}
+      <circle cx="12" cy="12" r="10" />
+      <circle cx="12" cy="12" r="6" />
+      <circle cx="12" cy="12" r="2" />
+    </svg>
+  )
+}
+
+function IconBanknote() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="6" width="20" height="12" rx="2" />
+      <circle cx="12" cy="12" r="2" />
+      <path d="M6 12h.01M18 12h.01" />
+    </svg>
+  )
+}
+
+function IconRepeat() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M17 2l4 4-4 4" />
+      <path d="M3 11v-1a4 4 0 0 1 4-4h14" />
+      <path d="M7 22l-4-4 4-4" />
+      <path d="M21 13v1a4 4 0 0 1-4 4H3" />
+    </svg>
+  )
+}
+
+function IconTransfer() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M8 3L4 7l4 4" />
+      <path d="M4 7h16" />
+      <path d="M16 21l4-4-4-4" />
+      <path d="M20 17H4" />
+    </svg>
+  )
+}
 
 /**
- * One door: an icon, what is behind it, the figure that would make you open
- * it, and a chevron.
+ * One circle and its label.
  *
- * This replaced a row of tiles. The tiles were the problem rather than their
- * number - two looked as lopsided as three looked junior - because a grid
- * says "these are dashboard metrics" when they are actually just navigation.
- * An inset grouped list is what iOS uses for exactly this, and it never looks
- * unbalanced, holds a fourth row without a redesign, and reads as somewhere
- * to go rather than something to read.
+ * The label is the accessible name and the glyph is decorative, so the icon
+ * carries aria-hidden and the link needs no aria-label - a screen reader
+ * reads "Goals, link" rather than "Goals Goals".
  */
-function PlannerRow({ to, icon, label, value, valueClass = '', isLast = false }) {
+function QuickAction({ to, icon, label }) {
   return (
-    <Link
-      to={to}
-      className="flex items-center gap-3 pl-4 pr-3 py-3 active:bg-slate-50 dark:active:bg-white/[0.04]
-        transition-colors"
-    >
-      <span
-        className="w-7 h-7 rounded-xl flex items-center justify-center text-[15px] leading-none shrink-0
-          bg-slate-100 dark:bg-white/[0.07]"
-        aria-hidden="true"
-      >
+    <Link to={to} className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-75">
+      {/* `card` rather than a bespoke fill: same glass as the budget and
+          transaction panels, and it tracks that material if it ever changes. */}
+      <span className="card quick-action-icon w-11 h-11 rounded-full flex items-center justify-center">
         {icon}
       </span>
-      <span className="flex-1 min-w-0 text-[15px] font-medium text-slate-800 dark:text-white truncate">
+      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
         {label}
       </span>
-      <span className={`text-[13px] tabular-nums shrink-0 ${
-        valueClass || 'text-slate-500 dark:text-slate-400'
-      }`}>
-        {value}
-      </span>
-      <span className="text-slate-300 dark:text-slate-600 shrink-0">
-        <IconChevronRight />
-      </span>
-      {/* Separator inset to start under the label, not the card edge - the
-          detail that makes a list read as iOS rather than as a table. Drawn
-          by the row so the last one simply omits it. */}
-      {!isLast && (
-        <span className="absolute left-[3.25rem] right-0 bottom-0 h-px
-          bg-slate-200/80 dark:bg-white/[0.09]" aria-hidden="true" />
-      )}
     </Link>
   )
 }
 
-function PlannerList({ goalAlloc, debts }) {
-  // What you owe is the actionable half, so it leads. Money owed TO you only
-  // takes the slot when you owe nothing - otherwise the row would read green
-  // while you are in the red.
-  const { debtValue, debtClass } = useMemo(() => {
-    const outstanding = (list) => list
-      .filter(d => (d.amountPaid ?? 0) < (d.amount ?? 0))
-      .reduce((s, d) => s + Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)), 0)
-    const iOwe = outstanding((debts ?? []).filter(d => d.type === 'i_owe'))
-    const owed = outstanding((debts ?? []).filter(d => d.type === 'owed_to_me'))
-    if (iOwe > 0) return { debtValue: `${fmtCompact(iOwe)} owed`, debtClass: 'text-red-500 dark:text-red-400 font-semibold' }
-    if (owed > 0) return { debtValue: `${fmtCompact(owed)} to collect`, debtClass: 'text-emerald-600 dark:text-emerald-400 font-semibold' }
-    return { debtValue: 'Clear', debtClass: '' }
-  }, [debts])
-
-  // A goal with no target set contributes to neither side of the fraction, so
-  // it cannot quietly drag the figure down - see allocateGoals.
-  const { goalValue, goalClass } = useMemo(() => {
-    const t = goalAlloc?.totals
-    if (!t || t.count === 0) return { goalValue: 'None yet', goalClass: '' }
-    if (t.complete === t.count) return { goalValue: 'All funded', goalClass: 'text-emerald-600 dark:text-emerald-400 font-semibold' }
-    return { goalValue: `${Math.round(t.pct)}% funded`, goalClass: '' }
-  }, [goalAlloc])
-
+/**
+ * Six doors, below the accounts.
+ *
+ * This replaced two rectangles, which replaced three, and the shape is the
+ * point: the home screen was cards all the way down, so a row of discs reads
+ * as "things you do" against everything above and below being "things you
+ * have". No card behind the row - boxing it would put the rectangle straight
+ * back - though each disc IS the card material, so the row still belongs to
+ * the same surface family as the panels around it.
+ *
+ * Six rather than four because four left 16px of air either side of every
+ * disc in an 81px column. Six columns are 58px, which is a disc and its
+ * breathing room and nothing spare.
+ *
+ * Order is deliberate. Goals, Debts and Recurring come first because none of
+ * them has another entry point anywhere in the app - and Recurring's only
+ * other home, the Upcoming rows, renders nothing at all on a week when
+ * nothing is due. Expense, Inflow and Transfer follow, in the order the add
+ * sheet lists them, because the FAB already reaches all three; here they are
+ * one tap instead of two.
+ *
+ * Every glyph is the accent, not red for Expense and green for Inflow the way
+ * the add sheet colours them. Three hues among six discs would read as a
+ * legend that means something, when the only thing being encoded is "these go
+ * to different pages" - the labels already say that, and the destination
+ * pages carry the semantics.
+ */
+function QuickActions() {
   return (
-    <section className="px-5 mt-3">
-      <div className="card rounded-2xl overflow-hidden [&>a]:relative">
-        <PlannerRow to="/goals" icon="🎯" label="Goals" value={goalValue} valueClass={goalClass} />
-        <PlannerRow to="/debts" icon="🧾" label="Debts" value={debtValue} valueClass={debtClass} isLast />
+    <section className="px-5 mt-5">
+      <div className="grid grid-cols-6 gap-1">
+        <QuickAction to="/goals"     icon={<IconTarget />}    label="Goals" />
+        <QuickAction to="/debts"     icon={<IconBanknote />}  label="Debts" />
+        <QuickAction to="/recurring" icon={<IconRepeat />}    label="Bills" />
+        <QuickAction to="/expense"   icon={<IconArrowOut />}  label="Expense" />
+        <QuickAction to="/inflow"    icon={<IconArrowIn />}   label="Inflow" />
+        <QuickAction to="/transfer"  icon={<IconTransfer />}  label="Transfer" />
       </div>
     </section>
   )
