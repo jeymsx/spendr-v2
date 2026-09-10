@@ -717,6 +717,24 @@ html.dark body {
   .acct-card.acct-card-sorting { rotate: 0deg; scale: 1; }
 }
 
+/* ── Segmented-control active label ──────────────────────────────────────────
+   The chart colours are picked to read on a chart, not as 10px bold text on a
+   white track. Measured against #ffffff: red 3.76:1, primary 2.85:1, emerald
+   2.28:1 - all three under the 4.5:1 small text needs. Against the dark card
+   they are 4.73, 6.26 and 7.82, so dark needs no correction at all.
+
+   65% black clears 4.5:1 for all three, so one figure covers the set rather
+   than a second colour map to keep in step. The colour arrives as
+   --seg-color, which is why this is a class and not an inline style: an
+   inline style cannot answer a theme. Same shape as .budget-tone-ok. */
+.seg-active {
+  color: color-mix(in srgb, var(--seg-color) 65%, black);
+}
+
+.dark .seg-active {
+  color: var(--seg-color);
+}
+
 /* ── Upcoming-row badge ───────────────────────────────────────────────────────
    The little repeat/calendar dot on an upcoming charge's icon, bottom-right.
    It has to read as punched out of the row rather than stuck on top of it,

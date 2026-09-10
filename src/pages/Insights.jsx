@@ -484,19 +484,52 @@ function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDa
     : range === '6m'            ? 'Last 6 Months'
     : 'All Time'
 
+  /* Glass, with a thumb that slides.
+ 
+     It was a flat tint holding a flat white pill - no depth, no movement, and
+     nothing tying it to the frosted panels around it. This borrows the
+     treatment RangeChips already uses further up this same page: a translucent
+     track with a hairline rim and an inset highlight, and one pill that
+     travels rather than three that blink.
+ 
+     Fixed-width buttons are what make the travel possible. The thumb is
+     `100% / N` of the track and moves by multiples of its own width, which
+     only lands correctly if every segment is the same size - the old
+     auto-width px-2.5 buttons could not have been animated this way. 60px
+     fits the longest label, "Expenses". */
+  const activeTypeIdx = CHART_TYPE_OPTS.findIndex(o => o.key === chartType)
+  const activeColor = CHART_COLORS[chartType] ?? CHART_COLORS.expenses
   const typeFilter = isArea && (
-    <div className="flex items-center gap-0.5 bg-slate-100 dark:bg-white/[0.06] rounded-full p-0.5">
+    <div className="relative flex items-center rounded-full p-[3px]
+      bg-slate-100/70 dark:bg-white/[0.04]
+      border border-slate-200/70 dark:border-white/[0.07]
+      backdrop-blur-md
+      shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]
+      dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+      <div
+        className="absolute top-[3px] bottom-[3px] left-[3px] rounded-full border pointer-events-none"
+        style={{
+          width: `calc((100% - 6px) / ${CHART_TYPE_OPTS.length})`,
+          transform: `translateX(${activeTypeIdx * 100}%)`,
+          transition: 'transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s, border-color 0.2s',
+          // color-mix rather than string-concatenating an alpha suffix: netflow's
+          // colour is `var(--color-primary)`, and 'var(--color-primary)' + '22'
+          // is not a colour.
+          backgroundColor: `color-mix(in srgb, ${activeColor} 16%, transparent)`,
+          borderColor: `color-mix(in srgb, ${activeColor} 40%, transparent)`,
+        }}
+      />
       {CHART_TYPE_OPTS.map(o => (
         <button
           key={o.key}
           onClick={() => setChartType(o.key)}
+          aria-pressed={chartType === o.key}
           className={[
-            'px-2.5 py-1 text-[10px] font-semibold rounded-full transition-all duration-150',
-            chartType === o.key
-              ? 'bg-white dark:bg-[#1e2a3a] shadow-sm'
-              : 'text-slate-400 dark:text-slate-500',
+            'relative z-10 w-[60px] py-1 text-[10px] font-semibold rounded-full',
+            'transition-colors duration-200',
+            chartType === o.key ? 'seg-active' : 'text-slate-500 dark:text-slate-400',
           ].join(' ')}
-          style={chartType === o.key ? { color: CHART_COLORS[o.key] } : {}}
+          style={chartType === o.key ? { '--seg-color': CHART_COLORS[o.key] } : undefined}
         >{o.label}</button>
       ))}
     </div>
