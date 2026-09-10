@@ -112,10 +112,30 @@ export function categoryIcon(cat) {
  * the app's weight, set to match the navbar - see LucideProvider's replacement
  * note in components/icons.jsx.
  */
-export default function CategoryGlyph({ cat, size = 20, emoji = '📦', className = '' }) {
+export default function CategoryGlyph({ cat, size = 20, emoji = '📦', className = '', color = true }) {
   const Icon = categoryIcon(cat)
   if (Icon) {
-    return <Icon size={size} stroke={1.8} className={className} aria-hidden="true" />
+    /* The glyph takes the category's colour by default.
+    
+       It inherited currentColor before, which made a list of transactions a
+       column of identical grey icons - the colour was sitting in cat.color
+       being spent on a 12% background wash and thrown away on the glyph. The
+       two-theme correction lives in .cat-glyph in index.css, because an inline
+       style cannot answer a theme; only the colour comes from here.
+    
+       `color={false}` is for the places where the glyph sits on a coloured
+       ground of its own and has to stay legible against it - a filled chip, or
+       a selected tile - and for the onboarding grids, whose rows are already
+       colour-coded by selection state. */
+    return (
+      <Icon
+        size={size}
+        stroke={1.8}
+        className={`${color ? 'cat-glyph' : ''} ${className}`}
+        style={color ? { '--cat-color': cat?.color ?? '#64748b' } : undefined}
+        aria-hidden="true"
+      />
+    )
   }
   return (
     <span

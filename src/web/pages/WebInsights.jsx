@@ -249,7 +249,7 @@ export default function WebInsights() {
                   <div key={c.name} className="flex items-center gap-2.5 min-w-0">
                     <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: c.color }} />
                     <span className="text-xs text-slate-600 dark:text-slate-300 truncate flex-1">
-                      {c.icon} {c.name}
+                      <CategoryGlyph cat={c} size={14} /> {c.name}
                     </span>
                     <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200 shrink-0">
                       {moneyCompact(c.value)}
@@ -352,7 +352,7 @@ export default function WebInsights() {
                     <div key={`${c.name}-${c.type}`} className="min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <span className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
-                          {c.icon} {c.name}
+                          <CategoryGlyph cat={c} size={14} /> {c.name}
                         </span>
                         <span className={`text-xs font-bold tabular-nums shrink-0 ${
                           over ? 'text-red-600 dark:text-red-400' : 'text-slate-700 dark:text-slate-200'}`}>

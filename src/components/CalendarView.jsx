@@ -51,8 +51,8 @@ function TxRow({ tx, catMap, onClick }) {
         active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
     >
       <div
-        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-[18px]"
-        style={{ backgroundColor: (cat?.color ?? '#2D9DFF') + '22' }}
+        className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+        style={{ '--cat-color': cat?.color ?? '#64748b' }}
       >
         <CategoryGlyph cat={cat} size={16} emoji="💸" />
       </div>

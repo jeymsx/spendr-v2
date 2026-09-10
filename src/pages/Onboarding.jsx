@@ -7,6 +7,7 @@ import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, CUSTOM_PALETTE } from '../lib
 import { ACCOUNT_TYPE_ICON, IconCashUI, IconTick, IconSparkle } from '../components/icons'
 import { EXPENSE_PRESETS, INFLOW_PRESETS, SYSTEM_CATS, EMOJI_SUGGESTIONS, CAT_PALETTE, LOCKED_EXPENSE, LOCKED_INFLOW } from '../lib/phCategories'
 import { useToast } from '../context/ToastContext'
+import CategoryGlyph from '../components/CategoryGlyph'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -671,7 +672,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
               bg-white/[0.08] border border-white/[0.15] text-slate-300 text-sm font-semibold">
-              <span>{locked.icon}</span> {locked.name}
+              <CategoryGlyph cat={locked} size={13} /> {locked.name}
               <span className="opacity-70 ml-0.5"><IconTick size={11} /></span>
             </span>
           </div>
@@ -694,7 +695,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
                       : 'bg-white/[0.04] border-white/[0.08] text-slate-400 active:bg-white/[0.08]'
                   }`}
                 >
-                  <span>{cat.icon}</span>
+                  <CategoryGlyph cat={cat} size={13} />
                   {cat.name}
                   {sel && <span className="ml-0.5"><IconTick size={11} /></span>}
                 </button>
@@ -712,7 +713,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
                 <span key={cat.name}
                   className="flex items-center gap-1.5 pl-3 pr-1.5 py-1.5 rounded-xl
                     bg-primary/15 border border-primary/50 text-primary text-sm font-medium">
-                  <span>{cat.icon}</span>
+                  <CategoryGlyph cat={cat} size={13} />
                   {cat.name}
                   <button
                     onClick={() => onRemoveCustom(cat.name)}

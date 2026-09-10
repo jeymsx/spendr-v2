@@ -97,7 +97,7 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
       <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
         {active ? (
           <>
-            <span style={{ fontSize: 26, lineHeight: 1 }}>{active.icon}</span>
+            <span className="leading-none"><CategoryGlyph cat={active} size={26} /></span>
             <span className="text-xl font-bold text-slate-800 dark:text-white tabular-nums mt-1.5">{fmtCompact(active.value)}</span>
             <span className="text-sm text-slate-400 dark:text-slate-500 mt-0.5">
               {total > 0 ? (active.value / total * 100).toFixed(1) : 0}%
@@ -734,7 +734,7 @@ function BudgetSection({ data, animKey }) {
             <div key={i} className="relative rounded-2xl overflow-hidden flex flex-col gap-1.5 px-3 pt-2.5 pb-0
               bg-slate-50 dark:bg-white/[0.03]">
               <div className="flex items-center gap-1.5">
-                <span className="text-[13px] leading-none shrink-0">{d.icon}</span>
+                <span className="leading-none shrink-0"><CategoryGlyph cat={d} size={14} /></span>
                 <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-200 truncate">{d.name}</span>
               </div>
               <div className="flex items-baseline justify-between gap-1 mb-2">

@@ -85,8 +85,8 @@ function CategoryRow({ cat }) {
     <div className="px-4 py-3.5">
       <div className="flex items-center gap-3">
         <span
-          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[17px]"
-          style={{ backgroundColor: (cat.color ?? '#2D9DFF') + '22' }}
+          className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+          style={{ '--cat-color': cat?.color ?? '#64748b' }}
           aria-hidden="true"
         >
           <CategoryGlyph cat={cat} size={20} emoji="💸" />
@@ -151,7 +151,7 @@ function AllocationRow({ cat, maxLimit }) {
     <div>
       <div className="flex items-baseline justify-between gap-3 mb-1.5">
         <span className="flex items-center gap-1.5 min-w-0">
-          <span className="text-[13px] leading-none shrink-0" aria-hidden="true">{cat.icon ?? '\u{1F4B8}'}</span>
+          <span className="leading-none shrink-0"><CategoryGlyph cat={cat} size={14} emoji="💸" /></span>
           <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate">
             {cat.name}
           </span>
@@ -425,8 +425,8 @@ export default function Budget() {
                     <div key={c.name}>
                       <div className="flex items-center gap-3 px-4 py-3">
                         <span
-                          className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-[17px]"
-                          style={{ backgroundColor: (c.color ?? '#2D9DFF') + '22' }}
+                          className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                          style={{ '--cat-color': c?.color ?? '#64748b' }}
                           aria-hidden="true"
                         >
                           <CategoryGlyph cat={c} size={18} emoji="💸" />

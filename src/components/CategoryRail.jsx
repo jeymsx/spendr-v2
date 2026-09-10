@@ -101,7 +101,7 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
                 answer a theme. */}
             <span
               data-on={on}
-              className="cat-tile w-[50px] h-[50px] rounded-[15px] flex items-center
+              className="cat-tile-pick w-[50px] h-[50px] rounded-[15px] flex items-center
                 justify-center text-[23px] leading-none transition-shadow duration-150"
               style={{ '--cat-color': cat.color ?? '#64748b' }}
             >

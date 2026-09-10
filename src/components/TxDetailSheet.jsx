@@ -400,7 +400,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   check. */}
               {(() => {
                 const rows = [
-                  cat      && { key: 'cat',  label: 'Category', value: `${cat.icon}  ${cat.name}` },
+                  cat      && { key: 'cat',  label: 'Category', value: <><CategoryGlyph cat={cat} size={14} className="inline-block mr-1.5 -mt-px" />{cat.name}</> },
                   acct     && { key: 'acct', label: 'Account',  value: acct.name,     dot: acct.color },
                   fromAcct && { key: 'from', label: 'From',     value: fromAcct.name, dot: fromAcct.color },
                   toAcct   && { key: 'to',   label: 'To',       value: toAcct.name,   dot: toAcct.color },

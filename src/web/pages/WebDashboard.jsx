@@ -6,6 +6,7 @@ import BrandMark from '../../components/BrandMark'
 import { accountBrand } from '../../lib/accountBrands'
 import { normalizeDesign } from '../../lib/cardDesigns'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact, amountTone } from '../components/WebPanel'
+import CategoryGlyph from '../../components/CategoryGlyph'
 
 /**
  * Every row on the phone dashboard is tappable - an account card deep-links to
@@ -185,7 +186,7 @@ export default function WebDashboard() {
                           focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset
                           transition-colors duration-150"
                       >
-                        <td className="px-5 py-2.5 w-[52px] text-base">{cat?.icon ?? (t.type === 'transfer' ? '🔄' : '📦')}</td>
+                        <td className="px-5 py-2.5 w-[52px]"><CategoryGlyph cat={cat} size={16} emoji={t.type === 'transfer' ? '🔄' : '📦'} /></td>
                         <td className="px-2 py-2.5 min-w-0">
                           <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                             {t.description || t.category || '—'}
@@ -222,7 +223,7 @@ export default function WebDashboard() {
                     <div key={`${c.name}-${c.type}`} className="min-w-0">
                       <div className="flex items-center justify-between gap-2 mb-1.5">
                         <p className="text-xs font-medium text-slate-600 dark:text-slate-300 truncate">
-                          {c.icon} {c.name}
+                          <CategoryGlyph cat={c} size={14} /> {c.name}
                         </p>
                         <p className={`text-xs font-bold tabular-nums shrink-0
                           ${over ? 'text-red-600 dark:text-red-400' : 'text-slate-600 dark:text-slate-300'}`}>

@@ -449,7 +449,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
               >
                 {category ? (
                   <>
-                    <span className="text-xl leading-none">{category.icon}</span>
+                    <span className="leading-none"><CategoryGlyph cat={category} size={20} /></span>
                     <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">{category.name}</span>
                   </>
                 ) : (

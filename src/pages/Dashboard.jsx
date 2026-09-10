@@ -51,17 +51,16 @@ function getGreeting() {
 }
 
 /**
- * The line under the greeting: {glyph?, Icon?, text}.
+ * The line under the greeting: {cat?, Icon?, text}.
  *
  * It used to return one string with the glyph interpolated into it, which is
  * why the home screen's first line of type carried a raw U+26A0 and U+1F514 -
  * OS-font emoji sitting directly under a drawn settings icon.
  *
- * A shape rather than a string because a component cannot be interpolated into
- * a template literal. `glyph` survives for the budget cases only: those
- * showed the CATEGORY's own emoji when it had one, and that is user data with
- * a sync path, so it keeps working until the category icons are decided. The
- * hardcoded fallbacks are icons now.
+ * A shape rather than a string, because a component cannot be interpolated
+ * into a template literal. The budget cases pass the CATEGORY, so the line
+ * renders whatever that category renders as everywhere else; the rest pass an
+ * icon directly.
  */
 function getContextHint(txAll, budgetCategories, upcomingRecurring) {
   const _d    = new Date()
@@ -70,10 +69,10 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
 
   // Budget warnings take top priority
   const overBudget = (budgetCategories ?? []).find(c => c.spent > c.budget)
-  if (overBudget) return { glyph: overBudget.icon, Icon: IconWarning, text: `Over budget on ${overBudget.name.toLowerCase()}` }
+  if (overBudget) return { cat: overBudget, Icon: IconWarning, text: `Over budget on ${overBudget.name.toLowerCase()}` }
 
   const nearBudget = (budgetCategories ?? []).find(c => c.budget > 0 && (c.spent / c.budget) >= 0.85)
-  if (nearBudget) return { glyph: nearBudget.icon, Icon: IconWarning, text: `${nearBudget.name.toLowerCase()} budget almost full` }
+  if (nearBudget) return { cat: nearBudget, Icon: IconWarning, text: `${nearBudget.name.toLowerCase()} budget almost full` }
 
   // Overdue bills first, then ones due today or tomorrow. The previous check
   // was `diff <= 1`, which is also true for anything long overdue — so a bill
@@ -108,11 +107,17 @@ function getContextHint(txAll, budgetCategories, upcomingRecurring) {
 }
 
 function ContextHint({ hint }) {
-  const { glyph, Icon, text } = hint ?? {}
+  const { cat, Icon, text } = hint ?? {}
   return (
     <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 flex items-center gap-1">
-      {glyph
-        ? <span className="leading-none">{glyph}</span>
+      {/* The budget cases carry the CATEGORY, so this line shows the same icon
+          the Budget page and every transaction row show for it. It used to
+          pass the raw emoji straight through, which left the first line of
+          type on the home screen disagreeing with the rest of the app about
+          what Food looks like. CategoryGlyph still falls back to the emoji for
+          a category with no mapped icon. */}
+      {cat
+        ? <CategoryGlyph cat={cat} size={13} className="shrink-0" />
         : Icon ? <Icon size={12} className="shrink-0" /> : null}
       <span className="truncate">{text}</span>
     </p>
@@ -1385,7 +1390,7 @@ function BudgetRow({ cat }) {
     >
       {/* icon + name */}
       <div className="flex items-center gap-1.5">
-        <span className="text-[13px] leading-none shrink-0">{cat.icon}</span>
+        <span className="leading-none shrink-0"><CategoryGlyph cat={cat} size={14} /></span>
         <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-200 truncate">
           {cat.name}
         </span>
@@ -1428,12 +1433,10 @@ function TxRow({ tx, cat, isLast }) {
     >
       {/* category icon */}
       <div
-        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-base"
-        style={{
-          backgroundColor: cat?.color ? cat.color + '22' : '#2D9DFF22',
-        }}
+        className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+        style={{ '--cat-color': cat?.color ?? '#64748b' }}
       >
-        {cat?.icon ?? '💸'}
+        <CategoryGlyph cat={cat} size={18} emoji="💸" />
       </div>
 
       {/* description + account */}

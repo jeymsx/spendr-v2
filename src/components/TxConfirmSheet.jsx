@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
+import CategoryGlyph from './CategoryGlyph'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -134,7 +135,7 @@ export default function TxConfirmSheet({
             <DetailRow label="Note" value={description} />
           )}
           {category && (
-            <DetailRow label="Category" value={`${category.icon}  ${category.name}`} />
+            <DetailRow label="Category" value={<><CategoryGlyph cat={category} size={14} className="inline-block mr-1.5 -mt-px" />{category.name}</>} />
           )}
           {account && (
             <DetailRow label="Account" value={account.name} dot={account.color} />

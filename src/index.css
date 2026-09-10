@@ -924,26 +924,43 @@ html.dark body {
   color: rgba(255, 255, 255, 0.52);
 }
 
-/* ── Category tile ───────────────────────────────────────────────────────────
-   The icon square in the add-expense category rail.
+/* ── Category tiles ───────────────────────────────────────────────
+   Two variants, because the same tile has to do two jobs on two grounds.
 
-   It began as a flat `cat.color + '20'` inline background, which is what the
-   transaction and bill ROWS use - and those sit on a card, while these sit on
-   the bare page. Measured, 12.5% of #ef4444 over #0b0f14 composites to
-   rgb(40,21,19): technically red, visually just dark. Six of them in a row
-   read as a strip of grey squares with emoji on top.
+   The rows - transactions, budget, the calendar, Recent - sit INSIDE a card,
+   and there the tile should read as a soft blob behind the glyph. 14% is
+   close to the flat 13% these used before the icons arrived, which was the
+   right weight; what was wrong was that the glyph on top was grey.
 
-   So the wash is composited over the card's own base rather than over the
-   page, which is the same layering .card-solid uses, and the dark side gets a
-   stronger mix because it has further to travel. The hairline rim in the
-   category's own colour is what actually makes each tile read as ITS colour
-   at 50px - a rim is a hard edge against a known neighbour, where a fill is a
-   shade you have to judge in isolation.
+   The picker rail sits on the BARE PAGE, where a 14% wash disappears - six
+   tiles in a row read as a strip of grey squares. It gets 26% and a hairline
+   rim in the category's colour, because at 50px a rim is a hard edge against
+   a known neighbour where a fill is a shade you must judge in isolation.
 
-   This is a class and not an inline style because an inline style cannot
-   answer a theme: one --cat-color comes in from the JSX and both themes derive
-   from it here. Same shape as .seg-active and .upcoming-badge. */
+   Softening the row variant costs nothing in contrast - it gains. Measured
+   against the .cat-glyph mixes, going 26% -> 14% moves the worst case from
+   3.90:1 to 4.56:1 in dark and 3.28:1 to 3.49:1 in light, because a lighter
+   wash in dark mode means a darker tile under a light glyph, and the reverse
+   in light mode.
+
+   Both derive from one --cat-color passed in from the JSX; an inline style
+   cannot answer a theme. */
 .cat-tile {
+  --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 14%, transparent);
+  background:
+    linear-gradient(var(--cat-wash), var(--cat-wash)),
+    #ffffff;
+}
+
+.dark .cat-tile {
+  --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 14%, transparent);
+  background:
+    linear-gradient(var(--cat-wash), var(--cat-wash)),
+    rgba(40, 60, 95, 0.22);
+}
+
+/* The rail's tile: stronger, and rimmed, because it is on the page. */
+.cat-tile-pick {
   --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 15%, transparent);
   background:
     linear-gradient(var(--cat-wash), var(--cat-wash)),
@@ -953,7 +970,7 @@ html.dark body {
     0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
-.dark .cat-tile {
+.dark .cat-tile-pick {
   --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 26%, transparent);
   background:
     linear-gradient(var(--cat-wash), var(--cat-wash)),
@@ -965,14 +982,41 @@ html.dark body {
 
 /* Selected: an INSET accent ring, deliberately.
 
-   An outset ring is the obvious choice and it does not survive a tight row -
-   at 50px squares with 6px between them, a 2px ring plus the page-coloured
-   gap it needs to read against reaches within a pixel of the next tile. Inset
-   costs no layout at all, so the row can be as tight as the labels allow. */
-.cat-tile[data-on='true'] {
+   An outset ring is the obvious choice and does not survive a tight row - at
+   50px squares with 6px between them, a 2px ring plus the page-coloured gap
+   it needs to read against reaches within a pixel of the next tile. Inset
+   costs no layout, so the row can be as tight as the labels allow. */
+.cat-tile-pick[data-on='true'] {
   box-shadow:
     inset 0 0 0 2px var(--color-primary),
     inset 0 0 0 12px color-mix(in srgb, var(--cat-color, #64748b) 10%, transparent);
+}
+
+/* ── Category glyph, in its own colour ──────────────────────────────
+   The icons inherited currentColor, so a list of them was a column of
+   identical grey glyphs and the page read as dull. The colour was there all
+   along in cat.color - it was being spent on the background wash and thrown
+   away on the glyph itself, which is the part you actually look at.
+
+   Dark takes the colour RAW. Measured against the soft 14% tile wash, the
+   worst case is #845EF7 violet at 3.60:1 and everything else is 4.9-8.3:1,
+   all clear of the 3:1 a meaningful graphic needs. An earlier version
+   lightened it 85/15 toward white, which was necessary only against the
+   heavier 26% wash the picker rail uses - carried over to the rows it made
+   the already-bright palette colours glare, which is what "too bright" was.
+
+   Light cannot take it raw: a pale colour on a pale tint of itself measures
+   1.49:1 to 3.55:1, worst #FCC419. Mixing 65% into black gives 3.49:1 across
+   the palette while keeping the hue plainly readable.
+
+   Same mechanism as .seg-active, and a class rather than an inline style for
+   the same reason: an inline style cannot answer a theme. */
+.cat-glyph {
+  color: color-mix(in srgb, var(--cat-color, #64748b) 65%, black);
+}
+
+.dark .cat-glyph {
+  color: var(--cat-color, #94a3b8);
 }
 
 /* ── Quick-action count badge ──────────────────────────────────────────────────

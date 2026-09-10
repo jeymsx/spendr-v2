@@ -6,6 +6,7 @@ import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { IconTemplate } from './icons'
+import CategoryGlyph from './CategoryGlyph'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -153,7 +154,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
             <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04]">
               <span className="text-xs text-slate-400 dark:text-slate-500">Category</span>
               <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                {category.icon}  {category.name}
+                <CategoryGlyph cat={category} size={15} /> {category.name}
               </span>
             </div>
           )}

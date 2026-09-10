@@ -6,6 +6,7 @@ import { isInstallmentRow } from '../../utils/installments'
 import TxDetailSheet from '../../components/TxDetailSheet'
 import { WebPageHeader, WebPanel, WebEmpty, money, amountTone } from '../components/WebPanel'
 import WebSelect from '../components/WebSelect'
+import CategoryGlyph from '../../components/CategoryGlyph'
 
 const PAGE = 100
 
@@ -310,7 +311,7 @@ export default function WebTransactions() {
                         <td className="px-3 py-3 align-middle">
                           <span className="flex items-center gap-1.5 min-w-0
                             text-[13px] text-slate-600 dark:text-slate-300">
-                            <span className="shrink-0 text-[13px] leading-none">{cat?.icon}</span>
+                            <span className="shrink-0 leading-none"><CategoryGlyph cat={cat} size={14} /></span>
                             <span className="truncate">{t.category ?? '—'}</span>
                           </span>
                         </td>
