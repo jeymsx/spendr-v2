@@ -506,6 +506,28 @@ html.dark body {
   stroke: none !important;
 }
 
+/* Off-card: the same marks, in the current text colour.
+ 
+   .scheme-mark is built for a card face - it hardcodes white and adds a drop
+   shadow to lift the mark off a gradient. In a picker that is wrong twice: the
+   shadow has nothing to sit on, and white-on-white made the Visa, Amex and JCB
+   marks literally invisible in light mode. That was live, in the old boxed
+   selector, behind a `.scheme-pick` class that had no CSS behind it at all.
+ 
+   Two classes plus the attribute is (0,3,1), which beats the white rule's
+   (0,2,1) without needing another !important on top of the one already there.
+   Mastercard is untouched either way: it keeps its own colours, because
+   flattening its two circles to one silhouette stops it being the logo.      */
+.scheme-mark.scheme-ink {
+  color: inherit;
+  filter: none;
+}
+
+.scheme-mark.scheme-ink[data-tone='mono'] svg,
+.scheme-mark.scheme-ink[data-tone='mono'] svg * {
+  fill: currentColor !important;
+}
+
 /* On the near-black cards a white watermark is the only thing separating the
    face from a flat rectangle, so it gets a little more presence. */
 .acct-card[data-brand='maya-credit'] > .acct-card-watermark {

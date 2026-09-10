@@ -727,6 +727,26 @@ export default function AccountNew() {
   // Changing type away from credit can strand the index past the end.
   const current = steps[Math.min(step, steps.length - 1)]
 
+  /**
+   * Open the network row on the chosen mark.
+   *
+   * Five marks in a swiped row do not fit, so the row scrolls - and one parked
+   * at zero hides Amex and JCB off the right edge while leaving "None" against
+   * the left. Centring the current choice makes the row look placed and puts
+   * the answer to "which one is this" in the middle of the screen.
+   *
+   * Keyed on `current` rather than run once: the row does not exist until the
+   * details step renders, so an on-mount effect would find nothing to scroll.
+   */
+  const schemeRef = useRef(null)
+  useEffect(() => {
+    const row = schemeRef.current
+    const on = row?.querySelector('[aria-checked="true"]')
+    if (!row || !on) return
+    row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current])
+
   const taken = useMemo(
     () => new Set((accounts ?? []).map(a => (a.name ?? '').trim().toLowerCase())),
     [accounts],
@@ -1017,20 +1037,60 @@ export default function AccountNew() {
               <SectionLabel hint="Printed on the card face, like the real thing.">
                 Card network
               </SectionLabel>
-              {/* Showing the marks rather than their names: it is what you
-                  look for on the physical card, and Mastercard keeps its own
-                  colours here the same as it does on the card face. */}
-              <OptionGrid
-                options={SCHEME_OPTIONS.map(o => ({
-                  value: o.value,
-                  label: o.label,
-                  art: o.value
-                    ? <SchemeMark scheme={o.value} className="scheme-pick" />
-                    : <span className="block w-5 h-[2px] rounded-full bg-current opacity-40" />,
-                }))}
-                value={draft.scheme}
-                onChange={(v) => set({ scheme: v })}
-              />
+              {/* The marks themselves, in a row you swipe - the same control
+                  as the colours, for the same reason: five boxed tiles in a
+                  3+2 grid left an orphan row, and a box around a logo is a
+                  second rectangle competing with the one on the card.
+
+                  No chip behind them either. The logos are different widths,
+                  so a ring or a pill around each would be five different
+                  shapes; opacity carries the selection instead, with a rule
+                  under the active one. Names are gone with the boxes - the
+                  mark IS the name on a real card, which is what you look for
+                  when you check which network yours is on.
+
+                  scheme-ink is what makes them legible here: the on-card
+                  treatment hardcodes white, which was invisible against the
+                  light-mode tile this replaces. */}
+              <div
+                ref={schemeRef}
+                className="flex items-center gap-1 overflow-x-auto no-scrollbar snap-x -mx-5"
+                style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
+              >
+                <span className="shrink-0" style={{ width: 'calc(50% - 40px)' }} aria-hidden="true" />
+                {SCHEME_OPTIONS.map(o => {
+                  const on = draft.scheme === o.value
+                  return (
+                    <button
+                      key={o.value || 'none'}
+                      type="button"
+                      role="radio"
+                      aria-checked={on}
+                      aria-label={o.label}
+                      onClick={() => set({ scheme: o.value })}
+                      className={`shrink-0 snap-center w-20 h-12 rounded-xl flex flex-col items-center
+                        justify-center gap-1.5 transition-opacity duration-200 active:scale-95 ${
+                          on ? 'opacity-100' : 'opacity-40'
+                        }`}
+                    >
+                      {o.value ? (
+                        <SchemeMark scheme={o.value} className="scheme-ink h-[17px]
+                          text-slate-800 dark:text-white" />
+                      ) : (
+                        <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200">
+                          None
+                        </span>
+                      )}
+                      {/* Always rendered, so selecting one does not change the
+                          height of the row and shift the fields below it. */}
+                      <span className={`block w-6 h-[2px] rounded-full transition-colors duration-200 ${
+                        on ? 'bg-primary' : 'bg-transparent'
+                      }`} />
+                    </button>
+                  )
+                })}
+                <span className="shrink-0" style={{ width: 'calc(50% - 40px)' }} aria-hidden="true" />
+              </div>
             </div>
           )}
 
