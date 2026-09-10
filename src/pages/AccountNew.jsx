@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
-import { accountBrand } from '../lib/accountBrands'
+import { accountBrand, GRADIENT_PRESETS } from '../lib/accountBrands'
 import { CARD_DESIGNS, designMeta, normalizeDesign } from '../lib/cardDesigns'
 import { PH_ACCOUNTS } from '../lib/phAccounts'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
@@ -520,6 +520,41 @@ function StyleStep({ draft, set, nameProblem }) {
               className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x px-5 py-1.5 -mx-5"
               style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
             >
+              {/* Gradients first: they are the ones worth scrolling to, and a
+                  row that opens on fourteen solids buries them. Each is
+                  stored in the same `color` field as a comma-separated pair -
+                  "#a855f7,#ec4899" - which aaSafeStops splits and darkens
+                  end-by-end. One field, one column, no migration, and an
+                  existing single hex still parses exactly as before. */}
+              {GRADIENT_PRESETS.map(([a, b]) => {
+                const spec = `${a},${b}`
+                const on = draft.color === spec
+                return (
+                  <button
+                    key={spec}
+                    onClick={() => set({ color: spec })}
+                    aria-label={`Gradient ${a} to ${b}`}
+                    aria-pressed={on}
+                    className={`w-7 h-7 shrink-0 snap-center rounded-full
+                      transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
+                    style={{
+                      background: `linear-gradient(135deg, ${a} 0%, ${b} 100%)`,
+                      // The selection ring takes the first stop; ringing a
+                      // two-colour swatch in two colours is a worse problem
+                      // than picking one.
+                      '--swatch-color': a,
+                    }}
+                  />
+                )
+              })}
+
+              {/* A hairline between the two kinds, so the row reads as two
+                  groups rather than one long list that changes character. */}
+              <span
+                className="shrink-0 w-px h-6 bg-slate-200 dark:bg-white/[0.12]"
+                aria-hidden="true"
+              />
+
               {PALETTE.map(c => {
                 const on = draft.color === c
                 return (
@@ -555,7 +590,6 @@ export default function AccountNew() {
 
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
-  const [query, setQuery] = useState('')
   const [touchedName, setTouchedName] = useState(false)
   const [filter, setFilter] = useState('all')
 
@@ -609,11 +643,11 @@ export default function AccountNew() {
   // want, and hiding a match because a category pill happens to be selected
   // is the kind of thing that makes a search box feel broken.
   const visiblePresets = useMemo(() => {
-    const q = query.trim().toLowerCase()
+    const q = draft.name.trim().toLowerCase()
     if (q) return PH_ACCOUNTS.filter(a => a.name.toLowerCase().includes(q))
     if (filter === 'all') return PH_ACCOUNTS
     return PH_ACCOUNTS.filter(a => a.group === filter)
-  }, [query, filter])
+  }, [draft.name, filter])
 
   function pickPreset(preset) {
     set({
@@ -738,7 +772,11 @@ export default function AccountNew() {
       {current === 'style' ? (
         <StyleStep draft={draft} set={set} nameProblem={nameProblem} />
       ) : (
-        <PreviewCard draft={draft} />
+        /* pt-3: the card sat flush against the progress bar, which read as
+           the two being one component. */
+        <div className="pt-3">
+          <PreviewCard draft={draft} />
+        </div>
       )}
 
       {current === 'institution' && (
@@ -748,16 +786,31 @@ export default function AccountNew() {
               <IconSearch />
             </span>
             <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search banks and wallets"
-              className={inputCls() + ' pl-10'}
+              value={draft.name}
+              /* Typing IS naming. The grid filters on the same value, so a
+                 name that matches an institution surfaces its logo to tap, and
+                 one that matches nothing is simply the name - no second field,
+                 no "or". Tapping a logo writes its name back into this field,
+                 which is what makes the two behaviours one control rather than
+                 two sharing a box.
+
+                 fromPreset goes false on every keystroke: the moment you edit
+                 the text it is not the institution's card any more, so its
+                 colour stops being locked on the style step. pickPreset sets
+                 it back to true. */
+              onChange={e => { set({ name: e.target.value, fromPreset: false }); setTouchedName(true) }}
+              placeholder="Search, or type any name"
+              className={inputCls(touchedName && !!nameProblem) + ' pl-10'}
             />
           </div>
 
+          {touchedName && nameProblem && (
+            <p className="text-xs text-red-500 dark:text-red-400 mt-2 px-1">{nameProblem}</p>
+          )}
+
           {/* A filter row instead of four stacked sections. It scrolls
               sideways, so a narrow screen never wraps it into an orphan. */}
-          {!query && (
+          {!draft.name && (
             <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar px-5 pb-1">
               {FILTERS.map(f => (
                 <button
@@ -799,22 +852,9 @@ export default function AccountNew() {
 
           {/* Always reachable: the list will never cover every institution,
               and cash, envelopes and joint pots have no institution at all. */}
-          <div className="px-5 mt-7">
-            <SectionLabel hint="Anything not above, or just Cash.">
-              Or name it yourself
-            </SectionLabel>
-            <input
-              value={draft.name}
-              // Typing a name by hand means this is not an institution's card any
-              // more, so its colour goes back to being the user's choice.
-              onChange={e => { set({ name: e.target.value, fromPreset: false }); setTouchedName(true) }}
-              placeholder="Account name"
-              className={inputCls(touchedName && !!nameProblem)}
-            />
-            {touchedName && nameProblem && (
-              <p className="text-xs text-red-500 dark:text-red-400 mt-2">{nameProblem}</p>
-            )}
-          </div>
+          {/* The manual-name field used to live here, under an "Or name it
+              yourself" heading. It is the field at the top now - see its
+              onChange. The error message moved up with it. */}
         </div>
       )}
 
@@ -893,28 +933,10 @@ export default function AccountNew() {
           {/* Only worth showing when the brand is unknown: a recognised
               institution takes its own colours, so a swatch here would do
               nothing and look broken. */}
-          {accountBrand({ name: draft.name, type: draft.type, color: draft.color }).key === 'custom' && (
-            <div>
-              <SectionLabel hint="Used to build the card's gradient.">Colour</SectionLabel>
-              <div className="grid grid-cols-7 gap-2">
-                {PALETTE.map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => set({ color: c })}
-                    aria-label={`Colour ${c}`}
-                    aria-pressed={draft.color === c}
-                    className={`aspect-square rounded-full transition-transform active:scale-90 ${
-                      draft.color === c
-                        ? 'ring-2 ring-offset-2 ring-primary ring-offset-white dark:ring-offset-[#0b0f14]'
-                        : ''
-                    }`}
-                    style={{ backgroundColor: c }}
-                  />
-                ))}
-              </div>
-            </div>
-          )}
+          {/* The colour grid used to be here. It is on the style step now,
+              alongside the design gallery, which is where you can actually see
+              what a colour does to the card. Asking for it twice in one flow
+              was the tell that it was in the wrong place the first time. */}
         </div>
       )}
 

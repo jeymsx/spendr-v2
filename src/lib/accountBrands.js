@@ -126,10 +126,15 @@ function whiteContrast(rgb) {
  * factor sized for the worst case would turn every custom card near-black.
  * Scaling channels proportionally holds the hue while moving lightness.
  */
-function aaSafeStops(hex, target = 4.55) {
-  const rgb = parseHex(hex)
-  if (!rgb) return null
-
+/**
+ * Darken one colour until white text clears `target` on it.
+ *
+ * Split out of aaSafeStops so a two-colour gradient can solve each end
+ * independently - text can sit over either stop, so both have to clear the
+ * bar, and solving only the lighter one would leave the other unnecessarily
+ * dark.
+ */
+function solveStop(rgb, target) {
   let lo = 0, hi = 1
   if (whiteContrast(rgb) < target) {
     // Binary search the largest scale that still clears the bar. 24 rounds
@@ -142,11 +147,55 @@ function aaSafeStops(hex, target = 4.55) {
   } else {
     lo = 1
   }
+  return rgb.map(c => c * lo)
+}
 
-  const from = rgb.map(c => c * lo)
+/**
+ * A colour spec becomes a safe pair of gradient stops.
+ *
+ * Accepts one hex, or two separated by a comma - "#a855f7,#ec4899" - which is
+ * how a gradient preset is stored. One field, one column, no migration: an
+ * existing single hex parses exactly as it always did.
+ */
+function aaSafeStops(spec, target = 4.55) {
+  const parts = String(spec ?? '').split(',').map(x => x.trim()).filter(Boolean)
+  if (parts.length > 1) {
+    const a = parseHex(parts[0])
+    const b = parseHex(parts[1])
+    if (!a || !b) return null
+    return { from: toHex(solveStop(a, target)), to: toHex(solveStop(b, target)) }
+  }
+
+  const rgb = parseHex(spec)
+  if (!rgb) return null
+
+  const from = solveStop(rgb, target)
   // The deep stop only has to be darker, and darker is always safer.
   return { from: toHex(from), to: toHex(from.map(c => c * 0.66)) }
 }
+
+/**
+ * Two-colour presets for the card style step.
+ *
+ * Kept apart from PALETTE because PALETTE's values go straight into
+ * `background` on a swatch and into other colour grids; a comma-separated
+ * pair there would render as an invalid colour. These are only ever read by
+ * the style step, which knows to draw them as a gradient.
+ *
+ * Stated light: aaSafeStops darkens each end as far as white text needs, so
+ * what is picked here is the hue and what lands on the card is the safe
+ * version of it.
+ */
+export const GRADIENT_PRESETS = [
+  ['#a855f7', '#ec4899'],   // violet to pink
+  ['#3b82f6', '#8b5cf6'],   // blue to violet
+  ['#06b6d4', '#3b82f6'],   // cyan to blue
+  ['#f97316', '#ec4899'],   // orange to pink
+  ['#10b981', '#06b6d4'],   // emerald to cyan
+  ['#f59e0b', '#ef4444'],   // amber to red
+  ['#6366f1', '#0ea5e9'],   // indigo to sky
+  ['#14b8a6', '#84cc16'],   // teal to lime
+]
 
 /**
  * Initials for an institution with no logo file.
