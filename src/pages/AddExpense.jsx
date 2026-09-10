@@ -7,7 +7,7 @@ import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { advanceNextDate } from '../utils/recurring'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
-import CategoryPickerSheet from '../components/CategoryPickerSheet'
+import CategoryRail from '../components/CategoryRail'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
@@ -101,7 +101,6 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   const [account,      setAccount]      = useState(null)
   const [catError,     setCatError]     = useState(false)
   const [acctError,    setAcctError]    = useState(false)
-  const [showCatSheet, setShowCatSheet] = useState(false)
   const [showAcctSheet, setShowAcctSheet] = useState(false)
   const [showConfirm,    setShowConfirm]    = useState(false)
   const [showTemplates,  setShowTemplates]  = useState(false)
@@ -312,26 +311,26 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
           </div>
         </div>
 
-        {/* Category */}
+        {/* ── Category ──
+            A row you swipe, not a field that opens a sheet. The sheet was
+            three interactions for one choice - tap the field, tap the
+            category, watch it dismiss - and it covered the amount you had
+            just typed while you made it. See components/CategoryRail.jsx.
+
+            The error moved up beside the label: the rail has no empty box to
+            put "Required" inside, and next to the heading is where it is
+            legible without shifting the tiles. */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Category</p>
-          <FieldButton
-            onClick={() => { setCatError(false); setShowCatSheet(true) }}
-            error={catError}
-            left={
-              <span className="text-[22px] leading-none">
-                {category?.icon ?? <span className="text-slate-300 dark:text-slate-600 text-base">🏷️</span>}
-              </span>
-            }
-            center={
-              <span className={`text-sm ${category ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                {category?.name ?? 'Select category'}
-                {catError && !category && (
-                  <span className="ml-2 text-xs font-normal text-red-500">Required</span>
-                )}
-              </span>
-            }
-            right={<IconChevronRight />}
+          <div className="flex items-baseline gap-2 mb-1.5 px-1">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Category</p>
+            {catError && !category && (
+              <p className="text-xs font-medium text-red-500 dark:text-red-400">Pick one</p>
+            )}
+          </div>
+          <CategoryRail
+            categories={categories ?? []}
+            selected={category}
+            onSelect={cat => { setCategory(cat); setCatError(false) }}
           />
         </div>
 
@@ -471,13 +470,6 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
       </div>
 
       {/* ── Sheets ── */}
-      <CategoryPickerSheet
-        open={showCatSheet}
-        onClose={() => setShowCatSheet(false)}
-        categories={categories ?? []}
-        selected={category}
-        onSelect={cat => { setCategory(cat); setCatError(false) }}
-      />
       <AccountPickerSheet
         open={showAcctSheet}
         onClose={() => setShowAcctSheet(false)}
