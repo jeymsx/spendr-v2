@@ -960,32 +960,78 @@ export default function AccountNew() {
   return (
     <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-4">
       {/* ── Header ── */}
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
-        <button
-          onClick={back}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label={step === 0 ? 'Back to accounts' : 'Previous step'}
-        >
-          <IconChevronLeft />
-        </button>
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          New Account
-        </h1>
-        <span className="w-9 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-          {steps.indexOf(current) + 1}/{steps.length}
-        </span>
-      </header>
+      {/* ── Step chrome, pinned ──────────────────────────────────────────
 
-      {/* ── The final step: the card is the whole screen ──
+          Steps one and two scroll - the institution grid is forty tiles - and
+          the header scrolled away with them, taking the back button and the
+          step count with it. Halfway down the bank list there was nothing on
+          screen saying where you were or how to get out.
 
-          Progress moves to the top so nothing sits between the card and the
-          middle of the viewport, and the block centres in what is left. On
-          every other step the card stays a running preview pinned under the
-          header. ── */}
-      <StepProgress steps={steps} index={steps.indexOf(current)} className="mt-1 shrink-0" />
+          Frosted rather than filled. Every other sticky header in this app
+          uses a solid colour, but those are all inside SHEETS, where the
+          background is a known flat value. This is a page, and the page has a
+          fixed radial gradient behind it (html.dark::before) - a solid fill
+          would read as a flat patch sliding over a gradient. A translucent
+          tint over a blur frosts whatever passes beneath and needs to know
+          nothing about what that is.
+
+          The progress bar comes along because it is the same chrome: it
+          answers "how much is left", which is only useful while you are still
+          in it. ── */}
+      <div className="sticky top-0 z-20 shrink-0 pb-2">
+        {/* The frost is its OWN layer, not the wrapper's background, and that
+            is what lets it feather.
+ 
+            Feathering means masking, and masking the wrapper would fade the
+            header text and the progress bar along with the blur - the mask
+            applies to the element's whole rendering, filter and content
+            alike. A separate layer behind them can be masked to nothing at
+            its bottom edge while the text above stays at full strength.
+ 
+            It reaches 20px BELOW the wrapper, so the fade happens past the
+            content rather than across it: at the header's own bottom edge the
+            blur is still at full strength, and it thins out over the gap into
+            the page. Without that overhang the frost stopped mid-sentence and
+            the tiles behind it were sharply half-blurred.
+ 
+            mask-image with a -webkit- twin: Safari still wants the prefix,
+            and this is a PWA on iOS. */}
+        <div
+          className="absolute inset-x-0 top-0 -bottom-5 pointer-events-none
+            backdrop-blur-xl bg-white/70 dark:bg-black/35"
+          style={{
+            maskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
+            WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
+          }}
+          aria-hidden="true"
+        />
+        <header className="relative flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
+          <button
+            onClick={back}
+            className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+              bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
+              text-slate-600 dark:text-slate-300 shadow-sm
+              active:scale-90 transition-transform duration-75"
+            aria-label={step === 0 ? 'Back to accounts' : 'Previous step'}
+          >
+            <IconChevronLeft />
+          </button>
+          <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
+            New Account
+          </h1>
+          <span className="w-9 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+            {steps.indexOf(current) + 1}/{steps.length}
+          </span>
+        </header>
+
+        {/* ── The final step: the card is the whole screen ──
+
+            Progress moves to the top so nothing sits between the card and the
+            middle of the viewport, and the block centres in what is left. On
+            every other step the card stays a running preview pinned under the
+            header. ── */}
+        <StepProgress steps={steps} index={steps.indexOf(current)} className="relative shrink-0" />
+      </div>
 
       {current === 'style' ? (
         <StyleStep draft={draft} set={set} action={actionButton} />
