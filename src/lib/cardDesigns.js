@@ -18,37 +18,43 @@
  * every account created before this existed looks like. An account with no
  * `design` field renders as classic without needing a migration.
  *
- * Key and name only. Each design also carried a one-line description shown
- * under the gallery - but a sentence explaining what Bloom looks like sat
- * directly beneath a picture of what Bloom looks like, and the picture is the
- * better argument. What the patterns do is documented in index.css beside the
- * patterns themselves, which is where anyone changing one would look.
+ * `hint` is one short line, six or seven words. It replaced a full sentence
+ * per design, which was genuinely too much: two lines of prose beneath a
+ * picture of the thing they described, changing on every swipe. A phrase
+ * names the idea without competing with the card for attention, which is what
+ * the reference does under its own gallery.
  */
 
 export const CARD_DESIGNS = [
   {
     key: 'classic',
     name: 'Classic',
+    hint: 'Bare gradient, with the grain and sheen',
   },
   {
     key: 'orbit',
     name: 'Orbit',
+    hint: 'Concentric bands off the right edge',
   },
   {
     key: 'bloom',
     name: 'Bloom',
+    hint: 'Soft orbs, lit from the right',
   },
   {
     key: 'sweep',
     name: 'Sweep',
+    hint: 'Two broad diagonals across the middle',
   },
   {
     key: 'glitter',
     name: 'Glitter',
+    hint: 'Fine metallic fleck, generated not downloaded',
   },
   {
     key: 'onyx',
     name: 'Onyx',
+    hint: 'Deep tonal shapes, the darkest of the six',
   },
 ]
 

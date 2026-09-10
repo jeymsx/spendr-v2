@@ -476,6 +476,28 @@ function StyleStep({ draft, set, nameProblem }) {
   }, [paintRail])
 
   /**
+   * Open the swatch row on the selected colour.
+   *
+   * Twenty-seven swatches cannot fit, so the row scrolls - and a scrolled row
+   * parked at zero puts its first swatch hard against the left padding while
+   * the right runs off the screen, which reads as a list that fell over
+   * rather than a control. Centring the current selection makes it look
+   * placed, and it also answers "which one is on" before you have read the
+   * ring.
+   *
+   * Once, on entry only: re-centring on every pick would yank the row out
+   * from under the finger that just tapped it.
+   */
+  const swatchRef = useRef(null)
+  useEffect(() => {
+    const row = swatchRef.current
+    const on = row?.querySelector('[aria-pressed="true"]')
+    if (!row || !on) return
+    row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2 })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
+  /**
    * Centre card `i` in the rail.
    *
    * An explicit scrollTo rather than node.scrollIntoView({inline:'center'}),
@@ -534,8 +556,9 @@ function StyleStep({ draft, set, nameProblem }) {
           The height is still pinned, at one line now instead of three, so
           swiping between a short name and a long one does not shift the dots
           and the CTA under it. */}
-      <div className="px-6 mt-4 text-center min-h-[22px]">
+      <div className="px-6 mt-4 text-center min-h-[42px]">
         <p className="text-[15px] font-semibold text-slate-900 dark:text-white">{meta.name}</p>
+        <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">{meta.hint}</p>
       </div>
 
       {/* Design dots. Tapping one scrolls the rail, so the gallery stays the
@@ -578,10 +601,19 @@ function StyleStep({ draft, set, nameProblem }) {
 
                 shrink-0 on each swatch is what stops flex compressing them
                 into ovals; that was the actual bug, not the wrapping. */}
+            {/* py-2.5 rather than py-1.5: the selected swatch's ring extends 4px
+                past the circle, and at py-1.5 the row clipped it. */}
+            {/* Centring spacers, the same trick the card rail uses. Without
+                them the FIRST swatch can never be centred - a scrollport
+                cannot scroll past its own start - so selecting it would leave
+                the row jammed against the left edge, which is the imbalance
+                this was meant to fix. */}
             <div
-              className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x px-5 py-1.5 -mx-5"
+              ref={swatchRef}
+              className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x py-2.5 -mx-5"
               style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
             >
+              <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
               {/* Gradients first: they are the ones worth scrolling to, and a
                   row that opens on fourteen solids buries them. Each is
                   stored in the same `color` field as a comma-separated pair -
@@ -597,7 +629,7 @@ function StyleStep({ draft, set, nameProblem }) {
                     onClick={() => set({ color: spec })}
                     aria-label={`Gradient ${a} to ${b}`}
                     aria-pressed={on}
-                    className={`w-7 h-7 shrink-0 snap-center rounded-full
+                    className={`w-9 h-9 shrink-0 snap-center rounded-full
                       transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
                     style={{
                       background: `linear-gradient(135deg, ${a} 0%, ${b} 100%)`,
@@ -625,12 +657,13 @@ function StyleStep({ draft, set, nameProblem }) {
                     onClick={() => set({ color: c })}
                     aria-label={`Colour ${c}`}
                     aria-pressed={on}
-                    className={`w-7 h-7 shrink-0 snap-center rounded-full
+                    className={`w-9 h-9 shrink-0 snap-center rounded-full
                       transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
                     style={{ background: c, '--swatch-color': c }}
                   />
                 )
               })}
+              <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
             </div>
           </>
         )}
@@ -659,7 +692,14 @@ export default function AccountNew() {
     name: '',
     type: 'cash',
     role: 'spending',
-    color: PALETTE[0],
+    // The first gradient, not the first solid. Two reasons, and the second is
+    // the real one: a flat emerald is a duller card than the app can now make,
+    // and PALETTE[0] sat tenth in the swatch row - so centring the selection
+    // opened the row on the solids with every gradient scrolled off to the
+    // left, hiding them behind a swipe nobody would know to make. A branded
+    // account never sees this: pickPreset overwrites it with the
+    // institution's own colour.
+    color: GRADIENT_PRESETS[0].join(','),
     design: CARD_DESIGNS[0].key,
     fromPreset: false,
     scheme: '',
@@ -1080,7 +1120,10 @@ export default function AccountNew() {
           pointer-events dance, no measurement of the navbar: it is laid out
           by the same flow as everything above it, and pb-nav on the root
           keeps the whole page clear of the navbar in one place. ── */}
-      <div className="mt-auto flex flex-col items-center gap-2 px-5 pt-6">
+      {/* pt-4, not pt-6. mt-auto already pushes this to the bottom, so the
+          padding was buying separation the empty space above had already
+          bought. */}
+      <div className="mt-auto flex flex-col items-center gap-2 px-5 pt-4">
         {/* Why the button is dead, next to the dead button. Tapping a bank
             you already have disables Continue, and the explanation used to
             render under the manual-name field far down the page - so the
@@ -1095,7 +1138,7 @@ export default function AccountNew() {
           <button
             onClick={save}
             disabled={saving || !!nameProblem}
-            className="min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
+            className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
               text-[15px] font-semibold text-white bg-primary
               shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
               disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
@@ -1106,7 +1149,7 @@ export default function AccountNew() {
           <button
             onClick={next}
             disabled={!canAdvance}
-            className="min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
+            className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
               text-[15px] font-semibold text-white bg-primary
               shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
               disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
