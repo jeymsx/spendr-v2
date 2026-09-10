@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -421,6 +421,24 @@ export default function AccountNew() {
     setTouchedName(true)
   }
 
+  /**
+   * A step change starts at the top.
+   *
+   * Necessary the moment the action button moved into the flow: Continue now
+   * lives at the BOTTOM of a step, so tapping it left the scroller parked
+   * down there and the next step opened halfway through itself - on the
+   * institution list, below the fold entirely.
+   *
+   * Instant, not smooth. This is a new page rather than a movement within
+   * one, and animating it would read as the old page sliding away.
+   *
+   * <main> is the scroller, not the window - see layouts/AppLayout.jsx - so
+   * window.scrollTo would do nothing here.
+   */
+  useEffect(() => {
+    document.getElementById('app-main')?.scrollTo({ top: 0, behavior: 'auto' })
+  }, [step])
+
   function next() {
     if (current === 'institution') {
       setTouchedName(true)
@@ -469,9 +487,15 @@ export default function AccountNew() {
 
   // min-h-full plus a flex column is what lets the review step centre
   // itself: <main> is a definite-height scroller, so the flex child can take
-  // the leftover space between the progress bar and the pill.
+  // the leftover space between the progress bar and the action.
+  //
+  // pb-nav rather than a hand-set 5.5rem: the old value existed to reserve
+  // space beneath a FIXED pill, and getting it wrong is what clipped the
+  // button behind the navbar once already. In flow the button needs the same
+  // navbar clearance as every other page, which pb-nav already computes
+  // (5rem plus the safe-area inset).
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-[5.5rem]">
+    <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-nav">
       {/* ── Header ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
         <button
@@ -809,32 +833,31 @@ export default function AccountNew() {
         </div>
       )}
 
-      {/* ── The action, as a floating pill ──
+      {/* ── The action, in the flow of each step ──
 
-          It was a full-width button on an opaque blurred bar. The bar was
-          there to stop content showing through, but it read as a slab bolted
-          to the bottom of the screen and it needed its height kept in step
-          with the navbar by hand - which is exactly what clipped the button
-          by 4px when I guessed 76px for an 80px navbar.
+          It has been three things. First a full-width button on an opaque
+          blurred bar - a slab bolted to the bottom of the screen, whose
+          height had to be kept in step with the navbar by hand, which is
+          what clipped it by 4px when I reserved 76px for an 80px navbar.
+          Then a fixed pill, which fixed the slab but kept the coupling: a
+          fixed element has to be told where the navbar ends, and the page
+          had to reserve a matching hole for it.
 
-          A pill needs no bar: its own fill is opaque, so whatever scrolls
-          behind it stays legible, and it sizes to its label rather than to
-          the viewport. The wrapper takes pointer-events-none so the strip
-          either side of the pill does not swallow taps meant for the content
-          underneath, and the pill turns them back on for itself. ── */}
-      <div
-        className="fixed left-0 right-0 z-40 flex flex-col items-center gap-2 px-5 pointer-events-none
-          bottom-[calc(5rem+env(safe-area-inset-bottom,0px)+1.75rem)]"
-      >
+          Now it is simply the last thing on the page. `mt-auto` pushes it to
+          the bottom when the step is short - which is most of them - and
+          lets it sit directly under the content when the step is long enough
+          to scroll, instead of hovering over it. No z-index, no
+          pointer-events dance, no measurement of the navbar: it is laid out
+          by the same flow as everything above it, and pb-nav on the root
+          keeps the whole page clear of the navbar in one place. ── */}
+      <div className="mt-auto flex flex-col items-center gap-2 px-5 pt-6">
         {/* Why the button is dead, next to the dead button. Tapping a bank
             you already have disables Continue, and the explanation used to
             render under the manual-name field far down the page - so the
             button greyed out for no visible reason. */}
         {current === 'institution' && touchedName && nameProblem && (
-          <p className="pointer-events-none max-w-[20rem] text-center text-[12px] font-medium
-            text-red-500 dark:text-red-400
-            bg-white/90 dark:bg-[#0b0f14]/90 rounded-full px-3.5 py-1.5
-            shadow-[0_2px_10px_-2px_rgba(0,0,0,0.4)]">
+          <p className="max-w-[20rem] text-center text-[12px] font-medium
+            text-red-500 dark:text-red-400">
             {nameProblem}
           </p>
         )}
@@ -842,7 +865,7 @@ export default function AccountNew() {
           <button
             onClick={save}
             disabled={saving || !!nameProblem}
-            className="pointer-events-auto min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
+            className="min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
               text-[15px] font-semibold text-white bg-primary
               shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
               disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
@@ -853,7 +876,7 @@ export default function AccountNew() {
           <button
             onClick={next}
             disabled={!canAdvance}
-            className="pointer-events-auto min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
+            className="min-w-[15rem] max-w-full px-8 py-3.5 rounded-full
               text-[15px] font-semibold text-white bg-primary
               shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
               disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
