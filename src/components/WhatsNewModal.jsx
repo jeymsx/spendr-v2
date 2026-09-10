@@ -1,26 +1,31 @@
 import { useState } from 'react'
 import db from '../db/db'
 import {
-  IconSparkle, IconBell, IconBillHistory, IconDebt, IconCategories,
-  IconDrawn, IconPalette, IconSettings, IconContrast,
+  IconSparkle, IconQuickLog, IconBell, IconBillHistory, IconDebt,
+  IconCategories, IconDrawn, IconPalette, IconSettings, IconContrast,
 } from './icons'
 
 const CURRENT_VERSION = '0.3.0'
 
 /* Written from the user's side of the change, not the code's: what is
-   different when you open the app. Ordered by what you meet first - the home
-   screen, then the pages behind it, then settings - so reading the list walks
-   the app rather than the changelog.
+   different when you open the app. Ordered by what you meet first - the +
+   button, then the home screen, then the pages behind it, then settings - so
+   reading the list walks the app rather than the changelog.
 
-   What is NOT here: the 48 tests and the AST checks this release added. They
+   What is NOT here: the 86 tests and the AST checks this release added. They
    are the reason the figures stay right, but a test count is something the
    person who wrote it wants to say, not something the person using it wants
    to read. That belongs in plan.md.
 
    `Icon` is a COMPONENT, not a string. This list held emoji until 0.3.0 -
    which is the release that took the emoji out of the app, so it could hardly
-   keep rendering eight of them. */
+   keep rendering nine of them. */
 const WHATS_NEW = [
+  {
+    Icon: IconQuickLog,
+    title: 'Hold the + and just type it',
+    desc: 'Say “150 jollibee” or “500 from gcash to bpi”. Spendr reads the amount, the merchant and the account, then opens the right form with it all filled in.',
+  },
   {
     Icon: IconBell,
     title: 'You can tell at a glance',

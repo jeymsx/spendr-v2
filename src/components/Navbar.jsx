@@ -1,3 +1,4 @@
+import { useRef, useCallback, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 
 /* ── SVG icon primitives ───────────────────────────────── */
@@ -79,7 +80,80 @@ function Tab({ path, label, Icon }) {
   )
 }
 
-export default function Navbar({ onAddClick }) {
+/* How long the + must be held before it becomes quick log. Long enough not to
+   fire on a firm tap, short enough that you do not wonder whether it worked. */
+const HOLD_MS = 420
+/* How far the finger may wander and still count as a press. 12px is roughly
+   the slop a browser itself allows before it stops calling a touch a tap. */
+const SLOP_PX = 12
+
+export default function Navbar({ onAddClick, onQuickLog }) {
+  const timer   = useRef(null)
+  const heldRef = useRef(false)   // the hold fired: quick log is open
+  const offRef  = useRef(false)   // the finger left: do nothing on release
+  const downAt  = useRef({ x: 0, y: 0 })
+
+  const clearTimer = useCallback(() => {
+    clearTimeout(timer.current)
+    timer.current = null
+  }, [])
+
+  const startPress = useCallback((e) => {
+    heldRef.current = false
+    offRef.current = false
+    downAt.current = { x: e.clientX, y: e.clientY }
+    timer.current = setTimeout(() => {
+      heldRef.current = true
+      timer.current = null
+      // A short buzz, so a hold is confirmed by feel rather than by the
+      // overlay appearing - which on a slow frame lands after your thumb has
+      // already left.
+      try { navigator.vibrate?.(14) } catch { /* unsupported, or denied */ }
+      onQuickLog?.()
+    }, HOLD_MS)
+  }, [onQuickLog])
+
+  /*
+    Slide off to cancel - the behaviour every button has.
+
+    This has to be measured from pointermove, not onPointerLeave, and that is
+    not a stylistic preference. A touch pointer is IMPLICITLY CAPTURED to the
+    element that received pointerdown, so pointerout - which is what React's
+    onPointerLeave is built on - does not fire until the finger lifts. On a
+    phone the leave handler therefore arrives strictly too late: the 420ms
+    timer has already fired and quick log is already open.
+
+    pointermove does fire during capture, so distance is the only signal that
+    actually exists mid-gesture. Guarded on timer.current so a mouse merely
+    travelling across the button does nothing.
+  */
+  const onMove = useCallback((e) => {
+    if (!timer.current) return
+    const dx = e.clientX - downAt.current.x
+    const dy = e.clientY - downAt.current.y
+    if (dx * dx + dy * dy > SLOP_PX * SLOP_PX) {
+      offRef.current = true
+      clearTimer()
+    }
+  }, [clearTimer])
+
+  const abortPress = useCallback(() => {
+    offRef.current = true
+    clearTimer()
+  }, [clearTimer])
+
+  const endPress = useCallback(() => {
+    clearTimer()
+    // Neither gesture on release if the finger wandered off. Without the
+    // offRef check a cancelled hold would fall through to the add sheet,
+    // which is the one thing the user just said they did not want.
+    if (!heldRef.current && !offRef.current) onAddClick?.()
+    heldRef.current = false
+    offRef.current = false
+  }, [clearTimer, onAddClick])
+
+  useEffect(() => () => clearTimeout(timer.current), [])
+
   return (
     <nav
       className={[
@@ -99,14 +173,29 @@ export default function Navbar({ onAddClick }) {
 
       {/* center add button */}
       <div className="flex flex-col items-center flex-1">
+        {/* Tap adds, hold quick-logs, slide off cancels.
+
+            Pointer events rather than onClick, because the two gestures share
+            one target: a timer starts on down and whichever fires first wins.
+
+            onPointerMove is the one that does the cancelling - see the note on
+            implicit pointer capture above. Leave and cancel are kept as well;
+            they are the ones that fire for a mouse, and for the case where the
+            browser takes the gesture away. */}
         <button
-          onClick={onAddClick}
-          aria-label="Add transaction"
+          onPointerDown={startPress}
+          onPointerMove={onMove}
+          onPointerUp={endPress}
+          onPointerLeave={abortPress}
+          onPointerCancel={abortPress}
+          onContextMenu={e => e.preventDefault()}
+          aria-label="Add transaction. Hold to quick log."
           className={[
             'w-14 h-14 rounded-full -mt-7',
             'flex items-center justify-center',
             'active:scale-95 transition-transform duration-100',
             'border-4 border-white dark:border-navy',
+            'select-none touch-none',
           ].join(' ')}
           style={{ background: 'var(--color-primary)' }}
         >

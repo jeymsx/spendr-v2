@@ -14,6 +14,7 @@ import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconTemplate} from '../components/icons'
+import { useQuickPrefill } from '../hooks/useQuickPrefill'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -117,6 +118,21 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
       .then(cs => cs.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))),
     [], [],
   )
+  /* Quick log hands its parse over as router state; this fills the form once
+     the categories and accounts have loaded, so the names it matched can be
+     resolved to the objects the pickers expect. */
+  useQuickPrefill({
+    categories,
+    accounts,
+    apply: (p) => {
+      if (p.amount != null) setAmountStr(numToMoneyStr(p.amount))
+      if (p.description) setDescription(p.description)
+      if (p.category) setCategory(p.category)
+      if (p.account) setAccount(p.account)
+      if (p.date) setDate(p.date)
+    },
+  })
+
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false
 

@@ -136,7 +136,7 @@ import {
   Bell01, Zap, Bank, Wallet01, CreditCard01, Phone01, BankNote01,
   Receipt, SwitchHorizontal01,
   CalendarCheck01, CoinsHand, Grid01, Brush01, Palette, Settings01,
-  Contrast01,
+  Contrast01, ZapFast,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -175,6 +175,7 @@ export const IconDrawn       = uui(Brush01)          // the icon set replacing t
 export const IconPalette     = uui(Palette)          // accent colour
 export const IconSettings    = uui(Settings01)
 export const IconContrast    = uui(Contrast01)       // the light-mode contrast pass
+export const IconQuickLog    = uui(ZapFast)          // hold the + and type a line
 
 /**
  * An account type's icon.

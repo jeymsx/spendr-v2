@@ -3,6 +3,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ErrorBoundary from '../components/ErrorBoundary'
 import AddActionSheet from '../components/AddActionSheet'
+import QuickLogOverlay from '../components/QuickLogOverlay'
 import { useSyncManager } from '../components/SyncManager'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
@@ -23,6 +24,7 @@ function PageFallback() {
 
 export default function AppLayout() {
   const [sheetOpen, setSheetOpen] = useState(false)
+  const [quickOpen, setQuickOpen] = useState(false)
   const { runSync } = useSyncManager()
   const { user } = useAuth()
   const { showToast } = useToast()
@@ -161,8 +163,13 @@ export default function AppLayout() {
         </div>
       </main>
 
-      <Navbar onAddClick={() => setSheetOpen(true)} />
+      <Navbar onAddClick={() => setSheetOpen(true)} onQuickLog={() => setQuickOpen(true)} />
       <AddActionSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
+
+      {/* Hold the + to get here. Rendered at the LAYOUT level, so it can blur
+          the whole app including the navbar - the navbar is a sibling of
+          <main>, so a page-level overlay could never cover it. */}
+      {quickOpen && <QuickLogOverlay onClose={() => setQuickOpen(false)} />}
       {showWhatsNew && !whatsNewDismissed && (
         <WhatsNewModal onClose={() => setWhatsNewDismissed(true)} />
       )}

@@ -12,6 +12,7 @@ import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconCalendar, IconChevronLeft, IconChevronRight, IconTemplate, IconWarning} from '../components/icons'
+import { useQuickPrefill } from '../hooks/useQuickPrefill'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -117,6 +118,19 @@ export default function Transfer({ onCancel, onSaved } = {}) {
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
+  /* Quick log hands its parse over as router state; this fills the form once
+     the accounts have loaded, so the names it matched can be resolved. */
+  useQuickPrefill({
+    accounts,
+    categories: [],
+    apply: (p) => {
+      if (p.amount != null) setAmountStr(numToMoneyStr(p.amount))
+      if (p.fromAccount) setFromAccount(p.fromAccount)
+      if (p.toAccount) setToAccount(p.toAccount)
+      if (p.date) setDate(p.date)
+    },
+  })
+
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false
 
