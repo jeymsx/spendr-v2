@@ -1,338 +1,310 @@
 # Spendr — what to build next
 
-Written 10 September 2026, on `feat/goals`, after building the goals feature.
+Rewritten 2026-09-11, after a full pass over the codebase. Every number here
+was measured rather than estimated; where something is a judgement call it says
+so.
 
-Everything here is grounded in this codebase rather than a generic checklist:
-the numbers were measured, the file references are real, and where something is
-already fine I have said so instead of padding the list. Ordered by what it
-buys you, not by effort.
+## Where the project actually is
+
+|  |  |
+| --- | --- |
+| Code | 28,437 lines across 116 files |
+| Comments | 4,283 lines (13% of non-blank — reasoning, not noise) |
+| Screens | 21 routes, plus 15 sheets |
+| Data | 15 Dexie tables, 5 Supabase migrations |
+| Dependencies | 15 runtime, 12 dev |
+| Tests | 48, all on pure logic |
+
+**Grade: product-grade, pre-operational.**
+
+The craft is above the average enterprise codebase — offline-first with a real
+sync layer, two complete UIs sharing one set of logic, contrast solved by
+measurement rather than taste, and comments that explain *why*. That is not
+"medium build" work.
+
+What is missing is not polish, it is the **safety net**. Enterprise-grade is
+mostly about what happens when you are not looking, and right now: nothing runs
+the tests on push, nothing blocks a bad merge, nothing tells you a deploy broke,
+and nothing catches a type error before a user does. Five data shapes changed in
+one evening and every one had to be verified by hand.
+
+Six things would close that gap, roughly in order of value per hour:
+
+1. **CI** — `npm run check && npm run lint && npm test && npm run build` on push.
+   Half an hour. Without it every other item on this list decays.
+2. **RLS on the two unprotected tables** (below). Security, one file.
+3. **Error monitoring** — a crash in production is currently invisible.
+4. **TypeScript**, incrementally via JSDoc + `checkJs` on `src/lib` and `src/db`
+   first. That is where the sync shapes live, and where a wrong shape is silent.
+5. **Split the two big files.** `Settings.jsx` is 3,240 code lines and
+   `Accounts.jsx` 2,022. Both would fail any review on size alone.
+6. **A component-test layer.** 48 tests over ~28k lines is about 1%. The pure
+   logic is covered; nothing renders.
 
 ---
 
-## 0. Read this first
+## 1. Security and correctness — do these first
 
-**Goals is done and committed** (`ce62f14`), but two things are outstanding:
+### RLS is missing on `templates` and `user_preferences`
 
-1. **Run `src/supabase/migrations/004_goals.sql`** in the Supabase SQL editor.
-   Until then goals stay on-device: `optionalSync` in [sync.js](src/lib/sync.js)
-   deliberately steps over the goals push and pull so a missing remote table
-   cannot abort the whole sync.
-2. **Remove the three demo goals before you sign in to Supabase on localhost.**
-   [seed-goals-demo.js](seed-goals-demo.js) has the one-paste undo. They are
-   written `synced: 0`; harmless today because of the point above, dangerous the
-   moment the migration lands.
+Both are created in `003_schema.sql` with no `enable row level security` and no
+policy anywhere, and both sync: `pushTable('templates', …)` at sync.js:433,
+`pullSimpleTable` at :550. Every other synced table has a policy —
+transactions, accounts, categories, debts and recurring in `001_init.sql`, goals
+in `004_goals.sql`.
 
-The implementation is explained at the top of [src/lib/goals.js](src/lib/goals.js)
-— read that file's header rather than this document if you want to know how the
-allocation works.
+The anon key ships in the client. With open signups, any account can read and
+write every user's templates, which hold descriptions, amounts, categories and
+accounts. One migration fixes it; write it before inviting a second user.
+
+### Two migrations are still unapplied
+
+`004_goals.sql` and `005_account_design.sql`. Until they run, goals do not sync
+and card designs fall back via the drop-and-retry path in `optionalSync`.
+
+### Demo rows must go before signing in on localhost
+
+8 seeded rows — 5 debts, 3 goals — tagged `demoSeed`. `pushTable` pushes all
+local rows unconditionally, so signing in merges fictional people into real
+cloud data. Undo blocks are in `seed-debts-demo.js` and `seed-goals-demo.js`.
+
+### Sync may break on rename
+
+`accounts` and `categories` declare `unique (user_id, local_id)` but the push
+uses a `user_id,name` conflict target. Renaming a row locally then syncing is
+the untested path; worth a deliberate test before it matters.
+
+### The credit-card due-date bug
+
+Still open, still noted, still unfixed from the previous plan.
 
 ---
 
-## 1. Correctness first — a wrong figure costs more than a missing feature
+## 2. Accessibility — measured, not guessed
 
-This is a money app. Everything in this section outranks everything below it.
+A DOM probe now walks all 17 routes in light mode, resolves each element's
+composited background up the ancestor chain, and applies real WCAG thresholds.
+It lives in the session scratchpad and is worth moving into `scripts/`.
 
-### 1.1 The credit card due date is a guess
+### The one that matters: white text on filled buttons
 
-[utils/creditCycle.js](src/utils/creditCycle.js) derives the due date as the
-month following `cycleEnd`. Real cards use a fixed grace period from the
-statement date, and Philippine issuers vary — BPI and Metrobank are ~20 days,
-some are 25. If your card's due day is earlier in the month than its statement
-day, the current logic is off by a month.
+Measured, white on the raw accent, against the 4.5:1 that 14–15px bold needs:
 
-You already store `dueDate` as a day-of-month on the account. Prefer the stored
-day and only fall back to the derived one; and when a derived date is being
-shown, say so, because "Due Sep 25" reads as fact.
+| accent | ratio | verdict |
+| --- | --- | --- |
+| Cosmos | 4.26:1 | marginal |
+| Blush | 3.00:1 | fails |
+| Azure (default) | 2.85:1 | fails |
+| Ember | 2.78:1 | fails |
+| Lagoon | 2.13:1 | fails |
+| Sage | 2.01:1 | fails |
+| Amber | 1.78:1 | fails |
+| **Honey** | **1.61:1** | barely legible |
 
-**Why it matters:** a due date that is wrong by a month is how a card gets paid
-late. Highest-value fix on this list.
+This is **every filled button in the app** — Continue, Save Changes, Review
+Expense, the FAB — in both themes, since the fill does not change with theme.
 
-### 1.2 There is no test runner
+The fix is a second token, `--color-primary-strong`, used for filled surfaces
+only, derived per accent. The amount each needs to darken to clear 4.5:1 is
+already solved:
 
-`package.json` has exactly three scripts: `dev`, `build`, `preview`. No test
-framework, no eslint. Over this session, **five ReferenceErrors, one temporal
-dead-zone crash, and one rules-of-hooks crash all shipped past a green
-`vite build`** — a build that succeeds proves the bundle parsed, nothing more.
-
-I wrote three AST checkers while working (unbound identifiers, use-before-
-declaration, hooks-after-early-return) and 50 unit tests for the goals
-allocator, but **they live in a temp directory and are gone when this session
-ends.** That is the single biggest piece of debt here.
-
-```jsonc
-// package.json
-"scripts": {
-  "dev": "vite",
-  "build": "vite build",
-  "preview": "vite preview",
-  "check": "node scripts/scopecheck.mjs src/**/*.{js,jsx} && node scripts/tdzcheck.mjs src/**/*.{js,jsx} && node scripts/hookcheck.mjs src/**/*.jsx",
-  "test": "vitest run"
-}
+```text
+Azure  keep 77% → #237AC5      Lagoon keep 67% → #158665
+Cosmos keep 97% → #805BEF      Amber  keep 61% → #9C6D2B
+Blush  keep 80% → #BF5177      Ember  keep 77% → #C35252
+Sage   keep 65% → #358642      Honey  keep 58% → #93720F
 ```
 
-Then move the checkers into `scripts/`, add `vitest`, and port the goals tests
-as the first real suite. The money logic is where tests earn their keep and it
-is all pure and already testable:
+Deliberately not applied yet: it changes the app's signature colour and wants a
+decision, not a late-night commit. Note that Honey and Amber become visibly
+duller — which is the honest cost of legible white text on them, and an argument
+for either dark text on those two, or dropping them.
 
-| Module | What to pin down |
-|---|---|
-| `lib/goals.js` | 50 tests exist — port them verbatim |
-| `utils/creditCycle.js` | cycle boundaries, statement-paid detection, §1.1 |
-| `utils/installments.js` | the "next statement counted every future installment" bug |
-| `utils/scheduled.js` | the cutoff that keeps future rows out of "spent" |
-| `utils/recurring.js` | next-occurrence across month ends and February |
-| `lib/accountBrands.js` | `aaSafeStops` still clears 4.5:1 through the overlays |
+### Already fixed
 
-### 1.3 Deleting an account with history is a dead end
+Debt avatar initials (all ten palette colours failed, 2.15–4.47:1), "Record a
+payment", the budget limit chip, the currency chip, and the budgets "spent"
+line. Two new utilities — `.accent-ink` and `.tone-ink` — generalise what
+`.budget-tone-ok` was doing for one page.
 
-[Accounts.jsx](src/pages/Accounts.jsx) blocks deletion when transactions
-reference the account and offers no way forward. Since accounts are keyed by
-**name** everywhere (transactions, balances, `parentName`, and now goal links),
-the fix is a reassign step: "move 47 transactions to … then delete". The rename
-cascade already does exactly this work — it just isn't reachable from delete.
+### Remaining, lower priority
 
-Add **archiving** alongside it. A closed account still has to keep its history
-but should not clutter pickers or the card stack.
+- The **navbar's active tab icon** is 2.85:1 against 3:1 in light mode.
+  Marginal, and it is the app's signature. Worth revisiting with the button
+  colour, since both are the same root cause.
+- The **`text-slate-400 dark:text-slate-500` pair** is backwards for light
+  mode and appears roughly 235 times. slate-400 on white is 2.56:1; slate-500
+  works in both themes. A find-and-replace, but a big diff.
+- The **accent picker's 6–7px preview text** measures ~4.1:1. It is a
+  thumbnail of a screen and is `aria-hidden`, so it is decorative — noted so
+  nobody "fixes" it.
 
-### 1.4 Renames cascade in application code, not in the database
+### Untested
 
-The cascade lives in one `db.transaction` in the account form. Goals now join
-it, and that is three call sites and counting. Every new table that references
-an account name is a chance to forget one — a goal pointing at a renamed
-account would silently read ₱0, which looks like a real number.
-
-Either centralise it as `renameAccount(oldName, newName)` in `db/txHelpers.js`,
-or move to account **ids** with names as display-only. The second is correct but
-touches the sync conflict keys (`user_id,name`) and is a migration; the first is
-an afternoon and removes the whole class of bug.
+No screen reader pass. No keyboard-only pass — and the app is touch-first, so
+tab order has never been exercised. Reduced-motion is honoured in three places
+and ignored elsewhere.
 
 ---
 
-## 2. Accessibility — one systemic issue, one real gap
+## 3. Modal or page? — a rule, and where the app breaks it
 
-### 2.1 The muted-text pair fails contrast, in 235 places
+The app has 21 routes and 15 sheets, and until tonight the split was accidental.
+A rule that holds up:
 
-`text-slate-400 dark:text-slate-500` appears **235 times** in `src/`. Measured:
+**A sheet is for one decision you can finish in a few seconds without losing
+your place.** Pick a thing, confirm a thing, or nudge one value. It keeps the
+context behind it visible, and that visibility is the point.
 
-| Pair | Ratio | Verdict |
-|---|---|---|
-| `slate-400` on white | **2.56:1** | fails AA *and* AA-large |
-| `slate-400` on `slate-50` | **2.45:1** | fails both |
-| `slate-500` on `#0d1117` | **3.98:1** | large text only |
-| `slate-500` on white | 4.76:1 | passes |
-| `slate-400` on `#0d1117` | 7.38:1 | passes |
+**A page is for a task with more than one step, its own scroll, or its own
+sub-state** — and for anything you might want to link to or come back to.
 
-The light-mode half is the problem, and it is on captions, dates, account
-subtitles and hints — the small text where it matters most. Note the pair is
-**backwards**: `slate-400` is the safe choice in dark mode and the failing one
-in light.
+Two corollaries worth stating because both were violated:
 
-Swap to `text-slate-500 dark:text-slate-400` and it passes in both. Do it as
-one mechanical pass with a `--dry-run` diff first; a handful of instances sit on
-coloured or overlaid backgrounds and need the composite measured, not the bare
-pair. (Every card gradient in
-[accountBrands.js](src/lib/accountBrands.js) is already solved *through* its
-overlay stack — same discipline applies here.)
+- **A sheet must never open another sheet.** That was the reason Categories and
+  Monthly Budgets became pages. A sheet over a sheet has no clear way back and
+  no clear owner of the backdrop.
+- **A sheet is not a place to keep pending state.** Budgets held unsaved edits
+  behind a "Discard/Done" header, which is a page's job.
 
-### 2.2 Toasts are silent to screen readers
+### Where it stands now
 
-`aria-live` does not appear anywhere in `src/`. Every confirmation the app gives
-— "Goal created", "Account updated", "Failed to save" — is invisible to assistive
-tech. One attribute on the toast container in
-[ToastContext.jsx](src/context/ToastContext.jsx) fixes all of them:
-`role="status" aria-live="polite"`, and `aria-live="assertive"` for errors.
+|  | shape | verdict |
+| --- | --- | --- |
+| Category / account / template pickers | sheet | correct — one decision, context matters |
+| Overdraw, duplicate, template confirm | sheet | correct — a question, then gone |
+| Add expense / inflow / transfer | page | correct — multi-field, own scroll |
+| Categories, Monthly Budgets, Accent | page | fixed tonight |
+| Bills, Debts, Goals, and each bill | page | correct |
+| **Category form** | sheet over a page | correct now |
+| **Profile, Sheets config, Restore, Reset** | sheet | **wrong** — see below |
+| **Templates manager** | sheet | **wrong** — a list you manage |
+| **`TxDetailSheet`** | sheet | **borderline** — see below |
 
-### 2.3 Smaller, verified
+### What to change
 
-- **White on `--color-primary` is 2.85:1.** It is your brand blue and I left it
-  alone deliberately, but it fails on the primary button, which is the most
-  important control in the app. Darkening the button's blue ~15% while keeping
-  the brand colour for accents would clear 4.5:1 without changing the identity.
-- **`prefers-reduced-motion` covers three things and misses the rest.** There
-  are exactly three blocks in [index.css](src/index.css): the wallet tab, the
-  wallet fold, and the account cards. Not covered: the count-up on the net-worth
-  figure (a number visibly ticking), every sheet slide-up, and every progress-bar
-  width transition — including the new goal bars. The count-up is the one that
-  matters; it is motion carrying information, so it needs a static fallback
-  rather than a faster animation.
+**Promote to pages:** Templates manager (a list with CRUD — same argument as
+Categories), Restore Backup and Reset App (multi-step, destructive, and a
+"where am I" moment matters), and Sheets config (a form with credentials).
+Profile can stay a sheet: it is two fields.
 
----
+**`TxDetailSheet` is the interesting one.** It is a detail *and* an editor, and
+at 800 lines it is the app's most complex sheet. It works, and the
+detail-and-edit-are-the-same-layout idea is genuinely good. But a transaction is
+a thing you might want to link to, and the sheet cannot be. Proposal:
+`/transactions/:id` as a page, keeping the same rows, with the sheet retained
+for the quick-look case from the Recent list. Not urgent; it is the best-built
+sheet in the app.
 
-## 3. Performance
-
-### 3.1 `@react-pdf/renderer` is 1.43 MB
-
-```
-1428K  react-pdf.browser-*.js      ← the monthly PDF report
- 332K  CartesianChart-*.js         ← recharts
- 204K  vendor-supabase-*.js
- 192K  index-*.js
- 164K  vendor-react-*.js
-```
-
-It is already a separate chunk, so it does not block first paint — but it *is*
-in the service worker precache (55 entries, 1.9 MB), so every install pays for
-it whether or not a report is ever generated. Exclude it from the precache
-globs in the PWA config and let it load on demand; a report is a deliberate act
-and can afford a spinner.
-
-`/budget` no longer imports recharts. `Insights` and `AccountDetail` still do —
-`AccountDetail`'s use is one bare 30-day line, which is perhaps 40 lines of
-hand-rolled SVG. Dropping recharts there would take the chart off the account
-page's critical path entirely.
-
-### 3.2 Everything reads the whole table
-
-Every surface does `db.transactions.toArray()` and filters in JavaScript. Fine
-today, and it will stay fine for a year or two of personal use. When it stops
-being fine the fix is `where('date').between(...)` — the `date` index already
-exists. **Not worth doing until it hurts**; noted so it is not a surprise.
+**The desktop layer keeps its modals.** A two-pane layout has room to show
+context beside a modal, which is exactly when a modal is right. This is why
+`CategoryManager` and `BudgetManager` take a variant rather than being
+converted outright.
 
 ---
 
-## 4. UI/UX tweaks
+## 4. Copy — where it reads as machine-written
 
-Small, cheap, and each one removes a real papercut.
+The tell is not length, it is **explaining rather than labelling**. Apple names
+things and trusts the interface; the pattern to avoid is a sentence that teaches
+you a concept you did not ask about.
 
-1. **Empty states that do the next thing.** Several read "No upcoming
-   payments" and stop. Every empty state should carry the action that fills it
-   — the new goals page does this ("Add your first goal"); make it the standard.
+Measured — the longest user-facing strings in the app:
 
-2. **Undo instead of confirm.** Deletes currently open a confirm step. A toast
-   with UNDO is faster and safer: it does not interrupt the common case, and it
-   covers accidents the confirm dialog never sees.
+| chars | where |  |
+| --- | --- | --- |
+| 166 | Goals empty state | "Name what you are saving for, set the amount, and point it at the account holding the money. Progress comes from the real balance…" |
+| 124 | Goals delete confirm | "The goal goes; your money does not move. Nothing was ever taken out…" |
+| 122 | Reset confirm | "This will permanently delete all transactions, accounts, categories…" |
+| 105 | AccountNew credit hint | "A credit card's balance comes from its charges, so it starts at zero…" |
+| 97 | Budget empty state | "Give a category a monthly limit and this page starts tracking it…" |
 
-3. ~~**The amount keypad should be everywhere money is entered.**~~ *Done, the
-   other way round.* This asked for `NumericKeypad` to spread; the call went to
-   the plain `inputMode="decimal"` field instead, because that is what Add
-   Expense, Add Inflow, Transfer and every sheet already used - the keypad was
-   one screen out of many. A custom pad also cannot do what a real input does
-   for free: caret, select-all, paste, hardware keyboard on the desktop build,
-   dictation. The component is deleted; there is one way to type an amount.
+Two of these are **fine and should stay**: the reset confirm and the goal-delete
+confirm. A destructive action must say exactly what it destroys — that is not
+verbosity, it is consent.
 
-4. **Pull-to-refresh has no result.** The "↓ Pull to sync" affordance appears
-   even when signed out, where syncing is impossible. Hide it, or say what it
-   would do.
+The rest are the pattern to cut. Goals' empty state teaches the whole feature
+before you have used it. Apple would write **"No goals yet"** and a button, and
+let the first goal teach the feature.
 
-5. **Relative dates past "Yesterday".** `fmtDate` handles today and yesterday
-   then falls back to "Sep 8". "3 days ago" reads better up to about a week.
+### Rules to hold
 
-6. **Tapping a figure should explain it.** "Using 65% of spending budget" and
-   the new "28%" goals tile are both derived from several inputs. A long-press
-   or an ⓘ that shows the arithmetic builds more trust than any amount of
-   polish — this is the same reasoning behind "Where it comes from" on /goals.
+- **Empty state:** a short title, at most one short line, and a button that does
+  the next thing. If the title and the button are enough, drop the line.
+- **Never explain the model.** "Progress comes from the real balance" is
+  documentation. Cut it, or move it behind an info affordance.
+- **Buttons are verbs, and specific.** "Add account", not "Continue" where
+  "Continue" could mean anything.
+- **No em-dash asides in UI copy.** They read as written-by-committee. Fine in
+  code comments, wrong on a button's helper text.
+- **Sentence case everywhere.** Mostly done; the sheets are the holdout.
+- **Trust the number.** "₱3,400 remaining · 77% used" needs no sentence around
+  it.
 
-7. **The three planner tiles are 111 px tall** for an icon, a word and a
-   figure. Slightly generous; worth revisiting once there is real data in all
-   three.
+### Empty states that do the next thing
 
----
-
-## 5. Feature additions
-
-Ordered by value for how this app is actually used. The comparisons are to what
-YNAB, Monarch, Copilot, Actual and Lunch Money do, and where they do it *badly*
-I have said so rather than copying.
-
-### 5.1 Budget rollover — the biggest single gap
-
-`rollover` and `carryover` appear nowhere in `src/`. Every budget is a fresh
-monthly limit, so underspending in September buys nothing in October and one
-bad month is permanently "over".
-
-This is the mechanic YNAB is built on and the one people miss most. Per
-category: **reset monthly** (today's behaviour), **roll the surplus forward**,
-or **roll the deficit forward too** (harsher, and honest). It needs a stored
-per-category-per-month record rather than the single `budget` field, so it is
-the largest item here — and still the one I would do first.
-
-### 5.2 Goals, next steps
-
-The waterfall is deliberately minimal. In rough order:
-
-- **"Start from today."** Right now a ₱90,000 goal on an account already
-  holding ₱120,000 is instantly complete — correct for a bucket model, and
-  occasionally not what you meant. An optional `baseline` (the balance to
-  ignore) would express "save ₱90,000 *more*". I left it out because it
-  reintroduces a typed-in number, which is exactly what you asked to avoid;
-  worth adding only if the current behaviour actually annoys you.
-- **Contribution history.** A goal knows its balance now but not that it was
-  ₱20,000 last month. Sampling monthly totals into a small table would give a
-  real trend line and a projected completion date from *observed* saving rather
-  than from arithmetic on the target date.
-- **Milestones.** 25/50/75/100% with a toast. Cheap, and the only genuinely
-  motivating thing in most savings apps.
-- **Goal-aware transfers.** "Move ₱5,000 to Emergency Fund" could preselect the
-  funding account on the transfer screen.
-- **Round-up saving.** Every expense rounds to the next ₱100 and the difference
-  transfers to your top-ranked goal. Very popular; needs a real transfer, not a
-  derived figure, so it is a change in kind rather than degree.
-
-### 5.3 A net-worth history
-
-Every balance is a current value; nothing is retained. A monthly snapshot table
-written on the first launch of each month would give the one chart that answers
-"am I actually getting ahead" — and it is the chart every one of the apps above
-leads with. Cheap to add, impossible to backfill, which argues for adding it
-**now** so the history starts accumulating.
-
-### 5.4 Bills, properly
-
-`recurring` holds a schedule and requires a manual "Post now" — no auto-post
-exists (`autoPost` appears nowhere). That is the right default for a country
-where cash still moves by hand, but:
-
-- **Overdue is currently just a red date.** It should be a count you can act on.
-- **Auto-post for the certain ones** (Netflix, Spotify) with an undo window.
-- **Post from a notification.** The service worker is already registered.
-
-### 5.5 Insights that say something
-
-The Insights page shows what happened. What people want is what it *means*:
-- "Food is up 32% on your 3-month average"
-- "This is the fourth month running that Shopping went over"
-- "Your spending is ₱1,200/day; the month has 20 days left and ₱5,250 in it"
-
-All computable from data already stored, no new schema.
-
-### 5.6 Shared or multi-currency
-
-`currency` exists on every account and a `currency` meta key exists, but
-`en-PH` is hardcoded in **30 files** — a near-identical `fmt`/`fmtCompact` pair
-copy-pasted into almost every page and sheet. So the field promises support that
-does not exist, and adding it later means editing thirty files.
-
-Worth doing the cheap half now regardless of multi-currency: **one shared
-formatter module.** Thirty copies of the same eight-line function is thirty
-chances for two screens to format the same amount differently, which is the
-kind of inconsistency people notice in a money app. Extracting it is mechanical
-and makes §5.6 a small change instead of a large one.
+Agreed and partly done. Bills, Debts and Goals now offer the action. Still to
+do: **Transactions** with an active filter (offer "Clear filters", not just "No
+transactions"), **Insights** with no data for the month (offer the previous
+month rather than an empty chart), and **Accounts** when only Cash exists
+(offer the institution picker).
 
 ---
 
-## 6. Deliberately not doing
+## 5. UI polish worth doing
 
-Saying no is part of a plan:
-
-- **Bank sync / open banking.** No usable aggregator for PH consumer accounts,
-  and offline-first is the app's actual advantage.
-- **Splitting bills with people.** `debts` covers the informal case, which is
-  what actually happens.
-- **Investment tracking.** A savings-and-spending app that also does portfolios
-  does neither well.
-- **A web/desktop rewrite.** `src/web/**` already covers desktop. Per the
-  existing constraint, mobile files gain exports and CSS hooks only.
+- **`AddActionSheet`** is the last flush-bottom slab among the primary flows.
+  Bring it onto the floating-glass treatment the filter and transaction sheets
+  use.
+- **Skeletons.** Dashboard has one; Insights, Accounts and Transactions flash
+  empty then populate. Reserve the height.
+- **Toast placement.** `bottom-28` clears the navbar but collides with the
+  floating sheets. Should sit above whatever is topmost.
+- **The `+ Limit` chip** on Budgets is the only place a control looks like a
+  label. Make it read as tappable.
+- **Insights bullet glyphs** stay emoji, deliberately — twelve distinct marks
+  for twelve editorial remarks is the one place emoji beat a monochrome set.
+- **Goal icons** are still user-set emoji and the only remaining emoji in
+  identity data. Unlike categories there is no name→icon map to derive from,
+  because goal names are freeform, so this one genuinely needs a picker.
 
 ---
 
-## 7. If you only do three things
+## 6. Features, in rough order of value
 
-1. **§1.2 — a test runner and the three checkers in `scripts/`.** Everything
-   else on this list is safer afterwards, and the checkers have already caught
-   seven crashes that the build did not.
-2. **§1.1 — the credit due date.** It is the one figure on the screen that can
-   cost real money by being wrong.
-3. **§2.1 — the contrast pass.** 235 instances, one mechanical swap, and the
-   small text in light mode goes from 2.56:1 to passing.
+1. **Quick log** — hold the FAB, type "150 jollibee", land on a pre-filled
+   expense. In progress on `feat/quick-log`; see that branch's notes for the
+   parser-versus-model reasoning.
+2. **Budget rollover** — unspent budget carrying to next month is the single
+   most-requested feature in every budgeting app and Spendr has no answer.
+3. **Search that spans everything**, not just transactions.
+4. **Scheduled/future transactions as first-class**, rather than the
+   `scheduledCutoff` special case threaded through three files.
+5. **Multi-currency**, properly. `currency` exists on accounts and nothing
+   converts.
+6. **Shared/household accounts.** The RLS work above is the prerequisite.
 
-Then §5.1 (rollover) as the first proper feature.
+---
+
+## 7. Retired from the previous plan
+
+- ~~The amount keypad should be everywhere~~ — resolved the other way. Every
+  money field is the system keyboard now; `NumericKeypad` is deleted.
+- ~~Move the AST checkers into `scripts/`~~ — done, behind `npm run check`,
+  with Vite told to ignore the directory.
+- ~~No test runner~~ — Vitest, 48 tests, `npm test`.
+- ~~No linter~~ — ESLint 10 flat config, `npm run lint`. Its most useful
+  result was negative: `no-undef` and `rules-of-hooks` both report zero, which
+  is the checkers having done their job. The 134 findings are the React-19 rule
+  set and are warnings, with the reasoning recorded in the config.
+- ~~Pull-to-refresh has no result~~ — done. It now says "Sync needs an account"
+  and offers Settings.
+
+## Known lint backlog
+
+134 warnings, none of them a crash: 45 `react-refresh/only-export-components`
+(mostly `icons.jsx`, by design), 35 `no-unused-vars`, 28
+`react-hooks/set-state-in-effect`, 14 `exhaustive-deps`, and 9 others. Two are
+false positives on inspection. The one worth fixing first is
+`AccountDetail.jsx:416` — a ref written during render. Idempotent today, but it
+is the kind of thing that breaks under concurrent rendering.
