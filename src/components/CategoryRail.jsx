@@ -119,13 +119,13 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
             className="shrink-0 snap-start w-[54px] flex flex-col items-center gap-1.5
               active:scale-95 transition-transform duration-75"
           >
-            {/* The wash, the rim and the selected ring all live in .cat-tile
-                in index.css - only the colour comes from here, because both
-                themes have to derive from it and an inline style cannot
-                answer a theme. */}
+            {/* The wash and the selected ring live in .cat-tile in index.css,
+                which is the same tile the transaction rows use - only the
+                colour comes from here, because both themes derive from it and
+                an inline style cannot answer a theme. */}
             <span
               data-on={on}
-              className="cat-tile-pick w-[50px] h-[50px] rounded-[15px] flex items-center
+              className="cat-tile w-[50px] h-[50px] rounded-[15px] flex items-center
                 justify-center text-[23px] leading-none transition-shadow duration-150"
               style={{ '--cat-color': cat.color ?? '#64748b' }}
             >
