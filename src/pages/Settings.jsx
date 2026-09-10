@@ -11,6 +11,7 @@ import { useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useSyncManager } from '../components/SyncManager'
+import SubPage from '../components/SubPage'
 import db, { UNSYNCED } from '../db/db'
 import { scheduledCutoff } from '../utils/scheduled'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -24,6 +25,7 @@ import { syncToSheets } from '../lib/sheetsSync'
 import { IconCheck, IconChevronRight, IconPlus, IconUpload,
   IconTick, IconWarning, IconTemplate, IconTransferUI } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
+import SegTabs from '../components/SegTabs'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
@@ -944,14 +946,28 @@ function BudgetSummaryCard({ categories, transactions }) {
 
 // ── Budget manager sheet ───────────────────────────────────────────────────────
 
-export function BudgetManagerSheet({ open, onClose }) {
+/**
+ * Monthly budgets: one implementation, two presentations.
+ *
+ * `variant="page"` is the mobile route at /settings/budgets, with the app's
+ * standard sub-page header. `variant="sheet"` is the modal the DESKTOP
+ * settings uses - src/web/pages/WebSettings.jsx imports BudgetManagerSheet and
+ * presents it over a two-pane layout, where a full-page route would be wrong.
+ *
+ * A variant rather than two components, because everything that matters here
+ * is the state and the save semantics - pending edits held locally until you
+ * commit them - and duplicating that to get two shells would be duplicating
+ * the only part with any behaviour in it.
+ */
+function BudgetManager({ open, onClose, variant = 'sheet' }) {
+  const asPage = variant === 'page'
   const { showToast } = useToast()
   const [closing,      setClosing]      = useState(false)
   const [editingId,    setEditingId]    = useState(null)
   const [localBudgets, setLocalBudgets] = useState({})
   const [saving,       setSaving]       = useState(false)
   const inputRef = useRef(null)
-  useScrollLock(open)
+  useScrollLock(open && !asPage)
 
   const categories   = useLiveQuery(() => db.categories.toArray(), [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
@@ -985,6 +1001,9 @@ export function BudgetManagerSheet({ open, onClose }) {
   )
 
   const close = () => {
+    // On a page there is no panel to slide away, so skip the exit animation
+    // and let the router transition carry it.
+    if (asPage) { setEditingId(null); setLocalBudgets({}); onClose(); return }
     setClosing(true)
     setEditingId(null)
     setLocalBudgets({})
@@ -1032,7 +1051,148 @@ export function BudgetManagerSheet({ open, onClose }) {
     }
   }
 
+
   if (!open && !closing) return null
+
+  /* The list and the save button are shared; only the shell around them
+     differs. The page lets the document scroll and puts the button after the
+     list; the sheet scrolls internally and pins the button to the panel. */
+  const listBody = (
+    <>
+            <BudgetSummaryCard categories={categories} transactions={transactions} />
+
+            <div className="mx-4 flex flex-col gap-2 mb-6">
+              {expenseCats.length === 0 ? (
+                <div className="py-10 text-center">
+                  <p className="text-sm text-slate-400 dark:text-slate-500">No expense categories yet</p>
+                </div>
+              ) : expenseCats.map((cat) => {
+                const localStr  = localBudgets[cat.id]
+                const budget    = localStr !== undefined ? parseMoney(localStr) || 0 : (cat.budget ?? 0)
+                const spent     = monthlySpend[cat.name] ?? 0
+                const pct       = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0
+                const over      = budget > 0 && spent > budget
+                const warn      = pct >= 75 && !over
+                const accentHex = over ? '#ef4444' : warn ? '#f59e0b' : null
+                const isEditing = editingId === cat.id
+                const isDirty   = localStr !== undefined && (parseMoney(localStr) || 0) !== (cat.budget ?? 0)
+
+                return (
+                  <div
+                    key={cat.id}
+                    className={[
+                      'rounded-2xl overflow-hidden transition-all duration-200',
+                      isEditing
+                        ? 'bg-white dark:bg-[#131c28] border-2 border-primary/40 dark:border-primary/30 shadow-[0_0_0_4px_rgba(var(--color-primary-rgb),0.08)]'
+                        : isDirty
+                          ? 'bg-white dark:bg-white/[0.04] border border-primary/30 dark:border-primary/20 shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]'
+                          : 'bg-white dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07] shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]',
+                    ].join(' ')}
+                  >
+                    {isEditing ? (
+                      /* ── Inline edit state ── */
+                      <div className="px-4 pt-4 pb-3">
+                        <div className="flex items-center gap-2.5 mb-4">
+                          <span className="leading-none"><CategoryGlyph cat={cat} size={20} /></span>
+                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{cat.name}</span>
+                          <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-auto">monthly limit</span>
+                        </div>
+                        <div className="flex items-baseline gap-1.5 mb-3 px-1">
+                          <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 leading-none mb-0.5">₱</span>
+                          <input
+                            ref={inputRef}
+                            type="text"
+                            inputMode="decimal"
+                            value={(localBudgets[cat.id] ?? '0') === '0' ? '' : (localBudgets[cat.id] ?? '')}
+                            onChange={e => {
+                              const handler = moneyChangeHandler(str => handleLocalChange(cat.id, str))
+                              handler(e)
+                            }}
+                            placeholder="0"
+                            className="flex-1 bg-transparent text-3xl font-bold tabular-nums text-slate-900 dark:text-white outline-none min-w-0 tracking-tight"
+                          />
+                        </div>
+                        {(cat.budget ?? 0) > 0 && (
+                          <button
+                            onClick={() => removeLimit(cat.id)}
+                            className="text-[11px] font-semibold text-red-400 active:opacity-50">
+                            Remove limit
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      /* ── Display state ── */
+                      <button onClick={() => startEdit(cat)} className="w-full text-left px-4 py-3.5">
+                        <div className="flex items-center gap-3 mb-2">
+                          <span className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                            style={{ '--cat-color': cat.color ?? '#64748b' }}>
+                            <CategoryGlyph cat={cat} size={19} />
+                          </span>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
+                            {budget > 0 && (
+                              <p className="text-[10px] tabular-nums mt-0.5" style={{ color: accentHex ?? 'rgb(148 163 184)' }}>
+                                {fmt(spent)} spent
+                              </p>
+                            )}
+                          </div>
+                          <div className={[
+                            'shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums',
+                            over ? 'bg-red-50 dark:bg-red-500/15 text-red-500 dark:text-red-400'
+                              : warn ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
+                              : budget > 0 ? 'bg-primary/[0.08] dark:bg-primary/[0.14] text-primary'
+                              : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500',
+                          ].join(' ')}>
+                            {budget > 0 ? fmt(budget) : '+ Limit'}
+                          </div>
+                        </div>
+                        {budget > 0 && (
+                          <div className="ml-12 h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                            <div
+                              className="h-full rounded-full transition-all duration-700"
+                              style={{
+                                width: `${pct}%`,
+                                background: accentHex
+                                  ? `linear-gradient(90deg, ${accentHex}88, ${accentHex})`
+                                  : 'linear-gradient(90deg, rgba(var(--color-primary-rgb),0.5), rgba(var(--color-primary-rgb),1))',
+                              }}
+                            />
+                          </div>
+                        )}
+                      </button>
+                    )}
+                  </div>
+                )
+              })}
+            </div>
+    </>
+  )
+
+  const saveButton = (
+            <button
+              onClick={saveAll}
+              disabled={!hasPendingChanges || saving}
+              className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white
+                bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.3)]
+                disabled:opacity-30 disabled:shadow-none
+                active:scale-[0.98] transition-all duration-100 flex items-center justify-center gap-2">
+              {saving
+                ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving…</>
+                : 'Save Changes'}
+            </button>
+  )
+
+  if (asPage) {
+    return (
+      <SubPage title="Monthly Budgets">
+        <p className="px-5 -mt-1 mb-1 text-center text-[13px] text-slate-500 dark:text-slate-400">
+          Tap a category to set its monthly limit
+        </p>
+        <div className="pt-3">{listBody}</div>
+        <div className="px-5 -mt-3">{saveButton}</div>
+      </SubPage>
+    )
+  }
 
   return (
     <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
@@ -1046,7 +1206,6 @@ export function BudgetManagerSheet({ open, onClose }) {
         ].join(' ')}
         style={{ maxHeight: '88vh', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
       >
-        {/* Header */}
         <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
@@ -1060,130 +1219,27 @@ export function BudgetManagerSheet({ open, onClose }) {
           </p>
         </div>
 
-        {/* Scrollable list */}
         <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-          <BudgetSummaryCard categories={categories} transactions={transactions} />
-
-          <div className="mx-4 flex flex-col gap-2 mb-6">
-            {expenseCats.length === 0 ? (
-              <div className="py-10 text-center">
-                <p className="text-sm text-slate-400 dark:text-slate-500">No expense categories yet</p>
-              </div>
-            ) : expenseCats.map((cat) => {
-              const localStr  = localBudgets[cat.id]
-              const budget    = localStr !== undefined ? parseMoney(localStr) || 0 : (cat.budget ?? 0)
-              const spent     = monthlySpend[cat.name] ?? 0
-              const pct       = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0
-              const over      = budget > 0 && spent > budget
-              const warn      = pct >= 75 && !over
-              const accentHex = over ? '#ef4444' : warn ? '#f59e0b' : null
-              const isEditing = editingId === cat.id
-              const isDirty   = localStr !== undefined && (parseMoney(localStr) || 0) !== (cat.budget ?? 0)
-
-              return (
-                <div
-                  key={cat.id}
-                  className={[
-                    'rounded-2xl overflow-hidden transition-all duration-200',
-                    isEditing
-                      ? 'bg-white dark:bg-[#131c28] border-2 border-primary/40 dark:border-primary/30 shadow-[0_0_0_4px_rgba(var(--color-primary-rgb),0.08)]'
-                      : isDirty
-                        ? 'bg-white dark:bg-white/[0.04] border border-primary/30 dark:border-primary/20 shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]'
-                        : 'bg-white dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07] shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]',
-                  ].join(' ')}
-                >
-                  {isEditing ? (
-                    /* ── Inline edit state ── */
-                    <div className="px-4 pt-4 pb-3">
-                      <div className="flex items-center gap-2.5 mb-4">
-                        <span className="text-xl leading-none">{cat.icon}</span>
-                        <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{cat.name}</span>
-                        <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-auto">monthly limit</span>
-                      </div>
-                      <div className="flex items-baseline gap-1.5 mb-3 px-1">
-                        <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 leading-none mb-0.5">₱</span>
-                        <input
-                          ref={inputRef}
-                          type="text"
-                          inputMode="decimal"
-                          value={(localBudgets[cat.id] ?? '0') === '0' ? '' : (localBudgets[cat.id] ?? '')}
-                          onChange={e => {
-                            const handler = moneyChangeHandler(str => handleLocalChange(cat.id, str))
-                            handler(e)
-                          }}
-                          placeholder="0"
-                          className="flex-1 bg-transparent text-3xl font-bold tabular-nums text-slate-900 dark:text-white outline-none min-w-0 tracking-tight"
-                        />
-                      </div>
-                      {(cat.budget ?? 0) > 0 && (
-                        <button
-                          onClick={() => removeLimit(cat.id)}
-                          className="text-[11px] font-semibold text-red-400 active:opacity-50">
-                          Remove limit
-                        </button>
-                      )}
-                    </div>
-                  ) : (
-                    /* ── Display state ── */
-                    <button onClick={() => startEdit(cat)} className="w-full text-left px-4 py-3.5">
-                      <div className="flex items-center gap-3 mb-2">
-                        <span className="text-[22px] leading-none shrink-0 w-9 text-center">{cat.icon}</span>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
-                          {budget > 0 && (
-                            <p className="text-[10px] tabular-nums mt-0.5" style={{ color: accentHex ?? 'rgb(148 163 184)' }}>
-                              {fmt(spent)} spent
-                            </p>
-                          )}
-                        </div>
-                        <div className={[
-                          'shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums',
-                          over ? 'bg-red-50 dark:bg-red-500/15 text-red-500 dark:text-red-400'
-                            : warn ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                            : budget > 0 ? 'bg-primary/[0.08] dark:bg-primary/[0.14] text-primary'
-                            : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500',
-                        ].join(' ')}>
-                          {budget > 0 ? fmt(budget) : '+ Limit'}
-                        </div>
-                      </div>
-                      {budget > 0 && (
-                        <div className="ml-12 h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
-                          <div
-                            className="h-full rounded-full transition-all duration-700"
-                            style={{
-                              width: `${pct}%`,
-                              background: accentHex
-                                ? `linear-gradient(90deg, ${accentHex}88, ${accentHex})`
-                                : 'linear-gradient(90deg, rgba(var(--color-primary-rgb),0.5), rgba(var(--color-primary-rgb),1))',
-                            }}
-                          />
-                        </div>
-                      )}
-                    </button>
-                  )}
-                </div>
-              )
-            })}
-          </div>
+          {listBody}
         </div>
 
-        {/* Bottom save bar */}
         <div className="shrink-0 px-5 pt-3 pb-1 border-t border-slate-100 dark:border-white/[0.04]">
-          <button
-            onClick={saveAll}
-            disabled={!hasPendingChanges || saving}
-            className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white
-              bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.3)]
-              disabled:opacity-30 disabled:shadow-none
-              active:scale-[0.98] transition-all duration-100 flex items-center justify-center gap-2">
-            {saving
-              ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving…</>
-              : 'Save Changes'}
-          </button>
+          {saveButton}
         </div>
       </div>
     </div>
   )
+}
+
+/** The desktop modal. Imported by src/web/pages/WebSettings.jsx. */
+export function BudgetManagerSheet(props) {
+  return <BudgetManager {...props} variant="sheet" />
+}
+
+/** The mobile route at /settings/budgets. */
+export function BudgetsPage() {
+  const navigate = useNavigate()
+  return <BudgetManager open onClose={() => navigate(-1)} variant="page" />
 }
 
 // ── Category row ───────────────────────────────────────────────────────────────
@@ -1228,10 +1284,13 @@ function CategoryRow({ cat, onTap, onLongPressDelete }) {
       ].join(' ')}
     >
       <div
-        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-[20px]"
-        style={{ backgroundColor: (cat.color ?? '#2D9DFF') + '22' }}
+        /* The mapped icon, not the stored emoji. This list is for scanning,
+           and every other list in the app shows the icon; the emoji is still
+           what you EDIT, in the form sheet, which is where it belongs. */
+        className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+        style={{ '--cat-color': cat.color ?? '#64748b' }}
       >
-        {cat.icon ?? '🏷️'}
+        <CategoryGlyph cat={cat} size={20} emoji="🏷️" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
@@ -1384,9 +1443,27 @@ function SortableCategoryRow({ cat, onTap, onLongPressDelete }) {
 
 // ── Category manager sheet ─────────────────────────────────────────────────────
 
-export function CategoryManagerSheet({ open, onClose }) {
+/**
+ * Category management: one implementation, two presentations.
+ *
+ * `variant="page"` is the mobile route at /settings/categories, with the
+ * app's standard sub-page header. `variant="sheet"` is the modal the DESKTOP
+ * settings uses - src/web/pages/WebSettings.jsx imports CategoryManagerSheet
+ * and presents it over a two-pane layout, where a route would be wrong.
+ *
+ * A variant rather than two components, because what matters here is the
+ * drag-to-reorder state and the local ordering held per tab while a drag is in
+ * flight - duplicating that to get two shells would duplicate the only part
+ * with any behaviour in it.
+ *
+ * The form and the presets browser stay SHEETS in both. On the page that is
+ * the point: editing is the only thing that should interrupt you, so a sheet
+ * over a page rather than a sheet over a sheet.
+ */
+function CategoryManager({ open, onClose, variant = 'sheet' }) {
+  const asPage = variant === 'page'
   const [closing,        setClosing]        = useState(false)
-  useScrollLock(open)
+  useScrollLock(open && !asPage)
   const [activeTab,      setActiveTab]      = useState('expense')
   const [formOpen,       setFormOpen]       = useState(false)
   const [editingCat,     setEditingCat]     = useState(null)
@@ -1443,6 +1520,9 @@ export function CategoryManagerSheet({ open, onClose }) {
   }
 
   const close = () => {
+    // On a page there is no panel to slide away, so skip the exit animation
+    // and let the router transition carry it.
+    if (asPage) { onClose(); return }
     setClosing(true)
     setTimeout(() => { setClosing(false); onClose() }, 240)
   }
@@ -1451,7 +1531,141 @@ export function CategoryManagerSheet({ open, onClose }) {
   function openEdit(cat) { setEditingCat(cat); setFormStartDelete(false); setTimeout(() => setFormOpen(true), 0) }
   function openDelete(cat) { setEditingCat(cat); setFormStartDelete(true); setTimeout(() => setFormOpen(true), 0) }
 
+
   if (!open && !closing) return null
+
+  /* The tab switcher and the list are shared; only the shell differs. The
+     page lets the document scroll, the sheet scrolls inside its panel. */
+  /* The app's segmented control, not a pair of filled pills.
+ 
+     It was two buttons with the active one solid bg-primary, plus arrow
+     glyphs - which is a third segmented-control idiom in one app, after the
+     trackless pill on Insights/Bills/Debts and the slate trough this replaced
+     elsewhere. Same control everywhere now.
+ 
+     The counts move into SegTabs' own count slot, and the arrows go: "Expense"
+     and "Inflow" already say which direction the money moves. */
+  const tabBar = (
+    <SegTabs
+      tabs={[
+        { value: 'expense', label: 'Expense', count: expenseCats.length },
+        { value: 'inflow',  label: 'Inflow',  count: inflowCats.length  },
+      ]}
+      value={activeTab}
+      onChange={setActiveTab}
+    />
+  )
+
+  const listBody = (
+    <>
+              {activeTab === 'expense' && (
+                <BudgetSummaryCard categories={categories} transactions={transactions} />
+              )}
+
+              <div className="mx-5 rounded-2xl overflow-hidden
+                bg-white border border-slate-100
+                dark:bg-white/[0.04] dark:border-white/[0.07]
+                shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none mb-3">
+                {visibleCats.length === 0 ? (
+                  <div className="py-10 text-center">
+                    <p className="text-sm text-slate-400 dark:text-slate-500">No {activeTab} categories</p>
+                    <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Tap "Add" below to create one</p>
+                  </div>
+                ) : (
+                  <DndContext
+                    sensors={sensors}
+                    collisionDetection={closestCenter}
+                    onDragStart={handleDragStart}
+                    onDragEnd={handleDragEnd}
+                  >
+                    <SortableContext items={visibleCats.map(c => c.id)} strategy={verticalListSortingStrategy}>
+                      {visibleCats.map((cat, i) => (
+                        <div key={cat.id}>
+                          <SortableCategoryRow
+                            cat={cat}
+                            onTap={openEdit}
+                            onLongPressDelete={openDelete}
+                          />
+                          {i < visibleCats.length - 1 && <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />}
+                        </div>
+                      ))}
+                    </SortableContext>
+                  </DndContext>
+                )}
+              </div>
+
+              <div className="px-5 flex flex-col gap-2 pb-6">
+                <button
+                  onClick={openAdd}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold
+                    text-primary bg-primary/[0.07] dark:bg-primary/[0.12]
+                    border border-primary/20 dark:border-primary/30
+                    active:scale-[0.98] transition-transform duration-100"
+                >
+                  <IconPlus size={15} strokeWidth="2.5" />
+                  Add {activeTab === 'expense' ? 'Expense' : 'Inflow'} Category
+                </button>
+                <button
+                  onClick={() => setBrowseOpen(true)}
+                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold
+                    text-slate-500 dark:text-slate-400
+                    bg-slate-100 dark:bg-white/[0.05]
+                    border border-slate-200 dark:border-white/[0.07]
+                    active:scale-[0.98] transition-transform duration-100"
+                >
+                  Browse presets
+                </button>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-1">
+                  Hold a category to quickly delete it
+                </p>
+              </div>
+    </>
+  )
+
+  const nestedSheets = (
+    <>
+        <CategoryFormSheet
+          open={formOpen}
+          onClose={() => setFormOpen(false)}
+          category={editingCat}
+          defaultType={activeTab}
+          allCategories={categories ?? []}
+          startAtDelete={formStartDelete}
+          zIndex={110}
+        />
+        <CategoryPresetsSheet
+          open={browseOpen}
+          onClose={() => setBrowseOpen(false)}
+          activeTab={activeTab}
+          existingCategories={categories ?? []}
+        />
+    </>
+  )
+
+  if (asPage) {
+    return (
+      <>
+        <SubPage
+          title="Categories"
+          action={(
+            <button
+              onClick={openAdd}
+              className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+                bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]
+                active:scale-90 transition-transform duration-75"
+              aria-label="New category"
+            >
+              <IconPlus />
+            </button>
+          )}
+        >
+          <div className="px-5 pb-1">{tabBar}</div>
+          <div className="pt-4">{listBody}</div>
+        </SubPage>
+        {nestedSheets}
+      </>
+    )
+  }
 
   return (
     <>
@@ -1466,7 +1680,6 @@ export function CategoryManagerSheet({ open, onClose }) {
             'max-h-[92vh] flex flex-col',
           ].join(' ')}
         >
-          {/* Header */}
           <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
             <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
             <div className="flex items-center justify-between mb-4">
@@ -1475,112 +1688,28 @@ export function CategoryManagerSheet({ open, onClose }) {
                 Done
               </button>
             </div>
-            {/* Tab bar */}
-            <div className="flex items-center gap-2">
-              {['expense', 'inflow'].map(tab => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={[
-                    'flex-1 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-100',
-                    activeTab === tab
-                      ? 'bg-primary text-white shadow-[0_2px_12px_rgba(var(--color-primary-rgb),0.4)]'
-                      : 'bg-white dark:bg-white/[0.06] text-slate-500 dark:text-slate-400',
-                  ].join(' ')}
-                >
-                  {tab === 'expense' ? '↑ Expense' : '↓ Inflow'}
-                  <span className={`ml-1.5 text-[11px] font-medium ${activeTab === tab ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {tab === 'expense' ? expenseCats.length : inflowCats.length}
-                  </span>
-                </button>
-              ))}
-            </div>
+            {tabBar}
           </div>
 
-          {/* Scrollable content */}
           <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-            {activeTab === 'expense' && (
-              <BudgetSummaryCard categories={categories} transactions={transactions} />
-            )}
-
-            <div className="mx-5 rounded-2xl overflow-hidden
-              bg-white border border-slate-100
-              dark:bg-white/[0.04] dark:border-white/[0.07]
-              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none mb-3">
-              {visibleCats.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="text-sm text-slate-400 dark:text-slate-500">No {activeTab} categories</p>
-                  <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Tap "Add" below to create one</p>
-                </div>
-              ) : (
-                <DndContext
-                  sensors={sensors}
-                  collisionDetection={closestCenter}
-                  onDragStart={handleDragStart}
-                  onDragEnd={handleDragEnd}
-                >
-                  <SortableContext items={visibleCats.map(c => c.id)} strategy={verticalListSortingStrategy}>
-                    {visibleCats.map((cat, i) => (
-                      <div key={cat.id}>
-                        <SortableCategoryRow
-                          cat={cat}
-                          onTap={openEdit}
-                          onLongPressDelete={openDelete}
-                        />
-                        {i < visibleCats.length - 1 && <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />}
-                      </div>
-                    ))}
-                  </SortableContext>
-                </DndContext>
-              )}
-            </div>
-
-            <div className="px-5 flex flex-col gap-2 pb-6">
-              <button
-                onClick={openAdd}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold
-                  text-primary bg-primary/[0.07] dark:bg-primary/[0.12]
-                  border border-primary/20 dark:border-primary/30
-                  active:scale-[0.98] transition-transform duration-100"
-              >
-                <IconPlus size={15} strokeWidth="2.5" />
-                Add {activeTab === 'expense' ? 'Expense' : 'Inflow'} Category
-              </button>
-              <button
-                onClick={() => setBrowseOpen(true)}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold
-                  text-slate-500 dark:text-slate-400
-                  bg-slate-100 dark:bg-white/[0.05]
-                  border border-slate-200 dark:border-white/[0.07]
-                  active:scale-[0.98] transition-transform duration-100"
-              >
-                Browse presets
-              </button>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-1">
-                Hold a category to quickly delete it
-              </p>
-            </div>
+            {listBody}
           </div>
         </div>
       </div>
-
-      <CategoryFormSheet
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        category={editingCat}
-        defaultType={activeTab}
-        allCategories={categories ?? []}
-        startAtDelete={formStartDelete}
-        zIndex={110}
-      />
-      <CategoryPresetsSheet
-        open={browseOpen}
-        onClose={() => setBrowseOpen(false)}
-        activeTab={activeTab}
-        existingCategories={categories ?? []}
-      />
+      {nestedSheets}
     </>
   )
+}
+
+/** The desktop modal. Imported by src/web/pages/WebSettings.jsx. */
+export function CategoryManagerSheet(props) {
+  return <CategoryManager {...props} variant="sheet" />
+}
+
+/** The mobile route at /settings/categories. */
+export function CategoriesPage() {
+  const navigate = useNavigate()
+  return <CategoryManager open onClose={() => navigate(-1)} variant="page" />
 }
 
 // ── Category form sheet ────────────────────────────────────────────────────────
@@ -2750,8 +2879,6 @@ export default function Settings() {
   const { status: syncStatus, runSync } = useSyncManager()
 
   const [profileOpen,  setProfileOpen]  = useState(false)
-  const [catMgrOpen,   setCatMgrOpen]   = useState(false)
-  const [budgetMgrOpen, setBudgetMgrOpen] = useState(false)
   const [tmplMgrOpen,  setTmplMgrOpen]  = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
@@ -3015,7 +3142,7 @@ export default function Settings() {
             label="Categories"
             sublabel="Customize expense and inflow categories"
             right={<IconChevronRight size={14} strokeWidth="2" />}
-            onTap={() => setCatMgrOpen(true)}
+            onTap={() => navigate('/settings/categories')}
           />
           <RowDivider />
           <SettingsRow
@@ -3023,7 +3150,7 @@ export default function Settings() {
             label="Monthly Budgets"
             sublabel="Set spending limits per category"
             right={<IconChevronRight size={14} strokeWidth="2" />}
-            onTap={() => setBudgetMgrOpen(true)}
+            onTap={() => navigate('/settings/budgets')}
           />
           <RowDivider />
           <SettingsRow
@@ -3444,14 +3571,6 @@ export default function Settings() {
         onClose={() => setProfileOpen(false)}
         displayName={displayName}
         currency={currency}
-      />
-      <CategoryManagerSheet
-        open={catMgrOpen}
-        onClose={() => setCatMgrOpen(false)}
-      />
-      <BudgetManagerSheet
-        open={budgetMgrOpen}
-        onClose={() => setBudgetMgrOpen(false)}
       />
       <TemplateManagerSheet
         open={tmplMgrOpen}

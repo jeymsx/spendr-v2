@@ -27,6 +27,10 @@ const Recurring    = lazy(() => import('./pages/Recurring'))
 const RecurringDetail = lazy(() => import('./pages/RecurringDetail'))
 const Settings     = lazy(() => import('./pages/Settings'))
 const SettingsAccent = lazy(() => import('./pages/SettingsAccent'))
+// Named exports, because both share their implementation with the desktop
+// modal that lives in the same file - see CategoryManager / BudgetManager.
+const SettingsCategories = lazy(() => import('./pages/Settings').then(m => ({ default: m.CategoriesPage })))
+const SettingsBudgets    = lazy(() => import('./pages/Settings').then(m => ({ default: m.BudgetsPage })))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
 const Onboarding   = lazy(() => import('./pages/Onboarding'))
 const Login        = lazy(() => import('./pages/Login'))
@@ -87,6 +91,8 @@ export default function App() {
               <Route path="/recurring/:id" element={<RecurringDetail />} />
               <Route path="/settings"     element={<Settings />} />
               <Route path="/settings/accent" element={<SettingsAccent />} />
+              <Route path="/settings/categories" element={<SettingsCategories />} />
+              <Route path="/settings/budgets"    element={<SettingsBudgets />} />
               <Route path="/import"       element={<ImportWizard />} />
             </Route>
           </Route>
