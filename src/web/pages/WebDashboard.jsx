@@ -4,6 +4,7 @@ import { useFinanceSummary } from '../../hooks/useFinanceSummary'
 import TxDetailSheet from '../../components/TxDetailSheet'
 import BrandMark from '../../components/BrandMark'
 import { accountBrand } from '../../lib/accountBrands'
+import { normalizeDesign } from '../../lib/cardDesigns'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact, amountTone } from '../components/WebPanel'
 
 /**
@@ -95,7 +96,8 @@ export default function WebDashboard() {
                       to={`/accounts?open=${encodeURIComponent(a.name)}`}
                       className="acct-card rounded-xl px-3.5 py-3 min-w-0 block text-white
                         hover:brightness-110 transition-[filter] duration-150"
-                      style={{ background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)` }}
+                      style={{ '--card-from': brand.from, '--card-to': brand.to }}
+                      data-design={normalizeDesign(a.design)}
                     >
                       <div className="flex items-center gap-2 mb-1.5">
                         <BrandMark mark={brand.mark} size={16} className="shrink-0" />

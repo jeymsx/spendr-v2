@@ -9,6 +9,7 @@ import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 import { IconBank, IconCard, IconChevronRight, IconPhone, IconWallet } from '../components/icons'
 import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
+import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
@@ -1134,12 +1135,14 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
       className="acct-card shrink-0 w-[188px] rounded-2xl px-4 pt-3.5 pb-4 text-left flex flex-col
         text-white"
       style={{
-        background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
+        '--card-from': brand.from,
+        '--card-to': brand.to,
         // Slightly taller than a card's true 1.586 so the balance and its
         // label have room to breathe; the Accounts faces keep the exact ratio.
         aspectRatio: '1.45',
       }}
       data-brand={brand.key}
+      data-design={normalizeDesign(acct.design)}
       data-compact=""
     >
       <BrandWatermark brand={brand} />

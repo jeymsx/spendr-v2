@@ -226,7 +226,7 @@ export default function WebAccounts() {
                       <span
                         className="acct-card w-7 h-7 rounded-lg shrink-0
                           flex items-center justify-center text-white"
-                        style={{ background: `linear-gradient(135deg, ${accountBrand(a).from} 0%, ${accountBrand(a).to} 100%)` }}
+                        style={{ '--card-from': accountBrand(a).from, '--card-to': accountBrand(a).to }}
                       >
                         <BrandMark mark={accountBrand(a).mark} size={14} />
                       </span>

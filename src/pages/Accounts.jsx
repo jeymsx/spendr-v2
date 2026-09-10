@@ -22,6 +22,7 @@ import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInp
 import { IconBank, IconCard, IconCheck, IconChevronRight, IconPhone, IconPlus, IconWallet } from '../components/icons'
 import { deleteAccountRemote } from '../lib/sync'
 import { accountBrand } from '../lib/accountBrands'
+import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark, { SCHEME_OPTIONS } from '../components/SchemeMark'
@@ -318,7 +319,11 @@ const AccountCard = forwardRef(function AccountCard({
         isDragging ? ' acct-card-dragging' : isSorting ? ' acct-card-sorting' : ''
       }`}
       style={{
-        background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
+        // The gradient goes in as custom properties, not `background`: the
+        // shorthand would beat the design patterns in index.css. See the
+        // comment on .acct-card there.
+        '--card-from': brand.from,
+        '--card-to': brand.to,
         aspectRatio: String(CARD_RATIO),
         marginTop: depth > 0 ? pullUp : 0,
         // Later cards sit over earlier ones, so the strip you read belongs to
@@ -329,6 +334,7 @@ const AccountCard = forwardRef(function AccountCard({
         ...dragStyle,
       }}
       data-brand={brand.key}
+      data-design={normalizeDesign(acct.design)}
       {...dragProps}
     >
       {/* Brand watermark bottom-right, network mark bottom-left. Both are
@@ -1484,6 +1490,7 @@ export function buildAccountRow({
   name, type, role, color, creditLimit,
   statementDay, dueDay, cutoffDay, minPayment,
   qrImage = null, parentName = null, scheme = '',
+  design,
 }) {
   const isCredit = type === 'credit'
   return {
@@ -1503,6 +1510,12 @@ export function buildAccountRow({
     // Unindexed on purpose: nothing queries by network, so this needed no
     // db.version() bump.
     scheme:         scheme || null,
+    // Same - unindexed, no version bump. Spread conditionally rather than
+    // written as `design: design ?? null`, because this row is also the patch
+    // for db.accounts.update() when editing: an explicit key would overwrite
+    // a chosen design with null every time the edit form saved, and the
+    // account form has no design field to put back.
+    ...(design ? { design } : {}),
   }
 }
 

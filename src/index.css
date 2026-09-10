@@ -182,6 +182,22 @@ html.dark body {
   position: relative;
   isolation: isolate;
   overflow: hidden;
+  /* The gradient arrives as two custom properties rather than an inline
+     `background`, and that is what makes the designs below possible at all:
+     the shorthand sets background-image, so any pattern CSS added here would
+     have lost to it on every one of the six surfaces that render a card face.
+     Composed here instead, the pattern layers over the gradient and every
+     renderer only has to say which colours and which design.
+
+     --card-pattern defaults to `none`, so a card with no data-design - which
+     is every account created before designs existed - renders exactly as it
+     always did, with no migration. */
+  background:
+    var(--card-pattern, none),
+    linear-gradient(135deg, var(--card-from, #3f4a5a) 0%, var(--card-to, #26303c) 100%);
+  background-size: var(--card-pattern-size, cover), cover;
+  background-position: var(--card-pattern-pos, center), center;
+  background-repeat: var(--card-pattern-repeat, no-repeat), no-repeat;
   /* The card is picked up by a 500ms press-and-hold (see cardSensors in
      pages/Accounts.jsx), which is exactly the gesture iOS answers with its
      own callout menu. Suppress it, or the drag begins under a share sheet.
@@ -203,6 +219,53 @@ html.dark body {
     box-shadow 260ms cubic-bezier(0.2, 0.7, 0.3, 1),
     rotate 220ms cubic-bezier(0.2, 0.7, 0.3, 1),
     scale 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+/* ── Card face designs ───────────────────────────────────────────────────────
+   Each is a decorative layer over the brand gradient, never a replacement -
+   see lib/cardDesigns.js for why. White at low alpha throughout, so the same
+   pattern reads over an e-wallet green and a near-black credit card without
+   a per-brand variant.
+
+   Percentages in the SVG viewBox rather than pixels, with background-size
+   cover, so a pattern is the same shape on a 350px carousel card, a 170px
+   filter tile and the portrait preview - which is the mistake the wallet
+   silhouette made once already, and the reason it now measures itself.
+
+   `classic` needs no rule: --card-pattern falls back to none.                */
+
+.acct-card[data-design='aurora'] {
+  --card-pattern:
+    radial-gradient(38% 52% at 18% 82%, rgba(255, 255, 255, 0.16), transparent 70%),
+    radial-gradient(46% 60% at 88% 22%, rgba(255, 255, 255, 0.11), transparent 72%);
+}
+
+.acct-card[data-design='ripple'] {
+  /* Concentric arcs struck from the bottom-left corner. Drawn as strokes on a
+     100x100 viewBox with preserveAspectRatio none, so they stretch with the
+     card the way a printed pattern would. */
+  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.13'%3E%3Ccircle cx='4' cy='104' r='30' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='48' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='66' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='84' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='102' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E");
+  --card-pattern-size: 100% 100%;
+}
+
+.acct-card[data-design='wave'] {
+  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M0 62 C 26 38, 52 86, 100 46 L100 100 L0 100 Z' fill='%23ffffff' fill-opacity='0.10'/%3E%3Cpath d='M0 74 C 30 52, 58 96, 100 62 L100 100 L0 100 Z' fill='%23ffffff' fill-opacity='0.07'/%3E%3C/svg%3E");
+  --card-pattern-size: 100% 100%;
+}
+
+.acct-card[data-design='weave'] {
+  /* The one genuinely repeating pattern, so it tiles at a fixed size rather
+     than stretching - a weave that scaled with the card would read as coarse
+     on a big card and as a flat wash on a small one. */
+  --card-pattern: repeating-linear-gradient(
+    58deg,
+    rgba(255, 255, 255, 0.055) 0px,
+    rgba(255, 255, 255, 0.055) 1px,
+    transparent 1px,
+    transparent 7px
+  );
+  --card-pattern-size: auto;
+  --card-pattern-repeat: repeat;
 }
 
 .acct-card::before,
@@ -715,6 +778,31 @@ html.dark body {
   /* Reordering still works; it just stops tilting about it. */
   .acct-card.acct-card-dragging,
   .acct-card.acct-card-sorting { rotate: 0deg; scale: 1; }
+}
+
+/* ── Colour swatch, selected ─────────────────────────────────────────────────
+   A ring in the swatch's OWN colour with a gap of page background between it
+   and the circle - the radio-button treatment, rather than a single accent
+   ring around every swatch whatever its colour.
+
+   Two box-shadows do it: the inner one paints the gap, the outer paints the
+   ring. The gap has to be an opaque page colour rather than transparent,
+   because a transparent inner shadow would show the ring's own spread
+   through it and read as a thick blurry border.
+
+   That is why this is a class: the gap colour is theme-dependent and an
+   inline style cannot answer a theme. The swatch colour arrives as
+   --swatch-color. */
+.swatch-on {
+  box-shadow:
+    0 0 0 2px #f8fafc,
+    0 0 0 4px var(--swatch-color);
+}
+
+.dark .swatch-on {
+  box-shadow:
+    0 0 0 2px #0b0f14,
+    0 0 0 4px var(--swatch-color);
 }
 
 /* ── Segmented-control active label ──────────────────────────────────────────

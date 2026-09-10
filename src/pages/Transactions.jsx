@@ -6,6 +6,7 @@ import TxDetailSheet from '../components/TxDetailSheet'
 import CalendarView from '../components/CalendarView'
 import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
+import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 
@@ -470,12 +471,13 @@ function FilterModal({
                         on ? prev.filter(n => n !== a.name) : [...prev, a.name])}
                       aria-pressed={on}
                       data-brand={brand.key}
+                      data-design={normalizeDesign(a.design)}
                       data-compact
                       className={`acct-card relative rounded-2xl px-3 pt-2.5 pb-2.5 flex flex-col
                         justify-between text-left text-white min-h-[74px] ${
                           on ? 'ring-2 ring-primary' : ''
                         }`}
-                      style={{ background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)` }}
+                      style={{ '--card-from': brand.from, '--card-to': brand.to }}
                     >
                       <BrandWatermark brand={brand} />
                       <span className="flex items-start justify-between gap-2 w-full">

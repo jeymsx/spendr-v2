@@ -101,6 +101,9 @@ function accountToRow(r, userId) {
     color:           r.color,
     qr_image:        r.qrImage        ?? null,
     parent_name:     r.parentName     ?? null,
+    // Optional: see OPTIONAL_ACCOUNT_COLS below. Dropped and retried if the
+    // remote table has not had migration 005 applied yet.
+    design:          r.design         ?? null,
     sort_order:      r.sort_order     ?? 0,
     updated_at:      r.updatedAt ?? new Date().toISOString(),
   }
@@ -222,6 +225,10 @@ function rowToAccount(row) {
     color:          row.color,
     qrImage:        row.qr_image    ?? null,
     parentName:     row.parent_name ?? null,
+    // undefined when the column does not exist yet, which normalizeDesign
+    // renders as 'classic' - so a pull from a pre-migration table is a
+    // no-op here rather than an error.
+    design:         row.design ?? null,
     sort_order:     row.sort_order  ?? 0,
     updatedAt:      row.updated_at,
   }
@@ -428,6 +435,30 @@ export async function syncToSupabase(userId) {
   await pushPreferences(userId)
 }
 
+/**
+ * Columns that may not exist remotely yet, per table.
+ *
+ * `design` arrives with src/supabase/migrations/005_account_design.sql. The
+ * problem is that pushTable sends EVERY account in one upsert and PostgREST
+ * rejects the whole request if it names a column the table does not have - so
+ * shipping the mapping before the migration ran would not have degraded
+ * gracefully, it would have stopped accounts syncing altogether, for real
+ * financial data.
+ *
+ * Rather than make the app depend on migration order, the push drops these
+ * columns and retries once when the error says the column is unknown. The
+ * result is that design syncs the moment the migration is applied and simply
+ * stays on-device until then, with no flag to set and nothing to remember.
+ */
+const OPTIONAL_COLS = {
+  accounts: ['design'],
+}
+
+// PostgREST reports an unknown column as PGRST204 with a message naming it,
+// and Postgres itself as 42703. Matching the text covers both and does not
+// depend on which layer rejected it.
+const UNKNOWN_COLUMN = /could not find the '.*' column|does not exist|42703|PGRST204/i
+
 // conflictCols: the Supabase UNIQUE constraint columns to resolve on.
 // Accounts and categories use their name-based constraints because the
 // IndexedDB auto-increment counter does NOT reset on table.clear(), so
@@ -451,10 +482,27 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
     })
   }
 
-  const { error } = await supabase
-    .from(tableName)
-    .upsert(rows, { onConflict: conflictCols, ignoreDuplicates: false })
-  if (error) throw new Error(`${tableName} push: ${error.message}`)
+  const opts = { onConflict: conflictCols, ignoreDuplicates: false }
+  const { error } = await supabase.from(tableName).upsert(rows, opts)
+  if (!error) return
+
+  const optional = OPTIONAL_COLS[tableName] ?? []
+  if (optional.length && UNKNOWN_COLUMN.test(error.message ?? '')) {
+    console.warn(
+      '[sync] %s: dropping %s and retrying - run the migration to sync it:',
+      tableName, optional.join(', '), error.message,
+    )
+    const trimmed = rows.map(row => {
+      const copy = { ...row }
+      for (const col of optional) delete copy[col]
+      return copy
+    })
+    const retry = await supabase.from(tableName).upsert(trimmed, opts)
+    if (retry.error) throw new Error(`${tableName} push: ${retry.error.message}`)
+    return
+  }
+
+  throw new Error(`${tableName} push: ${error.message}`)
 }
 
 // ── Pull from Supabase ────────────────────────────────────────────────────────

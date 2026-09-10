@@ -8,6 +8,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { allocateGoals } from '../lib/goals'
 import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
 import { accountBrand } from '../lib/accountBrands'
+import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark from '../components/SchemeMark'
@@ -615,10 +616,12 @@ export default function AccountDetail() {
           className="acct-card mx-auto w-full max-w-[300px] rounded-2xl px-5 pt-4 pb-4
             flex flex-col text-left text-white"
           style={{
-            background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
+            '--card-from': brand.from,
+            '--card-to': brand.to,
             aspectRatio: String(CARD_RATIO),
           }}
           data-brand={brand.key}
+          data-design={normalizeDesign(account.design)}
         >
           <BrandWatermark brand={brand} />
 

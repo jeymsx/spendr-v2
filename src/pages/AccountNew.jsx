@@ -1,9 +1,10 @@
-import { useState, useMemo, useEffect, useCallback } from 'react'
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { accountBrand } from '../lib/accountBrands'
+import { CARD_DESIGNS, designMeta, normalizeDesign } from '../lib/cardDesigns'
 import { PH_ACCOUNTS } from '../lib/phAccounts'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
 import BrandMark from '../components/BrandMark'
@@ -113,10 +114,14 @@ function PreviewCard({ draft, large = false }) {
         large ? 'max-w-[350px] px-6 pt-5 pb-5' : 'max-w-[300px] px-5 pt-4 pb-4'
       }`}
       style={{
-        background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)`,
+        // Custom properties, not `background` - the shorthand would beat the
+        // design patterns in index.css. Same as every other card renderer.
+        '--card-from': brand.from,
+        '--card-to': brand.to,
         aspectRatio: String(CARD_RATIO),
       }}
       data-brand={brand.key}
+      data-design={normalizeDesign(draft.design)}
     >
       <BrandWatermark brand={brand} />
 
@@ -305,32 +310,8 @@ function BrandTile({ preset, selected, onPick }) {
   )
 }
 
-function Card({ children, className = '' }) {
-  return (
-    <div
-      className={`rounded-2xl overflow-hidden bg-white border border-slate-100
-        dark:bg-white/[0.04] dark:border-white/[0.07]
-        shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none ${className}`}
-    >
-      {children}
-    </div>
-  )
-}
 
-function Divider() {
-  return <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-}
 
-function SummaryRow({ label, value }) {
-  return (
-    <div className="flex items-baseline justify-between gap-3 px-4 py-3">
-      <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
-      <span className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 tabular-nums text-right truncate">
-        {value}
-      </span>
-    </div>
-  )
-}
 
 /** The step indicator. Rendered above the card on the final step and below
  *  it on the others, so it is a component rather than two copies. */
@@ -346,6 +327,222 @@ function StepProgress({ steps, index, className = '' }) {
         />
       ))}
     </div>
+  )
+}
+
+// ── Card style step ────────────────────────────────────────────────────────────
+
+/**
+ * The card, stood up on its end.
+ *
+ * A CSS rotation of the real landscape face rather than a second portrait
+ * layout, which is what the reference does too - its wordmark reads
+ * bottom-to-top because the whole card is turned, not redrawn. One layout to
+ * maintain, and what you are looking at is provably the card you are about to
+ * get rather than an illustration of it.
+ *
+ * A transform never changes the layout box, so the wrapper is sized to the
+ * PORTRAIT footprint and the landscape card is centred inside it and turned.
+ * Rotating a w x h box by 90 degrees gives an h x w footprint, so the card is
+ * built at (portraitH x portraitW) and lands exactly filling the wrapper. Get
+ * that backwards and it overflows by the difference - the same trap the tilted
+ * detail card fell into when its rotation saved no vertical space.
+ */
+const PORTRAIT_W = 224
+const PORTRAIT_H = Math.round(PORTRAIT_W * CARD_RATIO)   // 355
+
+function PortraitCard({ draft, turned }) {
+  return (
+    <div
+      className="relative mx-auto"
+      style={{ width: PORTRAIT_W, height: PORTRAIT_H }}
+    >
+      <div
+        className="absolute top-1/2 left-1/2"
+        style={{
+          width: PORTRAIT_H,
+          height: PORTRAIT_W,
+          // The card turns from flat to upright once, on entering the step.
+          // 520ms with an overshoot: a card being stood on its end has
+          // weight, and easing it linearly reads as a diagram rather than an
+          // object.
+          transform: `translate(-50%, -50%) rotate(${turned ? 90 : 0}deg) scale(${turned ? 1 : 0.92})`,
+          transition: 'transform 520ms cubic-bezier(0.34, 1.28, 0.64, 1)',
+        }}
+      >
+        <PreviewCard draft={draft} large />
+      </div>
+    </div>
+  )
+}
+
+function StyleStep({ draft, set, nameProblem }) {
+  const railRef = useRef(null)
+  const [turned, setTurned] = useState(false)
+  const activeIdx = Math.max(0, CARD_DESIGNS.findIndex(d => d.key === normalizeDesign(draft.design)))
+  const meta = designMeta(draft.design)
+
+  // The turn happens after the first paint, so the transition has a `from`
+  // state to run out of. Setting it during render would land on 90deg with
+  // nothing to animate.
+  useEffect(() => {
+    const id = requestAnimationFrame(() => setTurned(true))
+    return () => cancelAnimationFrame(id)
+  }, [])
+
+  const brand = accountBrand({ name: draft.name, type: draft.type, color: draft.color })
+  // A matched institution owns its colour. GCash blue and BPI red are the
+  // whole reason the card faces exist, so they are stated and locked rather
+  // than offered as a default someone can wander away from. accountBrand
+  // ignores `color` for these anyway - offering swatches would have been a
+  // control that silently did nothing.
+  const colorLocked = draft.fromPreset
+    || (brand.key !== 'custom' && brand.key !== 'fallback')
+
+  /**
+   * Which card is centred in the rail.
+   *
+   * Measured against the scrollport's centre rather than derived from
+   * scrollLeft / itemWidth, because the rail has centring spacers at both
+   * ends and a gap between items - so an index computed from arithmetic on
+   * scrollLeft would be off by the spacer width and drift with the gap.
+   * Closest centre wins, whatever the geometry.
+   */
+  const syncFromScroll = useCallback(() => {
+    const rail = railRef.current
+    if (!rail) return
+    const mid = rail.scrollLeft + rail.clientWidth / 2
+    let best = 0, bestDist = Infinity
+    for (const node of rail.querySelectorAll('[data-design-idx]')) {
+      const dist = Math.abs(node.offsetLeft + node.offsetWidth / 2 - mid)
+      if (dist < bestDist) { bestDist = dist; best = Number(node.dataset.designIdx) }
+    }
+    const key = CARD_DESIGNS[best]?.key
+    if (key && key !== draft.design) set({ design: key })
+  }, [draft.design, set])
+
+  /**
+   * Centre card `i` in the rail.
+   *
+   * An explicit scrollTo rather than node.scrollIntoView({inline:'center'}),
+   * which measured wrong here: tapping the third dot landed on the fifth
+   * card. scrollIntoView walks every scrollable ancestor and negotiates with
+   * scroll-snap while it does it, and on a snap-mandatory rail the two
+   * disagree. Computing the offset directly asks one element to go to one
+   * place, and snapping then has nothing left to argue with.
+   */
+  function scrollTo(i) {
+    const rail = railRef.current
+    const node = rail?.querySelector(`[data-design-idx="${i}"]`)
+    if (!rail || !node) return
+    rail.scrollTo({
+      left: node.offsetLeft - (rail.clientWidth - node.offsetWidth) / 2,
+      behavior: 'smooth',
+    })
+  }
+
+  return (
+    <section className="flex-1 flex flex-col justify-center min-h-0 py-2">
+      {/* The gallery. Every card is the real face with a different design on
+          it, so the choice is made by looking rather than by reading a name.
+          snap-mandatory means it always settles on one. */}
+      <div
+        ref={railRef}
+        onScroll={syncFromScroll}
+        className="flex items-center gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar"
+        style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
+      >
+        {/* Spacers, so the first and last card can reach the centre - a
+            scrollport cannot scroll past its own start. */}
+        <div className="shrink-0" style={{ width: `calc(50% - ${PORTRAIT_W / 2}px)` }} />
+        {CARD_DESIGNS.map((d, i) => (
+          <div
+            key={d.key}
+            data-design-idx={i}
+            className="shrink-0 snap-center transition-opacity duration-300"
+            style={{ opacity: i === activeIdx ? 1 : 0.45 }}
+          >
+            <PortraitCard draft={{ ...draft, design: d.key }} turned={turned} />
+          </div>
+        ))}
+        <div className="shrink-0" style={{ width: `calc(50% - ${PORTRAIT_W / 2}px)` }} />
+      </div>
+
+      {/* Name and blurb for the centred design. */}
+      <div className="px-6 mt-4 text-center min-h-[52px]">
+        <p className="text-[15px] font-semibold text-slate-900 dark:text-white">{meta.name}</p>
+        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">
+          {meta.blurb}
+        </p>
+      </div>
+
+      {/* Design dots. Tapping one scrolls the rail, so the gallery stays the
+          single source of which design is on - no second piece of state that
+          could disagree with the scroll position. */}
+      <div className="flex items-center justify-center gap-2 mt-3">
+        {CARD_DESIGNS.map((d, i) => (
+          <button
+            key={d.key}
+            onClick={() => scrollTo(i)}
+            aria-label={d.name}
+            aria-pressed={i === activeIdx}
+            className={`rounded-full transition-all duration-200 ${
+              i === activeIdx
+                ? 'w-5 h-1.5 bg-primary'
+                : 'w-1.5 h-1.5 bg-slate-300 dark:bg-white/25'
+            }`}
+          />
+        ))}
+      </div>
+
+      {/* Colour. */}
+      <div className="mt-4 px-5">
+        {colorLocked ? (
+          <p className="text-[12px] text-center text-slate-500 dark:text-slate-400">
+            Colour comes from {draft.name.trim() || 'the institution'} — the design is yours to pick.
+          </p>
+        ) : (
+          <>
+            {/* No "COLOUR" caption. The step measured 12px past the viewport
+                with one, and a row of coloured circles under a card preview
+                does not need to be told what it is - the reference does not
+                label it either. Twelve pixels is not a rounding error here:
+                the whole point of this step is that it fits on one screen. */}
+            {/* Swiped, not wrapped. Fourteen 28px swatches overrun 350px, and
+                the two ways out are a second row or a scroll. A scroll keeps
+                the control one line tall - which the no-scrolling budget for
+                this step needs - and reads as a continuation of the card
+                gallery directly above it, which is also swiped.
+
+                shrink-0 on each swatch is what stops flex compressing them
+                into ovals; that was the actual bug, not the wrapping. */}
+            <div
+              className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x px-5 py-1.5 -mx-5"
+              style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
+            >
+              {PALETTE.map(c => {
+                const on = draft.color === c
+                return (
+                  <button
+                    key={c}
+                    onClick={() => set({ color: c })}
+                    aria-label={`Colour ${c}`}
+                    aria-pressed={on}
+                    className={`w-7 h-7 shrink-0 snap-center rounded-full
+                      transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
+                    style={{ background: c, '--swatch-color': c }}
+                  />
+                )
+              })}
+            </div>
+          </>
+        )}
+      </div>
+
+      {nameProblem && (
+        <p className="text-xs text-red-500 dark:text-red-400 mt-3 px-5 text-center">{nameProblem}</p>
+      )}
+    </section>
   )
 }
 
@@ -367,6 +564,8 @@ export default function AccountNew() {
     type: 'cash',
     role: 'spending',
     color: PALETTE[0],
+    design: CARD_DESIGNS[0].key,
+    fromPreset: false,
     scheme: '',
     startingBal: '0',
     creditLimit: '0',
@@ -380,8 +579,13 @@ export default function AccountNew() {
 
   // The credit step is skipped for anything that cannot carry a statement,
   // rather than shown with its four fields disabled.
+  // `style` replaced `review`, and is last so its button is the one that
+  // creates the account. For an ordinary account that puts the card style at
+  // step three; a credit card gets it at four, because its statement fields
+  // have to be asked for somewhere and they are not something to interrupt
+  // the visual step with.
   const steps = useMemo(
-    () => ['institution', 'details', ...(isCredit ? ['credit'] : []), 'review'],
+    () => ['institution', 'details', ...(isCredit ? ['credit'] : []), 'style'],
     [isCredit],
   )
   // Changing type away from credit can strand the index past the end.
@@ -417,6 +621,12 @@ export default function AccountNew() {
       type: preset.type,
       role: defaultRole(preset.type),
       color: preset.color,
+      // The institution supplied its own colour, so the style step locks it.
+      // Not the same test as "has a hard-coded brand gradient": BDO, PSBank
+      // and most of the list have a real logo and a real house colour without
+      // an entry in BRAND_GRADIENTS, and offering to recolour those is just as
+      // wrong as offering to recolour BPI.
+      fromPreset: true,
     })
     setTouchedName(true)
   }
@@ -467,6 +677,7 @@ export default function AccountNew() {
         cutoffDay: draft.cutoffDay,
         minPayment: draft.minPayment,
         scheme: draft.scheme,
+        design: draft.design,
       })
       await createAccount(row, isCredit ? 0 : parseMoney(draft.startingBal))
       showToast('Account created')
@@ -482,7 +693,7 @@ export default function AccountNew() {
     institution: 'Which account?',
     details: 'The details',
     credit: 'Billing cycle',
-    review: 'Ready to add',
+    style: 'Choose card style',
   }[current]
 
   // min-h-full plus a flex column is what lets the review step centre
@@ -524,81 +735,12 @@ export default function AccountNew() {
           header. ── */}
       <StepProgress steps={steps} index={steps.indexOf(current)} className="mt-1 shrink-0" />
 
-      {current === 'review' ? (
-        <>
-          <section className="flex-1 flex flex-col justify-center min-h-0 py-6">
-            <p className="text-center text-[11px] font-semibold uppercase tracking-widest
-              text-slate-500 dark:text-slate-400 mb-3">
-              Ready to add
-            </p>
-
-            <div className="px-5">
-              <PreviewCard draft={draft} large />
-            </div>
-
-            <div className="px-5 mx-auto w-full max-w-[350px] mt-5">
-            {/* Name and kind are deliberately NOT repeated here. The card sits
-                directly above this, in larger type, already showing both - the
-                same redundancy the detail page had when it printed the balance
-                twice. This lists only what the card face cannot show. */}
-            <Card>
-              <SummaryRow
-                label="Counts as"
-                value={isCredit ? 'Credit' : (draft.role === 'savings' ? 'Savings' : 'Spending')}
-              />
-              {!isCredit && (
-                <>
-                  <Divider />
-                  <SummaryRow label="Opening balance" value={fmt(parseMoney(draft.startingBal))} />
-                </>
-              )}
-              {isCredit && (
-                <>
-                  <Divider />
-                  <SummaryRow label="Credit limit" value={fmt(parseMoney(draft.creditLimit))} />
-                  <Divider />
-                  <SummaryRow label="Statement closes" value={draft.cutoffDay ? `Day ${draft.cutoffDay}` : 'Not set'} />
-                  <Divider />
-                  <SummaryRow label="Payment due" value={draft.dueDay ? `Day ${draft.dueDay}` : 'Not set'} />
-                  <Divider />
-                  <SummaryRow label="Minimum payment" value={fmt(parseMoney(draft.minPayment))} />
-                </>
-              )}
-              {draft.scheme && (
-                <>
-                  <Divider />
-                  <SummaryRow
-                    label="Network"
-                    value={SCHEME_OPTIONS.find(o => o.value === draft.scheme)?.label ?? draft.scheme}
-                  />
-                </>
-              )}
-            </Card>
-
-            <p className="text-[12px] leading-relaxed text-slate-500 dark:text-slate-400 mt-4 px-1">
-              Anything here can be changed later from the account&rsquo;s own page.
-              {isCredit && ' A card starts at zero and fills in as you record charges against it.'}
-            </p>
-
-            {nameProblem && (
-              <p className="text-xs text-red-500 dark:text-red-400 mt-3 px-1">{nameProblem}</p>
-            )}
-          </div>
-          </section>
-        </>
+      {current === 'style' ? (
+        <StyleStep draft={draft} set={set} nameProblem={nameProblem} />
       ) : (
-        <>
-          <section className="px-5 mt-4 shrink-0">
-            <PreviewCard draft={draft} />
-          </section>
-
-          <h2 className="px-5 mt-5 text-[19px] font-semibold tracking-tight text-slate-900 dark:text-white">
-            {stepTitle}
-          </h2>
-        </>
+        <PreviewCard draft={draft} />
       )}
 
-      {/* ── Step: institution ── */}
       {current === 'institution' && (
         <div className="mt-4">
           <div className="px-5 relative">
@@ -663,7 +805,9 @@ export default function AccountNew() {
             </SectionLabel>
             <input
               value={draft.name}
-              onChange={e => { set({ name: e.target.value }); setTouchedName(true) }}
+              // Typing a name by hand means this is not an institution's card any
+              // more, so its colour goes back to being the user's choice.
+              onChange={e => { set({ name: e.target.value, fromPreset: false }); setTouchedName(true) }}
               placeholder="Account name"
               className={inputCls(touchedName && !!nameProblem)}
             />
@@ -861,7 +1005,7 @@ export default function AccountNew() {
             {nameProblem}
           </p>
         )}
-        {current === 'review' ? (
+        {current === 'style' ? (
           <button
             onClick={save}
             disabled={saving || !!nameProblem}
