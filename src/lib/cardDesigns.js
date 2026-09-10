@@ -17,38 +17,38 @@
  * `classic` is first and is the default: no pattern at all, which is what
  * every account created before this existed looks like. An account with no
  * `design` field renders as classic without needing a migration.
+ *
+ * Key and name only. Each design also carried a one-line description shown
+ * under the gallery - but a sentence explaining what Bloom looks like sat
+ * directly beneath a picture of what Bloom looks like, and the picture is the
+ * better argument. What the patterns do is documented in index.css beside the
+ * patterns themselves, which is where anyone changing one would look.
  */
 
 export const CARD_DESIGNS = [
   {
     key: 'classic',
     name: 'Classic',
-    blurb: 'Just the brand gradient, with the grain and sheen the cards have always had.',
   },
   {
     key: 'orbit',
     name: 'Orbit',
-    blurb: 'Concentric bands widening off the right edge, the way light falls across moulded plastic.',
   },
   {
     key: 'bloom',
     name: 'Bloom',
-    blurb: 'Soft overlapping orbs, lit from the right and weighted at the lower left.',
   },
   {
     key: 'sweep',
     name: 'Sweep',
-    blurb: 'Two broad diagonals cutting across the middle, wide enough to read as light.',
   },
   {
     key: 'glitter',
     name: 'Glitter',
-    blurb: 'A fine metallic fleck, generated in the browser rather than pulled from a texture file.',
   },
   {
     key: 'onyx',
     name: 'Onyx',
-    blurb: 'Deep tonal shapes rather than highlights. The darkest and most formal of the five.',
   },
 ]
 

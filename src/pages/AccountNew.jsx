@@ -408,18 +408,72 @@ function StyleStep({ draft, set, nameProblem }) {
    * scrollLeft would be off by the spacer width and drift with the gap.
    * Closest centre wins, whatever the geometry.
    */
-  const syncFromScroll = useCallback(() => {
+  /**
+   * Turn each card by how far it is from the centre.
+   *
+   * Coverflow: the centred card faces you and its neighbours are rotated away
+   * on their own vertical axis, so swiping reads as turning through a wallet
+   * rather than sliding a strip sideways. Distance is measured in card widths,
+   * so it is continuous - the cards turn WITH the finger rather than snapping
+   * between two states when the index changes.
+   *
+   * Written straight to the nodes, deliberately. Routing this through React
+   * would re-render a list of six card faces on every scroll frame, and a CSS
+   * transition would fight a value that is already changing continuously.
+   *
+   * perspective sits inside each card's own transform rather than on the rail:
+   * on a scrolling ancestor it interacts with the scrollport, and a per-node
+   * perspective is also what keeps each card's vanishing point its own.
+   *
+   * Transforms never change the layout box, so offsetLeft and every snap
+   * position stay exactly where they were - which is the only reason this can
+   * be layered onto a snap rail at all.
+   */
+  const paintRail = useCallback(() => {
     const rail = railRef.current
     if (!rail) return
     const mid = rail.scrollLeft + rail.clientWidth / 2
     let best = 0, bestDist = Infinity
     for (const node of rail.querySelectorAll('[data-design-idx]')) {
-      const dist = Math.abs(node.offsetLeft + node.offsetWidth / 2 - mid)
+      const centre = node.offsetLeft + node.offsetWidth / 2
+      const away = (centre - mid) / node.offsetWidth        // in card widths
+      const clamped = Math.max(-1.5, Math.min(1.5, away))
+      const fade = Math.min(Math.abs(clamped), 1)
+      node.style.transform =
+        `perspective(900px) rotateY(${clamped * -30}deg) scale(${1 - fade * 0.1})`
+      node.style.opacity = String(1 - fade * 0.55)
+      // The turned-away cards must not sit on top of the centred one.
+      node.style.zIndex = String(10 - Math.round(fade * 10))
+
+      const dist = Math.abs(centre - mid)
       if (dist < bestDist) { bestDist = dist; best = Number(node.dataset.designIdx) }
     }
-    const key = CARD_DESIGNS[best]?.key
-    if (key && key !== draft.design) set({ design: key })
-  }, [draft.design, set])
+    return best
+  }, [])
+
+  /**
+   * One rAF per scroll burst.
+   *
+   * A snap rail fires scroll dozens of times per gesture; painting on each
+   * would do the same work several times inside one frame.
+   */
+  const frame = useRef(0)
+  const onRailScroll = useCallback(() => {
+    if (frame.current) return
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0
+      const best = paintRail()
+      const key = CARD_DESIGNS[best]?.key
+      if (key && key !== draft.design) set({ design: key })
+    })
+  }, [draft.design, set, paintRail])
+
+  // Paint once before the first gesture, or the neighbours start flat and
+  // only turn after the rail is touched.
+  useEffect(() => {
+    paintRail()
+    return () => { if (frame.current) cancelAnimationFrame(frame.current) }
+  }, [paintRail])
 
   /**
    * Centre card `i` in the rail.
@@ -448,7 +502,7 @@ function StyleStep({ draft, set, nameProblem }) {
           snap-mandatory means it always settles on one. */}
       <div
         ref={railRef}
-        onScroll={syncFromScroll}
+        onScroll={onRailScroll}
         className="flex items-center gap-4 overflow-x-auto snap-x snap-mandatory no-scrollbar"
         style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
       >
@@ -459,8 +513,12 @@ function StyleStep({ draft, set, nameProblem }) {
           <div
             key={d.key}
             data-design-idx={i}
-            className="shrink-0 snap-center transition-opacity duration-300"
-            style={{ opacity: i === activeIdx ? 1 : 0.45 }}
+            /* No transition and no React-driven style. Both transform and
+               opacity are written straight to the node by paintRail on every
+               scroll frame - a CSS transition would fight a value that is
+               already changing continuously, and going through React would
+               mean a re-render per frame of a list holding six card faces. */
+            className="shrink-0 snap-center will-change-transform"
           >
             <PortraitCard draft={{ ...draft, design: d.key }} turned={turned} />
           </div>
@@ -468,12 +526,16 @@ function StyleStep({ draft, set, nameProblem }) {
         <div className="shrink-0" style={{ width: `calc(50% - ${PORTRAIT_W / 2}px)` }} />
       </div>
 
-      {/* Name and blurb for the centred design. */}
-      <div className="px-6 mt-4 text-center min-h-[52px]">
+      {/* The name, and nothing else. A sentence explaining what "Bloom" looks
+          like sits directly under a picture of what Bloom looks like - the
+          picture is the better argument, and two lines of prose that change
+          on every swipe are noise between the card and the dots.
+
+          The height is still pinned, at one line now instead of three, so
+          swiping between a short name and a long one does not shift the dots
+          and the CTA under it. */}
+      <div className="px-6 mt-4 text-center min-h-[22px]">
         <p className="text-[15px] font-semibold text-slate-900 dark:text-white">{meta.name}</p>
-        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">
-          {meta.blurb}
-        </p>
       </div>
 
       {/* Design dots. Tapping one scrolls the rail, so the gallery stays the
@@ -772,9 +834,11 @@ export default function AccountNew() {
       {current === 'style' ? (
         <StyleStep draft={draft} set={set} nameProblem={nameProblem} />
       ) : (
-        /* pt-3: the card sat flush against the progress bar, which read as
-           the two being one component. */
-        <div className="pt-3">
+        /* The card sat flush against the progress bar, which read as the two
+           being one component. pt-3 separated them; pt-7 gives the card room
+           to look like the subject of the screen rather than a header
+           attachment. */
+        <div className="pt-7">
           <PreviewCard draft={draft} />
         </div>
       )}

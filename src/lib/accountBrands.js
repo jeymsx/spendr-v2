@@ -195,6 +195,26 @@ export const GRADIENT_PRESETS = [
   ['#f59e0b', '#ef4444'],   // amber to red
   ['#6366f1', '#0ea5e9'],   // indigo to sky
   ['#14b8a6', '#84cc16'],   // teal to lime
+
+  // ── Metals ──
+  //
+  // Stated dark, on purpose. A metal is a LIGHT colour and white text cannot
+  // sit on one: measured, #eab308 gold is 1.92:1 against white and #cbd5e1
+  // platinum is 1.48:1, so aaSafeStops would darken them by around 60% and
+  // what came out the other side would be a muddy olive and a flat slate -
+  // the name on the swatch promising something the card could not deliver.
+  //
+  // These are the CARD colours rather than the metal colours: already deep
+  // enough that the solve only trims 15-20%, which the hue survives. Gold
+  // reads as antique gold, platinum as pewter. Paired with the Glitter or
+  // Orbit design they read metallic far more convincingly than a pale
+  // gradient ever would, because it is the sheen that says metal, not the
+  // lightness.
+  ['#b8860b', '#6b4a06'],   // gold
+  ['#b76e79', '#7d3f4a'],   // rose gold
+  ['#a1662f', '#5c3410'],   // bronze
+  ['#7d8896', '#3f4854'],   // platinum
+  ['#4b5563', '#1f2937'],   // graphite
 ]
 
 /**
