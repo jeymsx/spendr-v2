@@ -770,35 +770,48 @@ export default function Recurring() {
               {active.some(r => r.frequency !== 'monthly') && ', normalised per month'}
             </p>
 
-            <div className="grid grid-cols-3 gap-3 mt-5">
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+            {/* Three tiles, not three bare columns.
+ 
+                This was a naked grid, lifted from Goals - but on Goals the
+                same grid sits directly under a progress bar, which anchors it
+                to something. Here there was nothing above it but a centred
+                figure and nothing below but the tab switch, so three small
+                labels floated in open space and the top of the page read as
+                unfinished. Giving each one the card material makes them
+                objects, and the row reads as a set of three readings rather
+                than leftover text.
+ 
+                Centred, because a one-digit number left-aligned in a 112px
+                tile looks like it lost its label. */}
+            <div className="grid grid-cols-3 gap-2.5 mt-5">
+              <Card className="px-2 py-3 text-center">
+                <p className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Due now
                 </p>
-                <p className={`text-[15px] font-bold tabular-nums mt-0.5 ${
+                <p className={`text-[19px] leading-none font-semibold tabular-nums mt-1.5 ${
                   stats.dueNow > 0
                     ? 'text-red-500 dark:text-red-400'
-                    : 'text-slate-800 dark:text-slate-100'
+                    : 'text-slate-800 dark:text-white'
                 }`}>
                   {stats.dueNow}
                 </p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              </Card>
+              <Card className="px-2 py-3 text-center">
+                <p className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   This week
                 </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
+                <p className="text-[19px] leading-none font-semibold tabular-nums mt-1.5 text-slate-800 dark:text-white">
                   {stats.thisWeek}
                 </p>
-              </div>
-              <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              </Card>
+              <Card className="px-2 py-3 text-center">
+                <p className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   Paused
                 </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
+                <p className="text-[19px] leading-none font-semibold tabular-nums mt-1.5 text-slate-800 dark:text-white">
                   {stats.paused}
                 </p>
-              </div>
+              </Card>
             </div>
           </section>
 
