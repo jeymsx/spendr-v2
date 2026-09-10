@@ -29,7 +29,7 @@ import CategoryGlyph from './CategoryGlyph'
  * would need the .seg-active correction to clear 4.5:1, and there is nothing
  * for the colour to say that the ring above it has not already said.
  */
-export default function CategoryRail({ categories = [], selected, onSelect, className = '' }) {
+export default function CategoryRail({ categories = [], selected, onSelect, className = '', bleed = '-mx-4 px-4' }) {
   const railRef = useRef(null)
 
   /**
@@ -63,8 +63,11 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
   return (
     <div
       ref={railRef}
-      /* -mx-4 px-4 against the form's own px-4, so a tile can sit flush with
-         the screen edge and be visibly cut off.
+      /* `bleed` cancels the container's own horizontal padding and re-adds it
+         inside the scroller, so a tile can sit flush with the edge and be
+         visibly cut off. It is a prop because the add-expense form is px-4 and
+         the filter sheet is px-5, and a 1px mismatch reads as a misaligned
+         row.
 
          gap-1.5, and the tile below is only 4px wider than its icon. The
          first version had 68px tiles around 52px icons, so every visible gap
@@ -77,7 +80,7 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
          358 a 390px screen leaves after the form's padding - so the whole set
          is visible without a swipe, and the row only scrolls for someone who
          has added more. */
-      className={`flex gap-1.5 overflow-x-auto no-scrollbar snap-x -mx-4 px-4 py-1 ${className}`}
+      className={`flex gap-1.5 overflow-x-auto no-scrollbar snap-x py-1 ${bleed} ${className}`}
       style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
       role="radiogroup"
       aria-label="Category"

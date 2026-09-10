@@ -10,6 +10,8 @@ import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import CategoryGlyph from '../components/CategoryGlyph'
+import CategoryRail from '../components/CategoryRail'
+import FadeScroller from '../components/FadeScroller'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -361,9 +363,12 @@ function FilterModal({
           </div>
         </div>
 
-        {/* Scrollable body */}
-        <div
-          className="overflow-y-auto flex-1 px-5 pb-4 flex flex-col gap-6"
+        {/* Scrollable body, feathered at whichever edge it has run past.
+            It was a plain overflow clip, so the first row of account cards
+            was sliced straight through under the header - the exact thing
+            FadeScroller exists for, and this sheet predates it. */}
+        <FadeScroller
+          className="flex-1 px-5 pb-4 flex flex-col gap-6"
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
 
@@ -509,31 +514,24 @@ function FilterModal({
           {catOpts.length > 0 && (
             <div>
               <SectionLabel>Category</SectionLabel>
-              <div className="grid grid-cols-3 gap-2">
-                {catOpts.map(c => {
-                  const active = categoryFilter === c.name
-                  return (
-                    <button
-                      key={c.id}
-                      onClick={() => setCategoryFilter(active ? null : c.name)}
-                      className={[
-                        'flex flex-col items-center gap-1.5 py-3 px-2 rounded-2xl border text-center transition-all duration-150 active:scale-95',
-                        active
-                          ? 'bg-primary/10 dark:bg-primary/15 border-primary/30'
-                          : 'bg-slate-50 dark:bg-white/[0.04] border-slate-200/60 dark:border-white/[0.07]',
-                      ].join(' ')}
-                    >
-                      <span className="leading-none"><CategoryGlyph cat={c} size={20} /></span>
-                      <span className={`text-[10px] font-semibold leading-tight truncate w-full ${active ? 'text-primary' : 'text-slate-600 dark:text-slate-400'}`}>
-                        {c.name}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
+              {/* One scrollable row, the same control the add-expense form
+                  uses. It was a 3-column grid, which for nine categories is
+                  three rows of chips and the tallest block in the sheet - and
+                  a different way of picking a category from the one you used
+                  to record the transaction.
+
+                  Single-select with deselect-on-retap, so the parent does the
+                  toggling: the rail reports what was tapped and the filter
+                  decides whether that means set or clear. */}
+              <CategoryRail
+                categories={catOpts}
+                selected={catOpts.find(c => c.name === categoryFilter) ?? null}
+                onSelect={c => setCategoryFilter(prev => prev === c.name ? null : c.name)}
+                bleed="-mx-5 px-5"
+              />
             </div>
           )}
-        </div>
+        </FadeScroller>
 
         {/* Footer CTA */}
         <div
