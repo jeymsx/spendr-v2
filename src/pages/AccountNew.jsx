@@ -345,7 +345,7 @@ function PortraitCard({ draft, turned }) {
   )
 }
 
-function StyleStep({ draft, set }) {
+function StyleStep({ draft, set, action }) {
   const railRef = useRef(null)
   const [turned, setTurned] = useState(false)
   const activeIdx = Math.max(0, CARD_DESIGNS.findIndex(d => d.key === normalizeDesign(draft.design)))
@@ -484,23 +484,27 @@ function StyleStep({ draft, set }) {
   }, [paintRail])
 
   /**
-   * Open the swatch row on the selected colour.
+   * Reveal the selected colour, but only if it is out of sight.
    *
-   * Twenty-seven swatches cannot fit, so the row scrolls - and a scrolled row
-   * parked at zero puts its first swatch hard against the left padding while
-   * the right runs off the screen, which reads as a list that fell over
-   * rather than a control. Centring the current selection makes it look
-   * placed, and it also answers "which one is on" before you have read the
-   * ring.
+   * The row starts at its left margin like every other row on the page. It
+   * used to centre the selection, which needed spacers at both ends and left
+   * the first swatch floating in the middle of an otherwise empty line - a
+   * default presented as though it had been chosen.
    *
-   * Once, on entry only: re-centring on every pick would yank the row out
-   * from under the finger that just tapped it.
+   * The scroll survives for the case that needs it: reopening a card set to
+   * the last solid, twenty-odd swatches along, would otherwise show a row
+   * with nothing selected in it.
+   *
+   * Once, on entry: re-scrolling on every pick would yank the row out from
+   * under the finger that just tapped it.
    */
   const swatchRef = useRef(null)
   useEffect(() => {
     const row = swatchRef.current
     const on = row?.querySelector('[aria-pressed="true"]')
     if (!row || !on) return
+    const left = on.offsetLeft - row.scrollLeft
+    if (left >= 0 && left + on.offsetWidth <= row.clientWidth) return
     row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -606,11 +610,9 @@ function StyleStep({ draft, set }) {
       <div className="mt-4 px-5">
         <div
           ref={swatchRef}
-          className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x py-2.5 -mx-5"
+          className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x px-5 py-2.5 -mx-5"
           style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
         >
-          <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
-
           {brandColor && (
             <button
               onClick={() => set({
@@ -640,7 +642,7 @@ function StyleStep({ draft, set }) {
               which aaSafeStops splits and darkens end-by-end. */}
           {GRADIENT_PRESETS.map(([a, b]) => {
             const spec = `${a},${b}`
-            const on = !!draft.customColor && draft.color === spec
+            const on = draft.color === spec && (!!draft.customColor || !brandColor)
             return (
               <button
                 key={spec}
@@ -665,7 +667,12 @@ function StyleStep({ draft, set }) {
           />
 
           {PALETTE.map(c => {
-            const on = !!draft.customColor && draft.color === c
+            // (!draft.customColor || !brandColor): with no brand to override,
+            // accountBrand's custom path reads `color` regardless of the flag,
+            // so the colour IS in effect and the row has to say so. Testing
+            // the flag alone left an unbranded account showing no selection
+            // while its card plainly wore the colour.
+            const on = draft.color === c && (!!draft.customColor || !brandColor)
             return (
               <button
                 key={c}
@@ -678,9 +685,23 @@ function StyleStep({ draft, set }) {
               />
             )
           })}
-          <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
         </div>
       </div>
+
+      {/* The button lives INSIDE the centred group on this step, not pinned to
+          the bottom of the screen.
+
+          Pinned, it sat a long way under the colour row with nothing between
+          them - and because the section above it was flex-1, the section ate
+          every spare pixel and left the whole group riding high with a gap
+          beneath. Part of the same group, all five pieces centre together:
+          card, name, dots, colours, button.
+
+          It is also the only step where this is possible. One and two scroll,
+          and a button that scrolls away with the content has to sit at the
+          end of it; this step fits on one screen by design, so the button can
+          be where the eye already is. */}
+      <div className="mt-6 px-5 flex justify-center">{action}</div>
 
       {/* No error here. The name cannot be edited on this step, and step one
           will not let a duplicate through - so the only way to arrive with a
@@ -881,6 +902,33 @@ export default function AccountNew() {
     }
   }
 
+  /* One button, two homes. Steps one and two hang it off the bottom of a
+     scrolling page; the style step puts it inside its centred group. Building
+     it once here keeps the two from drifting apart. */
+  const actionButton = current === 'style' ? (
+    <button
+      onClick={save}
+      disabled={saving || !!nameProblem}
+      className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
+        text-[15px] font-semibold text-white bg-primary
+        shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
+        disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
+    >
+      {saving ? 'Adding\u2026' : 'Add account'}
+    </button>
+  ) : (
+    <button
+      onClick={next}
+      disabled={!canAdvance}
+      className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
+        text-[15px] font-semibold text-white bg-primary
+        shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
+        disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
+    >
+      Continue
+    </button>
+  )
+
   const stepTitle = {
     institution: 'Which account?',
     details: 'The details',
@@ -892,13 +940,25 @@ export default function AccountNew() {
   // itself: <main> is a definite-height scroller, so the flex child can take
   // the leftover space between the progress bar and the action.
   //
-  // pb-nav rather than a hand-set 5.5rem: the old value existed to reserve
-  // space beneath a FIXED pill, and getting it wrong is what clipped the
-  // button behind the navbar once already. In flow the button needs the same
-  // navbar clearance as every other page, which pb-nav already computes
-  // (5rem plus the safe-area inset).
+  // The navbar clearance belongs to the steps that SCROLL, not to the root.
+  //
+  // Three versions of this were wrong in three different ways. min-h-[calc
+  // (100dvh-5rem)] with pb-nav subtracted the navbar twice, leaving 80px of
+  // dead air under the button. min-h-full did not resolve at all - <main>
+  // takes its height from flex-grow, and a percentage min-height against a
+  // flex-grown parent is not reliably definite, so the section stopped 110px
+  // short and mt-auto computed to 0. min-h-[100dvh] with pb-nav resolved
+  // fine and then overflowed by exactly 80px, because the padding is space
+  // the style step does not need: nothing on it scrolls, so nothing can hide
+  // behind the navbar.
+  //
+  // So the root is the viewport minus the navbar with a small pad, which is
+  // the box the style step centres itself in - and the clearance moves to the
+  // action wrapper on steps one and two, which are the ones long enough to
+  // scroll a button under the navbar. Each piece of padding now belongs to
+  // the thing that needs it.
   return (
-    <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-nav">
+    <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-4">
       {/* ── Header ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
         <button
@@ -928,7 +988,7 @@ export default function AccountNew() {
       <StepProgress steps={steps} index={steps.indexOf(current)} className="mt-1 shrink-0" />
 
       {current === 'style' ? (
-        <StyleStep draft={draft} set={set} />
+        <StyleStep draft={draft} set={set} action={actionButton} />
       ) : (
         /* The card sat flush against the progress bar, which read as the two
            being one component. pt-3 separated them; pt-7 gives the card room
@@ -1256,42 +1316,17 @@ export default function AccountNew() {
       {/* pt-4, not pt-6. mt-auto already pushes this to the bottom, so the
           padding was buying separation the empty space above had already
           bought. */}
-      <div className="mt-auto flex flex-col items-center gap-2 px-5 pt-4">
-        {/* The duplicate error that used to sit here is gone. It was added
-            when the field it describes was far down the page and the button
-            was pinned to the bottom of the viewport - so the button greyed out
-            with no visible reason. Both halves of that have changed: the name
-            field is now the first thing on the step, and the button is in the
-            flow beneath it.
-
-            What replaced it is in next(): tapping the dead button scrolls the
-            field into view and focuses it. One message, next to its cause, and
-            the button still explains itself - by taking you to the reason
-            rather than reciting it. */}
-        {current === 'style' ? (
-          <button
-            onClick={save}
-            disabled={saving || !!nameProblem}
-            className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
-              text-[15px] font-semibold text-white bg-primary
-              shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
-              disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
-          >
-            {saving ? 'Adding\u2026' : 'Add account'}
-          </button>
-        ) : (
-          <button
-            onClick={next}
-            disabled={!canAdvance}
-            className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
-              text-[15px] font-semibold text-white bg-primary
-              shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
-              disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
-          >
-            Continue
-          </button>
-        )}
-      </div>
+      {/* Steps one and two: the button is the last thing on a page that
+          scrolls, so it belongs at the end of it. mt-auto pushes it down when
+          the step is short. The style step does not come through here - it
+          renders the same button inside its own centred group, because it is
+          the one step that fits on a screen. */}
+      {current !== 'style' && (
+        <div className="mt-auto flex flex-col items-center gap-2 px-5 pt-4
+          pb-[calc(5rem+env(safe-area-inset-bottom,0px))]">
+          {actionButton}
+        </div>
+      )}
     </div>
   )
 }
