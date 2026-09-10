@@ -291,6 +291,36 @@ html.dark body {
     radial-gradient(90% 70% at 50% 50%, rgba(0, 0, 0, 0.06), transparent 78%);
 }
 
+/* ── Glitter ──────────────────────────────────────────────────────────────────
+   A metallic fleck, generated rather than downloaded.
+
+   The reference for this was a CodePen that hotlinks a silver-glitter PNG and
+   a photographic background. Neither can ship here: the app is offline-first
+   and its service worker precaches local assets only, so a remote texture is
+   a card face that goes blank the moment there is no signal - and the licence
+   on someone's CodePen upload is not a thing to guess at.
+
+   The technique transfers without the image. feTurbulence already appears in
+   this file making the card's grain; the same primitive at a higher frequency,
+   thresholded through feColorMatrix so only noise above 0.58 survives as
+   discrete points, is a sparkle field. Around 430 bytes, inline, no network.
+
+   What did NOT transfer is the reference's brightness. It finishes with
+   mix-blend-mode: color-dodge and filter: brightness(2) to blow the card out
+   to chrome - and its own text is silver-grey with an embossed shadow over a
+   photograph, not white over a brand colour. Our gradients have zero contrast
+   headroom, so this is a texture rather than a chrome effect: masked to the
+   middle band like every other light design, and composited normally rather
+   than dodged, because a blend mode's result depends on what is underneath
+   and this one sits over ten different brand gradients.                     */
+
+.acct-card[data-design='glitter'] {
+  --card-pattern:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' seed='7'/%3E%3CfeColorMatrix values='0 0 0 0 1 0 0 0 0 1 0 0 0 0 1 1 0 0 0 -0.58'/%3E%3C/filter%3E%3ClinearGradient id='sf' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0.12' stop-color='%23000'/%3E%3Cstop offset='0.34' stop-color='%23fff'/%3E%3Cstop offset='0.74' stop-color='%23fff'/%3E%3Cstop offset='0.94' stop-color='%23000'/%3E%3C/linearGradient%3E%3Cmask id='sb'%3E%3Crect width='100' height='100' fill='url(%23sf)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23sb)'%3E%3Crect width='100' height='100' filter='url(%23g)' opacity='0.5'/%3E%3C/g%3E%3C/svg%3E"),
+    radial-gradient(70% 52% at 74% 48%, rgba(255, 255, 255, 0.07), transparent 72%);
+  --card-pattern-size: 100% 100%, cover;
+}
+
 .acct-card::before,
 .acct-card::after {
   content: '';

@@ -41,6 +41,11 @@ export const CARD_DESIGNS = [
     blurb: 'Two broad diagonals cutting across the middle, wide enough to read as light.',
   },
   {
+    key: 'glitter',
+    name: 'Glitter',
+    blurb: 'A fine metallic fleck, generated in the browser rather than pulled from a texture file.',
+  },
+  {
     key: 'onyx',
     name: 'Onyx',
     blurb: 'Deep tonal shapes rather than highlights. The darkest and most formal of the five.',
