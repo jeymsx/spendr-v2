@@ -26,6 +26,7 @@ import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark, { SCHEME_OPTIONS } from '../components/SchemeMark'
+import CategoryGlyph from '../components/CategoryGlyph'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -2383,7 +2384,7 @@ export function DetailTxRow({ tx, accountName, onSelect, catMap = {} }) {
         style={{ backgroundColor: (cat?.color ?? '#2D9DFF') + '22' }}
         aria-hidden="true"
       >
-        {cat?.icon ?? '💸'}
+        <CategoryGlyph cat={cat} size={18} emoji="💸" />
       </span>
 
       <span className="flex-1 min-w-0">

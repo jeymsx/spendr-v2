@@ -134,6 +134,7 @@ export function IconWallet({ size = 16, strokeWidth = '2', stroke = 'currentColo
 import {
   AlertTriangle, X as XClose, Check, Trash01, Download01, Scales02, Stars01,
   Bell01, Zap, Bank, Wallet01, CreditCard01, Phone01, BankNote01,
+  Receipt, SwitchHorizontal01,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -158,6 +159,8 @@ export const IconWalletUI  = uui(Wallet01)
 export const IconCardUI    = uui(CreditCard01)
 export const IconPhoneUI   = uui(Phone01)
 export const IconCashUI    = uui(BankNote01)
+export const IconReceipt   = uui(Receipt)            // a dated debt in Upcoming
+export const IconTransferUI = uui(SwitchHorizontal01) // a transfer template
 
 /**
  * An account type's icon.

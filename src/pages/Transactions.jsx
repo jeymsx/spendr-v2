@@ -9,6 +9,7 @@ import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
+import CategoryGlyph from '../components/CategoryGlyph'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -522,7 +523,7 @@ function FilterModal({
                           : 'bg-slate-50 dark:bg-white/[0.04] border-slate-200/60 dark:border-white/[0.07]',
                       ].join(' ')}
                     >
-                      <span className="text-xl leading-none">{c.icon ?? '📦'}</span>
+                      <span className="leading-none"><CategoryGlyph cat={c} size={20} /></span>
                       <span className={`text-[10px] font-semibold leading-tight truncate w-full ${active ? 'text-primary' : 'text-slate-600 dark:text-slate-400'}`}>
                         {c.name}
                       </span>
@@ -569,7 +570,7 @@ function TxRow({ tx, catMap, onClick }) {
         className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-[18px]"
         style={{ backgroundColor: (cat?.color ?? '#2D9DFF') + '22' }}
       >
-        {cat?.icon ?? '💸'}
+        <CategoryGlyph cat={cat} size={20} emoji="💸" />
       </div>
 
       <div className="flex-1 min-w-0">

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import CategoryGlyph from './CategoryGlyph'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -53,7 +54,7 @@ function TxRow({ tx, catMap, onClick }) {
         className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-[18px]"
         style={{ backgroundColor: (cat?.color ?? '#2D9DFF') + '22' }}
       >
-        {cat?.icon ?? '💸'}
+        <CategoryGlyph cat={cat} size={16} emoji="💸" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">

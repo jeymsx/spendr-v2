@@ -7,6 +7,7 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
+import CategoryGlyph from '../../components/CategoryGlyph'
 
 const RANGES = [
   { key: '1m',  label: 'This month' },
@@ -299,7 +300,7 @@ export default function WebInsights() {
               <tbody>
                 {topExpenses.map(t => (
                   <tr key={t.id} className="border-t border-slate-100 dark:border-white/[0.05]">
-                    <td className="px-5 py-2.5 w-[52px] text-base">{catMap[t.category]?.icon ?? '📦'}</td>
+                    <td className="px-5 py-2.5 w-[52px]"><CategoryGlyph cat={catMap[t.category]} size={16} /></td>
                     <td className="px-2 py-2.5 min-w-0">
                       <p className="font-medium text-slate-800 dark:text-slate-100 truncate max-w-[300px]">
                         {t.description || t.category || '—'}

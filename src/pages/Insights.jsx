@@ -7,6 +7,7 @@ import {
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { scheduledCutoff } from '../utils/scheduled'
+import CategoryGlyph from '../components/CategoryGlyph'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -654,7 +655,7 @@ function TopTransactions({ txs, catMap }) {
                 className="w-9 h-9 rounded-2xl flex items-center justify-center text-[17px] shrink-0"
                 style={{ backgroundColor: (cat?.color ?? '#2D9DFF') + '22' }}
               >
-                {cat?.icon ?? '📦'}
+                <CategoryGlyph cat={cat} size={18} />
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-[13px] font-medium text-slate-800 dark:text-white truncate leading-snug">

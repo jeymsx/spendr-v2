@@ -14,6 +14,7 @@ import {
   FREQ_OPTIONS, FREQ_ORDER, FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, parseDateLocal, daysUntil, dueStatus, DUE_TONE,
 } from '../utils/recurring'
+import CategoryGlyph from '../components/CategoryGlyph'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -87,7 +88,7 @@ function BillRow({ rec, onOpen, isLast }) {
           className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
           style={{ backgroundColor: (rec._catColor ?? '#64748b') + (dim ? '14' : '20') }}
         >
-          {rec._catIcon ?? '🔁'}
+          <CategoryGlyph cat={rec._cat} size={20} emoji="🔁" />
         </span>
 
         <span className="flex-1 min-w-0">
@@ -583,7 +584,9 @@ export default function Recurring() {
     const catMap = Object.fromEntries((categories ?? []).map(c => [c.name, c]))
     return (allRec ?? []).map(r => ({
       ...r,
-      _catIcon:  catMap[r.category]?.icon  ?? '🔁',
+      // The category itself, not a pre-resolved glyph: CategoryGlyph needs the
+      // name to look up an icon, and a bare emoji string has thrown that away.
+      _cat:      catMap[r.category] ?? null,
       _catColor: catMap[r.category]?.color ?? '#64748b',
     }))
   }, [allRec, categories])

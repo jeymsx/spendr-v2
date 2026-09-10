@@ -11,6 +11,7 @@ import { accountBrand } from '../../lib/accountBrands'
 // validated form logic, and QuickAddSheet carries the 48 PH presets.
 import { AccountFormSheet, QuickAddSheet } from '../../pages/Accounts'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
+import CategoryGlyph from '../../components/CategoryGlyph'
 
 const GROUPS = [
   { key: 'cash',    label: 'Cash',          types: ['cash'] },
@@ -65,7 +66,7 @@ function LedgerRow({ tx, accountName, catMap, onSelect }) {
         border-t border-slate-100 dark:border-white/[0.05]
         hover:bg-slate-50 dark:hover:bg-white/[0.03] transition-colors"
     >
-      <span className="w-6 text-base shrink-0">{catMap[tx.category]?.icon ?? '📦'}</span>
+      <span className="w-6 shrink-0"><CategoryGlyph cat={catMap[tx.category]} size={16} /></span>
       <span className="flex-1 min-w-0">
         <span className="block text-[13px] font-medium text-slate-800 dark:text-slate-100 truncate">{label}</span>
         <span className="block text-[10px] text-slate-500 dark:text-slate-400">

@@ -1,4 +1,5 @@
 import { useRef, useEffect } from 'react'
+import CategoryGlyph from './CategoryGlyph'
 
 /**
  * Pick a category by swiping a row of them.
@@ -104,7 +105,7 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
                 justify-center text-[23px] leading-none transition-shadow duration-150"
               style={{ '--cat-color': cat.color ?? '#64748b' }}
             >
-              {cat.icon ?? '🏷️'}
+              <CategoryGlyph cat={cat} size={23} emoji="🏷️" />
             </span>
             <span className={[
               'text-[10.5px] leading-tight text-center w-full',

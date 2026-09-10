@@ -6,7 +6,9 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
 import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
-import { IconBank, IconCard, IconChevronRight, IconPhone, IconWallet, IconWarning, IconBell } from '../components/icons'
+import { IconBank, IconCard, IconChevronRight, IconPhone, IconWallet, IconWarning, IconBell,
+  IconCardUI, IconReceipt, IconTransferUI } from '../components/icons'
+import CategoryGlyph from '../components/CategoryGlyph'
 import { scheduledCutoff } from '../utils/scheduled'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
@@ -426,7 +428,10 @@ export default function Dashboard() {
         name: r.name || r.category || 'Recurring',
         amount: r.amount ?? 0,
         meta: r.account ?? '',
-        icon: cat?.icon ?? '🔁',
+        // A node, not a string. The three kinds of upcoming row want three
+        // different glyphs and only the recurring one has a category to look
+        // up, so resolving here keeps UpcomingRow from having to know.
+        icon: <CategoryGlyph cat={cat} size={17} emoji="🔁" />,
         color: cat?.color ?? null,
         // Straight to the bill, not to the list. Tapping "Internet, overdue"
         // and landing on a page of every bill you own makes you find the one
@@ -452,7 +457,7 @@ export default function Dashboard() {
         name: a.name,
         amount: owed,
         meta: 'Statement balance',
-        icon: '💳',
+        icon: <IconCardUI size={17} />,
         color: a.color ?? null,
         to: `/accounts/${a.id}`,
       })
@@ -475,7 +480,7 @@ export default function Dashboard() {
         name: d.name || d.contact || 'Debt',
         amount: owed,
         meta: d.contact && d.name !== d.contact ? d.contact : 'You owe',
-        icon: '🧾',
+        icon: <IconReceipt size={17} />,
         color: null,
         to: '/debts?tab=i_owe',
       })
@@ -754,7 +759,9 @@ export default function Dashboard() {
               .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
               .map(tpl => {
                 const cat = (categories ?? []).find(c => c.name === tpl.category)
-                const icon = tpl.type === 'transfer' ? '🔄' : (cat?.icon ?? '⚡')
+                const icon = tpl.type === 'transfer'
+            ? <IconTransferUI size={15} />
+            : <CategoryGlyph cat={cat} size={15} emoji="⚡" />
                 const compact = (tpl.amount ?? 0) >= 1000
                   ? '₱' + ((tpl.amount) / 1000).toFixed(1) + 'K'
                   : '₱' + (tpl.amount ?? 0).toFixed(0)
@@ -765,7 +772,7 @@ export default function Dashboard() {
                     className="card shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-2xl
                       active:scale-[0.96] transition-transform duration-75"
                   >
-                    <span className="text-sm leading-none">{icon}</span>
+                    <span className="leading-none">{icon}</span>
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{tpl.name}</span>
                     <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{compact}</span>
                   </button>

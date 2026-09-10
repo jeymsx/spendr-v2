@@ -5,6 +5,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useTheme } from '../context/ThemeContext'
 import { scheduledCutoff } from '../utils/scheduled'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
+import CategoryGlyph from '../components/CategoryGlyph'
 
 /**
  * The month's budget, in full.
@@ -88,7 +89,7 @@ function CategoryRow({ cat }) {
           style={{ backgroundColor: (cat.color ?? '#2D9DFF') + '22' }}
           aria-hidden="true"
         >
-          {cat.icon ?? '💸'}
+          <CategoryGlyph cat={cat} size={20} emoji="💸" />
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-100 truncate">
@@ -428,7 +429,7 @@ export default function Budget() {
                           style={{ backgroundColor: (c.color ?? '#2D9DFF') + '22' }}
                           aria-hidden="true"
                         >
-                          {c.icon ?? '💸'}
+                          <CategoryGlyph cat={c} size={18} emoji="💸" />
                         </span>
                         <p className="flex-1 min-w-0 text-[14px] font-semibold text-slate-800 dark:text-slate-100 truncate">
                           {c.name}

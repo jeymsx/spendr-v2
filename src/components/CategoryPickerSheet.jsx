@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
 import FadeScroller from './FadeScroller'
+import CategoryGlyph from './CategoryGlyph'
 
 export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect }) {
   const [closing, setClosing] = useState(false)
@@ -62,7 +63,7 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
                       : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.09]',
                   ].join(' ')}
                 >
-                  <span className="text-[26px] leading-none">{cat.icon}</span>
+                  <span className="leading-none"><CategoryGlyph cat={cat} size={24} /></span>
                   <span className="text-[11px] font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
                     {cat.name}
                   </span>

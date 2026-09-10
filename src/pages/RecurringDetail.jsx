@@ -13,6 +13,7 @@ import {
   FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
 } from '../utils/recurring'
+import CategoryGlyph from '../components/CategoryGlyph'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -354,7 +355,7 @@ export default function RecurringDetail() {
               className="w-14 h-14 rounded-2xl flex items-center justify-center text-[26px] shrink-0"
               style={{ backgroundColor: (cat?.color ?? '#64748b') + '20' }}
             >
-              {cat?.icon ?? '🔁'}
+              <CategoryGlyph cat={cat} size={26} emoji="🔁" />
             </div>
             <div className="min-w-0 flex-1">
               <p className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">

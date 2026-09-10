@@ -8,6 +8,7 @@ import OverdrawWarningSheet from '../../components/OverdrawWarningSheet'
 // Reused: ~370 lines of validated form, frequency handling and delete flow.
 import { RecurringFormSheet } from '../../pages/Recurring'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, money, moneyCompact } from '../components/WebPanel'
+import CategoryGlyph from '../../components/CategoryGlyph'
 
 const FREQ_LABEL = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }
 
@@ -95,7 +96,7 @@ export default function WebRecurring() {
       <tr className="border-t border-slate-100 dark:border-white/[0.05]">
         <td className="px-5 py-3 min-w-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-base shrink-0">{catMap[r.category]?.icon ?? '🔄'}</span>
+            <span className="shrink-0"><CategoryGlyph cat={catMap[r.category]} size={16} emoji="🔄" /></span>
             <div className="min-w-0">
               <p className={`text-sm font-medium truncate ${dim
                 ? 'text-slate-500 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>

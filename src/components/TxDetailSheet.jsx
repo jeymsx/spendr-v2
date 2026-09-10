@@ -9,6 +9,7 @@ import CategoryPickerSheet from './CategoryPickerSheet'
 import AccountPickerSheet from './AccountPickerSheet'
 import { useToast } from '../context/ToastContext'
 import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
+import CategoryGlyph from './CategoryGlyph'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -478,7 +479,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                     <EditRow key="cat" label="Category">
                       <RowPicker
                         label={editCategory?.name}
-                        icon={editCategory?.icon ?? '🏷️'}
+                        icon={<CategoryGlyph cat={editCategory} size={17} emoji="🏷️" />}
                         placeholder="Choose"
                         onClick={() => setShowCatPicker(true)}
                       />
