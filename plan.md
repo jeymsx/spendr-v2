@@ -13,7 +13,7 @@ buys you, not by effort.
 
 **Goals is done and committed** (`ce62f14`), but two things are outstanding:
 
-1. **Run `supabase/migrations/0001_goals.sql`** in the Supabase SQL editor.
+1. **Run `src/supabase/migrations/004_goals.sql`** in the Supabase SQL editor.
    Until then goals stay on-device: `optionalSync` in [sync.js](src/lib/sync.js)
    deliberately steps over the goals push and pull so a missing remote table
    cannot abort the whole sync.

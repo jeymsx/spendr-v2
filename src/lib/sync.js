@@ -351,7 +351,8 @@ async function pullPreferences(userId) {
 
 // ── Tables that may not exist remotely yet ───────────────────────────────────
 //
-// `goals` ships with a Supabase migration (supabase/migrations). Until that is
+// `goals` ships with a Supabase migration (src/supabase/migrations/004_goals.sql).
+// Until that is
 // applied, every goals query comes back "relation does not exist" - and since
 // syncToSupabase awaits each push in sequence and pushTable throws, one missing
 // table would abort the whole sync and take transactions, accounts and
