@@ -26,6 +26,7 @@ const Goals        = lazy(() => import('./pages/Goals'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
 const RecurringDetail = lazy(() => import('./pages/RecurringDetail'))
 const Settings     = lazy(() => import('./pages/Settings'))
+const SettingsAccent = lazy(() => import('./pages/SettingsAccent'))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
 const Onboarding   = lazy(() => import('./pages/Onboarding'))
 const Login        = lazy(() => import('./pages/Login'))
@@ -85,6 +86,7 @@ export default function App() {
               <Route path="/recurring"    element={<Recurring />} />
               <Route path="/recurring/:id" element={<RecurringDetail />} />
               <Route path="/settings"     element={<Settings />} />
+              <Route path="/settings/accent" element={<SettingsAccent />} />
               <Route path="/import"       element={<ImportWizard />} />
             </Route>
           </Route>

@@ -16,6 +16,7 @@ import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
 import { allocateGoals } from '../lib/goals'
+import { cardGradient } from '../lib/accentTheme'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -282,14 +283,6 @@ function useWalletClip() {
   return [ref, clipPath]
 }
 
-function cardGradient(accentColor, theme) {
-  const isBlue = accentColor === '#2D9DFF'
-  const isDark = theme === 'dark'
-  if (isBlue  && isDark)  return 'linear-gradient(135deg, #0d47a1 0%, #1565c0 35%, #2196f3 70%, #42a5f5 100%)'
-  if (isBlue  && !isDark) return 'linear-gradient(135deg, #1565c0 0%, #1e88e5 45%, #64b5f6 100%)'
-  if (!isBlue && isDark)  return 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 28%, black) 0%, color-mix(in srgb, var(--color-primary) 48%, black) 40%, color-mix(in srgb, var(--color-primary) 75%, black) 100%)'
-  return 'linear-gradient(135deg, color-mix(in srgb, var(--color-primary) 52%, black) 0%, color-mix(in srgb, var(--color-primary) 80%, black) 50%, var(--color-primary) 100%)'
-}
 
 export default function Dashboard() {
   const navigate = useNavigate()

@@ -924,6 +924,46 @@ html.dark body {
   color: rgba(255, 255, 255, 0.52);
 }
 
+/* ── Accent preview frame ────────────────────────────────────────
+   The miniature screen on the accent picker. Just an edge - there is no
+   selected state here, because the selection IS the card in the middle.
+
+   A ring around the active card was the first attempt and it was wrong twice
+   over: it competed with the miniature screen inside it, two rectangles of
+   emphasis on one object, and it needed a React prop to drive it, which
+   re-rendered eight previews mid-snap and sent a swipe to card 3 to card 8
+   instead. Position says which one is chosen, and position costs nothing. */
+.accent-frame {
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dark .accent-frame {
+  border-color: rgba(255, 255, 255, 0.09);
+}
+
+/* The active card's shadow, which is what lifts it off the deck.
+ 
+   Keyed on data-front, written by paintRail. A radial vignette over the whole
+   rail came first and was the wrong object - a shadow belongs to the card
+   casting it, and a gradient over the container cannot know which pixels are
+   the card, so it dimmed the front one's top and bottom too.
+ 
+   The two themes need very different weights. On #0b0f14 a shadow only reads
+   if it is close to black and generous, hence 0.75; on #f8fafc that would be a
+   smudge, so light gets a third of it. Both are offset downward, which is
+   where a card held above a deck would cast. */
+[data-front] .accent-frame {
+  box-shadow:
+    0 22px 44px -14px rgba(0, 0, 0, 0.26),
+    0 6px 14px -6px rgba(0, 0, 0, 0.14);
+}
+
+.dark [data-front] .accent-frame {
+  box-shadow:
+    0 26px 52px -12px rgba(0, 0, 0, 0.75),
+    0 8px 18px -6px rgba(0, 0, 0, 0.55);
+}
+
 /* ── Category tile ────────────────────────────────────────────────
    One treatment, everywhere: transaction rows, budget rows, the calendar,
    Recent, and the picker rails.

@@ -55,14 +55,14 @@ const CAT_COLORS = [
 const DEFAULT_CAT_NAMES = new Set(['Others', 'Income', 'Transfer', 'Transfer Fee'])
 
 export const ACCENT_COLORS = [
-  { hex: '#2D9DFF', name: 'Azure'  },
-  { hex: '#845EF7', name: 'Cosmos' },
-  { hex: '#F06595', name: 'Blush'  },
-  { hex: '#51CF66', name: 'Sage'   },
-  { hex: '#20C997', name: 'Lagoon' },
-  { hex: '#FFB347', name: 'Amber'  },
-  { hex: '#FF6B6B', name: 'Ember'  },
-  { hex: '#FCC419', name: 'Honey'  },
+  { hex: '#2D9DFF', name: 'Azure',  hint: 'The default. Cool and quiet.'      },
+  { hex: '#845EF7', name: 'Cosmos', hint: 'Deep violet, low glare at night.'  },
+  { hex: '#F06595', name: 'Blush',  hint: 'Warm pink, softer than red.'       },
+  { hex: '#51CF66', name: 'Sage',   hint: 'Fresh green, reads as positive.'   },
+  { hex: '#20C997', name: 'Lagoon', hint: 'Teal. Green without the alarm.'    },
+  { hex: '#FFB347', name: 'Amber',  hint: 'Warm orange, high energy.'         },
+  { hex: '#FF6B6B', name: 'Ember',  hint: 'Coral red. Bold on dark.'          },
+  { hex: '#FCC419', name: 'Honey',  hint: 'Bright yellow, lightest of the set.' },
 ]
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -2754,7 +2754,6 @@ export default function Settings() {
   const [budgetMgrOpen, setBudgetMgrOpen] = useState(false)
   const [tmplMgrOpen,  setTmplMgrOpen]  = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
-  const [accentOpen,   setAccentOpen]   = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
   const [legalOpen,    setLegalOpen]    = useState(false)
   const [exporting,          setExporting]          = useState(false)
@@ -2959,7 +2958,7 @@ export default function Settings() {
                 <IconChevronRight size={14} strokeWidth="2" />
               </div>
             }
-            onTap={() => setAccentOpen(true)}
+            onTap={() => navigate('/settings/accent')}
           />
         </SectionCard>
       </div>
@@ -3462,12 +3461,6 @@ export default function Settings() {
       <ResetConfirmModal
         open={resetOpen}
         onClose={() => setResetOpen(false)}
-      />
-      <AccentColorSheet
-        open={accentOpen}
-        onClose={() => setAccentOpen(false)}
-        accentColor={accentColor}
-        setAccentColor={setAccentColor}
       />
       <PolicySheet
         open={!!policyOpen}
