@@ -14,7 +14,7 @@ import 'react-image-crop/dist/ReactCrop.css'
 import { useTheme } from '../context/ThemeContext'
 import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
+import { getCreditStatus, getNextCycleRange, nextDueDate } from '../utils/creditCycle'
 import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS, TYPE_ICON } from '../lib/phAccounts'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
@@ -124,13 +124,10 @@ export function nextOccurrence(dayOfMonth) {
   return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
 }
 
-export function nextOccurrenceDate(dayOfMonth) {
-  if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) return null
-  const now = new Date()
-  let d = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
-  if (d <= now) d = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth)
-  return d
-}
+// Kept as a named export because AccountDetail imports it; the rule itself
+// now lives in utils/creditCycle.js so the Dashboard can use it without
+// importing this module.
+export const nextOccurrenceDate = nextDueDate
 
 export function fmtCycleDate(date) {
   if (!date) return ''

@@ -101,6 +101,26 @@ export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
  * @param {object[]} txs         Any transaction list; filtered by account here.
  * @param {Date} [referenceDate] "Now", for testing or historical views.
  */
+/**
+ * The next time a day-of-month comes around, as a Date.
+ *
+ * Lives here rather than in pages/Accounts.jsx because the Dashboard needs it
+ * too, and Dashboard is the one eagerly-loaded route: importing it from
+ * Accounts.jsx would drag that whole module - dnd-kit, react-image-crop and
+ * the account form - into the initial bundle, which is precisely what App.jsx
+ * lazy-loads Accounts to avoid.
+ *
+ * Today counts as passed, so a due date of "the 10th" on the 10th returns next
+ * month. That is deliberate for a bill you have presumably already paid, and
+ * it matches what the account cards have always shown.
+ */
+export function nextDueDate(dayOfMonth, now = new Date()) {
+  if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) return null
+  let d = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
+  if (d <= now) d = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth)
+  return d
+}
+
 export function getCreditStatus(account, txs, referenceDate = new Date()) {
   const { cycleStart, cycleEnd } = getCycleRange(account?.cutoffDate, referenceDate)
   // The cycle now accumulating. Its end is the boundary between "on the next

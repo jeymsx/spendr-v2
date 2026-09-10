@@ -717,6 +717,32 @@ html.dark body {
   .acct-card.acct-card-sorting { rotate: 0deg; scale: 1; }
 }
 
+/* ── Upcoming-row badge ───────────────────────────────────────────────────────
+   The little repeat/calendar dot on an upcoming charge's icon, bottom-right.
+   It has to read as punched out of the row rather than stuck on top of it,
+   which means its ring matches the row's own background.
+
+   That colour lives HERE, next to the .card rules it comes from, rather than
+   as a utility class in the JSX - the dark card is translucent
+   (rgba(40,60,95,0.2) over the #0b0f14 page), so there is no Tailwind colour
+   that names it and the value has to be derived:
+     r = 0.2·40 + 0.8·11 = 17    g = 0.2·60 + 0.8·15 = 24
+     b = 0.2·95 + 0.8·20 = 35
+   The card also carries a backdrop blur, so this is close rather than exact -
+   at 15px across, indistinguishable, and it degrades to a slightly darker dot
+   rather than a wrong-coloured one if the card is ever retuned. */
+.upcoming-badge {
+  background: #ffffff;
+  box-shadow: 0 0 0 2px #ffffff;
+  color: #94a3b8;                    /* slate-400 — decorative, not text */
+}
+
+.dark .upcoming-badge {
+  background: rgb(17, 24, 35);
+  box-shadow: 0 0 0 2px rgb(17, 24, 35);
+  color: rgba(255, 255, 255, 0.52);
+}
+
 /* ── Sheet scroll lock — prevents iOS scroll bleed-through */
 #app-main.scroll-locked {
   overflow: hidden;
