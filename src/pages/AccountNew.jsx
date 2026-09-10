@@ -48,14 +48,6 @@ const FILTERS = [
   { value: 'Digital Banks',     label: 'Digital' },
 ]
 
-const TYPE_MARK_FOR = {
-  cash:    'cash',
-  ewallet: 'wallet',
-  savings: 'bank',
-  bank:    'bank',
-  credit:  'card',
-}
-
 const ROLE_OPTIONS = [
   { value: 'spending', label: 'Spending', hint: 'Day-to-day money you spend from' },
   { value: 'savings',  label: 'Savings',  hint: 'Money you are holding, not spending' },
@@ -226,39 +218,6 @@ function Segmented({ options, value, onChange }) {
   )
 }
 
-/**
- * A uniform grid of choices. Wrapping chips were leaving orphans - "Credit
- * Card" and "JCB" each stranded alone on a second row - because chip widths
- * follow their text. Fixed columns align every cell instead, so a five-option
- * set reads as 3 + 2 of a grid rather than as a ragged overflow.
- */
-function OptionGrid({ options, value, onChange, columns = 3 }) {
-  return (
-    <div className={`grid gap-2 ${columns === 3 ? 'grid-cols-3' : 'grid-cols-2'}`} role="radiogroup">
-      {options.map(o => {
-        const active = value === o.value
-        return (
-          <button
-            key={o.value || 'none'}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(o.value)}
-            className={`flex flex-col items-center justify-center gap-1.5 h-[62px] rounded-2xl
-              border text-[12px] font-semibold transition-colors active:scale-[0.97] ${
-                active
-                  ? 'bg-primary/[0.12] border-primary/50 text-primary'
-                  : 'bg-white dark:bg-white/[0.05] border-slate-200 dark:border-white/[0.09] text-slate-600 dark:text-slate-300'
-              }`}
-          >
-            {o.art}
-            <span className="leading-none">{o.label}</span>
-          </button>
-        )
-      })}
-    </div>
-  )
-}
 
 /**
  * One institution in the picker.
@@ -728,21 +687,27 @@ export default function AccountNew() {
   const current = steps[Math.min(step, steps.length - 1)]
 
   /**
-   * Open the network row on the chosen mark.
+   * Reveal the chosen mark, but only if it is out of sight.
    *
-   * Five marks in a swiped row do not fit, so the row scrolls - and one parked
-   * at zero hides Amex and JCB off the right edge while leaving "None" against
-   * the left. Centring the current choice makes the row look placed and puts
-   * the answer to "which one is this" in the middle of the screen.
+   * Not centred, deliberately - unlike the colour row. "None" is the default
+   * and the leftmost, and a default floated into the middle of the screen
+   * reads as a choice someone already made. So the row opens at its start,
+   * with None on the left margin like every other label on the page.
    *
-   * Keyed on `current` rather than run once: the row does not exist until the
-   * details step renders, so an on-mount effect would find nothing to scroll.
+   * The scroll is still there for the case that needs it: editing an account
+   * already set to JCB, which sits off the right edge, would otherwise open on
+   * a row where nothing looks selected.
+   *
+   * Keyed on `current` rather than run once, because the row does not exist
+   * until the details step renders - an on-mount effect would find nothing.
    */
   const schemeRef = useRef(null)
   useEffect(() => {
     const row = schemeRef.current
     const on = row?.querySelector('[aria-checked="true"]')
     if (!row || !on) return
+    const left = on.offsetLeft - row.scrollLeft
+    if (left >= 0 && left + on.offsetWidth <= row.clientWidth) return   // already visible
     row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2 })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current])
@@ -987,27 +952,59 @@ export default function AccountNew() {
         <div className="px-5 mt-4 space-y-7">
           <div>
             <SectionLabel>Kind of account</SectionLabel>
-            <OptionGrid
-              options={TYPE_OPTIONS.map(t => ({
-                value: t.value,
-                label: t.shortLabel,
-                art: <BrandMark mark={TYPE_MARK_FOR[t.value]} size={20} />,
-              }))}
-              value={draft.type}
-              onChange={(v) => set({
-                type: v,
-                role: defaultRole(v),
-                // A cash tin has no card network to print.
-                scheme: v === 'cash' ? '' : draft.scheme,
-              })}
-            />
+            {/* A real <select>, because this runs as a PWA on iOS and iOS
+                answers a select with its own wheel picker - a scrolling drum
+                that lands with a detent, sized and placed by the OS. A grid of
+                five tiles is a passable imitation of a control the platform
+                will simply hand over if asked.
+
+                appearance-none only strips the default arrow and chrome; the
+                native picker still opens, so this is styling the closed state
+                rather than replacing the control. The chevron is drawn beside
+                it and marked aria-hidden, since the select announces itself.
+
+                text-[16px], not the 15px the other fields use: below 16px iOS
+                zooms the viewport when a form control takes focus, and it does
+                not zoom back out.
+
+                pr-11 keeps the value clear of the chevron - a select does not
+                know the chevron is there and would happily print "E-Wallet"
+                straight through it. */}
+            <div className="relative">
+              <select
+                value={draft.type}
+                onChange={e => {
+                  const v = e.target.value
+                  set({
+                    type: v,
+                    role: defaultRole(v),
+                    // A cash tin has no card network to print.
+                    scheme: v === 'cash' ? '' : draft.scheme,
+                  })
+                }}
+                className={inputCls() + ' appearance-none pr-11 text-[16px] cursor-pointer'
+                  + ' [color-scheme:light] dark:[color-scheme:dark]'}
+              >
+                {TYPE_OPTIONS.map(t => (
+                  <option key={t.value} value={t.value}>{t.label}</option>
+                ))}
+              </select>
+              <span
+                className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none
+                  text-slate-400 dark:text-slate-500"
+                aria-hidden="true"
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M6 9l6 6 6-6" />
+                </svg>
+              </span>
+            </div>
           </div>
 
           {!isCredit && (
             <div>
-              <SectionLabel hint="Decides which group it lands in, and which total it feeds.">
-                Counts as
-              </SectionLabel>
+              <SectionLabel>Counts as</SectionLabel>
               <Segmented options={ROLE_OPTIONS} value={draft.role} onChange={(v) => set({ role: v })} />
               <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-2 px-1">
                 {ROLE_OPTIONS.find(r => r.value === draft.role)?.hint}
@@ -1017,7 +1014,7 @@ export default function AccountNew() {
 
           {!isCredit && (
             <div>
-              <SectionLabel hint="What is in it right now. You can change this later.">
+              <SectionLabel hint="What is in it right now.">
                 Opening balance
               </SectionLabel>
               <div className="relative">
@@ -1034,9 +1031,7 @@ export default function AccountNew() {
 
           {draft.type !== 'cash' && (
             <div>
-              <SectionLabel hint="Printed on the card face, like the real thing.">
-                Card network
-              </SectionLabel>
+              <SectionLabel>Card network</SectionLabel>
               {/* The marks themselves, in a row you swipe - the same control
                   as the colours, for the same reason: five boxed tiles in a
                   3+2 grid left an orphan row, and a box around a logo is a
@@ -1052,12 +1047,15 @@ export default function AccountNew() {
                   scheme-ink is what makes them legible here: the on-card
                   treatment hardcodes white, which was invisible against the
                   light-mode tile this replaces. */}
+              {/* px-5 -mx-5 and no centring spacers, unlike the colour row.
+                  "None" is the default and it belongs at the left margin with
+                  everything else on the page - a default floated to the middle
+                  of the screen reads as a choice already made. */}
               <div
                 ref={schemeRef}
-                className="flex items-center gap-1 overflow-x-auto no-scrollbar snap-x -mx-5"
+                className="flex items-center gap-1 overflow-x-auto no-scrollbar snap-x px-5 -mx-5"
                 style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
               >
-                <span className="shrink-0" style={{ width: 'calc(50% - 40px)' }} aria-hidden="true" />
                 {SCHEME_OPTIONS.map(o => {
                   const on = draft.scheme === o.value
                   return (
@@ -1089,7 +1087,6 @@ export default function AccountNew() {
                     </button>
                   )
                 })}
-                <span className="shrink-0" style={{ width: 'calc(50% - 40px)' }} aria-hidden="true" />
               </div>
             </div>
           )}
