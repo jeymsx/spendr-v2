@@ -222,50 +222,50 @@ html.dark body {
 }
 
 /* ── Card face designs ───────────────────────────────────────────────────────
-   Each is a decorative layer over the brand gradient, never a replacement -
-   see lib/cardDesigns.js for why. White at low alpha throughout, so the same
-   pattern reads over an e-wallet green and a near-black credit card without
-   a per-brand variant.
+   Decoration over the brand gradient, never a replacement - lib/cardDesigns.js
+   says why.
 
-   Percentages in the SVG viewBox rather than pixels, with background-size
-   cover, so a pattern is the same shape on a 350px carousel card, a 170px
-   filter tile and the portrait preview - which is the mistake the wallet
-   silhouette made once already, and the reason it now measures itself.
+   ── The constraint that shaped all of these ──
+
+   The brand gradients were solved to land white text at exactly 4.5:1 through
+   the existing overlay stack (grain at 0.10 grey, sheen at 0.08 white,
+   watermark at 0.10 white). Measured, that leaves ZERO headroom: a flat white
+   design layer at even 0.06 alpha drops BPI from 4.55:1 to 4.14, GCash to
+   4.13 and MariBank to 4.12. Every one of them fails.
+
+   So none of these is a flat wash. Light shapes are masked to the card's
+   middle band, away from the top strip that carries the name and balance and
+   off the bottom edge that carries the currency and network mark. Dark shapes
+   need no mask at all - they push contrast UP, which is why `onyx` can be the
+   boldest of the set.
+
+   That is also what the references actually do, looking again: their art sits
+   opposite the text rather than under it.
+
+   Percentages on a 100x100 viewBox with preserveAspectRatio none, so a design
+   is the same composition on a 350px carousel card, a 170px filter tile and
+   the portrait preview.
 
    `classic` needs no rule: --card-pattern falls back to none.                */
 
-.acct-card[data-design='aurora'] {
-  --card-pattern:
-    radial-gradient(38% 52% at 18% 82%, rgba(255, 255, 255, 0.16), transparent 70%),
-    radial-gradient(46% 60% at 88% 22%, rgba(255, 255, 255, 0.11), transparent 72%);
-}
-
-.acct-card[data-design='ripple'] {
-  /* Concentric arcs struck from the bottom-left corner. Drawn as strokes on a
-     100x100 viewBox with preserveAspectRatio none, so they stretch with the
-     card the way a printed pattern would. */
-  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='0.13'%3E%3Ccircle cx='4' cy='104' r='30' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='48' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='66' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='84' stroke-width='1.2'/%3E%3Ccircle cx='4' cy='104' r='102' stroke-width='1.2'/%3E%3C/g%3E%3C/svg%3E");
+.acct-card[data-design='orbit'] {
+  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0.14' stop-color='%23000'/%3E%3Cstop offset='0.36' stop-color='%23fff'/%3E%3Cstop offset='0.72' stop-color='%23fff'/%3E%3Cstop offset='0.93' stop-color='%23000'/%3E%3C/linearGradient%3E%3Cmask id='b'%3E%3Crect width='100' height='100' fill='url(%23f)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23b)' fill='%23fff'%3E%3Ccircle cx='104' cy='50' r='88' fill-opacity='0.05'/%3E%3Ccircle cx='104' cy='50' r='66' fill-opacity='0.05'/%3E%3Ccircle cx='104' cy='50' r='44' fill-opacity='0.05'/%3E%3Ccircle cx='104' cy='50' r='22' fill-opacity='0.05'/%3E%3C/g%3E%3C/svg%3E");
   --card-pattern-size: 100% 100%;
 }
 
-.acct-card[data-design='wave'] {
-  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cpath d='M0 62 C 26 38, 52 86, 100 46 L100 100 L0 100 Z' fill='%23ffffff' fill-opacity='0.10'/%3E%3Cpath d='M0 74 C 30 52, 58 96, 100 62 L100 100 L0 100 Z' fill='%23ffffff' fill-opacity='0.07'/%3E%3C/svg%3E");
+.acct-card[data-design='bloom'] {
+  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0.14' stop-color='%23000'/%3E%3Cstop offset='0.36' stop-color='%23fff'/%3E%3Cstop offset='0.72' stop-color='%23fff'/%3E%3Cstop offset='0.93' stop-color='%23000'/%3E%3C/linearGradient%3E%3Cmask id='b'%3E%3Crect width='100' height='100' fill='url(%23f)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23b)'%3E%3Cellipse cx='84' cy='54' rx='44' ry='36' fill='%23fff' fill-opacity='0.085'/%3E%3Cellipse cx='40' cy='64' rx='30' ry='24' fill='%23fff' fill-opacity='0.05'/%3E%3C/g%3E%3Cellipse cx='4' cy='98' rx='44' ry='30' fill='%23000' fill-opacity='0.10'/%3E%3C/svg%3E");
   --card-pattern-size: 100% 100%;
 }
 
-.acct-card[data-design='weave'] {
-  /* The one genuinely repeating pattern, so it tiles at a fixed size rather
-     than stretching - a weave that scaled with the card would read as coarse
-     on a big card and as a flat wash on a small one. */
-  --card-pattern: repeating-linear-gradient(
-    58deg,
-    rgba(255, 255, 255, 0.055) 0px,
-    rgba(255, 255, 255, 0.055) 1px,
-    transparent 1px,
-    transparent 7px
-  );
-  --card-pattern-size: auto;
-  --card-pattern-repeat: repeat;
+.acct-card[data-design='sweep'] {
+  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cdefs%3E%3ClinearGradient id='f' x1='0' y1='0' x2='0' y2='1'%3E%3Cstop offset='0.14' stop-color='%23000'/%3E%3Cstop offset='0.36' stop-color='%23fff'/%3E%3Cstop offset='0.72' stop-color='%23fff'/%3E%3Cstop offset='0.93' stop-color='%23000'/%3E%3C/linearGradient%3E%3Cmask id='b'%3E%3Crect width='100' height='100' fill='url(%23f)'/%3E%3C/mask%3E%3C/defs%3E%3Cg mask='url(%23b)' fill='%23fff'%3E%3Cpath d='M-12 104 L 64 -8 L 96 -8 L 20 104 Z' fill-opacity='0.075'/%3E%3Cpath d='M28 104 L 104 -8 L 124 -8 L 48 104 Z' fill-opacity='0.045'/%3E%3C/g%3E%3C/svg%3E");
+  --card-pattern-size: 100% 100%;
+}
+
+.acct-card[data-design='onyx'] {
+  --card-pattern: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100' preserveAspectRatio='none'%3E%3Cellipse cx='12' cy='96' rx='56' ry='38' fill='%23000' fill-opacity='0.15'/%3E%3Ccircle cx='98' cy='4' r='44' fill='%23000' fill-opacity='0.11'/%3E%3Cellipse cx='70' cy='58' rx='34' ry='26' fill='%23fff' fill-opacity='0.05'/%3E%3C/svg%3E");
+  --card-pattern-size: 100% 100%;
 }
 
 .acct-card::before,

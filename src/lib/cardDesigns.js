@@ -26,32 +26,49 @@ export const CARD_DESIGNS = [
     blurb: 'Just the brand gradient, with the grain and sheen the cards have always had.',
   },
   {
-    key: 'aurora',
-    name: 'Aurora',
-    blurb: 'Two soft orbs, low and wide, the way light pools behind frosted plastic.',
+    key: 'orbit',
+    name: 'Orbit',
+    blurb: 'Concentric bands widening off the right edge, the way light falls across moulded plastic.',
   },
   {
-    key: 'ripple',
-    name: 'Ripple',
-    blurb: 'Concentric arcs from the bottom corner, like a struck surface settling.',
+    key: 'bloom',
+    name: 'Bloom',
+    blurb: 'Soft overlapping orbs, lit from the right and weighted at the lower left.',
   },
   {
-    key: 'wave',
-    name: 'Wave',
-    blurb: 'One long curve across the face, dividing it without drawing a line.',
+    key: 'sweep',
+    name: 'Sweep',
+    blurb: 'Two broad diagonals cutting across the middle, wide enough to read as light.',
   },
   {
-    key: 'weave',
-    name: 'Weave',
-    blurb: 'A fine diagonal weft. Closest to a real card’s embossed texture.',
+    key: 'onyx',
+    name: 'Onyx',
+    blurb: 'Deep tonal shapes rather than highlights. The darkest and most formal of the five.',
   },
 ]
+
+/**
+ * Earlier keys, kept working.
+ *
+ * The first pass at these was ripple, wave and weave - hairline strokes and a
+ * fine diagonal weft, which read as artefacts rather than art. The concepts
+ * that survived were rebuilt bolder under new names, so the old keys map onto
+ * their nearest replacement instead of falling back to classic and silently
+ * losing a choice someone had already made.
+ */
+const ALIASES = {
+  aurora: 'bloom',
+  ripple: 'orbit',
+  wave: 'sweep',
+  weave: 'onyx',
+}
 
 export const DEFAULT_DESIGN = 'classic'
 
 /** A stored value that is no longer a known design must not render as blank. */
 export function normalizeDesign(key) {
-  return CARD_DESIGNS.some(d => d.key === key) ? key : DEFAULT_DESIGN
+  const resolved = ALIASES[key] ?? key
+  return CARD_DESIGNS.some(d => d.key === resolved) ? resolved : DEFAULT_DESIGN
 }
 
 export function designMeta(key) {
