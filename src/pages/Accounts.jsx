@@ -255,8 +255,19 @@ function SummaryBar({ summary, hidden, onToggleHide, accentColor, theme }) {
  * coloured tiles, so the face is sized by aspect-ratio and never by a height.
  */
 const CARD_RATIO = 1.586
-/** How much of each card in a stack stays visible above the next one. */
-const STACK_STRIP = 76
+/**
+ * How much of each card in a stack stays visible above the next one.
+ *
+ * Measured, not chosen: the strip's content - brand mark, name, subtitle and
+ * balance - ends 47.5px below the card's top edge at 390px wide. 76px left
+ * 28.5px of empty gradient under the text on every card but the last, which
+ * read as the cards being spaced apart rather than stacked.
+ *
+ * 58 keeps 10.5px of clearance, near-symmetric with the card's own 14px of
+ * top padding, and enough that the next card's drop shadow does not fall
+ * across the subtitle above it. Below about 52 it does.
+ */
+const STACK_STRIP = 58
 
 /**
  * One account, as a card face.
