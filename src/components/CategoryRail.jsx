@@ -63,9 +63,20 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
     <div
       ref={railRef}
       /* -mx-4 px-4 against the form's own px-4, so a tile can sit flush with
-         the screen edge and be visibly cut off. py-1 gives the selected
-         tile's ring somewhere to live; without it the row clipped it. */
-      className={`flex gap-2.5 overflow-x-auto no-scrollbar snap-x -mx-4 px-4 py-1 ${className}`}
+         the screen edge and be visibly cut off.
+
+         gap-1.5, and the tile below is only 4px wider than its icon. The
+         first version had 68px tiles around 52px icons, so every visible gap
+         was 10px of gap plus 16px of slack INSIDE the tiles either side - 26px
+         of air that read as the row being spread out, when it was really the
+         tiles being padded. Hugging the icon puts the measured gap and the
+         perceived gap back in agreement: 10px now.
+
+         It also fits. Six tiles at 54 plus five gaps at 6 is 354, inside the
+         358 a 390px screen leaves after the form's padding - so the whole set
+         is visible without a swipe, and the row only scrolls for someone who
+         has added more. */
+      className={`flex gap-1.5 overflow-x-auto no-scrollbar snap-x -mx-4 px-4 py-1 ${className}`}
       style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
       role="radiogroup"
       aria-label="Category"
@@ -80,19 +91,18 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
             onClick={() => onSelect(cat)}
             role="radio"
             aria-checked={on}
-            className="shrink-0 snap-start w-[68px] flex flex-col items-center gap-1.5
+            className="shrink-0 snap-start w-[54px] flex flex-col items-center gap-1.5
               active:scale-95 transition-transform duration-75"
           >
+            {/* The wash, the rim and the selected ring all live in .cat-tile
+                in index.css - only the colour comes from here, because both
+                themes have to derive from it and an inline style cannot
+                answer a theme. */}
             <span
-              className={[
-                'w-[52px] h-[52px] rounded-2xl flex items-center justify-center text-[24px] leading-none',
-                'transition-shadow duration-150',
-                on ? 'ring-2 ring-primary' : '',
-              ].join(' ')}
-              /* The category's colour still does the identifying, at the same
-                 20% tint the transaction rows and the bill rows use, so a
-                 category looks like itself everywhere in the app. */
-              style={{ backgroundColor: (cat.color ?? '#64748b') + (on ? '2e' : '20') }}
+              data-on={on}
+              className="cat-tile w-[50px] h-[50px] rounded-[15px] flex items-center
+                justify-center text-[23px] leading-none transition-shadow duration-150"
+              style={{ '--cat-color': cat.color ?? '#64748b' }}
             >
               {cat.icon ?? '🏷️'}
             </span>

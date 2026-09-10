@@ -924,6 +924,57 @@ html.dark body {
   color: rgba(255, 255, 255, 0.52);
 }
 
+/* ── Category tile ───────────────────────────────────────────────────────────
+   The icon square in the add-expense category rail.
+
+   It began as a flat `cat.color + '20'` inline background, which is what the
+   transaction and bill ROWS use - and those sit on a card, while these sit on
+   the bare page. Measured, 12.5% of #ef4444 over #0b0f14 composites to
+   rgb(40,21,19): technically red, visually just dark. Six of them in a row
+   read as a strip of grey squares with emoji on top.
+
+   So the wash is composited over the card's own base rather than over the
+   page, which is the same layering .card-solid uses, and the dark side gets a
+   stronger mix because it has further to travel. The hairline rim in the
+   category's own colour is what actually makes each tile read as ITS colour
+   at 50px - a rim is a hard edge against a known neighbour, where a fill is a
+   shade you have to judge in isolation.
+
+   This is a class and not an inline style because an inline style cannot
+   answer a theme: one --cat-color comes in from the JSX and both themes derive
+   from it here. Same shape as .seg-active and .upcoming-badge. */
+.cat-tile {
+  --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 15%, transparent);
+  background:
+    linear-gradient(var(--cat-wash), var(--cat-wash)),
+    #ffffff;
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--cat-color, #64748b) 26%, transparent),
+    0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+.dark .cat-tile {
+  --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 26%, transparent);
+  background:
+    linear-gradient(var(--cat-wash), var(--cat-wash)),
+    rgba(40, 60, 95, 0.22);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--cat-color, #64748b) 34%, transparent),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Selected: an INSET accent ring, deliberately.
+
+   An outset ring is the obvious choice and it does not survive a tight row -
+   at 50px squares with 6px between them, a 2px ring plus the page-coloured
+   gap it needs to read against reaches within a pixel of the next tile. Inset
+   costs no layout at all, so the row can be as tight as the labels allow. */
+.cat-tile[data-on='true'] {
+  box-shadow:
+    inset 0 0 0 2px var(--color-primary),
+    inset 0 0 0 12px color-mix(in srgb, var(--cat-color, #64748b) 10%, transparent);
+}
+
 /* ── Quick-action count badge ──────────────────────────────────────────────────
    The notification disc on a home-screen quick action: "there is something on
    this tab you need to look at". It straddles the disc's edge, so it sits over
