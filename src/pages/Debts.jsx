@@ -74,8 +74,21 @@ function getInitials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase()
 }
 
-function getAvatarColor(name) {
-  const COLORS = ['#ef4444','#f97316','#f59e0b','#22c55e','#2D9DFF','#8b5cf6','#ec4899','#14b8a6','#6366f1','#06b6d4']
+export function getAvatarColor(name) {
+  /* Solved for white initials, not picked for looks.
+ 
+     The first version used the raw Tailwind 500s, and measured against white
+     14px bold text every single one failed AA - from #6366f1 indigo at 4.47:1
+     down to #f59e0b amber at 2.15:1, which is barely legible. Each is darkened
+     to the least amount that clears 4.6:1, so the hue survives (these still
+     read as red, orange, amber, green...) while the initials are readable.
+ 
+     Pre-computed rather than solved at runtime: the palette is fixed, so there
+     is nothing to solve per render, and the values can be asserted in a test. */
+  const COLORS = [
+    '#d53d3d', '#bd5711', '#a26907', '#178640', '#2378c4',
+    '#8458ea', '#cb3e84', '#0e8377', '#6264ed', '#048096',
+  ]
   let hash = 0
   for (let i = 0; i < (name?.length ?? 0); i++) hash = (hash * 31 + name.charCodeAt(i)) & 0xffffffff
   return COLORS[Math.abs(hash) % COLORS.length]
@@ -279,7 +292,10 @@ function DebtCard({ debt, onEdit, onPayment }) {
         <div className="border-t border-slate-100 dark:border-white/[0.06]">
           <button
             onClick={() => onPayment(debt)}
-            className="w-full py-3 text-[13px] font-semibold text-primary
+            /* accent-ink, not text-primary. Measured in light mode, the raw
+               accent is 2.85:1 here and 13px bold does not qualify for the
+               large-text exemption, so it needed the shift. */
+            className="w-full py-3 text-[13px] font-semibold accent-ink
               active:bg-primary/[0.06] transition-colors"
           >
             Record a payment

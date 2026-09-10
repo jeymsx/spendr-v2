@@ -4,6 +4,16 @@ import tailwindcss from '@tailwindcss/vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
 export default defineConfig({
+  server: {
+    watch: {
+      // scripts/ holds the AST checkers, which are run against src rather than
+      // being part of it. Without this, editing one - or having one appear and
+      // then be deleted - invalidates the module graph and the dev server
+      // serves a blank page with no console error, which looks exactly like a
+      // bug in whatever you changed last. That cost real debugging time.
+      ignored: ['**/scripts/**'],
+    },
+  },
   build: {
     // Explicit vendor chunks → stable filenames → better long-term caching
     rollupOptions: {

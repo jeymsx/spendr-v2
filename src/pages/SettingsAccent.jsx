@@ -48,12 +48,20 @@ const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
       {/* The tilt goes on THIS layer, not on the snap child above it.
  
           Chrome computes a scroll-snap area from the element's TRANSFORMED
-          box, not its layout box - which I had assumed the other way round.
-          Since the transform here is a function of scroll position, putting
-          it on the snap child made the snap points move as you scrolled: a
-          feedback loop, measured as a scrollTo asking for card 3, settling on
-          card 1, and resting 58px off any centre. That is what "fighting in
-          positioning" was.
+          box, not its layout box. Since the transform here is a function of
+          scroll position, putting it on the snap child made the snap points
+          move as you scrolled: a feedback loop, measured as a scrollTo asking
+          for card 3, settling on card 1, and resting 58px off any centre.
+          That is what "fighting in positioning" was.
+ 
+          The precise rule is narrower than "never transform a snap child",
+          and worth stating because the card style step in AccountNew does
+          exactly that and is fine: with snap-center, only a transform that
+          moves the element's CENTRE can move its snap point. rotateY, scale
+          and translateZ are all symmetric about the centre, so AccountNew's
+          `rotateY + translateZ + scale` leaves its snap points alone -
+          measured, offBy 0 on every card. translateX is the one that moves
+          the centre, and it is the one this deck needs.
  
           One layer down, the snap child's box is untouched and its snap point
           is fixed, while the visual can be moved as freely as it likes.

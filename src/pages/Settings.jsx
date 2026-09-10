@@ -1131,7 +1131,15 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
                             {budget > 0 && (
-                              <p className="text-[10px] tabular-nums mt-0.5" style={{ color: accentHex ?? 'rgb(148 163 184)' }}>
+                              // tone-ink, because amber and red here are FILL
+                              // colours: at 10px they measured 2.15:1 in light
+                              // mode. The class shifts them per theme, which an
+                              // inline colour cannot do - mixing toward black
+                              // would be exactly wrong on a dark background.
+                              <p
+                                className={accentHex ? 'tone-ink text-[10px] tabular-nums mt-0.5' : 'text-[10px] tabular-nums mt-0.5 text-slate-500 dark:text-slate-400'}
+                                style={accentHex ? { '--tone': accentHex } : undefined}
+                              >
                                 {fmt(spent)} spent
                               </p>
                             )}
@@ -1140,7 +1148,7 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
                             'shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums',
                             over ? 'bg-red-50 dark:bg-red-500/15 text-red-500 dark:text-red-400'
                               : warn ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                              : budget > 0 ? 'bg-primary/[0.08] dark:bg-primary/[0.14] text-primary'
+                              : budget > 0 ? 'bg-primary/[0.08] dark:bg-primary/[0.14] accent-ink'
                               : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500',
                           ].join(' ')}>
                             {budget > 0 ? fmt(budget) : '+ Limit'}
@@ -3047,7 +3055,7 @@ export default function Settings() {
               {displayName || user?.email?.split('@')[0] || 'Your Name'}
             </p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 text-primary">
+              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 accent-ink">
                 {currency}
               </span>
               {user?.email && (

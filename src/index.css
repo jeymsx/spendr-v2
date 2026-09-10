@@ -1139,6 +1139,41 @@ html.dark body {
 .no-scrollbar::-webkit-scrollbar { display: none; width: 0; height: 0; }
 
 /* ── Safe-area helpers ────────────────────────────────── */
+/* Any semantic tone, shifted until it is readable as small text.
+ 
+   Same problem as .accent-ink, one level more general: amber and red are
+   chosen to read as fills on a bar, and at 10px on a light card the amber
+   measured 2.15:1. The tone arrives as --tone so one class serves every
+   colour, and the mix flips direction per theme - toward black on light,
+   toward white on dark - which is the part an inline style cannot do. */
+.tone-ink {
+  color: color-mix(in srgb, var(--tone, #64748b) 72%, black);
+}
+
+.dark .tone-ink {
+  color: color-mix(in srgb, var(--tone, #94a3b8) 88%, white);
+}
+
+/* The accent, shifted until it is readable as small text.
+
+   Use .accent-ink anywhere the accent is TEXT rather than a fill. The raw
+   accent is a fill colour: measured, #2D9DFF is 2.85:1 on white and the
+   lighter accents are far worse - Honey is 1.6:1 - so accent text under
+   18.66px bold fails AA everywhere in light mode.
+
+   Mixing toward black in light and toward white in dark keeps the hue while
+   clearing 4.5:1: 5.1:1 and 7.1:1 for the default blue.
+
+   .budget-tone-ok below is the same formula under an older, page-specific
+   name; it predates this one and is left alone rather than churned. */
+.accent-ink {
+  color: color-mix(in srgb, var(--color-primary) 72%, black);
+}
+
+.dark .accent-ink {
+  color: color-mix(in srgb, var(--color-primary) 88%, white);
+}
+
 /* The accent, shifted until it is readable as small text.
 
    The raw accent is a fill colour, not a text colour: #2D9DFF measures

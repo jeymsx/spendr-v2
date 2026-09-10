@@ -1,9 +1,12 @@
 import { useState, useRef, useEffect, useLayoutEffect, Suspense } from 'react'
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ErrorBoundary from '../components/ErrorBoundary'
 import AddActionSheet from '../components/AddActionSheet'
 import { useSyncManager } from '../components/SyncManager'
+import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
+import { isSupabaseConfigured } from '../lib/supabase'
 import WhatsNewModal, { CURRENT_VERSION } from '../components/WhatsNewModal'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -21,6 +24,21 @@ function PageFallback() {
 export default function AppLayout() {
   const [sheetOpen, setSheetOpen] = useState(false)
   const { runSync } = useSyncManager()
+  const { user } = useAuth()
+  const { showToast } = useToast()
+  const navigate = useNavigate()
+
+  /**
+   * Whether pulling can actually do anything.
+   *
+   * runSync returns immediately when there is no user, so signed out the
+   * gesture did nothing at all - the affordance appeared, you pulled, and
+   * nothing happened or was said. Hiding it was the other option and it is
+   * worse: someone signed out would never learn that syncing exists.
+   *
+   * So the affordance stays and tells the truth instead.
+   */
+  const canSync = Boolean(user?.id) && isSupabaseConfigured
 
   const whatsNewMeta = useLiveQuery(async () => (await db.meta.get('whatsNewSeen')) ?? null, [], undefined)
   // undefined = still loading, null = key missing, object = key found
@@ -31,8 +49,22 @@ export default function AppLayout() {
   const touchStartY = useRef(-1)
   const [pullState, setPullState] = useState('idle') // idle | pulling | ready
   const runSyncRef   = useRef(runSync)
+  const canSyncRef   = useRef(canSync)
+  const promptRef    = useRef(null)
   const pathnameRef  = useRef(location.pathname)
   useEffect(() => { runSyncRef.current  = runSync },          [runSync])
+  useEffect(() => { canSyncRef.current  = canSync },          [canSync])
+  // Refs, because the touch listeners are bound once with an empty dep array;
+  // reading canSync directly would capture its first value forever.
+  useEffect(() => {
+    promptRef.current = () => showToast(
+      isSupabaseConfigured ? 'Sign in to sync' : 'Cloud sync is not set up',
+      'warning',
+      isSupabaseConfigured
+        ? { actionLabel: 'Settings', onAction: () => navigate('/settings') }
+        : {},
+    )
+  }, [showToast, navigate])
   useEffect(() => { pathnameRef.current = location.pathname }, [location.pathname])
 
   // Disable browser scroll restoration so it can't override our manual reset
@@ -70,7 +102,10 @@ export default function AppLayout() {
       const dy = e.changedTouches[0].clientY - touchStartY.current
       touchStartY.current = -1
       setPullState('idle')
-      if (dy > 64) runSyncRef.current()
+      if (dy > 64) {
+        if (canSyncRef.current) runSyncRef.current()
+        else promptRef.current?.()
+      }
     }
 
     el.addEventListener('touchstart', onTouchStart, { passive: true })
@@ -101,7 +136,9 @@ export default function AppLayout() {
         <div className={`flex items-center justify-center overflow-hidden transition-all duration-200 text-xs font-medium text-primary/70 ${
           pullState !== 'idle' ? 'h-9' : 'h-0'
         }`}>
-          {pullState === 'ready' ? '↑ Release to sync' : '↓ Pull to sync'}
+          {!canSync
+            ? (pullState === 'ready' ? '↑ Release — sign in to sync' : '↓ Sync needs an account')
+            : (pullState === 'ready' ? '↑ Release to sync' : '↓ Pull to sync')}
         </div>
 
         {/* pb-nav ensures content isn't hidden under the fixed navbar */}
