@@ -527,7 +527,7 @@ function FilterModal({
                 categories={catOpts}
                 selected={catOpts.find(c => c.name === categoryFilter) ?? null}
                 onSelect={c => setCategoryFilter(prev => prev === c.name ? null : c.name)}
-                bleed="-mx-5 px-5"
+                gutter={20}
               />
             </div>
           )}

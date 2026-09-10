@@ -29,7 +29,7 @@ import CategoryGlyph from './CategoryGlyph'
  * would need the .seg-active correction to clear 4.5:1, and there is nothing
  * for the colour to say that the ring above it has not already said.
  */
-export default function CategoryRail({ categories = [], selected, onSelect, className = '', bleed = '-mx-4 px-4' }) {
+export default function CategoryRail({ categories = [], selected, onSelect, className = '', gutter = 16 }) {
   const railRef = useRef(null)
 
   /**
@@ -63,11 +63,26 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
   return (
     <div
       ref={railRef}
-      /* `bleed` cancels the container's own horizontal padding and re-adds it
-         inside the scroller, so a tile can sit flush with the edge and be
-         visibly cut off. It is a prop because the add-expense form is px-4 and
-         the filter sheet is px-5, and a 1px mismatch reads as a misaligned
-         row.
+      /* `gutter` is the container's own horizontal padding, in px. The rail
+         cancels it with a negative margin and re-adds it inside the scroller,
+         so a tile can sit flush with the screen edge and be visibly cut off.
+         A number rather than a class string because the third value below has
+         to match it exactly, and two hand-written Tailwind classes that must
+         agree is a bug waiting to happen - the callers already disagree, the
+         form being px-4 and the filter sheet px-5.
+
+         scrollPaddingInline is the load-bearing one, and it is not optional.
+         `snap-start` aligns an item's start edge to the SNAPPORT's start
+         edge, and the snapport defaults to the padding box - so the browser
+         snapped the first tile flush to the container edge and ate the 20px
+         of padding, putting it 20px left of the section label and the button.
+         Measured: scrollLeft settled at exactly 20, the padding's own value.
+         scroll-padding moves the snapport inward by the same amount, so the
+         resting position becomes 0 and the padding survives.
+
+         Invisible on the add-expense form, incidentally, because six
+         categories fit without scrolling and a rail with nothing to scroll
+         never snaps.
 
          gap-1.5, and the tile below is only 4px wider than its icon. The
          first version had 68px tiles around 52px icons, so every visible gap
@@ -80,8 +95,14 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
          358 a 390px screen leaves after the form's padding - so the whole set
          is visible without a swipe, and the row only scrolls for someone who
          has added more. */
-      className={`flex gap-1.5 overflow-x-auto no-scrollbar snap-x py-1 ${bleed} ${className}`}
-      style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
+      className={`flex gap-1.5 overflow-x-auto no-scrollbar snap-x py-1 ${className}`}
+      style={{
+        marginInline: -gutter,
+        paddingInline: gutter,
+        scrollPaddingInline: gutter,
+        touchAction: 'pan-x pan-y',
+        overscrollBehaviorX: 'contain',
+      }}
       role="radiogroup"
       aria-label="Category"
     >
