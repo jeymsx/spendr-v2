@@ -327,6 +327,11 @@ describe('learnLedger, against a real-shaped ledger', () => {
     expect(KNOW.category.load).toBe('Transpo')
   })
 
+  it('learns which direction a merchant means', () => {
+    expect(KNOW.type.payroll).toBe('inflow')
+    expect(KNOW.type.grab).toBe('expense')
+  })
+
   it('records a typical amount only once there are enough samples', () => {
     expect(KNOW.amount.grab).toMatchObject({ median: 165, n: 12 })
     expect(KNOW.amount.haircut).toBeUndefined()   // one sample is not a habit
@@ -432,6 +437,33 @@ describe('quickParse with a learned ledger', () => {
     expect(r.category).toBe('Transpo')
   })
 
+  it('books money coming in as an inflow, without the word being hardcoded', () => {
+    // "payroll" is not in INFLOW_WORDS and cannot be - a fixed list has no way
+    // to know what any given person calls their pay. Nine rows of it do.
+    const r = quickParse('40000 payroll', ctx())
+    expect(r.type).toBe('inflow')
+    expect(r.matched.type).toMatchObject({ via: 'history' })
+  })
+
+  it('lets your ledger overrule the inflow word list', () => {
+    // "interest" is in INFLOW_WORDS, for people with savings accounts. This
+    // user only ever pays it on a card. Getting the SIGN wrong is the one
+    // error that moves a balance the wrong way, so history has to win.
+    const r = quickParse('340 interest', ctx())
+    expect(r.type).toBe('expense')
+    expect(r.matched.type).toMatchObject({ via: 'history' })
+  })
+
+  it('still trusts the word list where the ledger has nothing to say', () => {
+    const r = quickParse('5000 bonus', ctx())
+    expect(r.type).toBe('inflow')
+    expect(r.matched.type).toMatchObject({ via: 'word', value: 'bonus' })
+  })
+
+  it('does not flip an ordinary expense', () => {
+    expect(quickParse('180 grab', ctx()).type).toBe('expense')
+  })
+
   it('offers a bill you already have instead of a duplicate', () => {
     expect(quickParse('549 netflix', ctx()).recurringMatch).toMatchObject({ name: 'Netflix', id: 1 })
   })
@@ -483,6 +515,8 @@ describe('the corpus - what must and must not be understood', () => {
     ['1300 shopee order',          'expense',    1300, 'Shopping',   'Maya'],
     ['100 load',                   'expense',     100, 'Transpo',    'GCash'],
     ['42000 salary',               'inflow',    42000, 'Salary',     null],
+    ['40000 payroll',              'inflow',    40000, 'Salary',     'BPI'],
+    ['340 interest',               'expense',     340, 'Bills',      'Maya Black'],
     // must NOT decide
     ['800 with mom',               'expense',     800, null,         null],
     ['450 fun run',                'expense',     450, null,         null],

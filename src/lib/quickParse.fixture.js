@@ -111,8 +111,17 @@ add(67, 'Registration', 'Others', 'GCash', 600)
 // ── Shopee: two words, both meaningful, consistent account ───────────────────
 for (let i = 0; i < 5; i++) add(8 + i * 24, 'Shopee order', 'Shopping', 'Maya', 900 + i * 200)
 
-// ── Inflow ───────────────────────────────────────────────────────────────────
+// ── Inflow, under a word no hardcoded list contains ──────────────────────────
+// "Payroll" is not in INFLOW_WORDS and never will be, because the list cannot
+// know what any given person calls their pay. Nine rows of it should be
+// enough for the parser to stop booking it as money going out.
 for (let i = 0; i < 9; i++) add(2 + i * 30, 'Payroll', 'Salary', 'BPI', 40000, 'inflow')
+
+// ── An inflow word that is, for this user, an expense ────────────────────────
+// "interest" IS in INFLOW_WORDS - it is in there for a savings account. This
+// user only ever pays it, on a credit card. The ledger has to win, or the
+// direction is wrong every single time in the one place it matters most.
+for (let i = 0; i < 5; i++) add(15 + i * 30, 'Interest', 'Bills', 'Maya Black', 340)
 
 // ── A row the app wrote, not the user ────────────────────────────────────────
 // Accounts.jsx writes this when you reconcile a balance. It is not a merchant

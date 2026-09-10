@@ -232,6 +232,8 @@ function median(nums) {
  *   category  what you file this under
  *   account   which account you pay it from - the field a model could never
  *             know, and the one that saves the most taps
+ *   type      expense or inflow, so money coming IN is not booked as going
+ *             out just because nobody hardcoded the word for it
  *   amount    { median, n }, so an order-of-magnitude typo can be questioned
  *   keys      every phrase worth matching against, longest-first at lookup
  *
@@ -255,30 +257,35 @@ export function learnLedger(transactions = [], opts = {}) {
     for (const { key, strong } of phrasesOf(tx.description)) {
       let s = stats.get(key)
       if (!s) {
-        s = { rows: 0, strong: false, cat: new Map(), acct: new Map(), amounts: [] }
+        s = { rows: 0, strong: false, cat: new Map(), acct: new Map(), kind: new Map(), amounts: [] }
         stats.set(key, s)
       }
       s.rows++
       if (strong) s.strong = true
       if (tx.category) s.cat.set(tx.category, (s.cat.get(tx.category) ?? 0) + w)
       if (tx.account) s.acct.set(tx.account, (s.acct.get(tx.account) ?? 0) + w)
+      if (tx.type) s.kind.set(tx.type, (s.kind.get(tx.type) ?? 0) + w)
       if (Number.isFinite(tx.amount) && tx.amount > 0) s.amounts.push(Math.abs(tx.amount))
     }
   }
 
-  const category = {}, account = {}, amount = {}
+  const category = {}, account = {}, type = {}, amount = {}
   for (const [key, s] of stats) {
     if (!s.strong && s.rows < MIN_ROWS_FOR_WORD) continue
     const c = winner(s.cat)
     if (c) category[key] = c
     const a = winner(s.acct)
     if (a) account[key] = a
+    const k = winner(s.kind)
+    if (k) type[key] = k
     if (s.amounts.length >= MIN_ROWS_FOR_AMOUNT) {
       amount[key] = { median: median(s.amounts), n: s.amounts.length }
     }
   }
 
-  const keys = [...new Set([...Object.keys(category), ...Object.keys(account)])]
+  const keys = [...new Set([
+    ...Object.keys(category), ...Object.keys(account), ...Object.keys(type),
+  ])]
 
   /*
     What a typo is allowed to reach, as [token, the key it stands for].
@@ -309,7 +316,7 @@ export function learnLedger(transactions = [], opts = {}) {
     }
   }
 
-  return { category, account, amount, keys, fuzzyTerms }
+  return { category, account, type, amount, keys, fuzzyTerms }
 }
 
 /**
@@ -471,6 +478,7 @@ export function quickParse(input, ctx = {}) {
   const know = knowledge ?? {
     category: merchantMap ?? {},
     account: {},
+    type: {},
     amount: {},
     keys: Object.keys(merchantMap ?? {}),
   }
@@ -542,9 +550,10 @@ export function quickParse(input, ctx = {}) {
     }
   }
 
-  if (INFLOW_WORDS.some(w => norm(rest).includes(w))) {
+  const inflowWord = INFLOW_WORDS.find(w => norm(rest).includes(w))
+  if (inflowWord) {
     result.type = 'inflow'
-    result.matched.type = INFLOW_WORDS.find(w => norm(rest).includes(w))
+    result.matched.type = { via: 'word', value: inflowWord }
   }
 
   // ── Account, as typed ──
@@ -651,6 +660,30 @@ export function quickParse(input, ctx = {}) {
     if (a && hasAccount(a)) {
       result.account = a
       result.matched.account = { via: 'history', value: phrase }
+    }
+  }
+
+  // ── Direction, corrected against what you have actually done ──
+  //
+  // INFLOW_WORDS above is a fixed English-and-Tagalog list, and a fixed list
+  // cannot know your words. "Sideline", "Padala", "Rental", the name of the
+  // person who pays you - all money coming IN, all booked as going OUT,
+  // because nobody hardcoded them. Getting the SIGN wrong is the worst
+  // mistake this parser can make: every other field is a mis-filing you can
+  // see, and this one moves the balance the wrong way, twice over.
+  //
+  // So the ledger overrides the list, in both directions, for the same reason
+  // it overrides SEED_MERCHANTS: nine rows of your own behaviour is better
+  // evidence than a word someone guessed at. "Interest" is in the list as an
+  // inflow, but if you have only ever paid interest on a card, it is yours.
+  //
+  // Transfers never reach here - that branch returns early - so this only
+  // ever chooses between expense and inflow.
+  if (phrase) {
+    const learnedType = know.type?.[phrase]
+    if ((learnedType === 'inflow' || learnedType === 'expense') && learnedType !== result.type) {
+      result.type = learnedType
+      result.matched.type = { via: 'history', value: phrase }
     }
   }
 
