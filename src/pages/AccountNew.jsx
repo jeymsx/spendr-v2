@@ -335,7 +335,7 @@ function PortraitCard({ draft, turned }) {
   )
 }
 
-function StyleStep({ draft, set, nameProblem }) {
+function StyleStep({ draft, set }) {
   const railRef = useRef(null)
   const [turned, setTurned] = useState(false)
   const activeIdx = Math.max(0, CARD_DESIGNS.findIndex(d => d.key === normalizeDesign(draft.design)))
@@ -628,9 +628,11 @@ function StyleStep({ draft, set, nameProblem }) {
         )}
       </div>
 
-      {nameProblem && (
-        <p className="text-xs text-red-500 dark:text-red-400 mt-3 px-5 text-center">{nameProblem}</p>
-      )}
+      {/* No error here. The name cannot be edited on this step, and step one
+          will not let a duplicate through - so the only way to arrive with a
+          bad name is another device syncing one while you stood on this
+          screen. save() already handles that by dropping back to step one,
+          where the field shows the reason next to itself. */}
     </section>
   )
 }
@@ -770,10 +772,19 @@ export default function AccountNew() {
     document.getElementById('app-main')?.scrollTo({ top: 0, behavior: 'auto' })
   }, [step])
 
+  const nameRef = useRef(null)
+
   function next() {
     if (current === 'institution') {
       setTouchedName(true)
-      if (nameProblem) return
+      if (nameProblem) {
+        // The button is disabled, so this only runs when something else calls
+        // next() - but keeping the scroll here means the reason is always one
+        // place, whatever route gets here.
+        nameRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+        nameRef.current?.focus()
+        return
+      }
     }
     setStep(s => Math.min(s + 1, steps.length - 1))
   }
@@ -857,7 +868,7 @@ export default function AccountNew() {
       <StepProgress steps={steps} index={steps.indexOf(current)} className="mt-1 shrink-0" />
 
       {current === 'style' ? (
-        <StyleStep draft={draft} set={set} nameProblem={nameProblem} />
+        <StyleStep draft={draft} set={set} />
       ) : (
         /* The card sat flush against the progress bar, which read as the two
            being one component. pt-3 separated them; pt-7 gives the card room
@@ -889,6 +900,7 @@ export default function AccountNew() {
                  it back to true. */
               onChange={e => { set({ name: e.target.value, fromPreset: false }); setTouchedName(true) }}
               placeholder="Search, or type any name"
+              ref={nameRef}
               className={inputCls(touchedName && !!nameProblem) + ' pl-10'}
             />
           </div>
@@ -1181,16 +1193,17 @@ export default function AccountNew() {
           padding was buying separation the empty space above had already
           bought. */}
       <div className="mt-auto flex flex-col items-center gap-2 px-5 pt-4">
-        {/* Why the button is dead, next to the dead button. Tapping a bank
-            you already have disables Continue, and the explanation used to
-            render under the manual-name field far down the page - so the
-            button greyed out for no visible reason. */}
-        {current === 'institution' && touchedName && nameProblem && (
-          <p className="max-w-[20rem] text-center text-[12px] font-medium
-            text-red-500 dark:text-red-400">
-            {nameProblem}
-          </p>
-        )}
+        {/* The duplicate error that used to sit here is gone. It was added
+            when the field it describes was far down the page and the button
+            was pinned to the bottom of the viewport - so the button greyed out
+            with no visible reason. Both halves of that have changed: the name
+            field is now the first thing on the step, and the button is in the
+            flow beneath it.
+
+            What replaced it is in next(): tapping the dead button scrolls the
+            field into view and focuses it. One message, next to its cause, and
+            the button still explains itself - by taking you to the reason
+            rather than reciting it. */}
         {current === 'style' ? (
           <button
             onClick={save}
