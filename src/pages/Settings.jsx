@@ -21,7 +21,9 @@ import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { syncToSheets } from '../lib/sheetsSync'
-import { IconCheck, IconChevronRight, IconPlus, IconUpload } from '../components/icons'
+import { IconCheck, IconChevronRight, IconPlus, IconUpload,
+  IconTick, IconWarning, IconTemplate, IconTransferUI } from '../components/icons'
+import CategoryGlyph from '../components/CategoryGlyph'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
@@ -1328,7 +1330,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
                 >
                   <span>{preset.icon}</span>
                   {preset.name}
-                  {exists && <span className="text-[10px] ml-0.5">✓</span>}
+                  {exists && <span className="ml-0.5"><IconTick size={11} /></span>}
                   {isAdding && (
                     <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin ml-0.5" />
                   )}
@@ -1893,7 +1895,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
           <div className="px-5 pt-5 pb-2">
             <div className="flex items-start gap-3 px-4 py-3.5 mb-5 rounded-2xl
               bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
-              <span className="text-xl shrink-0 mt-0.5">⚠️</span>
+              <span className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400"><IconWarning size={20} /></span>
               <div>
                 <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
                   {txCount} {txCount === 1 ? 'transaction uses' : 'transactions use'} this category
@@ -1993,7 +1995,7 @@ const tfmt = (v) => {
   return (n < 0 ? '−₱' : '₱') + _tFmt.format(Math.abs(n))
 }
 
-function TemplateRow({ tpl, catIcon, onTap, onLongPressDelete }) {
+function TemplateRow({ tpl, cat, onTap, onLongPressDelete }) {
   const timerRef = useRef(null)
   const firedRef = useRef(false)
   const [pressed, setPressed] = useState(false)
@@ -2016,7 +2018,9 @@ function TemplateRow({ tpl, catIcon, onTap, onLongPressDelete }) {
         ${pressed ? 'bg-slate-50 dark:bg-white/[0.06]' : ''}`}
     >
       <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-[18px] shrink-0 ${ts.bg}`}>
-        {tpl.type === 'transfer' ? '🔄' : (catIcon ?? '⚡')}
+        {tpl.type === 'transfer'
+                        ? <IconTransferUI size={16} />
+                        : <CategoryGlyph cat={cat} size={16} emoji="⚡" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{tpl.name}</p>
@@ -2376,7 +2380,7 @@ export function TemplateManagerSheet({ open, onClose }) {
           <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
             {(templates ?? []).length === 0 ? (
               <div className="py-14 text-center px-8">
-                <p className="text-3xl mb-3">⚡</p>
+                <p className="mb-3 flex justify-center text-slate-400 dark:text-slate-500"><IconTemplate size={30} /></p>
                 <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No templates yet</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
                   Add one below, or toggle "Save as template" when confirming any transaction
@@ -2389,7 +2393,7 @@ export function TemplateManagerSheet({ open, onClose }) {
                   <div key={tpl.id}>
                     <TemplateRow
                       tpl={tpl}
-                      catIcon={catMap[tpl.category]?.icon}
+                      cat={catMap[tpl.category]}
                       onTap={openEdit}
                       onLongPressDelete={deleteTpl}
                     />
@@ -3024,7 +3028,7 @@ export default function Settings() {
           />
           <RowDivider />
           <SettingsRow
-            iconEl={<RowIcon color="amber"><span className="text-base">⚡</span></RowIcon>}
+            iconEl={<RowIcon color="amber"><IconTemplate size={16} /></RowIcon>}
             label="Quick Templates"
             sublabel="One-tap repeat transactions"
             right={<IconChevronRight size={14} strokeWidth="2" />}
