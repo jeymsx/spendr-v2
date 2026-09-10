@@ -37,20 +37,53 @@ function fmtTime(isoStr) {
   return new Date(isoStr).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })
 }
 
-// ── Detail row ─────────────────────────────────────────────────────────────────
+// ── Detail rows ────────────────────────────────────────────────────────────────
 
-function DetailRow({ label, value, dot, sub }) {
+/**
+ * One row of an inset grouped list.
+ *
+ * These used to be separate rounded pills with 6px of air between them, which
+ * made three facts about one transaction look like three unrelated cards. Apple
+ * groups them: a single container, hairline separators, labels left and values
+ * right. Same information, a quarter of the visual noise.
+ *
+ * The separator is drawn by the row and skipped on the last one, so the group
+ * does not need to know its own length twice.
+ */
+function DetailRow({ label, value, dot, sub, isLast }) {
   return (
-    <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04]">
-      <span className="text-xs text-slate-400 dark:text-slate-500">{label}</span>
-      <div className="flex items-center gap-2 max-w-[65%]">
-        {dot && <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: dot }} />}
-        <div className="text-right">
-          <p className="text-sm font-medium text-slate-700 dark:text-slate-200 truncate">{value}</p>
-          {sub && <p className="text-[10px] text-slate-400 dark:text-slate-500">{sub}</p>}
+    <div className={`flex items-baseline justify-between gap-4 px-4 py-3 ${
+      isLast ? '' : 'border-b border-slate-100 dark:border-white/[0.06]'
+    }`}>
+      <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
+      <div className="flex items-baseline gap-2 min-w-0">
+        {dot && <span className="w-2 h-2 rounded-full shrink-0 self-center" style={{ backgroundColor: dot }} />}
+        <div className="text-right min-w-0">
+          <p className="text-[15px] font-medium text-slate-800 dark:text-white truncate">{value}</p>
+          {sub && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
         </div>
       </div>
     </div>
+  )
+}
+
+/** The container the rows sit in. */
+function DetailGroup({ children }) {
+  return (
+    <div className="rounded-2xl overflow-hidden
+      bg-slate-50 border border-slate-100
+      dark:bg-white/[0.03] dark:border-white/[0.06]">
+      {children}
+    </div>
+  )
+}
+
+function IconClose() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 6L6 18M6 6l12 12" />
+    </svg>
   )
 }
 
@@ -283,18 +316,41 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
     <div className="fixed inset-0" style={{ touchAction: 'none', zIndex }}>
       <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
 
+      {/* ── A floating card, not a slab ──
+
+          It was flush to the bottom edge with only its top corners rounded -
+          the Android bottom-sheet shape. iOS floats its action sheets: inset
+          from every edge, rounded all the way round, so the page is visibly
+          behind it rather than covered by it.
+
+          `card-solid` is the app's own material for exactly this - see
+          index.css, "opaque twin of .card, for anything that floats over a
+          full page". Opaque rather than blurred on purpose: a 20%-translucent
+          panel over a populated list shows the list through it, and
+          backdrop-filter would make this the containing block for the nested
+          pickers' position:fixed, so they would centre against this card
+          instead of the viewport.
+
+          The grab handle is gone with the slab. A handle says "drag me down
+          from this edge", and there is no edge to drag from any more; the
+          close button and the backdrop are the honest affordances.
+
+          None of this touches desktop: `html.web .sheet-panel` re-anchors the
+          panel as a centred modal at specificity (0,2,1), which beats every
+          utility class here. ── */}
       <div
         className={[
           closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[88vh] overflow-y-auto',
+          'card-solid absolute inset-x-3 rounded-[28px]',
+          'bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
+          'max-h-[86dvh] overflow-y-auto',
         ].join(' ')}
         style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
       >
-        <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+        {/* Not sticky any more. It was sticky with a hardcoded background to
+            match the panel, which card-solid's gradient would have shown a
+            seam against - and detail and delete both fit without scrolling. */}
+        <div className="pt-4 px-5 pb-1">
 
           {/* mode-aware header */}
           {mode === 'detail' && (
@@ -302,9 +358,20 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.badge}`}>
                 {cfg.label}
               </span>
-              <span className="text-xs text-slate-400 dark:text-slate-500">
-                {fmtDisplayDate(tx.date)} · {fmtTime(tx.date)}
-              </span>
+              {/* The timestamp used to live here AND in the Date row below,
+                  saying the same thing twice on a card with three facts on
+                  it. Dropping it here frees the corner for the close button
+                  the missing grab handle left the sheet without. */}
+              <button
+                onClick={close}
+                className="w-8 h-8 -mr-1 rounded-full flex items-center justify-center
+                  bg-slate-100 dark:bg-white/[0.07]
+                  text-slate-500 dark:text-slate-400
+                  active:scale-90 transition-transform duration-75"
+                aria-label="Close"
+              >
+                <IconClose />
+              </button>
             </div>
           )}
           {mode === 'edit' && (
@@ -323,10 +390,9 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
             </div>
           )}
           {mode === 'confirm-delete' && (
-            <div className="text-center pb-1">
-              <span className="text-2xl">🗑️</span>
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">
-                {planCount > 1 ? 'Delete Whole Plan?' : 'Delete Transaction?'}
+            <div className="text-center pt-2 pb-1">
+              <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white">
+                {planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?'}
               </h3>
             </div>
           )}
@@ -337,23 +403,39 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
           {/* ── DETAIL MODE ── */}
           {mode === 'detail' && (
             <>
-              {/* large amount */}
-              <div className="text-center py-4 mb-2">
-                <p className="text-[42px] font-bold tabular-nums leading-none" style={{ color: cfg.color }}>
+              {/* The figure, given room. Tighter tracking at this size: at
+                  42px the default spacing makes a long peso amount sprawl. */}
+              <div className="text-center pt-5 pb-6">
+                <p className="text-[40px] font-semibold tabular-nums leading-none tracking-tight"
+                  style={{ color: cfg.color }}>
                   {cfg.sign}{fmt(tx.amount)}
                 </p>
                 {tx.description && (
-                  <p className="text-sm text-slate-500 dark:text-slate-400 mt-2">{tx.description}</p>
+                  <p className="text-[15px] text-slate-500 dark:text-slate-400 mt-2.5">{tx.description}</p>
                 )}
               </div>
 
-              <div className="flex flex-col gap-1.5 mb-6">
-                {cat && <DetailRow label="Category" value={`${cat.icon}  ${cat.name}`} />}
-                {acct && <DetailRow label="Account" value={acct.name} dot={acct.color} />}
-                {fromAcct && <DetailRow label="From" value={fromAcct.name} dot={fromAcct.color} />}
-                {toAcct   && <DetailRow label="To"   value={toAcct.name}   dot={toAcct.color} />}
-                <DetailRow label="Date" value={fmtDisplayDate(tx.date)} sub={fmtTime(tx.date)} />
-              </div>
+              {/* One group, hairline separators. `rows` is built first so the
+                  last row knows it is last without every branch repeating the
+                  check. */}
+              {(() => {
+                const rows = [
+                  cat      && { key: 'cat',  label: 'Category', value: `${cat.icon}  ${cat.name}` },
+                  acct     && { key: 'acct', label: 'Account',  value: acct.name,     dot: acct.color },
+                  fromAcct && { key: 'from', label: 'From',     value: fromAcct.name, dot: fromAcct.color },
+                  toAcct   && { key: 'to',   label: 'To',       value: toAcct.name,   dot: toAcct.color },
+                  { key: 'date', label: 'Date', value: fmtDisplayDate(tx.date), sub: fmtTime(tx.date) },
+                ].filter(Boolean)
+                return (
+                  <DetailGroup>
+                    {rows.map((r, i) => (
+                      <DetailRow key={r.key} {...r} isLast={i === rows.length - 1} />
+                    ))}
+                  </DetailGroup>
+                )
+              })()}
+
+              <div className="h-5" />
 
               <div className="flex gap-3">
                 <button
@@ -526,7 +608,9 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
             </div>
           )}
         </div>
-        <div className="h-8 shrink-0" />
+        {/* The panel floats now, so it carries its own bottom padding rather
+            than borrowing the screen edge's. */}
+        <div className="h-4 shrink-0" />
       </div>
 
       {/* nested pickers — z-[110] renders above this sheet at z-[100] */}
