@@ -91,7 +91,17 @@ function IconCheck() {
  * you are about to get, not an illustration of one.
  */
 function PreviewCard({ draft, large = false }) {
-  const brand = accountBrand({ name: draft.name, type: draft.type, color: draft.color })
+  // customColor has to travel with the colour, or accountBrand's override
+  // branch never fires and the preview keeps showing the house gradient while
+  // the swatch row says otherwise. Every other card renderer passes the whole
+  // account object and gets this for free; this one builds the argument by
+  // hand from a draft, which is exactly how the field went missing.
+  const brand = accountBrand({
+    name: draft.name,
+    type: draft.type,
+    color: draft.color,
+    customColor: draft.customColor,
+  })
   const isCredit = draft.type === 'credit'
   const typeLabel = TYPE_LABEL[draft.type]
   const named = draft.name.trim()
@@ -350,13 +360,26 @@ function StyleStep({ draft, set }) {
   }, [])
 
   const brand = accountBrand({ name: draft.name, type: draft.type, color: draft.color })
-  // A matched institution owns its colour. GCash blue and BPI red are the
-  // whole reason the card faces exist, so they are stated and locked rather
-  // than offered as a default someone can wander away from. accountBrand
-  // ignores `color` for these anyway - offering swatches would have been a
-  // control that silently did nothing.
-  const colorLocked = draft.fromPreset
-    || (brand.key !== 'custom' && brand.key !== 'fallback')
+  /**
+   * The institution's own stops, if it has any.
+   *
+   * Asked for with customColor forced off, so it returns the house colours
+   * whatever the draft currently overrides them with - this is the swatch that
+   * puts them back, so it has to know what they were.
+   *
+   * Null for an unbranded account: `custom` and `fallback` have no house
+   * colour to offer, so their row starts with the gradients instead.
+   */
+  const brandColor = useMemo(() => {
+    const b = accountBrand({ name: draft.name, type: draft.type, customColor: false })
+    if (b.key !== 'custom' && b.key !== 'fallback') return { from: b.from, to: b.to }
+    // No hard-coded gradient, but the grid may still have handed over a house
+    // colour - solve it the same way the card will.
+    const own = draft.presetColor ? accountBrand({
+      name: draft.name, type: draft.type, color: draft.presetColor,
+    }) : null
+    return own ? { from: own.from, to: own.to } : null
+  }, [draft.name, draft.type, draft.presetColor])
 
   /**
    * Which card is centred in the rail.
@@ -396,11 +419,37 @@ function StyleStep({ draft, set }) {
     for (const node of rail.querySelectorAll('[data-design-idx]')) {
       const centre = node.offsetLeft + node.offsetWidth / 2
       const away = (centre - mid) / node.offsetWidth        // in card widths
-      const clamped = Math.max(-1.5, Math.min(1.5, away))
+      // Clamped to one card width, so `clamped * -62` tops out at exactly 62
+      // degrees. At the 1.2 this first used it reached 74.4 - past the point
+      // the comment below says is too far, which is the kind of thing a
+      // measured check catches and reading the code does not.
+      const clamped = Math.max(-1, Math.min(1, away))
       const fade = Math.min(Math.abs(clamped), 1)
+      // 46 degrees on a 620px perspective, up from 30 on 900. Both numbers
+      // pull the same way: the angle is how far the card turns, the shorter
+      // perspective is how hard that turn foreshortens. 30 on 900 read as a
+      // card lying back; this reads as one being turned.
+      //
+      // 46 is a measured ceiling, not a taste call, and the constraint is
+      // worth writing down because it is not obvious: a resting neighbour is
+      // always at full turn, so the maximum angle IS how the row looks
+      // standing still - there is no separate "at rest" value to tune. The
+      // peek left at the screen edge is therefore W*cos(angle), and for a
+      // 224px card sitting 240px off centre in a 390px viewport that is
+      //
+      //     30deg -> 52px    42deg -> 38px    54deg -> 21px
+      //     38deg -> 43px    46deg -> 33px    62deg ->  8px
+      //
+      // 62 was tried and the neighbours vanished outright. Past about 50 there
+      // is not enough card left to see the next design coming, which is the
+      // only reason to render it at all.
+      //
+      // translateZ pushes the turning cards back as well as around, so they
+      // pass behind the centred one rather than beside it.
       node.style.transform =
-        `perspective(900px) rotateY(${clamped * -30}deg) scale(${1 - fade * 0.1})`
-      node.style.opacity = String(1 - fade * 0.55)
+        `perspective(620px) rotateY(${clamped * -46}deg)`
+        + ` translateZ(${-fade * 30}px) scale(${1 - fade * 0.06})`
+      node.style.opacity = String(1 - fade * 0.6)
       // The turned-away cards must not sit on top of the centred one.
       node.style.zIndex = String(10 - Math.round(fade * 10))
 
@@ -539,93 +588,98 @@ function StyleStep({ draft, set }) {
         ))}
       </div>
 
-      {/* Colour. */}
+{/* ── Colour, for every account ──────────────────────────────────
+
+          Branded ones included. Banks issue the same account in several
+          finishes, so the card in your hand may not be the one on the brand
+          sheet - locking the colour to the house palette made the app more
+          certain about someone's card than they are.
+
+          What a chosen colour does NOT take with it is the logo.
+          accountBrand overrides the gradient only, so a purple BPI card still
+          carries the BPI mark; see its customColor branch.
+
+          A branded account leads with its own colours as the first swatch,
+          selected until something else is picked - which makes the house
+          colour a visible default rather than an invisible one, and gives you
+          somewhere to tap to put it back. ── */}
       <div className="mt-4 px-5">
-        {colorLocked ? (
-          <p className="text-[12px] text-center text-slate-500 dark:text-slate-400">
-            Colour comes from {draft.name.trim() || 'the institution'} — the design is yours to pick.
-          </p>
-        ) : (
-          <>
-            {/* No "COLOUR" caption. The step measured 12px past the viewport
-                with one, and a row of coloured circles under a card preview
-                does not need to be told what it is - the reference does not
-                label it either. Twelve pixels is not a rounding error here:
-                the whole point of this step is that it fits on one screen. */}
-            {/* Swiped, not wrapped. Fourteen 28px swatches overrun 350px, and
-                the two ways out are a second row or a scroll. A scroll keeps
-                the control one line tall - which the no-scrolling budget for
-                this step needs - and reads as a continuation of the card
-                gallery directly above it, which is also swiped.
+        <div
+          ref={swatchRef}
+          className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x py-2.5 -mx-5"
+          style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
+        >
+          <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
 
-                shrink-0 on each swatch is what stops flex compressing them
-                into ovals; that was the actual bug, not the wrapping. */}
-            {/* py-2.5 rather than py-1.5: the selected swatch's ring extends 4px
-                past the circle, and at py-1.5 the row clipped it. */}
-            {/* Centring spacers, the same trick the card rail uses. Without
-                them the FIRST swatch can never be centred - a scrollport
-                cannot scroll past its own start - so selecting it would leave
-                the row jammed against the left edge, which is the imbalance
-                this was meant to fix. */}
-            <div
-              ref={swatchRef}
-              className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x py-2.5 -mx-5"
-              style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
-            >
-              <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
-              {/* Gradients first: they are the ones worth scrolling to, and a
-                  row that opens on fourteen solids buries them. Each is
-                  stored in the same `color` field as a comma-separated pair -
-                  "#a855f7,#ec4899" - which aaSafeStops splits and darkens
-                  end-by-end. One field, one column, no migration, and an
-                  existing single hex still parses exactly as before. */}
-              {GRADIENT_PRESETS.map(([a, b]) => {
-                const spec = `${a},${b}`
-                const on = draft.color === spec
-                return (
-                  <button
-                    key={spec}
-                    onClick={() => set({ color: spec })}
-                    aria-label={`Gradient ${a} to ${b}`}
-                    aria-pressed={on}
-                    className={`w-9 h-9 shrink-0 snap-center rounded-full
-                      transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
-                    style={{
-                      background: `linear-gradient(135deg, ${a} 0%, ${b} 100%)`,
-                      // The selection ring takes the first stop; ringing a
-                      // two-colour swatch in two colours is a worse problem
-                      // than picking one.
-                      '--swatch-color': a,
-                    }}
-                  />
-                )
+          {brandColor && (
+            <button
+              onClick={() => set({
+                customColor: false,
+                // Put the house colour back on the draft as well as clearing
+                // the flag: for a brand with no BRAND_GRADIENTS entry the card
+                // reads `color` even with the flag off, so clearing alone
+                // would leave the last override showing.
+                ...(draft.presetColor ? { color: draft.presetColor } : {}),
               })}
+              aria-label={`${draft.name.trim() || 'Brand'} colours`}
+              aria-pressed={!draft.customColor}
+              className={`w-9 h-9 shrink-0 snap-center rounded-full
+                transition-transform duration-150 active:scale-90 ${
+                  !draft.customColor ? 'swatch-on' : ''
+                }`}
+              style={{
+                background: `linear-gradient(135deg, ${brandColor.from} 0%, ${brandColor.to} 100%)`,
+                '--swatch-color': brandColor.from,
+              }}
+            />
+          )}
 
-              {/* A hairline between the two kinds, so the row reads as two
-                  groups rather than one long list that changes character. */}
-              <span
-                className="shrink-0 w-px h-6 bg-slate-200 dark:bg-white/[0.12]"
-                aria-hidden="true"
+          {/* Gradients before solids: they are the ones worth scrolling to,
+              and a row that opens on solids buries them. Stored in the same
+              `color` field as a comma-separated pair - "#a855f7,#ec4899" -
+              which aaSafeStops splits and darkens end-by-end. */}
+          {GRADIENT_PRESETS.map(([a, b]) => {
+            const spec = `${a},${b}`
+            const on = !!draft.customColor && draft.color === spec
+            return (
+              <button
+                key={spec}
+                onClick={() => set({ color: spec, customColor: true })}
+                aria-label={`Gradient ${a} to ${b}`}
+                aria-pressed={on}
+                className={`w-9 h-9 shrink-0 snap-center rounded-full
+                  transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
+                style={{
+                  background: `linear-gradient(135deg, ${a} 0%, ${b} 100%)`,
+                  // The ring takes the first stop; ringing a two-colour swatch
+                  // in two colours is a worse problem than picking one.
+                  '--swatch-color': a,
+                }}
               />
+            )
+          })}
 
-              {PALETTE.map(c => {
-                const on = draft.color === c
-                return (
-                  <button
-                    key={c}
-                    onClick={() => set({ color: c })}
-                    aria-label={`Colour ${c}`}
-                    aria-pressed={on}
-                    className={`w-9 h-9 shrink-0 snap-center rounded-full
-                      transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
-                    style={{ background: c, '--swatch-color': c }}
-                  />
-                )
-              })}
-              <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
-            </div>
-          </>
-        )}
+          <span
+            className="shrink-0 w-px h-6 bg-slate-200 dark:bg-white/[0.12]"
+            aria-hidden="true"
+          />
+
+          {PALETTE.map(c => {
+            const on = !!draft.customColor && draft.color === c
+            return (
+              <button
+                key={c}
+                onClick={() => set({ color: c, customColor: true })}
+                aria-label={`Colour ${c}`}
+                aria-pressed={on}
+                className={`w-9 h-9 shrink-0 snap-center rounded-full
+                  transition-transform duration-150 active:scale-90 ${on ? 'swatch-on' : ''}`}
+                style={{ background: c, '--swatch-color': c }}
+              />
+            )
+          })}
+          <span className="shrink-0" style={{ width: 'calc(50% - 18px)' }} aria-hidden="true" />
+        </div>
       </div>
 
       {/* No error here. The name cannot be edited on this step, and step one
@@ -662,7 +716,8 @@ export default function AccountNew() {
     // institution's own colour.
     color: GRADIENT_PRESETS[0].join(','),
     design: CARD_DESIGNS[0].key,
-    fromPreset: false,
+    customColor: false,
+    presetColor: null,
     scheme: '',
     startingBal: '0',
     creditLimit: '0',
@@ -744,12 +799,16 @@ export default function AccountNew() {
       type: preset.type,
       role: defaultRole(preset.type),
       color: preset.color,
-      // The institution supplied its own colour, so the style step locks it.
-      // Not the same test as "has a hard-coded brand gradient": BDO, PSBank
-      // and most of the list have a real logo and a real house colour without
-      // an entry in BRAND_GRADIENTS, and offering to recolour those is just as
-      // wrong as offering to recolour BPI.
-      fromPreset: true,
+      // Switching institution drops any earlier override, so the new one
+      // arrives in its own colours rather than inheriting the last pick.
+      customColor: false,
+      // Kept so the swatch row can offer the house colour back. Most of the
+      // list - PNB, BDO, PSBank - has a real logo and a real house colour
+      // without an entry in BRAND_GRADIENTS, so accountBrand reports them as
+      // `custom` and there is no gradient to look up. Without this the row
+      // would show nothing selected on exactly the accounts most likely to
+      // have been picked from the grid.
+      presetColor: preset.color,
     })
     setTouchedName(true)
   }
@@ -810,6 +869,7 @@ export default function AccountNew() {
         minPayment: draft.minPayment,
         scheme: draft.scheme,
         design: draft.design,
+        customColor: draft.customColor,
       })
       await createAccount(row, isCredit ? 0 : parseMoney(draft.startingBal))
       showToast('Account created')
@@ -894,19 +954,23 @@ export default function AccountNew() {
                  which is what makes the two behaviours one control rather than
                  two sharing a box.
 
-                 fromPreset goes false on every keystroke: the moment you edit
-                 the text it is not the institution's card any more, so its
-                 colour stops being locked on the style step. pickPreset sets
-                 it back to true. */
-              onChange={e => { set({ name: e.target.value, fromPreset: false }); setTouchedName(true) }}
+                 A colour already picked survives a rename, deliberately: it
+                 was chosen for the card, not for the name on it. */
+              onChange={e => { set({ name: e.target.value }); setTouchedName(true) }}
               placeholder="Search, or type any name"
               ref={nameRef}
               className={inputCls(touchedName && !!nameProblem) + ' pl-10'}
             />
           </div>
 
+          {/* px-5, not px-1. This sits OUTSIDE the field's own px-5 wrapper -
+              it is a sibling of that div, not a child - so px-1 put it 4px
+              from the screen edge while the field it describes started at 20.
+              Aligned to the field's border box rather than its text, which
+              starts at 60px behind the search icon; an error indented under
+              the icon would read as belonging to the icon. */}
           {touchedName && nameProblem && (
-            <p className="text-xs text-red-500 dark:text-red-400 mt-2 px-1">{nameProblem}</p>
+            <p className="text-xs text-red-500 dark:text-red-400 mt-2 px-5">{nameProblem}</p>
           )}
 
           {/* A filter row instead of four stacked sections. It scrolls

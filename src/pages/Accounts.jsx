@@ -1490,7 +1490,7 @@ export function buildAccountRow({
   name, type, role, color, creditLimit,
   statementDay, dueDay, cutoffDay, minPayment,
   qrImage = null, parentName = null, scheme = '',
-  design,
+  design, customColor,
 }) {
   const isCredit = type === 'credit'
   return {
@@ -1516,6 +1516,10 @@ export function buildAccountRow({
     // a chosen design with null every time the edit form saved, and the
     // account form has no design field to put back.
     ...(design ? { design } : {}),
+    // Same conditional spread, same reason: this row doubles as the patch for
+    // db.accounts.update() when editing, and the edit form has no colour-
+    // override field - an explicit key would clear the flag on every save.
+    ...(customColor === undefined ? {} : { customColor: !!customColor }),
   }
 }
 

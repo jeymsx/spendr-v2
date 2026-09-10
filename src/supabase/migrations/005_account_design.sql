@@ -1,4 +1,4 @@
--- 005 — Card face design.
+-- 005 — Card face design, and a chosen colour.
 --
 -- Which decorative pattern an account's card face wears. See
 -- src/lib/cardDesigns.js; the values are the design keys ('classic',
@@ -24,3 +24,14 @@
 
 alter table public.accounts
   add column if not exists design text;
+
+-- Whether the colour on this account was chosen rather than inherited from
+-- the institution. Needed because every account ever created already carries
+-- a palette colour from createAccount, so the client cannot tell a deliberate
+-- pick from a default by looking at `color` alone - and treating them the same
+-- would recolour every existing branded card at once.
+--
+-- Same optional-column handling as `design` above: the push drops it and
+-- retries if this has not run.
+alter table public.accounts
+  add column if not exists custom_color boolean;

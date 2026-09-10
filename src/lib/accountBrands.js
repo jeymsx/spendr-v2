@@ -321,7 +321,7 @@ export function accountBrand(account) {
 
   for (const [pattern, brandKey, mark] of NAME_RULES) {
     if (pattern.test(key)) {
-      return {
+      const brand = {
         key: brandKey, mark,
         monogram: monogram(account?.name),
         logoKeys: [brandKey, ...logoCandidates(account?.name)],
@@ -332,6 +332,24 @@ export function accountBrand(account) {
           ? BRAND_GRADIENTS[brandKey]
           : asCredit(BRAND_GRADIENTS[brandKey], isCredit)),
       }
+
+      // A chosen colour beats the house colour - banks issue the same account
+      // in several finishes, so the card in your hand may not be the one on
+      // the brand sheet.
+      //
+      // It overrides the GRADIENT ONLY. The key, the mark and the logo keys
+      // all stay, because a purple BPI card is still a BPI card: the logo is
+      // what identifies the account, and dropping to key 'custom' here would
+      // swap a real logo for a monogram.
+      //
+      // Gated on the explicit `customColor` flag rather than on `color` being
+      // set, and that distinction is the whole reason the flag exists: every
+      // account ever created already carries a palette colour from
+      // createAccount, so honouring `color` unconditionally would have
+      // recoloured every existing branded card at once.
+      if (!account?.customColor) return brand
+      const picked = aaSafeStops(account.color)
+      return picked ? { ...brand, ...asCredit(picked, isCredit) } : brand
     }
   }
 

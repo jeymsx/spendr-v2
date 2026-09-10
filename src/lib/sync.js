@@ -104,6 +104,7 @@ function accountToRow(r, userId) {
     // Optional: see OPTIONAL_ACCOUNT_COLS below. Dropped and retried if the
     // remote table has not had migration 005 applied yet.
     design:          r.design         ?? null,
+    custom_color:    r.customColor    ?? null,
     sort_order:      r.sort_order     ?? 0,
     updated_at:      r.updatedAt ?? new Date().toISOString(),
   }
@@ -229,6 +230,7 @@ function rowToAccount(row) {
     // renders as 'classic' - so a pull from a pre-migration table is a
     // no-op here rather than an error.
     design:         row.design ?? null,
+    customColor:    row.custom_color ?? false,
     sort_order:     row.sort_order  ?? 0,
     updatedAt:      row.updated_at,
   }
@@ -451,7 +453,7 @@ export async function syncToSupabase(userId) {
  * stays on-device until then, with no flag to set and nothing to remember.
  */
 const OPTIONAL_COLS = {
-  accounts: ['design'],
+  accounts: ['design', 'custom_color'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,
