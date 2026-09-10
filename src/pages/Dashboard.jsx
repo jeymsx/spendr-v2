@@ -891,18 +891,27 @@ function UpcomingSection({ items }) {
   const total = items.reduce((sum, i) => sum + (i.amount ?? 0), 0)
   return (
     <section className="px-5 mt-8">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-          Upcoming
-        </h2>
-        {/* The total covers the rows on screen, not every future bill - a
-            figure that disagreed with the two rows under it would be worse
-            than no figure. */}
-        <span className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-          −{fmtCompact(total)}
-        </span>
-      </div>
-      <div className="card rounded-2xl overflow-hidden mt-2.5">
+      {/* Headed like Accounts, Budget and Recent, because it is the same kind
+          of thing: a top-level block of this screen.
+ 
+          It started as small uppercase caps, copied from the reference app -
+          but there, "UPCOMING" is a group divider INSIDE one continuous
+          transaction list, a peer of "THU, 20 JUL". Borrowing that
+          typography for a standalone card borrowed the wrong hierarchy, and
+          sitting directly under the Budget block it read as a sub-part of
+          it rather than a section in its own right. */}
+      <SectionHeader
+        title="Upcoming"
+        right={
+          /* The total covers the rows on screen, not every future bill - a
+             figure that disagreed with the two rows under it would be worse
+             than no figure at all. */
+          <span className="text-[13px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+            −{fmtCompact(total)}
+          </span>
+        }
+      />
+      <div className="card rounded-2xl overflow-hidden mt-3">
         {items.map((item, i) => (
           <UpcomingRow key={item.key} item={item} isLast={i === items.length - 1} />
         ))}
@@ -990,7 +999,7 @@ function PlannerRow({ goalAlloc, debts }) {
 
 // ── Section header ─────────────────────────────────────────────────────────────
 
-function SectionHeader({ title, subtitle, actionLabel, actionTo, px = false }) {
+function SectionHeader({ title, subtitle, actionLabel, actionTo, right = null, px = false }) {
   return (
     <div className={`flex items-baseline justify-between ${px ? 'px-5' : ''}`}>
       <div className="flex items-baseline gap-2">
@@ -999,6 +1008,9 @@ function SectionHeader({ title, subtitle, actionLabel, actionTo, px = false }) {
           <span className="text-xs text-slate-400 dark:text-slate-500">{subtitle}</span>
         )}
       </div>
+      {/* A value rather than a link. Upcoming puts its total here, where
+          every other section on this screen puts its "See all". */}
+      {right}
       {actionLabel && actionTo && (
         <Link
           to={actionTo}
