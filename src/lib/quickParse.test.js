@@ -318,6 +318,22 @@ describe('learnLedger, against a real-shaped ledger', () => {
     expect(KNOW.account['milk tea']).toBe('GCash')
   })
 
+  it('refuses an account that varies, even when the category is obvious', () => {
+    // Alfamart is three Cash and three GCash. WHICH account paid is a fact
+    // about that week, not about the merchant. Measured on a real ledger,
+    // guessing here made the account wrong more often than right.
+    expect(countOf('Alfamart', null)).toBe(6)
+    expect(KNOW.category.alfamart).toBe('Food')
+    expect(KNOW.account.alfamart).toBeUndefined()
+  })
+
+  it('withholds an account that is consistent but not yet established', () => {
+    // Two rows, both Maya, never varied. Consistent is not established.
+    expect(countOf('Bookstore')).toBe(2)
+    expect(KNOW.category.bookstore).toBe('Shopping')
+    expect(KNOW.account.bookstore).toBeUndefined()
+  })
+
   it('lets recent history outvote more numerous older history', () => {
     // Load was Bills eight times last year and Transpo three times this
     // month. Raw counts say Bills; a 90-day half-life says Transpo, which is
@@ -417,6 +433,17 @@ describe('quickParse with a learned ledger', () => {
     // Both spellings resolve; only one of them is a misspelling, and telling
     // the user they mistyped a word they typed correctly is its own bug.
     expect(quickParse('1940 supermarket', ctx()).matched.category.via).toBe('history')
+  })
+
+  it('never lets a typo decide the direction', () => {
+    // A near miss is the weakest evidence in the system and direction is the
+    // costliest field, so the two must not meet. Measured: "Google Cloud" was
+    // being read as an inflow because "cloud" is one edit from "icloud", and
+    // the user's iCloud rows are money coming back from friends.
+    const r = quickParse('300 jolibee', ctx())
+    expect(r.matched.category.via).toBe('typo')
+    expect(r.type).toBe('expense')
+    expect(r.matched.type).toBeUndefined()
   })
 
   it('does not guess at a short mistyped word', () => {

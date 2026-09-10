@@ -123,6 +123,19 @@ for (let i = 0; i < 9; i++) add(2 + i * 30, 'Payroll', 'Salary', 'BPI', 40000, '
 // direction is wrong every single time in the one place it matters most.
 for (let i = 0; i < 5; i++) add(15 + i * 30, 'Interest', 'Bills', 'Maya Black', 340)
 
+// ── A merchant paid from whichever account had money ─────────────────────────
+// Six rows, three Cash and three GCash. The category is obvious; the account
+// is a fact about that week's cash position, not about Alfamart. It must be
+// refused - this is the shape that made account inference wrong more often
+// than right on the real ledger.
+for (let i = 0; i < 3; i++) add(7 + i * 26, 'Alfamart', 'Food', 'Cash', 120)
+for (let i = 0; i < 3; i++) add(19 + i * 26, 'Alfamart', 'Food', 'GCash', 120)
+
+// ── Consistent, but not yet often enough ─────────────────────────────────────
+// Two rows, both Maya. Consistent is not the same as established: below
+// ACCOUNT_MIN_ROWS the account is withheld even though it has never varied.
+for (let i = 0; i < 2; i++) add(13 + i * 40, 'Bookstore', 'Shopping', 'Maya', 340)
+
 // ── A row the app wrote, not the user ────────────────────────────────────────
 // Accounts.jsx writes this when you reconcile a balance. It is not a merchant
 // and "balance" must not become a rule off the back of it.
