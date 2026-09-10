@@ -84,8 +84,29 @@ create index if not exists goals_user_id_idx on public.goals (user_id);
 
 alter table public.goals enable row level security;
 
-drop policy if exists "goals: own rows only" on public.goals;
-create policy "goals: own rows only"
-  ON public.goals FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+-- Re-runnable WITHOUT a `drop policy if exists` in front of it.
+--
+-- The drop was harmless — the policy name is one this file invents, on a table
+-- this file creates — but Supabase's SQL editor flags any query containing
+-- DROP as "potentially destructive" on a plain keyword scan, and a dialog
+-- warning you about permanent data loss is a bad thing to have to dismiss on
+-- trust just to add a table. Checking pg_policies first is idempotent the same
+-- way, with nothing in it that can remove anything.
+--
+-- `alter table` above will still trip that same keyword scan. It cannot be
+-- avoided: enabling RLS has no other syntax, and leaving RLS off would expose
+-- every user's goals to anyone holding the anon key.
+do $$
+begin
+  if not exists (
+    select 1 from pg_policies
+    where schemaname = 'public'
+      and tablename  = 'goals'
+      and policyname = 'goals: own rows only'
+  ) then
+    create policy "goals: own rows only"
+      ON public.goals FOR ALL
+      USING (auth.uid() = user_id)
+      WITH CHECK (auth.uid() = user_id);
+  end if;
+end $$;
