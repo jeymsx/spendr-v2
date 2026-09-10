@@ -5,6 +5,9 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import TxDetailSheet from '../components/TxDetailSheet'
 import CalendarView from '../components/CalendarView'
 import { scheduledCutoff } from '../utils/scheduled'
+import { accountBrand } from '../lib/accountBrands'
+import BrandMark from '../components/BrandMark'
+import BrandWatermark from '../components/BrandWatermark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -268,7 +271,7 @@ function FilterModal({
   dateRange, setDateRange,
   customFrom, setCustomFrom,
   customTo, setCustomTo,
-  accountFilter, setAccountFilter,
+  accountFilters, setAccountFilters,
   categoryFilter, setCategoryFilter,
   amountMin, setAmountMin,
   amountMax, setAmountMax,
@@ -312,19 +315,22 @@ function FilterModal({
 
   return (
     <div className="fixed inset-0 z-[100]">
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+      {/* Heavier than a plain scrim because the panel is glass, and glass
+          needs something soft behind it - see TxDetailSheet, where black/45
+          and a 4px blur left the list legible straight through the card. */}
+      <div className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-xl" onClick={close} />
       <div
         className={[
           closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[88vh] flex flex-col',
+          'card absolute inset-x-3 rounded-[28px]',
+          'bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
+          'max-h-[86dvh] flex flex-col',
         ].join(' ')}
       >
-        {/* Header */}
+        {/* Header. No grab handle: this floats now, so there is no edge to
+            drag it down from and a handle would promise a gesture that does
+            not exist. "Done" closes it, and so does the backdrop. */}
         <div className="pt-5 px-5 pb-4 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <h3 className="text-base font-semibold text-slate-800 dark:text-white">Filters</h3>
@@ -374,21 +380,33 @@ function FilterModal({
           {/* Date Range */}
           <div>
             <SectionLabel>Date Range</SectionLabel>
-            <div className="flex flex-wrap gap-2">
-              {DATE_OPTS.map(o => (
-                <button
-                  key={o.value}
-                  onClick={() => setDateRange(o.value)}
-                  className={[
-                    'px-3.5 py-2 rounded-full text-xs font-semibold transition-all duration-150 active:scale-95',
-                    dateRange === o.value
-                      ? 'bg-primary text-white shadow-[0_2px_8px_rgba(var(--color-primary-rgb),0.35)]'
-                      : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
-                  ].join(' ')}
-                >
-                  {o.label}
-                </button>
-              ))}
+            {/* A fixed three-column grid, not flex-wrap. Five chips wrapped
+                to 3 + 2, leaving "Custom…" adrift on a half-empty row - the
+                orphan. Here the last chip stretches across the columns the
+                row has left over, so both rows are full and every chip is the
+                same height. The remainder test generalises: five options span
+                two, six span none, seven span one. */}
+            <div className="grid grid-cols-3 gap-2">
+              {DATE_OPTS.map((o, i) => {
+                const rem = DATE_OPTS.length % 3
+                const isLast = i === DATE_OPTS.length - 1
+                const span = isLast && rem === 2 ? 'col-span-2' : ''
+                return (
+                  <button
+                    key={o.value}
+                    onClick={() => setDateRange(o.value)}
+                    className={[
+                      'py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 active:scale-95',
+                      span,
+                      dateRange === o.value
+                        ? 'bg-primary text-white'
+                        : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
+                    ].join(' ')}
+                  >
+                    {o.label}
+                  </button>
+                )
+              })}
             </div>
             {dateRange === 'custom' && (
               <div className="flex flex-col gap-2 mt-3">
@@ -427,33 +445,56 @@ function FilterModal({
           {/* Account */}
           {(accounts ?? []).length > 0 && (
             <div>
-              <SectionLabel>Account</SectionLabel>
-              <div className="flex flex-col gap-2">
+              <SectionLabel>
+                Account{accountFilters.length > 0 ? ` · ${accountFilters.length}` : ''}
+              </SectionLabel>
+              {/* The same card face the home carousel uses, at picker size.
+                  It was a stack of grey rows with a colour dot - which is a
+                  list of strings, when the app has spent real effort making
+                  each account look like the physical card in your wallet.
+                  Recognising GCash by its blue is faster than reading the
+                  word, and it is the same object in both places.
+
+                  Multi-select, because "GCash or Maya" used to be two passes
+                  and a mental merge. Two columns rather than three: at three
+                  the brand mark and the name both have to shrink past the
+                  point where the recognition works. */}
+              <div className="grid grid-cols-2 gap-2">
                 {(accounts ?? []).map(a => {
-                  const active = accountFilter === a.name
+                  const on = accountFilters.includes(a.name)
+                  const brand = accountBrand(a)
                   return (
                     <button
                       key={a.id}
-                      onClick={() => setAccountFilter(active ? null : a.name)}
-                      className={[
-                        'flex items-center gap-3 px-4 py-3 rounded-2xl border text-left transition-all duration-150 active:scale-[0.98]',
-                        active
-                          ? 'bg-primary/10 dark:bg-primary/15 border-primary/30'
-                          : 'bg-slate-50 dark:bg-white/[0.04] border-slate-200/60 dark:border-white/[0.07]',
-                      ].join(' ')}
+                      onClick={() => setAccountFilters(prev =>
+                        on ? prev.filter(n => n !== a.name) : [...prev, a.name])}
+                      aria-pressed={on}
+                      data-brand={brand.key}
+                      data-compact
+                      className={`acct-card relative rounded-2xl px-3 pt-2.5 pb-2.5 flex flex-col
+                        justify-between text-left text-white min-h-[74px] ${
+                          on ? 'ring-2 ring-primary' : ''
+                        }`}
+                      style={{ background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)` }}
                     >
-                      <span
-                        className="w-2.5 h-2.5 rounded-full shrink-0"
-                        style={{ backgroundColor: a.color ?? '#2D9DFF' }}
-                      />
-                      <span className={`flex-1 text-sm font-medium ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <BrandWatermark brand={brand} />
+                      <span className="flex items-start justify-between gap-2 w-full">
+                        <BrandMark mark={brand.mark} size={16} className="shrink-0 opacity-90" />
+                        {/* The tick is the only thing that says "picked" other
+                            than the ring, which a colourblind user may not
+                            separate from the card's own edge. */}
+                        <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0
+                          transition-opacity duration-150 ${on ? 'opacity-100 bg-white' : 'opacity-0'}`}>
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                            strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
+                            className="text-primary">
+                            <path d="M20 6L9 17l-5-5" />
+                          </svg>
+                        </span>
+                      </span>
+                      <span className="block text-[12px] font-semibold leading-tight truncate w-full">
                         {a.name}
                       </span>
-                      {active && (
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-primary shrink-0">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                      )}
                     </button>
                   )
                 })}
@@ -494,7 +535,9 @@ function FilterModal({
         {/* Footer CTA */}
         <div
           className="px-5 pt-3 shrink-0 border-t border-slate-100 dark:border-white/[0.06]"
-          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
+          /* The panel carries its own inset from the screen edge now, so the
+             footer needs padding rather than a safe-area reach-through. */
+          style={{ paddingBottom: '16px' }}
         >
           <button
             onClick={close}
@@ -577,7 +620,9 @@ export default function Transactions() {
 
   const [search,         setSearch]         = useState('')
   const [typeFilter,     setTypeFilter]     = useState('all')
-  const [accountFilter,  setAccountFilter]  = useState(null)
+  // A list, not a name. Filtering to one account at a time meant
+  // "GCash or Maya" was two passes and a mental merge.
+  const [accountFilters, setAccountFilters] = useState([])
   const [categoryFilter, setCategoryFilter] = useState(null)
   const [dateRange,      setDateRange]      = useState('all')
   const [customFrom,     setCustomFrom]     = useState('')
@@ -594,7 +639,7 @@ export default function Transactions() {
 
   useEffect(() => {
     setVisibleCount(PAGE_SIZE)
-  }, [search, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
+  }, [search, typeFilter, accountFilters, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])),
@@ -616,16 +661,18 @@ export default function Transactions() {
       if (q && !(tx.description ?? '').toLowerCase().includes(q) &&
                !(tx.category   ?? '').toLowerCase().includes(q)) return false
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false
-      if (accountFilter && tx.account !== accountFilter &&
-                           tx.fromAccount !== accountFilter &&
-                           tx.toAccount   !== accountFilter) return false
+      // Any of the picked accounts, on any of the three sides a transaction
+      // can name one.
+      if (accountFilters.length && !accountFilters.includes(tx.account) &&
+                                   !accountFilters.includes(tx.fromAccount) &&
+                                   !accountFilters.includes(tx.toAccount)) return false
       if (categoryFilter && tx.category !== categoryFilter) return false
       if (!inDateRange(tx, dateRange, customFrom, customTo)) return false
       if (amountMin != null && (tx.amount ?? 0) < amountMin) return false
       if (amountMax != null && (tx.amount ?? 0) > amountMax) return false
       return true
     })
-  }, [txAll, deferredSearch, typeFilter, accountFilter, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
+  }, [txAll, deferredSearch, typeFilter, accountFilters, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
   const visibleTx = useMemo(() => filteredTx.slice(0, visibleCount), [filteredTx, visibleCount])
   const groups    = useMemo(() => groupByDate(visibleTx), [visibleTx])
@@ -633,7 +680,7 @@ export default function Transactions() {
 
   // Type is now inline — only count date/account/category as "hidden" filter state
   const activeFilterCount = (dateRange !== 'all' ? 1 : 0) +
-    (accountFilter ? 1 : 0) +
+    (accountFilters.length ? 1 : 0) +
     (categoryFilter ? 1 : 0) +
     (amountMin != null || amountMax != null ? 1 : 0)
 
@@ -654,7 +701,7 @@ export default function Transactions() {
     setDateRange('all')
     setCustomFrom('')
     setCustomTo('')
-    setAccountFilter(null)
+    setAccountFilters([])
     setCategoryFilter(null)
     setAmountMin(null)
     setAmountMax(null)
@@ -771,13 +818,17 @@ export default function Transactions() {
               <button onClick={() => { setDateRange('all'); setCustomFrom(''); setCustomTo('') }} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
             </span>
           )}
-          {accountFilter && (
-            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+          {accountFilters.map(name => (
+            <span key={name} className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
-              {accountFilter}
-              <button onClick={() => setAccountFilter(null)} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+              {name}
+              <button
+                onClick={() => setAccountFilters(prev => prev.filter(n => n !== name))}
+                className="ml-0.5 opacity-60 hover:opacity-100"
+                aria-label={`Remove ${name} filter`}
+              >×</button>
             </span>
-          )}
+          ))}
           {categoryFilter && (
             <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
@@ -869,7 +920,7 @@ export default function Transactions() {
         dateRange={dateRange}         setDateRange={setDateRange}
         customFrom={customFrom}       setCustomFrom={setCustomFrom}
         customTo={customTo}           setCustomTo={setCustomTo}
-        accountFilter={accountFilter} setAccountFilter={setAccountFilter}
+        accountFilters={accountFilters} setAccountFilters={setAccountFilters}
         categoryFilter={categoryFilter} setCategoryFilter={setCategoryFilter}
         amountMin={amountMin}         setAmountMin={setAmountMin}
         amountMax={amountMax}         setAmountMax={setAmountMax}
