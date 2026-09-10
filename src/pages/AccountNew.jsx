@@ -904,12 +904,18 @@ export default function AccountNew() {
 
   /* One button, two homes. Steps one and two hang it off the bottom of a
      scrolling page; the style step puts it inside its centred group. Building
-     it once here keeps the two from drifting apart. */
+     it once here keeps the two from drifting apart.
+
+     w-full, not a min-width pill. At min-w-[15rem] the button was 240px in a
+     ~350px gutter, so it floated with an inch of dead space either side and
+     read as a suggestion rather than the way forward. Filling the gutter is
+     what iOS does with a primary action, and it makes the target the full
+     width of the thumb's reach. px-8 stays as the floor for the label. */
   const actionButton = current === 'style' ? (
     <button
       onClick={save}
       disabled={saving || !!nameProblem}
-      className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
+      className="w-full px-8 py-3 min-h-[44px] rounded-full
         text-[15px] font-semibold text-white bg-primary
         shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
         disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
@@ -920,7 +926,7 @@ export default function AccountNew() {
     <button
       onClick={next}
       disabled={!canAdvance}
-      className="min-w-[15rem] max-w-full px-8 py-3 min-h-[44px] rounded-full
+      className="w-full px-8 py-3 min-h-[44px] rounded-full
         text-[15px] font-semibold text-white bg-primary
         shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
         disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"

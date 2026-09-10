@@ -541,7 +541,15 @@ export default function Dashboard() {
 
                 <div className="wallet-fold -mx-6" data-open={breakdownOpen}>
                   <div className="pt-5">
-                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-5 pb-6">
+                    {/* pb-1.5, which looks wrong on its own and is not: the
+                        card's own padding-bottom already reserves 18px below
+                        the body's content, on top of the 22px the tab hangs
+                        below it. At pb-6 the two stacked to 42px of empty
+                        face under "Cash, wallets" - a band deeper than the
+                        row of figures itself. 6px + 18px puts the content
+                        14px clear of the stitching, which is exactly the
+                        clearance px-6 gives it on the left and right. */}
+                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-5 pb-1.5">
                   <div>
                     <p className="text-white/50 text-[11px] mb-1">Spending</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
