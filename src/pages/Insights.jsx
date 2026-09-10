@@ -484,32 +484,29 @@ function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDa
     : range === '6m'            ? 'Last 6 Months'
     : 'All Time'
 
-  /* Glass, with a thumb that slides.
+  /* Bare labels and one pill that slides. No track.
  
-     It was a flat tint holding a flat white pill - no depth, no movement, and
-     nothing tying it to the frosted panels around it. This borrows the
-     treatment RangeChips already uses further up this same page: a translucent
-     track with a hairline rim and an inset highlight, and one pill that
-     travels rather than three that blink.
+     It started as a flat tint holding a flat white pill, then gained a glass
+     track with a hairline rim - which looked right in the middle and wrong at
+     both ends, because the pill's rounded edge landed a hair inside the
+     track's and read as a double outline. There is nothing for a track to do
+     here that the pill is not already doing: three equal-width adjacent
+     labels read as one control on their own, and the pill says which is on.
+     So the glass moved onto the pill and the container went away.
  
-     Fixed-width buttons are what make the travel possible. The thumb is
-     `100% / N` of the track and moves by multiples of its own width, which
-     only lands correctly if every segment is the same size - the old
-     auto-width px-2.5 buttons could not have been animated this way. 60px
-     fits the longest label, "Expenses". */
+     Fixed-width segments are what make the travel possible. The thumb is
+     `100% / N` and moves by multiples of its own width, which only lands
+     correctly if every segment is the same size - the old auto-width px-2.5
+     buttons could not have been animated this way. 60px fits the longest
+     label, "Expenses". */
   const activeTypeIdx = CHART_TYPE_OPTS.findIndex(o => o.key === chartType)
   const activeColor = CHART_COLORS[chartType] ?? CHART_COLORS.expenses
   const typeFilter = isArea && (
-    <div className="relative flex items-center rounded-full p-[3px]
-      bg-slate-100/70 dark:bg-white/[0.04]
-      border border-slate-200/70 dark:border-white/[0.07]
-      backdrop-blur-md
-      shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]
-      dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+    <div className="relative flex items-center">
       <div
-        className="absolute top-[3px] bottom-[3px] left-[3px] rounded-full border pointer-events-none"
+        className="absolute inset-y-0 left-0 rounded-full border backdrop-blur-md pointer-events-none"
         style={{
-          width: `calc((100% - 6px) / ${CHART_TYPE_OPTS.length})`,
+          width: `calc(100% / ${CHART_TYPE_OPTS.length})`,
           transform: `translateX(${activeTypeIdx * 100}%)`,
           transition: 'transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s, border-color 0.2s',
           // color-mix rather than string-concatenating an alpha suffix: netflow's
