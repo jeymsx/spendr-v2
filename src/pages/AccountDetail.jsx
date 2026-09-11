@@ -13,6 +13,7 @@ import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark from '../components/SchemeMark'
 import TxDetailSheet from '../components/TxDetailSheet'
+import LimitMeter from '../components/LimitMeter'
 import { IconChevronRight, IconTick, IconWarning} from '../components/icons'
 import {
   AccountFormSheet, QrViewerModal, StatCard, CreditTxSection, DetailTxRow,
@@ -639,19 +640,23 @@ export default function AccountDetail() {
         </p>
 
         {isCredit && limit > 0 && (
-          <div className="mt-4 max-w-[320px] mx-auto">
-            <div className="h-1.5 rounded-full bg-red-100 dark:bg-red-500/20 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-700"
-                style={{
-                  width: `${usedPct}%`,
-                  backgroundColor: usedPct > 80 ? '#ef4444' : '#f59e0b',
-                }}
-              />
-            </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2">
-              {fmt(limit - totalUsed)} available of {fmt(limit)} limit ({usedPct.toFixed(0)}% used)
-            </p>
+          /* The hairline this replaces was amber up to 80% and red past it,
+             so a card with a tenth of its line gone was already warning
+             about something. Tones come from limitTone now, which is
+             WebBar's scale - accent under 70, amber to 90, red past it - so
+             this and the budget meters agree about what 95% looks like.
+
+             The sentence went with it. "₱2,500.00 available of ₱10,000.00
+             limit (75% used)" said the percentage the bar had just drawn and
+             the limit the track's own length already stands for; what was
+             worth keeping is how much is left, which is now the label. */
+          <div className="mt-5 max-w-[320px] mx-auto text-left">
+            <LimitMeter
+              pct={usedPct}
+              label={`${fmt(Math.max(0, limit - totalUsed))} left`}
+              used={fmt(totalUsed)}
+              total={fmt(limit)}
+            />
           </div>
         )}
       </section>
