@@ -202,7 +202,7 @@ export default function CalendarView({
                 className={[
                   'relative flex flex-col items-center justify-center h-12 rounded-lg transition-all duration-150 active:scale-90',
                   isSelected
-                    ? 'bg-primary shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.40)]'
+                    ? 'bg-primary'
                     : isToday
                     ? 'bg-primary/10 dark:bg-primary/[0.15]'
                     : hasTxs

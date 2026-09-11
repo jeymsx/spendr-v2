@@ -691,7 +691,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
         >
           <button
             onClick={() => { close(); setTimeout(onCustom, 260) }}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-sm font-semibold
+            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold
               text-slate-600 dark:text-slate-300
               bg-slate-100 dark:bg-white/[0.06]
               border border-slate-200/60 dark:border-white/[0.08]
@@ -916,7 +916,7 @@ export default function Accounts() {
           {(accounts ?? []).length > 1 && (
             <button
               onClick={() => setSortOpen(true)}
-              className="w-9 h-9 rounded-2xl flex items-center justify-center transition-colors duration-150
+              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150
                 border shadow-sm
                 bg-white dark:bg-primary/[0.10]
                 border-slate-200/80 dark:border-primary/[0.20]
@@ -933,8 +933,8 @@ export default function Accounts() {
           )}
           <button
             onClick={openAdd}
-            className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
-              bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
+              bg-primary text-white
               active:scale-90 transition-transform duration-75"
             aria-label="Add account"
           >
@@ -1483,7 +1483,7 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
           {!imgSrc ? (
             <button
               onClick={() => fileRef.current?.click()}
-              className="flex-1 py-3.5 rounded-2xl text-sm font-semibold text-white
+              className="flex-1 py-3.5 rounded-full text-sm font-semibold text-white
                 bg-primary
                 active:scale-[0.98] transition-all duration-100"
             >
@@ -1496,7 +1496,7 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
                   one to empty it, one to ask again. */}
               <button
                 onClick={() => fileRef.current?.click()}
-                className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                className="flex-1 py-3.5 rounded-full text-sm font-semibold
                   text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
                   active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
               >
@@ -1505,7 +1505,7 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
               <button
                 onClick={handleConfirm}
                 disabled={!completedCrop}
-                className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
                   bg-primary
                   disabled:opacity-40 disabled:shadow-none
                   active:scale-[0.98] transition-all duration-100"
@@ -1544,7 +1544,7 @@ export function QrViewerModal({ open, onClose, qrImage, accountName }) {
       />
       <button
         onClick={onClose}
-        className="mt-8 px-8 py-3 rounded-2xl text-sm font-semibold text-white
+        className="mt-8 px-8 py-3 rounded-full text-sm font-semibold text-white
           bg-white/10 active:bg-white/20 transition-colors"
       >
         Done
@@ -1942,7 +1942,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </p>
                 <button
                   onClick={() => setMode('form')}
-                  className="w-full py-3.5 rounded-2xl text-sm font-semibold
+                  className="w-full py-3.5 rounded-full text-sm font-semibold
                     text-slate-600 dark:text-slate-300
                     bg-slate-100 dark:bg-white/[0.06]
                     active:bg-slate-200 transition-colors"
@@ -1962,7 +1962,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   <button
                     onClick={() => setMode('form')}
                     disabled={saving}
-                    className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                    className="flex-1 py-3.5 rounded-full text-sm font-semibold
                       text-slate-600 dark:text-slate-300
                       bg-slate-100 dark:bg-white/[0.06]
                       disabled:opacity-40 transition-colors"
@@ -1972,8 +1972,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   <button
                     onClick={handleDelete}
                     disabled={saving}
-                    className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                      bg-red-500 shadow-[0_4px_16px_rgba(239,68,68,0.35)]
+                    className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
+                      bg-red-500
                       disabled:opacity-40 disabled:shadow-none
                       active:scale-[0.98] transition-all duration-100"
                   >
@@ -2423,7 +2423,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 <button
                   onClick={close}
                   disabled={saving}
-                  className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                  className="flex-1 py-3.5 rounded-full text-sm font-semibold
                     text-slate-600 dark:text-slate-300
                     bg-slate-100 dark:bg-white/[0.06]
                     disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
@@ -2434,7 +2434,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
                   bg-primary
                   disabled:opacity-40 disabled:shadow-none
                   active:scale-[0.98] transition-all duration-100"
@@ -2510,7 +2510,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 <button
                   onClick={() => setMode('form')}
                   disabled={saving}
-                  className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                  className="flex-1 py-3.5 rounded-full text-sm font-semibold
                     text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
                     disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
                 >
@@ -2519,7 +2519,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 <button
                   onClick={handleAdjust}
                   disabled={saving || diff === 0}
-                  className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+                  className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
                     bg-primary
                     disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100"
                 >

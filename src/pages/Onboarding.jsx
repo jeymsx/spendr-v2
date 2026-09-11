@@ -84,14 +84,14 @@ function StepWelcome({ onNext, onSignIn, signingIn }) {
         <button
           onClick={onNext}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
+             active:scale-[0.98] transition-all duration-100"
         >
           Get Started →
         </button>
         <button
           onClick={onSignIn}
           disabled={signingIn}
-          className="w-full py-3.5 rounded-2xl text-sm font-semibold text-slate-300
+          className="w-full py-3.5 rounded-full text-sm font-semibold text-slate-300
             border border-white/[0.12] bg-white/[0.05]
             flex items-center justify-center gap-2.5
             active:bg-white/[0.10] transition-all duration-100 disabled:opacity-50"
@@ -145,7 +145,7 @@ function StepName({ value, onChange, onNext }) {
           onClick={onNext}
           disabled={!value.trim()}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100
+             active:scale-[0.98] transition-all duration-100
             disabled:opacity-40 disabled:shadow-none disabled:active:scale-100"
         >
           Continue →
@@ -190,7 +190,7 @@ function StepCurrency({ value, onChange, onNext }) {
         <button
           onClick={onNext}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
+             active:scale-[0.98] transition-all duration-100"
         >
           Continue →
         </button>
@@ -446,7 +446,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                   onClick={() => setCustomType(t.value)}
                   className={`py-2 rounded-xl text-xs font-semibold transition-all duration-100 ${
                     customType === t.value
-                      ? 'bg-primary text-white shadow-[0_2px_8px_rgba(var(--color-primary-rgb),0.4)]'
+                      ? 'bg-primary text-white'
                       : 'bg-white/[0.06] text-slate-400 border border-white/[0.08]'
                   }`}
                 >
@@ -479,7 +479,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setShowCustomForm(false)}
-                className="flex-1 py-3 rounded-2xl text-sm font-semibold text-slate-400
+                className="flex-1 py-3 rounded-full text-sm font-semibold text-slate-400
                   border border-white/[0.08] active:bg-white/[0.05] transition-colors"
               >
                 Cancel
@@ -487,7 +487,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
               <button
                 onClick={addCustom}
                 disabled={!customName.trim()}
-                className="flex-[2] py-3 rounded-2xl text-sm font-semibold text-white
+                className="flex-[2] py-3 rounded-full text-sm font-semibold text-white
                   bg-primary disabled:opacity-40
                  
                   active:scale-[0.98] transition-all duration-100"
@@ -503,7 +503,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
         <button
           onClick={onNext}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
+             active:scale-[0.98] transition-all duration-100"
         >
           Continue ({totalSelected} {totalSelected === 1 ? 'account' : 'accounts'}) →
         </button>
@@ -611,7 +611,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
       <div className="shrink-0 flex gap-3 pt-1">
         <button
           onClick={onSkip}
-          className="flex-1 py-4 rounded-2xl border border-white/[0.10] text-slate-400 font-semibold
+          className="flex-1 py-4 rounded-full border border-white/[0.10] text-slate-400 font-semibold
             text-[15px] active:scale-[0.98] transition-all duration-100 active:bg-white/[0.05]"
         >
           Skip
@@ -619,7 +619,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
         <button
           onClick={onNext}
           className="flex-[2] py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
+             active:scale-[0.98] transition-all duration-100"
         >
           Continue →
         </button>
@@ -819,7 +819,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
             <div className="flex gap-2 pt-1">
               <button
                 onClick={() => setShowCustomForm(false)}
-                className="flex-1 py-3 rounded-2xl text-sm font-semibold text-slate-400
+                className="flex-1 py-3 rounded-full text-sm font-semibold text-slate-400
                   border border-white/[0.08] active:bg-white/[0.05] transition-colors"
               >
                 Cancel
@@ -827,7 +827,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
               <button
                 onClick={addCustom}
                 disabled={!customName.trim()}
-                className="flex-[2] py-3 rounded-2xl text-sm font-semibold text-white
+                className="flex-[2] py-3 rounded-full text-sm font-semibold text-white
                   bg-primary disabled:opacity-40 disabled:shadow-none
                  
                   active:scale-[0.98] transition-all duration-100"
@@ -843,7 +843,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
         <button
           onClick={onNext}
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
-            shadow-[0_4px_24px_rgba(var(--color-primary-rgb),0.45)] active:scale-[0.98] transition-all duration-100"
+             active:scale-[0.98] transition-all duration-100"
         >
           Continue ({totalSelected} {totalSelected === 1 ? 'category' : 'categories'}) →
         </button>
@@ -877,8 +877,7 @@ function StepDone({ onFinish, saving }) {
       <button
         onClick={onFinish}
         disabled={saving}
-        className="w-full py-4 rounded-2xl bg-primary text-white font-semibold text-[15px]
-          shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.40)]
+        className="w-full py-4 rounded-full bg-primary text-white font-semibold text-[15px]
           active:scale-[0.98] transition-all duration-100 disabled:opacity-60 flex items-center justify-center gap-2"
       >
         {saving

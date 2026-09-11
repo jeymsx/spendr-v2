@@ -543,7 +543,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
       <div className="px-5 flex gap-3">
         <button
           onClick={onBack}
-          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-2xl text-sm font-semibold
+          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-full text-sm font-semibold
             text-slate-600 dark:text-slate-300
             bg-slate-100 dark:bg-white/[0.06]
             active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
@@ -553,7 +553,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
         </button>
         <button
           onClick={onNext}
-          className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+          className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
             bg-primary
             active:scale-[0.98] transition-all duration-100"
         >
@@ -683,7 +683,7 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
       <div className="flex gap-3">
         <button
           onClick={onBack}
-          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-2xl text-sm font-semibold
+          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-full text-sm font-semibold
             text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
             active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
         >
@@ -692,7 +692,7 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
         </button>
         <button
           onClick={handleContinue}
-          className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+          className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
             bg-primary
             active:scale-[0.98] transition-all duration-100"
         >
@@ -916,7 +916,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
         <button
           onClick={onBack}
           disabled={importing}
-          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-2xl text-sm font-semibold
+          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-full text-sm font-semibold
             text-slate-600 dark:text-slate-300
             bg-slate-100 dark:bg-white/[0.06]
             disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
@@ -927,7 +927,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
         <button
           onClick={handleImport}
           disabled={importing}
-          className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+          className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
             bg-primary
             disabled:opacity-50 disabled:shadow-none
             active:scale-[0.98] transition-all duration-100"
@@ -980,7 +980,7 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
       <div className="w-full space-y-3">
         <button
           onClick={() => navigate('/')}
-          className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white
+          className="w-full py-3.5 rounded-full text-sm font-semibold text-white
             bg-primary
             active:scale-[0.98] transition-all duration-100"
         >
@@ -988,7 +988,7 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
         </button>
         <button
           onClick={onImportAnother}
-          className="w-full py-3.5 rounded-2xl text-sm font-semibold
+          className="w-full py-3.5 rounded-full text-sm font-semibold
             text-slate-600 dark:text-slate-300
             bg-slate-100 dark:bg-white/[0.06]
             active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
@@ -1116,7 +1116,7 @@ export default function ImportWizard() {
               else setStep(s => s - 1)
             }}
             aria-label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}
-            className="w-9 h-9 rounded-xl flex items-center justify-center
+            className="w-9 h-9 rounded-full flex items-center justify-center
               text-slate-500 dark:text-slate-400
               bg-slate-100 dark:bg-white/[0.06]
               active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors"

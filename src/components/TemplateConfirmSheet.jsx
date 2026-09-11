@@ -190,7 +190,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           <button
             onClick={close}
             disabled={saving}
-            className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+            className="flex-1 py-3.5 rounded-full text-sm font-semibold
               text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
               disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
           >
@@ -199,8 +199,8 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           <button
             onClick={handleSave}
             disabled={saving || amount <= 0}
-            className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-              bg-primary shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.4)]
+            className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
+              bg-primary
               disabled:opacity-50 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >

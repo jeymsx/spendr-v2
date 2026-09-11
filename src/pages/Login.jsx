@@ -96,9 +96,8 @@ export default function Login() {
             onClick={handleGoogleSignIn}
             disabled={signingIn}
             className="w-full flex items-center justify-center gap-3
-              py-3.5 rounded-2xl text-sm font-semibold
+              py-3.5 rounded-full text-sm font-semibold
               bg-primary text-white
-              shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.40)]
               disabled:opacity-50 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >

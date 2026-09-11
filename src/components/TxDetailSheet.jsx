@@ -367,7 +367,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
             <div className="flex items-center gap-3">
               <button
                 onClick={() => setMode('detail')}
-                className="w-8 h-8 rounded-xl flex items-center justify-center
+                className="w-8 h-8 rounded-full flex items-center justify-center
                   bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400
                   active:scale-90 transition-transform duration-75"
               >
@@ -429,7 +429,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               <div className="flex gap-3">
                 <button
                   onClick={() => setMode('confirm-delete')}
-                  className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                  className="flex-1 py-3.5 rounded-full text-sm font-semibold
                     text-red-500 dark:text-red-400
                     bg-red-50 dark:bg-red-500/10
                     active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
@@ -438,7 +438,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 </button>
                 <button
                   onClick={enterEdit}
-                  className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+                  className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
                     bg-primary
                     active:scale-[0.98] transition-transform duration-100"
                 >
@@ -534,7 +534,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 <button
                   onClick={() => setMode('detail')}
                   disabled={saving}
-                  className="flex-1 py-3.5 rounded-2xl text-[15px] font-semibold
+                  className="flex-1 py-3.5 rounded-full text-[15px] font-semibold
                     text-slate-600 dark:text-slate-300
                     bg-slate-100 dark:bg-white/[0.07]
                     disabled:opacity-40 active:scale-[0.98] transition-transform duration-75"
@@ -544,7 +544,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 <button
                   onClick={handleSave}
                   disabled={saving || !parseFloat(editAmount)}
-                  className="flex-[1.6] py-3.5 rounded-2xl text-[15px] font-semibold text-white
+                  className="flex-[1.6] py-3.5 rounded-full text-[15px] font-semibold text-white
                     bg-primary disabled:opacity-40
                     active:scale-[0.98] transition-transform duration-75"
                 >
@@ -593,7 +593,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 <button
                   onClick={() => setMode('detail')}
                   disabled={saving}
-                  className="flex-1 py-3.5 rounded-2xl text-[15px] font-semibold
+                  className="flex-1 py-3.5 rounded-full text-[15px] font-semibold
                     text-slate-600 dark:text-slate-300
                     bg-slate-100 dark:bg-white/[0.07]
                     disabled:opacity-40 active:scale-[0.98] transition-transform duration-75"
@@ -603,7 +603,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 <button
                   onClick={handleDelete}
                   disabled={saving}
-                  className="flex-[1.6] py-3.5 rounded-2xl text-[15px] font-semibold text-white
+                  className="flex-[1.6] py-3.5 rounded-full text-[15px] font-semibold text-white
                     bg-red-500 disabled:opacity-40
                     active:scale-[0.98] transition-transform duration-75"
                 >

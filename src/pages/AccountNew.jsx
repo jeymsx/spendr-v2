@@ -337,7 +337,7 @@ function CreatedStep({ draft, onDone, onAddTransaction }) {
       <div className="w-full mt-8 flex flex-col gap-2.5" style={{ animation: 'pageFadeIn 0.5s 0.3s ease both' }}>
         <button
           onClick={onDone}
-          className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white bg-primary
+          className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-primary
             shadow-[0_6px_20px_-6px_rgba(var(--color-primary-rgb),0.6)]
             active:scale-[0.98] transition-transform duration-100"
         >
@@ -345,7 +345,7 @@ function CreatedStep({ draft, onDone, onAddTransaction }) {
         </button>
         <button
           onClick={onAddTransaction}
-          className="w-full py-3 rounded-2xl text-sm font-semibold
+          className="w-full py-3 rounded-full text-sm font-semibold
             text-slate-600 dark:text-slate-300
             active:bg-slate-100 dark:active:bg-white/[0.06] transition-colors"
         >
@@ -675,7 +675,7 @@ export default function AccountNew() {
         <header className="relative flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
           <button
             onClick={back}
-            className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
               bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
               text-slate-600 dark:text-slate-300 shadow-sm
               active:scale-90 transition-transform duration-75"

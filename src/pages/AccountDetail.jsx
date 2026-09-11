@@ -543,7 +543,7 @@ export default function AccountDetail() {
       <div className="pt-safe-header px-5">
         <button
           onClick={back}
-          className="w-9 h-9 -ml-1 rounded-2xl flex items-center justify-center
+          className="w-9 h-9 -ml-1 rounded-full flex items-center justify-center
             bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
             text-slate-600 dark:text-slate-300 shadow-sm
             active:scale-90 transition-transform duration-75"
@@ -589,7 +589,7 @@ export default function AccountDetail() {
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
         <button
           onClick={back}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
             bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
             text-slate-600 dark:text-slate-300 shadow-sm
             active:scale-90 transition-transform duration-75"
@@ -606,7 +606,7 @@ export default function AccountDetail() {
           {account.qrImage && (
             <button
               onClick={() => setQrVisible(true)}
-              className="w-9 h-9 rounded-2xl flex items-center justify-center
+              className="w-9 h-9 rounded-full flex items-center justify-center
                 text-emerald-500 dark:text-emerald-400 active:opacity-60 transition-opacity"
               aria-label="Show payment QR"
             >
@@ -941,7 +941,7 @@ export default function AccountDetail() {
             </div>
             <button
               onClick={() => { setFormPrefill({ parentName: account.name }); setFormOpen(true) }}
-              className="w-full py-3 rounded-2xl text-sm font-semibold text-primary
+              className="w-full py-3 rounded-full text-sm font-semibold text-primary
                 bg-primary/[0.08] dark:bg-primary/[0.12]
                 active:bg-primary/[0.15] transition-colors mb-5"
             >

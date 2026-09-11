@@ -549,8 +549,8 @@ function FilterModal({
         >
           <button
             onClick={close}
-            className="w-full py-4 rounded-2xl text-sm font-semibold text-white
-              bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.3)]
+            className="w-full py-4 rounded-full text-sm font-semibold text-white
+              bg-primary
               active:scale-[0.98] transition-all duration-100"
           >
             Show {filteredCount} {filteredCount === 1 ? 'transaction' : 'transactions'}
@@ -742,7 +742,7 @@ export default function Transactions() {
           <button
             onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
             className={[
-              'w-9 h-9 rounded-2xl flex items-center justify-center transition-colors duration-150',
+              'w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150',
               'border shadow-sm',
               viewMode === 'calendar'
                 ? 'bg-primary border-primary text-white'
@@ -775,7 +775,7 @@ export default function Transactions() {
           <button
             onClick={() => setFilterOpen(true)}
             className={[
-              'relative w-9 h-9 rounded-2xl flex items-center justify-center transition-colors duration-150',
+              'relative w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150',
               'border shadow-sm',
               activeFilterCount > 0
                 ? 'bg-primary border-primary text-white'

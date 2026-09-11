@@ -263,7 +263,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
       <header className="flex items-center gap-3 px-4 pt-safe-header pb-2 shrink-0">
         <button
           onClick={() => (onCancel ? onCancel() : navigate(-1))}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
             bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
             text-slate-600 dark:text-slate-300 shadow-sm
             active:scale-90 transition-transform duration-75"
@@ -459,7 +459,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         <button
           onClick={onConfirmPress}
           disabled={saving || amount <= 0}
-          className="w-full py-4 rounded-2xl text-sm font-semibold text-white
+          className="w-full py-4 rounded-full text-sm font-semibold text-white
             bg-primary
             disabled:opacity-40 disabled:shadow-none
             active:scale-[0.98] transition-all duration-100"

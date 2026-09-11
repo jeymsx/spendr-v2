@@ -358,7 +358,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                   className={[
                     'text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150',
                     confirmDel
-                      ? 'bg-red-500 text-white shadow-[0_2px_8px_rgba(239,68,68,0.4)]'
+                      ? 'bg-red-500 text-white'
                       : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
                   ].join(' ')}
                 >
@@ -546,7 +546,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
               onClick={handleSave}
               disabled={saving}
               className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
-                bg-primary shadow-[0_4px_20px_rgba(var(--color-primary-rgb),0.4)]
+                bg-primary
                 disabled:opacity-40 disabled:shadow-none
                 active:scale-[0.98] transition-all duration-100"
             >
@@ -671,7 +671,7 @@ export default function Recurring() {
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
         <button
           onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
             bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
             text-slate-600 dark:text-slate-300 shadow-sm
             active:scale-90 transition-transform duration-75"
@@ -684,8 +684,8 @@ export default function Recurring() {
         </h1>
         <button
           onClick={() => setShowForm(true)}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
-            bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
+            bg-primary text-white
             active:scale-90 transition-transform duration-75"
           aria-label="New bill"
         >

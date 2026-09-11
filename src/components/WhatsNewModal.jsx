@@ -149,8 +149,8 @@ export default function WhatsNewModal({ onClose }) {
         <div className="px-5 pb-5 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
           <button
             onClick={() => dismiss(true)}
-            className="w-full py-3 rounded-2xl text-sm font-semibold text-white
-              bg-primary shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.35)]
+            className="w-full py-3 rounded-full text-sm font-semibold text-white
+              bg-primary
               active:scale-[0.98] transition-all duration-100">
             Got it
           </button>

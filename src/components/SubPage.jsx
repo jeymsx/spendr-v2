@@ -27,7 +27,7 @@ export default function SubPage({ title, action = null, onBack, children, classN
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
         <button
           onClick={onBack ?? (() => navigate(-1))}
-          className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
             bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
             text-slate-600 dark:text-slate-300 shadow-sm
             active:scale-90 transition-transform duration-75"
