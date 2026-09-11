@@ -434,6 +434,38 @@ export default function AccountNew() {
   }, [draft.name, filter])
 
   function pickPreset(preset) {
+    /* Tapping the tile that is already on clears it.
+
+       The grid is how you choose an institution, so it should also be how
+       you un-choose one - and the case that makes this matter is the one
+       where the name is rejected: tap BPI, get "you already have an account
+       with this name", and the only way out was to go to the field below and
+       delete the text the tile had just put there. The tile said "selected"
+       and offered no way to say otherwise.
+
+       Back to the draft's own defaults rather than just blanking the name.
+       The preset set four other fields on the way in - type, role, colour,
+       and the house colour the swatch row offers back - and leaving those
+       behind would mean an unnamed account still carrying BPI's crimson and
+       calling itself a bank.
+
+       touchedName goes back to false too. It exists to hold the error back
+       until you have interacted with the field, and clearing a name on
+       purpose should not immediately be told the name is missing. Both
+       advancing and saving set it themselves, so nothing stops validating. */
+    if (draft.name.trim() === preset.name) {
+      set({
+        name: '',
+        type: 'cash',
+        role: defaultRole('cash'),
+        color: GRADIENT_PRESETS[0].join(','),
+        customColor: false,
+        presetColor: null,
+      })
+      setTouchedName(false)
+      return
+    }
+
     set({
       name: preset.name,
       type: preset.type,
