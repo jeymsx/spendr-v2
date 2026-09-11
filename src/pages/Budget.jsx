@@ -190,7 +190,7 @@ function AllocationRow({ cat, maxLimit }) {
 
       {/* The categories against EACH OTHER: the track's own length carries
           the size of the budget, so Food's limit visibly dwarfs Transpo's. */}
-      <ProgressBar size="md" value={spentPct} scale={trackPct} color={color} marker={over} />
+      <ProgressBar value={spentPct} scale={trackPct} color={color} marker={over} />
     </div>
   )
 }

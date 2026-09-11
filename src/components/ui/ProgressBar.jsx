@@ -51,11 +51,17 @@ export default function ProgressBar({
    * its own limit, where the overshoot is otherwise invisible.
    */
   marker = false,
-  /** `sm` for a row in a list, `md` where the bar is the subject. */
-  size = 'sm',
   className = '',
 }) {
-  const h = size === 'md' ? 'h-2' : 'h-1.5'
+  /* One thickness, and no prop to choose another.
+     
+     The first version offered `sm` and `md`, which sounds harmless and is not:
+     the budget page immediately ended up with 6px category rows above 8px
+     comparative rows, and goals with an 8px card bar above 6px row bars. Two
+     bars of different weights on one screen read as a mistake whatever the
+     reason, and the reason here was only that a prop existed to make them
+     differ. 6px is what four of the six call sites already were. */
+  const h = 'h-1.5'
 
   /* A sliver rather than nothing, once there is anything at all to show.
      Goals and Debts both did this by hand - `Math.max(pct > 0 ? 2 : 0, pct)`

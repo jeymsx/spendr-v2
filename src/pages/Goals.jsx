@@ -24,6 +24,7 @@ import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
+import { AccountChip } from '../components/AccountPickerSheet'
 
 /**
  * Savings goals.
@@ -118,7 +119,6 @@ function IconCheck() {
 function GoalBar({ pct, complete }) {
   return (
     <ProgressBar
-      size="md"
       value={pct}
       fillClass={complete ? 'bg-emerald-500' : 'bg-primary'}
     />
@@ -236,27 +236,38 @@ function GoalRow({ goal, onEdit, today }) {
  * Without it, a goal at 50% is just an assertion; with it you can see which
  * account the money is in and how much of that account is still free.
  */
-function AccountSplitRow({ name, split, isLast }) {
+function AccountSplitRow({ name, split, acct, isLast }) {
   const pct = split.balance > 0 ? (split.assigned / split.balance) * 100 : 0
   return (
     <>
-    <div className="px-4 py-3">
-      <div className="flex items-baseline justify-between gap-3">
-        <span className="text-[13px] font-semibold text-slate-800 dark:text-white truncate">{name}</span>
-        <span className="text-[12px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
-          {fmtCompact(split.balance)}
-        </span>
-      </div>
-      <ProgressBar className="mt-2" value={pct} fillClass="bg-primary" />
-      <div className="flex items-baseline justify-between gap-3 mt-1.5">
-        <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate min-w-0">
-          {split.goals.length === 0
-            ? 'Not funding any goal'
-            : split.goals.map(g => g.name).join(', ')}
-        </span>
-        <span className="text-[11px] tabular-nums shrink-0 text-slate-400 dark:text-slate-500">
-          {split.unassigned > 0 ? `${fmtCompact(split.unassigned)} free` : 'fully assigned'}
-        </span>
+    <div className="flex items-center gap-3 px-4 py-3">
+      {/* The card, as everywhere else. This row named an account and never
+          showed it. */}
+      {acct
+        ? <AccountChip acct={acct} size="sm" />
+        : (
+          <span
+            className="w-[40px] h-[28px] rounded-[8px] shrink-0 border border-dashed
+              border-slate-300 dark:border-white/20"
+            aria-hidden="true"
+          />
+        )}
+      <div className="flex-1 min-w-0">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="text-[13px] font-semibold text-slate-800 dark:text-white truncate">{name}</span>
+          <span className="text-[12px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
+            {fmtCompact(split.balance)}
+          </span>
+        </div>
+        <ProgressBar className="mt-2" value={pct} fillClass="bg-primary" />
+        <div className="flex items-baseline justify-between gap-3 mt-1.5">
+          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate min-w-0">
+            {split.goals.map(g => g.name).join(', ')}
+          </span>
+          <span className="text-[11px] tabular-nums shrink-0 text-slate-400 dark:text-slate-500">
+            {split.unassigned > 0 ? `${fmtCompact(split.unassigned)} free` : 'fully assigned'}
+          </span>
+        </div>
       </div>
     </div>
 
@@ -654,8 +665,23 @@ export default function Goals() {
 
   const loading = goalRows === undefined || accounts === undefined
   const fundable = (accounts ?? []).filter(isFundable)
+  const acctMap = Object.fromEntries((accounts ?? []).map(a => [a.name, a]))
+
+  /* Two lists, not one.
+  
+     Every account with a balance used to get three lines here, and most of
+     them were saying the same thing: "Not funding any goal", with a bar at
+     zero and its whole balance free. Eight accounts made a 600px wall whose
+     interesting half was the four rows that actually fund something.
+  
+     The accounts doing no work are not noise individually - their total IS
+     the "money no goal has claimed" the heading promises - so they collapse
+     to the one line that says it. */
   const splitEntries = Object.entries(alloc.byAccount)
     .filter(([, s]) => s.balance > 0 || s.goals.length > 0)
+  const fundingSplits = splitEntries.filter(([, s]) => s.goals.length > 0)
+  const idleSplits    = splitEntries.filter(([, s]) => s.goals.length === 0)
+  const idleFree      = idleSplits.reduce((n, [, s]) => n + (s.unassigned ?? 0), 0)
 
   return (
     <div className="pb-10">
@@ -789,14 +815,33 @@ export default function Goals() {
               </SectionLabel>
               <div className="px-5">
                 <Card clip>
-                  {splitEntries.map(([name, split], i) => (
+                  {fundingSplits.map(([name, split], i) => (
                     <AccountSplitRow
                       key={name}
+                      acct={acctMap[name]}
                       name={name}
                       split={split}
-                      isLast={i === splitEntries.length - 1}
+                      isLast={i === fundingSplits.length - 1 && idleSplits.length === 0}
                     />
                   ))}
+
+                  {/* The rest, as the one number they add up to. Naming each
+                      account that funds nothing spends three lines saying
+                      "nothing" - the total is the thing the heading above
+                      actually promises. */}
+                  {idleSplits.length > 0 && (
+                    <>
+                      {fundingSplits.length > 0 && <Divider inset="row" />}
+                      <div className="flex items-baseline justify-between gap-3 px-4 py-3">
+                        <span className="text-[13px] text-slate-500 dark:text-slate-400 truncate">
+                          {idleSplits.length} account{idleSplits.length === 1 ? '' : 's'} not funding a goal
+                        </span>
+                        <span className="text-[13px] font-semibold tabular-nums shrink-0 text-slate-700 dark:text-slate-200">
+                          {fmtCompact(idleFree)} free
+                        </span>
+                      </div>
+                    </>
+                  )}
                 </Card>
               </div>
             </section>
