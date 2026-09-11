@@ -60,6 +60,23 @@ import { cx } from './cx'
 /** Matches .sheet-panel-exit's 0.24s. */
 const EXIT_MS = 240
 
+/**
+ * Every sheet currently on screen, innermost last.
+ *
+ * Sheets stack: the account form opens the card designer, the transaction
+ * sheet opens a category picker, and both are mounted at once as siblings.
+ * Each one binds its key handler to `document`, so without this ONE Escape
+ * reached every open sheet and closed them all - dismissing the colour picker
+ * threw away the account form behind it, edits and all. Tab was worse: each
+ * trap saw focus outside its own panel and yanked it back, so two traps
+ * fought over every press and focus never advanced past the inner sheet's
+ * first control.
+ *
+ * A module-level array rather than context: a sheet does not need to know
+ * about its ancestors, only whether it is the one on top.
+ */
+const openSheets = []
+
 const FOCUSABLE = [
   'a[href]', 'button:not([disabled])', 'input:not([disabled])',
   'select:not([disabled])', 'textarea:not([disabled])',
@@ -104,6 +121,16 @@ export default function Sheet({
   /** Scrim darkness, 0-100. Deeper for a sheet stacked on another sheet. */
   scrim = 45,
   /**
+   * A ref to focus when the sheet opens, instead of the panel.
+   *
+   * The default is the panel itself, on purpose: focusing a field opens the
+   * keyboard, which is the wrong thing to do to someone who only meant to
+   * read. But a sheet that exists to take one number - the debt amount, a
+   * payment - wants the keyboard immediately, and losing that made those two
+   * forms feel broken after the migration.
+   */
+  initialFocus = null,
+  /**
    * A height this sheet insists on - '52dvh' for the account picker, which
    * wants five rows and half of the sixth showing whatever the screen.
    *
@@ -112,6 +139,17 @@ export default function Sheet({
    * is the case the float/dock rule exists to avoid.
    */
   maxHeight = null,
+  /**
+   * The panel's own background, for a sheet whose contents are cards.
+   *
+   * The account sorter is a white card list; on Sheet's white panel it went
+   * white-on-white in light mode with only a hairline between them. It had
+   * its own recessed surface before the migration, and this is how it keeps
+   * it. Replaces the default rather than adding to it - two `bg-` utilities
+   * in one class list is decided by stylesheet order, not by which came
+   * last.
+   */
+  surface = 'bg-white dark:bg-[#111820]',
   className = '',
   bodyClassName = '',
   children,
@@ -130,7 +168,14 @@ export default function Sheet({
   const [docked, setDocked] = useState(false)
   const panelRef = useRef(null)
   const restoreRef = useRef(null)
+  /* Identity in `openSheets`. A ref rather than a value, so the key handler
+     closes over something stable. */
+  const stackToken = useRef({})
   const titleId = useId()
+  /* The last contents seen while open, and the copy shown while closing. See
+     the note where `shown` is worked out. */
+  const liveRef = useRef(null)
+  const [frozen, setFrozen] = useState(null)
 
   /* A sheet with a height of its own never floats - see the prop's note. */
   const isDocked = docked || !!maxHeight
@@ -190,17 +235,49 @@ export default function Sheet({
     restoreRef.current = document.activeElement
     /* The panel itself, not its first field: focusing an input opens the
        keyboard on a phone, which is the wrong thing to do to someone who
-       only meant to read the sheet. */
-    panelRef.current?.focus({ preventScroll: true })
+       only meant to read the sheet. `initialFocus` is the opt-out, for a
+       sheet that exists to take one number. */
+    const target = initialFocus?.current ?? panelRef.current
+    target?.focus({ preventScroll: true })
     return () => {
       const back = restoreRef.current
       if (back && typeof back.focus === 'function') back.focus({ preventScroll: true })
+    }
+  }, [open, initialFocus])
+
+  /* Kept current while the sheet is open. A ref written in an effect, never
+     during render. */
+  useEffect(() => {
+    if (open) liveRef.current = { children, title, titleAction, footer }
+  })
+
+  /* Taken at the moment of closing, in a LAYOUT effect so the copy is in
+     state before the browser paints - a passive effect would let one frame of
+     the caller's cleared content through, which is the flicker this exists to
+     stop. */
+  useLayoutEffect(() => {
+    if (open) return
+    setFrozen(liveRef.current)
+  }, [open])
+
+  /* Join the stack while open, leave on close - and leave in the cleanup, so
+     an unmount mid-animation cannot strand an entry and silence every sheet
+     under it. */
+  useEffect(() => {
+    if (!open) return
+    const token = stackToken.current
+    openSheets.push(token)
+    return () => {
+      const i = openSheets.indexOf(token)
+      if (i !== -1) openSheets.splice(i, 1)
     }
   }, [open])
 
   useEffect(() => {
     if (!open) return
     const onKey = (e) => {
+      // Only the innermost sheet answers. See openSheets.
+      if (openSheets.length && openSheets[openSheets.length - 1] !== stackToken.current) return
       if (e.key === 'Escape') {
         if (dismissible) { e.preventDefault(); onClose?.() }
         return
@@ -232,13 +309,36 @@ export default function Sheet({
     return () => document.removeEventListener('keydown', onKey)
   }, [open, dismissible, onClose])
 
+  /* Freeze the contents for the length of the exit.
+
+     Sheet keeps rendering for 240ms after `open` goes false, which is what
+     lets the panel slide away - but the caller has usually cleared the record
+     it was showing in the same breath. Three migrations hit this at once: an
+     account form retitled itself "New account" on the way out, a photo
+     cropper swapped the photo for its empty state mid-slide, and a delete
+     confirmation read "Permanently delete ?".
+
+     So while exiting, show the last contents we had rather than the new ones.
+     React elements are immutable descriptors, so holding the previous tree is
+     safe, and it is exactly what was on screen when the close started.
+
+     The copy lives in STATE rather than in a ref read during render: a ref
+     read at render time taints every value derived from it as far as the
+     compiler is concerned, and it is right to - the render would not re-run
+     when the ref changed. The ref here is only ever written and read inside
+     effects. */
+  const live = { children, title, titleAction, footer }
+  const shown = open ? live : (frozen ?? live)
+
   if (!open && phase === 'closed') return null
 
   /* Docked, the panel is flush with the bottom of the screen, so the last
      thing in it has to clear the home indicator itself. Floating, the panel
      already stands that far off the edge and adding it again reads as a hole
      under the buttons. */
-  const bottomPad = isDocked ? 'pb-[max(20px,env(safe-area-inset-bottom))]' : 'pb-5'
+  /* 24px docked, which is what every hand-rolled panel used before the
+     migration - 20px quietly shaved 4px off the bottom of all of them. */
+  const bottomPad = isDocked ? 'pb-[max(24px,env(safe-area-inset-bottom))]' : 'pb-5'
 
   return (
     <div className="fixed inset-0" style={{ zIndex: z }}>
@@ -253,14 +353,14 @@ export default function Sheet({
         style={maxHeight ? { '--sheet-max': maxHeight } : undefined}
         role="dialog"
         aria-modal="true"
-        aria-labelledby={title ? titleId : undefined}
-        aria-label={!title && ariaLabel ? ariaLabel : undefined}
+        aria-labelledby={shown.title ? titleId : undefined}
+        aria-label={!shown.title && ariaLabel ? ariaLabel : undefined}
         tabIndex={-1}
         className={cx(
           closing ? 'sheet-panel-exit' : 'sheet-panel',
           isDocked ? 'sheet-dock' : 'sheet-float',
           'absolute flex flex-col outline-none',
-          'bg-white dark:bg-[#111820]',
+          surface,
           isDocked
             ? 'border-t border-slate-100 dark:border-white/[0.07]'
             : 'border border-slate-100 dark:border-white/[0.07] shadow-[0_18px_50px_rgba(0,0,0,0.22)]',
@@ -272,25 +372,25 @@ export default function Sheet({
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mt-4 mb-3 shrink-0" />
         )}
 
-        {title && (
+        {shown.title && (
           <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-3">
             <h3 id={titleId} className="text-[17px] font-semibold text-slate-900 dark:text-white">
-              {title}
+              {shown.title}
             </h3>
-            {titleAction}
+            {shown.titleAction}
           </div>
         )}
 
         <FadeScroller
           data-sheet-body=""
-          className={cx('flex-1 min-h-0 px-5', !footer && bottomPad, bodyClassName)}
+          className={cx('flex-1 min-h-0 px-5', !shown.footer && bottomPad, bodyClassName)}
         >
-          {children}
+          {shown.children}
         </FadeScroller>
 
-        {footer && (
+        {shown.footer && (
           <div className={cx('shrink-0 px-5 pt-3', bottomPad)}>
-            {footer}
+            {shown.footer}
           </div>
         )}
       </div>

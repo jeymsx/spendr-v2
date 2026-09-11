@@ -8,6 +8,7 @@
  * made those sheets inconsistent: dialog semantics, Escape, the scrim, focus,
  * and whether the exit animation still unmounts.
  */
+import { useRef } from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, cleanup, fireEvent, act } from '@testing-library/react'
 import Sheet from './Sheet'
@@ -118,6 +119,61 @@ describe('Sheet', () => {
     act(() => { vi.advanceTimersByTime(260) })
     expect(screen.queryByRole('dialog')).toBe(null)
     vi.useRealTimers()
+  })
+
+  it('shows what it had while it closes, not what the caller cleared', () => {
+    // The regression this fixes: a caller nulls its record inside onClose, so
+    // for the 240ms of the exit the panel rendered the empty state - an
+    // account form retitling itself "New account" on the way out.
+    vi.useFakeTimers()
+    const { rerender } = render(
+      <Sheet open onClose={() => {}} title="Edit account">Metrobank</Sheet>,
+    )
+    rerender(<Sheet open={false} onClose={() => {}} title="New account">{null}</Sheet>)
+    expect(screen.getByRole('dialog').textContent).toContain('Metrobank')
+    expect(screen.getByRole('dialog').textContent).toContain('Edit account')
+    act(() => { vi.advanceTimersByTime(260) })
+    expect(screen.queryByRole('dialog')).toBe(null)
+    vi.useRealTimers()
+  })
+
+  it('only the innermost sheet answers Escape', () => {
+    // Two sheets open at once - the account form and the colour picker it
+    // opened. One Escape used to close both, discarding the form.
+    const outer = vi.fn()
+    const inner = vi.fn()
+    render(
+      <>
+        <Sheet open onClose={outer} ariaLabel="outer">outer</Sheet>
+        <Sheet open onClose={inner} ariaLabel="inner" z={130}>inner</Sheet>
+      </>,
+    )
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(inner).toHaveBeenCalledTimes(1)
+    expect(outer).not.toHaveBeenCalled()
+  })
+
+  it('focuses what it was told to, when it was told to', () => {
+    // The debt and payment forms want the keyboard the moment they open.
+    function WithField() {
+      const ref = useRef(null)
+      return (
+        <Sheet open onClose={() => {}} ariaLabel="amount" initialFocus={ref}>
+          <input ref={ref} aria-label="Amount" />
+        </Sheet>
+      )
+    }
+    render(<WithField />)
+    expect(document.activeElement).toBe(screen.getByLabelText('Amount'))
+  })
+
+  it('takes its surface from the caller when given one', () => {
+    const { container } = render(
+      <Sheet open onClose={() => {}} surface="bg-slate-50 dark:bg-[#0d1117]">x</Sheet>,
+    )
+    const cls = container.querySelector('.sheet-panel').className
+    expect(cls).toContain('bg-slate-50')
+    expect(cls).not.toContain('bg-white')
   })
 
   it('puts the stacking order and the scrim where it was told', () => {

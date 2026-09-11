@@ -36,6 +36,7 @@ import {
 } from '../lib/accountMeta'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
+import Sheet from '../components/ui/Sheet'
 
 /* Re-exported, not redefined. They moved to lib/accountMeta.js so that
    components/CardStyle.jsx can have them without importing a page - see the
@@ -525,10 +526,8 @@ function PopularCard({ acct, onPick }) {
 // ── Quick-add sheet ────────────────────────────────────────────────────────────
 
 export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
-  const [closing,     setClosing]     = useState(false)
   const [query,       setQuery]       = useState('')
   const [recentNames, setRecentNames] = useState([])
-  useScrollLock(open)
 
   useEffect(() => {
     // Hydrate-on-open. The sheet renders null when closed but stays
@@ -538,23 +537,13 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
     if (open) { setQuery(''); setRecentNames(getRecentPresets()) }
   }, [open])
 
-  const close = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }, [onClose])
-
-  const closeRef = useRef(close)
-  useEffect(() => { closeRef.current = close }, [close])
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') closeRef.current() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-
+  /* Sheet owns the overlay, the panel, the handle, the scroll lock, Escape,
+     the focus trap and the exit animation, so picking just closes it the
+     ordinary way. The 260ms stays: the preset opens the form sheet next, and
+     two sheets crossing over each other reads as a glitch. */
   function pick(acct) {
     pushRecentPreset(acct.name)
-    close()
+    onClose()
     setTimeout(() => onPickPreset(acct), 260)
   }
 
@@ -562,147 +551,120 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
   const filtered = q ? PH_ACCOUNTS.filter(a => a.name.toLowerCase().includes(q)) : null
   const recents  = recentNames.map(n => PH_ACCOUNTS.find(a => a.name === n)).filter(Boolean)
 
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0
-          rounded-t-[28px] overflow-hidden
-          bg-white dark:bg-[#111820]
-          border-t border-slate-100 dark:border-white/[0.07]
-          flex flex-col`}
-        style={{ maxHeight: '88dvh' }}
-      >
-        {/* Header */}
-        <div className="pt-4 px-5 pb-3 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-base font-semibold text-slate-800 dark:text-white">Add account</h2>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Select a preset or create a custom one</p>
-            </div>
-            <IconButton label="Close" size="sm" onClick={close}>
-              <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-                <line x1="1" y1="1" x2="11" y2="11"/><line x1="11" y1="1" x2="1" y2="11"/>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Add account"
+      maxHeight="88dvh"
+      footer={(
+        /* The hairline it used to carry is gone with the migration: at
+           slate-200/60 over a slate-100 fill it was a rounding error, and
+           no other secondary button in the app has one. */
+        <Button
+          variant="secondary"
+          block
+          onClick={() => { onClose(); setTimeout(onCustom, 260) }}
+        >
+          <span className="w-5 h-5 rounded-full bg-slate-300 dark:bg-white/[0.15]
+            flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-white">
+            +
+          </span>
+          Custom account
+        </Button>
+      )}
+    >
+      <p className="text-xs text-slate-400 dark:text-slate-500">
+        Select a preset or create a custom one
+      </p>
+
+      {/* Search */}
+      <div className="pt-3 pb-3">
+        <div className="relative">
+          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500"
+            width="14" height="14" viewBox="0 0 20 20" fill="none">
+            <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.8"/>
+            <path d="M14.5 14.5L18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+          </svg>
+          <input
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="Search accounts…"
+            className="w-full h-10 pl-9 pr-8 rounded-2xl text-sm
+              bg-slate-100 dark:bg-white/[0.07]
+              text-slate-800 dark:text-slate-200
+              placeholder:text-slate-400 dark:placeholder:text-slate-600
+              border border-slate-200/60 dark:border-white/[0.08]
+              focus:outline-none focus:border-primary/40 transition-colors"
+          />
+          {query && (
+            <button
+              onClick={() => setQuery('')}
+              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
+                bg-slate-300/80 dark:bg-white/[0.15] flex items-center justify-center
+                text-slate-600 dark:text-slate-300 active:opacity-70"
+            >
+              <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
+                <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
               </svg>
-            </IconButton>
-          </div>
+            </button>
+          )}
         </div>
+      </div>
 
-        {/* Search */}
-        <div className="px-5 pb-3 shrink-0">
-          <div className="relative">
-            <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500"
-              width="14" height="14" viewBox="0 0 20 20" fill="none">
-              <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.8"/>
-              <path d="M14.5 14.5L18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-            <input
-              value={query}
-              onChange={e => setQuery(e.target.value)}
-              placeholder="Search accounts…"
-              className="w-full h-10 pl-9 pr-8 rounded-2xl text-sm
-                bg-slate-100 dark:bg-white/[0.07]
-                text-slate-800 dark:text-slate-200
-                placeholder:text-slate-400 dark:placeholder:text-slate-600
-                border border-slate-200/60 dark:border-white/[0.08]
-                focus:outline-none focus:border-primary/40 transition-colors"
-            />
-            {query && (
+      {filtered ? (
+        /* ── Search results ── */
+        <div className="pb-4">
+          {filtered.length === 0 ? (
+            <div className="py-12 text-center">
+              <p className="text-sm text-slate-400 dark:text-slate-500">No results for "{query}"</p>
               <button
-                onClick={() => setQuery('')}
-                className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
-                  bg-slate-300/80 dark:bg-white/[0.15] flex items-center justify-center
-                  text-slate-600 dark:text-slate-300 active:opacity-70"
+                onClick={() => { onClose(); setTimeout(onCustom, 260) }}
+                className="mt-3 text-xs font-semibold text-primary active:opacity-70"
               >
-                <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                  <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
-                </svg>
+                + Create custom account
               </button>
-            )}
-          </div>
-        </div>
-
-        {/* Scrollable content */}
-        <div className="overflow-y-auto flex-1 px-5" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-          {filtered ? (
-            /* ── Search results ── */
-            <div className="pb-4">
-              {filtered.length === 0 ? (
-                <div className="py-12 text-center">
-                  <p className="text-sm text-slate-400 dark:text-slate-500">No results for "{query}"</p>
-                  <button
-                    onClick={() => { close(); setTimeout(onCustom, 260) }}
-                    className="mt-3 text-xs font-semibold text-primary active:opacity-70"
-                  >
-                    + Create custom account
-                  </button>
-                </div>
-              ) : (
-                <div className="flex flex-wrap gap-2">
-                  {filtered.map(acct => <AccountChip key={acct.name} acct={acct} onPick={pick} />)}
-                </div>
-              )}
             </div>
           ) : (
-            /* ── Browse ── */
-            <div className="pb-4 space-y-5">
-              {recents.length > 0 && (
-                <div>
-                  <QASectionLabel>Recent</QASectionLabel>
-                  <div className="flex flex-wrap gap-2">
-                    {recents.map(acct => <AccountChip key={acct.name} acct={acct} onPick={pick} />)}
-                  </div>
-                </div>
-              )}
-
-              <div>
-                <QASectionLabel>Popular</QASectionLabel>
-                <div
-                  className="flex gap-2.5 overflow-x-auto pb-1 -mx-5 px-5 no-scrollbar"
-                >
-                  {POPULAR_ACCOUNTS.map(acct => <PopularCard key={acct.name} acct={acct} onPick={pick} />)}
-                </div>
-              </div>
-
-              {PH_GROUPS.map(group => (
-                <div key={group}>
-                  <QASectionLabel>{group}</QASectionLabel>
-                  <div className="flex flex-wrap gap-2">
-                    {PH_ACCOUNTS.filter(a => a.group === group).map(acct => (
-                      <AccountChip key={acct.name} acct={acct} onPick={pick} />
-                    ))}
-                  </div>
-                </div>
-              ))}
+            <div className="flex flex-wrap gap-2">
+              {filtered.map(acct => <AccountChip key={acct.name} acct={acct} onPick={pick} />)}
             </div>
           )}
         </div>
+      ) : (
+        /* ── Browse ── */
+        <div className="pb-4 space-y-5">
+          {recents.length > 0 && (
+            <div>
+              <QASectionLabel>Recent</QASectionLabel>
+              <div className="flex flex-wrap gap-2">
+                {recents.map(acct => <AccountChip key={acct.name} acct={acct} onPick={pick} />)}
+              </div>
+            </div>
+          )}
 
-        {/* Custom account footer */}
-        <div
-          className="px-5 pt-3 shrink-0 border-t border-slate-100 dark:border-white/[0.06]"
-          style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-        >
-          {/* The hairline it used to carry is gone with the migration: at
-              slate-200/60 over a slate-100 fill it was a rounding error, and
-              no other secondary button in the app has one. */}
-          <Button
-            variant="secondary"
-            block
-            onClick={() => { close(); setTimeout(onCustom, 260) }}
-          >
-            <span className="w-5 h-5 rounded-full bg-slate-300 dark:bg-white/[0.15]
-              flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-white">
-              +
-            </span>
-            Custom account
-          </Button>
+          <div>
+            <QASectionLabel>Popular</QASectionLabel>
+            <div
+              className="flex gap-2.5 overflow-x-auto pb-1 -mx-5 px-5 no-scrollbar"
+            >
+              {POPULAR_ACCOUNTS.map(acct => <PopularCard key={acct.name} acct={acct} onPick={pick} />)}
+            </div>
+          </div>
+
+          {PH_GROUPS.map(group => (
+            <div key={group}>
+              <QASectionLabel>{group}</QASectionLabel>
+              <div className="flex flex-wrap gap-2">
+                {PH_ACCOUNTS.filter(a => a.group === group).map(acct => (
+                  <AccountChip key={acct.name} acct={acct} onPick={pick} />
+                ))}
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
-    </div>
+      )}
+    </Sheet>
   )
 }
 
@@ -1117,10 +1079,8 @@ function SortableAccountItem({ acct, childCount }) {
 }
 
 function AccountSortSheet({ open, onClose, accounts }) {
-  const [closing,   setClosing]   = useState(false)
   const [localList, setLocalList] = useState([])
   const isDraggingRef = useRef(false)
-  useScrollLock(open)
 
   const parentNames = useMemo(() =>
     new Set(accounts.filter(a => a.parentName).map(a => a.parentName)),
@@ -1169,72 +1129,48 @@ function AccountSortSheet({ open, onClose, accounts }) {
     isDraggingRef.current = false
   }
 
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  if (!open && !closing) return null
-
+  /* The panel-level touch-action this used to set is gone with the hand-rolled
+     chrome, and dnd-kit does not miss it: the grab handle carries `touch-none`
+     itself, which is what makes the drag work on a phone. */
   return (
-    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-slate-50 dark:bg-[#0d1117]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[80vh] flex flex-col',
-        ].join(' ')}
-      >
-        {/* Header */}
-        <div className="pt-5 px-5 pb-3 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Sort accounts</h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag to reorder — affects picker order</p>
-            </div>
-            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-              Done
-            </button>
-          </div>
-        </div>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title="Sort accounts"
+      maxHeight="80dvh"
+    >
+      <p className="text-xs text-slate-400 dark:text-slate-500">
+        Drag to reorder — affects picker order
+      </p>
 
-        {/* List */}
-        <div
-          className="overflow-y-auto flex-1 px-5 pt-4 pb-8"
-          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-        >
-          <div className="rounded-2xl overflow-hidden
-            bg-white border border-slate-100
-            dark:bg-white/[0.04] dark:border-white/[0.07]
-            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none">
-            <DndContext
-              sensors={sensors}
-              collisionDetection={closestCenter}
-              onDragStart={handleDragStart}
-              onDragEnd={handleDragEnd}
-            >
-              <SortableContext items={localList.map(a => a.id)} strategy={verticalListSortingStrategy}>
-                {localList.map((acct, i) => (
-                  <div key={acct.id}>
-                    <SortableAccountItem
-                      acct={acct}
-                      childCount={childCountMap[acct.name] ?? 0}
-                    />
-                    {i < localList.length - 1 && (
-                      <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />
-                    )}
-                  </div>
-                ))}
-              </SortableContext>
-            </DndContext>
-          </div>
+      <div className="pt-4">
+        <div className="rounded-2xl overflow-hidden
+          bg-white border border-slate-100
+          dark:bg-white/[0.04] dark:border-white/[0.07]
+          shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none">
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            onDragStart={handleDragStart}
+            onDragEnd={handleDragEnd}
+          >
+            <SortableContext items={localList.map(a => a.id)} strategy={verticalListSortingStrategy}>
+              {localList.map((acct, i) => (
+                <div key={acct.id}>
+                  <SortableAccountItem
+                    acct={acct}
+                    childCount={childCountMap[acct.name] ?? 0}
+                  />
+                  {i < localList.length - 1 && (
+                    <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />
+                  )}
+                </div>
+              ))}
+            </SortableContext>
+          </DndContext>
         </div>
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -1252,89 +1188,62 @@ function AccountSortSheet({ open, onClose, accounts }) {
  * to reconcile.
  */
 function CardStyleSheet({ open, onClose, draft, set }) {
-  const [closing, setClosing] = useState(false)
-  useScrollLock(open)
-
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  if (!open && !closing) return null
-
+  /* No Done button any more: the scrim, Escape and the handle all dismiss a
+     sheet, and this one commits every tap as it happens - there was nothing
+     for Done to confirm. */
   return (
-    <div className="fixed inset-0 z-[150]">
-      <div className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[94vh] overflow-y-auto',
-        ].join(' ')}
-        style={{
-          touchAction: 'pan-y',
-          overscrollBehavior: 'contain',
-          paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
-        }}
-      >
-        <div className="pt-5 px-5 pb-1">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Customise card</h3>
-            <button
-              onClick={close}
-              className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
-                bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        </div>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={150}
+      scrim={55}
+      title="Customise card"
+      maxHeight="94dvh"
+    >
+      {/* The card stands up here, exactly as it does on the create flow's
+          style step - that upright card is the thing being chosen, and it
+          is what makes this read as the same screen rather than a
+          different one that happens to share a colour row.
 
-        {/* The card stands up here, exactly as it does on the create flow's
-            style step - that upright card is the thing being chosen, and it
-            is what makes this read as the same screen rather than a
-            different one that happens to share a colour row. */}
-        <div className="pt-2 pb-1">
-          <CardDesignGallery draft={draft} set={set} />
-        </div>
-
-        <div className="mt-3 px-5">
-          <ColorRail draft={draft} set={set} />
-        </div>
+          -mx-5 cancels the body's page gutter: the rail centres its cards
+          with `calc(50% - cardWidth/2)` spacers, so it has to be as wide as
+          the panel or the card bleeds stop 20px short of each edge. */}
+      <div className="pt-2 pb-1 -mx-5">
+        <CardDesignGallery draft={draft} set={set} />
       </div>
-    </div>
+
+      <div className="mt-3">
+        <ColorRail draft={draft} set={set} />
+      </div>
+    </Sheet>
   )
 }
 
 // ── QR Crop Sheet ─────────────────────────────────────────────────────────────
 
 function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
-  const [closing,       setClosing]       = useState(false)
   const [imgSrc,        setImgSrc]        = useState(null)
   const [crop,          setCrop]          = useState(null)
   const [completedCrop, setCompletedCrop] = useState(null)
   const imgRef    = useRef(null)
   const fileRef   = useRef(null)
-  useScrollLock(open)
 
   useEffect(() => {
     // Hydrate-on-open. The sheet renders null when closed but stays
     // mounted through its own exit animation, so the parent can neither
     // unmount nor re-key it to reset these fields for the next record.
     // The photo arrives as a prop now, so opening means "crop this".
+    //
+    // Guarded on `open`, like every other hydrate effect in this file: Sheet
+    // renders for 240ms after open goes false, and the parent clears the
+    // source in onClose, so clearing here as well swapped the photo for the
+    // empty "Choose a photo" state during the slide-down.
+    if (!open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setImgSrc(open ? (initialSrc ?? null) : null)
+    setImgSrc(initialSrc ?? null)
     setCrop(null)
     setCompletedCrop(null)
   }, [open, initialSrc])
-
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
 
   function onFileChange(e) {
     const file = e.target.files?.[0]
@@ -1376,120 +1285,96 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
       0, 0, 500, 700,
     )
     onConfirm(canvas.toDataURL('image/jpeg', 0.82))
-    close()
+    onClose()
   }
 
-  if (!open && !closing) return null
+  /* The actions are Sheet's footer, so they stay reachable no matter how tall
+     the photo is. The header's Cancel went with the migration: it only ever
+     called close, which the scrim, Escape and the handle all do now. */
+  const actions = !imgSrc ? (
+    <div className="flex gap-3">
+      <Button className="flex-1" onClick={() => fileRef.current?.click()}>
+        Choose Photo
+      </Button>
+    </div>
+  ) : (
+    <div className="flex gap-3">
+      {/* Straight back to the picker. Clearing to the empty state
+          meant picking the wrong screenshot cost two taps to fix -
+          one to empty it, one to ask again. */}
+      <Button
+        variant="secondary"
+        className="flex-1"
+        onClick={() => fileRef.current?.click()}
+      >
+        Change
+      </Button>
+      <Button className="flex-[2]" onClick={handleConfirm} disabled={!completedCrop}>
+        Use Photo
+      </Button>
+    </div>
+  )
 
   return (
-    <div className="fixed inset-0 z-[150]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[92vh] flex flex-col overflow-hidden',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-      >
-        {/* Header */}
-        <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04] shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          {/* gap-4 and a shrink-0 Cancel, because the hint underneath is a
-              full sentence: without them it ran under the button and wrapped
-              a single orphaned word onto a third line. Short enough now to
-              hold one line at 390px, with room to spare either side. */}
-          <div className="flex items-start justify-between gap-4">
-            <div className="min-w-0">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Crop QR photo</h3>
-              {imgSrc && (
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                  Drag the box over the code
-                </p>
-              )}
-            </div>
-            <button
-              onClick={close}
-              className="shrink-0 pt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60"
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={150}
+      scrim={60}
+      title="Crop QR photo"
+      maxHeight="92dvh"
+      footer={actions}
+    >
+      {imgSrc && (
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          Drag the box over the code
+        </p>
+      )}
+
+      <div className="flex flex-col items-center justify-center py-6 gap-5">
+        {!imgSrc ? (
+          <button
+            onClick={() => fileRef.current?.click()}
+            className="w-full flex flex-col items-center gap-3 py-12 rounded-3xl
+              border-2 border-dashed border-slate-200 dark:border-white/10
+              text-slate-400 dark:text-slate-500
+              active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+          >
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
+            </svg>
+            <p className="text-sm font-medium">Choose a photo</p>
+            <p className="text-xs">Select a screenshot containing your QR code</p>
+          </button>
+        ) : (
+          <div className="w-full flex items-center justify-center" style={{ touchAction: 'none' }}>
+            <ReactCrop
+              crop={crop}
+              onChange={c => setCrop(c)}
+              onComplete={c => setCompletedCrop(c)}
+              aspect={5 / 7}
+              keepSelection
             >
-              Cancel
-            </button>
+              <img
+                ref={imgRef}
+                src={imgSrc}
+                alt="QR source"
+                onLoad={onImageLoad}
+                style={{
+                  display: 'block',
+                  maxWidth: '100%',
+                  // Cap image to available space: sheet is 92dvh, header ~100px, footer ~84px, body padding 48px
+                  maxHeight: 'calc(92dvh - 232px)',
+                  objectFit: 'contain',
+                }}
+              />
+            </ReactCrop>
           </div>
-        </div>
-
-        {/* Body */}
-        <div className="flex-1 min-h-0 flex flex-col items-center justify-center px-5 py-6 gap-5"
-          style={{ touchAction: imgSrc ? 'none' : 'pan-y', overflowY: imgSrc ? 'hidden' : 'auto' }}>
-          {!imgSrc ? (
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="w-full flex flex-col items-center gap-3 py-12 rounded-3xl
-                border-2 border-dashed border-slate-200 dark:border-white/10
-                text-slate-400 dark:text-slate-500
-                active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
-            >
-              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
-              </svg>
-              <p className="text-sm font-medium">Choose a photo</p>
-              <p className="text-xs">Select a screenshot containing your QR code</p>
-            </button>
-          ) : (
-            <div className="w-full flex items-center justify-center" style={{ touchAction: 'none' }}>
-              <ReactCrop
-                crop={crop}
-                onChange={c => setCrop(c)}
-                onComplete={c => setCompletedCrop(c)}
-                aspect={5 / 7}
-                keepSelection
-              >
-                <img
-                  ref={imgRef}
-                  src={imgSrc}
-                  alt="QR source"
-                  onLoad={onImageLoad}
-                  style={{
-                    display: 'block',
-                    maxWidth: '100%',
-                    // Cap image to available space: sheet is 92vh, header ~100px, footer ~84px, body padding 48px
-                    maxHeight: 'calc(92dvh - 232px)',
-                    objectFit: 'contain',
-                  }}
-                />
-              </ReactCrop>
-            </div>
-          )}
-        </div>
-
-        {/* Footer */}
-        <div className="px-5 pt-2 shrink-0 flex gap-3">
-          {!imgSrc ? (
-            <Button className="flex-1" onClick={() => fileRef.current?.click()}>
-              Choose Photo
-            </Button>
-          ) : (
-            <>
-              {/* Straight back to the picker. Clearing to the empty state
-                  meant picking the wrong screenshot cost two taps to fix -
-                  one to empty it, one to ask again. */}
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => fileRef.current?.click()}
-              >
-                Change
-              </Button>
-              <Button className="flex-[2]" onClick={handleConfirm} disabled={!completedCrop}>
-                Use Photo
-              </Button>
-            </>
-          )}
-        </div>
-        <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+        )}
       </div>
-    </div>
+
+      <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onFileChange} />
+    </Sheet>
   )
 }
 
@@ -1599,24 +1484,20 @@ export async function createAccount(row, balance) {
  */
 export function AccountFormSheet({ open, onClose, account, prefill = null, variant = 'sheet' }) {
   const isPage = variant === 'page'
-  const [closing,    setClosing]    = useState(false)
   const { showToast } = useToast()
   const [saving,     setSaving]     = useState(false)
   const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete' | 'adjust'
   const [deleteBlocked, setDeleteBlocked] = useState(null)
   const [adjustBal,  setAdjustBal]  = useState('0')
 
-  /* Not on a page, except while the delete sheet is over it.
+  /* No scroll lock of its own any more, and no condition to get wrong.
 
-     The lock is what stops the body scrolling behind a sheet. On a page the
-     body IS the form, and locking it left everything below the colour row
-     unreachable - but once the confirmation is up there is a sheet again,
-     and the form behind it should sit still.
-
-     Below `mode`, not above it. Reading a useState const before its
-     declaration is a temporal dead zone error, and this crashed the page
-     into the ErrorBoundary until it moved. */
-  useScrollLock(open && (!isPage || mode === 'confirm-delete'))
+     It used to be conditional because the lock is what stops the body
+     scrolling behind a sheet: on a page the body IS the form, and locking it
+     left everything below the colour row unreachable - but once the delete
+     confirmation was up there was a sheet again, and the form behind it
+     should sit still. Both of those are a <Sheet> now, and a Sheet locks the
+     body for exactly as long as it is up. */
 
   const [name,           setName]           = useState('')
   const [type,           setType]           = useState('cash')
@@ -1726,11 +1607,11 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, account?.id])
 
-  const close = () => {
-    if (saving) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
+  /* All that is left of close(): the page's Back button, which is not a sheet
+     dismissal and so keeps the in-flight guard by hand. The sheet's copy of
+     that guard is `dismissible={!saving}`, and the exit animation it used to
+     run here belongs to Sheet. */
+  const close = () => { if (!saving) onClose() }
 
   /* The picker opens from the form, not from inside the crop sheet.
 
@@ -1890,7 +1771,15 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
     !a.parentName && a.type !== 'credit' && a.name !== name
   )
 
-  if (!open && !closing) return null
+  /* The page can bail the moment it is closed; the sheet must not. Sheet
+     keeps rendering its children for the 240ms its exit animation takes, and
+     returning null here would cut that short. */
+  if (isPage && !open) return null
+
+  /* Hoisted out of the adjust block, which used to be an IIFE: the Apply
+     button is Sheet's footer now, and it needs the same difference the
+     preview inside the body shows. */
+  const adjustDiff = parseMoney(adjustBal) - (account?.balance ?? 0)
 
   /* The delete confirmation's content, defined once.
 
@@ -1950,73 +1839,21 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
      component. */
   const inner = (
     <>
-        {/* On a page, SubPage has already drawn the title and the back
-            button, so this row keeps only the actions. */}
-        <div className={isPage
-          ? 'px-5 pb-1'
-          : `sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10
-             border-b border-slate-50 dark:border-white/[0.04]`}>
-          {!isPage && <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />}
-          {mode === 'form' ? (
-            <div className={`flex items-center ${isPage ? 'justify-end' : 'justify-between'}`}>
-              {!isPage && (
-                <h3 className="text-base font-semibold text-slate-800 dark:text-white">
-                  {isEdit ? 'Edit Account' : 'New account'}
-                </h3>
-              )}
-              {isEdit && (
-                <div className="flex items-center gap-2">
-                  {type !== 'credit' && (
-                    <button
-                      onClick={() => { setAdjustBal(numToMoneyStr(account?.balance ?? 0)); setMode('adjust') }}
-                      className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
-                        bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
-                    >
-                      Adjust balance
-                    </button>
-                  )}
-                  {/* Only in the sheet. On a page it is the last thing on
-                      the form instead - a destructive action does not belong
-                      at the top of a screen, a thumb's width from Back. */}
-                  {!isPage && (
-                    <button
-                      onClick={handleDeleteCheck}
-                      className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
-                        bg-red-50 dark:bg-red-500/10 active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
-                    >
-                      Delete
-                    </button>
-                  )}
-                </div>
-              )}
-            </div>
-          ) : mode === 'adjust' ? (
-            /* Sheet only, for the same reason as the delete header: on a page
-               SubPage already carries the title, and Back already carries the
-               cancel - the body has its own Cancel under the amount too, so
-               this row was the third way out of one screen. */
-            !isPage && (
-              <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-800 dark:text-white">Adjust balance</h3>
-                <button onClick={() => setMode('form')} disabled={saving}
-                  className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-                  Cancel
-                </button>
-              </div>
-            )
-          ) : (
-            /* Sheet only - the page puts this in the modal. flex rather than
-               text-center because Preflight sets `svg { display: block }`, so
-               the icon was a block box inside a text-align container and sat
-               against the left padding. */
-            !isPage && (
-              <div className="flex flex-col items-center">
-                <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
-                <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">Delete account?</h3>
-              </div>
-            )
-          )}
-        </div>
+        {/* Page only. SubPage has already drawn the title and the back
+            button, so this row keeps only the action - and in the sheet the
+            heading, the grab handle and the same controls are Sheet's own
+            `title`, `handle` and `titleAction`. */}
+        {isPage && mode === 'form' && isEdit && type !== 'credit' && (
+          <div className="px-5 pb-1 flex items-center justify-end">
+            <button
+              onClick={() => { setAdjustBal(numToMoneyStr(account?.balance ?? 0)); setMode('adjust') }}
+              className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
+                bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
+            >
+              Adjust balance
+            </button>
+          </div>
+        )}
 
         {/* ── Form mode ──
             Still rendered under the page's delete modal: the account has not
@@ -2372,26 +2209,20 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               />
             </div>
 
-            {/* Action buttons.
+            {/* Save, on the page only.
 
-                No Cancel on a page: the back button in the header is the
-                cancel, and offering two of them side by side invites the
-                question of whether they do different things. The sheet keeps
-                its own, because a sheet's only other way out is the scrim. */}
-            <div className="flex gap-3 pt-2">
-              {!isPage && (
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={close} disabled={saving}
-                >
-                  Cancel
+                No Cancel beside it there: the back button in the header is
+                the cancel, and offering two of them side by side invites the
+                question of whether they do different things. In the sheet the
+                Cancel/Save pair is Sheet's footer, pinned under the body so
+                it cannot scroll out of reach. */}
+            {isPage && (
+              <div className="flex gap-3 pt-2">
+                <Button className="flex-1" onClick={handleSave} disabled={saving}>
+                  {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add account'}
                 </Button>
-              )}
-              <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add account'}
-              </Button>
-            </div>
+              </div>
+            )}
 
             {/* Last, and quiet. Text on the page rather than a filled red
                 button: deleting an account is rare and irreversible, and a
@@ -2412,50 +2243,49 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
         )}
 
         {/* ── Adjust balance mode ── */}
-        {mode === 'adjust' && (() => {
-          const newBal = parseMoney(adjustBal)
-          const diff   = newBal - (account?.balance ?? 0)
-          return (
-            <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
-              {/* Current balance pill */}
-              <div className="px-4 py-3.5 rounded-2xl
-                bg-slate-50 dark:bg-white/[0.04]
-                border border-slate-100 dark:border-white/[0.07]">
-                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1">
-                  Current balance
-                </p>
-                <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
-                  {fmt(account?.balance ?? 0)}
-                </p>
+        {mode === 'adjust' && (
+          <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
+            {/* Current balance pill */}
+            <div className="px-4 py-3.5 rounded-2xl
+              bg-slate-50 dark:bg-white/[0.04]
+              border border-slate-100 dark:border-white/[0.07]">
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1">
+                Current balance
+              </p>
+              <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
+                {fmt(account?.balance ?? 0)}
+              </p>
+            </div>
+
+            {/* New balance input */}
+            <div>
+              <Label>Correct balance</Label>
+              <input
+                type="text"
+                inputMode="decimal"
+                value={adjustBal === '0' ? '' : adjustBal}
+                onChange={moneyChangeHandler(setAdjustBal)}
+                placeholder="0.00"
+                className={inputClass()}
+                autoFocus
+              />
+            </div>
+
+            {/* Difference preview */}
+            {adjustDiff !== 0 && (
+              <div className={`px-4 py-3 rounded-2xl text-sm font-medium ${
+                adjustDiff > 0
+                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                  : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
+              }`}>
+                {adjustDiff > 0
+                  ? `+${fmt(adjustDiff)} will be recorded as an inflow`
+                  : `${fmt(Math.abs(adjustDiff))} will be recorded as an expense`}
               </div>
+            )}
 
-              {/* New balance input */}
-              <div>
-                <Label>Correct balance</Label>
-                <input
-                  type="text"
-                  inputMode="decimal"
-                  value={adjustBal === '0' ? '' : adjustBal}
-                  onChange={moneyChangeHandler(setAdjustBal)}
-                  placeholder="0.00"
-                  className={inputClass()}
-                  autoFocus
-                />
-              </div>
-
-              {/* Difference preview */}
-              {diff !== 0 && (
-                <div className={`px-4 py-3 rounded-2xl text-sm font-medium ${
-                  diff > 0
-                    ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                    : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
-                }`}>
-                  {diff > 0
-                    ? `+${fmt(diff)} will be recorded as an inflow`
-                    : `${fmt(Math.abs(diff))} will be recorded as an expense`}
-                </div>
-              )}
-
+            {/* Page only - in the sheet this pair is Sheet's footer. */}
+            {isPage && (
               <div className="flex gap-3 pt-1">
                 <Button
                   variant="secondary"
@@ -2466,22 +2296,105 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </Button>
                 <Button
                   className="flex-[2]"
-                  onClick={handleAdjust} disabled={saving || diff === 0}
+                  onClick={handleAdjust} disabled={saving || adjustDiff === 0}
                 >
                   {saving ? 'Adjusting…' : 'Apply Adjustment'}
                 </Button>
               </div>
-            </div>
-          )
-        })()}
+            )}
+          </div>
+        )}
 
-        {/* ── Confirm delete mode ── */}
+        {/* ── Confirm delete mode ──
+            The heading came out of the panel header and into the body: it is
+            centred and topped with the trash icon, which is not what Sheet's
+            left-aligned title is, so the dialog is named by ariaLabel
+            instead. flex rather than text-center because Preflight sets
+            `svg { display: block }`, so the icon was a block box inside a
+            text-align container and sat against the left padding. */}
         {mode === 'confirm-delete' && !isPage && (
-          <div className="px-5 pt-5 pb-2">{deleteBody}</div>
+          <div className="px-5 pt-1 pb-2">
+            <div className="flex flex-col items-center mb-5">
+              <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
+              <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">Delete account?</h3>
+            </div>
+            {deleteBody}
+          </div>
         )}
         <div className="h-8" />
     </>
   )
+
+  /* The sheet's chrome, by mode. On a page none of it applies - SubPage
+     carries the title and Back, and the buttons stay in the body. */
+  const sheetTitle =
+    mode === 'form'     ? (isEdit ? 'Edit Account' : 'New account')
+    : mode === 'adjust' ? 'Adjust balance'
+    /* confirm-delete keeps its centred, icon-topped heading in the body, so
+       the dialog takes its name from ariaLabel instead. */
+    : null
+
+  const sheetTitleAction =
+    mode === 'form' && isEdit ? (
+      <div className="flex items-center gap-2">
+        {type !== 'credit' && (
+          <button
+            onClick={() => { setAdjustBal(numToMoneyStr(account?.balance ?? 0)); setMode('adjust') }}
+            className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
+              bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
+          >
+            Adjust balance
+          </button>
+        )}
+        {/* Only in the sheet. On a page it is the last thing on the form
+            instead - a destructive action does not belong at the top of a
+            screen, a thumb's width from Back. */}
+        <button
+          onClick={handleDeleteCheck}
+          className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
+            bg-red-50 dark:bg-red-500/10 active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
+        >
+          Delete
+        </button>
+      </div>
+    ) : mode === 'adjust' ? (
+      /* The way back out of a sub-mode, on the heading's own row - which is
+         what titleAction is for. */
+      <button onClick={() => setMode('form')} disabled={saving}
+        className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+        Cancel
+      </button>
+    ) : null
+
+  /* Pinned under the body rather than trailing it. The panel is capped at
+     92dvh and scrolls, so on a short screen Save sat below the fold. */
+  const sheetFooter =
+    mode === 'form' ? (
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
+        <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add account'}
+        </Button>
+      </div>
+    ) : mode === 'adjust' ? (
+      <div className="flex gap-3">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => setMode('form')} disabled={saving}
+        >
+          Cancel
+        </Button>
+        <Button
+          className="flex-[2]"
+          onClick={handleAdjust} disabled={saving || adjustDiff === 0}
+        >
+          {saving ? 'Adjusting…' : 'Apply Adjustment'}
+        </Button>
+      </div>
+    ) : null
 
   return (
     <>
@@ -2501,21 +2414,29 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
         {inner}
       </SubPage>
     ) : (
-      <div className="fixed inset-0 z-[100]">
-        <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-        <div
-          className={[
-            closing ? 'sheet-panel-exit' : 'sheet-panel',
-            'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-            'bg-white dark:bg-[#111820]',
-            'border-t border-slate-100 dark:border-white/[0.07]',
-            'max-h-[92vh] overflow-y-auto',
-          ].join(' ')}
-          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-        >
-          {inner}
-        </div>
-      </div>
+      /* The overlay, the panel, the grab handle, the scroll lock, Escape, the
+         focus trap, the dialog role and the exit animation all live in
+         <Sheet> now.
+
+         -mx-5 cancels Sheet's page gutter, and has to: `inner` is the PAGE's
+         body as well, SubPage draws no gutter of its own, and every block
+         inside carries its own px-5. Undoing it once here is the one place
+         that knows about both. */
+      <Sheet
+        open={open}
+        onClose={onClose}
+        dismissible={!saving}
+        maxHeight="92dvh"
+        title={sheetTitle}
+        /* Only reaches the dialog in confirm-delete mode, where sheetTitle is
+           null because that heading stays in the body. Sheet ignores it
+           whenever there is a title. */
+        ariaLabel="Delete account"
+        titleAction={sheetTitleAction}
+        footer={sheetFooter}
+      >
+        <div className="-mx-5">{inner}</div>
+      </Sheet>
     )}
 
     {/* Over the page, with the form still behind it.
@@ -2528,35 +2449,31 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
         index.css already re-positions any sheet as a centred modal on
         desktop, so this IS centred there, for free; a hand-rolled centred
         box would have stayed a phone-sized card in the middle of a 1440px
-        screen. */}
-    {isPage && mode === 'confirm-delete' && (
-      <div className="fixed inset-0 z-[150]">
-        <div
-          className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-sm"
-          onClick={() => { if (!saving) setMode('form') }}
-        />
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label="Delete account"
-          className="sheet-panel absolute bottom-0 inset-x-0 rounded-t-[28px]
-            bg-white dark:bg-[#111820]
-            border-t border-slate-100 dark:border-white/[0.07]"
-          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
-        >
-          <div className="pt-5 px-5">
-            <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-            <div className="flex flex-col items-center">
-              <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white mt-2">
-                Delete account?
-              </h3>
-            </div>
-          </div>
-          <div className="px-5 pt-4">{deleteBody}</div>
-        </div>
+        screen.
+
+        Which is exactly what <Sheet> is, so it is one now - and it gains the
+        exit animation, Escape and the focus trap it never had as a static
+        panel. `open` rather than a && , so the exit has something to play
+        on; Sheet renders nothing when it is closed. */}
+    <Sheet
+      open={isPage && mode === 'confirm-delete'}
+      onClose={() => setMode('form')}
+      z={150}
+      scrim={55}
+      dismissible={!saving}
+      ariaLabel="Delete account"
+    >
+      {/* flex rather than text-center because Preflight sets
+          `svg { display: block }`, so the icon was a block box inside a
+          text-align container and sat against the left padding. */}
+      <div className="flex flex-col items-center">
+        <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
+        <h3 className="text-base font-semibold text-slate-800 dark:text-white mt-2">
+          Delete account?
+        </h3>
       </div>
-    )}
+      <div className="pt-4">{deleteBody}</div>
+    </Sheet>
 
     <CardStyleSheet
       open={styleOpen}

@@ -1,5 +1,4 @@
 import { cloneElement, useEffect, useState, useMemo } from 'react'
-import { useScrollLock } from '../hooks/useScrollLock'
 import db, { UNSYNCED } from '../db/db'
 import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx,
          deleteTxGroup, restoreDeletedTxs } from '../db/txHelpers'
@@ -12,6 +11,7 @@ import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
 import CategoryGlyph from './CategoryGlyph'
 import Button from './ui/Button'
 import IconButton from './ui/IconButton'
+import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -82,15 +82,6 @@ function DetailGroup({ children }) {
   )
 }
 
-function IconClose() {
-  return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M18 6L6 18M6 6l12 12" />
-    </svg>
-  )
-}
-
 // ── Edit rows ──────────────────────────────────────────────────────────────────
 
 /**
@@ -110,6 +101,11 @@ function IconClose() {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [], zIndex = 100 }) {
+  /* The record the panel keeps showing while it slides away - see the note
+     above `rec`. State rather than a ref, because a ref read during render is
+     not something the component re-renders for, and the compiler is right to
+     say so. */
+  const [lastTx, setLastTx] = useState(null)
   const { showToast } = useToast()
 
   // The sheet is handed a single transaction, so the plan's other months are
@@ -124,8 +120,9 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
   const planCount = planRows?.length ?? 0
   const planTotal = (planRows ?? []).reduce((s, t) => s + (t.amount ?? 0), 0)
 
-  const [closing,         setClosing]         = useState(false)
-  useScrollLock(open)
+  /* No `closing` flag and no scroll lock here: Sheet owns the overlay, the
+     panel, the grab handle, the scroll lock, Escape, the focus trap and the
+     exit animation, and `open` is the only thing that decides any of it. */
   const [mode,            setMode]            = useState('detail')   // 'detail' | 'edit' | 'confirm-delete'
   const [saving,          setSaving]          = useState(false)
 
@@ -148,6 +145,11 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
   const catMap  = useMemo(() => Object.fromEntries(categories.map(c => [c.name, c])), [categories])
 
   // reset mode when a different transaction is opened
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (tx) setLastTx(tx)
+  }, [tx])
+
   useEffect(() => {
     // Hydrate-on-open. The sheet renders null when closed but stays
     // mounted through its own exit animation, so the parent can neither
@@ -174,12 +176,6 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
     setMode('edit')
   }
 
-  const close = () => {
-    if (saving) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
   async function handleSave() {
     setSaving(true)
     try {
@@ -204,7 +200,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
         await applyBalanceEffect({ ...tx, ...patch })
         await db.transactions.update(tx.id, patch)
       })
-      close()
+      onClose()
     } catch (e) {
       console.error('[TxDetailSheet] save failed:', e)
       showToast('Failed to save changes', 'error')
@@ -221,7 +217,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
     try {
       if (group) {
         await deleteTxGroup(group)
-        close()
+        onClose()
         showToast(`${group.length} payments deleted`, 'success', {
           actionLabel: 'Undo',
           onAction: async () => {
@@ -256,7 +252,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
             await db.recurring.update(tx.recurringId, { nextDate: tx.recurringPrevDate })
           }
         })
-      close()
+      onClose()
       showToast('Transaction deleted', 'success', {
         actionLabel: 'Undo',
         onAction: async () => {
@@ -277,124 +273,170 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
     }
   }
 
-  if (!open && !closing) return null
-  if (!tx) return null
+  /* Hold the last record across the exit.
 
-  const cfg         = TYPE_CFG[tx.type] ?? TYPE_CFG.expense
-  const cat         = catMap[tx.category]
-  const acct        = acctMap[tx.account]
-  const fromAcct    = acctMap[tx.fromAccount]
-  const toAcct      = acctMap[tx.toAccount]
-  const editCatList = categories.filter(c => c.type === tx.type)
+     Every caller nulls its selection inside onClose - setSelectedTx(null) on
+     Transactions, AccountDetail and three desktop pages - in the same batch
+     that flips `open` false. With a bare `if (!tx) return null` the whole
+     Sheet unmounted on the very next render, so the panel vanished instead of
+     sliding away. Sheet keeps ITS contents alive through the exit, but it
+     cannot help if the component above it stops rendering.
+
+     So: remember the last non-null record and read that. It is only ever the
+     thing the sheet is already showing. */
+  const rec = tx ?? lastTx
+  if (!rec) return null
+
+  const cfg         = TYPE_CFG[rec.type] ?? TYPE_CFG.expense
+  const cat         = catMap[rec.category]
+  const acct        = acctMap[rec.account]
+  const fromAcct    = acctMap[rec.fromAccount]
+  const toAcct      = acctMap[rec.toAccount]
+  const editCatList = categories.filter(c => c.type === rec.type)
     .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))
 
+  /* One action row per mode, pinned by Sheet under the scrolling body.
+
+     They used to be the last thing inside each mode's block, so anything
+     that made the card tall - a plan warning, a long note - pushed Save or
+     Delete below the fold of a panel that scrolls as one piece. */
+  const footer = {
+    detail: (
+      <div className="flex gap-3">
+        <Button
+          variant="dangerTint"
+          className="flex-1"
+          onClick={() => setMode('confirm-delete')}
+        >
+          Delete
+        </Button>
+        <Button className="flex-[2]" onClick={enterEdit}>
+          Edit
+        </Button>
+      </div>
+    ),
+    edit: (
+      <div className="flex gap-2.5">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => setMode('detail')} disabled={saving}
+        >
+          Cancel
+        </Button>
+        <Button
+          className="flex-[1.6]"
+          onClick={handleSave} disabled={saving || !parseFloat(editAmount)}
+        >
+          {saving ? 'Saving…' : 'Save'}
+        </Button>
+      </div>
+    ),
+    'confirm-delete': (
+      <div className="flex gap-2.5">
+        <Button
+          variant="secondary"
+          className="flex-1"
+          onClick={() => setMode('detail')} disabled={saving}
+        >
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          className="flex-[1.6]"
+          onClick={handleDelete} disabled={saving}
+        >
+          {saving ? 'Deleting…' : planCount > 1 ? `Delete all ${planCount}` : 'Delete'}
+        </Button>
+      </div>
+    ),
+  }[mode]
+
+  /* Edit and confirm-delete head themselves with a line of text, so they hand
+     it to Sheet and get aria-labelledby pointing at it. Detail's heading is
+     the coloured type pill - a graphic, not a line of text - so it stays in
+     the body and ariaLabel names the dialog instead. */
+  const title = {
+    edit:             `Edit ${cfg.label}`,
+    'confirm-delete': planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?',
+  }[mode] ?? null
+
   return (
-    <div className="fixed inset-0" style={{ touchAction: 'none', zIndex }}>
-      {/* A heavier backdrop than the other sheets use, because this panel is
-          glass and glass needs something soft behind it. At black/45 with a
-          4px blur the transaction list was still legible THROUGH the card -
-          ghost rows and red amounts sitting under the detail group, which is
-          exactly what index.css warns about for translucent floating panels.
-          The answer is not to give up the glass but to obscure what it is
-          frosting: 24px of blur and 55% black leaves shapes and colour behind
-          the card, which is the point, and no readable text. */}
-      <div className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-xl" onClick={close} />
+    <>
+      {/* ── A floating card, not a slab, and now not by hand ──
 
-      {/* ── A floating card, not a slab ──
+          This panel was flush to the bottom edge with only its top corners
+          rounded - the Android bottom-sheet shape - and was hand-converted to
+          the iOS one: inset from every edge, rounded all the way round, so
+          the page is visibly behind it rather than covered by it.
 
-          It was flush to the bottom edge with only its top corners rounded -
-          the Android bottom-sheet shape. iOS floats its action sheets: inset
-          from every edge, rounded all the way round, so the page is visibly
-          behind it rather than covered by it.
+          That geometry lives in Sheet now, and Sheet does the harder half of
+          it: it measures at open time and only floats while the content fits,
+          docking to the bottom edge when it does not - because a card that
+          has to scroll with a gap beneath it puts its own bottom edge and the
+          screen's in the same place, and the rounded corners then read as a
+          rendering fault. So no maxHeight here: asking for a height would pin
+          this to the docked shape permanently, and detail and delete both fit
+          without scrolling on every phone this runs on.
 
-          `card` - the glass material, same as every panel on the home
-          screen - rather than `card-solid`.
+          The glass went with the hand-rolled panel - Sheet's material is
+          opaque, which retires the argument that a translucent card needs
+          something soft behind it. The 55% scrim stays anyway, on its own
+          merits: this opens over the transaction list, the densest page in
+          the app, and what shows behind a sheet should read as a page rather
+          than as rows you can almost finish reading.
 
-          index.css warns off translucency for floating panels on two counts,
-          and neither applies here. It says a 20%-opacity panel over a
-          populated page shows the page through it: true over a bare page, but
-          this one sits on the backdrop below, already blurred and darkened to
-          45% black, so the glass frosts that rather than the list. And it says
-          backdrop-filter makes an element the containing block for its
-          position:fixed descendants, which would centre the nested pickers
-          against this card instead of the viewport - but the pickers are
-          SIBLINGS of this panel inside the outer fixed wrapper, not
-          descendants, so the blur cannot capture them. Worth keeping in mind
-          if they are ever moved inside.
-
-          The grab handle is gone with the slab. A handle says "drag me down
-          from this edge", and there is no edge to drag from any more; the
-          close button and the backdrop are the honest affordances.
-
-          None of this touches desktop: `html.web .sheet-panel` re-anchors the
-          panel as a centred modal at specificity (0,2,1), which beats every
-          utility class here. ── */}
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'card absolute inset-x-3 rounded-[28px]',
-          'bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
-          'max-h-[86dvh] overflow-y-auto',
-        ].join(' ')}
-        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+          The grab handle comes back with Sheet, and the header's close button
+          goes: the handle, the scrim and Escape all dismiss this now. ── */}
+      <Sheet
+        open={open}
+        onClose={onClose}
+        z={zIndex}
+        scrim={55}
+        /* Not while it is writing: the sheet that is saving or deleting a
+           transaction must not be dismissed out from under the write. This
+           is the `if (saving) return` the old local close() opened with. */
+        dismissible={!saving}
+        title={title}
+        /* Only used when there is no title - which is detail mode. */
+        ariaLabel={`${cfg.label} details`}
+        titleAction={mode === 'edit' ? (
+          <IconButton
+            label="Back to details"
+            size="sm"
+            onClick={() => setMode('detail')}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+          </IconButton>
+        ) : null}
+        footer={footer}
       >
-        {/* Not sticky any more. It was sticky with a hardcoded background to
-            match the panel, which card-solid's gradient would have shown a
-            seam against - and detail and delete both fit without scrolling. */}
-        <div className="pt-4 px-5 pb-1">
-
-          {/* mode-aware header */}
-          {mode === 'detail' && (
-            <div className="flex items-center justify-between">
-              <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.badge}`}>
-                {cfg.label}
-              </span>
-              {/* The timestamp used to live here AND in the Date row below,
-                  saying the same thing twice on a card with three facts on
-                  it. Dropping it here frees the corner for the close button
-                  the missing grab handle left the sheet without. */}
-              <IconButton label="Close" size="sm" className="-mr-1" onClick={close}>
-                <IconClose />
-              </IconButton>
-            </div>
-          )}
-          {mode === 'edit' && (
-            <div className="flex items-center gap-3">
-              <IconButton
-                label="Back to details"
-                size="sm"
-                onClick={() => setMode('detail')}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <polyline points="15 18 9 12 15 6" />
-                </svg>
-              </IconButton>
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Edit {cfg.label}</h3>
-            </div>
-          )}
-          {mode === 'confirm-delete' && (
-            <div className="text-center pt-2 pb-1">
-              <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white">
-                {planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?'}
-              </h3>
-            </div>
-          )}
-        </div>
-
-        <div className="px-5 pb-2">
+        <div>
 
           {/* ── DETAIL MODE ── */}
           {mode === 'detail' && (
             <>
+              {/* The type, as a pill, in place of a title. The timestamp used
+                  to sit opposite it and say exactly what the Date row below
+                  says - the corner it freed went to a close button, which
+                  Sheet's handle and scrim have now made unnecessary. */}
+              <div className="flex items-center">
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.badge}`}>
+                  {cfg.label}
+                </span>
+              </div>
+
               {/* The figure, given room. Tighter tracking at this size: at
                   42px the default spacing makes a long peso amount sprawl. */}
               <div className="text-center pt-5 pb-6">
                 <p className="text-[40px] font-semibold tabular-nums leading-none tracking-tight"
                   style={{ color: cfg.color }}>
-                  {cfg.sign}{fmt(tx.amount)}
+                  {cfg.sign}{fmt(rec.amount)}
                 </p>
-                {tx.description && (
-                  <p className="text-[15px] text-slate-500 dark:text-slate-400 mt-2.5">{tx.description}</p>
+                {rec.description && (
+                  <p className="text-[15px] text-slate-500 dark:text-slate-400 mt-2.5">{rec.description}</p>
                 )}
               </div>
 
@@ -407,7 +449,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   acct     && { key: 'acct', label: 'Account',  value: acct.name,     dot: acct.color },
                   fromAcct && { key: 'from', label: 'From',     value: fromAcct.name, dot: fromAcct.color },
                   toAcct   && { key: 'to',   label: 'To',       value: toAcct.name,   dot: toAcct.color },
-                  { key: 'date', label: 'Date', value: fmtDisplayDate(tx.date), sub: fmtTime(tx.date) },
+                  { key: 'date', label: 'Date', value: fmtDisplayDate(rec.date), sub: fmtTime(rec.date) },
                 ].filter(Boolean)
                 return (
                   <DetailGroup>
@@ -417,27 +459,12 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   </DetailGroup>
                 )
               })()}
-
-              <div className="h-5" />
-
-              <div className="flex gap-3">
-                <Button
-                  variant="dangerTint"
-                  className="flex-1"
-                  onClick={() => setMode('confirm-delete')}
-                >
-                  Delete
-                </Button>
-                <Button className="flex-[2]" onClick={enterEdit}>
-                  Edit
-                </Button>
-              </div>
             </>
           )}
 
           {/* ── EDIT MODE ── */}
           {mode === 'edit' && (
-            <div className="mt-2">
+            <div className="pt-2">
               {(() => {
                 const rows = [
                   <EditRow key="amt" label="Amount">
@@ -471,7 +498,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                       display={editDate ? fmtDisplayDate(`${editDate}T00:00:00`) : ''}
                     />
                   </EditRow>,
-                  ...(tx.type !== 'transfer' ? [
+                  ...(rec.type !== 'transfer' ? [
                     <EditRow key="cat" label="Category">
                       <RowPicker
                         label={editCategory?.name}
@@ -516,28 +543,12 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   </DetailGroup>
                 )
               })()}
-
-              <div className="flex gap-2.5 mt-5">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => setMode('detail')} disabled={saving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-[1.6]"
-                  onClick={handleSave} disabled={saving || !parseFloat(editAmount)}
-                >
-                  {saving ? 'Saving…' : 'Save'}
-                </Button>
-              </div>
             </div>
           )}
 
           {/* ── CONFIRM DELETE MODE ── */}
           {mode === 'confirm-delete' && (
-            <div className="mt-1">
+            <div className="pt-1">
               <p className="text-[13px] text-center text-slate-500 dark:text-slate-400 mb-4 px-2">
                 This cannot be undone from here, though the toast afterwards
                 offers one.
@@ -550,10 +561,10 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               <DetailGroup>
                 <DetailRow
                   label={planCount > 1 ? `${planCount} payments` : 'Amount'}
-                  value={planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(tx.amount)}`}
+                  value={planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(rec.amount)}`}
                 />
-                {tx.description && (
-                  <DetailRow label="Note" value={tx.description} />
+                {rec.description && (
+                  <DetailRow label="Note" value={rec.description} />
                 )}
                 <DetailRow
                   label="Balance"
@@ -566,65 +577,61 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   goes. Say so before it happens rather than after. */}
               {planCount > 1 && (
                 <p className="text-[12px] font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
-                  All {planCount} payments in this plan ({fmt(tx.amount)} × {planCount}) will be deleted.
+                  All {planCount} payments in this plan ({fmt(rec.amount)} × {planCount}) will be deleted.
                 </p>
               )}
-
-              <div className="flex gap-2.5 mt-5">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => setMode('detail')} disabled={saving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  variant="danger"
-                  className="flex-[1.6]"
-                  onClick={handleDelete} disabled={saving}
-                >
-                  {saving ? 'Deleting…' : planCount > 1 ? `Delete all ${planCount}` : 'Delete'}
-                </Button>
-              </div>
             </div>
           )}
         </div>
-        {/* The panel floats now, so it carries its own bottom padding rather
-            than borrowing the screen edge's. */}
-        <div className="h-4 shrink-0" />
-      </div>
+      </Sheet>
 
-      {/* nested pickers — z-[110] renders above this sheet at z-[100] */}
-      <CategoryPickerSheet
-        open={showCatPicker}
-        onClose={() => setShowCatPicker(false)}
-        categories={editCatList}
-        selected={editCategory}
-        onSelect={c => { setEditCategory(c); setShowCatPicker(false) }}
-      />
-      <AccountPickerSheet
-        open={showAcctPicker}
-        onClose={() => setShowAcctPicker(false)}
-        accounts={accounts}
-        selected={editAccount}
-        onSelect={a => { setEditAccount(a); setShowAcctPicker(false) }}
-      />
-      <AccountPickerSheet
-        open={showFromPicker}
-        onClose={() => setShowFromPicker(false)}
-        accounts={accounts}
-        selected={editFrom}
-        onSelect={a => { setEditFrom(a); setShowFromPicker(false) }}
-        exclude={editTo ? [editTo.id] : []}
-      />
-      <AccountPickerSheet
-        open={showToPicker}
-        onClose={() => setShowToPicker(false)}
-        accounts={accounts}
-        selected={editTo}
-        onSelect={a => { setEditTo(a); setShowToPicker(false) }}
-        exclude={editFrom ? [editFrom.id] : []}
-      />
-    </div>
+      {/* ── The nested pickers, outside <Sheet> rather than among its children ──
+
+          `.sheet-panel` animates a transform, and a transformed element is the
+          containing block for any position:fixed descendant - a picker
+          rendered inside this panel would centre itself against the panel
+          instead of the viewport.
+
+          The wrapper is a stacking context one step above this sheet, and
+          that is the whole of its job: the pickers carry z-[130] of their
+          own, which clears this sheet at its default z of 100 but not the 160
+          the desktop pages hand it. Nesting them in a context above this
+          sheet's holds them on top whatever z it is given - which is what the
+          old hand-rolled wrapper did by keeping the panel and the pickers
+          inside one z-indexed element. Fixed and empty, so it takes no space
+          and catches no taps when every picker is closed. ── */}
+      <div className="fixed" style={{ zIndex: zIndex + 1 }}>
+        <CategoryPickerSheet
+          open={showCatPicker}
+          onClose={() => setShowCatPicker(false)}
+          categories={editCatList}
+          selected={editCategory}
+          onSelect={c => { setEditCategory(c); setShowCatPicker(false) }}
+        />
+        <AccountPickerSheet
+          open={showAcctPicker}
+          onClose={() => setShowAcctPicker(false)}
+          accounts={accounts}
+          selected={editAccount}
+          onSelect={a => { setEditAccount(a); setShowAcctPicker(false) }}
+        />
+        <AccountPickerSheet
+          open={showFromPicker}
+          onClose={() => setShowFromPicker(false)}
+          accounts={accounts}
+          selected={editFrom}
+          onSelect={a => { setEditFrom(a); setShowFromPicker(false) }}
+          exclude={editTo ? [editTo.id] : []}
+        />
+        <AccountPickerSheet
+          open={showToPicker}
+          onClose={() => setShowToPicker(false)}
+          accounts={accounts}
+          selected={editTo}
+          onSelect={a => { setEditTo(a); setShowToPicker(false) }}
+          exclude={editFrom ? [editFrom.id] : []}
+        />
+      </div>
+    </>
   )
 }

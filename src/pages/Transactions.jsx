@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useDeferredValue } from 'react'
+import { useState, useMemo, useCallback, useDeferredValue } from 'react'
 import * as RadixSlider from '@radix-ui/react-slider'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -11,8 +11,8 @@ import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import CategoryGlyph from '../components/CategoryGlyph'
 import CategoryRail from '../components/CategoryRail'
-import FadeScroller from '../components/FadeScroller'
 import Button from '../components/ui/Button'
+import Sheet from '../components/ui/Sheet'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -302,22 +302,6 @@ function FilterModal({
   activeCount, onClear,
   filteredCount,
 }) {
-  const [closing, setClosing] = useState(false)
-
-  const close = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }, [onClose])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') close() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open, close])
-
-  if (!open && !closing) return null
-
   // Show all categories (deduped by name), optionally narrowed to the selected type
   const catOpts = Object.values(
     (categories ?? [])
@@ -325,235 +309,217 @@ function FilterModal({
       .reduce((map, c) => { map[c.name] = map[c.name] ?? c; return map }, {})
   )
 
+  /* Sheet owns the overlay, the panel, the grab handle, the 86dvh cap, the
+     scroll lock, Escape, the focus trap, the dialog role and the exit
+     animation. Its body is a FadeScroller already, so the hand-rolled one
+     that used to wrap this content is gone - it was here because the plain
+     overflow clip sliced the first row of account cards straight through
+     under the header, which is the thing FadeScroller exists to fix.
+
+     "Show N transactions" is the pinned `footer`: it was the last thing in a
+     column that scrolled, so on a short screen it sat below the fold. "Clear
+     all" rides the title row as `titleAction`, and "Done" is gone - the
+     scrim, Escape and the handle all dismiss a sheet now.
+
+     The panel used to float on an inset with its own rounded corners and no
+     handle, on the grounds that a floating card has no bottom edge to drag.
+     Asking for a height docks it (see the prop's note in Sheet), so the edge
+     is back and so is the handle. */
   return (
-    <div className="fixed inset-0 z-[100]">
-      {/* Heavier than a plain scrim because the panel is glass, and glass
-          needs something soft behind it - see TxDetailSheet, where black/45
-          and a 4px blur left the list legible straight through the card. */}
-      <div className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-xl" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'card absolute inset-x-3 rounded-[28px]',
-          'bottom-[calc(0.75rem+env(safe-area-inset-bottom,0px))]',
-          'max-h-[86dvh] flex flex-col',
-        ].join(' ')}
-      >
-        {/* Header. No grab handle: this floats now, so there is no edge to
-            drag it down from and a handle would promise a gesture that does
-            not exist. "Done" closes it, and so does the backdrop. */}
-        <div className="pt-5 px-5 pb-4 shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Filters</h3>
-              {activeCount > 0 && (
-                <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-white">
-                  {activeCount}
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-3">
-              {activeCount > 0 && (
-                <button
-                  onClick={onClear}
-                  className="text-xs font-semibold text-red-500 dark:text-red-400 active:opacity-60"
-                >
-                  Clear all
-                </button>
-              )}
-              <button
-                onClick={close}
-                className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60"
-              >
-                Done
-              </button>
-            </div>
-          </div>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      /* Heavier than a plain scrim because the panel is glass, and glass
+         needs something soft behind it - see TxDetailSheet, where black/45
+         left the list legible straight through the card. */
+      scrim={55}
+      maxHeight="86dvh"
+      title={(
+        <span className="flex items-center gap-2">
+          Filters
+          {activeCount > 0 && (
+            <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-white">
+              {activeCount}
+            </span>
+          )}
+        </span>
+      )}
+      titleAction={activeCount > 0 && (
+        <button
+          onClick={onClear}
+          className="text-xs font-semibold text-red-500 dark:text-red-400 active:opacity-60"
+        >
+          Clear all
+        </button>
+      )}
+      footer={(
+        <Button size="lg" block onClick={onClose}>
+          Show {filteredCount} {filteredCount === 1 ? 'transaction' : 'transactions'}
+        </Button>
+      )}
+    >
+      <div className="flex flex-col gap-6 pb-4">
+        {/* Amount range */}
+        <div>
+          <SectionLabel>Amount range</SectionLabel>
+          <AmountRangeFilter
+            allTxs={allTxs}
+            amountMin={amountMin}
+            amountMax={amountMax}
+            onAmountMin={setAmountMin}
+            onAmountMax={setAmountMax}
+          />
         </div>
 
-        {/* Scrollable body, feathered at whichever edge it has run past.
-            It was a plain overflow clip, so the first row of account cards
-            was sliced straight through under the header - the exact thing
-            FadeScroller exists for, and this sheet predates it. */}
-        <FadeScroller
-          className="flex-1 px-5 pb-4 flex flex-col gap-6"
-          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-        >
-
-          {/* Amount range */}
-          <div>
-            <SectionLabel>Amount range</SectionLabel>
-            <AmountRangeFilter
-              allTxs={allTxs}
-              amountMin={amountMin}
-              amountMax={amountMax}
-              onAmountMin={setAmountMin}
-              onAmountMax={setAmountMax}
-            />
+        {/* Date range */}
+        <div>
+          <SectionLabel>Date range</SectionLabel>
+          {/* A fixed three-column grid, not flex-wrap. Five chips wrapped
+              to 3 + 2, leaving "Custom…" adrift on a half-empty row - the
+              orphan. Here the last chip stretches across the columns the
+              row has left over, so both rows are full and every chip is the
+              same height. The remainder test generalises: five options span
+              two, six span none, seven span one. */}
+          <div className="grid grid-cols-3 gap-2">
+            {DATE_OPTS.map((o, i) => {
+              const rem = DATE_OPTS.length % 3
+              const isLast = i === DATE_OPTS.length - 1
+              const span = isLast && rem === 2 ? 'col-span-2' : ''
+              return (
+                <button
+                  key={o.value}
+                  onClick={() => setDateRange(o.value)}
+                  className={[
+                    'py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 active:scale-95',
+                    span,
+                    dateRange === o.value
+                      ? 'bg-primary text-white'
+                      : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
+                  ].join(' ')}
+                >
+                  {o.label}
+                </button>
+              )
+            })}
           </div>
+          {dateRange === 'custom' && (
+            <div className="flex flex-col gap-2 mt-3">
+              <div>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">From</p>
+                <input
+                  type="date"
+                  value={customFrom}
+                  onChange={e => setCustomFrom(e.target.value)}
+                  className="block w-full h-[52px] px-4 rounded-2xl text-sm font-medium
+                    text-slate-700 dark:text-white
+                    bg-slate-50 dark:bg-white/[0.06]
+                    border border-slate-200/80 dark:border-white/[0.09]
+                    outline-none focus:ring-2 focus:ring-primary/30
+                    [color-scheme:light] dark:[color-scheme:dark]"
+                />
+              </div>
+              <div>
+                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">To</p>
+                <input
+                  type="date"
+                  value={customTo}
+                  onChange={e => setCustomTo(e.target.value)}
+                  className="block w-full h-[52px] px-4 rounded-2xl text-sm font-medium
+                    text-slate-700 dark:text-white
+                    bg-slate-50 dark:bg-white/[0.06]
+                    border border-slate-200/80 dark:border-white/[0.09]
+                    outline-none focus:ring-2 focus:ring-primary/30
+                    [color-scheme:light] dark:[color-scheme:dark]"
+                />
+              </div>
+            </div>
+          )}
+        </div>
 
-          {/* Date range */}
+        {/* Account */}
+        {(accounts ?? []).length > 0 && (
           <div>
-            <SectionLabel>Date range</SectionLabel>
-            {/* A fixed three-column grid, not flex-wrap. Five chips wrapped
-                to 3 + 2, leaving "Custom…" adrift on a half-empty row - the
-                orphan. Here the last chip stretches across the columns the
-                row has left over, so both rows are full and every chip is the
-                same height. The remainder test generalises: five options span
-                two, six span none, seven span one. */}
-            <div className="grid grid-cols-3 gap-2">
-              {DATE_OPTS.map((o, i) => {
-                const rem = DATE_OPTS.length % 3
-                const isLast = i === DATE_OPTS.length - 1
-                const span = isLast && rem === 2 ? 'col-span-2' : ''
+            <SectionLabel>
+              Account{accountFilters.length > 0 ? ` · ${accountFilters.length}` : ''}
+            </SectionLabel>
+            {/* The same card face the home carousel uses, at picker size.
+                It was a stack of grey rows with a colour dot - which is a
+                list of strings, when the app has spent real effort making
+                each account look like the physical card in your wallet.
+                Recognising GCash by its blue is faster than reading the
+                word, and it is the same object in both places.
+
+                Multi-select, because "GCash or Maya" used to be two passes
+                and a mental merge. Two columns rather than three: at three
+                the brand mark and the name both have to shrink past the
+                point where the recognition works. */}
+            <div className="grid grid-cols-2 gap-2">
+              {(accounts ?? []).map(a => {
+                const on = accountFilters.includes(a.name)
+                const brand = accountBrand(a)
                 return (
                   <button
-                    key={o.value}
-                    onClick={() => setDateRange(o.value)}
-                    className={[
-                      'py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 active:scale-95',
-                      span,
-                      dateRange === o.value
-                        ? 'bg-primary text-white'
-                        : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
-                    ].join(' ')}
+                    key={a.id}
+                    onClick={() => setAccountFilters(prev =>
+                      on ? prev.filter(n => n !== a.name) : [...prev, a.name])}
+                    aria-pressed={on}
+                    data-brand={brand.key}
+                    data-design={normalizeDesign(a.design)}
+                    data-compact
+                    className={`acct-card relative rounded-2xl px-3 pt-2.5 pb-2.5 flex flex-col
+                      justify-between text-left text-white min-h-[74px] ${
+                        on ? 'ring-2 ring-primary' : ''
+                      }`}
+                    style={{ '--card-from': brand.from, '--card-to': brand.to }}
                   >
-                    {o.label}
+                    <BrandWatermark brand={brand} />
+                    <span className="flex items-start justify-between gap-2 w-full">
+                      <BrandMark mark={brand.mark} size={16} className="shrink-0 opacity-90" />
+                      {/* The tick is the only thing that says "picked" other
+                          than the ring, which a colourblind user may not
+                          separate from the card's own edge. */}
+                      <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0
+                        transition-opacity duration-150 ${on ? 'opacity-100 bg-white' : 'opacity-0'}`}>
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
+                          className="text-primary">
+                          <path d="M20 6L9 17l-5-5" />
+                        </svg>
+                      </span>
+                    </span>
+                    <span className="block text-[12px] font-semibold leading-tight truncate w-full">
+                      {a.name}
+                    </span>
                   </button>
                 )
               })}
             </div>
-            {dateRange === 'custom' && (
-              <div className="flex flex-col gap-2 mt-3">
-                <div>
-                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">From</p>
-                  <input
-                    type="date"
-                    value={customFrom}
-                    onChange={e => setCustomFrom(e.target.value)}
-                    className="block w-full h-[52px] px-4 rounded-2xl text-sm font-medium
-                      text-slate-700 dark:text-white
-                      bg-slate-50 dark:bg-white/[0.06]
-                      border border-slate-200/80 dark:border-white/[0.09]
-                      outline-none focus:ring-2 focus:ring-primary/30
-                      [color-scheme:light] dark:[color-scheme:dark]"
-                  />
-                </div>
-                <div>
-                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">To</p>
-                  <input
-                    type="date"
-                    value={customTo}
-                    onChange={e => setCustomTo(e.target.value)}
-                    className="block w-full h-[52px] px-4 rounded-2xl text-sm font-medium
-                      text-slate-700 dark:text-white
-                      bg-slate-50 dark:bg-white/[0.06]
-                      border border-slate-200/80 dark:border-white/[0.09]
-                      outline-none focus:ring-2 focus:ring-primary/30
-                      [color-scheme:light] dark:[color-scheme:dark]"
-                  />
-                </div>
-              </div>
-            )}
           </div>
+        )}
 
-          {/* Account */}
-          {(accounts ?? []).length > 0 && (
-            <div>
-              <SectionLabel>
-                Account{accountFilters.length > 0 ? ` · ${accountFilters.length}` : ''}
-              </SectionLabel>
-              {/* The same card face the home carousel uses, at picker size.
-                  It was a stack of grey rows with a colour dot - which is a
-                  list of strings, when the app has spent real effort making
-                  each account look like the physical card in your wallet.
-                  Recognising GCash by its blue is faster than reading the
-                  word, and it is the same object in both places.
+        {/* Category */}
+        {catOpts.length > 0 && (
+          <div>
+            <SectionLabel>Category</SectionLabel>
+            {/* One scrollable row, the same control the add-expense form
+                uses. It was a 3-column grid, which for nine categories is
+                three rows of chips and the tallest block in the sheet - and
+                a different way of picking a category from the one you used
+                to record the transaction.
 
-                  Multi-select, because "GCash or Maya" used to be two passes
-                  and a mental merge. Two columns rather than three: at three
-                  the brand mark and the name both have to shrink past the
-                  point where the recognition works. */}
-              <div className="grid grid-cols-2 gap-2">
-                {(accounts ?? []).map(a => {
-                  const on = accountFilters.includes(a.name)
-                  const brand = accountBrand(a)
-                  return (
-                    <button
-                      key={a.id}
-                      onClick={() => setAccountFilters(prev =>
-                        on ? prev.filter(n => n !== a.name) : [...prev, a.name])}
-                      aria-pressed={on}
-                      data-brand={brand.key}
-                      data-design={normalizeDesign(a.design)}
-                      data-compact
-                      className={`acct-card relative rounded-2xl px-3 pt-2.5 pb-2.5 flex flex-col
-                        justify-between text-left text-white min-h-[74px] ${
-                          on ? 'ring-2 ring-primary' : ''
-                        }`}
-                      style={{ '--card-from': brand.from, '--card-to': brand.to }}
-                    >
-                      <BrandWatermark brand={brand} />
-                      <span className="flex items-start justify-between gap-2 w-full">
-                        <BrandMark mark={brand.mark} size={16} className="shrink-0 opacity-90" />
-                        {/* The tick is the only thing that says "picked" other
-                            than the ring, which a colourblind user may not
-                            separate from the card's own edge. */}
-                        <span className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0
-                          transition-opacity duration-150 ${on ? 'opacity-100 bg-white' : 'opacity-0'}`}>
-                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                            strokeWidth="3.5" strokeLinecap="round" strokeLinejoin="round"
-                            className="text-primary">
-                            <path d="M20 6L9 17l-5-5" />
-                          </svg>
-                        </span>
-                      </span>
-                      <span className="block text-[12px] font-semibold leading-tight truncate w-full">
-                        {a.name}
-                      </span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Category */}
-          {catOpts.length > 0 && (
-            <div>
-              <SectionLabel>Category</SectionLabel>
-              {/* One scrollable row, the same control the add-expense form
-                  uses. It was a 3-column grid, which for nine categories is
-                  three rows of chips and the tallest block in the sheet - and
-                  a different way of picking a category from the one you used
-                  to record the transaction.
-
-                  Single-select with deselect-on-retap, so the parent does the
-                  toggling: the rail reports what was tapped and the filter
-                  decides whether that means set or clear. */}
-              <CategoryRail
-                categories={catOpts}
-                selected={catOpts.find(c => c.name === categoryFilter) ?? null}
-                onSelect={c => setCategoryFilter(prev => prev === c.name ? null : c.name)}
-                gutter={20}
-              />
-            </div>
-          )}
-        </FadeScroller>
-
-        {/* Footer CTA */}
-        <div
-          className="px-5 pt-3 shrink-0 border-t border-slate-100 dark:border-white/[0.06]"
-          /* The panel carries its own inset from the screen edge now, so the
-             footer needs padding rather than a safe-area reach-through. */
-          style={{ paddingBottom: '16px' }}
-        >
-          <Button size="lg" block onClick={close}>
-            Show {filteredCount} {filteredCount === 1 ? 'transaction' : 'transactions'}
-          </Button>
-        </div>
+                Single-select with deselect-on-retap, so the parent does the
+                toggling: the rail reports what was tapped and the filter
+                decides whether that means set or clear. */}
+            <CategoryRail
+              categories={catOpts}
+              selected={catOpts.find(c => c.name === categoryFilter) ?? null}
+              onSelect={c => setCategoryFilter(prev => prev === c.name ? null : c.name)}
+              gutter={20}
+            />
+          </div>
+        )}
       </div>
-    </div>
+    </Sheet>
   )
 }
 
