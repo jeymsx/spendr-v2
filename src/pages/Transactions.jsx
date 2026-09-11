@@ -10,9 +10,11 @@ import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import CategoryGlyph from '../components/CategoryGlyph'
+import { FieldLabel } from '../components/ui/Field'
 import CategoryRail from '../components/CategoryRail'
 import Button from '../components/ui/Button'
 import Sheet from '../components/ui/Sheet'
+import IconButton from '../components/ui/IconButton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -145,7 +147,13 @@ function QuickTypeFilter({ typeFilter, setTypeFilter }) {
 
 // ── Amount range histogram + slider ───────────────────────────────────────────
 
-const BUCKETS = 28
+/* 48, not 28.
+   At 28 buckets across a 350px sheet the bars came out ~9px wide - wide
+   enough to read as a bar CHART, which invites you to compare individual
+   bars, and there is nothing here to compare: this is a texture showing
+   roughly where your amounts cluster, under a slider. Twice as many buckets
+   at half the width reads as one shape instead of 28 objects. */
+const BUCKETS = 48
 
 function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmountMax }) {
   // Compute p1 and p99 of transaction amounts — the slider spans this range
@@ -200,21 +208,24 @@ function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmount
   return (
     <div>
       {/* Histogram */}
-      <div className="flex items-end gap-[2px] h-14 mb-1 px-0.5">
+      <div className="flex items-end gap-[3px] h-12 mb-1 px-0.5">
         {buckets.map((count, i) => {
           const bucketLoPos = i / BUCKETS * 100
           const bucketHiPos = (i + 1) / BUCKETS * 100
           const inRange     = bucketHiPos > loPos && bucketLoPos < hiPos
-          const heightPct   = count === 0 ? 4 : Math.max(8, (count / maxCount) * 100)
+          /* An empty bucket is a 2px dot on the baseline, not a bar. It is
+             there so the comb reads as one continuous object across the
+             whole range rather than as floating sticks. */
+          const heightPct   = count === 0 ? 3.5 : Math.max(10, (count / maxCount) * 100)
           return (
             <div
               key={i}
-              className="flex-1 rounded-sm transition-colors duration-150"
+              className="flex-1 rounded-full transition-colors duration-150"
               style={{
                 height: `${heightPct}%`,
                 backgroundColor: inRange
-                  ? 'rgba(var(--color-primary-rgb), 0.75)'
-                  : 'rgba(var(--color-primary-rgb), 0.15)',
+                  ? 'rgba(var(--color-primary-rgb), 0.8)'
+                  : 'rgba(var(--color-primary-rgb), 0.16)',
               }}
             />
           )
@@ -245,24 +256,25 @@ function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmount
         ))}
       </RadixSlider.Root>
 
-      {/* Min / Max labels */}
-      <div className="flex justify-between mt-3">
-        <div className="flex flex-col gap-1">
-          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Min</span>
-          <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.07]">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              {amountMin == null ? 'Any' : fmtAmt(amountMin)}
-            </span>
-          </div>
-        </div>
-        <div className="flex flex-col gap-1 items-end">
-          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Max</span>
-          <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.07]">
-            <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
-              {amountMax == null ? 'Any' : fmtAmt(amountMax) + '+'}
-            </span>
-          </div>
-        </div>
+      {/* The two ends, as text.
+
+          They were bordered chips, which read as fields you could type into -
+          and you cannot; the slider above is the control and these only ever
+          report where its handles are. A box around a read-only value is a
+          promise the UI does not keep. */}
+      <div className="flex items-baseline justify-between mt-3">
+        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+          Min{' '}
+          <span className="font-semibold tabular-nums text-slate-800 dark:text-slate-100">
+            {amountMin == null ? 'Any' : fmtAmt(amountMin)}
+          </span>
+        </p>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+          Max{' '}
+          <span className="font-semibold tabular-nums text-slate-800 dark:text-slate-100">
+            {amountMax == null ? 'Any' : fmtAmt(amountMax) + '+'}
+          </span>
+        </p>
       </div>
     </div>
   )
@@ -277,15 +289,15 @@ function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmount
    the parent re-renders - any state or focus inside it is discarded.
    Harmless for a label, wrong as a habit, and the rule cannot tell which it
    is looking at. */
+/**
+ * A heading in the filter sheet.
+ *
+ * It used to carry a 3px accent bar down its left side - an idiom this sheet
+ * invented and nothing else in the app uses. The shared FieldLabel is what
+ * every other heading on every other screen is, so this is that.
+ */
 function SectionLabel({ children }) {
-  return (
-    <div className="flex items-center gap-2.5 mb-3">
-      <div className="w-[3px] h-3.5 rounded-full bg-primary shrink-0" />
-      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
-        {children}
-      </p>
-    </div>
-  )
+  return <FieldLabel>{children}</FieldLabel>
 }
 
 function FilterModal({
@@ -700,17 +712,15 @@ export default function Transactions() {
           Transactions
         </h1>
         <div className="flex items-center gap-2">
-          {/* Single view mode toggle — icon swaps between list and calendar */}
-          <button
+          {/* Single view mode toggle — icon swaps between list and calendar.
+
+              The accent fill is the one header accent left in the app, and it
+              is not chrome: it means calendar mode is ON. Same for the filter
+              button beside it. */}
+          <IconButton
+            label={viewMode === 'list' ? 'Switch to calendar view' : 'Switch to list view'}
+            variant={viewMode === 'calendar' ? 'primary' : 'surface'}
             onClick={() => setViewMode(viewMode === 'list' ? 'calendar' : 'list')}
-            className={[
-              'w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150',
-              'border shadow-sm',
-              viewMode === 'calendar'
-                ? 'bg-primary border-primary text-white'
-                : 'bg-white dark:bg-primary/[0.10] border-slate-200/80 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
-            ].join(' ')}
-            aria-label={viewMode === 'list' ? 'Switch to calendar view' : 'Switch to list view'}
           >
             {viewMode === 'list' ? (
               /* Calendar icon — shown in list mode to indicate "switch to calendar" */
@@ -731,19 +741,15 @@ export default function Transactions() {
                 <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
             )}
-          </button>
+          </IconButton>
 
-          {/* Filter button */}
-          <button
+          {/* Filter button. `relative` is for the count badge, which hangs off
+              the corner. */}
+          <IconButton
+            label="Filters"
+            variant={activeFilterCount > 0 ? 'primary' : 'surface'}
+            className="relative"
             onClick={() => setFilterOpen(true)}
-            className={[
-              'relative w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150',
-              'border shadow-sm',
-              activeFilterCount > 0
-                ? 'bg-primary border-primary text-white'
-                : 'bg-white dark:bg-primary/[0.10] border-slate-200/80 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
-            ].join(' ')}
-            aria-label="Filters"
           >
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <line x1="4" y1="6" x2="20" y2="6" />
@@ -755,7 +761,7 @@ export default function Transactions() {
                 {activeFilterCount}
               </span>
             )}
-          </button>
+          </IconButton>
         </div>
       </div>
 
