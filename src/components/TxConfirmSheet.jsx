@@ -175,9 +175,22 @@ export default function TxConfirmSheet({
           <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white">
             Confirm {cfg.noun}
           </h3>
+          {/* The break is written, not negotiated.
+
+              Greedy wrapping stranded "confirm." alone on the second line.
+              text-wrap: balance fixed the orphan and then broke after "your",
+              which splits the sentence mid-phrase - "Nothing is saved to
+              your / ledger until you confirm." reads worse than the problem
+              it solved, because "your ledger" is one idea.
+
+              So the break is explicit and lands where the clause does. This
+              is a fixed 48-character subtitle in a 268px box, not flowing
+              body copy: the line it wants is knowable, and a <br> is how you
+              say so. Both halves fit well inside the box at the narrowest
+              phone this runs on, so nothing re-wraps underneath it. */}
           <p className="mt-1 mx-auto max-w-[268px] text-[12.5px] leading-snug
             text-slate-400 dark:text-slate-500">
-            Nothing is saved to your ledger until you confirm.
+            Nothing is saved to your ledger<br />until you confirm.
           </p>
         </div>
 

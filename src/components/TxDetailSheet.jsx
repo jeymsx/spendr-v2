@@ -565,10 +565,10 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white">
                   {deleteHeading}
                 </h3>
-                <p className="mt-1 mx-auto max-w-[268px] text-[12.5px] leading-snug
+                <p className="mt-1 mx-auto max-w-[268px] text-[12.5px] leading-snug text-balance
                   text-slate-400 dark:text-slate-500">
                   This cannot be undone from here, though the toast afterwards
-                  offers one.
+                  offers{' '}one.
                 </p>
               </div>
 
