@@ -159,6 +159,8 @@ export default function SettingsAccent() {
   // inside the rail reads it, which is what keeps a swipe from re-rendering
   // the previews mid-snap.
   const [centred, setCentred] = useState(accentColor)
+  /* The dots are written to directly, on the same frame as the cards. */
+  const dotsRef = useRef(null)
 
   /**
    * Turn each preview by how far it is from the middle.
@@ -192,12 +194,14 @@ export default function SettingsAccent() {
     const mid = rail.scrollLeft + rail.clientWidth / 2
     const first = rail.querySelector('[data-accent]')
     const stride = first ? first.offsetWidth + 8 : 236   // card + gap-2
-    let best = null, bestDist = Infinity
+    let best = null, bestDist = Infinity, bestIdx = 0, i = 0
+    const dist = []
     for (const node of rail.querySelectorAll('[data-accent]')) {
       const centre = node.offsetLeft + node.offsetWidth / 2
       const natural = centre - mid                       // px the layout gives
       const dir = Math.sign(natural)
       const mag = Math.abs(natural) / stride             // distance, in cards
+      dist.push(mag)
 
       /* The deck.
        *
@@ -228,10 +232,42 @@ export default function SettingsAccent() {
       const fade = Math.min(mag, 1)
 
       const tilt = node.querySelector('[data-tilt]') ?? node
-      tilt.style.transform =
-        `perspective(1000px) translateX(${wanted - natural}px)`
-        + ` rotateY(${Math.max(-1, Math.min(1, natural / stride)) * -30}deg)`
-        + ` translateZ(${-fade * 90}px) scale(${1 - fade * 0.16})`
+
+      /* Quantised, and only written when it actually changed.
+       *
+       * Two things were making this jitter on a phone. The first is that
+       * every frame wrote five properties on all eight cards whether or not
+       * any of them differed - forty style mutations a frame, each one a
+       * style recalculation, and `filter` repaints its whole layer.
+       *
+       * The second is subtler and is the actual jiggle. iOS scrolls on the
+       * compositor and delivers `scroll` asynchronously, so `scrollLeft` read
+       * during momentum trails the position already on screen. Feeding that
+       * lagging number into an unrounded transform means the card is drawn a
+       * fraction of a pixel off from where the scroll has put it, and the
+       * error changes sign frame to frame - which is exactly what a wobble
+       * is. Rounding to half a pixel and half a degree puts the value on a
+       * grid coarser than the lag, so it simply stops moving between frames
+       * where the difference is noise.
+       *
+       * Half a pixel and half a degree are both well under what an eye
+       * resolves at this size, so the deck looks the same. */
+      const q = (v, step) => Math.round(v / step) * step
+      const tx = q(wanted - natural, 0.5)
+      const ry = q(Math.max(-1, Math.min(1, natural / stride)) * -30, 0.5)
+      const tz = q(-fade * 90, 0.5)
+      const sc = q(1 - fade * 0.16, 0.005)
+      const br = q(1 - fade * 0.42, 0.02)
+      const op = q(mag <= 1.6 ? 1 : Math.max(0, 1 - (mag - 1.6) / 0.8), 0.02)
+      const z = 40 - Math.round(mag * 10)
+      const front = mag < 0.5
+
+      const prev = tilt._paint
+      if (!prev || prev.tx !== tx || prev.ry !== ry || prev.tz !== tz || prev.sc !== sc) {
+        tilt.style.transform =
+          `perspective(1000px) translateX(${tx}px) rotateY(${ry}deg)`
+          + ` translateZ(${tz}px) scale(${sc})`
+      }
 
       /* Opaque, and recessed with brightness instead.
        *
@@ -250,8 +286,9 @@ export default function SettingsAccent() {
        * 1.6 to 2.4, entirely behind the front card, so it never reads as a
        * pop - and it keeps the deck to about two cards a side, which is what
        * a hand of cards looks like. */
-      tilt.style.filter = `brightness(${1 - fade * 0.42})`
-      tilt.style.opacity = String(mag <= 1.6 ? 1 : Math.max(0, 1 - (mag - 1.6) / 0.8))
+      if (!prev || prev.br !== br) tilt.style.filter = `brightness(${br})`
+      if (!prev || prev.op !== op) tilt.style.opacity = String(op)
+      tilt._paint = { tx, ry, tz, sc, br, op }
 
       /* The front card's own shadow, which is what lifts it off the deck.
  
@@ -264,16 +301,51 @@ export default function SettingsAccent() {
          data-front rather than an inline shadow, so the two themes can differ
          in CSS - a dark page needs a far heavier shadow than a light one to
          read at all. */
-      if (mag < 0.5) node.dataset.front = '1'
-      else delete node.dataset.front
+      /* Both of these change an attribute or a computed style, which costs
+         a selector rematch - so they are written on the frame they change and
+         not on the two hundred frames they do not. */
+      if (front !== (node.dataset.front === '1')) {
+        if (front) node.dataset.front = '1'
+        else delete node.dataset.front
+      }
 
       // Strictly decreasing with distance, or a card behind draws over the
       // front one - which at this much overlap is the whole illusion.
-      node.style.zIndex = String(40 - Math.round(mag * 10))
+      if (node._z !== z) { node.style.zIndex = String(z); node._z = z }
 
       const d = Math.abs(centre - mid)
-      if (d < bestDist) { bestDist = d; best = node }
+      if (d < bestDist) { bestDist = d; best = node; bestIdx = i }
+      i++
     }
+
+    /* The dots, painted here rather than rendered from state.
+     *
+     * They had `transition-all duration-200` and a width that flipped between
+     * 6 and 16 whenever the centred accent changed. A flick passes six
+     * accents in about a third of a second, so six dots were part-way through
+     * a 200ms expansion at the same moment - which is what "they all go
+     * active" was. Nothing was choosing six accents; six animations were
+     * simply still running.
+     *
+     * Driven from the scroll position there is no animation to overlap: a
+     * dot's width IS its distance from the middle, so exactly one is wide,
+     * it grows as you swipe toward it, and it cannot lag behind the card it
+     * belongs to. */
+    const dots = dotsRef.current
+    if (dots) {
+      const kids = dots.children
+      for (let k = 0; k < kids.length; k++) {
+        const near = Math.max(0, 1 - dist[k])
+        const w = Math.round(6 + 10 * near)
+        const o = Math.round((0.3 + 0.7 * near) * 50) / 50
+        const dot = kids[k]
+        if (dot._w !== w) { dot.style.width = `${w}px`; dot._w = w }
+        if (dot._o !== o) { dot.style.opacity = String(o); dot._o = o }
+        const bg = k === bestIdx ? ACCENT_COLORS[k].hex : 'currentColor'
+        if (dot._bg !== bg) { dot.style.background = bg; dot._bg = bg }
+      }
+    }
+
     return best
   }, [])
 
@@ -402,16 +474,18 @@ export default function SettingsAccent() {
           )}
         </div>
 
-        <div className="mt-4 flex items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500">
+        {/* No transition and no state: paintRail sets each dot's width from
+            how far its card is from the middle, on the same frame it places
+            the cards. See the note there for why a transition was the bug. */}
+        <div
+          ref={dotsRef}
+          className="mt-4 flex items-center justify-center gap-1.5 text-slate-400 dark:text-slate-500"
+        >
           {ACCENT_COLORS.map(({ hex }) => (
             <span
               key={hex}
-              className="h-1.5 rounded-full transition-all duration-200"
-              style={{
-                width: centred === hex ? 16 : 6,
-                background: centred === hex ? hex : 'currentColor',
-                opacity: centred === hex ? 1 : 0.3,
-              }}
+              className="h-1.5 rounded-full shrink-0"
+              style={{ width: 6, opacity: 0.3 }}
               aria-hidden="true"
             />
           ))}
