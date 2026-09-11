@@ -1,5 +1,6 @@
 import { useId } from 'react'
 import { cx } from './cx'
+import SectionLabel from './SectionLabel'
 
 /**
  * One text field, one look, everywhere.
@@ -32,28 +33,18 @@ import { cx } from './cx'
  */
 
 /**
- * The words above a field, and above anything else that behaves like one - a
- * segmented control, an icon grid, a colour rail.
+ * The words above a field.
  *
- * Exported so there is one answer to "how does a label look". Settings had
- * 11px uppercase with widest tracking and the forms had 12px sentence case;
- * three of the former stacked down a sheet is what reads as machine output,
- * so the forms' version wins.
+ * This used to be defined here, and then the same 65 captions turned up
+ * across the pages labelling things that are not fields - a list, a chart, a
+ * group of cards. It is one component labelling one kind of thing, so it
+ * moved to SectionLabel and this is the field's name for it.
+ *
+ * TRANSITIONAL. Settings.jsx holds 14 of the 15 call sites and is being
+ * migrated by another pass right now; when that lands, those become
+ * SectionLabel and this alias goes. Do not add a call site to it.
  */
-export function FieldLabel({ children, htmlFor = null, className = '' }) {
-  const Tag = htmlFor ? 'label' : 'p'
-  return (
-    <Tag
-      htmlFor={htmlFor ?? undefined}
-      className={cx(
-        'block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1',
-        className,
-      )}
-    >
-      {children}
-    </Tag>
-  )
-}
+export { default as FieldLabel } from './SectionLabel'
 
 /**
  * The frame every field wears: capsule, filled, hairline, 52px.
@@ -107,7 +98,7 @@ export default function Field({
       {/* htmlFor only when this wraps a real input: pointing a label at a
           <button> or a native date picker that a caller passed as children
           would name something it does not own. */}
-      {label && <FieldLabel htmlFor={children ? null : id}>{label}</FieldLabel>}
+      {label && <SectionLabel htmlFor={children ? null : id}>{label}</SectionLabel>}
 
       <div className={cx(fieldFrame(invalid), disabled && 'opacity-60')}>
         {left && (
