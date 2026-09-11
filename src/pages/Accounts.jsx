@@ -1628,15 +1628,23 @@ export async function createAccount(row, balance) {
 export function AccountFormSheet({ open, onClose, account, prefill = null, variant = 'sheet' }) {
   const isPage = variant === 'page'
   const [closing,    setClosing]    = useState(false)
-  /* Not on a page. The lock is what stops the body scrolling behind a sheet;
-     on a page the body IS the form, and locking it left everything below the
-     colour row unreachable. */
-  useScrollLock(open && !isPage)
   const { showToast } = useToast()
   const [saving,     setSaving]     = useState(false)
   const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete' | 'adjust'
   const [deleteBlocked, setDeleteBlocked] = useState(null)
   const [adjustBal,  setAdjustBal]  = useState('0')
+
+  /* Not on a page, except while the delete sheet is over it.
+
+     The lock is what stops the body scrolling behind a sheet. On a page the
+     body IS the form, and locking it left everything below the colour row
+     unreachable - but once the confirmation is up there is a sheet again,
+     and the form behind it should sit still.
+
+     Below `mode`, not above it. Reading a useState const before its
+     declaration is a temporal dead zone error, and this crashed the page
+     into the ErrorBoundary until it moved. */
+  useScrollLock(open && (!isPage || mode === 'confirm-delete'))
 
   const [name,           setName]           = useState('')
   const [type,           setType]           = useState('cash')
@@ -1912,6 +1920,71 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
   if (!open && !closing) return null
 
+  /* The delete confirmation's content, defined once.
+
+     In the sheet it replaces the sheet's body, which is what a sheet is for.
+     On a page it cannot do that: swapping a whole screen for three lines and
+     a button left the form gone, the header describing a screen that was no
+     longer there, and two thirds of the display empty. It is a modal over
+     the page instead - the form stays where it was, which is also the honest
+     picture of what is happening, since nothing has been deleted yet. */
+  const deleteBody = (
+    <>
+            {deleteBlocked ? (
+              <>
+                <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-2">
+                  Cannot delete <span className="font-semibold text-slate-800 dark:text-white">{account?.name}</span>
+                </p>
+                <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-6 leading-relaxed">
+                  {deleteBlocked === 'sub-accounts'
+                    ? 'This account has sub-accounts. Delete or re-assign them first.'
+                    : `This account has ${deleteBlocked} ${deleteBlocked === 1 ? 'transaction' : 'transactions'}. Remove those transactions first.`}
+                </p>
+                <button
+                  onClick={() => setMode('form')}
+                  className="w-full py-3.5 rounded-2xl text-sm font-semibold
+                    text-slate-600 dark:text-slate-300
+                    bg-slate-100 dark:bg-white/[0.06]
+                    active:bg-slate-200 transition-colors"
+                >
+                  Go Back
+                </button>
+              </>
+            ) : (
+              <>
+                <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-1">
+                  Permanently delete <span className="font-semibold text-slate-800 dark:text-white">{account?.name}</span>?
+                </p>
+                <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-6">
+                  This cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setMode('form')}
+                    disabled={saving}
+                    className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                      text-slate-600 dark:text-slate-300
+                      bg-slate-100 dark:bg-white/[0.06]
+                      disabled:opacity-40 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDelete}
+                    disabled={saving}
+                    className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
+                      bg-red-500 shadow-[0_4px_16px_rgba(239,68,68,0.35)]
+                      disabled:opacity-40 disabled:shadow-none
+                      active:scale-[0.98] transition-all duration-100"
+                  >
+                    {saving ? 'Deleting…' : 'Delete Account'}
+                  </button>
+                </div>
+              </>
+            )}
+    </>
+  )
+
   /* One body, two chromes. Everything below is identical whether this is a
      sheet or a page - only the frame around it changes, at the bottom of the
      component. */
@@ -1958,23 +2031,37 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               )}
             </div>
           ) : mode === 'adjust' ? (
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Adjust Balance</h3>
-              <button onClick={() => setMode('form')} disabled={saving}
-                className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-                Cancel
-              </button>
-            </div>
+            /* Sheet only, for the same reason as the delete header: on a page
+               SubPage already carries the title, and Back already carries the
+               cancel - the body has its own Cancel under the amount too, so
+               this row was the third way out of one screen. */
+            !isPage && (
+              <div className="flex items-center justify-between">
+                <h3 className="text-base font-semibold text-slate-800 dark:text-white">Adjust Balance</h3>
+                <button onClick={() => setMode('form')} disabled={saving}
+                  className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+                  Cancel
+                </button>
+              </div>
+            )
           ) : (
-            <div className="text-center">
-              <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
-              <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">Delete Account?</h3>
-            </div>
+            /* Sheet only - the page puts this in the modal. flex rather than
+               text-center because Preflight sets `svg { display: block }`, so
+               the icon was a block box inside a text-align container and sat
+               against the left padding. */
+            !isPage && (
+              <div className="flex flex-col items-center">
+                <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
+                <h3 className="text-sm font-semibold text-slate-800 dark:text-white mt-2">Delete account?</h3>
+              </div>
+            )
           )}
         </div>
 
-        {/* ── Form mode ── */}
-        {mode === 'form' && (
+        {/* ── Form mode ──
+            Still rendered under the page's delete modal: the account has not
+            been deleted, so the form has no business disappearing. */}
+        {(mode === 'form' || (isPage && mode === 'confirm-delete')) && (
           <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
 
             {/* The card, lying flat, at the top.
@@ -2444,61 +2531,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
         })()}
 
         {/* ── Confirm delete mode ── */}
-        {mode === 'confirm-delete' && (
-          <div className="px-5 pt-5 pb-2">
-            {deleteBlocked ? (
-              <>
-                <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-2">
-                  Cannot delete <span className="font-semibold text-slate-800 dark:text-white">{account?.name}</span>
-                </p>
-                <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-6 leading-relaxed">
-                  {deleteBlocked === 'sub-accounts'
-                    ? 'This account has sub-accounts. Delete or re-assign them first.'
-                    : `This account has ${deleteBlocked} ${deleteBlocked === 1 ? 'transaction' : 'transactions'}. Remove those transactions first.`}
-                </p>
-                <button
-                  onClick={() => setMode('form')}
-                  className="w-full py-3.5 rounded-2xl text-sm font-semibold
-                    text-slate-600 dark:text-slate-300
-                    bg-slate-100 dark:bg-white/[0.06]
-                    active:bg-slate-200 transition-colors"
-                >
-                  Go Back
-                </button>
-              </>
-            ) : (
-              <>
-                <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-1">
-                  Permanently delete <span className="font-semibold text-slate-800 dark:text-white">{account?.name}</span>?
-                </p>
-                <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-6">
-                  This cannot be undone.
-                </p>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => setMode('form')}
-                    disabled={saving}
-                    className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
-                      text-slate-600 dark:text-slate-300
-                      bg-slate-100 dark:bg-white/[0.06]
-                      disabled:opacity-40 transition-colors"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    disabled={saving}
-                    className="flex-[2] py-3.5 rounded-2xl text-sm font-semibold text-white
-                      bg-red-500 shadow-[0_4px_16px_rgba(239,68,68,0.35)]
-                      disabled:opacity-40 disabled:shadow-none
-                      active:scale-[0.98] transition-all duration-100"
-                  >
-                    {saving ? 'Deleting…' : 'Delete Account'}
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
+        {mode === 'confirm-delete' && !isPage && (
+          <div className="px-5 pt-5 pb-2">{deleteBody}</div>
         )}
         <div className="h-8" />
     </>
@@ -2507,7 +2541,18 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   return (
     <>
     {isPage ? (
-      <SubPage title={isEdit ? 'Edit account' : 'New account'} onBack={close}>
+      /* Title and Back both follow `mode`. The page swaps its whole body for
+         the confirmation, so leaving it headed "Edit account" described a
+         screen that was no longer there - and Back would have left the
+         account entirely rather than returning to the form behind it. */
+      <SubPage
+        title={
+          mode === 'adjust' ? 'Adjust balance'
+          : isEdit          ? 'Edit account'
+          : 'New account'
+        }
+        onBack={mode === 'form' ? close : () => setMode('form')}
+      >
         {inner}
       </SubPage>
     ) : (
@@ -2524,6 +2569,46 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
           {inner}
+        </div>
+      </div>
+    )}
+
+    {/* Over the page, with the form still behind it.
+
+        A bottom sheet rather than a centred dialog, for two reasons that
+        both check out in this repo. Every other confirmation here is one -
+        DupWarningSheet and OverdrawWarningSheet are the same shape, a
+        warning with two ways out - and a centred box would have been the
+        only dialog of its kind in the app. And `html.web .sheet-panel` in
+        index.css already re-positions any sheet as a centred modal on
+        desktop, so this IS centred there, for free; a hand-rolled centred
+        box would have stayed a phone-sized card in the middle of a 1440px
+        screen. */}
+    {isPage && mode === 'confirm-delete' && (
+      <div className="fixed inset-0 z-[150]">
+        <div
+          className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-sm"
+          onClick={() => { if (!saving) setMode('form') }}
+        />
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-label="Delete account"
+          className="sheet-panel absolute bottom-0 inset-x-0 rounded-t-[28px]
+            bg-white dark:bg-[#111820]
+            border-t border-slate-100 dark:border-white/[0.07]"
+          style={{ paddingBottom: 'max(20px, env(safe-area-inset-bottom))' }}
+        >
+          <div className="pt-5 px-5">
+            <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+            <div className="flex flex-col items-center">
+              <span className="text-red-500 dark:text-red-400"><IconTrash size={24} /></span>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white mt-2">
+                Delete account?
+              </h3>
+            </div>
+          </div>
+          <div className="px-5 pt-4">{deleteBody}</div>
         </div>
       </div>
     )}

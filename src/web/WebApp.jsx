@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { OnboardingGuard } from '../App'
 import SyncManager from '../components/SyncManager'
 import WebLayout from './WebLayout'
@@ -49,6 +49,12 @@ export default function WebApp() {
 
               <Route path="/transactions" element={<WebTransactions />} />
               <Route path="/accounts"     element={<WebAccounts />} />
+              {/* The mobile edit page has no desktop counterpart - editing
+                  here is the modal WebAccounts already opens - and this route
+                  tree has no catch-all, so the URL rendered a blank screen.
+                  Reachable by switching to desktop view while on it, or by a
+                  bookmark. */}
+              <Route path="/accounts/:id/edit" element={<Navigate to="/accounts" replace />} />
               <Route path="/insights"     element={<WebInsights />} />
               <Route path="/debts"        element={<WebDebts />} />
               <Route path="/recurring"    element={<WebRecurring />} />
