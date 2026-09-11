@@ -192,7 +192,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
             Cancel
           </Button>
           <Button className="flex-[2]" onClick={handleSave} disabled={saving || amount <= 0}>
-            {saving ? 'Saving…' : 'Save Transaction'}
+            {saving ? 'Saving…' : 'Save transaction'}
           </Button>
         </div>
       </div>

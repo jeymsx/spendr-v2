@@ -26,8 +26,8 @@ afterEach(cleanup)
 describe('Button', () => {
   it('renders its label and calls onClick', () => {
     const onClick = vi.fn()
-    render(<Button onClick={onClick}>Save Transaction</Button>)
-    fireEvent.click(screen.getByRole('button', { name: 'Save Transaction' }))
+    render(<Button onClick={onClick}>Save transaction</Button>)
+    fireEvent.click(screen.getByRole('button', { name: 'Save transaction' }))
     expect(onClick).toHaveBeenCalledTimes(1)
   })
 

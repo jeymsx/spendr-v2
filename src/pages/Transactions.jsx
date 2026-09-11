@@ -248,7 +248,7 @@ function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmount
       {/* Min / Max labels */}
       <div className="flex justify-between mt-3">
         <div className="flex flex-col gap-1">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Min</span>
+          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Min</span>
           <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.07]">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               {amountMin == null ? 'Any' : fmtAmt(amountMin)}
@@ -256,7 +256,7 @@ function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmount
           </div>
         </div>
         <div className="flex flex-col gap-1 items-end">
-          <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500">Max</span>
+          <span className="text-xs font-bold text-slate-400 dark:text-slate-500">Max</span>
           <div className="px-3 py-1.5 rounded-xl bg-slate-50 dark:bg-white/[0.06] border border-slate-200/60 dark:border-white/[0.07]">
             <span className="text-sm font-semibold text-slate-700 dark:text-slate-200">
               {amountMax == null ? 'Any' : fmtAmt(amountMax) + '+'}
@@ -281,7 +281,7 @@ function SectionLabel({ children }) {
   return (
     <div className="flex items-center gap-2.5 mb-3">
       <div className="w-[3px] h-3.5 rounded-full bg-primary shrink-0" />
-      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+      <p className="text-xs font-bold text-slate-500 dark:text-slate-400">
         {children}
       </p>
     </div>
@@ -380,9 +380,9 @@ function FilterModal({
           style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
         >
 
-          {/* Amount Range */}
+          {/* Amount range */}
           <div>
-            <SectionLabel>Amount Range</SectionLabel>
+            <SectionLabel>Amount range</SectionLabel>
             <AmountRangeFilter
               allTxs={allTxs}
               amountMin={amountMin}
@@ -392,9 +392,9 @@ function FilterModal({
             />
           </div>
 
-          {/* Date Range */}
+          {/* Date range */}
           <div>
-            <SectionLabel>Date Range</SectionLabel>
+            <SectionLabel>Date range</SectionLabel>
             {/* A fixed three-column grid, not flex-wrap. Five chips wrapped
                 to 3 + 2, leaving "Custom…" adrift on a half-empty row - the
                 orphan. Here the last chip stretches across the columns the
@@ -426,7 +426,7 @@ function FilterModal({
             {dateRange === 'custom' && (
               <div className="flex flex-col gap-2 mt-3">
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">From</p>
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">From</p>
                   <input
                     type="date"
                     value={customFrom}
@@ -440,7 +440,7 @@ function FilterModal({
                   />
                 </div>
                 <div>
-                  <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">To</p>
+                  <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">To</p>
                   <input
                     type="date"
                     value={customTo}

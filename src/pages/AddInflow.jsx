@@ -166,7 +166,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
         <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add Inflow</h1>
+        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add inflow</h1>
         <button
           onClick={() => setShowTemplates(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
@@ -265,7 +265,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
 
       <div className="px-4 pt-5">
         <Button size="lg" block onClick={onConfirmPress} disabled={saving || amount <= 0}>
-          Review Inflow
+          Review inflow
         </Button>
       </div>
 

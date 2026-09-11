@@ -375,7 +375,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
           block
           onClick={onConfirmPress} disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id}
         >
-          Review Transfer
+          Review transfer
         </Button>
       </div>
 

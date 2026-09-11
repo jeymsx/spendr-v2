@@ -235,7 +235,7 @@ function StepFilePicker({ onParsed }) {
 
   return (
     <div className="px-5 pt-4 pb-6">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Import Data</h2>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Import data</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
         Import transactions from a Spendr CSV export.
       </p>
@@ -304,7 +304,7 @@ function StepFilePicker({ onParsed }) {
         bg-white dark:bg-white/[0.04]
         border border-slate-100 dark:border-white/[0.07]
         shadow-[0_1px_4px_rgba(0,0,0,0.04)] dark:shadow-none">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">
           Expected columns
         </p>
         <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono leading-relaxed break-all">
@@ -407,7 +407,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Summary stats */}
       <div className="px-5 mb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
           Summary
         </p>
         <div className="rounded-2xl overflow-hidden bg-white dark:bg-white/[0.04]
@@ -434,7 +434,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Accounts referenced */}
       <div className="px-5 mb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
           Accounts in file
         </p>
         <div className="flex flex-wrap gap-2">
@@ -456,7 +456,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Categories referenced */}
       <div className="px-5 mb-5">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
           Categories in file
         </p>
         <div className="flex flex-wrap gap-2">
@@ -496,7 +496,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Preview table */}
       <div className="px-5 mb-6">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
           Preview (first 10 rows)
         </p>
         <div className="rounded-2xl overflow-hidden border border-slate-100 dark:border-white/[0.07]
@@ -506,7 +506,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
               <thead>
                 <tr className="border-b border-slate-50 dark:border-white/[0.05]">
                   {previewCols.map(col => (
-                    <th key={col} className="text-left px-3 py-2.5 font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                    <th key={col} className="text-left px-3 py-2.5 font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                       {col}
                     </th>
                   ))}
@@ -613,7 +613,7 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
 
   return (
     <div className="px-5 pt-4 pb-6">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Opening Balances</h2>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Opening balances</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
         How much was in each account <span className="font-semibold text-slate-700 dark:text-slate-200">before your first transaction</span> in this file? Leave at 0 if you started from nothing.
       </p>
@@ -925,7 +925,7 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
         <IconSuccess />
       </div>
 
-      <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1.5">Import Complete</h2>
+      <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1.5">Import complete</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mb-8">
         Your transactions have been imported and account balances recalculated.
       </p>
@@ -1055,7 +1055,7 @@ export default function ImportWizard() {
   const STEP_LABELS = {
     1: 'Select File',
     2: 'Preview & Validate',
-    3: 'Opening Balances',
+    3: 'Opening balances',
     4: 'Confirm Import',
     5: 'Done',
   }
@@ -1076,7 +1076,7 @@ export default function ImportWizard() {
             <IconArrowLeft />
           </IconButton>
           <div className="flex-1">
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">
               {step < 5 ? `Step ${step} of 4` : 'Complete'}
             </p>
             <h1 className="text-base font-bold text-slate-900 dark:text-white leading-tight">

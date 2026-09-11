@@ -89,7 +89,7 @@ export default function Login() {
           shadow-[0_4px_24px_rgba(0,0,0,0.06)] dark:shadow-none
           p-6 mb-4">
 
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 text-center mb-5">
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 text-center mb-5">
             Sign in to continue
           </p>
 

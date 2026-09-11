@@ -383,7 +383,7 @@ export default function Budget() {
                 <p className={`text-[17px] font-bold tabular-nums ${tone.textClass}`}>
                   {fmtCompact(Math.abs(remaining))}
                 </p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5 text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-semibold mt-0.5 text-slate-500 dark:text-slate-400">
                   {remaining >= 0 ? 'Remaining' : 'Over by'}
                 </p>
               </div>
@@ -391,7 +391,7 @@ export default function Budget() {
                 <p className="text-[17px] font-bold tabular-nums text-slate-800 dark:text-slate-100">
                   {daysLeft}
                 </p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5 text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-semibold mt-0.5 text-slate-500 dark:text-slate-400">
                   Days left
                 </p>
               </div>
@@ -401,7 +401,7 @@ export default function Budget() {
                 <p className="text-[17px] font-bold tabular-nums text-slate-800 dark:text-slate-100">
                   {remaining > 0 ? fmtCompact(perDay) : '—'}
                 </p>
-                <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5 text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-semibold mt-0.5 text-slate-500 dark:text-slate-400">
                   A day
                 </p>
               </div>

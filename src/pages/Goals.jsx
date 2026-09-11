@@ -444,7 +444,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
             <>
               {/* Name */}
               <label className="block">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   What are you saving for
                 </span>
                 <input
@@ -462,7 +462,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
 
               {/* Icon */}
               <div className="mt-4">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Icon
                 </span>
                 <div className="mt-1.5 grid grid-cols-8 gap-1.5">
@@ -487,7 +487,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
 
               {/* Target */}
               <label className="block mt-4">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Target amount
                 </span>
                 <div className="mt-1.5 flex items-center gap-2 px-3.5 py-3 rounded-2xl
@@ -506,7 +506,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
 
               {/* Funding accounts */}
               <div className="mt-4">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Funded by
                 </span>
                 <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
@@ -547,7 +547,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
 
               {/* Target date */}
               <label className="block mt-4">
-                <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Target date <span className="normal-case font-normal text-slate-400 dark:text-slate-500">— optional</span>
                 </span>
                 <input
@@ -565,7 +565,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
               </label>
 
               <Button block className="mt-6" onClick={handleSave} disabled={!canSave}>
-                {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create goal'}
+                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
               </Button>
 
               {isEdit && (
@@ -705,7 +705,7 @@ export default function Goals() {
         <>
           {/* ── The whole plan, in one figure ── */}
           <section className="px-5">
-            <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
               Saved toward goals
             </p>
             <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
@@ -721,7 +721,7 @@ export default function Goals() {
 
             <div className="grid grid-cols-3 gap-3 mt-5">
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Funded
                 </p>
                 <p className="text-[15px] font-bold tabular-nums mt-0.5 text-emerald-600 dark:text-emerald-400">
@@ -729,7 +729,7 @@ export default function Goals() {
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Still to save
                 </p>
                 <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
@@ -740,7 +740,7 @@ export default function Goals() {
                 {/* Money in fundable accounts that no goal has claimed. Not
                     "spare" - it is simply unspoken-for, which is a different
                     and more useful thing to know. */}
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
                   Unassigned
                 </p>
                 <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">

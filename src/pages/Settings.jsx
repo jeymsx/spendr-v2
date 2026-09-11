@@ -239,7 +239,7 @@ function IconTarget() {
 
 function SectionHeader({ children }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 px-5 mb-2">
+    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-5 mb-2">
       {children}
     </p>
   )
@@ -321,7 +321,7 @@ function inputClass(error = false) {
 }
 
 /* FieldLabel now comes from ui/Field, so this file and the add-forms cannot
-   drift apart again. It was 11px uppercase with widest tracking here and 12px
+   drift apart again. It was 11px with widest tracking here and 12px
    sentence case there, for the same job. */
 
 // ── Profile sheet ──────────────────────────────────────────────────────────────
@@ -376,7 +376,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
       >
         <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04]">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <h3 className="text-base font-semibold text-slate-800 dark:text-white">Google Sheets Sync</h3>
+          <h3 className="text-base font-semibold text-slate-800 dark:text-white">Google Sheets sync</h3>
           <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-0.5">
             Paste your Apps Script Web App URL to enable syncing.
           </p>
@@ -384,7 +384,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
 
         <div className="px-5 py-5 flex flex-col gap-4">
           <div>
-            <label className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2 block">
+            <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 block">
               Apps Script URL
             </label>
             <input
@@ -480,7 +480,7 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
         <div className="pt-5 px-5 pb-3 border-b border-slate-50 dark:border-white/[0.04]">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Edit Profile</h3>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Edit profile</h3>
             <button onClick={close} disabled={saving} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
               Cancel
             </button>
@@ -489,7 +489,7 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
 
         <div className="px-5 pt-5 flex flex-col gap-5">
           <div>
-            <FieldLabel>Display Name</FieldLabel>
+            <FieldLabel>Display name</FieldLabel>
             <input
               value={name}
               onChange={e => setName(e.target.value)}
@@ -598,7 +598,7 @@ export function RestoreBackupSheet({ open, onClose }) {
         {step === 1 && (
           <>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Restore Backup</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Restore backup</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Pick a <span className="font-semibold">.json</span> backup. Its contents replace
                 what's on this device — anything not in the file is removed.
@@ -742,7 +742,7 @@ export function ResetConfirmModal({ open, onClose }) {
         {step === 1 && (
           <>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Reset App?</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Reset app?</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 This will permanently delete all transactions, accounts, categories, debts, and recurring payments. This cannot be undone.
               </p>
@@ -793,7 +793,7 @@ export function ResetConfirmModal({ open, onClose }) {
                 className="flex-1"
                 onClick={handleReset} disabled={loading || input !== 'RESET'}
               >
-                {loading ? 'Resetting…' : 'Reset App'}
+                {loading ? 'Resetting…' : 'Reset app'}
               </Button>
             </div>
           </>
@@ -834,8 +834,8 @@ function BudgetSummaryCard({ categories, transactions }) {
       dark:bg-white/[0.04] dark:border-white/[0.07]
       shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none">
       <div className="flex items-center justify-between mb-3">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
-          Budget — This Month
+        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">
+          Budget this month
         </p>
         {over && (
           <span className="text-[10px] font-semibold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-full">
@@ -1095,13 +1095,13 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
             <Button block onClick={saveAll} disabled={!hasPendingChanges || saving}>
               {saving
                 ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving…</>
-                : 'Save Changes'}
+                : 'Save changes'}
             </Button>
   )
 
   if (asPage) {
     return (
-      <SubPage title="Monthly Budgets">
+      <SubPage title="Monthly budgets">
         <p className="px-5 -mt-1 mb-1 text-center text-[13px] text-slate-500 dark:text-slate-400">
           Tap a category to set its monthly limit
         </p>
@@ -1126,7 +1126,7 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
         <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Monthly Budgets</h3>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Monthly budgets</h3>
             <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
               {hasPendingChanges ? 'Discard' : 'Done'}
             </button>
@@ -1480,7 +1480,7 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
     <>
               {/* No budget summary here. This screen is for naming, ordering
                   and colouring categories; the month's budget total belongs
-                  to the Budget page and to Monthly Budgets, which both show
+                  to the Budget page and to Monthly budgets, which both show
                   it already. Three copies of one figure is two too many. */}
 
               <div className="mx-5 rounded-2xl overflow-hidden
@@ -1526,13 +1526,13 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
                     on a near-white wash is the same problem .accent-ink
                     exists for.
 
-                    "Add Category", not "Add Expense Category". The tab
+                    "Add category", not "Add expense Category". The tab
                     directly above says Expense or Inflow, and a button that
                     repeats the thing sitting above it is the house style of
                     forms, not of iOS. */}
                 <Button block onClick={openAdd}>
                   <IconPlus size={15} strokeWidth="2.5" />
-                  Add Category
+                  Add category
                 </Button>
                 <button
                   onClick={() => setBrowseOpen(true)}
@@ -1606,7 +1606,7 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
           <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
             <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Manage Categories</h3>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Manage categories</h3>
               <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
                 Done
               </button>
@@ -1756,8 +1756,8 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
   const sheetTitle = {
     form:             isEdit ? 'Edit Category' : 'New Category',
-    'confirm-delete': 'Delete Category',
-    reassign:         'Reassign Transactions',
+    'confirm-delete': 'Delete category',
+    reassign:         'Reassign transactions',
   }[mode]
 
   /* One action row per mode, pinned by Sheet under the scrolling body.
@@ -1774,17 +1774,17 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
           Cancel
         </Button>
         <Button className="flex-[2]" onClick={handleSave} loading={saving}>
-          {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Category'}
+          {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add category'}
         </Button>
       </div>
     ),
     'confirm-delete': (
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={() => setMode('form')} disabled={saving}>
-          Keep It
+          Keep it
         </Button>
         <Button variant="danger" className="flex-[2]" onClick={handleDeleteDirect} loading={saving}>
-          {saving ? 'Deleting…' : 'Delete Category'}
+          {saving ? 'Deleting…' : 'Delete category'}
         </Button>
       </div>
     ),
@@ -1800,7 +1800,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
           loading={saving}
           disabled={!reassignTarget || reassignOptions.length === 0}
         >
-          {saving ? 'Moving…' : 'Reassign & Delete'}
+          {saving ? 'Moving…' : 'Reassign & delete'}
         </Button>
       </div>
     ),
@@ -2232,7 +2232,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
           <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
             {/* Name */}
             <div>
-              <FieldLabel>Template Name</FieldLabel>
+              <FieldLabel>Template name</FieldLabel>
               <input value={name} onChange={e => { setName(e.target.value); setNameError(false) }}
                 placeholder="e.g. Jeep fare" maxLength={40}
                 className={inputClass(nameError)} />
@@ -2265,7 +2265,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
             {/* Amount */}
             <div>
-              <FieldLabel>Default Amount</FieldLabel>
+              <FieldLabel>Default amount</FieldLabel>
               <div className="flex items-center gap-2 px-4 h-[48px] rounded-2xl
                 bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]">
                 <span className="text-slate-400 dark:text-slate-500 text-sm">₱</span>
@@ -2278,7 +2278,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
             {/* Description */}
             <div>
-              <FieldLabel>Default Note <span className="font-normal text-slate-400 normal-case">(optional)</span></FieldLabel>
+              <FieldLabel>Default note <span className="font-normal text-slate-400 normal-case">(optional)</span></FieldLabel>
               <input value={desc} onChange={e => setDesc(e.target.value)}
                 placeholder="e.g. Morning commute" maxLength={100}
                 className={inputClass()} />
@@ -2321,7 +2321,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
             ) : (
               <>
                 <div>
-                  <FieldLabel>From Account</FieldLabel>
+                  <FieldLabel>From account</FieldLabel>
                   <button onClick={() => setShowFrom(true)}
                     className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
                       bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
@@ -2336,7 +2336,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                   </button>
                 </div>
                 <div>
-                  <FieldLabel>To Account</FieldLabel>
+                  <FieldLabel>To account</FieldLabel>
                   <button onClick={() => setShowTo(true)}
                     className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
                       bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
@@ -2363,7 +2363,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                 Cancel
               </Button>
               <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Template'}
+                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add Template'}
               </Button>
             </div>
             <div className="h-8 shrink-0" />
@@ -2389,12 +2389,12 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 // ── Template manager sheet ─────────────────────────────────────────────────────
 
 /**
- * Quick Templates.
+ * Quick templates.
  *
  * `variant="page"` is the mobile route at /settings/templates, with the
  * app's back disc; `variant="sheet"` is the desktop modal that
  * src/web/pages/WebSettings.jsx still uses. Same split as Categories and
- * Monthly Budgets, and for the same reason: editing a template opens a form
+ * Monthly budgets, and for the same reason: editing a template opens a form
  * sheet, and a sheet on top of a sheet is a stack the phone has no way to
  * explain. On a page the form is the only sheet on screen.
  */
@@ -2493,7 +2493,7 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
     return (
       <>
         <SubPage
-          title="Quick Templates"
+          title="Quick templates"
           action={(
             <IconButton label="New template" variant="primary" onClick={openAdd}>
               <IconPlus />
@@ -2521,7 +2521,7 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
             border-b border-slate-100 dark:border-white/[0.04] shrink-0">
             <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
             <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Quick Templates</h3>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Quick templates</h3>
               <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
                 Done
               </button>
@@ -2578,7 +2578,7 @@ export function AccentColorSheet({ open, onClose, accentColor, setAccentColor })
         <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04]">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Accent Color</h3>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Accent colour</h3>
             <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
               Done
             </button>
@@ -2635,10 +2635,10 @@ export function AccentColorSheet({ open, onClose, accentColor, setAccentColor })
 const PRIVACY_SECTIONS = [
   { h: null,                  b: 'Last updated: May 2026' },
   { h: 'What We Store',       b: 'Your financial data — transactions, accounts, categories, and budgets — is stored locally on your device using IndexedDB. Nothing leaves your device unless you explicitly enable cloud sync.' },
-  { h: 'Cloud Sync',          b: 'If you sign in with Google and enable Supabase sync, your data is stored in Supabase under your own credentials. The developer has no access to your cloud data.' },
+  { h: 'Cloud sync',          b: 'If you sign in with Google and enable Supabase sync, your data is stored in Supabase under your own credentials. The developer has no access to your cloud data.' },
   { h: 'What We Don\'t Collect', b: 'We collect no analytics, usage telemetry, advertising identifiers, or personal information beyond what you voluntarily enter in the app.' },
   { h: 'How Data Is Used',    b: 'All data exists solely to provide the app\'s budgeting and tracking functionality. Your data is never sold, shared, or transmitted to any third party.' },
-  { h: 'Data Deletion',       b: 'You can permanently delete all local data at any time via Settings → Reset App. To remove cloud-synced data, contact us at jamesandgen111@gmail.com and we will delete your data from our servers.' },
+  { h: 'Data Deletion',       b: 'You can permanently delete all local data at any time via Settings → Reset app. To remove cloud-synced data, contact us at jamesandgen111@gmail.com and we will delete your data from our servers.' },
   { h: 'Security',            b: 'Local data security depends on your device\'s own security settings. Cloud-synced data is protected by Supabase\'s infrastructure and your Google account credentials.' },
   { h: 'Changes',             b: 'This policy may be updated from time to time. Continued use of the app after changes are posted constitutes acceptance of the updated policy.' },
   { h: 'Contact',             b: 'Questions or concerns? Email us at jamesandgen111@gmail.com' },
@@ -2666,7 +2666,7 @@ export function PolicySheet({ open, type, onClose }) {
     setTimeout(() => { setClosing(false); onClose() }, 240)
   }
 
-  const title    = type === 'privacy' ? 'Privacy Policy' : 'Terms of Use'
+  const title    = type === 'privacy' ? 'Privacy policy' : 'Terms of use'
   const badge    = type === 'privacy' ? 'Privacy' : 'Legal'
   const sections = type === 'privacy' ? PRIVACY_SECTIONS : TERMS_SECTIONS
   const intro    = sections.find(s => s.h === null)
@@ -2692,7 +2692,7 @@ export function PolicySheet({ open, type, onClose }) {
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
           <div className="flex items-start justify-between gap-3">
             <div>
-              <span className="inline-block text-[10px] font-bold uppercase tracking-widest
+              <span className="inline-block text-xs font-bold
                 px-2 py-0.5 rounded-full mb-1.5
                 bg-primary/10 dark:bg-primary/20 text-primary">
                 {badge}
@@ -2999,7 +2999,7 @@ export default function Settings() {
           <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="violet"><IconPalette /></RowIcon>}
-            label="Accent Color"
+            label="Accent colour"
             sublabel={ACCENT_COLORS.find(c => c.hex === accentColor)?.name ?? 'Custom'}
             right={
               <div className="flex items-center gap-2.5">
@@ -3024,7 +3024,7 @@ export default function Settings() {
                 </svg>
               </RowIcon>
             }
-            label="Skip Confirmation"
+            label="Skip confirmation"
             sublabel="Save instantly, no review step"
             right={<ToggleSwitch on={skipConfirm} />}
             onTap={() => db.meta.put({ key: 'skipConfirm', value: !skipConfirm })}
@@ -3043,7 +3043,7 @@ export default function Settings() {
                 </svg>
               </RowIcon>
             }
-            label="Desktop Layout"
+            label="Desktop layout"
             sublabel={
               getViewPreference() === 'mobile'
                 ? 'Forced to mobile on this device — tap to allow desktop'
@@ -3069,7 +3069,7 @@ export default function Settings() {
           <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="green"><IconTarget /></RowIcon>}
-            label="Monthly Budgets"
+            label="Monthly budgets"
             sublabel="Set spending limits per category"
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => navigate('/settings/budgets')}
@@ -3077,7 +3077,7 @@ export default function Settings() {
           <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="amber"><IconTemplate size={16} /></RowIcon>}
-            label="Quick Templates"
+            label="Quick templates"
             sublabel="One-tap repeat transactions"
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => navigate('/settings/templates')}
@@ -3091,7 +3091,7 @@ export default function Settings() {
         <SectionCard>
           <SettingsRow
             iconEl={<RowIcon color="green"><IconDownload /></RowIcon>}
-            label="Export Transactions (CSV)"
+            label="Export transactions (CSV)"
             sublabel={exporting ? 'Preparing download…' : `${txCount ?? 0} transactions`}
             right={
               exporting
@@ -3104,7 +3104,7 @@ export default function Settings() {
           <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="teal"><IconDownload /></RowIcon>}
-            label="Full Backup (JSON)"
+            label="Full backup (JSON)"
             sublabel={backingUp ? 'Preparing download…' : 'Accounts, categories, transactions & more'}
             right={
               backingUp
@@ -3117,7 +3117,7 @@ export default function Settings() {
           <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="amber"><IconUpload /></RowIcon>}
-            label="Restore Backup (JSON)"
+            label="Restore backup (JSON)"
             sublabel="Replace this device's data with a backup file"
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setRestoreOpen(true)}
@@ -3173,7 +3173,7 @@ export default function Settings() {
                 </span>
               </RowIcon>
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">Cloud Sync</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">Cloud sync</p>
                 <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5 truncate">
                   {syncStatus === 'syncing' ? 'Syncing…'
                     : syncStatus === 'error' ? 'Last sync failed'
@@ -3201,7 +3201,7 @@ export default function Settings() {
           ) : (
             <SettingsRow
               iconEl={<RowIcon color="violet"><IconCloud /></RowIcon>}
-              label="Enable Cloud Sync"
+              label="Enable cloud sync"
               sublabel="Sign in with Google to sync across devices"
               right={<IconChevronRight size={14} strokeWidth="2" />}
               onTap={() => navigate('/login')}
@@ -3284,7 +3284,7 @@ export default function Settings() {
               </svg>
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Sign Out?</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Sign out?</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Your data stays on this device. You can sign back in anytime to sync again.
               </p>
@@ -3325,7 +3325,7 @@ export default function Settings() {
               <IconDownload />
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Export Transactions?</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Export transactions?</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 This will download all {txCount ?? 0} transactions as a CSV file.
               </p>
@@ -3365,7 +3365,7 @@ export default function Settings() {
               <IconDownload />
             </div>
             <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Download Full Backup?</h3>
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Download full backup?</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Exports all accounts, categories, transactions, templates, recurring, and debts as a JSON file.
               </p>
@@ -3393,11 +3393,11 @@ export default function Settings() {
 
       {/* ══ 8. DANGER ZONE ══ */}
       <div className="mb-8">
-        <SectionHeader>Danger Zone</SectionHeader>
+        <SectionHeader>Danger zone</SectionHeader>
         <SectionCard>
           <SettingsRow
             iconEl={<RowIcon color="red"><IconTrash /></RowIcon>}
-            label="Reset App"
+            label="Reset app"
             sublabel="Permanently delete all local data"
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setResetOpen(true)}
@@ -3412,7 +3412,7 @@ export default function Settings() {
           <SettingsRow
             iconEl={<RowIcon color="slate"><IconFileText /></RowIcon>}
             label="Legal"
-            sublabel="Privacy Policy & Terms of Use"
+            sublabel="Privacy policy & terms of use"
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setLegalOpen(true)}
           />
@@ -3431,7 +3431,7 @@ export default function Settings() {
           >
             <div className="pt-5 px-5 pb-4">
               <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-              <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">Legal</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-4">Legal</p>
               <div className="flex flex-col gap-2">
                 <button
                   onClick={() => { setLegalOpen(false); setTimeout(() => setPolicyOpen('privacy'), 60) }}
@@ -3440,7 +3440,7 @@ export default function Settings() {
                     active:bg-slate-100 dark:active:bg-white/[0.08] transition-colors"
                 >
                   <RowIcon color="slate"><IconFileText /></RowIcon>
-                  <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Privacy Policy</span>
+                  <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Privacy policy</span>
                   <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                 </button>
                 <button
@@ -3450,7 +3450,7 @@ export default function Settings() {
                     active:bg-slate-100 dark:active:bg-white/[0.08] transition-colors"
                 >
                   <RowIcon color="slate"><IconInfo /></RowIcon>
-                  <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Terms of Use</span>
+                  <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Terms of use</span>
                   <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
                 </button>
               </div>

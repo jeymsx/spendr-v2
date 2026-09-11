@@ -116,7 +116,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
         <div className="pt-5 px-5 pb-3 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Quick Templates</h3>
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Quick templates</h3>
             <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
               Close
             </button>

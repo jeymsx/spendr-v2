@@ -561,7 +561,7 @@ export default function Dashboard() {
         </IconButton>
       </header>
 
-      {/* ── Net Worth Card ───────────────────────────────────────────────────── */}
+      {/* ── Net worth Card ───────────────────────────────────────────────────── */}
       <section className="px-5 mt-4">
         {(() => {
           const revealed = !balanceHidden || peek
@@ -582,7 +582,7 @@ export default function Dashboard() {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold uppercase tracking-widest text-white/60">Net Worth</span>
+                  <span className="text-xs font-semibold text-white/60">Net worth</span>
                   <button
                     onPointerDown={e => e.stopPropagation()}
                     onClick={() => setBalanceHidden(h => !h)}
@@ -732,7 +732,7 @@ export default function Dashboard() {
         </div>
       </section>
 
-{/* ── Quick Templates ─────────────────────────────────────────────────── */}
+{/* ── Quick templates ─────────────────────────────────────────────────── */}
       {(templates ?? []).length > 0 && (
         <section className="mt-3">
           <div
@@ -993,7 +993,7 @@ function UpcomingSection({ items }) {
       {/* Headed like Accounts, Budget and Recent, because it is the same kind
           of thing: a top-level block of this screen.
  
-          It started as small uppercase caps, copied from the reference app -
+          It started as small caps, copied from the reference app -
           but there, "UPCOMING" is a group divider INSIDE one continuous
           transaction list, a peer of "THU, 20 JUL". Borrowing that
           typography for a standalone card borrowed the wrong hierarchy, and
@@ -1280,7 +1280,7 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
       <p className="text-[13px] font-semibold truncate mt-2">{acct.name}</p>
 
       <div className="mt-auto pt-1">
-        <p className="text-[9px] font-semibold uppercase tracking-wider text-white/60 mb-0.5">
+        <p className="text-[9px] font-semibold text-white/60 mb-0.5">
           {isCredit ? 'Available' : 'Balance'}
         </p>
         <p className="text-[17px] font-bold tabular-nums leading-none">

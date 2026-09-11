@@ -77,7 +77,7 @@ const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
       >
         {/* The net-worth card: the largest accent surface in the app. */}
         <div className="rounded-2xl px-3 pt-2.5 pb-3" style={{ background: cardGradient(hex, theme) }}>
-          <p className="text-[6.5px] font-semibold uppercase tracking-widest text-white/60">Net Worth</p>
+          <p className="text-[6.5px] font-semibold text-white/60">Net worth</p>
           <p className="text-[17px] font-semibold tracking-tight text-white mt-0.5">₱33,571</p>
           <div className="flex gap-2.5 mt-1.5">
             <span className="text-[6px] text-white/50">Spending</span>
@@ -130,7 +130,7 @@ const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
           className="rounded-xl py-1.5 text-center text-[7.5px] font-semibold text-white"
           style={{ background: hex }}
         >
-          Add Expense
+          Add expense
         </div>
 
         {/* The navbar, one tab active. */}
@@ -237,7 +237,7 @@ export default function SettingsAccent() {
        *
        * Translucency was the bug. Eight compressed cards piled near the
        * middle, each at 40-60% opacity, meant every card behind showed
-       * THROUGH the ones in front - four Net Worth headings and four budget
+       * THROUGH the ones in front - four Net worth headings and four budget
        * bars visible at once, shuffling as the stack reordered. That is what
        * "two low opacity cards on both sides interchanging" was.
        *
@@ -349,7 +349,7 @@ export default function SettingsAccent() {
        min-h in dvh minus the navbar, because a percentage min-height against a
        flex-grown parent does not reliably resolve - that cost three attempts
        on the card style step. mt-auto/mb-auto then centres what is inside. */
-    <SubPage title="Accent Color" className="flex flex-col min-h-[calc(100dvh-5rem)]">
+    <SubPage title="Accent colour" className="flex flex-col min-h-[calc(100dvh-5rem)]">
       <div className="mt-auto mb-auto">
         {/* calc(50% - 114px) of padding, so the first and last previews can
             reach the middle. With snap-center and a 228px card, an end card

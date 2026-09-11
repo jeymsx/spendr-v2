@@ -293,8 +293,8 @@ function HeroStats({ totalSpent, totalEarned }) {
   const netPos = net >= 0
   return (
     <div className="px-5 py-1 text-center">
-      <p className="text-[10px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5">
-        Total Spent
+      <p className="text-xs font-bold tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5">
+        Total spent
       </p>
       <p className="text-[44px] font-bold tracking-tight text-slate-900 dark:text-white tabular-nums leading-none">
         {fmtCompact(totalSpent)}
@@ -525,7 +525,7 @@ const TREND_EMPTY = {
  *
  * The empty state was a single `py-8` line, so switching Expenses -> Income on
  * a month with no income collapsed the section from 160px to about 52px and
- * shoved everything below it - Top Expenses, the whole rest of the page - up
+ * shoved everything below it - Top expenses, the whole rest of the page - up
  * the screen. Toggling back shoved it down again. A control that makes the
  * page jump is a control people stop touching.
  *
@@ -646,13 +646,13 @@ function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDa
   )
 }
 
-// ── Top Expenses ───────────────────────────────────────────────────────────────
+// ── Top expenses ───────────────────────────────────────────────────────────────
 
 function TopTransactions({ txs, catMap }) {
   if (!txs.length) return null
   return (
     <div>
-      <SectionLabel>Top Expenses</SectionLabel>
+      <SectionLabel>Top expenses</SectionLabel>
       <div className="flex flex-col gap-2 mx-5">
         {txs.map((tx, i) => {
           const cat  = catMap[tx.category]
@@ -699,7 +699,7 @@ function AccountBreakdown({ data, animKey }) {
 
   return (
     <div>
-      <SectionLabel>By Account</SectionLabel>
+      <SectionLabel>By account</SectionLabel>
       <div className="mx-5 flex flex-col gap-2">
         {data.map((d, i) => (
           <div key={i} className="card px-4 py-3 rounded-2xl">

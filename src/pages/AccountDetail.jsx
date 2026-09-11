@@ -618,8 +618,8 @@ export default function AccountDetail() {
 
       {/* ── The one number, leading the page ── */}
       <section className="px-5 mt-1 text-center">
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-          {isCredit ? 'Balance Used' : 'Current Balance'}
+        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+          {isCredit ? 'Balance Used' : 'Current balance'}
         </p>
         <p className={`mt-1.5 text-[38px] leading-none font-semibold tracking-tight tabular-nums ${
           isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
@@ -680,7 +680,7 @@ export default function AccountDetail() {
               holds, and printing state on a card face is not what a card does
               anyway. Currency in its place, matching the Accounts list. */}
           <div className="mt-auto flex items-end justify-between gap-3">
-            <span className="text-[9px] font-semibold uppercase tracking-wider text-white/50">
+            <span className="text-[9px] font-semibold text-white/50">
               {account.currency ?? 'PHP'}
             </span>
             <SchemeMark scheme={account.scheme} className="h-[30px]" />
@@ -695,7 +695,7 @@ export default function AccountDetail() {
           targets away from the thumb's path across the line itself. ── */}
       <section className="mt-7">
         <div className="flex items-baseline justify-between px-5 mb-1">
-          <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400">
             {RANGE_TITLE[range.key]}
           </h2>
           <TrendDelta data={trend} isCredit={isCredit} />
@@ -724,7 +724,7 @@ export default function AccountDetail() {
       {goalSplit && goalSplit.goals.length > 0 && (
         <section className="mt-7 px-5">
           <div className="flex items-baseline justify-between mb-2">
-            <h2 className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400">
               Funding {goalSplit.goals.length} goal{goalSplit.goals.length === 1 ? '' : 's'}
             </h2>
             <Link to="/goals" className="text-[11px] font-medium text-primary active:opacity-70">
@@ -757,7 +757,7 @@ export default function AccountDetail() {
             <div className="flex items-baseline justify-between gap-3 px-4 py-3
               border-t border-slate-100 dark:border-white/[0.07]
               bg-slate-50/60 dark:bg-white/[0.02]">
-              <span className="text-[12px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+              <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">
                 Unassigned
               </span>
               <span className="text-[13px] font-bold tabular-nums text-slate-600 dark:text-slate-300 shrink-0">
@@ -796,8 +796,8 @@ export default function AccountDetail() {
                   says so in words. */}
               <div className={`col-span-2 px-4 py-3 rounded-2xl flex items-center justify-between ${STMT_TONE[creditData.tone].box}`}>
                 <div>
-                  <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${STMT_TONE[creditData.tone].label}`}>
-                    Statement Balance
+                  <p className={`text-xs font-semibold mb-0.5 ${STMT_TONE[creditData.tone].label}`}>
+                    Statement balance
                   </p>
                   <p className={`text-xl font-bold tabular-nums ${STMT_TONE[creditData.tone].value}`}>
                     {fmt(creditData.thisTotal)}
@@ -810,10 +810,10 @@ export default function AccountDetail() {
                 </div>
                 {creditData.nextTotal > 0 && (
                   <div className="text-right">
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-0.5">Next Statement</p>
+                    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-0.5">Next statement</p>
                     {/* What the next bill will actually ask for. The wider
                         nextTotal includes plan months billed later, and it
-                        still drives Available Credit below. */}
+                        still drives Available credit below. */}
                     <p className="text-sm font-bold text-slate-600 dark:text-slate-300 tabular-nums">{fmt(creditData.nextStatementTotal)}</p>
                     <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
                       Closes {fmtCycleDate(creditData.nextEnd)}
@@ -826,16 +826,16 @@ export default function AccountDetail() {
                   </div>
                 )}
               </div>
-              <StatCard label="Available Credit" value={fmt(creditData.availableCredit)} />
+              <StatCard label="Available credit" value={fmt(creditData.availableCredit)} />
               {/* An em dash rather than a zero: nothing is being asked for,
                   which is not the same as being asked for nothing. */}
-              <StatCard label="Minimum Due" value={creditData.minimumDue > 0 ? fmt(creditData.minimumDue) : '—'} />
+              <StatCard label="Minimum due" value={creditData.minimumDue > 0 ? fmt(creditData.minimumDue) : '—'} />
             </div>
 
             <CreditTxSection
               onSelect={setSelectedTx}
               catMap={catMap}
-              title="This Statement"
+              title="This statement"
               dateRange={`${fmtCycleDate(creditData.cycleStart)} – ${fmtCycleDate(creditData.cycleEnd)}`}
               txs={creditData.thisCharges}
               total={creditData.thisTotal}
@@ -848,7 +848,7 @@ export default function AccountDetail() {
               <CreditTxSection
                 onSelect={setSelectedTx}
               catMap={catMap}
-                title="Next Statement"
+                title="Next statement"
                 dateRange={`${fmtCycleDate(creditData.nextStart)} – ${fmtCycleDate(creditData.nextCycleEnd)}`}
                 txs={creditData.nextStatementCharges}
                 total={creditData.nextStatementTotal}
@@ -863,7 +863,7 @@ export default function AccountDetail() {
               <CreditTxSection
                 onSelect={setSelectedTx}
               catMap={catMap}
-                title="Scheduled Later"
+                title="Scheduled later"
                 dateRange={`After ${fmtCycleDate(creditData.nextCycleEnd)}`}
                 txs={creditData.laterCharges}
                 total={creditData.laterTotal}
@@ -887,7 +887,7 @@ export default function AccountDetail() {
           </>
         ) : isParent ? (
           <>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2.5">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
               Sub-accounts · {children.length}
             </p>
             <div
@@ -939,7 +939,7 @@ export default function AccountDetail() {
 
             {acctTxs.length > 0 && (
               <>
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2.5">
+                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
                   Direct Transactions · {acctTxs.length}
                 </p>
                 <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} catMap={catMap} />
@@ -948,7 +948,7 @@ export default function AccountDetail() {
           </>
         ) : (
           <>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400 mb-2.5">
+            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
               Transactions · {acctTxs.length}
             </p>
             {acctTxs.length === 0 ? (

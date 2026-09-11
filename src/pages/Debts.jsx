@@ -154,7 +154,7 @@ function Card({ children, className = '' }) {
 function StatTile({ label, value, tone = '' }) {
   return (
     <Card className="px-2 py-3 text-center">
-      <p className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+      <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
         {label}
       </p>
       <p className={`text-[17px] leading-none font-semibold tabular-nums mt-1.5 ${
@@ -269,7 +269,7 @@ function DebtCard({ debt, onEdit, onPayment }) {
             { label: 'Remaining', value: fmt(remaining),            color: isPaid ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white' },
           ].map(({ label, value, color }) => (
             <div key={label}>
-              <p className="text-[9.5px] text-slate-500 dark:text-slate-400 uppercase tracking-wider font-semibold">{label}</p>
+              <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-semibold">{label}</p>
               <p className={`text-[13px] font-bold tabular-nums mt-0.5 ${color}`}>{value}</p>
             </div>
           ))}
@@ -579,7 +579,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
             settings rows in one card.
 
             The amount led the change. Every other place in Spendr where you
-            type money - Add Expense, Add Inflow, Transfer, and now the payment
+            type money - Add expense, Add inflow, Transfer, and now the payment
             sheet - opens with one big centred figure, because the amount IS
             the transaction. Here it was the third field down, the same size as
             a note, which made a debt feel like a form to fill rather than a
@@ -681,7 +681,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
               disabled:opacity-40 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >
-            {saving ? 'Saving…' : editDebt ? 'Save Changes' : 'Add debt'}
+            {saving ? 'Saving…' : editDebt ? 'Save changes' : 'Add debt'}
           </button>
         </div>
       </div>
@@ -829,7 +829,7 @@ export function PaymentSheet({ open, onClose, debt }) {
             )}
 
             {/* ── Amount ──
-                The same field Add Expense, Add Inflow and Transfer use, down to
+                The same field Add expense, Add inflow and Transfer use, down to
                 the class: one big centred `amount-input`, inputMode="decimal",
                 driven by moneyChangeHandler.
 
@@ -1084,7 +1084,7 @@ export default function Debts() {
         <>
           {/* ── Where you stand ── */}
           <section className="px-5">
-            <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
               {headline.label}
             </p>
             <p className={`mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums ${headline.tone}`}>

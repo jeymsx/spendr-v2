@@ -374,7 +374,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
             {/* Name */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Name</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Name</p>
               <input
                 type="text"
                 value={name}
@@ -394,7 +394,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
             {/* Amount */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Amount</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Amount</p>
               <div className={[
                 'flex items-center h-[52px] px-4 rounded-2xl',
                 'bg-white dark:bg-white/[0.05]',
@@ -416,7 +416,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
             {/* Frequency */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-2">Frequency</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">Frequency</p>
               <div className="grid grid-cols-4 gap-2">
                 {FREQ_OPTIONS.map(opt => (
                   <button
@@ -445,7 +445,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
             {/* Category */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Category</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Category</p>
               <button
                 onClick={() => setShowCatPick(true)}
                 className={[
@@ -472,7 +472,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
             {/* Account */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Account</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Account</p>
               <button
                 onClick={() => setShowAcctPick(true)}
                 className={[
@@ -499,7 +499,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
             {/* Next date */}
             <div>
-              <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5">Next Due Date</p>
+              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Next due date</p>
               <input
                 type="date"
                 value={nextDate}
@@ -551,7 +551,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                 disabled:opacity-40 disabled:shadow-none
                 active:scale-[0.98] transition-all duration-100"
             >
-              {saving ? 'Saving…' : editRec ? 'Save Changes' : 'Add Recurring'}
+              {saving ? 'Saving…' : editRec ? 'Save changes' : 'Add Recurring'}
             </button>
           </div>
         </div>
@@ -711,7 +711,7 @@ export default function Recurring() {
               the only violet surface in the app, and a second accent nothing
               else answered to. */}
           <section className="px-5">
-            <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+            <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
               Monthly cost
             </p>
             <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
@@ -736,7 +736,7 @@ export default function Recurring() {
                 tile looks like it lost its label. */}
             <div className="grid grid-cols-3 gap-2.5 mt-5">
               <Card className="px-2 py-3 text-center">
-                <p className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
                   Due now
                 </p>
                 <p className={`text-[19px] leading-none font-semibold tabular-nums mt-1.5 ${
@@ -748,7 +748,7 @@ export default function Recurring() {
                 </p>
               </Card>
               <Card className="px-2 py-3 text-center">
-                <p className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
                   This week
                 </p>
                 <p className="text-[19px] leading-none font-semibold tabular-nums mt-1.5 text-slate-800 dark:text-white">
@@ -756,7 +756,7 @@ export default function Recurring() {
                 </p>
               </Card>
               <Card className="px-2 py-3 text-center">
-                <p className="text-[9.5px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
                   Paused
                 </p>
                 <p className="text-[19px] leading-none font-semibold tabular-nums mt-1.5 text-slate-800 dark:text-white">

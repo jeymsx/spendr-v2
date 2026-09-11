@@ -84,7 +84,7 @@ function fmtTxTime(isoStr) {
  * while the Dashboard tiles and useFinanceSummary bucket by `role` into
  * Spending / Savings / Credit. Following role means the subtotals here tie
  * back to the numbers on the home screen, a one-account "Cash" group stops
- * costing a whole header, and the split honours the form's own "Counts As"
+ * costing a whole header, and the split honours the form's own "Counts as"
  * field - so moving GCash to Savings actually moves it.
  */
 const ACCOUNT_GROUPS = [
@@ -157,7 +157,7 @@ export function typeIcon(type) {
 
 function Label({ children }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-1">
+    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5 px-1">
       {children}
     </p>
   )
@@ -196,26 +196,26 @@ function SummaryBar({ summary, hidden, onToggleHide, accentColor, theme }) {
       />
       <div className="relative">
         <div className="flex items-center justify-between mb-4">
-          <span className="text-[11px] font-semibold uppercase tracking-widest text-white/60">Overview</span>
+          <span className="text-xs font-semibold text-white/60">Overview</span>
           <button onClick={onToggleHide} className="text-white/60 hover:text-white/90 transition-colors active:scale-95">
             {hidden ? <IconEyeOff /> : <IconEye />}
           </button>
         </div>
         <div className="grid grid-cols-3 gap-2">
           <div>
-            <p className="text-white/55 text-[10px] font-semibold uppercase tracking-wider mb-1">Assets</p>
+            <p className="text-white/55 text-xs font-semibold mb-1">Assets</p>
             <p className="text-white font-bold text-[17px] tabular-nums leading-tight">
               {hidden ? '₱ ••••' : fmtCompact(summary.assets)}
             </p>
           </div>
           <div>
-            <p className="text-white/55 text-[10px] font-semibold uppercase tracking-wider mb-1">Credit Used</p>
+            <p className="text-white/55 text-xs font-semibold mb-1">Credit used</p>
             <p className="text-white font-bold text-[17px] tabular-nums leading-tight">
               {hidden ? '₱ ••••' : fmtCompact(summary.creditUsed)}
             </p>
           </div>
           <div>
-            <p className="text-white/55 text-[10px] font-semibold uppercase tracking-wider mb-1">Net Worth</p>
+            <p className="text-white/55 text-xs font-semibold mb-1">Net worth</p>
             <p className="text-white font-bold text-[17px] tabular-nums leading-tight">
               {hidden ? '₱ ••••' : fmtCompact(summary.net)}
             </p>
@@ -359,7 +359,7 @@ const AccountCard = forwardRef(function AccountCard({
               />
             </div>
             <div className="flex items-end justify-between mt-1.5 gap-2">
-              <span className="text-[9px] uppercase tracking-wider text-white/60">
+              <span className="text-[9px] text-white/60">
                 {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit)} used
               </span>
               <SchemeMark scheme={acct.scheme} className="h-[34px]" />
@@ -367,7 +367,7 @@ const AccountCard = forwardRef(function AccountCard({
           </>
         ) : (
           <div className="flex items-end justify-between gap-2">
-            <span className="text-[9px] uppercase tracking-wider text-white/50">
+            <span className="text-[9px] text-white/50">
               {acct.currency ?? 'PHP'}
             </span>
             <SchemeMark scheme={acct.scheme} className="h-[34px]" />
@@ -483,7 +483,7 @@ const TYPE_LABEL_SHORT = { ewallet: 'E-Wallet', bank: 'Bank', credit: 'Credit Ca
 function QASectionLabel({ children }) {
   return (
     <div className="flex items-center gap-2.5 mb-2.5">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 shrink-0">
+      <span className="text-xs font-bold text-slate-400 dark:text-slate-500 shrink-0">
         {children}
       </span>
       <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.06]" />
@@ -580,7 +580,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-base font-semibold text-slate-800 dark:text-white">Add Account</h2>
+              <h2 className="text-base font-semibold text-slate-800 dark:text-white">Add account</h2>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Select a preset or create a custom one</p>
             </div>
             <IconButton label="Close" size="sm" onClick={close}>
@@ -698,7 +698,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
               flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-white">
               +
             </span>
-            Custom Account
+            Custom account
           </Button>
         </div>
       </div>
@@ -960,7 +960,7 @@ export default function Accounts() {
           return (
             <section key={parent.id} className="mb-3">
               <div className="flex items-center gap-3 px-5 py-2">
-                <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap">
+                <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                   {parent.name}
                 </span>
                 <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
@@ -999,7 +999,7 @@ export default function Accounts() {
         return (
           <section key={group.label} className="mb-3">
             <div className="flex items-center gap-3 px-5 py-2">
-              <span className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 whitespace-nowrap">
+              <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                 {group.label}
               </span>
               <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
@@ -1193,7 +1193,7 @@ function AccountSortSheet({ open, onClose, accounts }) {
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
           <div className="flex items-center justify-between">
             <div>
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Sort Accounts</h3>
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Sort accounts</h3>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag to reorder — affects picker order</p>
             </div>
             <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
@@ -1504,7 +1504,7 @@ export function QrViewerModal({ open, onClose, qrImage, accountName }) {
       style={{ touchAction: 'none' }}
       onClick={onClose}
     >
-      <p className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-5">
+      <p className="text-white/60 text-xs font-semibold mb-5">
         {accountName}
       </p>
       <img
@@ -1961,7 +1961,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             <div className={`flex items-center ${isPage ? 'justify-end' : 'justify-between'}`}>
               {!isPage && (
                 <h3 className="text-base font-semibold text-slate-800 dark:text-white">
-                  {isEdit ? 'Edit Account' : 'New Account'}
+                  {isEdit ? 'Edit Account' : 'New account'}
                 </h3>
               )}
               {isEdit && (
@@ -1972,7 +1972,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                       className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
                         bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
                     >
-                      Adjust Balance
+                      Adjust balance
                     </button>
                   )}
                   {/* Only in the sheet. On a page it is the last thing on
@@ -1997,7 +1997,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                this row was the third way out of one screen. */
             !isPage && (
               <div className="flex items-center justify-between">
-                <h3 className="text-base font-semibold text-slate-800 dark:text-white">Adjust Balance</h3>
+                <h3 className="text-base font-semibold text-slate-800 dark:text-white">Adjust balance</h3>
                 <button onClick={() => setMode('form')} disabled={saving}
                   className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
                   Cancel
@@ -2057,7 +2057,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
             {/* Name */}
             <div>
-              <Label>Account Name</Label>
+              <Label>Account name</Label>
               <input
                 value={name}
                 onChange={e => { setName(e.target.value); setNameError(false) }}
@@ -2070,7 +2070,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
             {/* Type */}
             <div>
-              <Label>Account Type</Label>
+              <Label>Account type</Label>
               {isEdit ? (
                 <p className="h-[48px] flex items-center px-4 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-300
                   bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.09]">
@@ -2106,15 +2106,15 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 which network yours is on. Same control as the create flow. */}
             {type !== 'cash' && (
               <div>
-                <Label>Card Network</Label>
+                <Label>Card network</Label>
                 <SchemeRail value={scheme} onChange={v => setScheme(v)} />
               </div>
             )}
 
-            {/* Counts As — hidden for credit */}
+            {/* Counts as — hidden for credit */}
             {type !== 'credit' && (
               <div>
-                <Label>Counts As</Label>
+                <Label>Counts as</Label>
                 <div className="flex gap-2">
                   {[
                     { value: 'spending', label: 'Spending', Icon: IconWalletUI },
@@ -2153,7 +2153,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             {/* Group under parent */}
             {type !== 'credit' && !isParentItself && potentialParents.length > 0 && (
               <div>
-                <Label>Group Under</Label>
+                <Label>Group under</Label>
                 {/* One line that scrolls, not a wrapping block.
 
                     Wrapped, this grew a row for every account you own and
@@ -2206,7 +2206,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             {/* Starting balance — add mode only */}
             {!isEdit && (
               <div>
-                <Label>Starting Balance</Label>
+                <Label>Starting balance</Label>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -2224,7 +2224,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 <div className="h-px bg-slate-100 dark:bg-white/[0.07]" />
 
                 <div>
-                  <Label>Credit Limit</Label>
+                  <Label>Credit limit</Label>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -2236,7 +2236,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </div>
 
                 <div>
-                  <Label>Minimum Payment</Label>
+                  <Label>Minimum payment</Label>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -2389,7 +2389,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </Button>
               )}
               <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Account'}
+                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add account'}
               </Button>
             </div>
 
@@ -2421,8 +2421,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               <div className="px-4 py-3.5 rounded-2xl
                 bg-slate-50 dark:bg-white/[0.04]
                 border border-slate-100 dark:border-white/[0.07]">
-                <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1">
-                  Current Balance
+                <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1">
+                  Current balance
                 </p>
                 <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                   {fmt(account?.balance ?? 0)}
@@ -2431,7 +2431,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
               {/* New balance input */}
               <div>
-                <Label>Correct Balance</Label>
+                <Label>Correct balance</Label>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -2582,7 +2582,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 export function StatCard({ label, value }) {
   return (
     <div className="px-4 py-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">
-      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-0.5">
+      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-0.5">
         {label}
       </p>
       <p className="text-sm font-bold text-slate-700 dark:text-slate-200 tabular-nums">{value}</p>
@@ -2597,7 +2597,7 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
     <div className="mb-5">
       <div className="flex items-center justify-between mb-2">
         <div>
-          <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
+          <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">
             {title}
           </p>
           {dateRange && (
@@ -2699,7 +2699,7 @@ export function DetailTxRow({ tx, accountName, onSelect, catMap = {} }) {
             {label}
           </span>
           {isTransferFee && (
-            <span className="shrink-0 text-[9px] font-semibold uppercase tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
+            <span className="shrink-0 text-[9px] font-semibold tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
               Fee
             </span>
           )}

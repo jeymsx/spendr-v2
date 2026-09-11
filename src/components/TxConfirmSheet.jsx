@@ -208,7 +208,7 @@ export default function TxConfirmSheet({
   toAccount,
   onSaveTemplate = null,  // if provided, shows save-as-template toggle
   installment    = null,  // { months, monthly, total, firstLabel, lastLabel }
-  /* The confirm button's words. "Save Transaction" is right when a form is
+  /* The confirm button's words. "Save transaction" is right when a form is
      being saved and wrong when a bill is being posted - the sheet is the
      same review either way, but the verb is the caller's. */
   confirmLabel   = null,
@@ -276,7 +276,7 @@ export default function TxConfirmSheet({
   /* The actions are Sheet's `footer`, which pins them under the scrolling
      body. They used to be the last thing inside a panel that scrolled as one
      piece, so on a short screen - and on desktop, where the modal is capped
-     at 84vh - Save Transaction sat below the fold. */
+     at 84vh - Save transaction sat below the fold. */
   const actions = swipeToConfirm ? (
     /* Stacked, not side by side. A drag needs the full width to have any
        travel in it, and a 52px pill next to a Cancel button would give the
@@ -305,7 +305,7 @@ export default function TxConfirmSheet({
         }}
       >
         {saving ? savingLabel
-          : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save Transaction')}
+          : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save transaction')}
       </Button>
     </div>
   )

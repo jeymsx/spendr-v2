@@ -267,7 +267,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add Expense</h1>
+        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add expense</h1>
         <button
           onClick={() => setShowTemplates(true)}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
@@ -447,7 +447,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
 
       <div className="px-4 pt-5">
         <Button size="lg" block onClick={onConfirmPress} disabled={saving || amount <= 0}>
-          {isInstallment ? 'Review Installment' : 'Review Expense'}
+          {isInstallment ? 'Review installment' : 'Review expense'}
         </Button>
       </div>
 

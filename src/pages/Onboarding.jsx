@@ -120,7 +120,7 @@ function StepName({ value, onChange, onNext }) {
   return (
     <div className="flex-1 flex flex-col gap-8">
       <div>
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 1 of 6</p>
+        <p className="text-primary text-xs font-bold mb-3">Step 1 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           What should<br />we call you?
         </h2>
@@ -162,7 +162,7 @@ function StepCurrency({ value, onChange, onNext }) {
   return (
     <div className="flex-1 flex flex-col gap-8">
       <div>
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 2 of 6</p>
+        <p className="text-primary text-xs font-bold mb-3">Step 2 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           Your main<br />currency?
         </h2>
@@ -207,7 +207,7 @@ const COLOR_SWATCHES = ['#2D9DFF', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '
 function OnbSectionLabel({ children }) {
   return (
     <div className="flex items-center gap-2.5 mb-2.5">
-      <span className="text-[10px] font-bold uppercase tracking-widest text-slate-600 shrink-0">{children}</span>
+      <span className="text-xs font-bold text-slate-600 shrink-0">{children}</span>
       <div className="flex-1 h-px bg-white/[0.07]" />
     </div>
   )
@@ -238,7 +238,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
   return (
     <div className="flex-1 flex flex-col gap-4 min-h-0">
       <div className="shrink-0">
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 3 of 6</p>
+        <p className="text-primary text-xs font-bold mb-3">Step 3 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           Which accounts<br />do you use?
         </h2>
@@ -426,7 +426,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCustomForm(false)} />
           <div className="relative w-full max-w-sm bg-[#1a2130] border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
             <div>
-              <h3 className="text-base font-semibold text-white">Custom Account</h3>
+              <h3 className="text-base font-semibold text-white">Custom account</h3>
               <p className="text-xs text-slate-500 mt-0.5">Name, type, and color.</p>
             </div>
             <input
@@ -456,7 +456,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
               ))}
             </div>
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2.5">Color</p>
+              <p className="text-xs font-bold text-slate-600 mb-2.5">Color</p>
               <div className="flex gap-2.5">
                 {COLOR_SWATCHES.map(c => (
                   <button
@@ -490,7 +490,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
                 className="flex-[2]"
                 onClick={addCustom} disabled={!customName.trim()}
               >
-                Add Account
+                Add account
               </Button>
             </div>
           </div>
@@ -516,7 +516,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
   return (
     <div className="flex-1 flex flex-col gap-5 min-h-0">
       <div className="shrink-0">
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step 4 of 6</p>
+        <p className="text-primary text-xs font-bold mb-3">Step 4 of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           Set starting<br />balances
         </h2>
@@ -569,7 +569,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
                 {isCredit && (
                   <div className="mt-2 ml-10 flex items-center gap-4">
                     <div className="flex-1">
-                      <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-1">Owed</p>
+                      <p className="text-xs text-slate-600 mb-1">Owed</p>
                       <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
                         <span className="text-slate-600 text-xs">₱</span>
                         <input
@@ -584,7 +584,7 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
                       </div>
                     </div>
                     <div className="flex-1">
-                      <p className="text-[10px] uppercase tracking-widest text-slate-600 mb-1">Limit</p>
+                      <p className="text-xs text-slate-600 mb-1">Limit</p>
                       <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
                         <span className="text-slate-600 text-xs">₱</span>
                         <input
@@ -655,7 +655,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
   return (
     <div className="flex-1 flex flex-col gap-4 min-h-0">
       <div className="shrink-0">
-        <p className="text-primary text-xs font-bold uppercase tracking-widest mb-3">Step {stepNum} of 6</p>
+        <p className="text-primary text-xs font-bold mb-3">Step {stepNum} of 6</p>
         <h2 className="text-[28px] font-semibold leading-tight text-white">
           {isExpense ? <>What do you<br />spend on?</> : <>What are your<br />income sources?</>}
         </h2>
@@ -667,7 +667,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
       <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5 pb-2">
         {/* Locked chip */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Always included</p>
+          <p className="text-xs font-bold text-slate-600 mb-2">Always included</p>
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
               bg-white/[0.08] border border-white/[0.15] text-slate-300 text-sm font-semibold">
@@ -679,7 +679,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
         {/* Preset chips */}
         <div>
-          <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Suggestions</p>
+          <p className="text-xs font-bold text-slate-600 mb-2">Suggestions</p>
           <div className="flex flex-wrap gap-2">
             {presets.map(cat => {
               const sel = selectedNames.has(cat.name)
@@ -706,7 +706,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
         {/* Custom categories */}
         {customCats.length > 0 && (
           <div>
-            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Custom</p>
+            <p className="text-xs font-bold text-slate-600 mb-2">Custom</p>
             <div className="flex flex-wrap gap-2">
               {customCats.map(cat => (
                 <span key={cat.name}
@@ -749,7 +749,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
           />
           <div className="relative w-full max-w-sm bg-[#1a2130] border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
             <div>
-              <h3 className="text-base font-semibold text-white">Custom Category</h3>
+              <h3 className="text-base font-semibold text-white">Custom category</h3>
               <p className="text-xs text-slate-500 mt-0.5">Name, icon, and color.</p>
             </div>
 
@@ -768,7 +768,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
             {/* Emoji picker */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2">Icon</p>
+              <p className="text-xs font-bold text-slate-600 mb-2">Icon</p>
               <div className="grid grid-cols-8 gap-1 max-h-[108px] overflow-y-auto">
                 {EMOJI_SUGGESTIONS.map(e => (
                   <button
@@ -789,7 +789,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
             {/* Color swatches */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-widest text-slate-600 mb-2.5">Color</p>
+              <p className="text-xs font-bold text-slate-600 mb-2.5">Color</p>
               <div className="flex gap-2.5">
                 {CAT_SWATCHES.map(c => (
                   <button
@@ -827,7 +827,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
                 className="flex-[2]"
                 onClick={addCustom} disabled={!customName.trim()}
               >
-                Add Category
+                Add category
               </Button>
             </div>
           </div>
