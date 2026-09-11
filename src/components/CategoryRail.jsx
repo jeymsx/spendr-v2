@@ -31,6 +31,10 @@ import CategoryGlyph from './CategoryGlyph'
  */
 export default function CategoryRail({ categories = [], selected, onSelect, className = '', gutter = 16 }) {
   const railRef = useRef(null)
+  /* Whether the rail has already centred itself, and whether the person has
+     taken over. Refs, not state: neither should cause a render. */
+  const centred = useRef(false)
+  const touched = useRef(false)
 
   /**
    * Open on the selected category.
@@ -41,15 +45,27 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
    *
    * Explicit scrollTo rather than scrollIntoView: on a scroll-snap rail
    * scrollIntoView negotiates with the snap points and lands on a neighbour.
-   * Once, on mount only - re-centring on every pick would yank the row out
-   * from under the finger that just tapped it.
+   * Once, and never in response to a tap - re-centring on every pick would
+   * yank the row out from under the finger that just made it.
+   *
+   * "On mount" was not enough. The edit form resolves its category from the
+   * categories table, which loads after the page renders, so at mount there
+   * is no selected tile to scroll to and the rail sat at the left showing
+   * Bills while the bill was Subscriptions, four tiles off-screen. It looked
+   * for all the world like nothing was selected.
+   *
+   * So it waits for a selection to EXIST rather than for the component to
+   * mount, and `touched` is what keeps the original promise: once you have
+   * tapped a tile, this never moves the rail again.
    */
   useEffect(() => {
+    if (centred.current || touched.current) return
     const rail = railRef.current
     const on = rail?.querySelector('[data-on="true"]')
     if (!rail || !on) return
+    centred.current = true
     rail.scrollTo({ left: Math.max(0, on.offsetLeft - (rail.clientWidth - on.offsetWidth) / 2) })
-  }, [])
+  }, [selected])
 
   if (!categories.length) {
     return (
@@ -112,7 +128,7 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
             key={cat.id}
             type="button"
             data-on={on}
-            onClick={() => onSelect(cat)}
+            onClick={() => { touched.current = true; onSelect(cat) }}
             role="radio"
             aria-checked={on}
             className="shrink-0 snap-start w-[54px] flex flex-col items-center gap-1.5

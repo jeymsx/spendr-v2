@@ -26,6 +26,7 @@ const Debts        = lazy(() => import('./pages/Debts'))
 const Goals        = lazy(() => import('./pages/Goals'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
 const RecurringDetail = lazy(() => import('./pages/RecurringDetail'))
+const RecurringForm   = lazy(() => import('./pages/RecurringForm'))
 const Settings     = lazy(() => import('./pages/Settings'))
 const SettingsAccent = lazy(() => import('./pages/SettingsAccent'))
 // Named exports, because both share their implementation with the desktop
@@ -91,6 +92,9 @@ export default function App() {
               <Route path="/debts"        element={<Debts />} />
               <Route path="/goals"        element={<Goals />} />
               <Route path="/recurring"    element={<Recurring />} />
+              {/* Before /recurring/:id, or "new" matches as an id. */}
+              <Route path="/recurring/new" element={<RecurringForm />} />
+              <Route path="/recurring/:id/edit" element={<RecurringForm />} />
               <Route path="/recurring/:id" element={<RecurringDetail />} />
               <Route path="/settings"     element={<Settings />} />
               <Route path="/settings/accent" element={<SettingsAccent />} />

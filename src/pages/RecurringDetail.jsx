@@ -8,7 +8,6 @@ import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
-import { RecurringFormSheet } from './Recurring'
 import { IconChevronLeft } from '../components/icons'
 import {
   FREQ_LABEL, FREQ_SHORT,
@@ -140,7 +139,6 @@ export default function RecurringDetail() {
 
   const recId = Number(id)
 
-  const [formOpen,  setFormOpen]  = useState(false)
   const [posting,   setPosting]   = useState(false)
   const [confirmPost, setConfirmPost] = useState(false)
   const [toggling,  setToggling]  = useState(false)
@@ -342,7 +340,7 @@ export default function RecurringDetail() {
           variant="tint"
           size="xs"
           className="shrink-0 px-4"
-          onClick={() => setFormOpen(true)}
+          onClick={() => navigate(`/recurring/${rec.id}/edit`)}
         >
           Edit
         </Button>
@@ -560,14 +558,6 @@ export default function RecurringDetail() {
         )}
       </section>
 
-      <RecurringFormSheet
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        editRec={rec}
-        showDelete={false}
-        categories={categories ?? []}
-        accounts={accounts ?? []}
-      />
 
       {/* The same sheet the expense form uses to review a transaction before
           saving it, which is what this is - so posting a bill and saving an

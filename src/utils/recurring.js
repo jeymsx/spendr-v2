@@ -3,43 +3,40 @@
  * Returns a YYYY-MM-DD string.
  */
 export function advanceNextDate(dateStr, frequency) {
-  const d = new Date(dateStr)
-  switch (frequency) {
-    case 'daily':  d.setDate(d.getDate() + 1); break
-    case 'weekly': d.setDate(d.getDate() + 7); break
-    case 'monthly': {
-      // Save original day, reset to 1st to prevent overflow (e.g. Jan 31 → Mar 2)
-      const day = d.getDate()
-      d.setDate(1)
-      d.setMonth(d.getMonth() + 1)
-      // Clamp to last day of the target month (e.g. Jan 31 → Feb 28/29)
-      d.setDate(Math.min(day, new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()))
-      break
-    }
-    case 'yearly': {
-      // Save original day/month, reset to 1st to prevent Feb-29 overflow
-      const day = d.getDate()
-      const mon = d.getMonth()
-      d.setDate(1)
-      d.setFullYear(d.getFullYear() + 1)
-      d.setDate(Math.min(day, new Date(d.getFullYear(), mon + 1, 0).getDate()))
-      break
-    }
+  const step = FREQ_BY_VALUE[frequency]?.step
+  const d = parseDateLocal(dateStr) ?? new Date(dateStr)
+  if (!step) return d.toISOString().slice(0, 10)
+
+  if (step.unit === 'day') {
+    d.setDate(d.getDate() + step.n)
+  } else {
+    /* Reset to the 1st before moving, then clamp. Adding a month to Jan 31
+       lands on Mar 2 otherwise, because Feb has no 31st and the overflow
+       carries - and a bill due on the 31st would walk forward through the
+       calendar a day or two every quarter. Clamping keeps it on the last day
+       of the target month and, crucially, does not lose the original day:
+       the NEXT advance is computed from the stored date, so a Jan 31 bill
+       becomes Feb 28 and then Mar 28 rather than returning to the 31st.
+       That is the same behaviour this had for monthly and yearly; the only
+       change is that the period is now a number from the table. */
+    const day = d.getDate()
+    d.setDate(1)
+    d.setMonth(d.getMonth() + step.n)
+    const lastOfTarget = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+    d.setDate(Math.min(day, lastOfTarget))
   }
-  return d.toISOString().slice(0, 10)
+
+  /* Local, not toISOString: the date is a calendar day, and in UTC+8 an
+     ISO conversion of a local midnight lands on the previous day. */
+  const p = (n) => String(n).padStart(2, '0')
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
 /**
  * Normalize an amount to its monthly equivalent.
  */
 export function toMonthlyAmount(amount, frequency) {
-  switch (frequency) {
-    case 'daily':   return (amount ?? 0) * 30.44
-    case 'weekly':  return (amount ?? 0) * (52 / 12)
-    case 'monthly': return amount ?? 0
-    case 'yearly':  return (amount ?? 0) / 12
-    default:        return amount ?? 0
-  }
+  return (amount ?? 0) * (FREQ_BY_VALUE[frequency]?.perMonth ?? 1)
 }
 
 // ── Shared vocabulary ────────────────────────────────────────────────────────
@@ -50,15 +47,36 @@ export function toMonthlyAmount(amount, frequency) {
 // of "is this overdue?" is how a row ends up amber on one screen and red on
 // the next.
 
+/**
+ * Every frequency, and everything that follows from it.
+ *
+ * `step` advances a due date, `perMonth` normalises an amount, and the three
+ * labels are what the list, the hero and a chip each need. They live in one
+ * row per frequency on purpose: the first version had the labels here and the
+ * arithmetic in two switch statements further down, so adding "quarterly"
+ * meant editing three places and a bill added on the fourth would have had a
+ * name, no way to advance its date, and a monthly cost of its full amount.
+ *
+ * perMonth is stated rather than derived from `step`. A month is not 30.44
+ * days for a bill that arrives on the 8th - monthly, quarterly and yearly
+ * divide exactly, and only the day-stepped ones need the average.
+ */
 export const FREQ_OPTIONS = [
-  { value: 'daily',   label: 'Daily',   short: 'day', every: 'day'   },
-  { value: 'weekly',  label: 'Weekly',  short: 'wk',  every: 'week'  },
-  { value: 'monthly', label: 'Monthly', short: 'mo',  every: 'month' },
-  { value: 'yearly',  label: 'Yearly',  short: 'yr',  every: 'year'  },
+  { value: 'daily',       label: 'Daily',          short: 'day', every: 'day',      step: { unit: 'day',   n: 1  }, perMonth: 30.44   },
+  { value: 'weekly',      label: 'Weekly',         short: 'wk',  every: 'week',     step: { unit: 'day',   n: 7  }, perMonth: 52 / 12 },
+  { value: 'fortnightly', label: 'Every 2 weeks',  short: '2wk', every: '2 weeks',  step: { unit: 'day',   n: 14 }, perMonth: 26 / 12 },
+  { value: 'monthly',     label: 'Monthly',        short: 'mo',  every: 'month',    step: { unit: 'month', n: 1  }, perMonth: 1       },
+  { value: 'quarterly',   label: 'Quarterly',      short: 'qtr', every: 'quarter',  step: { unit: 'month', n: 3  }, perMonth: 1 / 3   },
+  { value: 'semiannual',  label: 'Every 6 months', short: '6mo', every: '6 months', step: { unit: 'month', n: 6  }, perMonth: 1 / 6   },
+  { value: 'yearly',      label: 'Yearly',         short: 'yr',  every: 'year',     step: { unit: 'month', n: 12 }, perMonth: 1 / 12  },
 ]
 
+const FREQ_BY_VALUE = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f]))
+
 /** Commonest first: how the All tab groups, and how a picker should order. */
-export const FREQ_ORDER = ['monthly', 'weekly', 'yearly', 'daily']
+export const FREQ_ORDER = [
+  'monthly', 'weekly', 'fortnightly', 'quarterly', 'semiannual', 'yearly', 'daily',
+]
 
 export const FREQ_LABEL = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.label]))
 export const FREQ_SHORT = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.short]))

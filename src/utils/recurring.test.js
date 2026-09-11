@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   advanceNextDate, toMonthlyAmount, parseDateLocal, daysUntil,
-  dueStatus, billingLine, FREQ_LABEL,
+  dueStatus, billingLine, FREQ_LABEL, FREQ_OPTIONS, FREQ_ORDER,
 } from './recurring'
 
 /**
@@ -143,5 +143,69 @@ describe('FREQ_LABEL', () => {
     for (const f of ['daily', 'weekly', 'monthly', 'yearly']) {
       expect(FREQ_LABEL[f]).toBeTruthy()
     }
+  })
+})
+
+/**
+ * The middle terms - every 2 weeks, quarterly, every 6 months.
+ *
+ * They were missing, so a quarterly subscription had to be entered as monthly
+ * and its cost was overstated threefold in "Monthly cost". These pin the two
+ * things a new frequency can silently half-implement: advancing the date, and
+ * normalising the amount.
+ */
+describe('the frequencies added later', () => {
+  it('advances a fortnight by 14 days, not half a month', () => {
+    expect(advanceNextDate('2026-09-08', 'fortnightly')).toBe('2026-09-22')
+  })
+
+  it('advances a quarter by three months', () => {
+    expect(advanceNextDate('2026-09-08', 'quarterly')).toBe('2026-12-08')
+  })
+
+  it('advances six months across a year boundary', () => {
+    expect(advanceNextDate('2026-09-08', 'semiannual')).toBe('2027-03-08')
+  })
+
+  it('clamps a month-end quarterly rather than overflowing', () => {
+    // Nov 31 does not exist. The naive setMonth lands on Dec 1.
+    expect(advanceNextDate('2026-08-31', 'quarterly')).toBe('2026-11-30')
+  })
+
+  it('normalises each one to a monthly figure', () => {
+    expect(toMonthlyAmount(300, 'quarterly')).toBeCloseTo(100, 6)
+    expect(toMonthlyAmount(600, 'semiannual')).toBeCloseTo(100, 6)
+    expect(toMonthlyAmount(100, 'fortnightly')).toBeCloseTo(100 * 26 / 12, 6)
+  })
+
+  it('leaves the four original frequencies exactly as they were', () => {
+    expect(toMonthlyAmount(120, 'monthly')).toBe(120)
+    expect(toMonthlyAmount(1200, 'yearly')).toBe(100)
+    expect(toMonthlyAmount(100, 'weekly')).toBeCloseTo(100 * 52 / 12, 6)
+    expect(toMonthlyAmount(10, 'daily')).toBeCloseTo(304.4, 6)
+  })
+})
+
+describe('the frequency table is the single source', () => {
+  it('gives every option a step and a monthly factor', () => {
+    // The failure this stops: a frequency with a label and no arithmetic,
+    // which renders as a chip and then never advances.
+    for (const f of FREQ_OPTIONS) {
+      expect(f.step?.unit).toMatch(/^(day|month)$/)
+      expect(f.step.n).toBeGreaterThan(0)
+      expect(typeof f.perMonth).toBe('number')
+      expect(f.perMonth).toBeGreaterThan(0)
+    }
+  })
+
+  it('orders every option exactly once', () => {
+    expect([...FREQ_ORDER].sort()).toEqual(FREQ_OPTIONS.map(f => f.value).sort())
+  })
+
+  it('returns a local calendar day, not a UTC-shifted one', () => {
+    // In UTC+8 a local midnight converted through toISOString lands on the
+    // previous day, which walked every bill backwards one day per advance.
+    expect(advanceNextDate('2026-01-31', 'monthly')).toBe('2026-02-28')
+    expect(advanceNextDate('2026-03-01', 'daily')).toBe('2026-03-02')
   })
 })

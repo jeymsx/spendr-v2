@@ -3,13 +3,14 @@ import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
-import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import { IconChevronRight, IconChevronLeft, IconPlus } from '../components/icons'
 import SegTabs from '../components/SegTabs'
+import { validateRecurring, saveRecurring } from '../lib/recurringWrite'
 import {
   FREQ_OPTIONS, FREQ_ORDER, FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, parseDateLocal, daysUntil, dueStatus, DUE_TONE,
@@ -238,34 +239,19 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     setConfirmDel(false)
   }, [open, editRec, categories, accounts])
 
+  /* Validation and the write itself come from lib/recurringWrite, which the
+     mobile page also calls. They are two layouts of one record, and a second
+     copy of "is this valid" is how one screen starts accepting a bill the
+     other rejects. */
   async function handleSave() {
-    const errs = {}
-    if (!name.trim()) errs.name = 'Required'
-    const amount = parseMoney(amountStr)
-    if (!amountStr || amount <= 0) errs.amount = 'Enter a valid amount'
-    if (!category) errs.category = 'Select a category'
-    if (!account)  errs.account  = 'Select an account'
-    if (!nextDate) errs.nextDate = 'Required'
+    const draft = { name, amountStr, category, account, frequency, nextDate, active }
+    const errs = validateRecurring(draft)
     if (Object.keys(errs).length) { setErrors(errs); return }
 
     setSaving(true)
     try {
-      const data = {
-        name:      name.trim(),
-        amount,
-        category:  category.name,
-        account:   account.name,
-        frequency,
-        nextDate,
-        active,
-      }
-      if (editRec) {
-        await db.recurring.update(editRec.id, data)
-        showToast('Recurring updated')
-      } else {
-        await db.recurring.add(data)
-        showToast('Recurring saved')
-      }
+      const what = await saveRecurring(draft, editRec)
+      showToast(what === 'created' ? 'Bill added' : 'Bill updated')
       onClose()
     } catch (e) {
       console.error('[RecurringForm] save failed:', e)
@@ -372,13 +358,16 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
           {/* Frequency */}
           <div>
             <SectionLabel>Frequency</SectionLabel>
-            <div className="grid grid-cols-4 gap-2">
+            {/* Wrapping chips, not a four-across grid. The grid was four
+                wide because there were exactly four; there are seven now, and
+                "Every 6 months" does not fit a quarter of the sheet. */}
+            <div className="flex flex-wrap gap-2">
               {FREQ_OPTIONS.map(opt => (
                 <button
                   key={opt.value}
                   onClick={() => setFrequency(opt.value)}
                   className={[
-                    'py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150',
+                    'h-9 px-4 rounded-full border text-[13px] font-semibold transition-all duration-150',
                     frequency === opt.value
                       /* seg-active, not text-primary. Measured, the accent
                          as text is 2.63:1 on its own 8% tint - worse than
@@ -522,11 +511,9 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 export default function Recurring() {
   const navigate = useNavigate()
   const [tab,      setTab]      = useState('upcoming')
-  const [showForm, setShowForm] = useState(false)
 
   const allRec     = useLiveQuery(() => db.recurring.toArray(),  [], undefined)
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
-  const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
 
   // Enrich with the category's icon and colour, which is all the row needs
   // from it.
@@ -616,7 +603,7 @@ export default function Recurring() {
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           Bills
         </h1>
-        <IconButton label="New bill" variant="primary" onClick={() => setShowForm(true)}>
+        <IconButton label="New bill" variant="primary" onClick={() => navigate('/recurring/new')}>
           <IconPlus />
         </IconButton>
       </header>
@@ -633,7 +620,7 @@ export default function Recurring() {
           title="No bills yet"
           body="Subscriptions, rent, utilities — anything that repeats."
           action={
-            <Button onClick={() => setShowForm(true)} className="px-5">
+            <Button onClick={() => navigate('/recurring/new')} className="px-5">
               Add your first bill
             </Button>
           }
@@ -744,13 +731,6 @@ export default function Recurring() {
 
       {/* Add only. Editing an existing bill happens on its own page, which is
           also where posting, pausing and deleting live. */}
-      <RecurringFormSheet
-        open={showForm}
-        onClose={() => setShowForm(false)}
-        editRec={null}
-        categories={categories ?? []}
-        accounts={accounts ?? []}
-      />
 
     </div>
   )
