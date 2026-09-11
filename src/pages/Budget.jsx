@@ -13,6 +13,10 @@ import CategoryGlyph from '../components/CategoryGlyph'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
 import StatTrio from '../components/ui/StatTrio'
+import SectionLabel from '../components/ui/SectionLabel'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
 
 /**
  * The month's budget, in full.
@@ -68,31 +72,11 @@ function IconChevronLeft() {
 
 // ── Bits ───────────────────────────────────────────────────────────────────────
 
-/**
- * A section heading, and only that.
- *
- * It used to take a `hint` and every one of the three sections passed one, so
- * each heading came with a sentence explaining the section under it. Three of
- * those down one page reads as annotated design notes rather than an app -
- * normal UI states the section and lets the content speak.
- */
-function SectionLabel({ children }) {
-  return (
-    <div className="px-5 mb-2.5">
-      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
-    </div>
-  )
-}
-
-function Card({ children, className = '' }) {
-  return (
-    <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
-  )
-}
-
-function Divider() {
-  return <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4" />
-}
+/* The section heading, the card and the hairline all used to be declared
+   here. They are ui/SectionLabel, ui/Card and ui/Divider now - the same three
+   shapes this page drew were being redrawn on every other page, each time
+   slightly differently. The headings pass their page gutter as layout and
+   nothing else. */
 
 /** One budgeted category: how much of its limit is gone, and what is left. */
 function CategoryRow({ cat }) {
@@ -345,21 +329,27 @@ export default function Budget() {
           <div className="h-32 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
         </div>
       ) : totals.budget === 0 ? (
-        <div className="px-5 mt-8 text-center">
-          <p className="text-[15px] font-semibold text-slate-800 dark:text-white">No budgets set</p>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-            Give a category a monthly limit and this page starts tracking it
-            against what you actually spend.
-          </p>
-          <Link
-            to="/settings"
-            className="inline-block mt-5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary
-              active:scale-[0.97] transition-transform duration-75"
-          >
-            Set a budget
-          </Link>
+        <div>
+          {/* The way out stays a <Link>, not a <Button>: it is a route, and a
+              button cannot be long-pressed, copied or opened in a new tab.
+              Button has no `as` escape hatch the way Card does. */}
+          <EmptyState
+            title="No budgets set"
+            body="Give a category a monthly limit and this page starts tracking it against what you actually spend."
+            action={(
+              <Link
+                to="/settings"
+                className="inline-block px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary
+                  active:scale-[0.97] transition-transform duration-75"
+              >
+                Set a budget
+              </Link>
+            )}
+          />
+          {/* Kept: it is the only place the month's unbudgeted spend is
+              reported while there are no limits to report against. */}
           {unbudgeted.length > 0 && (
-            <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-6">
+            <p className="-mt-6 px-8 text-center text-[12px] text-slate-500 dark:text-slate-400">
               You have spent {fmt(totals.other)} this month across{' '}
               {unbudgeted.length} categor{unbudgeted.length === 1 ? 'y' : 'ies'}.
             </p>
@@ -421,13 +411,13 @@ export default function Budget() {
 
           {/* ── Spent against each limit ── */}
           <section className="mt-7">
-            <SectionLabel>By category</SectionLabel>
+            <SectionLabel inset="gutter" gap="loose">By category</SectionLabel>
             <div className="px-5">
-              <Card>
+              <Card clip>
                 {budgeted.map((cat, i) => (
                   <div key={cat.id ?? cat.name}>
                     <CategoryRow cat={cat} />
-                    {i < budgeted.length - 1 && <Divider />}
+                    {i < budgeted.length - 1 && <Divider inset="row" />}
                   </div>
                 ))}
               </Card>
@@ -437,9 +427,9 @@ export default function Budget() {
           {/* ── Every limit on one scale ── */}
           {budgeted.length > 1 && (
             <section className="mt-7">
-              <SectionLabel>Where the budget goes</SectionLabel>
+              <SectionLabel inset="gutter" gap="loose">Where the budget goes</SectionLabel>
               <div className="px-5">
-                <Card className="px-4 py-4">
+                <Card clip padding="md">
                   <div className="flex flex-col gap-4">
                     {budgeted.map(cat => (
                       <AllocationRow key={cat.id ?? cat.name} cat={cat} maxLimit={maxLimit} />
@@ -453,9 +443,11 @@ export default function Budget() {
           {/* ── Spending with no limit against it ── */}
           {unbudgeted.length > 0 && (
             <section className="mt-7">
-              <SectionLabel>Unbudgeted · {fmtCompact(totals.other)}</SectionLabel>
+              <SectionLabel inset="gutter" gap="loose">
+                Unbudgeted · {fmtCompact(totals.other)}
+              </SectionLabel>
               <div className="px-5">
-                <Card>
+                <Card clip>
                   {unbudgeted.slice(0, 8).map((c, i) => (
                     <div key={c.name}>
                       <div className="flex items-center gap-3 px-4 py-3">
@@ -473,7 +465,7 @@ export default function Budget() {
                           {fmt(c.spent)}
                         </p>
                       </div>
-                      {i < Math.min(unbudgeted.length, 8) - 1 && <Divider />}
+                      {i < Math.min(unbudgeted.length, 8) - 1 && <Divider inset="row" />}
                     </div>
                   ))}
                 </Card>

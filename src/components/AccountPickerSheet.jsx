@@ -2,6 +2,7 @@ import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from './BrandMark'
+import Card from './ui/Card'
 import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -106,12 +107,7 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
               if (isParent) {
                 const children = sortByOrder(selectable.filter(a => a.parentName === item.name))
                 return (
-                  <div
-                    key={item.id}
-                    className="rounded-2xl overflow-hidden
-                      bg-slate-50 dark:bg-white/[0.04]
-                      border border-slate-200/60 dark:border-white/[0.08]"
-                  >
+                  <Card key={item.id} surface="recessed" clip>
                     <AccountRow
                       acct={item}
                       selected={selected}
@@ -130,16 +126,11 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
                         isLast={i === children.length - 1}
                       />
                     ))}
-                  </div>
+                  </Card>
                 )
               }
               return (
-                <div
-                  key={item.id}
-                  className="rounded-2xl overflow-hidden
-                    bg-slate-50 dark:bg-white/[0.04]
-                    border border-slate-200/60 dark:border-white/[0.08]"
-                >
+                <Card key={item.id} surface="recessed" clip>
                   <AccountRow
                     acct={item}
                     selected={selected}
@@ -148,7 +139,7 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
                     roundedTop
                     roundedBottom
                   />
-                </div>
+                </Card>
               )
             })}
         </div>

@@ -17,6 +17,10 @@ import {
 import CategoryGlyph from '../components/CategoryGlyph'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
+import DetailRow from '../components/ui/DetailRow'
+import EmptyState from '../components/ui/EmptyState'
+import SectionLabel from '../components/ui/SectionLabel'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -65,40 +69,23 @@ function IconEmptyReceipt() {
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children, right = null }) {
+/**
+ * A heading, and optionally a figure beside it.
+ *
+ * The heading itself is <SectionLabel>; all this adds is the row that puts a
+ * figure opposite it. The gutter is px-4 rather than px-5 because
+ * SectionLabel carries 4px of its own, so the words still land on the page's
+ * 20px line, and the 10px under the heading is split between SectionLabel's
+ * own 6px and the 4px here rather than fighting it with an mb-0.
+ */
+function SectionHeading({ children, right = null }) {
   return (
-    <div className="px-5 mb-2.5 flex items-baseline justify-between gap-3">
-      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
+    <div className="px-4 mb-1 flex items-baseline justify-between gap-3">
+      <SectionLabel>{children}</SectionLabel>
       {right && (
-        <p className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
+        <p className="pr-1 text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
       )}
     </div>
-  )
-}
-
-function Card({ children, className = '' }) {
-  return <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
-}
-
-/**
- * One fact, on its own line.
- *
- * Deliberately not tappable and carrying no chevron, which is the same choice
- * AccountDetail makes: there is exactly one door to editing on this page, the
- * pill in the header. Five rows that all open the same sheet would look like
- * five different destinations.
- */
-function DetailRow({ label, value, tone = '', isLast = false }) {
-  return (
-    <>
-      <div className="flex items-center justify-between gap-3 px-4 py-3.5">
-        <p className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</p>
-        <p className={`text-[14px] font-medium text-right truncate ${tone || 'text-slate-800 dark:text-white'}`}>
-          {value}
-        </p>
-      </div>
-      {!isLast && <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4" />}
-    </>
   )
 }
 
@@ -113,12 +100,14 @@ function DetailRow({ label, value, tone = '', isLast = false }) {
  */
 function ActionTile({ icon, label, sub, onClick, disabled, tone = 'plain' }) {
   return (
-    <button
+    <Card
+      as="button"
+      interactive
+      padding="sm"
       onClick={onClick}
       disabled={disabled}
       className={[
-        'card rounded-2xl px-4 py-3.5 flex items-center gap-3 text-left min-h-[62px]',
-        'active:scale-[0.97] transition-transform duration-75',
+        'flex items-center gap-3 min-h-[62px]',
         disabled ? 'opacity-45' : '',
       ].join(' ')}
     >
@@ -136,7 +125,7 @@ function ActionTile({ icon, label, sub, onClick, disabled, tone = 'plain' }) {
           <span className="block text-[11px] text-slate-500 dark:text-slate-400 truncate">{sub}</span>
         )}
       </span>
-    </button>
+    </Card>
   )
 }
 
@@ -322,17 +311,16 @@ export default function RecurringDetail() {
         <IconButton label="Back to bills" onClick={back}>
           <IconChevronLeft />
         </IconButton>
-        <div className="py-20 text-center">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Bill not found</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">It may have been deleted.</p>
-          <button
-            onClick={back}
-            className="mt-5 px-4 py-2 rounded-xl text-sm font-semibold text-primary
-              bg-primary/[0.08] dark:bg-primary/[0.12] active:bg-primary/[0.15] transition-colors"
-          >
-            Back to Bills
-          </button>
-        </div>
+        <EmptyState
+          className="mt-8"
+          title="Bill not found"
+          body="It may have been deleted."
+          action={
+            <Button variant="tint" className="px-5" onClick={back}>
+              Back to bills
+            </Button>
+          }
+        />
       </div>
     )
   }
@@ -364,7 +352,7 @@ export default function RecurringDetail() {
           service rather than with a chart. The amount is the largest thing on
           the card because it is the question you opened this page to answer. */}
       <section className="px-5 mt-1">
-        <Card className="px-4 py-4">
+        <Card clip padding="md">
           <div className="flex items-center gap-3.5">
             <div
               className="w-14 h-14 rounded-2xl flex items-center justify-center text-[26px] shrink-0"
@@ -427,11 +415,16 @@ export default function RecurringDetail() {
         />
       </section>
 
-      {/* ── The facts ── */}
+      {/* ── The facts ──
+          Rows, not links: none of them is tappable and none carries a
+          chevron, which is the same choice AccountDetail makes. There is
+          exactly one door to editing on this page, the pill in the header,
+          and five rows that all opened the same sheet would look like five
+          different destinations. */}
       <section className="mt-7">
-        <SectionLabel>Details</SectionLabel>
+        <SectionHeading>Details</SectionHeading>
         <div className="px-5">
-          <Card>
+          <Card clip>
             <DetailRow label="Account"  value={rec.account || '—'} />
             <DetailRow label="Category" value={rec.category || '—'} />
             {/* Just "Monthly". It read "Monthly · every month", which says
@@ -459,28 +452,22 @@ export default function RecurringDetail() {
 
       {/* ── What it has actually cost ── */}
       <section className="mt-7">
-        <SectionLabel right={history?.length ? fmt(paidTotal) : undefined}>
+        <SectionHeading right={history?.length ? fmt(paidTotal) : undefined}>
           Billing history
-        </SectionLabel>
+        </SectionHeading>
         <div className="px-5">
-          <Card>
+          <Card clip>
             {history === null ? (
               <div className="px-4 py-6">
                 <div className="h-4 w-32 rounded bg-slate-100 dark:bg-white/[0.05] animate-pulse" />
               </div>
             ) : history.length === 0 ? (
-              <div className="px-5 py-9 text-center">
-                <div className="mx-auto w-12 h-12 rounded-full flex items-center justify-center
-                  bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500">
-                  <IconEmptyReceipt />
-                </div>
-                <p className="mt-3 text-[13px] font-semibold text-slate-700 dark:text-slate-200">
-                  Nothing charged yet
-                </p>
-                <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">
-                  Charges appear here once posted.
-                </p>
-              </div>
+              <EmptyState
+                size="sm"
+                icon={<IconEmptyReceipt />}
+                title="Nothing charged yet"
+                body="Charges appear here once posted."
+              />
             ) : (
               /* Six, not all of them. Past half a year the list stops being a
                  record you read and becomes one you scroll, and Transactions
@@ -511,25 +498,18 @@ export default function RecurringDetail() {
           Bottom of the page, two taps, and never a tile beside the other
           actions: it is not a peer of Pause. */}
       <section className="px-5 mt-7">
-        <button
+        <Button
+          block
+          variant={confirmDel ? 'danger' : 'dangerTint'}
           onClick={handleDelete}
           disabled={deleting}
-          className={[
-            'w-full py-3 rounded-2xl text-[14px] font-semibold transition-colors duration-150',
-            confirmDel
-              ? 'bg-red-500 text-white'
-              : 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-500/[0.12]',
-          ].join(' ')}
         >
           {deleting ? 'Deleting…' : confirmDel ? 'Tap again to delete' : 'Delete this bill'}
-        </button>
+        </Button>
         {confirmDel && !deleting && (
-          <button
-            onClick={() => setConfirmDel(false)}
-            className="w-full mt-2 py-2 text-[13px] font-medium text-slate-500 dark:text-slate-400"
-          >
+          <Button block variant="quiet" size="sm" className="mt-2" onClick={() => setConfirmDel(false)}>
             Cancel
-          </button>
+          </Button>
         )}
       </section>
 

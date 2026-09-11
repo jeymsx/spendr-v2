@@ -19,6 +19,11 @@ import BillMark from '../components/BillMark'
 import IconButton from '../components/ui/IconButton'
 import Sheet from '../components/ui/Sheet'
 import StatTrio from '../components/ui/StatTrio'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
+import SectionLabel from '../components/ui/SectionLabel'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -46,20 +51,22 @@ function fmtCompact(v) {
  * "Coming up" - which is prose no native list view carries. A number on the
  * right is the iOS shape for the same slot: it adds information rather than
  * restating the label.
+ *
+ * The heading itself is <SectionLabel>; all this adds is the row that puts a
+ * figure opposite it. The gutter is px-4 rather than px-5 because
+ * SectionLabel carries 4px of its own, so the words still land on the page's
+ * 20px line, and the 10px under the heading is split between SectionLabel's
+ * own 6px and the 4px here rather than fighting it with an mb-0.
  */
-function SectionLabel({ children, right = null }) {
+function SectionHeading({ children, right = null }) {
   return (
-    <div className="px-5 mb-2.5 flex items-baseline justify-between gap-3">
-      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
+    <div className="px-4 mb-1 flex items-baseline justify-between gap-3">
+      <SectionLabel>{children}</SectionLabel>
       {right && (
-        <p className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
+        <p className="pr-1 text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
       )}
     </div>
   )
-}
-
-function Card({ children, className = '' }) {
-  return <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
 }
 
 /**
@@ -144,7 +151,10 @@ function BillRow({ rec, onOpen, isLast }) {
           <IconChevronRight size={15} strokeWidth="2" />
         </span>
       </button>
-      {!isLast && <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4" />}
+      {/* Inset to the tile, not to the card: the row is led by a 40px mark,
+          so a full-width rule would cut the card rather than separate two
+          bills inside it. */}
+      {!isLast && <Divider inset="glyph" />}
     </>
   )
 }
@@ -168,32 +178,6 @@ function IconAllClear() {
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M20 6 9 17l-5-5" />
     </svg>
-  )
-}
-
-/**
- * Empty states, in the app's own voice.
- *
- * This replaced a 96px violet blob with an animated ring in it. Every other
- * empty state in the app - Goals, Accounts, the trend section - is a quiet
- * glyph over two lines of plain sentence, and a page that shouts when it has
- * nothing to say is the one that looks least finished.
- */
-function EmptyBlock({ icon, title, body, action, tone = 'calm' }) {
-  return (
-    <div className="px-8 py-12 text-center">
-      <div className={[
-        'mx-auto w-14 h-14 rounded-full flex items-center justify-center',
-        tone === 'good'
-          ? 'bg-emerald-50 dark:bg-emerald-500/[0.12] text-emerald-600 dark:text-emerald-400'
-          : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500',
-      ].join(' ')}>
-        {icon}
-      </div>
-      <p className="mt-4 text-[15px] font-semibold text-slate-800 dark:text-white">{title}</p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">{body}</p>
-      {action}
-    </div>
   )
 }
 
@@ -323,39 +307,29 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
         onClose={onClose}
         scrim={40}
         maxHeight="92dvh"
-        title={editRec ? 'Edit Recurring' : 'Add Recurring'}
+        title={editRec ? 'Edit recurring' : 'Add recurring'}
         titleAction={editRec && showDelete && (
-          <button
+          <Button
+            variant={confirmDel ? 'danger' : 'dangerTint'}
+            size="xs"
+            className="px-3"
             onClick={handleDelete}
             disabled={deleting}
-            className={[
-              'text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150',
-              confirmDel
-                ? 'bg-red-500 text-white'
-                : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
-            ].join(' ')}
           >
-            {deleting ? 'Deleting…' : confirmDel ? 'Confirm Delete' : 'Delete'}
-          </button>
+            {deleting ? 'Deleting…' : confirmDel ? 'Confirm delete' : 'Delete'}
+          </Button>
         )}
         footer={(
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
-              bg-primary
-              disabled:opacity-40 disabled:shadow-none
-              active:scale-[0.98] transition-all duration-100"
-          >
-            {saving ? 'Saving…' : editRec ? 'Save changes' : 'Add Recurring'}
-          </button>
+          <Button block size="lg" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : editRec ? 'Save changes' : 'Add recurring'}
+          </Button>
         )}
       >
         <div className="space-y-4">
 
           {/* Name */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Name</p>
+            <SectionLabel>Name</SectionLabel>
             <input
               type="text"
               value={name}
@@ -375,7 +349,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
           {/* Amount */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Amount</p>
+            <SectionLabel>Amount</SectionLabel>
             <div className={[
               'flex items-center h-[52px] px-4 rounded-2xl',
               'bg-white dark:bg-white/[0.05]',
@@ -397,7 +371,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
           {/* Frequency */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">Frequency</p>
+            <SectionLabel>Frequency</SectionLabel>
             <div className="grid grid-cols-4 gap-2">
               {FREQ_OPTIONS.map(opt => (
                 <button
@@ -426,7 +400,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
           {/* Category */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Category</p>
+            <SectionLabel>Category</SectionLabel>
             <button
               onClick={() => setShowCatPick(true)}
               className={[
@@ -453,7 +427,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
           {/* Account */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Account</p>
+            <SectionLabel>Account</SectionLabel>
             <button
               onClick={() => setShowAcctPick(true)}
               className={[
@@ -480,7 +454,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
           {/* Next date */}
           <div>
-            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Next due date</p>
+            <SectionLabel>Next due date</SectionLabel>
             <input
               type="date"
               value={nextDate}
@@ -654,18 +628,14 @@ export default function Recurring() {
           <div className="h-40 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
         </div>
       ) : enriched.length === 0 ? (
-        <EmptyBlock
+        <EmptyState
           icon={<IconNoBills />}
           title="No bills yet"
           body="Subscriptions, rent, utilities — anything that repeats."
           action={
-            <button
-              onClick={() => setShowForm(true)}
-              className="inline-block mt-5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary
-                active:scale-[0.97] transition-transform duration-75"
-            >
+            <Button onClick={() => setShowForm(true)} className="px-5">
               Add your first bill
-            </button>
+            </Button>
           }
         />
       ) : (
@@ -677,10 +647,8 @@ export default function Recurring() {
               the only violet surface in the app, and a second accent nothing
               else answered to. */}
           <section className="px-5">
-            <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Monthly cost
-            </p>
-            <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            <SectionLabel className="text-center">Monthly cost</SectionLabel>
+            <p className="mt-0.5 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
               {fmt(totalMonthly)}
             </p>
             <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
@@ -720,11 +688,12 @@ export default function Recurring() {
 
           {tab === 'upcoming' ? (
             <section className="mt-5">
-              <SectionLabel right="Next 30 days">Coming up</SectionLabel>
+              <SectionHeading right="Next 30 days">Coming up</SectionHeading>
               <div className="px-5">
-                <Card>
+                <Card clip>
                   {upcoming.length === 0 ? (
-                    <EmptyBlock
+                    <EmptyState
+                      size="sm"
                       tone="good"
                       icon={<IconAllClear />}
                       title="All clear"
@@ -747,15 +716,15 @@ export default function Recurring() {
             <div className="mt-5 flex flex-col gap-6">
               {groups.map(({ freq, label, items }) => (
                 <section key={freq}>
-                  <SectionLabel
+                  <SectionHeading
                     right={fmtCompact(
                       items.filter(r => r.active).reduce((s, r) => s + (r.amount ?? 0), 0),
                     )}
                   >
                     {label}
-                  </SectionLabel>
+                  </SectionHeading>
                   <div className="px-5">
-                    <Card>
+                    <Card clip>
                       {items.map((r, i) => (
                         <BillRow
                           key={r.id}

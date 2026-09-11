@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { Fragment, useState, useMemo, useEffect, useId } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   DndContext, closestCenter, PointerSensor, useSensor, useSensors,
@@ -18,6 +18,10 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import Sheet from '../components/ui/Sheet'
 import StatTrio from '../components/ui/StatTrio'
+import SectionLabel from '../components/ui/SectionLabel'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
 
 /**
  * Savings goals.
@@ -96,20 +100,11 @@ function IconCheck() {
 
 // ── Bits ─────────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children, hint }) {
-  return (
-    <div className="px-5 mb-2.5">
-      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
-      {hint && (
-        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>
-      )}
-    </div>
-  )
-}
-
-function Card({ children, className = '' }) {
-  return <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
-}
+/* The section heading and the card were declared here; they are
+   ui/SectionLabel and ui/Card now. The heading's `hint` went with it - both
+   sections passed one, so every heading on the page came with a sentence
+   explaining the section under it, and the closing paragraph already says how
+   the split works for anyone who wants it. */
 
 /**
  * A goal's progress bar.
@@ -245,7 +240,8 @@ function GoalRow({ goal, onEdit, today }) {
 function AccountSplitRow({ name, split, isLast }) {
   const pct = split.balance > 0 ? (split.assigned / split.balance) * 100 : 0
   return (
-    <div className={`px-4 py-3 ${isLast ? '' : 'border-b border-slate-100 dark:border-white/[0.06]'}`}>
+    <>
+    <div className="px-4 py-3">
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-[13px] font-semibold text-slate-800 dark:text-white truncate">{name}</span>
         <span className="text-[12px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
@@ -267,6 +263,12 @@ function AccountSplitRow({ name, split, isLast }) {
         </span>
       </div>
     </div>
+
+    {/* Was a border-b on the row's own box, so the line ran the full width of
+        the card. It starts where the row's text starts now. Same gaps get a
+        line: the last row still gets none. */}
+    {!isLast && <Divider inset="row" />}
+    </>
   )
 }
 
@@ -281,6 +283,11 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
   const [targetDate, setTargetDate] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
+
+  /* SectionLabel renders a real <label> when there is a control to point at,
+     which is what these three fields have - so they name their inputs by id
+     rather than by wrapping them. */
+  const uid = useId()
 
   const isEdit = !!goal
 
@@ -458,29 +465,27 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
         ) : (
           <>
             {/* Name */}
-            <label className="block">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                What are you saving for
-              </span>
+            <div>
+              <SectionLabel htmlFor={`${uid}-name`}>What are you saving for</SectionLabel>
               <input
+                id={`${uid}-name`}
                 value={name}
                 onChange={e => setName(e.target.value)}
                 placeholder="Emergency fund"
                 maxLength={40}
-                className="mt-1.5 w-full px-3.5 py-3 rounded-2xl text-[15px]
+                className="w-full px-3.5 py-3 rounded-2xl text-[15px]
                   bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
                   border border-slate-200 dark:border-white/[0.08]
                   placeholder:text-slate-400 dark:placeholder:text-slate-600
                   focus:outline-none focus:border-primary"
               />
-            </label>
+            </div>
 
             {/* Icon */}
             <div className="mt-4">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Icon
-              </span>
-              <div className="mt-1.5 grid grid-cols-8 gap-1.5">
+              {/* A grid of buttons is not one control, so this stays a <p>. */}
+              <SectionLabel>Icon</SectionLabel>
+              <div className="grid grid-cols-8 gap-1.5">
                 {GOAL_ICONS.map(g => (
                   <button
                     key={g}
@@ -501,15 +506,14 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
             </div>
 
             {/* Target */}
-            <label className="block mt-4">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Target amount
-              </span>
-              <div className="mt-1.5 flex items-center gap-2 px-3.5 py-3 rounded-2xl
+            <div className="mt-4">
+              <SectionLabel htmlFor={`${uid}-target`}>Target amount</SectionLabel>
+              <div className="flex items-center gap-2 px-3.5 py-3 rounded-2xl
                 bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08]
                 focus-within:border-primary">
                 <span className="text-[15px] font-semibold text-slate-400 dark:text-slate-500">₱</span>
                 <input
+                  id={`${uid}-target`}
                   value={target}
                   onChange={moneyChangeHandler(setTarget)}
                   inputMode="decimal"
@@ -517,14 +521,15 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
                     text-slate-800 dark:text-white focus:outline-none"
                 />
               </div>
-            </label>
+            </div>
 
             {/* Funding accounts */}
             <div className="mt-4">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Funded by
-              </span>
-              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+              <SectionLabel>Funded by</SectionLabel>
+              {/* Kept, both sentences. The first is the one mechanic of this
+                  whole screen; the second explains an absence, and an absence
+                  is the one thing the list itself cannot show you. */}
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 leading-snug px-1">
                 Progress is read from these balances. Credit cards are not
                 listed — a card holds debt, not savings.
               </p>
@@ -561,23 +566,26 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
             </div>
 
             {/* Target date */}
-            <label className="block mt-4">
-              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                Target date <span className="normal-case font-normal text-slate-400 dark:text-slate-500">— optional</span>
-              </span>
+            <div className="mt-4">
+              <SectionLabel htmlFor={`${uid}-date`}>
+                Target date <span className="font-normal text-slate-400 dark:text-slate-500">— optional</span>
+              </SectionLabel>
               <input
+                id={`${uid}-date`}
                 type="date"
                 value={targetDate}
                 onChange={e => setTargetDate(e.target.value)}
-                className="mt-1.5 w-full px-3.5 py-3 rounded-2xl text-[15px]
+                className="w-full px-3.5 py-3 rounded-2xl text-[15px]
                   bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
                   border border-slate-200 dark:border-white/[0.08]
                   focus:outline-none focus:border-primary"
               />
-              <span className="block text-[12px] text-slate-500 dark:text-slate-400 mt-1.5">
+              {/* Kept: it is what the date actually does, which the field
+                  cannot show. */}
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1.5 px-1">
                 Adds a monthly figure to hit it on time.
-              </span>
-            </label>
+              </p>
+            </div>
           </>
         )}
       </div>
@@ -677,22 +685,22 @@ export default function Goals() {
           <div className="h-20 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
         </div>
       ) : alloc.active.length === 0 && archived.length === 0 ? (
-        <div className="px-5 mt-8 text-center">
-          <p className="text-[15px] font-semibold text-slate-800 dark:text-white">No goals yet</p>
-          <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-            Name what you are saving for, set the amount, and point it at the
-            account holding the money. Progress comes from the real balance —
-            there is nothing to keep updating.
-          </p>
-          <button
-            onClick={() => { setEditing(null); setFormOpen(true) }}
-            className="inline-block mt-5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary
-              active:scale-[0.97] transition-transform duration-75"
-          >
-            Add your first goal
-          </button>
+        <div>
+          <EmptyState
+            title="No goals yet"
+            body="Name what you are saving for, set the amount, and point it at the account holding the money."
+            action={(
+              <Button
+                className="px-4"
+                onClick={() => { setEditing(null); setFormOpen(true) }}
+              >
+                Add your first goal
+              </Button>
+            )}
+          />
+          {/* Kept: a constraint, and one you cannot act on from this screen. */}
           {fundable.length === 0 && (
-            <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-4">
+            <p className="-mt-8 px-8 text-center text-[12px] text-amber-600 dark:text-amber-400">
               You will need a cash, e-wallet, bank or savings account first.
             </p>
           )}
@@ -701,10 +709,8 @@ export default function Goals() {
         <>
           {/* ── The whole plan, in one figure ── */}
           <section className="px-5">
-            <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-              Saved toward goals
-            </p>
-            <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            <SectionLabel className="text-center">Saved toward goals</SectionLabel>
+            <p className="text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
               {fmt(alloc.totals.saved)}
             </p>
             <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
@@ -738,11 +744,15 @@ export default function Goals() {
           {/* ── The goals, in funding order ── */}
           {active.length > 0 && (
             <section className="mt-7">
-              <SectionLabel hint="Top of the list is funded first. Drag the handle to change who gets the money.">
+              <SectionLabel
+                inset="gutter"
+                gap="loose"
+                hint="Top of the list is funded first. Drag the handle to change who gets the money."
+              >
                 In funding order
               </SectionLabel>
               <div className="px-5">
-                <Card>
+                <Card clip>
                   <DndContext
                     sensors={sensors}
                     collisionDetection={closestCenter}
@@ -756,9 +766,7 @@ export default function Goals() {
                             today={today}
                             onEdit={goal => { setEditing(goal); setFormOpen(true) }}
                           />
-                          {i < active.length - 1 && (
-                            <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4" />
-                          )}
+                          {i < active.length - 1 && <Divider inset="row" />}
                         </div>
                       ))}
                     </SortableContext>
@@ -771,11 +779,15 @@ export default function Goals() {
           {/* ── Reconciliation ── */}
           {splitEntries.length > 0 && (
             <section className="mt-7">
-              <SectionLabel hint="Every peso counted once. What is left over is money no goal has claimed.">
+              <SectionLabel
+                inset="gutter"
+                gap="loose"
+                hint="Every peso counted once. What is left over is money no goal has claimed."
+              >
                 Where it comes from
               </SectionLabel>
               <div className="px-5">
-                <Card>
+                <Card clip>
                   {splitEntries.map(([name, split], i) => (
                     <AccountSplitRow
                       key={name}
@@ -802,23 +814,23 @@ export default function Goals() {
               </div>
               {showArchived && (
                 <div className="px-5 mt-2.5">
-                  <Card>
+                  <Card clip>
                     {archived.map((g, i) => (
-                      <button
-                        key={g.id}
-                        onClick={() => { setEditing(g); setFormOpen(true) }}
-                        className={`w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70 ${
-                          i === archived.length - 1 ? '' : 'border-b border-slate-100 dark:border-white/[0.06]'
-                        }`}
-                      >
-                        <span className="text-[16px] leading-none opacity-50" aria-hidden="true">{g.icon ?? '🎯'}</span>
-                        <span className="flex-1 min-w-0 text-[13px] font-medium text-slate-500 dark:text-slate-400 truncate">
-                          {g.name}
-                        </span>
-                        <span className="text-[12px] tabular-nums text-slate-400 dark:text-slate-500 shrink-0">
-                          {fmtCompact(g.target)}
-                        </span>
-                      </button>
+                      <Fragment key={g.id}>
+                        <button
+                          onClick={() => { setEditing(g); setFormOpen(true) }}
+                          className="w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70"
+                        >
+                          <span className="text-[16px] leading-none opacity-50" aria-hidden="true">{g.icon ?? '🎯'}</span>
+                          <span className="flex-1 min-w-0 text-[13px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                            {g.name}
+                          </span>
+                          <span className="text-[12px] tabular-nums text-slate-400 dark:text-slate-500 shrink-0">
+                            {fmtCompact(g.target)}
+                          </span>
+                        </button>
+                        {i < archived.length - 1 && <Divider inset="row" />}
+                      </Fragment>
                     ))}
                   </Card>
                 </div>

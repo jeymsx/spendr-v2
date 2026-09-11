@@ -1,3 +1,6 @@
+import Card from './ui/Card'
+import Divider from './ui/Divider'
+
 /**
  * The app's native form rows.
  *
@@ -17,17 +20,18 @@
 
 /** The frame: a card with hairline-separated rows. */
 export function RowGroup({ children, className = '' }) {
-  return <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
+  return <Card clip className={className}>{children}</Card>
 }
 
 export function EditRow({ label, isLast, children }) {
   return (
-    <div className={`flex items-center justify-between gap-3 px-4 min-h-[48px] py-2 ${
-      isLast ? '' : 'border-b border-slate-100 dark:border-white/[0.06]'
-    }`}>
-      <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
-      <div className="flex-1 min-w-0 flex items-center justify-end gap-2">{children}</div>
-    </div>
+    <>
+      <div className="flex items-center justify-between gap-3 px-4 min-h-[48px] py-2">
+        <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
+        <div className="flex-1 min-w-0 flex items-center justify-end gap-2">{children}</div>
+      </div>
+      {!isLast && <Divider inset="row" />}
+    </>
   )
 }
 

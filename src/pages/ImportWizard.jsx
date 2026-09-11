@@ -6,6 +6,10 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { IconCheck, IconUpload, ACCOUNT_TYPE_ICON, IconCashUI, IconImport, IconBankUI, IconBalance, IconSparkle } from '../components/icons'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import DetailRow from '../components/ui/DetailRow'
+import SectionLabel from '../components/ui/SectionLabel'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -300,20 +304,15 @@ function StepFilePicker({ onParsed }) {
       )}
 
       {/* Format reference */}
-      <div className="mt-5 px-4 py-4 rounded-2xl
-        bg-white dark:bg-white/[0.04]
-        border border-slate-100 dark:border-white/[0.07]
-        shadow-[0_1px_4px_rgba(0,0,0,0.04)] dark:shadow-none">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">
-          Expected columns
-        </p>
+      <Card padding="md" className="mt-5">
+        <SectionLabel>Expected columns</SectionLabel>
         <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono leading-relaxed break-all">
           {NEW_REQUIRED_COLS.join(', ')}
         </p>
         <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
           Legacy format (txId, date, payment, account…) is also accepted.
         </p>
-      </div>
+      </Card>
     </div>
   )
 }
@@ -407,36 +406,31 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Summary stats */}
       <div className="px-5 mb-5">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
-          Summary
-        </p>
-        <div className="rounded-2xl overflow-hidden bg-white dark:bg-white/[0.04]
-          border border-slate-100 dark:border-white/[0.07]
-          shadow-[0_1px_4px_rgba(0,0,0,0.04)] dark:shadow-none">
-
-          <StatRow label="Total transactions" value={String(rows.length)} />
-          <Divider />
-          <StatRow label="Date range" value={`${analysis.earliest} → ${analysis.latest}`} mono />
-          <Divider />
-          <StatRow label="Expenses" value={String(analysis.byType.expense)} />
-          <Divider />
-          <StatRow label="Inflows" value={String(analysis.byType.inflow)} />
-          <Divider />
-          <StatRow label="Transfers" value={String(analysis.byType.transfer)} />
+        <SectionLabel>Summary</SectionLabel>
+        <Card clip>
+          <DetailRow label="Total transactions" value={String(rows.length)} />
+          <DetailRow label="Date range" value={`${analysis.earliest} → ${analysis.latest}`} />
+          <DetailRow label="Expenses" value={String(analysis.byType.expense)} />
+          <DetailRow label="Inflows" value={String(analysis.byType.inflow)} />
+          <DetailRow
+            label="Transfers"
+            value={String(analysis.byType.transfer)}
+            isLast={analysis.byType.other === 0}
+          />
           {analysis.byType.other > 0 && (
-            <>
-              <Divider />
-              <StatRow label="Unknown type" value={String(analysis.byType.other)} warn />
-            </>
+            <DetailRow
+              label="Unknown type"
+              value={String(analysis.byType.other)}
+              tone="text-amber-600 dark:text-amber-400"
+              isLast
+            />
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Accounts referenced */}
       <div className="px-5 mb-5">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
-          Accounts in file
-        </p>
+        <SectionLabel>Accounts in file</SectionLabel>
         <div className="flex flex-wrap gap-2">
           {[...analysis.accountSet].map(a => (
             <span
@@ -456,9 +450,7 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Categories referenced */}
       <div className="px-5 mb-5">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
-          Categories in file
-        </p>
+        <SectionLabel>Categories in file</SectionLabel>
         <div className="flex flex-wrap gap-2">
           {[...analysis.categorySet].map(c => (
             <span
@@ -496,11 +488,8 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Preview table */}
       <div className="px-5 mb-6">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">
-          Preview (first 10 rows)
-        </p>
-        <div className="rounded-2xl overflow-hidden border border-slate-100 dark:border-white/[0.07]
-          bg-white dark:bg-white/[0.04] shadow-[0_1px_4px_rgba(0,0,0,0.04)] dark:shadow-none">
+        <SectionLabel>Preview (first 10 rows)</SectionLabel>
+        <Card clip>
           <div className="overflow-x-auto">
             <table className="w-full text-[11px]">
               <thead>
@@ -533,12 +522,14 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
             </table>
           </div>
           {rows.length > 10 && (
-            <div className="px-4 py-2.5 text-center text-[11px] text-slate-400 dark:text-slate-500
-              border-t border-slate-50 dark:border-white/[0.04]">
-              +{rows.length - 10} more rows not shown
-            </div>
+            <>
+              <Divider />
+              <div className="px-4 py-2.5 text-center text-[11px] text-slate-400 dark:text-slate-500">
+                +{rows.length - 10} more rows not shown
+              </div>
+            </>
           )}
-        </div>
+        </Card>
       </div>
 
       {/* Actions */}
@@ -626,12 +617,7 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
           const acc = existingAccounts?.find(a => a.name === name)
           const isCredit = acc?.type === 'credit'
           return (
-            <div
-              key={name}
-              className="flex items-center gap-3 px-4 py-3.5 rounded-2xl
-                bg-white border border-slate-100 shadow-sm
-                dark:bg-white/[0.04] dark:border-white/[0.07]"
-            >
+            <Card key={name} className="flex items-center gap-3 px-4 py-3.5">
               <div
                 className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
                 style={{
@@ -666,7 +652,7 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
                     bg-transparent focus:outline-none text-[15px] tabular-nums"
                 />
               </div>
-            </div>
+            </Card>
           )
         })}
       </div>
@@ -812,16 +798,11 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
 
   return (
     <div className="px-5 pt-4 pb-6">
-      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Ready to Import</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-6">
-        Review what will happen, then confirm.
-      </p>
+      <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-6">Ready to import</h2>
 
       <div className="space-y-3 mb-6">
         {/* What gets inserted */}
-        <div className="px-4 py-4 rounded-2xl bg-white dark:bg-white/[0.04]
-          border border-slate-100 dark:border-white/[0.07]
-          shadow-[0_1px_4px_rgba(0,0,0,0.04)] dark:shadow-none">
+        <Card padding="md">
           <div className="flex items-center gap-3">
             <span className="text-slate-500 dark:text-slate-400"><IconImport size={24} /></span>
             <div>
@@ -833,7 +814,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
         {missingAccounts.size > 0 && (
           <div className="px-4 py-4 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.08]
@@ -905,7 +886,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
               Importing…
             </span>
           ) : (
-            `Import ${rows.length} Transactions`
+            `Import ${rows.length} transactions`
           )}
         </Button>
       </div>
@@ -946,10 +927,10 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
 
       <div className="w-full space-y-3">
         <Button block onClick={() => navigate('/')}>
-          Go to Dashboard
+          Go to dashboard
         </Button>
         <Button variant="secondary" block onClick={onImportAnother}>
-          Import Another File
+          Import another file
         </Button>
       </div>
     </div>
@@ -957,27 +938,6 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
 }
 
 // ── Small helpers ──────────────────────────────────────────────────────────────
-
-function StatRow({ label, value, mono = false, warn = false }) {
-  return (
-    <div className="flex items-center justify-between px-4 py-3">
-      <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
-      <span className={[
-        'text-sm font-semibold',
-        warn
-          ? 'text-amber-600 dark:text-amber-400'
-          : 'text-slate-800 dark:text-white',
-        mono ? 'font-mono text-xs' : '',
-      ].join(' ')}>
-        {value}
-      </span>
-    </div>
-  )
-}
-
-function Divider() {
-  return <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-}
 
 function WarnBanner({ title, body }) {
   return (
@@ -1053,18 +1013,17 @@ export default function ImportWizard() {
   }
 
   const STEP_LABELS = {
-    1: 'Select File',
-    2: 'Preview & Validate',
+    1: 'Select file',
+    2: 'Preview & validate',
     3: 'Opening balances',
-    4: 'Confirm Import',
+    4: 'Confirm import',
     5: 'Done',
   }
 
   return (
     <div className="page-enter min-h-screen pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-[#0d1117]
-        border-b border-slate-100 dark:border-white/[0.06]">
+      <div className="sticky top-0 z-10 bg-white dark:bg-[#0d1117]">
         <div className="flex items-center gap-3 px-5 pt-safe-header pb-3">
           <IconButton
             label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}
@@ -1087,6 +1046,7 @@ export default function ImportWizard() {
         <div className="px-4 pb-3">
           <StepDots step={step} />
         </div>
+        <Divider />
       </div>
 
       {/* Steps */}

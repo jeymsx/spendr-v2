@@ -1,4 +1,5 @@
 import { useNavigate } from 'react-router-dom'
+import Card from './ui/Card'
 import Sheet from './ui/Sheet'
 
 function IconArrowUp() {
@@ -76,10 +77,13 @@ export default function AddActionSheet({ open, onClose }) {
       <div className="pt-1 pb-2">
         <div className="flex flex-col gap-3.5">
           {ACTIONS.map(({ label, path, Icon, iconBg }) => (
-            <button
+            <Card
               key={path}
+              as="button"
+              interactive
+              padding="md"
               onClick={() => handleAction(path)}
-              className="card flex items-center gap-4 w-full text-left px-4 py-4 rounded-2xl active:scale-[0.98] transition-all duration-100"
+              className="flex items-center gap-4"
             >
               <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${iconBg}`}>
                 <Icon />
@@ -90,7 +94,7 @@ export default function AddActionSheet({ open, onClose }) {
               <svg className="text-slate-300 dark:text-slate-600 shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="5,2 9,7 5,12" />
               </svg>
-            </button>
+            </Card>
           ))}
         </div>
       </div>

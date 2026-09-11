@@ -1,4 +1,5 @@
 import Button from './ui/Button'
+import Divider from './ui/Divider'
 import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -75,7 +76,7 @@ export default function OverdrawWarningSheet({
               <span className="text-xs text-slate-400 dark:text-slate-500">This transaction</span>
               <span className="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">−{fmt(amount)}</span>
             </div>
-            <div className="h-px bg-slate-200/70 dark:bg-white/[0.07]" />
+            <Divider />
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Balance after</span>
               <span className="text-sm font-bold tabular-nums text-red-500 dark:text-red-400">{fmt(after)}</span>

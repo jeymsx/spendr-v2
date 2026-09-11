@@ -8,6 +8,10 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { scheduledCutoff } from '../utils/scheduled'
 import CategoryGlyph from '../components/CategoryGlyph'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
+import SectionLabel from '../components/ui/SectionLabel'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -105,8 +109,8 @@ function DonutChart({ segments, total, animKey, selected, onSelect }) {
           </>
         ) : (
           <>
-            <span className="text-xs font-semibold text-slate-400 dark:text-slate-500">Total spent</span>
-            <span className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums mt-1">{fmtCompact(total)}</span>
+            <SectionLabel>Total spent</SectionLabel>
+            <span className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums">{fmtCompact(total)}</span>
           </>
         )}
       </div>
@@ -206,17 +210,18 @@ function MultiBarChart({ data }) {
 
 // ── Layout primitives ──────────────────────────────────────────────────────────
 
-function SectionLabel({ children, action }) {
+/* Not a <SectionLabel>. This is the page's section HEADING - 16px slate-800,
+   the same recipe Dashboard's `<h2>` and every screen's title bar use - and it
+   carries a control on the right (the chart's Expenses/Income/Net flow
+   switch). The shared SectionLabel is the 12px slate-500 caption; using it
+   here would mute a page heading down to a caption and drop the action slot. */
+function SectionHeading({ children, action }) {
   return (
     <div className="px-5 flex items-center justify-between mb-3">
       <h2 className="text-base font-semibold text-slate-800 dark:text-white">{children}</h2>
       {action}
     </div>
   )
-}
-
-function Divider() {
-  return <div className="mx-5 border-t border-slate-100 dark:border-white/[0.05] my-5" />
 }
 
 // ── Range Chips ────────────────────────────────────────────────────────────────
@@ -273,7 +278,7 @@ function MonthNav({ monthOffset, onMonth }) {
       <button onClick={() => !isCurrent && onMonth(0)} className="flex items-center gap-1.5">
         <span className="text-[13px] font-semibold text-slate-600 dark:text-slate-300">{monthLabel}</span>
         {!isCurrent && (
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">NOW</span>
+          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>
         )}
       </button>
       <button onClick={() => onMonth(monthOffset + 1)} disabled={isCurrent}
@@ -440,7 +445,7 @@ function SpendingByCategory({ segments, total, animKey, rangeLabel }) {
 
   if (!segments.length) {
     return (
-      <p className="text-sm text-slate-400 dark:text-slate-500 text-center py-8">No expenses {rangeLabel}</p>
+      <EmptyState size="sm" title={`No expenses ${rangeLabel}`} />
     )
   }
 
@@ -537,16 +542,8 @@ function TrendEmpty({ kind, height }) {
   const { Icon, noun } = TREND_EMPTY[kind] ?? TREND_EMPTY.expenses
   return (
     <div className="px-5">
-      <div
-        style={{ height }}
-        className="flex flex-col items-center justify-center gap-2 text-center"
-      >
-        <span className="text-slate-300 dark:text-white/20">
-          <Icon />
-        </span>
-        <p className="text-[13px] text-slate-400 dark:text-slate-500">
-          No {noun} in this period
-        </p>
+      <div style={{ height }} className="flex flex-col items-center justify-center">
+        <EmptyState size="sm" icon={<Icon />} title={`No ${noun} in this period`} />
       </div>
     </div>
   )
@@ -557,7 +554,7 @@ function TrendEmpty({ kind, height }) {
 const CHART_TYPE_OPTS = [
   { key: 'expenses', label: 'Expenses' },
   { key: 'income',   label: 'Income'   },
-  { key: 'netflow',  label: 'Net Flow' },
+  { key: 'netflow',  label: 'Net flow' },
 ]
 
 function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDayExpense, sevenDayIncome, sevenDayNetflow, multiBarData }) {
@@ -575,11 +572,11 @@ function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDa
     ? activeData.some(d => d.value !== 0)
     : multiBarData.some(d => d.expense > 0)
 
-  const label = range === '7d'  ? 'Last 7 Days'
+  const label = range === '7d'  ? 'Last 7 days'
     : range === '1m'            ? 'Trend'
-    : range === '3m'            ? 'Last 3 Months'
-    : range === '6m'            ? 'Last 6 Months'
-    : 'All Time'
+    : range === '3m'            ? 'Last 3 months'
+    : range === '6m'            ? 'Last 6 months'
+    : 'All time'
 
   /* Bare labels and one pill that slides. No track.
  
@@ -631,7 +628,7 @@ function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDa
 
   return (
     <div>
-      <SectionLabel action={typeFilter}>{label}</SectionLabel>
+      <SectionHeading action={typeFilter}>{label}</SectionHeading>
       {!hasData ? (
         <TrendEmpty
           kind={isArea ? chartType : 'bars'}
@@ -652,13 +649,13 @@ function TopTransactions({ txs, catMap }) {
   if (!txs.length) return null
   return (
     <div>
-      <SectionLabel>Top expenses</SectionLabel>
+      <SectionHeading>Top expenses</SectionHeading>
       <div className="flex flex-col gap-2 mx-5">
         {txs.map((tx, i) => {
           const cat  = catMap[tx.category]
           const date = new Date(tx.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
           return (
-            <div key={tx.id ?? i} className="card flex items-center gap-3 px-4 py-3 rounded-2xl">
+            <Card key={tx.id ?? i} padding="sm" className="flex items-center gap-3">
               <div
                 className="w-9 h-9 rounded-2xl flex items-center justify-center text-[17px] shrink-0"
                 style={{ backgroundColor: (cat?.color ?? '#2D9DFF') + '22' }}
@@ -672,7 +669,7 @@ function TopTransactions({ txs, catMap }) {
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{tx.category} · {date}</p>
               </div>
               <p className="text-[13px] font-semibold text-red-500 dark:text-red-400 tabular-nums shrink-0">{fmt(tx.amount)}</p>
-            </div>
+            </Card>
           )
         })}
       </div>
@@ -699,10 +696,10 @@ function AccountBreakdown({ data, animKey }) {
 
   return (
     <div>
-      <SectionLabel>By account</SectionLabel>
+      <SectionHeading>By account</SectionHeading>
       <div className="mx-5 flex flex-col gap-2">
         {data.map((d, i) => (
-          <div key={i} className="card px-4 py-3 rounded-2xl">
+          <Card key={i} padding="sm">
             <div className="flex items-center justify-between mb-2">
               <div className="flex items-center gap-2 min-w-0">
                 <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
@@ -714,7 +711,7 @@ function AccountBreakdown({ data, animKey }) {
               <div className="h-full rounded-full transition-all duration-700 ease-out"
                 style={{ width: ready ? `${(d.value / max) * 100}%` : '0%', backgroundColor: d.color }} />
             </div>
-          </div>
+          </Card>
         ))}
       </div>
     </div>
@@ -948,7 +945,7 @@ export default function Insights() {
           </>
         )}
 
-        <Divider />
+        <Divider inset="gutter" className="my-5" />
 
         {/* By category */}
         <SpendingByCategory
@@ -957,7 +954,7 @@ export default function Insights() {
           animKey={animKey} rangeLabel={rangeLabel}
         />
 
-        <Divider />
+        <Divider inset="gutter" className="my-5" />
 
         {/* Trend chart */}
         <SpendingTrend
@@ -973,14 +970,14 @@ export default function Insights() {
 
         {topExpenses.length > 0 && (
           <>
-            <Divider />
+            <Divider inset="gutter" className="my-5" />
             <TopTransactions txs={topExpenses} catMap={catMap} />
           </>
         )}
 
         {accountBreakdown.length > 0 && (
           <>
-            <Divider />
+            <Divider inset="gutter" className="my-5" />
             <AccountBreakdown data={accountBreakdown} animKey={animKey} />
           </>
         )}

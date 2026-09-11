@@ -1,5 +1,8 @@
 import { useMemo } from 'react'
 import CategoryGlyph from './CategoryGlyph'
+import Card from './ui/Card'
+import Divider from './ui/Divider'
+import EmptyState from './ui/EmptyState'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -131,7 +134,7 @@ export default function CalendarView({
   return (
     <div>
       {/* Calendar card — month nav lives inside */}
-      <div className="card mx-4 rounded-2xl overflow-hidden">
+      <Card clip className="mx-4">
 
         {/* Month nav — matches Insights MonthNav style, inside the card */}
         <div className="flex items-center justify-center gap-3 pt-3 pb-3 border-b border-slate-100 dark:border-primary/[0.10]">
@@ -155,7 +158,7 @@ export default function CalendarView({
             </span>
             {!isCurrentMonth && (
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
-                NOW
+                Now
               </span>
             )}
           </button>
@@ -236,7 +239,7 @@ export default function CalendarView({
             )
           })}
         </div>
-      </div>
+      </Card>
 
       {/* Selected date transactions */}
       {selectedDate && (
@@ -245,27 +248,25 @@ export default function CalendarView({
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
               {fmtGroupDate(selectedDate)}
             </span>
-            <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
+            <Divider className="flex-1" />
             <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
               {selectedTxs.length} {selectedTxs.length === 1 ? 'txn' : 'txns'}
             </span>
           </div>
 
           {selectedTxs.length === 0 ? (
-            <p className="text-xs text-center text-slate-400 dark:text-slate-500 py-6">
-              No transactions on this date
-            </p>
+            <EmptyState size="sm" title="No transactions on this date" />
           ) : (
-            <div className="card mx-5 rounded-2xl overflow-hidden">
+            <Card clip className="mx-5">
               {selectedTxs.map((tx, i) => (
                 <div key={tx.id}>
                   <TxRow tx={tx} catMap={catMap} onClick={onTxClick} />
                   {i < selectedTxs.length - 1 && (
-                    <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                    <Divider inset="glyph" />
                   )}
                 </div>
               ))}
-            </div>
+            </Card>
           )}
         </div>
       )}

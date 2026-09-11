@@ -7,6 +7,8 @@ import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInp
 import { IconTemplate } from './icons'
 import CategoryGlyph from './CategoryGlyph'
 import Button from './ui/Button'
+import Card from './ui/Card'
+import DetailRow from './ui/DetailRow'
 import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -84,6 +86,18 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
     }
   }
 
+  /* Built as a list so the shared row can draw its own separators and know
+     which one is last. Same four conditions, in the same order. */
+  const detailRows = [
+    category && {
+      label: 'Category',
+      value: <><CategoryGlyph cat={category} size={15} /> {category.name}</>,
+    },
+    account     && { label: 'Account', value: account.name,     dot: account.color     },
+    fromAccount && { label: 'From',    value: fromAccount.name, dot: fromAccount.color },
+    toAccount   && { label: 'To',      value: toAccount.name,   dot: toAccount.color   },
+  ].filter(Boolean)
+
   const actions = (
     <div className="flex gap-3">
       <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
@@ -152,44 +166,21 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           </div>
         )}
 
-        {/* Detail rows */}
-        <div className="flex flex-col gap-1.5 mb-5">
-          {category && (
-            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04]">
-              <span className="text-xs text-slate-400 dark:text-slate-500">Category</span>
-              <span className="text-sm font-medium text-slate-700 dark:text-slate-200">
-                <CategoryGlyph cat={category} size={15} /> {category.name}
-              </span>
-            </div>
-          )}
-          {account && (
-            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04]">
-              <span className="text-xs text-slate-400 dark:text-slate-500">Account</span>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: account.color }} />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{account.name}</span>
-              </div>
-            </div>
-          )}
-          {fromAccount && (
-            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04]">
-              <span className="text-xs text-slate-400 dark:text-slate-500">From</span>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: fromAccount.color }} />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{fromAccount.name}</span>
-              </div>
-            </div>
-          )}
-          {toAccount && (
-            <div className="flex items-center justify-between px-4 py-2.5 rounded-xl bg-slate-50 dark:bg-white/[0.04]">
-              <span className="text-xs text-slate-400 dark:text-slate-500">To</span>
-              <div className="flex items-center gap-2">
-                <span className="w-2 h-2 rounded-full" style={{ backgroundColor: toAccount.color }} />
-                <span className="text-sm font-medium text-slate-700 dark:text-slate-200">{toAccount.name}</span>
-              </div>
-            </div>
-          )}
-        </div>
+        {/* Detail rows. One recessed group rather than four floating pills -
+            same rows, same conditions, drawn by the shared DetailRow. */}
+        {detailRows.length > 0 && (
+          <Card surface="recessed" clip className="mb-5">
+            {detailRows.map((row, i) => (
+              <DetailRow
+                key={row.label}
+                label={row.label}
+                value={row.value}
+                dot={row.dot}
+                isLast={i === detailRows.length - 1}
+              />
+            ))}
+          </Card>
+        )}
 
       </div>
     </Sheet>

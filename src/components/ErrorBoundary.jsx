@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import Button from './ui/Button'
 
 /**
  * Catches render-time errors so one failure doesn't blank the whole app.
@@ -66,22 +67,17 @@ export default class ErrorBoundary extends Component {
         </p>
 
         <div className="flex items-center gap-2 mt-5">
-          <button
+          <Button
+            variant="outline"
+            size="sm"
+            className="px-4"
             onClick={() => this.setState({ error: null })}
-            className="px-4 py-2.5 rounded-2xl text-xs font-semibold
-              bg-white dark:bg-white/[0.07] text-slate-700 dark:text-slate-200
-              border border-slate-200/80 dark:border-white/[0.09]
-              active:scale-95 transition-transform duration-75"
           >
             Try again
-          </button>
-          <button
-            onClick={() => window.location.reload()}
-            className="px-4 py-2.5 rounded-2xl text-xs font-semibold text-white bg-primary
-              active:scale-95 transition-transform duration-75"
-          >
+          </Button>
+          <Button size="sm" className="px-4" onClick={() => window.location.reload()}>
             Reload app
-          </button>
+          </Button>
         </div>
       </div>
     )

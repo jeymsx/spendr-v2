@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react'
 import { accountBrand } from '../lib/accountBrands'
 import SwipeConfirm from './SwipeConfirm'
 import Button from './ui/Button'
+import DetailRow from './ui/DetailRow'
+import Divider from './ui/Divider'
 import Sheet from './ui/Sheet'
 import CategoryGlyph from './CategoryGlyph'
 import BrandMark from './BrandMark'
@@ -71,38 +73,6 @@ function AmountRule({ color }) {
         )
       })}
     </svg>
-  )
-}
-
-/**
- * One fact, as a row.
- *
- * Each of these used to be its own filled, rounded card with a gap beneath it,
- * so a transfer with a fee stacked nine little slabs down the sheet and the
- * eye had to cross nine borders to read nine values.
- *
- * Nothing is drawn between them now - not a card, not even a hairline. A
- * label hard left and its value hard right is already two columns; ruling
- * every pair was drawing a table nobody needed, and at three or four rows the
- * lines outnumbered the facts. Alignment and an even rhythm do the work.
- *
- * `accent` used to mean an amber card. It is amber TEXT now: the point was
- * that a fee is worth noticing, never that it deserved a box.
- */
-function DetailRow({ label, value, accent }) {
-  return (
-    <div className="flex items-center justify-between gap-4 py-2.5">
-      <span className={`text-[13px] shrink-0 ${
-        accent ? 'text-amber-600 dark:text-amber-400' : 'text-slate-400 dark:text-slate-500'
-      }`}>
-        {label}
-      </span>
-      <span className={`text-[14px] font-semibold text-right truncate ${
-        accent ? 'text-amber-600 dark:text-amber-400' : 'text-slate-800 dark:text-slate-100'
-      }`}>
-        {value}
-      </span>
-    </div>
   )
 }
 
@@ -186,11 +156,6 @@ function TransferLeg({ role, account }) {
       </span>
     </div>
   )
-}
-
-/** A breath between groups of rows, where a filled card used to do the job. */
-function Divider() {
-  return <div className="h-4" />
 }
 
 export default function TxConfirmSheet({
@@ -305,7 +270,7 @@ export default function TxConfirmSheet({
         }}
       >
         {saving ? savingLabel
-          : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save transaction')}
+          : confirmLabel ?? (installment ? `Schedule ${installment.months} payments` : 'Save transaction')}
       </Button>
     </div>
   )
@@ -338,7 +303,7 @@ export default function TxConfirmSheet({
           </h3>
           <p className="mt-1 mx-auto max-w-[268px] text-[12.5px] leading-snug
             text-slate-400 dark:text-slate-500">
-            Check the details below. Nothing is saved to your ledger until you confirm.
+            Nothing is saved to your ledger until you confirm.
           </p>
         </div>
 
@@ -359,16 +324,23 @@ export default function TxConfirmSheet({
           )}
         </div>
 
-        {/* One list, not a stack of cards. */}
+        {/* One list, not a stack of cards.
+
+            Every row is `isLast`, which is not a mistake: nothing is drawn
+            between these - not a card, not even a hairline. A label hard left
+            and its value hard right is already two columns, and this stack is
+            not inside a card, so a full-bleed rule between each pair would be
+            drawing a table across the sheet's own gutter. `padded={false}`
+            for the same reason: the sheet already owns the horizontal inset. */}
         <div className="flex flex-col mb-6">
           {description && description.trim() && (
-            <DetailRow label="Note" value={description} />
+            <DetailRow label="Note" value={description} padded={false} isLast />
           )}
           {category && (
-            <DetailRow label="Category" value={<><CategoryGlyph cat={category} size={14} className="inline-block mr-1.5 -mt-px" />{category.name}</>} />
+            <DetailRow label="Category" value={<><CategoryGlyph cat={category} size={14} className="inline-block mr-1.5 -mt-px" />{category.name}</>} padded={false} isLast />
           )}
           {hasFee && (
-            <DetailRow label="Transfer fee" value={fmt(fee)} accent />
+            <DetailRow label="Transfer fee" value={fmt(fee)} tone="text-amber-600 dark:text-amber-400" padded={false} isLast />
           )}
           {account && (
             <AccountLine
@@ -414,12 +386,12 @@ export default function TxConfirmSheet({
           {/* Installment schedule */}
           {installment && (
             <>
-              <Divider />
-              <DetailRow label="Per month"      value={fmt(installment.monthly)} />
-              <DetailRow label="Months"         value={`${installment.months}`} />
-              <DetailRow label="Total"          value={fmt(installment.total)} accent />
-              <DetailRow label="First payment"  value={installment.firstLabel} />
-              <DetailRow label="Last payment"   value={installment.lastLabel} />
+              <div className="h-4" />
+              <DetailRow label="Per month"      value={fmt(installment.monthly)} padded={false} isLast />
+              <DetailRow label="Months"         value={`${installment.months}`} padded={false} isLast />
+              <DetailRow label="Total"          value={fmt(installment.total)} tone="text-amber-600 dark:text-amber-400" padded={false} isLast />
+              <DetailRow label="First payment"  value={installment.firstLabel} padded={false} isLast />
+              <DetailRow label="Last payment"   value={installment.lastLabel} padded={false} isLast />
             </>
           )}
         </div>
@@ -427,11 +399,11 @@ export default function TxConfirmSheet({
         {/* save-as-template, in the same flat language as the rows above */}
         {onSaveTemplate && (
           <div className="mb-5">
+            <Divider />
             <button
               type="button"
               onClick={() => setSaveTemplate(v => !v)}
               className="w-full flex items-center justify-between gap-4 py-3
-                border-t border-slate-100 dark:border-white/[0.06]
                 active:opacity-60 transition-opacity"
             >
               <div className="flex items-center gap-2">

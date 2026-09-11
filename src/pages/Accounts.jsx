@@ -37,6 +37,10 @@ import {
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import Sheet from '../components/ui/Sheet'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
+import SectionLabel from '../components/ui/SectionLabel'
 
 /* Re-exported, not redefined. They moved to lib/accountMeta.js so that
    components/CardStyle.jsx can have them without importing a page - see the
@@ -155,14 +159,6 @@ export function typeIcon(type) {
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
-
-function Label({ children }) {
-  return (
-    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5 px-1">
-      {children}
-    </p>
-  )
-}
 
 function inputClass(error = false) {
   return [
@@ -479,7 +475,7 @@ function pushRecentPreset(name) {
   try { localStorage.setItem(RECENT_PRESETS_KEY, JSON.stringify(next)) } catch {}
 }
 
-const TYPE_LABEL_SHORT = { ewallet: 'E-Wallet', bank: 'Bank', credit: 'Credit Card', cash: 'Cash', savings: 'Savings' }
+const TYPE_LABEL_SHORT = { ewallet: 'E-wallet', bank: 'Bank', credit: 'Credit card', cash: 'Cash', savings: 'Savings' }
 
 function QASectionLabel({ children }) {
   return (
@@ -487,7 +483,7 @@ function QASectionLabel({ children }) {
       <span className="text-xs font-bold text-slate-400 dark:text-slate-500 shrink-0">
         {children}
       </span>
-      <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.06]" />
+      <Divider className="flex-1" />
     </div>
   )
 }
@@ -574,10 +570,6 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
         </Button>
       )}
     >
-      <p className="text-xs text-slate-400 dark:text-slate-500">
-        Select a preset or create a custom one
-      </p>
-
       {/* Search */}
       <div className="pt-3 pb-3">
         <div className="relative">
@@ -900,15 +892,15 @@ export default function Accounts() {
 
       {/* ── Empty state ── */}
       {(accounts ?? []).length === 0 && (
-        <div className="flex flex-col items-center py-20 text-center px-8">
-          <div className="w-16 h-16 rounded-3xl bg-slate-100 dark:bg-white/[0.05] flex items-center justify-center mb-4 text-slate-300 dark:text-slate-600">
+        <EmptyState
+          icon={(
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="5" width="20" height="14" rx="3" /><line x1="2" y1="10" x2="22" y2="10" />
             </svg>
-          </div>
-          <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No accounts yet</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Tap + to get started</p>
-        </div>
+          )}
+          title="No accounts yet"
+          body="Tap + to get started"
+        />
       )}
 
       {/* ── Account sections (parents + type groups, ordered by sort_order) ── */}
@@ -924,7 +916,7 @@ export default function Accounts() {
                 <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                   {parent.name}
                 </span>
-                <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
+                <Divider className="flex-1" />
                 <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
                   {fmt(groupTotal)}
                 </span>
@@ -963,7 +955,7 @@ export default function Accounts() {
               <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 whitespace-nowrap">
                 {group.label}
               </span>
-              <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
+              <Divider className="flex-1" />
               <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
                 {fmt(group.accounts.reduce((s, a) => s + acctTotal(a, creditStmtMap), 0))}
               </span>
@@ -1143,10 +1135,9 @@ function AccountSortSheet({ open, onClose, accounts }) {
       </p>
 
       <div className="pt-4">
-        <div className="rounded-2xl overflow-hidden
-          bg-white border border-slate-100
-          dark:bg-white/[0.04] dark:border-white/[0.07]
-          shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none">
+        {/* Recessed, not raised: this group sits inside a sheet, which is
+            already a raised surface. */}
+        <Card surface="recessed" clip>
           <DndContext
             sensors={sensors}
             collisionDetection={closestCenter}
@@ -1161,13 +1152,13 @@ function AccountSortSheet({ open, onClose, accounts }) {
                     childCount={childCountMap[acct.name] ?? 0}
                   />
                   {i < localList.length - 1 && (
-                    <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />
+                    <Divider inset="glyph" />
                   )}
                 </div>
               ))}
             </SortableContext>
           </DndContext>
-        </div>
+        </Card>
       </div>
     </Sheet>
   )
@@ -1293,7 +1284,7 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
   const actions = !imgSrc ? (
     <div className="flex gap-3">
       <Button className="flex-1" onClick={() => fileRef.current?.click()}>
-        Choose Photo
+        Choose photo
       </Button>
     </div>
   ) : (
@@ -1309,7 +1300,7 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
         Change
       </Button>
       <Button className="flex-[2]" onClick={handleConfirm} disabled={!completedCrop}>
-        Use Photo
+        Use photo
       </Button>
     </div>
   )
@@ -1801,7 +1792,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     : `This account has ${deleteBlocked} ${deleteBlocked === 1 ? 'transaction' : 'transactions'}. Remove those transactions first.`}
                 </p>
                 <Button variant="secondary" block onClick={() => setMode('form')}>
-                  Go Back
+                  Go back
                 </Button>
               </>
             ) : (
@@ -1825,7 +1816,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     className="flex-[2]"
                     onClick={handleDelete} disabled={saving}
                   >
-                    {saving ? 'Deleting…' : 'Delete Account'}
+                    {saving ? 'Deleting…' : 'Delete account'}
                   </Button>
                 </div>
               </>
@@ -1893,7 +1884,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
             {/* Name */}
             <div>
-              <Label>Account name</Label>
+              <SectionLabel>Account name</SectionLabel>
               <input
                 value={name}
                 onChange={e => { setName(e.target.value); setNameError(false) }}
@@ -1906,7 +1897,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
             {/* Type */}
             <div>
-              <Label>Account type</Label>
+              <SectionLabel>Account type</SectionLabel>
               {isEdit ? (
                 <p className="h-[48px] flex items-center px-4 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-300
                   bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.09]">
@@ -1942,7 +1933,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 which network yours is on. Same control as the create flow. */}
             {type !== 'cash' && (
               <div>
-                <Label>Card network</Label>
+                <SectionLabel>Card network</SectionLabel>
                 <SchemeRail value={scheme} onChange={v => setScheme(v)} />
               </div>
             )}
@@ -1950,7 +1941,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             {/* Counts as — hidden for credit */}
             {type !== 'credit' && (
               <div>
-                <Label>Counts as</Label>
+                <SectionLabel>Counts as</SectionLabel>
                 <div className="flex gap-2">
                   {[
                     { value: 'spending', label: 'Spending', Icon: IconWalletUI },
@@ -1989,7 +1980,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             {/* Group under parent */}
             {type !== 'credit' && !isParentItself && potentialParents.length > 0 && (
               <div>
-                <Label>Group under</Label>
+                <SectionLabel>Group under</SectionLabel>
                 {/* One line that scrolls, not a wrapping block.
 
                     Wrapped, this grew a row for every account you own and
@@ -2033,16 +2024,13 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     </button>
                   ))}
                 </div>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 px-1">
-                  Group this account under a parent
-                </p>
               </div>
             )}
 
             {/* Starting balance — add mode only */}
             {!isEdit && (
               <div>
-                <Label>Starting balance</Label>
+                <SectionLabel>Starting balance</SectionLabel>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -2057,10 +2045,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             {/* Credit-only fields */}
             {type === 'credit' && (
               <div className="flex flex-col gap-4 pt-1">
-                <div className="h-px bg-slate-100 dark:bg-white/[0.07]" />
+                <Divider />
 
                 <div>
-                  <Label>Credit limit</Label>
+                  <SectionLabel>Credit limit</SectionLabel>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -2072,7 +2060,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </div>
 
                 <div>
-                  <Label>Minimum payment</Label>
+                  <SectionLabel>Minimum payment</SectionLabel>
                   <input
                     type="text"
                     inputMode="decimal"
@@ -2085,7 +2073,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
                 <div className="grid grid-cols-3 gap-3">
                   <div>
-                    <Label>Statement</Label>
+                    <SectionLabel>Statement</SectionLabel>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -2097,7 +2085,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     />
                   </div>
                   <div>
-                    <Label>Due</Label>
+                    <SectionLabel>Due</SectionLabel>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -2109,7 +2097,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     />
                   </div>
                   <div>
-                    <Label>Cutoff</Label>
+                    <SectionLabel>Cutoff</SectionLabel>
                     <input
                       type="number"
                       inputMode="numeric"
@@ -2140,7 +2128,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 are looking at to replace it is the obvious move, and the two
                 pills beside it were the only way to do anything. */}
             <div>
-              <Label>Payment QR <span className="font-normal text-slate-400 normal-case">(optional)</span></Label>
+              <SectionLabel>Payment QR <span className="font-normal text-slate-400 normal-case">(optional)</span></SectionLabel>
               {qrImage ? (
                 <div className="flex items-start gap-4">
                   <button
@@ -2245,20 +2233,18 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
         {mode === 'adjust' && (
           <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
             {/* Current balance pill */}
-            <div className="px-4 py-3.5 rounded-2xl
-              bg-slate-50 dark:bg-white/[0.04]
-              border border-slate-100 dark:border-white/[0.07]">
+            <Card surface="recessed" className="px-4 py-3.5">
               <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1">
                 Current balance
               </p>
               <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
                 {fmt(account?.balance ?? 0)}
               </p>
-            </div>
+            </Card>
 
             {/* New balance input */}
             <div>
-              <Label>Correct balance</Label>
+              <SectionLabel>Correct balance</SectionLabel>
               <input
                 type="text"
                 inputMode="decimal"
@@ -2297,7 +2283,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   className="flex-[2]"
                   onClick={handleAdjust} disabled={saving || adjustDiff === 0}
                 >
-                  {saving ? 'Adjusting…' : 'Apply Adjustment'}
+                  {saving ? 'Adjusting…' : 'Apply adjustment'}
                 </Button>
               </div>
             )}
@@ -2327,7 +2313,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   /* The sheet's chrome, by mode. On a page none of it applies - SubPage
      carries the title and Back, and the buttons stay in the body. */
   const sheetTitle =
-    mode === 'form'     ? (isEdit ? 'Edit Account' : 'New account')
+    mode === 'form'     ? (isEdit ? 'Edit account' : 'New account')
     : mode === 'adjust' ? 'Adjust balance'
     /* confirm-delete keeps its centred, icon-topped heading in the body, so
        the dialog takes its name from ariaLabel instead. */
@@ -2390,7 +2376,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
           className="flex-[2]"
           onClick={handleAdjust} disabled={saving || adjustDiff === 0}
         >
-          {saving ? 'Adjusting…' : 'Apply Adjustment'}
+          {saving ? 'Adjusting…' : 'Apply adjustment'}
         </Button>
       </div>
     ) : null
@@ -2497,12 +2483,12 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
 export function StatCard({ label, value }) {
   return (
-    <div className="px-4 py-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">
+    <Card surface="recessed" padding="sm">
       <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-0.5">
         {label}
       </p>
       <p className="text-sm font-bold text-slate-700 dark:text-slate-200 tabular-nums">{value}</p>
-    </div>
+    </Card>
   )
 }
 
@@ -2526,25 +2512,20 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
       </div>
 
       {txs.length === 0 && emptyLabel ? (
-        <div className="py-6 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.03]">
-          <p className="text-xs text-slate-400 dark:text-slate-500">{emptyLabel}</p>
-        </div>
+        <Card surface="recessed">
+          <EmptyState size="sm" title={emptyLabel} />
+        </Card>
       ) : (
-        <div
-          className="rounded-2xl overflow-hidden
-            bg-white border border-slate-100
-            dark:bg-white/[0.04] dark:border-white/[0.07]
-            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
-        >
+        <Card clip>
           {txs.map((tx, i) => (
             <div key={tx.id ?? i}>
               <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} catMap={catMap} />
               {i < txs.length - 1 && (
-                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+                <Divider inset="glyph" />
               )}
             </div>
           ))}
-        </div>
+        </Card>
       )}
     </div>
   )

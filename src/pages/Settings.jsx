@@ -20,7 +20,6 @@ import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInp
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
-import { useScrollLock } from '../hooks/useScrollLock'
 import { syncToSheets } from '../lib/sheetsSync'
 import { IconCheck, IconChevronRight, IconPlus, IconUpload,
   IconTick, IconWarning, IconTemplate, IconTransferUI } from '../components/icons'
@@ -31,7 +30,9 @@ import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
 import Button from '../components/ui/Button'
 import Sheet from '../components/ui/Sheet'
-import Field, { FieldLabel, fieldFrame } from '../components/ui/Field'
+import Divider from '../components/ui/Divider'
+import SectionLabel from '../components/ui/SectionLabel'
+import Field, { fieldFrame } from '../components/ui/Field'
 import SwatchRail from '../components/ui/SwatchRail'
 import IconButton from '../components/ui/IconButton'
 
@@ -241,9 +242,9 @@ function SectionHeader({ children }) {
   )
 }
 
-function RowDivider() {
-  return <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-}
+/* Was a local hairline at slate-50 / white-4%, one of the sixteen recipes
+   the app had. It is the shared one now; the 8 call sites keep their name. */
+const RowDivider = () => <Divider inset="row" />
 
 function SectionCard({ children }) {
   return (
@@ -316,29 +317,27 @@ function inputClass(error = false) {
   ].join(' ')
 }
 
-/* FieldLabel now comes from ui/Field, so this file and the add-forms cannot
+/* SectionLabel now comes from ui/Field, so this file and the add-forms cannot
    drift apart again. It was 11px with widest tracking here and 12px
    sentence case there, for the same job. */
 
 // ── Profile sheet ──────────────────────────────────────────────────────────────
 
 export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
-  const [closing,  setClosing]  = useState(false)
   const [url,      setUrl]      = useState('')
   const [saving,   setSaving]   = useState(false)
   const [lastSync, setLastSync] = useState(null)
-  useScrollLock(open)
+
+  /* No `closing` flag, no scroll lock and no local close(): Sheet owns the
+     overlay, the panel, the grab handle, the scroll lock, Escape, the focus
+     trap and the exit animation, and `open` is the only thing that decides
+     any of it. */
 
   useEffect(() => {
     if (!open) return
     db.meta.get('sheetsUrl').then(r => setUrl(r?.value ?? ''))
     db.meta.get('sheetsLastSynced').then(r => setLastSync(r?.value ?? null))
   }, [open])
-
-  const close = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }, [onClose])
 
   async function handleSave() {
     setSaving(true)
@@ -356,78 +355,78 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
     ? new Date(lastSync).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
     : null
 
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04]">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <h3 className="text-base font-semibold text-slate-800 dark:text-white">Google Sheets sync</h3>
-          <p className="text-[12px] text-slate-400 dark:text-slate-500 mt-0.5">
-            Paste your Apps Script Web App URL to enable syncing.
+    /* The same z and the same 45% scrim it drew by hand, and Sheet's default
+       white/[#111820] panel is the surface it already had.
+
+       No maxHeight: this panel never asked for a height, so it keeps floating
+       while it fits and lets Sheet dock it when it does not. The line under
+       the heading moves into the body rather than staying in the header -
+       Sheet's title slot holds text only, so a second paragraph cannot leak
+       into the dialog's accessible name. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={100}
+      scrim={45}
+      title="Google Sheets sync"
+      footer={(
+        <Button size="lg" block onClick={handleSync} disabled={syncing || !url.trim()}>
+          {syncing
+            ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Syncing…</>
+            : 'Sync Now'}
+        </Button>
+      )}
+    >
+      <div className="pt-1 flex flex-col gap-4">
+        <p className="text-[12px] text-slate-400 dark:text-slate-500">
+          Paste your Apps Script Web App URL to enable syncing.
+        </p>
+
+        <div>
+          <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 block">
+            Apps Script URL
+          </label>
+          <input
+            type="url"
+            value={url}
+            onChange={e => setUrl(e.target.value)}
+            placeholder="https://script.google.com/macros/s/…/exec"
+            className="w-full h-[48px] rounded-xl px-4 text-[13px]
+              bg-slate-50 dark:bg-white/[0.05]
+              border border-slate-200 dark:border-white/[0.10]
+              text-slate-800 dark:text-white
+              placeholder:text-slate-400 dark:placeholder:text-slate-600
+              focus:outline-none focus:ring-2 focus:ring-primary/40"
+          />
+          <button
+            onClick={handleSave}
+            disabled={saving || !url.trim()}
+            className="mt-2 text-[12px] font-medium text-primary disabled:opacity-40"
+          >
+            {saving ? 'Saving…' : 'Save URL'}
+          </button>
+        </div>
+
+        {fmtLast && (
+          <p className="text-[12px] text-slate-400 dark:text-slate-500">
+            Last synced: {fmtLast}
           </p>
-        </div>
-
-        <div className="px-5 py-5 flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2 block">
-              Apps Script URL
-            </label>
-            <input
-              type="url"
-              value={url}
-              onChange={e => setUrl(e.target.value)}
-              placeholder="https://script.google.com/macros/s/…/exec"
-              className="w-full h-[48px] rounded-xl px-4 text-[13px]
-                bg-slate-50 dark:bg-white/[0.05]
-                border border-slate-200 dark:border-white/[0.10]
-                text-slate-800 dark:text-white
-                placeholder:text-slate-400 dark:placeholder:text-slate-600
-                focus:outline-none focus:ring-2 focus:ring-primary/40"
-            />
-            <button
-              onClick={handleSave}
-              disabled={saving || !url.trim()}
-              className="mt-2 text-[12px] font-medium text-primary disabled:opacity-40"
-            >
-              {saving ? 'Saving…' : 'Save URL'}
-            </button>
-          </div>
-
-          {fmtLast && (
-            <p className="text-[12px] text-slate-400 dark:text-slate-500">
-              Last synced: {fmtLast}
-            </p>
-          )}
-
-          <Button size="lg" block onClick={handleSync} disabled={syncing || !url.trim()}>
-            {syncing
-              ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Syncing…</>
-              : 'Sync Now'}
-          </Button>
-        </div>
+        )}
       </div>
-    </div>
+    </Sheet>
   )
 }
 
 export function ProfileSheet({ open, onClose, displayName: initName, currency: initCurrency }) {
   const { showToast } = useToast()
-  const [closing,  setClosing]  = useState(false)
-  useScrollLock(open)
   const [saving,   setSaving]   = useState(false)
   const [name,     setName]     = useState('')
   const [currency, setCurrency] = useState('PHP')
+
+  /* No `closing` flag and no scroll lock: Sheet owns the overlay, the panel,
+     the grab handle, the scroll lock, Escape, the focus trap and the exit
+     animation. Closing is just onClose now. */
 
   useEffect(() => {
     if (!open) return
@@ -440,18 +439,17 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
     setCurrency(initCurrency || 'PHP')
   }, [open, initName, initCurrency])
 
-  const close = () => {
-    if (saving) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
   async function handleSave() {
     setSaving(true)
     try {
       await db.meta.put({ key: 'displayName', value: name.trim() })
       await db.meta.put({ key: 'currency',    value: currency })
-      close()
+      /* Straight to onClose rather than through the old close(), which
+         opened with `if (saving) return`. That guard only ever passed here
+         because it read the pre-click `saving` out of a stale closure;
+         calling it with the current value would have refused to close the
+         sheet it had just finished saving. */
+      onClose()
     } catch (e) {
       console.error('[ProfileSheet] save failed:', e)
       showToast('Failed to save profile', 'error')
@@ -459,54 +457,50 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
     }
   }
 
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="pt-5 px-5 pb-3 border-b border-slate-50 dark:border-white/[0.04]">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Edit profile</h3>
-            <button onClick={close} disabled={saving} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-              Cancel
-            </button>
-          </div>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={100}
+      scrim={45}
+      title="Edit profile"
+      /* The header's Cancel, in the slot built for it - outside the <h3>, so
+         the word does not become part of the dialog's accessible name. */
+      titleAction={(
+        <button
+          onClick={onClose}
+          disabled={saving}
+          className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60"
+        >
+          Cancel
+        </button>
+      )}
+      /* The other half of the old close()'s `if (saving) return`: a sheet
+         that is writing the profile must not be dismissed by the scrim or by
+         Escape out from under the write. */
+      dismissible={!saving}
+      footer={(
+        <div className="flex gap-3">
+          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+            Cancel
+          </Button>
+          <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
+            {saving ? 'Saving…' : 'Save Profile'}
+          </Button>
         </div>
-
-        <div className="px-5 pt-5 flex flex-col gap-5">
-          <div>
-            <FieldLabel>Display name</FieldLabel>
-            <input
-              value={name}
-              onChange={e => setName(e.target.value)}
-              placeholder="Your name"
-              maxLength={40}
-              className={inputClass()}
-            />
-          </div>
-
-
-          <div className="flex gap-3 pt-1">
-            <Button variant="secondary" className="flex-1" onClick={close} disabled={saving}>
-              Cancel
-            </Button>
-            <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : 'Save Profile'}
-            </Button>
-          </div>
-        </div>
+      )}
+    >
+      <div className="pt-2">
+        <SectionLabel>Display name</SectionLabel>
+        <input
+          value={name}
+          onChange={e => setName(e.target.value)}
+          placeholder="Your name"
+          maxLength={40}
+          className={inputClass()}
+        />
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -521,14 +515,19 @@ export function RestoreBackupSheet({ open, onClose }) {
   const [input,   setInput]   = useState('')
   const [loading, setLoading] = useState(false)
   const fileRef = useRef(null)
-  useScrollLock(open)
+
+  /* No scroll lock and no `closing` flag: Sheet owns the overlay, the panel,
+     the scroll lock, Escape, the focus trap and the exit animation. */
 
   useEffect(() => {
+    if (!open) return
     // Hydrate-on-open. The sheet renders null when closed but stays
     // mounted through its own exit animation, so the parent can neither
     // unmount nor re-key it to reset these fields for the next record.
+    // Resetting on the way IN rather than on the way out also keeps the
+    // panel intact for the 240ms the exit animation runs.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!open) { setStep(1); setInfo(null); setRaw(null); setError(''); setInput(''); setLoading(false) }
+    setStep(1); setInfo(null); setRaw(null); setError(''); setInput(''); setLoading(false)
   }, [open])
 
   function handleFile(e) {
@@ -569,8 +568,6 @@ export function RestoreBackupSheet({ open, onClose }) {
     }
   }
 
-  if (!open) return null
-
   const c = info?.counts ?? {}
   const summary = [
     [c.transactions, 'transactions'], [c.accounts, 'accounts'],
@@ -579,12 +576,47 @@ export function RestoreBackupSheet({ open, onClose }) {
   ].filter(([n]) => n > 0)
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-sm rounded-3xl
-        bg-white dark:bg-[#111820]
-        border border-slate-100 dark:border-white/[0.07]
-        shadow-[0_20px_60px_rgba(0,0,0,0.3)] p-6 space-y-4">
+    /* Was a hand-rolled centred card. It stays centred on desktop - that is
+       what `html.web .sheet-panel` does to every sheet - so the geometry is
+       the primitive's now, and only the z-index and the scrim depth of the
+       old overlay are carried across by hand. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={200}
+      scrim={60}
+      /* It had no grab handle as a centred card, and gains none here. */
+      handle={false}
+      /* The headings stay in the body, centred under the icon, so the dialog
+         is named here rather than through Sheet's title slot. */
+      ariaLabel="Restore backup"
+      footer={step === 1 ? (
+        <div className="flex flex-col gap-2.5">
+          <Button block onClick={() => fileRef.current?.click()}>
+            Choose file
+          </Button>
+          <Button variant="secondary" block onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-2.5">
+          <Button
+            variant="danger"
+            block
+            onClick={handleRestore} disabled={input.trim().toUpperCase() !== 'RESTORE' || loading}
+          >
+            {loading ? 'Restoring…' : 'Replace my data'}
+          </Button>
+          <Button variant="secondary" block onClick={onClose} disabled={loading}>
+            Cancel
+          </Button>
+        </div>
+      )}
+    >
+      {/* pt-6 for the old card's p-6 top edge: with no handle and no title
+          there is nothing above the icon to hold it off the panel edge. */}
+      <div className="pt-6 space-y-4">
 
         <div className="w-14 h-14 rounded-2xl bg-amber-100 dark:bg-amber-500/15
           flex items-center justify-center mx-auto text-amber-600 dark:text-amber-400">
@@ -603,16 +635,12 @@ export function RestoreBackupSheet({ open, onClose }) {
             {error && (
               <p className="text-xs text-red-500 dark:text-red-400 text-center px-2">{error}</p>
             )}
+            {/* The `hidden` ATTRIBUTE as well as the class, because Sheet's
+                Tab trap skips nodes by the attribute: a display:none input
+                left in the ring is focusable to querySelectorAll but not to
+                focus(), and Tab dead-ends on it. */}
             <input ref={fileRef} type="file" accept=".json,application/json"
-              onChange={handleFile} className="hidden" />
-            <div className="flex flex-col gap-2.5">
-              <Button block onClick={() => fileRef.current?.click()}>
-                Choose file
-              </Button>
-              <Button variant="secondary" block onClick={onClose}>
-                Cancel
-              </Button>
-            </div>
+              onChange={handleFile} className="hidden" hidden />
           </>
         )}
 
@@ -643,7 +671,7 @@ export function RestoreBackupSheet({ open, onClose }) {
             </p>
 
             <div>
-              <FieldLabel>Type RESTORE to confirm</FieldLabel>
+              <SectionLabel>Type RESTORE to confirm</SectionLabel>
               <input
                 value={input}
                 onChange={e => setInput(e.target.value)}
@@ -655,23 +683,10 @@ export function RestoreBackupSheet({ open, onClose }) {
                   focus:border-primary dark:focus:border-primary"
               />
             </div>
-
-            <div className="flex flex-col gap-2.5">
-              <Button
-                variant="danger"
-                block
-                onClick={handleRestore} disabled={input.trim().toUpperCase() !== 'RESTORE' || loading}
-              >
-                {loading ? 'Restoring…' : 'Replace my data'}
-              </Button>
-              <Button variant="secondary" block onClick={onClose} disabled={loading}>
-                Cancel
-              </Button>
-            </div>
           </>
         )}
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -684,12 +699,19 @@ export function ResetConfirmModal({ open, onClose }) {
   const [loading, setLoading] = useState(false)
   const { signOut } = useAuth()
 
+  /* No scroll lock and no `closing` flag: Sheet owns the overlay, the panel,
+     the scroll lock, Escape, the focus trap and the exit animation. */
+
   useEffect(() => {
+    if (!open) return
     // Hydrate-on-open. The sheet renders null when closed but stays
     // mounted through its own exit animation, so the parent can neither
     // unmount nor re-key it to reset these fields for the next record.
+    // Resetting on the way IN rather than on the way out also keeps the
+    // panel intact for the 240ms the exit animation runs - a confirmation
+    // that snaps back to step 1 mid-slide reads as a glitch.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!open) { setStep(1); setInput(''); setLoading(false) }
+    setStep(1); setInput(''); setLoading(false)
   }, [open])
 
   async function handleReset() {
@@ -718,16 +740,58 @@ export function ResetConfirmModal({ open, onClose }) {
     }
   }
 
-  if (!open) return null
-
   return (
-    <div className="fixed inset-0 z-[200] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative w-full max-w-sm rounded-3xl
-        bg-white dark:bg-[#111820]
-        border border-slate-100 dark:border-white/[0.07]
-        shadow-[0_20px_60px_rgba(0,0,0,0.3)]
-        p-6 space-y-4">
+    /* Same story as RestoreBackupSheet: a hand-rolled centred card, which is
+       what `html.web .sheet-panel` already makes of every sheet on desktop.
+       Only the z-index and the scrim depth carry across by hand. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={200}
+      scrim={60}
+      /* It had no grab handle as a centred card, and gains none here. */
+      handle={false}
+      /* Both headings live in the body, centred under the icon, so the
+         dialog is named here rather than through Sheet's title slot. */
+      ariaLabel="Reset app"
+      footer={step === 1 ? (
+        <div className="flex gap-3">
+          <Button variant="secondary" size="sm" className="flex-1" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            className="flex-1"
+            onClick={() => setStep(2)}
+          >
+            Continue
+          </Button>
+        </div>
+      ) : (
+        <div className="flex gap-3">
+          <Button
+            variant="secondary"
+            size="sm"
+            className="flex-1"
+            onClick={onClose} disabled={loading}
+          >
+            Cancel
+          </Button>
+          <Button
+            variant="danger"
+            size="sm"
+            className="flex-1"
+            onClick={handleReset} disabled={loading || input !== 'RESET'}
+          >
+            {loading ? 'Resetting…' : 'Reset app'}
+          </Button>
+        </div>
+      )}
+    >
+      {/* pt-6 for the old card's p-6 top edge: with no handle and no title
+          there is nothing above the icon to hold it off the panel edge. */}
+      <div className="pt-6 space-y-4">
 
         {/* Icon */}
         <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-500/15
@@ -736,66 +800,34 @@ export function ResetConfirmModal({ open, onClose }) {
         </div>
 
         {step === 1 && (
-          <>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Reset app?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                This will permanently delete all transactions, accounts, categories, debts, and recurring payments. This cannot be undone.
-              </p>
-            </div>
-            <div className="flex gap-3 pt-1">
-              <Button variant="secondary" size="sm" className="flex-1" onClick={onClose}>
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                className="flex-1"
-                onClick={() => setStep(2)}
-              >
-                Continue
-              </Button>
-            </div>
-          </>
+          <div className="text-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Reset app?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              This will permanently delete all transactions, accounts, categories, debts, and recurring payments. This cannot be undone.
+            </p>
+          </div>
         )}
 
         {step === 2 && (
-          <>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Are you sure?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
-                Type <span className="font-bold text-red-500">RESET</span> to confirm.
-              </p>
-              <input
-                value={input}
-                onChange={e => setInput(e.target.value)}
-                placeholder="RESET"
-                className={inputClass()}
-                autoFocus
-              />
-            </div>
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={onClose} disabled={loading}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                className="flex-1"
-                onClick={handleReset} disabled={loading || input !== 'RESET'}
-              >
-                {loading ? 'Resetting…' : 'Reset app'}
-              </Button>
-            </div>
-          </>
+          <div className="text-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Are you sure?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mb-4">
+              Type <span className="font-bold text-red-500">RESET</span> to confirm.
+            </p>
+            {/* Still autoFocus rather than Sheet's initialFocus: the field
+                only exists once Continue has been pressed, so the keyboard
+                is wanted at that moment and not when the sheet opens. */}
+            <input
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              placeholder="RESET"
+              className={inputClass()}
+              autoFocus
+            />
+          </div>
         )}
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -826,10 +858,12 @@ export function ResetConfirmModal({ open, onClose }) {
 function BudgetManager({ open, onClose, variant = 'sheet' }) {
   const asPage = variant === 'page'
   const { showToast } = useToast()
-  const [closing,      setClosing]      = useState(false)
   const [localBudgets, setLocalBudgets] = useState({})
   const [saving,       setSaving]       = useState(false)
-  useScrollLock(open && !asPage)
+  /* No `closing` flag and no scroll lock any more: the sheet variant is a
+     <Sheet>, and it owns the overlay, the panel, the grab handle, the scroll
+     lock, Escape, the focus trap and the 240ms exit. `open` decides all of
+     it. The page variant never locked scroll in the first place. */
 
   /* No transactions query any more. This screen read EVERY transaction in the
      database to colour a progress bar and print a "spent" figure under each
@@ -852,13 +886,12 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
     [localBudgets, categories],
   )
 
+  /* Dropping the pending edits in the same breath as closing is safe on the
+     sheet too: Sheet holds on to what it was showing for the length of the
+     exit, so the fields do not empty themselves on the way out. */
   const close = () => {
-    // On a page there is no panel to slide away, so skip the exit animation
-    // and let the router transition carry it.
-    if (asPage) { setLocalBudgets({}); onClose(); return }
-    setClosing(true)
     setLocalBudgets({})
-    setTimeout(() => { setClosing(false); onClose() }, 240)
+    onClose()
   }
 
   function handleLocalChange(catId, str) {
@@ -890,7 +923,10 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
   }
 
 
-  if (!open && !closing) return null
+  /* Only the page may bail out on !open. The sheet has to keep rendering
+     while it slides away, and Sheet stops itself once the exit is over -
+     returning null here would unmount it mid-slide. */
+  if (asPage && !open) return null
 
   /* The list and the save button are shared; only the shell around them
      differs. The page lets the document scroll and puts the button after the
@@ -1002,39 +1038,43 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
   }
 
   return (
-    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px] flex flex-col',
-          'bg-slate-50 dark:bg-[#0d1117]',
-          'border-t border-slate-100 dark:border-white/[0.04]',
-        ].join(' ')}
-        style={{ maxHeight: '88vh', paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Monthly budgets</h3>
-            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-              {hasPendingChanges ? 'Discard' : 'Done'}
-            </button>
-          </div>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            Tap a category to set its monthly limit
-          </p>
-        </div>
+    /* The same z and the same 45% scrim the hand-rolled overlay drew, and the
+       recessed slate surface it had: these rows are white cards, and on
+       Sheet's default white panel they would be white on white.
 
-        <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-          {listBody}
-        </div>
+       88vh goes through `maxHeight`, never a style object. An inline height
+       outranks `html.web .sheet-panel`, which is the rule that makes this a
+       centred modal on desktop - setting it by hand pins the desktop dialog
+       to the bottom of the window. Asking for a height also docks the panel,
+       which is what it did before: it was flush with the bottom edge. */
+    <Sheet
+      open={open}
+      onClose={close}
+      z={100}
+      scrim={45}
+      maxHeight="88vh"
+      surface="bg-slate-50 dark:bg-[#0d1117]"
+      title="Monthly budgets"
+      titleAction={(
+        <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+          {hasPendingChanges ? 'Discard' : 'Done'}
+        </button>
+      )}
+      footer={saveButton}
+    >
+      {/* -mx-5 cancels Sheet's gutter, and has to: `listBody` is the page's
+          body as well, and its card carries its own mx-4.
 
-        <div className="shrink-0 px-5 pt-3 pb-1 border-t border-slate-100 dark:border-white/[0.04]">
-          {saveButton}
-        </div>
+          The line under the heading moves into the body rather than staying
+          beside it - Sheet's title slot holds text only, so a second
+          paragraph there would leak into the dialog's accessible name. */}
+      <div className="-mx-5">
+        <p className="px-5 text-xs text-slate-400 dark:text-slate-500">
+          Tap a category to set its monthly limit
+        </p>
+        <div className="pt-4">{listBody}</div>
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -1126,19 +1166,16 @@ function CategoryRow({ cat, onTap, onLongPressDelete }) {
 
 function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) {
   const { showToast } = useToast()
-  const [closing, setClosing] = useState(false)
-  useScrollLock(open)
+  /* No `closing` flag, no scroll lock and no local close(): Sheet owns the
+     overlay, the panel, the grab handle, the scroll lock, Escape, the focus
+     trap and the exit animation, and `open` is the only thing that decides
+     any of it. */
   const [adding,  setAdding]  = useState(null)
 
   const presets      = activeTab === 'expense' ? EXPENSE_PRESETS : INFLOW_PRESETS
   const existingNames = new Set(
     (existingCategories ?? []).filter(c => c.type === activeTab).map(c => c.name)
   )
-
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
 
   async function addPreset(preset) {
     if (existingNames.has(preset.name)) return
@@ -1153,68 +1190,64 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
     }
   }
 
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[120]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[75vh] flex flex-col',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04] shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Add from Presets</h3>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
-                {activeTab === 'expense' ? 'Expense' : 'Inflow'} suggestions — tap to add
-              </p>
-            </div>
-            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-              Done
-            </button>
-          </div>
-        </div>
+    /* z 120, because this opens from the category manager at 100 and has to
+       sit above it, and the same 45% scrim it drew by hand. Sheet's default
+       white / [#111820] panel is exactly the surface it already had, so no
+       `surface` here.
 
-        <div className="overflow-y-auto flex-1 px-5 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-          <div className="flex flex-wrap gap-2">
-            {presets.map(preset => {
-              const exists    = existingNames.has(preset.name)
-              const isAdding  = adding === preset.name
-              return (
-                <button
-                  key={preset.name}
-                  onClick={() => !exists && !isAdding && addPreset(preset)}
-                  disabled={exists || !!adding}
-                  className={[
-                    'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-medium',
-                    'transition-all duration-100',
-                    exists
-                      ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 cursor-default'
-                      : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 active:scale-95',
-                  ].join(' ')}
-                >
-                  <span>{preset.icon}</span>
-                  {preset.name}
-                  {exists && <span className="ml-0.5"><IconTick size={11} /></span>}
-                  {isAdding && (
-                    <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin ml-0.5" />
-                  )}
-                </button>
-              )
-            })}
-          </div>
-          <div className="h-8 shrink-0" />
+       75vh through `maxHeight` rather than a max-h utility or a style
+       object: that prop is what sets --sheet-max, and it docks the panel the
+       way this one was docked. The subtitle moves into the body, since
+       Sheet's title slot holds text only. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={120}
+      scrim={45}
+      maxHeight="75vh"
+      title="Add from Presets"
+      titleAction={(
+        <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+          Done
+        </button>
+      )}
+    >
+      <div className="pt-0.5">
+        <p className="text-xs text-slate-400 dark:text-slate-500">
+          {activeTab === 'expense' ? 'Expense' : 'Inflow'} suggestions — tap to add
+        </p>
+
+        <div className="flex flex-wrap gap-2 pt-4">
+          {presets.map(preset => {
+            const exists    = existingNames.has(preset.name)
+            const isAdding  = adding === preset.name
+            return (
+              <button
+                key={preset.name}
+                onClick={() => !exists && !isAdding && addPreset(preset)}
+                disabled={exists || !!adding}
+                className={[
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-xl border text-sm font-medium',
+                  'transition-all duration-100',
+                  exists
+                    ? 'bg-emerald-50 dark:bg-emerald-500/10 border-emerald-200 dark:border-emerald-500/30 text-emerald-600 dark:text-emerald-400 cursor-default'
+                    : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 active:scale-95',
+                ].join(' ')}
+              >
+                <span>{preset.icon}</span>
+                {preset.name}
+                {exists && <span className="ml-0.5"><IconTick size={11} /></span>}
+                {isAdding && (
+                  <span className="w-3 h-3 border border-current border-t-transparent rounded-full animate-spin ml-0.5" />
+                )}
+              </button>
+            )
+          })}
         </div>
+        <div className="h-8" />
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -1276,8 +1309,10 @@ function SortableCategoryRow({ cat, onTap, onLongPressDelete }) {
  */
 function CategoryManager({ open, onClose, variant = 'sheet' }) {
   const asPage = variant === 'page'
-  const [closing,        setClosing]        = useState(false)
-  useScrollLock(open && !asPage)
+  /* No `closing` flag and no scroll lock: the sheet variant is a <Sheet>,
+     which owns the overlay, the panel, the grab handle, the scroll lock,
+     Escape, the focus trap and the 240ms exit. The page never locked scroll
+     anyway. */
   const [activeTab,      setActiveTab]      = useState('expense')
   const [formOpen,       setFormOpen]       = useState(false)
   const [editingCat,     setEditingCat]     = useState(null)
@@ -1336,20 +1371,19 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
     isDraggingRef.current = false
   }
 
-  const close = () => {
-    // On a page there is no panel to slide away, so skip the exit animation
-    // and let the router transition carry it.
-    if (asPage) { onClose(); return }
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
+  /* No local close() any more. It existed to run the exit animation before
+     telling the parent; the Done button and the scrim both call `onClose`
+     directly now, and Sheet plays the exit off `open`. */
 
   function openAdd() { setEditingCat(null); setFormStartDelete(false); setTimeout(() => setFormOpen(true), 0) }
   function openEdit(cat) { setEditingCat(cat); setFormStartDelete(false); setTimeout(() => setFormOpen(true), 0) }
   function openDelete(cat) { setEditingCat(cat); setFormStartDelete(true); setTimeout(() => setFormOpen(true), 0) }
 
 
-  if (!open && !closing) return null
+  /* Only the page may bail out on !open. The sheet has to keep rendering
+     while it slides away, and Sheet stops itself once the exit is over -
+     returning null here would unmount it mid-slide. */
+  if (asPage && !open) return null
 
   /* The tab switcher and the list are shared; only the shell differs. The
      page lets the document scroll, the sheet scrolls inside its panel. */
@@ -1489,33 +1523,43 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-        <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-        <div
-          className={[
-            closing ? 'sheet-panel-exit' : 'sheet-panel',
-            'absolute bottom-0 inset-x-0 rounded-t-[28px] overflow-hidden',
-            'bg-slate-50 dark:bg-[#0d1117]',
-            'border-t border-slate-100 dark:border-white/[0.07]',
-            'max-h-[92vh] flex flex-col',
-          ].join(' ')}
-        >
-          <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
-            <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Manage categories</h3>
-              <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-                Done
-              </button>
-            </div>
-            {tabBar}
-          </div>
+      {/* The same z and the same 45% scrim the hand-rolled overlay drew, and
+          the recessed slate surface it had: the list is a white card, and on
+          Sheet's default white panel it would be white on white.
 
-          <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-            {listBody}
-          </div>
+          92vh through `maxHeight` rather than the old max-h utility - that
+          prop is what sets --sheet-max, and an inline height would outrank
+          `html.web .sheet-panel` and strand the desktop modal at the bottom
+          of the window. It also docks the panel, which is where this one
+          already sat. */}
+      <Sheet
+        open={open}
+        onClose={onClose}
+        z={100}
+        scrim={45}
+        maxHeight="92vh"
+        surface="bg-slate-50 dark:bg-[#0d1117]"
+        title="Manage categories"
+        titleAction={(
+          <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+            Done
+          </button>
+        )}
+      >
+        {/* -mx-5 cancels Sheet's gutter, and has to: `listBody` is the page's
+            body as well, SubPage draws no gutter of its own, and every block
+            inside carries its own mx-5 or px-5. The tabs come with it and
+            get the gutter back, since they sat at the panel's edges too.
+
+            They scroll with the list now rather than sitting in a sticky
+            header: the header belongs to Sheet, and the body is a
+            FadeScroller whose mask would fade a sticky child as you scrolled
+            past it. */}
+        <div className="-mx-5">
+          <div className="px-5 pb-7">{tabBar}</div>
+          {listBody}
         </div>
-      </div>
+      </Sheet>
       {nestedSheets}
     </>
   )
@@ -1732,7 +1776,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             />
 
             <div>
-              <FieldLabel>Type</FieldLabel>
+              <SectionLabel>Type</SectionLabel>
               {isEdit ? (
                 <p className="h-[48px] flex items-center px-4 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-300
                   bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.09]">
@@ -1757,7 +1801,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             </div>
 
             <div>
-              <FieldLabel>Icon</FieldLabel>
+              <SectionLabel>Icon</SectionLabel>
               {/* Worth saying out loud, because the preview below now shows
                   the real thing and the two will disagree: a preset name has
                   a drawn icon, and the emoji is what a custom name gets. */}
@@ -1790,7 +1834,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
                   rectangles stretched to fill the row and ticked with a white
                   check - the same job as the card's colour row, drawn as a
                   different object two screens away. */}
-              <FieldLabel>Color</FieldLabel>
+              <SectionLabel>Color</SectionLabel>
               <SwatchRail
                 colors={CAT_COLORS}
                 value={color}
@@ -1900,7 +1944,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               </div>
             </div>
 
-            <FieldLabel>Reassign to</FieldLabel>
+            <SectionLabel>Reassign to</SectionLabel>
             {reassignOptions.length === 0 ? (
               <div className="py-6 text-center rounded-2xl bg-slate-50 dark:bg-white/[0.04] mb-5">
                 <p className="text-sm text-slate-400 dark:text-slate-500">No other categories available</p>
@@ -1995,8 +2039,10 @@ function TemplateRow({ tpl, cat, onTap, onLongPressDelete }) {
 
 function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories }) {
   const { showToast } = useToast()
-  const [closing,   setClosing]   = useState(false)
-  useScrollLock(open)
+  /* No `closing` flag and no scroll lock: this is a <Sheet>, which owns the
+     overlay, the panel, the grab handle, the scroll lock, Escape, the focus
+     trap and the 240ms exit, and `open` is the only thing that decides any
+     of it. */
   const [saving,    setSaving]    = useState(false)
   const [name,      setName]      = useState('')
   const [type,      setType]      = useState('expense')
@@ -2044,12 +2090,6 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, template?.id])
 
-  const close = () => {
-    if (saving) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
   async function handleSave() {
     if (!name.trim()) { setNameError(true); return }
     setSaving(true)
@@ -2068,7 +2108,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
       } else {
         await db.templates.add({ ...data, createdAt: new Date().toISOString() })
       }
-      close()
+      onClose()
     } catch (e) {
       console.error('[TemplateForm] save failed:', e)
       showToast('Failed to save template', 'error')
@@ -2082,7 +2122,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
     try {
       await db.templates.delete(template.id)
       await deleteTemplateRemote(template.id, template.name)
-      close()
+      onClose()
     }
     catch (e) {
       console.error('[TemplateForm] delete failed:', e)
@@ -2091,45 +2131,67 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
     }
   }
 
-  if (!open && !closing) return null
-
   return (
     <>
-      <div className="fixed inset-0 z-[120]" style={{ touchAction: 'none' }}>
-        <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-        <div
-          className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px]
-            bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]
-            max-h-[92vh] overflow-y-auto`}
-          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-        >
-          {/* Header */}
-          <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10 border-b border-slate-50 dark:border-white/[0.04]">
-            <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">
-                {isEdit ? 'Edit Template' : 'New Template'}
-              </h3>
-              <div className="flex items-center gap-3">
-                {isEdit && (
-                  <button onClick={handleDelete} disabled={saving}
-                    className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
-                      bg-red-50 dark:bg-red-500/10 active:bg-red-100 transition-colors">
-                    Delete
-                  </button>
-                )}
-                <button onClick={close} disabled={saving}
-                  className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-                  Cancel
-                </button>
-              </div>
-            </div>
-          </div>
+      {/* The same z 120 it drew by hand - it opens from the template manager
+          at 110 and has to sit above it - and the same 45% scrim. Sheet's
+          default white / [#111820] panel is exactly the surface this had, so
+          no `surface` here.
 
-          <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
+          92vh goes through `maxHeight` rather than the old max-h utility:
+          that prop is what sets --sheet-max, and an inline height would
+          outrank `html.web .sheet-panel`, which is the rule that makes this a
+          centred modal on desktop. Asking for a height also docks the panel,
+          which is where this one already sat.
+
+          The action row moves out of the scrolling body into Sheet's pinned
+          footer, so a form long enough to scroll cannot push Save out of
+          reach. */}
+      <Sheet
+        open={open}
+        onClose={onClose}
+        z={120}
+        scrim={45}
+        maxHeight="92vh"
+        /* The `if (saving) return` the old local close() opened with: a sheet
+           that is writing a template must not be dismissed out from under the
+           write. */
+        dismissible={!saving}
+        title={isEdit ? 'Edit Template' : 'New Template'}
+        titleAction={(
+          <div className="flex items-center gap-3">
+            {isEdit && (
+              <button onClick={handleDelete} disabled={saving}
+                className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
+                  bg-red-50 dark:bg-red-500/10 active:bg-red-100 transition-colors">
+                Delete
+              </button>
+            )}
+            <button onClick={onClose} disabled={saving}
+              className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+              Cancel
+            </button>
+          </div>
+        )}
+        footer={(
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={onClose} disabled={saving}
+            >
+              Cancel
+            </Button>
+            <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
+              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add Template'}
+            </Button>
+          </div>
+        )}
+      >
+          <div className="pt-5 pb-2 flex flex-col gap-4">
             {/* Name */}
             <div>
-              <FieldLabel>Template name</FieldLabel>
+              <SectionLabel>Template name</SectionLabel>
               <input value={name} onChange={e => { setName(e.target.value); setNameError(false) }}
                 placeholder="e.g. Jeep fare" maxLength={40}
                 className={inputClass(nameError)} />
@@ -2138,7 +2200,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
             {/* Type */}
             <div>
-              <FieldLabel>Type</FieldLabel>
+              <SectionLabel>Type</SectionLabel>
               {isEdit ? (
                 <p className="h-[48px] flex items-center px-4 rounded-2xl text-sm font-medium
                   text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-white/[0.04]
@@ -2162,7 +2224,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
             {/* Amount */}
             <div>
-              <FieldLabel>Default amount</FieldLabel>
+              <SectionLabel>Default amount</SectionLabel>
               <div className="flex items-center gap-2 px-4 h-[48px] rounded-2xl
                 bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]">
                 <span className="text-slate-400 dark:text-slate-500 text-sm">₱</span>
@@ -2175,7 +2237,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
             {/* Description */}
             <div>
-              <FieldLabel>Default note <span className="font-normal text-slate-400 normal-case">(optional)</span></FieldLabel>
+              <SectionLabel>Default note <span className="font-normal text-slate-400 normal-case">(optional)</span></SectionLabel>
               <input value={desc} onChange={e => setDesc(e.target.value)}
                 placeholder="e.g. Morning commute" maxLength={100}
                 className={inputClass()} />
@@ -2184,7 +2246,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
             {/* Category (expense/inflow only) */}
             {type !== 'transfer' && (
               <div>
-                <FieldLabel>Category</FieldLabel>
+                <SectionLabel>Category</SectionLabel>
                 <button onClick={() => setShowCat(true)}
                   className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
                     bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
@@ -2201,7 +2263,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
             {/* Account (expense/inflow) or From/To (transfer) */}
             {type !== 'transfer' ? (
               <div>
-                <FieldLabel>Account</FieldLabel>
+                <SectionLabel>Account</SectionLabel>
                 <button onClick={() => setShowAcct(true)}
                   className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
                     bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
@@ -2218,7 +2280,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
             ) : (
               <>
                 <div>
-                  <FieldLabel>From account</FieldLabel>
+                  <SectionLabel>From account</SectionLabel>
                   <button onClick={() => setShowFrom(true)}
                     className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
                       bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
@@ -2233,7 +2295,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                   </button>
                 </div>
                 <div>
-                  <FieldLabel>To account</FieldLabel>
+                  <SectionLabel>To account</SectionLabel>
                   <button onClick={() => setShowTo(true)}
                     className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
                       bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
@@ -2250,23 +2312,8 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
               </>
             )}
 
-            {/* Actions */}
-            <div className="flex gap-3 pt-1">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={close} disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add Template'}
-              </Button>
-            </div>
-            <div className="h-8 shrink-0" />
           </div>
-        </div>
-      </div>
+      </Sheet>
 
       {/* Nested pickers */}
       <CategoryPickerSheet open={showCat} onClose={() => setShowCat(false)}
@@ -2298,8 +2345,10 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 function TemplateManager({ open, onClose, variant = 'sheet' }) {
   const asPage = variant === 'page'
   const { showToast } = useToast()
-  const [closing,    setClosing]    = useState(false)
-  useScrollLock(open && !asPage)
+  /* No `closing` flag and no scroll lock: the sheet variant is a <Sheet>,
+     which owns the overlay, the panel, the grab handle, the scroll lock,
+     Escape, the focus trap and the 240ms exit. The page never locked scroll
+     anyway. */
   const [formOpen,   setFormOpen]   = useState(false)
   const [editingTpl, setEditingTpl] = useState(null)
 
@@ -2309,14 +2358,6 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
 
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
-
-  const close = () => {
-    // On a page there is no panel to slide away, so skip the exit animation
-    // and let the router transition carry it.
-    if (asPage) { onClose(); return }
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
 
   function openAdd()       { setEditingTpl(null); setTimeout(() => setFormOpen(true), 0) }
   function openEdit(tpl)   { setEditingTpl(tpl);  setTimeout(() => setFormOpen(true), 0) }
@@ -2329,8 +2370,6 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
       showToast('Failed to delete template', 'error')
     }
   }
-
-  if (!open && !closing) return null
 
   /* The list and the add button are shared; only the shell differs. The page
      lets the document scroll, the sheet scrolls inside its panel. */
@@ -2406,30 +2445,35 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
 
   return (
     <>
-      <div className="fixed inset-0 z-[110]" style={{ touchAction: 'none' }}>
-        <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-        <div
-          className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px] overflow-hidden
-            bg-slate-50 dark:bg-[#0d1117] border-t border-slate-100 dark:border-white/[0.07]
-            max-h-[92vh] flex flex-col`}
-          style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-        >
-          <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10
-            border-b border-slate-100 dark:border-white/[0.04] shrink-0">
-            <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Quick templates</h3>
-              <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-                Done
-              </button>
-            </div>
-          </div>
+      {/* The same z 110 and the same 45% scrim the hand-rolled overlay drew,
+          and the recessed slate surface it had: the list is a white card, and
+          on Sheet's default white panel it would be white on white.
 
-          <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-            {listBody}
-          </div>
-        </div>
-      </div>
+          92vh through `maxHeight` rather than the old max-h utility - that
+          prop is what sets --sheet-max, and an inline height would outrank
+          `html.web .sheet-panel` and strand the desktop modal at the bottom
+          of the window. It also docks the panel, which is where this one
+          already sat, and the docked bottom pad is Sheet's now rather than
+          the max(24px, safe-area) this set by hand. */}
+      <Sheet
+        open={open}
+        onClose={onClose}
+        z={110}
+        scrim={45}
+        maxHeight="92vh"
+        surface="bg-slate-50 dark:bg-[#0d1117]"
+        title="Quick templates"
+        titleAction={(
+          <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+            Done
+          </button>
+        )}
+      >
+        {/* -mx-5 cancels Sheet's gutter, and has to: `listBody` is the page's
+            body as well, SubPage draws no gutter of its own, and every block
+            inside carries its own mx-5 or px-5. */}
+        <div className="-mx-5 pt-4">{listBody}</div>
+      </Sheet>
       {formSheet}
     </>
   )
@@ -2450,39 +2494,30 @@ export function TemplatesPage() {
 // ── Accent color sheet ────────────────────────────────────────────────────────
 
 export function AccentColorSheet({ open, onClose, accentColor, setAccentColor }) {
-  const [closing, setClosing] = useState(false)
-  useScrollLock(open)
-
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  if (!open && !closing) return null
-
+  /* No `closing` flag and no scroll lock: Sheet owns the overlay, the panel,
+     the grab handle, the scroll lock, Escape, the focus trap and the 240ms
+     exit. */
   return (
-    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04]">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Accent colour</h3>
-            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-              Done
-            </button>
-          </div>
-        </div>
+    /* The same z 100 and the same 45% scrim it drew by hand, and Sheet's
+       default white / [#111820] panel is exactly the surface it already had.
 
-        <div className="px-5 pt-5 pb-3">
+       No maxHeight: this panel never asked for a height, so it keeps floating
+       while the eight swatches fit and lets Sheet dock it when they do not.
+       Its hand-set max(32px, safe-area) bottom pad goes with the docking
+       decision - that padding is Sheet's now. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={100}
+      scrim={45}
+      title="Accent colour"
+      titleAction={(
+        <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+          Done
+        </button>
+      )}
+    >
+        <div className="pt-1">
           <div className="grid grid-cols-2 gap-2.5">
             {ACCENT_COLORS.map(({ hex, name }) => {
               const active = accentColor === hex
@@ -2522,8 +2557,7 @@ export function AccentColorSheet({ open, onClose, accentColor, setAccentColor })
             })}
           </div>
         </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -2555,69 +2589,63 @@ const TERMS_SECTIONS = [
 ]
 
 export function PolicySheet({ open, type, onClose }) {
-  const [closing, setClosing] = useState(false)
-  useScrollLock(open)
+  /* No `closing` flag and no scroll lock: Sheet owns the overlay, the panel,
+     the grab handle, the scroll lock, Escape, the focus trap and the 240ms
+     exit.
 
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
+     Nothing here guards on `type` either, even though the caller nulls it in
+     the same breath as `open` - Sheet freezes the title and the body it was
+     showing for the length of the exit, so the sheet slides away still
+     reading "Privacy policy" rather than flipping to the terms on the way
+     out. */
   const title    = type === 'privacy' ? 'Privacy policy' : 'Terms of use'
   const badge    = type === 'privacy' ? 'Privacy' : 'Legal'
   const sections = type === 'privacy' ? PRIVACY_SECTIONS : TERMS_SECTIONS
   const intro    = sections.find(s => s.h === null)
   const body     = sections.filter(s => s.h !== null)
 
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px] overflow-hidden',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[88vh] flex flex-col',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
-      >
-        {/* ── Header ── */}
-        <div className="pt-5 px-5 pb-4 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
-          <div className="flex items-start justify-between gap-3">
-            <div>
-              <span className="inline-block text-xs font-bold
-                px-2 py-0.5 rounded-full mb-1.5
-                bg-primary/10 dark:bg-primary/20 text-primary">
-                {badge}
-              </span>
-              <h3 className="text-[22px] font-bold tracking-tight text-slate-900 dark:text-white leading-tight">
-                {title}
-              </h3>
-            </div>
-            <button
-              onClick={close}
-              className="shrink-0 mt-1 text-xs font-semibold
-                text-slate-600 dark:text-slate-300
-                px-3 py-1.5 rounded-xl
-                bg-slate-100 dark:bg-white/[0.08]
-                active:bg-slate-200 dark:active:bg-white/[0.14] transition-colors"
-            >
-              Done
-            </button>
-          </div>
-        </div>
+    /* The same z 100 and the same 45% scrim the hand-rolled overlay drew, and
+       Sheet's default white / [#111820] panel is the surface it already had.
 
-        <div className="h-px bg-slate-100 dark:bg-white/[0.05] shrink-0 mx-5" />
+       88vh through `maxHeight` rather than the old max-h utility: that prop is
+       what sets --sheet-max, and an inline height would outrank
+       `html.web .sheet-panel`, the rule that makes this a centred modal on
+       desktop. It docks the panel too, which is where this one already sat,
+       and the docked bottom pad replaces the max(32px, safe-area) it set by
+       hand.
 
-        {/* ── Scrollable body ── */}
-        <div
-          className="overflow-y-auto flex-1 px-5 pt-5"
-          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+       The heading drops from 22px bold to Sheet's title, which is what makes
+       it the dialog's accessible name via aria-labelledby - and the Privacy /
+       Legal pill moves down into the body with it, because Sheet's title slot
+       holds text only: a pill inside the h3 becomes part of that name. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={100}
+      scrim={45}
+      maxHeight="88vh"
+      title={title}
+      titleAction={(
+        <button
+          onClick={onClose}
+          className="shrink-0 text-xs font-semibold
+            text-slate-600 dark:text-slate-300
+            px-3 py-1.5 rounded-xl
+            bg-slate-100 dark:bg-white/[0.08]
+            active:bg-slate-200 dark:active:bg-white/[0.14] transition-colors"
         >
+          Done
+        </button>
+      )}
+    >
+        <div className="pt-2">
+          <span className="inline-block text-xs font-bold
+            px-2 py-0.5 rounded-full mb-4
+            bg-primary/10 dark:bg-primary/20 text-primary">
+            {badge}
+          </span>
+
           {/* Intro callout */}
           {intro && (
             <div className="mb-6 px-4 py-3.5 rounded-2xl
@@ -2678,8 +2706,7 @@ export function PolicySheet({ open, type, onClose }) {
           </div>
           <div className="h-8 shrink-0" />
         </div>
-      </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -2888,7 +2915,7 @@ export default function Settings() {
         <SectionCard>
           <SettingsRow
             iconEl={<RowIcon color="slate">{theme === 'dark' ? <IconSun /> : <IconMoon />}</RowIcon>}
-            label={theme === 'dark' ? 'Light Mode' : 'Dark Mode'}
+            label={theme === 'dark' ? 'Light mode' : 'Dark mode'}
             sublabel={`Currently ${theme}`}
             right={<ToggleSwitch on={theme === 'dark'} />}
             onTap={toggleTheme}
@@ -3172,131 +3199,170 @@ export default function Settings() {
       )}
 
       {/* Sign-out confirmation dialog */}
-      {showSignOutConfirm && (
-        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            onClick={() => !loggingOut && setShowSignOutConfirm(false)} />
-          <div className="relative w-full max-w-sm rounded-3xl
-            bg-white dark:bg-[#111820]
-            border border-slate-100 dark:border-white/[0.07]
-            shadow-[0_20px_60px_rgba(0,0,0,0.3)]
-            p-6 space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-500/15
-              flex items-center justify-center mx-auto text-red-500 dark:text-red-400">
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
-                <polyline points="16 17 21 12 16 7"/>
-                <line x1="21" y1="12" x2="9" y2="12"/>
-              </svg>
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Sign out?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Your data stays on this device. You can sign back in anytime to sync again.
-              </p>
-            </div>
-            <div className="flex gap-3 pt-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={() => setShowSignOutConfirm(false)} disabled={loggingOut}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                className="flex-1"
-                onClick={async () => { await handleLogout(); setShowSignOutConfirm(false) }} disabled={loggingOut}
-              >
-                {loggingOut ? 'Signing out…' : 'Continue'}
-              </Button>
-            </div>
-          </div>
-        </div>
-      )}
+      {/* Was a hand-rolled centred card. It stays centred on desktop - that is
+          what `html.web .sheet-panel` does to every sheet - so the geometry is
+          the primitive's now, and only the z-index, the scrim depth and the
+          not-while-signing-out guard carry across by hand.
 
-      {/* Export CSV confirm */}
-      {showExportConfirm && (
-        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowExportConfirm(false)} />
-          <div className="relative w-full max-w-sm rounded-3xl
-            bg-white dark:bg-[#111820]
-            border border-slate-100 dark:border-white/[0.07]
-            shadow-[0_20px_60px_rgba(0,0,0,0.3)]
-            p-6 space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-500/15
-              flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
-              <IconDownload />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Export transactions?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                This will download all {txCount ?? 0} transactions as a CSV file.
-              </p>
-            </div>
-            <div className="flex gap-3 pt-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={() => setShowExportConfirm(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => { setShowExportConfirm(false); handleExport() }}
-              >
-                Download
-              </Button>
-            </div>
+          Rendered unconditionally rather than behind `showSignOutConfirm &&`:
+          the flag going false is what starts the exit, and a parent that
+          unmounts on that same render never lets the animation play. */}
+      <Sheet
+        open={showSignOutConfirm}
+        onClose={() => setShowSignOutConfirm(false)}
+        z={300}
+        scrim={60}
+        /* It had no grab handle as a centred card, and gains none here. */
+        handle={false}
+        /* The scrim already refused taps while the sign-out was in flight, the
+           same way both buttons are disabled; Escape now refuses too. */
+        dismissible={!loggingOut}
+        /* The heading stays in the body, centred under the icon, so the dialog
+           is named here rather than through Sheet's title slot. */
+        ariaLabel="Sign out"
+        footer={(
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowSignOutConfirm(false)} disabled={loggingOut}
+            >
+              Cancel
+            </Button>
+            <Button
+              variant="danger"
+              size="sm"
+              className="flex-1"
+              onClick={async () => { await handleLogout(); setShowSignOutConfirm(false) }} disabled={loggingOut}
+            >
+              {loggingOut ? 'Signing out…' : 'Continue'}
+            </Button>
+          </div>
+        )}
+      >
+        {/* pt-6 for the old card's p-6 top edge: with no handle and no title
+            there is nothing above the icon to hold it off the panel edge. */}
+        <div className="pt-6 space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-red-100 dark:bg-red-500/15
+            flex items-center justify-center mx-auto text-red-500 dark:text-red-400">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+              <polyline points="16 17 21 12 16 7"/>
+              <line x1="21" y1="12" x2="9" y2="12"/>
+            </svg>
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Sign out?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Your data stays on this device. You can sign back in anytime to sync again.
+            </p>
           </div>
         </div>
-      )}
+      </Sheet>
 
-      {/* Full Backup confirm */}
-      {showBackupConfirm && (
-        <div className="fixed inset-0 z-[300] flex items-end sm:items-center justify-center p-4" style={{ touchAction: 'none' }}>
-          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowBackupConfirm(false)} />
-          <div className="relative w-full max-w-sm rounded-3xl
-            bg-white dark:bg-[#111820]
-            border border-slate-100 dark:border-white/[0.07]
-            shadow-[0_20px_60px_rgba(0,0,0,0.3)]
-            p-6 space-y-4">
-            <div className="w-14 h-14 rounded-2xl bg-teal-100 dark:bg-teal-500/15
-              flex items-center justify-center mx-auto text-teal-600 dark:text-teal-400">
-              <IconDownload />
-            </div>
-            <div className="text-center">
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Download full backup?</h3>
-              <p className="text-sm text-slate-500 dark:text-slate-400">
-                Exports all accounts, categories, transactions, templates, recurring, and debts as a JSON file.
-              </p>
-            </div>
-            <div className="flex gap-3 pt-1">
-              <Button
-                variant="secondary"
-                size="sm"
-                className="flex-1"
-                onClick={() => setShowBackupConfirm(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                size="sm"
-                className="flex-1"
-                onClick={() => { setShowBackupConfirm(false); handleFullBackup() }}
-              >
-                Download
-              </Button>
-            </div>
+      {/* Export CSV confirm
+
+          Rendered unconditionally, like the sign-out confirm above: the flag
+          going false is what starts the exit, and a parent that unmounts on
+          that same render never lets the animation play. */}
+      <Sheet
+        open={showExportConfirm}
+        onClose={() => setShowExportConfirm(false)}
+        z={300}
+        scrim={60}
+        /* It had no grab handle as a centred card, and gains none here. */
+        handle={false}
+        /* The heading stays in the body, centred under the icon, so the
+           dialog is named here rather than through Sheet's title slot. */
+        ariaLabel="Export transactions"
+        footer={(
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowExportConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => { setShowExportConfirm(false); handleExport() }}
+            >
+              Download
+            </Button>
+          </div>
+        )}
+      >
+        {/* pt-6 for the old card's p-6 top edge: with no handle and no title
+            there is nothing above the icon to hold it off the panel edge. */}
+        <div className="pt-6 space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-emerald-100 dark:bg-emerald-500/15
+            flex items-center justify-center mx-auto text-emerald-600 dark:text-emerald-400">
+            <IconDownload />
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Export transactions?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              This will download all {txCount ?? 0} transactions as a CSV file.
+            </p>
           </div>
         </div>
-      )}
+      </Sheet>
+
+      {/* Full Backup confirm
+
+          Rendered unconditionally, like the sign-out confirm above: the flag
+          going false is what starts the exit, and a parent that unmounts on
+          that same render never lets the animation play. */}
+      <Sheet
+        open={showBackupConfirm}
+        onClose={() => setShowBackupConfirm(false)}
+        z={300}
+        scrim={60}
+        /* It had no grab handle as a centred card, and gains none here. */
+        handle={false}
+        /* The heading stays in the body, centred under the icon, so the
+           dialog is named here rather than through Sheet's title slot. */
+        ariaLabel="Download full backup"
+        footer={(
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              size="sm"
+              className="flex-1"
+              onClick={() => setShowBackupConfirm(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              className="flex-1"
+              onClick={() => { setShowBackupConfirm(false); handleFullBackup() }}
+            >
+              Download
+            </Button>
+          </div>
+        )}
+      >
+        {/* pt-6 for the old card's p-6 top edge: with no handle and no title
+            there is nothing above the icon to hold it off the panel edge. */}
+        <div className="pt-6 space-y-4">
+          <div className="w-14 h-14 rounded-2xl bg-teal-100 dark:bg-teal-500/15
+            flex items-center justify-center mx-auto text-teal-600 dark:text-teal-400">
+            <IconDownload />
+          </div>
+          <div className="text-center">
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Download full backup?</h3>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Exports all accounts, categories, transactions, templates, recurring, and debts as a JSON file.
+            </p>
+          </div>
+        </div>
+      </Sheet>
 
       {/* ══ 8. DANGER ZONE ══ */}
       <div className="mb-8">
@@ -3326,20 +3392,21 @@ export default function Settings() {
         </SectionCard>
       </div>
 
-      {/* Legal picker sheet */}
-      {legalOpen && (
-        <div className="fixed inset-0 z-[100]" style={{ touchAction: 'none' }}>
-          <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm"
-            onClick={() => setLegalOpen(false)} />
-          <div className="sheet-panel absolute bottom-0 inset-x-0 rounded-t-[28px]
-            bg-white dark:bg-[#111820]
-            border-t border-slate-100 dark:border-white/[0.07]"
-            style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-          >
-            <div className="pt-5 px-5 pb-4">
-              <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-4">Legal</p>
-              <div className="flex flex-col gap-2">
+      {/* Legal picker sheet.
+
+          ariaLabel rather than title: this panel's heading is a small caption,
+          not Sheet's 17px title, and promoting it would make the quietest
+          sheet in the app shout. */}
+      <Sheet
+        open={legalOpen}
+        onClose={() => setLegalOpen(false)}
+        z={100}
+        scrim={45}
+        ariaLabel="Legal"
+      >
+        <div className="pb-1">
+          <SectionLabel inset="none" gap="loose">Legal</SectionLabel>
+          <div className="flex flex-col gap-2">
                 <button
                   onClick={() => { setLegalOpen(false); setTimeout(() => setPolicyOpen('privacy'), 60) }}
                   className="flex items-center gap-4 px-4 py-3.5 rounded-2xl text-left
@@ -3357,14 +3424,12 @@ export default function Settings() {
                     active:bg-slate-100 dark:active:bg-white/[0.08] transition-colors"
                 >
                   <RowIcon color="slate"><IconInfo /></RowIcon>
-                  <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Terms of use</span>
-                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
-                </button>
-              </div>
-            </div>
+            <span className="flex-1 text-sm font-semibold text-slate-800 dark:text-white">Terms of use</span>
+            <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
+          </button>
           </div>
         </div>
-      )}
+      </Sheet>
 
       {/* ══ Spendr footer (no card) ══ */}
       <div className="px-5 pb-8 flex flex-col items-center gap-3 text-center">

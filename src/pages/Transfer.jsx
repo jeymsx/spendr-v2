@@ -17,6 +17,8 @@ import { IconCalendar, IconChevronLeft, IconTemplate, IconWarning} from '../comp
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
+import SectionLabel from '../components/ui/SectionLabel'
+import Divider from '../components/ui/Divider'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -293,11 +295,11 @@ export default function Transfer({ onCancel, onSaved } = {}) {
         {/* Arrow connector. No negative margin now - the parent's gap-4 is
             the same above and below, which is the whole point. */}
         <div className="flex items-center gap-3 px-1">
-          <div className="flex-1 h-px bg-slate-200 dark:bg-white/[0.08]" />
+          <Divider className="flex-1" />
           <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.07] flex items-center justify-center text-slate-400 dark:text-slate-500">
             <IconArrowDown />
           </div>
-          <div className="flex-1 h-px bg-slate-200 dark:bg-white/[0.08]" />
+          <Divider className="flex-1" />
         </div>
 
         <AccountSelectRow
@@ -330,9 +332,9 @@ export default function Transfer({ onCancel, onSaved } = {}) {
 
         {/* Transfer Fee */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">
-            Transfer Fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
-          </p>
+          <SectionLabel>
+            Transfer fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
+          </SectionLabel>
           <div className={fieldFrame()}>
             <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">₱</span>
             <input
@@ -354,7 +356,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
 
         {/* Date — last */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Date</p>
+          <SectionLabel>Date</SectionLabel>
           <div className={fieldFrame()}>
             <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
             <input

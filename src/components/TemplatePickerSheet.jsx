@@ -4,6 +4,9 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { deleteTemplateRemote } from '../lib/sync'
 import { IconTemplate, IconTransferUI } from './icons'
 import CategoryGlyph from './CategoryGlyph'
+import Card from './ui/Card'
+import Divider from './ui/Divider'
+import EmptyState from './ui/EmptyState'
 import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -115,17 +118,13 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
     >
       <div className="-mx-5">
           {templates.length === 0 ? (
-            <div className="py-14 text-center px-8">
-              <p className="mb-3 flex justify-center text-slate-400 dark:text-slate-500"><IconTemplate size={30} /></p>
-              <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No templates yet</p>
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                Save a transaction as a template to use it here
-              </p>
-            </div>
+            <EmptyState
+              icon={<IconTemplate size={26} />}
+              title="No templates yet"
+              body="Save a transaction as a template to use it here."
+            />
           ) : (
-            <div className="mx-5 mt-4 rounded-2xl overflow-hidden
-              bg-white border border-slate-100
-              dark:bg-white/[0.04] dark:border-white/[0.07]">
+            <Card surface="recessed" clip className="mx-5 mt-4">
               {templates.map((tpl, i) => (
                 <div key={tpl.id}>
                   {deleting === tpl.id ? (
@@ -142,12 +141,10 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
                       onLongPressDelete={confirmDelete}
                     />
                   )}
-                  {i < templates.length - 1 && (
-                    <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                  )}
+                  {i < templates.length - 1 && <Divider inset="row" />}
                 </div>
               ))}
-            </div>
+            </Card>
           )}
         <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-3">
           Hold a template to delete it

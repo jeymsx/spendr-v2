@@ -17,6 +17,7 @@ import {
 } from './Accounts'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
+import SectionLabel from '../components/ui/SectionLabel'
 
 /**
  * Creating an account, as a guided page rather than one long sheet.
@@ -93,21 +94,12 @@ function IconCheck() {
  */
 // ── Field furniture ────────────────────────────────────────────────────────────
 
-/**
- * A section header. Sentence case and normal weight rather than the
- * uppercase-tracked label a web form uses - the screaming caps were a large
- * part of why this page read as HTML.
- */
-function SectionLabel({ children, hint }) {
-  return (
-    <div className="mb-2.5 px-1">
-      <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
-      {hint && (
-        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>
-      )}
-    </div>
-  )
-}
+/* The section header used to be defined here - a 13px semibold in slate-700,
+   which is the size and weight of the content it labels. It is
+   components/ui/SectionLabel now, along with the other 64 captions in the app.
+
+   Its `hint` prop did not come along: SectionLabel has no hint, so the three
+   labels that carry one spell out the line beneath them. */
 
 const inputCls = (bad = false) =>
   `w-full px-4 py-3.5 rounded-2xl text-[15px] tabular-nums
@@ -851,9 +843,7 @@ export default function AccountNew() {
 
           {!isCredit && (
             <div>
-              <SectionLabel hint="What is in it right now.">
-                Opening balance
-              </SectionLabel>
+              <SectionLabel hint="What is in it right now.">Opening balance</SectionLabel>
               <div className="relative">
                 <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">₱</span>
                 <input

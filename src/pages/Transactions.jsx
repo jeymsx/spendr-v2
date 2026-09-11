@@ -10,11 +10,14 @@ import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import CategoryGlyph from '../components/CategoryGlyph'
-import { FieldLabel } from '../components/ui/Field'
 import CategoryRail from '../components/CategoryRail'
 import Button from '../components/ui/Button'
 import Sheet from '../components/ui/Sheet'
 import IconButton from '../components/ui/IconButton'
+import SectionLabel from '../components/ui/SectionLabel'
+import Divider from '../components/ui/Divider'
+import Card from '../components/ui/Card'
+import EmptyState from '../components/ui/EmptyState'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -282,24 +285,6 @@ function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmount
 
 // ── Filter sheet ───────────────────────────────────────────────────────────────
 
-/* Hoisted out of FilterModal.
-
-   Declaring a component inside another makes a NEW component type on every
-   render, so React unmounts the old subtree and mounts a fresh one each time
-   the parent re-renders - any state or focus inside it is discarded.
-   Harmless for a label, wrong as a habit, and the rule cannot tell which it
-   is looking at. */
-/**
- * A heading in the filter sheet.
- *
- * It used to carry a 3px accent bar down its left side - an idiom this sheet
- * invented and nothing else in the app uses. The shared FieldLabel is what
- * every other heading on every other screen is, so this is that.
- */
-function SectionLabel({ children }) {
-  return <FieldLabel>{children}</FieldLabel>
-}
-
 function FilterModal({
   open, onClose,
   typeFilter,
@@ -417,7 +402,7 @@ function FilterModal({
           {dateRange === 'custom' && (
             <div className="flex flex-col gap-2 mt-3">
               <div>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">From</p>
+                <SectionLabel>From</SectionLabel>
                 <input
                   type="date"
                   value={customFrom}
@@ -431,7 +416,7 @@ function FilterModal({
                 />
               </div>
               <div>
-                <p className="text-xs font-bold text-slate-400 dark:text-slate-500 mb-1.5 px-0.5">To</p>
+                <SectionLabel>To</SectionLabel>
                 <input
                   type="date"
                   value={customTo}
@@ -576,20 +561,19 @@ function TxRow({ tx, catMap, onClick }) {
   )
 }
 
-function EmptyState() {
+/* The glyph only. The 20px squircle it used to sit in, and the 14/12px text
+   under it, were this screen's own design for a moment every other screen
+   draws as a 56px disc over 15/13px - so the shape is EmptyState's now and
+   the icon is sized to match the rest of the set. */
+function IconNoTransactions() {
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-8 text-center">
-      <div className="w-20 h-20 rounded-3xl bg-slate-100 dark:bg-white/[0.05] flex items-center justify-center mb-5">
-        <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round" className="text-slate-300 dark:text-slate-600">
-          <rect x="2" y="5" width="20" height="14" rx="3" />
-          <line x1="2" y1="10" x2="22" y2="10" />
-          <line x1="6" y1="15" x2="10" y2="15" />
-          <line x1="6" y1="18" x2="8" y2="18" />
-        </svg>
-      </div>
-      <p className="text-sm font-semibold text-slate-500 dark:text-slate-400">No transactions found</p>
-      <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">Try adjusting your filters</p>
-    </div>
+    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="2" y="5" width="20" height="14" rx="3" />
+      <line x1="2" y1="10" x2="22" y2="10" />
+      <line x1="6" y1="15" x2="10" y2="15" />
+      <line x1="6" y1="18" x2="8" y2="18" />
+    </svg>
   )
 }
 
@@ -858,7 +842,11 @@ export default function Transactions() {
           onTxClick={setSelectedTx}
         />
       ) : filteredTx.length === 0 ? (
-        <EmptyState />
+        <EmptyState
+          icon={<IconNoTransactions />}
+          title="No transactions found"
+          body="Try adjusting your filters"
+        />
       ) : (
         <>
           {groups.map(({ date, txs }) => (
@@ -867,22 +855,23 @@ export default function Transactions() {
                 <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
                   {fmtGroupDate(date)}
                 </span>
-                <div className="flex-1 h-px bg-slate-100 dark:bg-white/[0.07]" />
+                <Divider className="flex-1" />
                 <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
                   {txs.length} {txs.length === 1 ? 'txn' : 'txns'}
                 </span>
               </div>
 
-              <div className="card mx-5 rounded-2xl overflow-hidden">
+              <Card clip className="mx-5">
                 {txs.map((tx, i) => (
                   <div key={tx.id}>
                     <TxRow tx={tx} catMap={catMap} onClick={setSelectedTx} />
-                    {i < txs.length - 1 && (
-                      <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                    )}
+                    {/* Under the text, not under the tile: the row is led by a
+                        40px glyph, so the line starts where the row's content
+                        does rather than cutting the card in half. */}
+                    {i < txs.length - 1 && <Divider inset="glyph" />}
                   </div>
                 ))}
-              </div>
+              </Card>
             </div>
           ))}
 

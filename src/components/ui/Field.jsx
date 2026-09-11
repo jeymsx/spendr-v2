@@ -32,19 +32,9 @@ import SectionLabel from './SectionLabel'
  * VoiceOver with it. Only the styling moved.
  */
 
-/**
- * The words above a field.
- *
- * This used to be defined here, and then the same 65 captions turned up
- * across the pages labelling things that are not fields - a list, a chart, a
- * group of cards. It is one component labelling one kind of thing, so it
- * moved to SectionLabel and this is the field's name for it.
- *
- * TRANSITIONAL. Settings.jsx holds 14 of the 15 call sites and is being
- * migrated by another pass right now; when that lands, those become
- * SectionLabel and this alias goes. Do not add a call site to it.
- */
-export { default as FieldLabel } from './SectionLabel'
+/* The label that used to live here is SectionLabel now - it turned out to be
+   the same component the pages were spelling out 65 times to caption a list,
+   a chart or a group of cards. Field renders it below. */
 
 /**
  * The frame every field wears: capsule, filled, hairline, 52px.

@@ -5,6 +5,7 @@ import {
   IconCategories, IconDrawn, IconPalette, IconSettings, IconContrast,
 } from './icons'
 import Button from './ui/Button'
+import Divider from './ui/Divider'
 
 const CURRENT_VERSION = '0.3.0'
 
@@ -102,17 +103,19 @@ export default function WhatsNewModal({ onClose }) {
       ].join(' ')}>
 
         {/* Header */}
-        <div className="px-6 pt-6 pb-4 border-b border-slate-100 dark:border-white/[0.06]">
+        <div className="px-6 pt-6 pb-4">
           <div className="flex items-center gap-3 mb-1">
             <div className="w-10 h-10 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
               <span className="accent-ink"><IconSparkle size={20} /></span>
             </div>
             <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">What's New</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">What's new</h2>
               <p className="text-[11px] font-semibold accent-ink">Version {CURRENT_VERSION}</p>
             </div>
           </div>
         </div>
+
+        <Divider />
 
         {/* Feature list */}
         <div className="px-5 py-4 flex flex-col gap-3.5 max-h-[55vh] overflow-y-auto no-scrollbar">
@@ -147,7 +150,9 @@ export default function WhatsNewModal({ onClose }) {
             load and the only way to stop it was a small grey link below -
             which is not where anyone looks. This list is keyed to a version,
             so acknowledging the version IS "don't show it again". */}
-        <div className="px-5 pb-5 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
+        <Divider />
+
+        <div className="px-5 pb-5 pt-3">
           <Button size="sm" block onClick={() => dismiss(true)}>
             Got it
           </Button>

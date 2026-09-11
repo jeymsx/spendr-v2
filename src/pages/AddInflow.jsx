@@ -17,6 +17,7 @@ import { IconCalendar, IconChevronLeft, IconTemplate} from '../components/icons'
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
+import SectionLabel from '../components/ui/SectionLabel'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -198,7 +199,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
 
         {/* Description */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Description</p>
+          <SectionLabel>Description</SectionLabel>
           <div className={fieldFrame()}>
             <input
               type="text"
@@ -222,10 +223,10 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
             put "Required" inside, and next to the heading is where it is
             legible without shifting the tiles. */}
         <div>
-          <div className="flex items-baseline gap-2 mb-1.5 px-1">
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Category</p>
+          <div className="flex items-baseline gap-2">
+            <SectionLabel>Category</SectionLabel>
             {catError && !category && (
-              <p className="text-xs font-medium text-red-500 dark:text-red-400">Pick one</p>
+              <p className="text-xs font-medium text-red-500 dark:text-red-400 mb-1.5">Pick one</p>
             )}
           </div>
           <CategoryRail
@@ -237,7 +238,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
 
         {/* Account */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Account</p>
+          <SectionLabel>Account</SectionLabel>
           <AccountSelectRow
             account={account}
             creditAvailable={account ? creditAvailMap?.[account.name] : null}
@@ -248,7 +249,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
 
         {/* Date — last */}
         <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Date</p>
+          <SectionLabel>Date</SectionLabel>
           <div className={fieldFrame()}>
             <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
             <input

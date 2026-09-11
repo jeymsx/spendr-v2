@@ -11,7 +11,12 @@ import { RowGroup, EditRow, RowInput, RowDate } from '../components/FormRows'
 import { useAuth } from '../context/AuthContext'
 import { deleteDebtRemote } from '../lib/sync'
 import { IconPlus, IconChevronLeft } from '../components/icons'
+import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
 import IconButton from '../components/ui/IconButton'
+import SectionLabel from '../components/ui/SectionLabel'
 import Sheet from '../components/ui/Sheet'
 import StatTrio from '../components/ui/StatTrio'
 
@@ -134,23 +139,11 @@ function IconNoDebts() {
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children, hint, right = null }) {
-  return (
-    <div className="px-5 mb-2.5 flex items-end justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
-        {hint && (
-          <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>
-        )}
-      </div>
-      {right}
-    </div>
-  )
-}
-
-function Card({ children, className = '' }) {
-  return <div className={`card rounded-2xl overflow-hidden ${className}`}>{children}</div>
-}
+/* SectionLabel and Card lived here. Both are in src/components/ui now - the
+   caption was one of nineteen recipes for the same words above a group, and
+   the card one of twelve spellings of `card rounded-2xl overflow-hidden`.
+   The local caption also carried `hint` and `right` props that no call site
+   on this page ever passed. */
 
 /** One of the three readings under the headline figure. */
 /* StatTile lived here - a bordered tile with the label above the figure.
@@ -209,7 +202,7 @@ function DebtCard({ debt, onEdit, onPayment }) {
   const barColor = isPaid ? 'bg-emerald-500' : dueStatus === 'overdue' ? 'bg-red-500' : 'bg-primary'
 
   return (
-    <Card>
+    <Card clip>
       <div className="px-4 pt-4 pb-3.5">
         <div className="flex items-start gap-3">
           <span
@@ -279,7 +272,8 @@ function DebtCard({ debt, onEdit, onPayment }) {
       </div>
 
       {!isPaid && (
-        <div className="border-t border-slate-100 dark:border-white/[0.06]">
+        <>
+          <Divider />
           <button
             onClick={() => onPayment(debt)}
             /* accent-ink, not text-primary. Measured in light mode, the raw
@@ -290,7 +284,7 @@ function DebtCard({ debt, onEdit, onPayment }) {
           >
             Record a payment
           </button>
-        </div>
+        </>
       )}
     </Card>
   )
@@ -331,7 +325,7 @@ function SettledSection({ debts, onEdit }) {
 
       {expanded && (
         <div className="px-5">
-          <Card>
+          <Card clip>
             {debts.map((d, i) => (
               <div key={d.id}>
                 <div className="flex items-center gap-3 px-4 py-3.5">
@@ -361,9 +355,7 @@ function SettledSection({ debts, onEdit }) {
                     <IconEdit />
                   </IconButton>
                 </div>
-                {i < debts.length - 1 && (
-                  <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4" />
-                )}
+                {i < debts.length - 1 && <Divider inset="row" />}
               </div>
             ))}
           </Card>
@@ -378,38 +370,21 @@ function SettledSection({ debts, onEdit }) {
 /**
  * Nothing here, in the app's own voice.
  *
- * This replaced a 96px tinted disc holding a hand-drawn 44px SVG that changed
- * shape per tab. Every other empty state in the app - Goals, Bills, the trend
- * section - is a quiet glyph over two plain sentences, and a screen that
- * shouts when it has nothing to say is the one that looks least finished.
+ * The shape - a 56px disc, a line saying what is empty, a line saying what to
+ * do about it - is <EmptyState> in src/components/ui now, because Bills had
+ * already converged on the same one byte for byte. What is left here is the
+ * copy, which is the only part that was ever this page's own.
+ *
+ * Two of the three lost their second line. "You owe nothing" followed by
+ * "Nothing recorded against you." is the same sentence twice, and a body that
+ * only restates the title is how a screen with nothing on it still manages to
+ * look busy. The All copy keeps its line, because that one says what the page
+ * is for rather than repeating what it just said.
  */
-function EmptyState({ view, onAdd }) {
-  /* One line each. These were two sentences apiece explaining how debts work,
-     which is not what an empty state is for - it is for saying the list is
-     empty and offering the way out of that. */
-  const copy = {
-    all:        ['No debts yet', 'Track what you owe and what you are owed.'],
-    i_owe:      ['You owe nothing', 'Nothing recorded against you.'],
-    owed_to_me: ['Nobody owes you', 'Nothing lent out right now.'],
-  }[view] ?? ['No debts yet', '']
-
-  return (
-    <div className="px-8 py-12 text-center">
-      <div className="mx-auto w-14 h-14 rounded-full flex items-center justify-center
-        bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500">
-        <IconNoDebts />
-      </div>
-      <p className="mt-4 text-[15px] font-semibold text-slate-800 dark:text-white">{copy[0]}</p>
-      <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">{copy[1]}</p>
-      <button
-        onClick={onAdd}
-        className="inline-block mt-5 px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary
-          active:scale-[0.97] transition-transform duration-75"
-      >
-        Add a debt
-      </button>
-    </div>
-  )
+const EMPTY_COPY = {
+  all:        { title: 'No debts yet',    body: 'Track what you owe and what you are owed.' },
+  i_owe:      { title: 'You owe nothing', body: null },
+  owed_to_me: { title: 'Nobody owes you', body: null },
 }
 
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
@@ -526,7 +501,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
               : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
           ].join(' ')}
         >
-          {deleting ? 'Deleting…' : confirmDel ? 'Confirm Delete' : 'Delete'}
+          {deleting ? 'Deleting…' : confirmDel ? 'Confirm delete' : 'Delete'}
         </button>
       )}
       footer={(
@@ -947,7 +922,8 @@ export default function Debts() {
   const openEdit    = (debt) => { setEditDebt(debt); setShowForm(true) }
   const openPayment = (debt) => { setPaymentDebt(debt); setShowPayment(true) }
 
-  const loading = allDebts === undefined
+  const loading   = allDebts === undefined
+  const emptyCopy = EMPTY_COPY[view] ?? EMPTY_COPY.all
 
   /** The headline, which is a different question in each view. */
   const headline = view === 'all'
@@ -1007,14 +983,17 @@ export default function Debts() {
           <div className="h-40 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
         </div>
       ) : rows.length === 0 ? (
-        <EmptyState view="all" onAdd={openAdd} />
+        <EmptyState
+          icon={<IconNoDebts />}
+          title={EMPTY_COPY.all.title}
+          body={EMPTY_COPY.all.body}
+          action={<Button onClick={openAdd}>Add a debt</Button>}
+        />
       ) : (
         <>
           {/* ── Where you stand ── */}
           <section className="px-5">
-            <p className="text-center text-xs font-semibold text-slate-500 dark:text-slate-400">
-              {headline.label}
-            </p>
+            <SectionLabel className="text-center">{headline.label}</SectionLabel>
             <p className={`mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums ${headline.tone}`}>
               {/* The minus is drawn rather than formatted in, so the figure
                   reads as a magnitude with a direction and fmt() does not have
@@ -1062,7 +1041,12 @@ export default function Debts() {
 
           {open.length === 0 && settled.length === 0 ? (
             <div className="mt-2">
-              <EmptyState view={view} onAdd={openAdd} />
+              <EmptyState
+                icon={<IconNoDebts />}
+                title={emptyCopy.title}
+                body={emptyCopy.body}
+                action={<Button onClick={openAdd}>Add a debt</Button>}
+              />
             </div>
           ) : (
             <>
@@ -1070,7 +1054,7 @@ export default function Debts() {
                 <div className="mt-5 flex flex-col gap-6">
                   {openOwe.length > 0 && (
                     <section>
-                      <SectionLabel>I owe</SectionLabel>
+                      <SectionLabel inset="gutter" gap="loose">I owe</SectionLabel>
                       <div className="px-5 flex flex-col gap-3">
                         {openOwe.map(d => (
                           <DebtCard key={d.id} debt={d} onEdit={openEdit} onPayment={openPayment} />
@@ -1080,7 +1064,7 @@ export default function Debts() {
                   )}
                   {openOwed.length > 0 && (
                     <section>
-                      <SectionLabel>Owed to me</SectionLabel>
+                      <SectionLabel inset="gutter" gap="loose">Owed to me</SectionLabel>
                       <div className="px-5 flex flex-col gap-3">
                         {openOwed.map(d => (
                           <DebtCard key={d.id} debt={d} onEdit={openEdit} onPayment={openPayment} />
@@ -1092,7 +1076,7 @@ export default function Debts() {
               ) : (
                 open.length > 0 && (
                   <section className="mt-5">
-                    <SectionLabel>Open</SectionLabel>
+                    <SectionLabel inset="gutter" gap="loose">Open</SectionLabel>
                     <div className="px-5 flex flex-col gap-3">
                       {open.map(d => (
                         <DebtCard key={d.id} debt={d} onEdit={openEdit} onPayment={openPayment} />

@@ -10,6 +10,8 @@ import { useToast } from '../context/ToastContext'
 import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
 import CategoryGlyph from './CategoryGlyph'
 import Button from './ui/Button'
+import Card from './ui/Card'
+import DetailRow from './ui/DetailRow'
 import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
 
@@ -39,47 +41,6 @@ function fmtDisplayDate(isoStr) {
 function fmtTime(isoStr) {
   if (!isoStr) return ''
   return new Date(isoStr).toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit', hour12: true })
-}
-
-// ── Detail rows ────────────────────────────────────────────────────────────────
-
-/**
- * One row of an inset grouped list.
- *
- * These used to be separate rounded pills with 6px of air between them, which
- * made three facts about one transaction look like three unrelated cards. Apple
- * groups them: a single container, hairline separators, labels left and values
- * right. Same information, a quarter of the visual noise.
- *
- * The separator is drawn by the row and skipped on the last one, so the group
- * does not need to know its own length twice.
- */
-function DetailRow({ label, value, dot, sub, isLast }) {
-  return (
-    <div className={`flex items-baseline justify-between gap-4 px-4 py-3 ${
-      isLast ? '' : 'border-b border-slate-100 dark:border-white/[0.06]'
-    }`}>
-      <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
-      <div className="flex items-baseline gap-2 min-w-0">
-        {dot && <span className="w-2 h-2 rounded-full shrink-0 self-center" style={{ backgroundColor: dot }} />}
-        <div className="text-right min-w-0">
-          <p className="text-[15px] font-medium text-slate-800 dark:text-white truncate">{value}</p>
-          {sub && <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{sub}</p>}
-        </div>
-      </div>
-    </div>
-  )
-}
-
-/** The container the rows sit in. */
-function DetailGroup({ children }) {
-  return (
-    <div className="rounded-2xl overflow-hidden
-      bg-slate-50 border border-slate-100
-      dark:bg-white/[0.03] dark:border-white/[0.06]">
-      {children}
-    </div>
-  )
 }
 
 // ── Edit rows ──────────────────────────────────────────────────────────────────
@@ -357,7 +318,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
      the coloured type pill - a graphic, not a line of text - so it stays in
      the body and ariaLabel names the dialog instead. */
   const title = {
-    edit:             `Edit ${cfg.label}`,
+    edit:             `Edit ${cfg.label.toLowerCase()}`,
     'confirm-delete': planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?',
   }[mode] ?? null
 
@@ -452,11 +413,11 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   { key: 'date', label: 'Date', value: fmtDisplayDate(rec.date), sub: fmtTime(rec.date) },
                 ].filter(Boolean)
                 return (
-                  <DetailGroup>
+                  <Card surface="recessed" clip>
                     {rows.map((r, i) => (
                       <DetailRow key={r.key} {...r} isLast={i === rows.length - 1} />
                     ))}
-                  </DetailGroup>
+                  </Card>
                 )
               })()}
             </>
@@ -535,12 +496,12 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   ]),
                 ]
                 return (
-                  <DetailGroup>
+                  <Card surface="recessed" clip>
                     {rows.map((row, i) =>
                       // isLast is injected here so each row does not have to
                       // be told the length of a list it cannot see.
                       cloneElement(row, { isLast: i === rows.length - 1 }))}
-                  </DetailGroup>
+                  </Card>
                 )
               })()}
             </div>
@@ -558,7 +519,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   three centred lines of prose. Same group as everywhere else,
                   so the thing you are deleting looks like the thing you were
                   just looking at. */}
-              <DetailGroup>
+              <Card surface="recessed" clip>
                 <DetailRow
                   label={planCount > 1 ? `${planCount} payments` : 'Amount'}
                   value={planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(rec.amount)}`}
@@ -571,7 +532,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   value="Reversed automatically"
                   isLast
                 />
-              </DetailGroup>
+              </Card>
 
               {/* Deleting one month would strand the rest, so the whole plan
                   goes. Say so before it happens rather than after. */}

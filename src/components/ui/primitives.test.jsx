@@ -45,10 +45,46 @@ describe('SectionLabel', () => {
   })
 
   it('takes layout from the caller without losing its own style', () => {
-    const { container } = render(<SectionLabel className="mb-3">x</SectionLabel>)
+    const { container } = render(<SectionLabel className="text-center">x</SectionLabel>)
     const cls = container.firstChild.className
-    expect(cls).toContain('mb-3')
+    expect(cls).toContain('text-center')
     expect(cls).toContain('text-xs')
+  })
+
+  it('spacing is a named option, because className could only ever raise it', () => {
+    // cx is not a tailwind-merge and Tailwind emits spacing in ascending
+    // order, so className="mb-0" lost to a baked-in mb-1.5 without saying so.
+    // Six captions were left hand-rolled during the migration for this.
+    const { container: gutter } = render(<SectionLabel inset="gutter" gap="loose">x</SectionLabel>)
+    expect(gutter.firstChild.className).toContain('px-5')
+    expect(gutter.firstChild.className).toContain('mb-3')
+    expect(gutter.firstChild.className).not.toContain('px-1')
+
+    cleanup()
+    const { container: bare } = render(<SectionLabel inset="none" gap="none">x</SectionLabel>)
+    expect(bare.firstChild.className).not.toMatch(/\bpx-/)
+    expect(bare.firstChild.className).not.toMatch(/\bmb-/)
+  })
+
+  it('carries a hint without letting it become a second heading', () => {
+    // Goals explained its funding order and its leftover line this way. The
+    // migration dropped both rather than lose the prop.
+    render(<SectionLabel hint="Top of the list is funded first.">In funding order</SectionLabel>)
+    const heading = screen.getByText('In funding order')
+    const hint = screen.getByText('Top of the list is funded first.')
+    expect(heading.className).toContain('font-semibold')
+    expect(hint.className).not.toContain('font-semibold')
+    // Dimmer than the label, so the two read as a hierarchy and not a pair.
+    expect(hint.className).toContain('text-slate-400')
+  })
+
+  it('keeps the hint out of the label element itself', () => {
+    // htmlFor names ONE control; folding a sentence into the label would make
+    // the control's accessible name the label plus the explanation.
+    render(<SectionLabel htmlFor="amt" hint="Pesos only.">Amount</SectionLabel>)
+    const label = screen.getByText('Amount')
+    expect(label.tagName).toBe('LABEL')
+    expect(label.textContent).toBe('Amount')
   })
 })
 

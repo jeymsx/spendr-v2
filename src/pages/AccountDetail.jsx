@@ -20,7 +20,11 @@ import {
   TYPE_LABEL, fmt, fmtCompact, fmtCycleDate, nextOccurrence, nextOccurrenceDate,
 } from './Accounts'
 import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
 import IconButton from '../components/ui/IconButton'
+import SectionLabel from '../components/ui/SectionLabel'
 
 /**
  * One account, as a page rather than a sheet.
@@ -337,9 +341,10 @@ function BalanceTrend({ data, color, isCredit, rangeKey, rangeTitle }) {
  * Empty-ledger glyph: a page with two ruled lines and a third left blank.
  *
  * 24x24 grid, 2px stroke on integer coordinates so the edges land on pixel
- * boundaries at 1x, currentColor so it tracks the text beside it in both
- * themes, and aria-hidden because the sentence under it already says this.
- * The missing third line is the whole idea - the rows that would be here.
+ * boundaries at 1x, currentColor so it takes the tone of the EmptyState disc
+ * it sits in, and aria-hidden because the sentence under it already says
+ * this. The missing third line is the whole idea - the rows that would be
+ * here. 32px to match the glyph every other empty state puts in that disc.
  */
 /**
  * Flat-chart glyph: an axis corner with a dashed, level series.
@@ -366,9 +371,8 @@ function IconFlatChart() {
 function IconEmptyLedger() {
   return (
     <svg
-      width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      className="text-slate-300 dark:text-white/20"
       aria-hidden="true" focusable="false"
     >
       <rect x="4" y="3" width="16" height="18" rx="3" />
@@ -546,19 +550,15 @@ export default function AccountDetail() {
         <IconButton label="Back to accounts" className="-ml-1" onClick={back}>
           <IconChevronLeft />
         </IconButton>
-        <div className="py-20 text-center">
-          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Account not found</p>
-          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-            It may have been deleted.
-          </p>
-          <button
-            onClick={back}
-            className="mt-5 px-4 py-2 rounded-xl text-sm font-semibold text-primary
-              bg-primary/[0.08] dark:bg-primary/[0.12] active:bg-primary/[0.15] transition-colors"
-          >
-            Back to Accounts
-          </button>
-        </div>
+        <EmptyState
+          title="Account not found"
+          body="It may have been deleted."
+          action={
+            <Button variant="tint" size="sm" className="px-4" onClick={back}>
+              Back to accounts
+            </Button>
+          }
+        />
       </div>
     )
   }
@@ -613,10 +613,10 @@ export default function AccountDetail() {
 
       {/* ── The one number, leading the page ── */}
       <section className="px-5 mt-1 text-center">
-        <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-          {isCredit ? 'Balance Used' : 'Current balance'}
-        </p>
-        <p className={`mt-1.5 text-[38px] leading-none font-semibold tracking-tight tabular-nums ${
+        <SectionLabel>
+          {isCredit ? 'Balance used' : 'Current balance'}
+        </SectionLabel>
+        <p className={`text-[38px] leading-none font-semibold tracking-tight tabular-nums ${
           isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
         }`}>
           {fmt(totalUsed)}
@@ -689,10 +689,8 @@ export default function AccountDetail() {
           the shape, and here is the span it covers", and it keeps the tap
           targets away from the thumb's path across the line itself. ── */}
       <section className="mt-7">
-        <div className="flex items-baseline justify-between px-5 mb-1">
-          <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-            {RANGE_TITLE[range.key]}
-          </h2>
+        <div className="flex items-baseline justify-between px-5">
+          <SectionLabel>{RANGE_TITLE[range.key]}</SectionLabel>
           <TrendDelta data={trend} isCredit={isCredit} />
         </div>
         <BalanceTrend
@@ -718,39 +716,30 @@ export default function AccountDetail() {
           anything. ── */}
       {goalSplit && goalSplit.goals.length > 0 && (
         <section className="mt-7 px-5">
-          <div className="flex items-baseline justify-between mb-2">
-            <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+          <div className="flex items-baseline justify-between">
+            <SectionLabel>
               Funding {goalSplit.goals.length} goal{goalSplit.goals.length === 1 ? '' : 's'}
-            </h2>
+            </SectionLabel>
             <Link to="/goals" className="text-[11px] font-medium text-primary active:opacity-70">
               Manage
             </Link>
           </div>
-          <div
-            className="rounded-2xl overflow-hidden
-              bg-white border border-slate-100
-              dark:bg-white/[0.04] dark:border-white/[0.07]
-              shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
-          >
+          <Card clip>
             {goalSplit.goals.map((g, i) => (
-              <div
-                key={g.goalId}
-                className={`flex items-baseline justify-between gap-3 px-4 py-3 ${
-                  i < goalSplit.goals.length - 1
-                    ? 'border-b border-slate-50 dark:border-white/[0.04]'
-                    : ''
-                }`}
-              >
-                <span className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
-                  {g.name}
-                </span>
-                <span className="text-[13px] font-bold tabular-nums text-slate-800 dark:text-slate-100 shrink-0">
-                  {fmt(g.amount)}
-                </span>
+              <div key={g.goalId}>
+                <div className="flex items-baseline justify-between gap-3 px-4 py-3">
+                  <span className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
+                    {g.name}
+                  </span>
+                  <span className="text-[13px] font-bold tabular-nums text-slate-800 dark:text-slate-100 shrink-0">
+                    {fmt(g.amount)}
+                  </span>
+                </div>
+                {i < goalSplit.goals.length - 1 && <Divider inset="row" />}
               </div>
             ))}
+            <Divider />
             <div className="flex items-baseline justify-between gap-3 px-4 py-3
-              border-t border-slate-100 dark:border-white/[0.07]
               bg-slate-50/60 dark:bg-white/[0.02]">
               <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">
                 Unassigned
@@ -759,7 +748,7 @@ export default function AccountDetail() {
                 {fmt(goalSplit.unassigned)}
               </span>
             </div>
-          </div>
+          </Card>
         </section>
       )}
 
@@ -882,15 +871,10 @@ export default function AccountDetail() {
           </>
         ) : isParent ? (
           <>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
+            <SectionLabel gap="loose">
               Sub-accounts · {children.length}
-            </p>
-            <div
-              className="rounded-2xl overflow-hidden mb-3
-                bg-white border border-slate-100
-                dark:bg-white/[0.04] dark:border-white/[0.07]
-                shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
-            >
+            </SectionLabel>
+            <Card clip className="mb-3">
               {children.map((child, i) => (
                 <div key={child.id}>
                   <button
@@ -916,12 +900,10 @@ export default function AccountDetail() {
                       <IconChevronRight />
                     </span>
                   </button>
-                  {i < children.length - 1 && (
-                    <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                  )}
+                  {i < children.length - 1 && <Divider inset="row" />}
                 </div>
               ))}
-            </div>
+            </Card>
             <Button
               variant="tint"
               size="sm"
@@ -929,33 +911,29 @@ export default function AccountDetail() {
               className="mb-5"
               onClick={() => { setFormPrefill({ parentName: account.name }); setFormOpen(true) }}
             >
-              + Add Sub-account
+              + Add sub-account
             </Button>
 
             {acctTxs.length > 0 && (
               <>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
-                  Direct Transactions · {acctTxs.length}
-                </p>
+                <SectionLabel gap="loose">
+                  Direct transactions · {acctTxs.length}
+                </SectionLabel>
                 <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} catMap={catMap} />
               </>
             )}
           </>
         ) : (
           <>
-            <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-2.5">
+            <SectionLabel gap="loose">
               Transactions · {acctTxs.length}
-            </p>
+            </SectionLabel>
             {acctTxs.length === 0 ? (
-              <div className="py-10 flex flex-col items-center text-center">
-                <IconEmptyLedger />
-                <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400 mt-3">
-                  No transactions yet
-                </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                  Anything you spend or receive here will show up
-                </p>
-              </div>
+              <EmptyState
+                icon={<IconEmptyLedger />}
+                title="No transactions yet"
+                body="Anything you spend or receive here will show up"
+              />
             ) : (
               <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} catMap={catMap} />
             )}
@@ -992,21 +970,14 @@ export default function AccountDetail() {
 
 function TxList({ txs, accountName, onSelect, catMap }) {
   return (
-    <div
-      className="rounded-2xl overflow-hidden mb-4
-        bg-white border border-slate-100
-        dark:bg-white/[0.04] dark:border-white/[0.07]
-        shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none"
-    >
+    <Card clip className="mb-4">
       {txs.map((tx, i) => (
         <div key={tx.id ?? i}>
           <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} catMap={catMap} />
-          {i < txs.length - 1 && (
-            <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-          )}
+          {i < txs.length - 1 && <Divider inset="row" />}
         </div>
       ))}
-    </div>
+    </Card>
   )
 }
 

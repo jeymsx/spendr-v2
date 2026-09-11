@@ -17,6 +17,9 @@ import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
 import { allocateGoals } from '../lib/goals'
 import { cardGradient } from '../lib/accentTheme'
 import IconButton from '../components/ui/IconButton'
+import Card from '../components/ui/Card'
+import Divider from '../components/ui/Divider'
+import EmptyState from '../components/ui/EmptyState'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -157,7 +160,7 @@ const ACCOUNT_ICON = {
   cash:    { icon: <IconWallet />,  label: 'Cash'     },
   savings: { icon: <IconBank />,    label: 'Savings'  },
   credit:  { icon: <IconCard />,    label: 'Credit'   },
-  ewallet: { icon: <IconPhone />,   label: 'E-Wallet' },
+  ewallet: { icon: <IconPhone />,   label: 'E-wallet' },
   bank:    { icon: <IconBank />,    label: 'Bank'     },
 }
 
@@ -779,16 +782,13 @@ export default function Dashboard() {
 
       <section className="px-5 mt-8 pb-nav">
         <SectionHeader title="Recent" actionLabel="See all" actionTo="/transactions" />
-        <div
-          className="card mt-3 rounded-3xl overflow-hidden"
-        >
+        <Card radius="3xl" clip className="mt-3">
           {recentTx.length === 0 ? (
-            <div className="py-10 text-center">
-              <p className="text-sm text-slate-400 dark:text-slate-500">No transactions yet</p>
-              <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">
-                Tap <span className="font-semibold">+</span> to add your first entry
-              </p>
-            </div>
+            <EmptyState
+              size="sm"
+              title="No transactions yet"
+              body={<>Tap <span className="font-semibold">+</span> to add your first entry</>}
+            />
           ) : (
             recentTx.map((tx, i) => (
               <TxRow
@@ -799,7 +799,7 @@ export default function Dashboard() {
               />
             ))
           )}
-        </div>
+        </Card>
       </section>
 
       {/*
@@ -862,21 +862,24 @@ function DashboardSkeleton() {
       {/* recent list */}
       <div className="px-5 mt-8">
         <Skel className="h-5 w-24 mb-3" />
-        <div className="rounded-3xl overflow-hidden bg-white dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">
-          {[1, 2, 3, 4].map(i => (
-            <div key={i} className="flex items-center gap-3 px-4 py-3.5 border-b border-slate-50 dark:border-white/[0.05]">
-              <Skel className="w-10 h-10 rounded-2xl shrink-0" />
-              <div className="flex-1 flex flex-col gap-2">
-                <Skel className="h-3.5 w-32" />
-                <Skel className="h-3 w-20" />
+        <Card radius="3xl" clip>
+          {[0, 1, 2, 3].map(i => (
+            <div key={i}>
+              <div className="flex items-center gap-3 px-4 py-3.5">
+                <Skel className="w-10 h-10 rounded-2xl shrink-0" />
+                <div className="flex-1 flex flex-col gap-2">
+                  <Skel className="h-3.5 w-32" />
+                  <Skel className="h-3 w-20" />
+                </div>
+                <div className="flex flex-col items-end gap-2">
+                  <Skel className="h-3.5 w-16" />
+                  <Skel className="h-3 w-10" />
+                </div>
               </div>
-              <div className="flex flex-col items-end gap-2">
-                <Skel className="h-3.5 w-16" />
-                <Skel className="h-3 w-10" />
-              </div>
+              {i < 3 && <Divider inset="glyph" />}
             </div>
           ))}
-        </div>
+        </Card>
       </div>
     </div>
   )
@@ -940,12 +943,11 @@ function UpcomingRow({ item, isLast }) {
   const navigate = useNavigate()
   const overdue = fmtUpcoming(item.date) === 'Overdue'
   return (
+    <>
     <button
       onClick={() => navigate(item.to)}
-      className={`w-full text-left flex items-center gap-3 px-4 py-3.5
-        active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors ${
-          !isLast ? 'border-b border-slate-50 dark:border-white/[0.05]' : ''
-        }`}
+      className="w-full text-left flex items-center gap-3 px-4 py-3.5
+        active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
     >
       <span className="relative shrink-0">
         <span
@@ -981,6 +983,8 @@ function UpcomingRow({ item, isLast }) {
         −{fmt(item.amount)}
       </span>
     </button>
+    {!isLast && <Divider inset="glyph" />}
+    </>
   )
 }
 
@@ -1015,11 +1019,11 @@ function UpcomingSection({ items }) {
           </span>
         }
       />
-      <div className="card rounded-2xl overflow-hidden mt-3">
+      <Card clip className="mt-3">
         {items.map((item, i) => (
           <UpcomingRow key={item.key} item={item} isLast={i === items.length - 1} />
         ))}
-      </div>
+      </Card>
     </section>
   )
 }
@@ -1318,10 +1322,7 @@ function BudgetSummaryTile({ totals, count }) {
 
   if (!hasBudget) {
     return (
-      <Link
-        to="/settings"
-        className="card block rounded-2xl px-4 py-4 active:scale-[0.99] transition-transform duration-100"
-      >
+      <Card as={Link} to="/settings" padding="md" interactive className="block">
         <p className="text-[15px] text-slate-800 dark:text-white">
           No <span className="font-bold">spending budget</span> set
         </p>
@@ -1329,14 +1330,17 @@ function BudgetSummaryTile({ totals, count }) {
           Set a monthly limit per category in <span className="font-semibold text-primary">Settings</span>
         </p>
         <BudgetMeter pct={0} className="mt-3.5" />
-      </Link>
+      </Card>
     )
   }
 
   return (
-    <Link
+    <Card
+      as={Link}
       to="/budget"
-      className="card block rounded-2xl px-4 py-4 active:scale-[0.99] transition-transform duration-100"
+      padding="md"
+      interactive
+      className="block"
       aria-label={`Using ${pct}% of your spending budget. View the full breakdown.`}
     >
       <div className="flex items-start gap-3">
@@ -1362,7 +1366,7 @@ function BudgetSummaryTile({ totals, count }) {
       </div>
 
       <BudgetMeter pct={totals.pct} className="mt-3.5" />
-    </Link>
+    </Card>
   )
 }
 
@@ -1377,11 +1381,8 @@ function TxRow({ tx, cat, isLast }) {
   const amountSign = isExpense ? '-' : isInflow ? '+' : ''
 
   return (
-    <div
-      className={`flex items-center gap-3 px-4 py-3.5 ${
-        !isLast ? 'border-b border-slate-50 dark:border-white/[0.05]' : ''
-      }`}
-    >
+    <>
+    <div className="flex items-center gap-3 px-4 py-3.5">
       {/* category icon */}
       <div
         className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
@@ -1412,6 +1413,8 @@ function TxRow({ tx, cat, isLast }) {
         </p>
       </div>
     </div>
+    {!isLast && <Divider inset="glyph" />}
+    </>
   )
 }
 

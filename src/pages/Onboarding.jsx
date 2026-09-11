@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { Fragment, useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useAuth } from '../context/AuthContext'
@@ -10,6 +10,8 @@ import { useToast } from '../context/ToastContext'
 import CategoryGlyph from '../components/CategoryGlyph'
 import Confetti from '../components/Confetti'
 import Button from '../components/ui/Button'
+import SectionLabel from '../components/ui/SectionLabel'
+import Divider from '../components/ui/Divider'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -87,7 +89,7 @@ function StepWelcome({ onNext, onSignIn, signingIn }) {
           className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
              active:scale-[0.98] transition-all duration-100"
         >
-          Get Started →
+          Get started →
         </button>
         <button
           onClick={onSignIn}
@@ -107,7 +109,7 @@ function StepWelcome({ onNext, onSignIn, signingIn }) {
               <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
             </svg>
           )}
-          {signingIn ? 'Signing in…' : 'Already have an account? Sign In'}
+          {signingIn ? 'Signing in…' : 'Already have an account? Sign in'}
         </button>
       </div>
     </div>
@@ -204,11 +206,23 @@ function StepCurrency({ value, onChange, onNext }) {
 
 const COLOR_SWATCHES = ['#2D9DFF', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#f97316', '#ec4899']
 
+/**
+ * A caption with a rule running off the end of it.
+ *
+ * The caption and the hairline are both the shared primitives now; what is
+ * left here is the arrangement, which no other screen has.
+ *
+ * The two margins are the arrangement too. SectionLabel carries 6px under
+ * itself for the field it usually names, and in a centred flex row that 6px
+ * would drop the rule 3px below the caption's middle - so the rule takes the
+ * same 6px and the two centre together. The wrapper then only owes the
+ * remaining 4px of the 10px gap that used to sit under the whole thing.
+ */
 function OnbSectionLabel({ children }) {
   return (
-    <div className="flex items-center gap-2.5 mb-2.5">
-      <span className="text-xs font-bold text-slate-600 shrink-0">{children}</span>
-      <div className="flex-1 h-px bg-white/[0.07]" />
+    <div className="flex items-center gap-2.5 mb-1">
+      <SectionLabel className="shrink-0">{children}</SectionLabel>
+      <Divider className="flex-1 mb-1.5" />
     </div>
   )
 }
@@ -425,10 +439,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
         <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCustomForm(false)} />
           <div className="relative w-full max-w-sm bg-[#1a2130] border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
-            <div>
-              <h3 className="text-base font-semibold text-white">Custom account</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Name, type, and color.</p>
-            </div>
+            <h3 className="text-base font-semibold text-white">Custom account</h3>
             <input
               type="text"
               value={customName}
@@ -456,7 +467,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
               ))}
             </div>
             <div>
-              <p className="text-xs font-bold text-slate-600 mb-2.5">Color</p>
+              <SectionLabel>Color</SectionLabel>
               <div className="flex gap-2.5">
                 {COLOR_SWATCHES.map(c => (
                   <button
@@ -525,82 +536,89 @@ function StepSetBalances({ allAccounts, balances, creditLimits, onBalanceChange,
 
       {/* Ledger list — no cards, just rows divided by hairlines */}
       <div className="flex-1 overflow-y-auto pb-2 no-scrollbar">
-        <div className="divide-y divide-white/[0.06]">
-          {allAccounts.map(acct => {
+        <div>
+          {allAccounts.map((acct, i) => {
             const isCredit = acct.type === 'credit'
             const Icon     = ACCOUNT_TYPE_ICON[acct.type] ?? IconCashUI
             return (
-              <div key={acct.name} className="py-3.5">
-                {/* Main row: icon + name + balance input */}
-                <div className="flex items-center gap-3">
-                  {/* The glow survives the swap - drop-shadow applies to
-                      an SVG the same as to a glyph - and the icon now takes
-                      the account's own colour, which the emoji could not. */}
-                  <span
-                    className="shrink-0 w-7 flex items-center justify-center"
-                    style={{ color: acct.color, filter: `drop-shadow(0 0 6px ${acct.color}88)` }}
-                  >
-                    <Icon size={18} />
-                  </span>
+              /* `divide-y` drew the line between rows and nowhere else; the
+                 hairline is its own element now, so it is asked for on every
+                 row but the first. Full bleed, because the rows are: nothing
+                 in this list is inside a card. */
+              <Fragment key={acct.name}>
+                {i > 0 && <Divider />}
+                <div className="py-3.5">
+                  {/* Main row: icon + name + balance input */}
+                  <div className="flex items-center gap-3">
+                    {/* The glow survives the swap - drop-shadow applies to
+                        an SVG the same as to a glyph - and the icon now takes
+                        the account's own colour, which the emoji could not. */}
+                    <span
+                      className="shrink-0 w-7 flex items-center justify-center"
+                      style={{ color: acct.color, filter: `drop-shadow(0 0 6px ${acct.color}88)` }}
+                    >
+                      <Icon size={18} />
+                    </span>
 
-                  <div className="flex items-center gap-1.5 shrink-0 mr-1">
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: acct.color }} />
-                  </div>
-
-                  <span className="flex-1 text-[15px] font-medium text-white truncate">{acct.name}</span>
-
-                  {!isCredit && (
-                    <div className="flex items-baseline gap-0.5 shrink-0">
-                      <span className="text-slate-600 text-sm">₱</span>
-                      <input
-                        type="number"
-                        inputMode="decimal"
-                        value={balances[acct.name] ?? ''}
-                        onChange={e => onBalanceChange(acct.name, e.target.value)}
-                        placeholder="0.00"
-                        className="bg-transparent text-right text-white placeholder:text-slate-700
-                          focus:outline-none text-[15px] tabular-nums w-28"
-                      />
+                    <div className="flex items-center gap-1.5 shrink-0 mr-1">
+                      <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: acct.color }} />
                     </div>
-                  )}
-                </div>
 
-                {/* Credit sub-row: two inline fields */}
-                {isCredit && (
-                  <div className="mt-2 ml-10 flex items-center gap-4">
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-600 mb-1">Owed</p>
-                      <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
-                        <span className="text-slate-600 text-xs">₱</span>
+                    <span className="flex-1 text-[15px] font-medium text-white truncate">{acct.name}</span>
+
+                    {!isCredit && (
+                      <div className="flex items-baseline gap-0.5 shrink-0">
+                        <span className="text-slate-600 text-sm">₱</span>
                         <input
                           type="number"
                           inputMode="decimal"
                           value={balances[acct.name] ?? ''}
                           onChange={e => onBalanceChange(acct.name, e.target.value)}
-                          placeholder="0"
-                          className="w-full bg-transparent text-white placeholder:text-slate-700
-                            focus:outline-none text-sm tabular-nums"
+                          placeholder="0.00"
+                          className="bg-transparent text-right text-white placeholder:text-slate-700
+                            focus:outline-none text-[15px] tabular-nums w-28"
                         />
                       </div>
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-xs text-slate-600 mb-1">Limit</p>
-                      <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
-                        <span className="text-slate-600 text-xs">₱</span>
-                        <input
-                          type="number"
-                          inputMode="decimal"
-                          value={creditLimits[acct.name] ?? ''}
-                          onChange={e => onCreditLimitChange(acct.name, e.target.value)}
-                          placeholder="0"
-                          className="w-full bg-transparent text-white placeholder:text-slate-700
-                            focus:outline-none text-sm tabular-nums"
-                        />
-                      </div>
-                    </div>
+                    )}
                   </div>
-                )}
-              </div>
+
+                  {/* Credit sub-row: two inline fields */}
+                  {isCredit && (
+                    <div className="mt-2 ml-10 flex items-center gap-4">
+                      <div className="flex-1">
+                        <p className="text-xs text-slate-600 mb-1">Owed</p>
+                        <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
+                          <span className="text-slate-600 text-xs">₱</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={balances[acct.name] ?? ''}
+                            onChange={e => onBalanceChange(acct.name, e.target.value)}
+                            placeholder="0"
+                            className="w-full bg-transparent text-white placeholder:text-slate-700
+                              focus:outline-none text-sm tabular-nums"
+                          />
+                        </div>
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-xs text-slate-600 mb-1">Limit</p>
+                        <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
+                          <span className="text-slate-600 text-xs">₱</span>
+                          <input
+                            type="number"
+                            inputMode="decimal"
+                            value={creditLimits[acct.name] ?? ''}
+                            onChange={e => onCreditLimitChange(acct.name, e.target.value)}
+                            placeholder="0"
+                            className="w-full bg-transparent text-white placeholder:text-slate-700
+                              focus:outline-none text-sm tabular-nums"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </Fragment>
             )
           })}
         </div>
@@ -667,7 +685,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
       <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5 pb-2">
         {/* Locked chip */}
         <div>
-          <p className="text-xs font-bold text-slate-600 mb-2">Always included</p>
+          <SectionLabel>Always included</SectionLabel>
           <div className="flex flex-wrap gap-2">
             <span className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl
               bg-white/[0.08] border border-white/[0.15] text-slate-300 text-sm font-semibold">
@@ -679,7 +697,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
         {/* Preset chips */}
         <div>
-          <p className="text-xs font-bold text-slate-600 mb-2">Suggestions</p>
+          <SectionLabel>Suggestions</SectionLabel>
           <div className="flex flex-wrap gap-2">
             {presets.map(cat => {
               const sel = selectedNames.has(cat.name)
@@ -706,7 +724,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
         {/* Custom categories */}
         {customCats.length > 0 && (
           <div>
-            <p className="text-xs font-bold text-slate-600 mb-2">Custom</p>
+            <SectionLabel>Custom</SectionLabel>
             <div className="flex flex-wrap gap-2">
               {customCats.map(cat => (
                 <span key={cat.name}
@@ -748,10 +766,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
             onClick={() => setShowCustomForm(false)}
           />
           <div className="relative w-full max-w-sm bg-[#1a2130] border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
-            <div>
-              <h3 className="text-base font-semibold text-white">Custom category</h3>
-              <p className="text-xs text-slate-500 mt-0.5">Name, icon, and color.</p>
-            </div>
+            <h3 className="text-base font-semibold text-white">Custom category</h3>
 
             <input
               type="text"
@@ -768,7 +783,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
             {/* Emoji picker */}
             <div>
-              <p className="text-xs font-bold text-slate-600 mb-2">Icon</p>
+              <SectionLabel>Icon</SectionLabel>
               <div className="grid grid-cols-8 gap-1 max-h-[108px] overflow-y-auto">
                 {EMOJI_SUGGESTIONS.map(e => (
                   <button
@@ -789,7 +804,7 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
             {/* Color swatches */}
             <div>
-              <p className="text-xs font-bold text-slate-600 mb-2.5">Color</p>
+              <SectionLabel>Color</SectionLabel>
               <div className="flex gap-2.5">
                 {CAT_SWATCHES.map(c => (
                   <button
