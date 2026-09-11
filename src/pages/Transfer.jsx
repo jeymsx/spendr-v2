@@ -7,11 +7,12 @@ import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { getCreditStatus } from '../utils/creditCycle'
 import AccountPickerSheet from '../components/AccountPickerSheet'
+import AccountSelectRow from '../components/AccountSelectRow'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconTemplate, IconWarning} from '../components/icons'
+import { IconCalendar, IconChevronLeft, IconTemplate, IconWarning} from '../components/icons'
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -38,34 +39,6 @@ function IconArrowDown() {
   )
 }
 
-
-function FieldButton({ onClick, error, label, left, center, right }) {
-  return (
-    <div>
-      {label && (
-        <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-1">
-          {label}
-        </p>
-      )}
-      <button
-        onClick={onClick}
-        className={[
-          'w-full flex items-center gap-3 px-4 h-[56px] rounded-2xl text-left',
-          'active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors',
-          'bg-white dark:bg-primary/[0.07]',
-          error
-            ? 'border border-red-300 dark:border-red-500/40'
-            : 'border border-slate-200/80 dark:border-primary/[0.14]',
-          'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]',
-        ].join(' ')}
-      >
-        <span className="shrink-0">{left}</span>
-        <span className="flex-1 min-w-0">{center}</span>
-        {right && <span className="shrink-0 text-slate-300 dark:text-slate-600">{right}</span>}
-      </button>
-    </div>
-  )
-}
 
 // ── Page ───────────────────────────────────────────────────────────────────────
 
@@ -296,38 +269,28 @@ export default function Transfer({ onCancel, onSaved } = {}) {
       {/* ── Form fields ── */}
       <div className="px-4 flex flex-col gap-4">
 
-        {/* From */}
-        <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">From</p>
-          <FieldButton
-            onClick={() => { setFromError(false); setShowFromSheet(true) }}
-            error={fromError}
-            left={
-              <span
-                className="w-6 h-6 rounded-lg shrink-0"
-                style={{ backgroundColor: fromAccount?.color ?? '#cbd5e1' }}
-              />
-            }
-            center={
-              <div>
-                <span className={`text-sm ${fromAccount ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                  {fromAccount?.name ?? 'Select account'}
-                </span>
-                {fromError && !fromAccount && (
-                  <span className="ml-2 text-xs text-red-500">Required</span>
-                )}
-              </div>
-            }
-            right={
-              fromAccount
-                ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{fmt(fromAccount.balance)}</span>
-                : <IconChevronRight />
-            }
-          />
-        </div>
+        {/* No From and To headings.
 
-        {/* Arrow connector */}
-        <div className="flex items-center gap-3 px-1 -my-1">
+            The rows say "Select source" and "Select destination" until they
+            are filled, and after that the arrow between them says which way
+            the money goes - a label above each one was the third time the
+            screen made the same point. Dropping them also lets the arrow sit
+            CENTRED between the two rows: the heading above To was 25px of
+            one-sided weight, so the divider was never in the middle of the
+            gap it divided.
+
+            aria-label carries the role for anyone who cannot see the arrow. */}
+        <AccountSelectRow
+          account={fromAccount}
+          error={fromError}
+          emptyText="Select source"
+          ariaLabel="Transfer from"
+          onClick={() => { setFromError(false); setShowFromSheet(true) }}
+        />
+
+        {/* Arrow connector. No negative margin now - the parent's gap-4 is
+            the same above and below, which is the whole point. */}
+        <div className="flex items-center gap-3 px-1">
           <div className="flex-1 h-px bg-slate-200 dark:bg-white/[0.08]" />
           <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.07] flex items-center justify-center text-slate-400 dark:text-slate-500">
             <IconArrowDown />
@@ -335,35 +298,13 @@ export default function Transfer({ onCancel, onSaved } = {}) {
           <div className="flex-1 h-px bg-slate-200 dark:bg-white/[0.08]" />
         </div>
 
-        {/* To */}
-        <div>
-          <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">To</p>
-          <FieldButton
-            onClick={() => { setToError(false); setShowToSheet(true) }}
-            error={toError}
-            left={
-              <span
-                className="w-6 h-6 rounded-lg shrink-0"
-                style={{ backgroundColor: toAccount?.color ?? '#cbd5e1' }}
-              />
-            }
-            center={
-              <div>
-                <span className={`text-sm ${toAccount ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                  {toAccount?.name ?? 'Select account'}
-                </span>
-                {toError && !toAccount && (
-                  <span className="ml-2 text-xs text-red-500">Required</span>
-                )}
-              </div>
-            }
-            right={
-              toAccount
-                ? <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">{fmt(toAccount.balance)}</span>
-                : <IconChevronRight />
-            }
-          />
-        </div>
+        <AccountSelectRow
+          account={toAccount}
+          error={toError}
+          emptyText="Select destination"
+          ariaLabel="Transfer to"
+          onClick={() => { setToError(false); setShowToSheet(true) }}
+        />
 
         {/* same-account warning */}
         {fromAccount && toAccount && fromAccount.id === toAccount.id && (

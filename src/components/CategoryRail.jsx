@@ -125,7 +125,7 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
             <span
               data-on={on}
               className="cat-tile w-[50px] h-[50px] rounded-[15px] flex items-center
-                justify-center text-[23px] leading-none transition-shadow duration-150"
+                justify-center text-[23px] leading-none"
               style={{ '--cat-color': cat.color ?? '#64748b' }}
             >
               <CategoryGlyph cat={cat} size={23} emoji="🏷️" />

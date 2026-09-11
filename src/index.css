@@ -1001,17 +1001,41 @@ html.dark body {
     rgba(40, 60, 95, 0.22);
 }
 
-/* Selected, in the picker rails. An INSET accent ring, deliberately: an
-   outset ring does not survive a tight row, because at 50px squares with 6px
-   between them a 2px ring plus the page-coloured gap it needs to read against
-   reaches within a pixel of the next tile. Inset costs no layout, so the row
-   can be as tight as the labels allow.
+/* Selected, in the picker rails. No ring.
 
-   It reads better on the soft tile than it did on the 26% one - there is more
-   contrast between an accent ring and a quiet wash. Rows never set data-on,
-   so they are untouched by this. */
+   It was `inset 0 0 0 2px var(--color-primary)`, so every selection was
+   painted the app accent - in a row where each tile already carries its own
+   category colour, "which one is on?" was answered in a colour belonging to
+   none of them. Food selected went blue.
+
+   The tile deepens its OWN wash instead, 14% -> 30%. On its own that is a
+   weak signal: worst case, dark-mode grey, the two states are 1.22:1 apart.
+   So the glyph moves at the same time, and away from the ground rather than
+   with it - darker in light, lighter in dark. Two cues, one gesture, and the
+   colour stays the category's.
+
+   Both glyph values are measured, not picked. A deeper wash of a colour
+   moves the background TOWARD a glyph painted in that same colour, which is
+   why the dark glyph cannot simply stay raw: at 30% it falls to 2.56:1,
+   under the 3:1 a meaningful graphic needs. Across all thirteen category
+   colours the worst cases here are
+
+       light   55% colour / 45% black  ->  4.27:1  (#FCC419)
+       dark    75% colour / 25% white  ->  4.13:1  (#6b7280)
+
+   against 3.47 and 3.12 for the unselected tile, so selecting one makes its
+   glyph MORE legible, not less. Rows never set data-on, so they are
+   untouched by any of this. */
 .cat-tile[data-on='true'] {
-  box-shadow: inset 0 0 0 2px var(--color-primary);
+  --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 30%, transparent);
+}
+
+.cat-tile[data-on='true'] .cat-glyph {
+  color: color-mix(in srgb, var(--cat-color, #64748b) 55%, black);
+}
+
+.dark .cat-tile[data-on='true'] .cat-glyph {
+  color: color-mix(in srgb, var(--cat-color, #94a3b8) 75%, white);
 }
 
 /* ── Category glyph, in its own colour ──────────────────────────────
@@ -1035,6 +1059,10 @@ html.dark body {
    the same reason: an inline style cannot answer a theme. */
 .cat-glyph {
   color: color-mix(in srgb, var(--cat-color, #64748b) 65%, black);
+  /* The selected tile changes this, so it is worth easing. The wash behind
+     it is a gradient layer and cannot interpolate; the glyph carries the
+     transition for both. */
+  transition: color 150ms ease;
 }
 
 .dark .cat-glyph {

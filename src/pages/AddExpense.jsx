@@ -9,11 +9,12 @@ import { advanceNextDate } from '../utils/recurring'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import CategoryRail from '../components/CategoryRail'
 import AccountPickerSheet from '../components/AccountPickerSheet'
+import AccountSelectRow from '../components/AccountSelectRow'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
-import { IconCalendar, IconChevronLeft, IconChevronRight, IconTemplate} from '../components/icons'
+import { IconCalendar, IconChevronLeft, IconTemplate} from '../components/icons'
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -50,29 +51,6 @@ function fmtDateLabel(dateStr) {
   if (dateStr === yesterKey)  return 'Yesterday'
   const d = new Date(dateStr + 'T00:00:00')
   return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })
-}
-
-// ── Field button ───────────────────────────────────────────────────────────────
-
-function FieldButton({ onClick, error, left, center, right }) {
-  return (
-    <button
-      onClick={onClick}
-      className={[
-        'w-full flex items-center gap-3 px-4 h-[52px] rounded-2xl text-left',
-        'active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors',
-        'bg-white dark:bg-primary/[0.07]',
-        error
-          ? 'border border-red-300 dark:border-red-500/40'
-          : 'border border-slate-200/80 dark:border-primary/[0.14]',
-        'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]',
-      ].join(' ')}
-    >
-      <span className="shrink-0">{left}</span>
-      <span className="flex-1 min-w-0">{center}</span>
-      {right && <span className="shrink-0 text-slate-300 dark:text-slate-600">{right}</span>}
-    </button>
-  )
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -372,32 +350,11 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         {/* Account */}
         <div>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Account</p>
-          <FieldButton
-            onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
+          <AccountSelectRow
+            account={account}
+            creditAvailable={account ? creditAvailMap?.[account.name] : null}
             error={acctError}
-            left={
-              <span
-                className="w-6 h-6 rounded-lg shrink-0"
-                style={{ backgroundColor: account?.color ?? '#cbd5e1' }}
-              />
-            }
-            center={
-              <span className={`text-sm ${account ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                {account?.name ?? 'Select account'}
-                {acctError && !account && (
-                  <span className="ml-2 text-xs font-normal text-red-500">Required</span>
-                )}
-              </span>
-            }
-            right={
-              account ? (
-                <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums">
-                  {account.type === 'credit'
-                    ? fmt(creditAvailMap?.[account.name] ?? 0) + ' avail.'
-                    : fmt(account.balance)}
-                </span>
-              ) : <IconChevronRight />
-            }
+            onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
           />
         </div>
 

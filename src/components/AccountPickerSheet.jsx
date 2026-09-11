@@ -92,19 +92,30 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
           'border-t border-slate-100 dark:border-white/[0.07]',
           'flex flex-col overflow-hidden',
         ].join(' ')}
-        /* 78dvh, up from 60. At 60 a seven-account list did not fit, so the
-           sheet opened already scrolled with a row sliced off at the top -
-           the state the fade below exists to soften, entered before you had
-           touched anything. 78 fits the common case outright and still reads
-           as a sheet rather than a takeover. */
-        style={{ maxHeight: '78dvh' }}
+        /* 52dvh, down from 78.
+
+           78 was chosen to fit a whole seven-account list without scrolling.
+           That turned out to be the wrong goal: at nine accounts it fills
+           the screen with near-identical rows, and a wall of them is harder
+           to read than a short list you flick - you are picking one account,
+           not auditing them.
+
+           Measured at 390x844: rows are 60px on a 70px pitch with 42px of
+           handle above, so 52dvh (439px) shows five whole rows and half of
+           the sixth. The half row is the point - it says "more below"
+           without a scrollbar, and the sheet opens at the top either way,
+           since nothing here scrolls to the current selection. Still five
+           rows on an SE and six on a Pro Max, because dvh scales with the
+           screen where a pixel height would not. */
+        style={{ maxHeight: '52dvh' }}
       >
         {/* handle + header */}
         <div className="pt-5 px-5 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
-            Select Account
-          </p>
+          {/* No title. The sheet opens from a row that already says Account,
+              From or To, and every line in it is an account - a header
+              repeating the word spent a line of a 78dvh sheet saying nothing
+              the tap had not already established. */}
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
         </div>
 
         {/* scrollable list */}
