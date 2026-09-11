@@ -700,6 +700,19 @@ export function quickParse(input, ctx = {}) {
   if (typed) {
     result.category = typed
     result.matched.category = { via: 'name', value: typed }
+    // Strip it, exactly as a named account is stripped a few lines up.
+    //
+    // "150 jollibee food gcash" was landing in the ledger described as
+    // "Jollibee Food". The category name there is an INSTRUCTION, not part of
+    // what you bought - you were telling the parser where to file it, and it
+    // has now done that. Leaving the word in means every such row carries a
+    // category name forever, and worse, the learner reads those rows back:
+    // "food" gets reinforced as a merchant word by descriptions that only
+    // contain it because the parser failed to remove it.
+    //
+    // Only for a TYPED category. One inferred from history came from words
+    // like "lrt fare" that genuinely are the description.
+    rest = norm(rest).replace(norm(typed), ' ').replace(/\s+/g, ' ').trim()
   } else {
     const learned = matchName(rest, know.keys)
     if (learned) {

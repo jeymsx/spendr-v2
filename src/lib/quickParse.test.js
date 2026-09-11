@@ -165,6 +165,24 @@ describe('description', () => {
     expect(r.description).toBe('Jollibee')
   })
 
+  it('removes a category you named from the description', () => {
+    // "food" there is an INSTRUCTION - you are saying where to file it, not
+    // what you bought. Left in, the row lands in the ledger described as
+    // "Jollibee Food", and the learner then reads that back and reinforces
+    // "food" as a merchant word off a row that only contains it by accident.
+    const r = quickParse('150 jollibee food gcash', ctx())
+    expect(r.category).toBe('Food')
+    expect(r.account).toBe('GCash')
+    expect(r.description).toBe('Jollibee')
+  })
+
+  it('keeps words that only INFERRED the category', () => {
+    // Nothing was named here - "groceries" is a real seed merchant term and
+    // it is also what you bought, so it stays.
+    const r = quickParse('500 grocery run', ctx())
+    expect(r.description).toBe('Grocery Run')
+  })
+
   it('is empty when nothing is left', () => {
     expect(quickParse('500', ctx()).description).toBe('')
   })
@@ -584,6 +602,7 @@ describe('the corpus - what must and must not be understood', () => {
   const CASES = [
     // typed                       type        amount   category      account
     ['180 grab',                   'expense',     180, 'Transpo',    'GCash'],
+    ['lrt fare transpo 11 gcash',  'expense',      11, 'Transpo',    'GCash'],
     ['grab 180',                   'expense',     180, 'Transpo',    'GCash'],
     ['1.2k grab',                  'expense',    1200, 'Transpo',    'GCash'],
     ['260 jollibee',               'expense',     260, 'Food',       'Cash'],
