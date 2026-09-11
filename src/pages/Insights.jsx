@@ -711,48 +711,6 @@ function AccountBreakdown({ data, animKey }) {
 
 // ── Budget ─────────────────────────────────────────────────────────────────────
 
-function BudgetSection({ data, animKey }) {
-  const [ready, setReady] = useState(false)
-  useEffect(() => {
-    setReady(false)
-    const raf = requestAnimationFrame(() => { const t = setTimeout(() => setReady(true), 70); return () => clearTimeout(t) })
-    return () => cancelAnimationFrame(raf)
-  }, [animKey])
-
-  if (!data.length) return null
-
-  return (
-    <div>
-      <SectionLabel>Budget</SectionLabel>
-      <div className="px-5 grid grid-cols-2 gap-2.5">
-        {data.map((d, i) => {
-          const pct    = d.budget > 0 ? Math.min((d.spent / d.budget) * 100, 100) : 0
-          const over   = d.spent > d.budget
-          const warn   = pct >= 75 && !over
-          const accent = over ? '#ef4444' : warn ? '#f59e0b' : '#22c55e'
-          return (
-            <div key={i} className="relative rounded-2xl overflow-hidden flex flex-col gap-1.5 px-3 pt-2.5 pb-0
-              bg-slate-50 dark:bg-white/[0.03]">
-              <div className="flex items-center gap-1.5">
-                <span className="leading-none shrink-0"><CategoryGlyph cat={d} size={14} /></span>
-                <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-200 truncate">{d.name}</span>
-              </div>
-              <div className="flex items-baseline justify-between gap-1 mb-2">
-                <span className="text-[13px] font-bold tabular-nums" style={{ color: accent }}>{fmtCompact(d.spent)}</span>
-                <span className="text-[10px] text-slate-400 dark:text-slate-500 tabular-nums shrink-0">/{fmtCompact(d.budget)}</span>
-              </div>
-              <div className="absolute bottom-0 inset-x-0 h-[3px] bg-black/[0.06] dark:bg-white/[0.08]">
-                <div className="h-full transition-all duration-700 ease-out"
-                  style={{ width: ready ? `${pct}%` : '0%', backgroundColor: accent }} />
-              </div>
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 // ── Main ───────────────────────────────────────────────────────────────────────
 
 export default function Insights() {

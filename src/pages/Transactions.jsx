@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useCallback, useRef, useDeferredValue } from 'react'
+import { useState, useMemo, useEffect, useCallback, useDeferredValue } from 'react'
 import * as RadixSlider from '@radix-ui/react-slider'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'

@@ -4,9 +4,8 @@ import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
-import { useToast } from '../context/ToastContext'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
-import { IconBank, IconCard, IconChevronRight, IconPhone, IconWallet, IconWarning, IconBell,
+import { IconBank, IconCard, IconPhone, IconWallet, IconWarning, IconBell,
   IconCardUI, IconReceipt, IconTransferUI } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
 import { scheduledCutoff } from '../utils/scheduled'
@@ -168,14 +167,6 @@ function monthPrefix() {
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
 }
 
-function inNext7Days(dateStr) {
-  if (!dateStr) return false
-  const d    = new Date(dateStr)
-  const now  = new Date(); now.setHours(0, 0, 0, 0)
-  const end  = new Date(now.getTime() + 7 * 864e5)
-  return d >= now && d <= end
-}
-
 // ── Main component ─────────────────────────────────────────────────────────────
 
 /* ── The wallet silhouette ────────────────────────────────────────────────────
@@ -287,7 +278,6 @@ function useWalletClip() {
 export default function Dashboard() {
   const navigate = useNavigate()
   const { accentColor, theme } = useTheme()
-  const { showToast } = useToast()
   const [balanceHidden,    setBalanceHidden]    = useState(true)
   const [accountsHidden,   setAccountsHidden]   = useState(false)
   const [peek,             setPeek]             = useState(false)
@@ -362,7 +352,6 @@ export default function Dashboard() {
   }, [txAll])
 
   const budgetCategories = useMemo(() => {
-    const catMap = Object.fromEntries((categories || []).map(c => [c.name, c]))
     const spentMap = {}
     monthExpenses.forEach(t => {
       spentMap[t.category] = (spentMap[t.category] ?? 0) + (t.amount ?? 0)
@@ -1307,18 +1296,6 @@ function AccountCard({ acct, hidden, onClick, stmt }) {
 
 // ── Quick add button ───────────────────────────────────────────────────────────
 
-function QuickAddBtn({ label, to, className }) {
-  const navigate = useNavigate()
-  return (
-    <button
-      onClick={() => navigate(to)}
-      className={`flex-1 py-2.5 rounded-2xl text-xs font-semibold text-center active:scale-[0.96] transition-transform duration-100 ${className}`}
-    >
-      {label}
-    </button>
-  )
-}
-
 // ── Budget summary tile ───────────────────────────────────────────────────────
 
 /**
@@ -1389,45 +1366,6 @@ function BudgetSummaryTile({ totals, count }) {
 
 // ── Budget chip (compact 2-col grid) ──────────────────────────────────────────
 
-function BudgetRow({ cat }) {
-  const pct    = cat.budget > 0 ? Math.min((cat.spent / cat.budget) * 100, 100) : 0
-  const over   = cat.spent > cat.budget
-  const warn   = pct >= 75 && !over
-  const accent = over ? '#ef4444' : warn ? '#f59e0b' : '#22c55e'
-
-  return (
-    <div
-      className="card relative rounded-2xl overflow-hidden flex flex-col gap-1.5 px-3 pt-2.5 pb-0"
-    >
-      {/* icon + name */}
-      <div className="flex items-center gap-1.5">
-        <span className="leading-none shrink-0"><CategoryGlyph cat={cat} size={14} /></span>
-        <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-200 truncate">
-          {cat.name}
-        </span>
-      </div>
-
-      {/* spent vs budget */}
-      <div className="flex items-baseline justify-between gap-1 mb-2">
-        <span className="text-[13px] font-bold tabular-nums" style={{ color: accent }}>
-          {fmtCompact(cat.spent)}
-        </span>
-        <span className="text-[10px] text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
-          /{fmtCompact(cat.budget)}
-        </span>
-      </div>
-
-      {/* progress track flush to bottom — no padding-bottom on card so this hugs the edge */}
-      <div className="absolute bottom-0 inset-x-0 h-[3px] bg-black/[0.06] dark:bg-white/[0.08]">
-        <div
-          className="h-full transition-all duration-700 ease-out"
-          style={{ width: `${pct}%`, backgroundColor: accent }}
-        />
-      </div>
-    </div>
-  )
-}
-
 function TxRow({ tx, cat, isLast }) {
   const isExpense  = tx.type === 'expense'
   const isInflow   = tx.type === 'inflow'
@@ -1476,14 +1414,6 @@ function TxRow({ tx, cat, isLast }) {
 }
 
 // ── Empty states ───────────────────────────────────────────────────────────────
-
-function EmptyCard({ label }) {
-  return (
-    <div className="card py-6 rounded-2xl text-center text-sm text-slate-400 dark:text-slate-500">
-      {label}
-    </div>
-  )
-}
 
 function EmptyPill({ label }) {
   return (

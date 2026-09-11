@@ -359,7 +359,6 @@ function StyleStep({ draft, set, action }) {
     return () => cancelAnimationFrame(id)
   }, [])
 
-  const brand = accountBrand({ name: draft.name, type: draft.type, color: draft.color })
   /**
    * The institution's own stops, if it has any.
    *
@@ -934,13 +933,6 @@ export default function AccountNew() {
       Continue
     </button>
   )
-
-  const stepTitle = {
-    institution: 'Which account?',
-    details: 'The details',
-    credit: 'Billing cycle',
-    style: 'Choose card style',
-  }[current]
 
   // min-h-full plus a flex column is what lets the review step centre
   // itself: <main> is a definite-height scroller, so the flex child can take

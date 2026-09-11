@@ -26,17 +26,6 @@ function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
-function fmtDateLabel(dateStr) {
-  const today = new Date()
-  const yest  = new Date(today); yest.setDate(today.getDate() - 1)
-  const todayKey = localDateStr(today)
-  const yesterKey = localDateStr(yest)
-  if (dateStr === todayKey)   return 'Today'
-  if (dateStr === yesterKey)  return 'Yesterday'
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })
-}
-
 function FieldButton({ onClick, error, left, center, right }) {
   return (
     <button

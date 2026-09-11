@@ -34,13 +34,6 @@ import { setViewMode, getViewPreference } from '../web/useViewMode'
 
 const APP_VERSION = '0.1.0'
 
-const CURRENCIES = [
-  { code: 'PHP', symbol: '₱', label: 'Philippine Peso' },
-  { code: 'USD', symbol: '$', label: 'US Dollar' },
-  { code: 'SGD', symbol: 'S$', label: 'Singapore Dollar' },
-  { code: 'EUR', symbol: '€', label: 'Euro' },
-]
-
 const EMOJI_OPTIONS = [
   '🍔', '🛍️', '🚗', '🎮', '💆', '🧾', '📦', '💰',
   '🏠', '💊', '🎓', '✈️', '🐾', '💻', '🎁', '🔧',
@@ -122,25 +115,6 @@ export function buildAndDownloadCSV(transactions) {
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
-function IconUser() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" />
-      <circle cx="12" cy="7" r="4" />
-    </svg>
-  )
-}
-
-function IconGlobe() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="2" y1="12" x2="22" y2="12" />
-      <path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
-    </svg>
-  )
-}
-
 function IconSun() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -169,16 +143,6 @@ function IconPalette() {
       <circle cx="8.5" cy="7.5" r=".5" fill="currentColor" />
       <circle cx="6.5" cy="12.5" r=".5" fill="currentColor" />
       <path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 011.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z" />
-    </svg>
-  )
-}
-
-function IconWallet() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M20 7H4a2 2 0 00-2 2v10a2 2 0 002 2h16a2 2 0 002-2V9a2 2 0 00-2-2z" />
-      <path d="M16 3H8l-4 4h16l-4-4z" />
-      <circle cx="17" cy="13" r="1" fill="currentColor" />
     </svg>
   )
 }
@@ -233,16 +197,6 @@ function IconCloud() {
   )
 }
 
-function IconRefresh() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <polyline points="23 4 23 10 17 10" />
-      <polyline points="1 20 1 14 7 14" />
-      <path d="M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15" />
-    </svg>
-  )
-}
-
 function IconInfo() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -272,15 +226,6 @@ function IconTarget() {
       <circle cx="12" cy="12" r="10" />
       <circle cx="12" cy="12" r="6" />
       <circle cx="12" cy="12" r="2" />
-    </svg>
-  )
-}
-
-function IconPencil() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
-      <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
     </svg>
   )
 }
@@ -2644,65 +2589,6 @@ export function TemplatesPage() {
 }
 
 
-// ── Month picker (custom — avoids browser native dropdown dark-mode issues) ───
-
-function MonthPicker({ months, value, onChange }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-  const selected = months.find(m => m.year === value.year && m.month === value.month) ?? months[0]
-
-  useEffect(() => {
-    if (!open) return
-    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('mousedown', handler)
-    document.addEventListener('touchstart', handler)
-    return () => { document.removeEventListener('mousedown', handler); document.removeEventListener('touchstart', handler) }
-  }, [open])
-
-  return (
-    <div ref={ref} className="flex-1 relative">
-      <button
-        onClick={() => setOpen(o => !o)}
-        className="w-full flex items-center justify-between gap-2 px-3 h-10 rounded-xl text-sm font-medium
-          bg-white dark:bg-primary/[0.07]
-          border border-slate-200/80 dark:border-primary/[0.14]
-          text-slate-800 dark:text-white
-          active:opacity-70 transition-opacity"
-      >
-        <span>{selected?.label}</span>
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={`shrink-0 transition-transform duration-150 ${open ? 'rotate-180' : ''}`}>
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </button>
-
-      {open && (
-        <div className="absolute left-0 right-0 bottom-full mb-1.5 z-[200] rounded-xl overflow-hidden
-          bg-white dark:bg-[#1a2332]
-          border border-slate-200/80 dark:border-white/[0.08]
-          shadow-[0_8px_32px_rgba(0,0,0,0.28)]
-          max-h-52 overflow-y-auto no-scrollbar">
-          {months.map(({ year, month, label }) => {
-            const active = year === value.year && month === value.month
-            return (
-              <button
-                key={`${year}-${month}`}
-                onClick={() => { onChange({ year, month }); setOpen(false) }}
-                className={`w-full text-left px-4 py-2.5 text-sm transition-colors
-                  ${active
-                    ? 'font-semibold text-primary bg-primary/[0.08] dark:bg-primary/[0.12]'
-                    : 'font-medium text-slate-700 dark:text-slate-300 active:bg-slate-50 dark:active:bg-white/[0.05]'
-                  }`}
-              >
-                {label}
-              </button>
-            )
-          })}
-        </div>
-      )}
-    </div>
-  )
-}
-
 // ── Accent color sheet ────────────────────────────────────────────────────────
 
 export function AccentColorSheet({ open, onClose, accentColor, setAccentColor }) {
@@ -2953,7 +2839,7 @@ function ToggleSwitch({ on }) {
 
 export default function Settings() {
   const navigate               = useNavigate()
-  const { theme, toggleTheme, accentColor, setAccentColor } = useTheme()
+  const { theme, toggleTheme, accentColor } = useTheme()
   const { showToast }          = useToast()
   const [restoreOpen, setRestoreOpen] = useState(false)
   const { user, signOut }      = useAuth()
@@ -3027,11 +2913,6 @@ export default function Settings() {
       showToast('Sign-out failed', 'error')
       setLoggingOut(false)
     }
-  }
-
-  async function handleRedoOnboarding() {
-    await db.meta.delete('onboarded')
-    navigate('/onboarding', { replace: true })
   }
 
   async function handleSheetsSync(url) {
@@ -3315,14 +3196,6 @@ export default function Settings() {
               </button>
             </div>
           </div>
-          {/* <RowDivider />
-          <SettingsRow
-            iconEl={<RowIcon color="slate"><IconRefresh /></RowIcon>}
-            label="Redo Onboarding"
-            sublabel="Restart the setup flow"
-            right={<IconChevronRight size={14} strokeWidth="2" />}
-            onTap={handleRedoOnboarding}
-          /> */}
         </SectionCard>
       </div>
 

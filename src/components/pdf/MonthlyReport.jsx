@@ -59,7 +59,6 @@ const GRAY_TEXT      = '#64748b'
 const MUTED          = '#94a3b8'
 const WHITE          = '#ffffff'
 const DARK_TEXT      = '#1e293b'
-const MEDIUM_TEXT    = '#334155'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -345,7 +344,7 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
       {/* Credit accounts — detailed cards */}
       {creditAccounts.map((acct, i) => {
         const det     = creditDetailMap[acct.name] ?? {}
-        const { stmtTotal = 0, stmtRange = '', nextTotal = 0, nextStatementTotal = 0, laterTotal = 0, nextRange = '',
+        const { stmtTotal = 0, stmtRange = '', nextStatementTotal = 0, nextRange = '',
                 balanceUsed = 0, available = 0, usedPct = 0, limit = 0,
                 dueDate = '—', minimumPayment = 0 } = det
         const barFill = Math.max((usedPct / 100) * 450, 0)

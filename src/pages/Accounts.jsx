@@ -8,18 +8,17 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import TxDetailSheet from '../components/TxDetailSheet'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
 import { useTheme } from '../context/ThemeContext'
 import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { getCreditStatus, getNextCycleRange, nextDueDate } from '../utils/creditCycle'
+import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
 import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS } from '../lib/phAccounts'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
-import { IconBank, IconCard, IconCheck, IconChevronRight, IconPhone, IconPlus, IconWallet, IconWalletUI, IconBankUI, IconTrash} from '../components/icons'
+import { IconBank, IconCard, IconCheck, IconPhone, IconPlus, IconWallet, IconWalletUI, IconBankUI, IconTrash} from '../components/icons'
 import { deleteAccountRemote } from '../lib/sync'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
@@ -736,8 +735,6 @@ export default function Accounts() {
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
-  // Needed by the transaction detail sheet opened from an account's ledger.
-  const categories   = useLiveQuery(() => db.categories.toArray(),   [], [])
 
   const creditStmtMap = useMemo(() => {
     const map = {}
@@ -1608,7 +1605,6 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
     setSaving(true)
     try {
       const cleanName = name.trim()
-      const isCredit  = type === 'credit'
       const data = buildAccountRow({
         name: cleanName, type, role, color, creditLimit,
         statementDay, dueDay, cutoffDay, minPayment,

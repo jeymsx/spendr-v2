@@ -350,7 +350,7 @@ export function learnLedger(transactions = [], opts = {}) {
   const stats = new Map()
   for (const tx of transactions) {
     if (!tx?.description) continue
-    const w = ageWeight(tx.date, nowMs)
+    const w = ageWeight(tx.date, nowMs, halfLife)
     for (const { key, strong } of phrasesOf(tx.description)) {
       let s = stats.get(key)
       if (!s) {
