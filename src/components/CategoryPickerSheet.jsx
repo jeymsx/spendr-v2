@@ -1,54 +1,24 @@
-import { useState } from 'react'
-import { useScrollLock } from '../hooks/useScrollLock'
-import FadeScroller from './FadeScroller'
+import Sheet from './ui/Sheet'
 import CategoryGlyph from './CategoryGlyph'
 
 export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect }) {
-  const [closing, setClosing] = useState(false)
-  useScrollLock(open)
-
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  const pick = (cat) => { onSelect(cat); close() }
-
-  if (!open && !closing) return null
+  const pick = (cat) => { onSelect(cat); onClose() }
 
   return (
-    <div className="fixed inset-0 z-[130]" style={{ touchAction: 'none' }}>
-      <div
-        className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={close}
-      />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'flex flex-col overflow-hidden',
-        ].join(' ')}
-        /* Same 78dvh as the account picker. A four-column grid of every
-           expense category is the longest list in the app, so this is where
-           a short sheet forced the most scrolling. */
-        style={{ maxHeight: '78dvh' }}
-      >
-        {/* non-scrollable header */}
-        <div className="pt-5 px-5 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
-          <p className="text-xs font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-4">
-            Select Category
-          </p>
-        </div>
-
-        {/* scrollable grid, feathered at whichever edge it runs past */}
-        <FadeScroller
-          className="flex-1 px-5"
-          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-        >
-          <div className="grid grid-cols-4 gap-2.5">
+    /* 78dvh: a four-column grid of every expense category is the longest
+       list in the app, so this is where a short sheet forced the most
+       scrolling. Sheet's feathered, scrolling body and the grab handle are
+       its own now - this file used to build both. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={130}
+      scrim={40}
+      maxHeight="78dvh"
+      title="Select category"
+    >
+      <div>
+        <div className="grid grid-cols-4 gap-2.5">
             {categories.map(cat => {
               const isSelected = selected?.id === cat.id
               return (
@@ -73,10 +43,8 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
                 </button>
               )
             })}
-          </div>
-          <div className="h-8 shrink-0" />
-        </FadeScroller>
+        </div>
       </div>
-    </div>
+    </Sheet>
   )
 }

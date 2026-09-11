@@ -103,6 +103,15 @@ export default function Sheet({
   z = 100,
   /** Scrim darkness, 0-100. Deeper for a sheet stacked on another sheet. */
   scrim = 45,
+  /**
+   * A height this sheet insists on - '52dvh' for the account picker, which
+   * wants five rows and half of the sixth showing whatever the screen.
+   *
+   * Setting it also docks the sheet: a panel with a height of its own is one
+   * that means to scroll, and a scrolling card standing off the bottom edge
+   * is the case the float/dock rule exists to avoid.
+   */
+  maxHeight = null,
   className = '',
   bodyClassName = '',
   children,
@@ -123,6 +132,8 @@ export default function Sheet({
   const restoreRef = useRef(null)
   const titleId = useId()
 
+  /* A sheet with a height of its own never floats - see the prop's note. */
+  const isDocked = docked || !!maxHeight
   const closing = phase === 'exiting'
   useScrollLock(open || closing)
 
@@ -227,7 +238,7 @@ export default function Sheet({
      thing in it has to clear the home indicator itself. Floating, the panel
      already stands that far off the edge and adding it again reads as a hole
      under the buttons. */
-  const bottomPad = docked ? 'pb-[max(20px,env(safe-area-inset-bottom))]' : 'pb-5'
+  const bottomPad = isDocked ? 'pb-[max(20px,env(safe-area-inset-bottom))]' : 'pb-5'
 
   return (
     <div className="fixed inset-0" style={{ zIndex: z }}>
@@ -239,6 +250,7 @@ export default function Sheet({
 
       <div
         ref={panelRef}
+        style={maxHeight ? { '--sheet-max': maxHeight } : undefined}
         role="dialog"
         aria-modal="true"
         aria-labelledby={title ? titleId : undefined}
@@ -246,10 +258,10 @@ export default function Sheet({
         tabIndex={-1}
         className={cx(
           closing ? 'sheet-panel-exit' : 'sheet-panel',
-          docked ? 'sheet-dock' : 'sheet-float',
+          isDocked ? 'sheet-dock' : 'sheet-float',
           'absolute flex flex-col outline-none',
           'bg-white dark:bg-[#111820]',
-          docked
+          isDocked
             ? 'border-t border-slate-100 dark:border-white/[0.07]'
             : 'border border-slate-100 dark:border-white/[0.07] shadow-[0_18px_50px_rgba(0,0,0,0.22)]',
           className,

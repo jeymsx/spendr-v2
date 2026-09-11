@@ -1,6 +1,5 @@
-import { useEffect, useRef, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useScrollLock } from '../hooks/useScrollLock'
+import Sheet from './ui/Sheet'
 
 function IconArrowUp() {
   return (
@@ -57,55 +56,23 @@ const ACTIONS = [
 
 export default function AddActionSheet({ open, onClose }) {
   const navigate = useNavigate()
-  const [closing, setClosing] = useState(false)
-  useScrollLock(open)
-  const overlayRef = useRef(null)
 
-  const handleClose = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => {
-      setClosing(false)
-      onClose()
-    }, 240)
-  }, [onClose])
+  /* Close, then navigate - the 260ms clears Sheet's 240ms exit animation.
+     Routing while the panel is still on screen takes the sheet down with the
+     page under it, which reads as a cut rather than a transition.
 
+     Everything else this component used to carry - the overlay, the panel,
+     the handle, the scroll lock, Escape (including the ref dance that kept
+     the listener pointing at a fresh callback) and the exit timer - is
+     Sheet's now. */
   const handleAction = (path) => {
-    handleClose()
+    onClose()
     setTimeout(() => navigate(path), 260)
   }
 
-  const handleCloseRef = useRef(handleClose)
-  useEffect(() => { handleCloseRef.current = handleClose }, [handleClose])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') handleCloseRef.current() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div
-        ref={overlayRef}
-        className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={handleClose}
-      />
-
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0',
-          'rounded-t-[28px] px-5 pt-5 pb-6',
-          'bg-white border-t border-slate-100',
-          'dark:bg-[#111820] dark:border-white/[0.07]',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-6" />
-
+    <Sheet open={open} onClose={onClose} ariaLabel="Add a transaction">
+      <div className="pt-1 pb-2">
         <div className="flex flex-col gap-3.5">
           {ACTIONS.map(({ label, description, path, Icon, iconBg }) => (
             <button
@@ -127,6 +94,6 @@ export default function AddActionSheet({ open, onClose }) {
           ))}
         </div>
       </div>
-    </div>
+    </Sheet>
   )
 }

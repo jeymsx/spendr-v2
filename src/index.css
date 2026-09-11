@@ -1186,15 +1186,24 @@ html.dark body {
   bottom: max(12px, env(safe-area-inset-bottom));
   border-radius: 28px;
   /* 56px of page left showing above it, plus the gap below. */
-  max-height: calc(100% - 68px);
+  max-height: var(--sheet-max, calc(100% - 68px));
 }
 
 .sheet-dock {
   inset-inline: 0;
   bottom: 0;
   border-radius: 28px 28px 0 0;
-  max-height: calc(100% - 56px);
+  max-height: var(--sheet-max, calc(100% - 56px));
 }
+
+/* --sheet-max is how a sheet asks to be a particular height - the account
+   picker wants 52dvh so it shows five rows and half of the sixth, which says
+   "more below" without a scrollbar.
+
+   A custom property rather than an inline max-height, because inline wins
+   over any stylesheet and would defeat `html.web .sheet-panel` the way the
+   float geometry did. This way the variable is only ever read by the two
+   rules above, and desktop overrides both outright.                       */
 
 @keyframes fadeIn {
   from { opacity: 0; }
