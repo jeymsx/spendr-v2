@@ -489,7 +489,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
       onClose={onClose}
       scrim={40}
       maxHeight="92dvh"
-      title={editDebt ? 'Edit debt' : 'Add debt'}
+      title={editDebt ? 'Edit Debt' : 'Add Debt'}
       titleAction={editDebt && (
         <button
           onClick={handleDelete}

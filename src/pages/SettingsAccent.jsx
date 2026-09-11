@@ -349,7 +349,7 @@ export default function SettingsAccent() {
        min-h in dvh minus the navbar, because a percentage min-height against a
        flex-grown parent does not reliably resolve - that cost three attempts
        on the card style step. mt-auto/mb-auto then centres what is inside. */
-    <SubPage title="Accent colour" className="flex flex-col min-h-[calc(100dvh-5rem)]">
+    <SubPage title="Accent Colour" className="flex flex-col min-h-[calc(100dvh-5rem)]">
       <div className="mt-auto mb-auto">
         {/* calc(50% - 114px) of padding, so the first and last previews can
             reach the middle. With snap-center and a 228px card, an end card

@@ -268,7 +268,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add expense</h1>
+        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add Expense</h1>
         <Button
           variant="tint"
           size="xs"

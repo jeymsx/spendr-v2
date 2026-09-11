@@ -15,7 +15,7 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
       z={130}
       scrim={40}
       maxHeight="78dvh"
-      title="Select category"
+      title="Select Category"
     >
       <div>
         <div className="grid grid-cols-4 gap-2.5">

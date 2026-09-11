@@ -373,7 +373,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
       onClose={onClose}
       z={100}
       scrim={45}
-      title="Google Sheets sync"
+      title="Google Sheets Sync"
       footer={(
         <Button size="lg" block onClick={handleSync} disabled={syncing || !url.trim()}>
           {syncing
@@ -467,7 +467,7 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
       onClose={onClose}
       z={100}
       scrim={45}
-      title="Edit profile"
+      title="Edit Profile"
       /* The header's Cancel, in the slot built for it - outside the <h3>, so
          the word does not become part of the dialog's accessible name. */
       titleAction={(
@@ -1034,7 +1034,7 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
      are fields now: you tap one and type. */
   if (asPage) {
     return (
-      <SubPage title="Monthly limits" onBack={close}>
+      <SubPage title="Monthly Limits" onBack={close}>
         <div className="pt-4">{listBody}</div>
         <div className="px-5 -mt-3">{saveButton}</div>
       </SubPage>
@@ -1058,7 +1058,7 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
       scrim={45}
       maxHeight="88vh"
       surface="bg-slate-50 dark:bg-[#0d1117]"
-      title="Monthly budgets"
+      title="Monthly Budgets"
       titleAction={(
         <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
           {hasPendingChanges ? 'Discard' : 'Done'}
@@ -1543,7 +1543,7 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
         scrim={45}
         maxHeight="92vh"
         surface="bg-slate-50 dark:bg-[#0d1117]"
-        title="Manage categories"
+        title="Manage Categories"
         titleAction={(
           <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
             Done
@@ -1701,8 +1701,8 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
   const sheetTitle = {
     form:             isEdit ? 'Edit Category' : 'New Category',
-    'confirm-delete': 'Delete category',
-    reassign:         'Reassign transactions',
+    'confirm-delete': 'Delete Category',
+    reassign:         'Reassign Transactions',
   }[mode]
 
   /* One action row per mode, pinned by Sheet under the scrolling body.
@@ -2166,7 +2166,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
            that is writing a template must not be dismissed out from under the
            write. */
         dismissible={!saving}
-        title={isEdit ? 'Edit template' : 'New template'}
+        title={isEdit ? 'Edit Template' : 'New Template'}
         titleAction={(
           <div className="flex items-center gap-3">
             {isEdit && (
@@ -2460,7 +2460,7 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
     return (
       <>
         <SubPage
-          title="Quick templates"
+          title="Quick Templates"
           action={(
             <IconButton label="New template" variant="primary" onClick={openAdd}>
               <IconPlus />
@@ -2493,7 +2493,7 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
         scrim={45}
         maxHeight="92vh"
         surface="bg-slate-50 dark:bg-[#0d1117]"
-        title="Quick templates"
+        title="Quick Templates"
         titleAction={(
           <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
             Done
@@ -2541,7 +2541,7 @@ export function AccentColorSheet({ open, onClose, accentColor, setAccentColor })
       onClose={onClose}
       z={100}
       scrim={45}
-      title="Accent colour"
+      title="Accent Colour"
       titleAction={(
         <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
           Done

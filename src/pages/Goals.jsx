@@ -446,7 +446,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
     <Sheet
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit goal' : 'New goal'}
+      title={isEdit ? 'Edit Goal' : 'New Goal'}
       maxHeight="88dvh"
       footer={actions}
     >

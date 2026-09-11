@@ -550,7 +550,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
     <Sheet
       open={open}
       onClose={onClose}
-      title="Add account"
+      title="Add Account"
       maxHeight="88dvh"
       footer={(
         /* The hairline it used to carry is gone with the migration: at
@@ -1150,7 +1150,7 @@ function AccountSortSheet({ open, onClose, accounts }) {
     <Sheet
       open={open}
       onClose={onClose}
-      title="Sort accounts"
+      title="Sort Accounts"
       maxHeight="80dvh"
     >
       <p className="text-xs text-slate-400 dark:text-slate-500">
@@ -1211,7 +1211,7 @@ function CardStyleSheet({ open, onClose, draft, set }) {
       onClose={onClose}
       z={150}
       scrim={55}
-      title="Customise card"
+      title="Customise Card"
       maxHeight="94dvh"
     >
       {/* The card stands up here, exactly as it does on the create flow's
@@ -1335,7 +1335,7 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
       onClose={onClose}
       z={150}
       scrim={60}
-      title="Crop QR photo"
+      title="Crop QR Photo"
       maxHeight="92dvh"
       footer={actions}
     >
@@ -2290,7 +2290,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   /* The sheet's chrome, by mode. On a page none of it applies - SubPage
      carries the title and Back, and the buttons stay in the body. */
   const sheetTitle =
-    mode === 'form' ? (isEdit ? 'Edit account' : 'New account')
+    mode === 'form' ? (isEdit ? 'Edit Account' : 'New Account')
     /* confirm-delete keeps its centred, icon-topped heading in the body, so
        the dialog takes its name from ariaLabel instead. */
     : null
@@ -2331,7 +2331,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
          screen that was no longer there - and Back would have left the
          account entirely rather than returning to the form behind it. */
       <SubPage
-        title={isEdit ? 'Edit account' : 'New account'}
+        title={isEdit ? 'Edit Account' : 'New Account'}
         onBack={mode === 'form' ? close : () => setMode('form')}
       >
         {inner}

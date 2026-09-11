@@ -664,7 +664,7 @@ export default function AccountNew() {
             <IconChevronLeft />
           </IconButton>
           <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-            New account
+            New Account
           </h1>
           <span className="w-9 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
             {steps.indexOf(current) + 1}/{steps.length}

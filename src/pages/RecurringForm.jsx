@@ -186,7 +186,7 @@ export default function RecurringForm() {
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          {isEdit ? 'Edit bill' : 'New bill'}
+          {isEdit ? 'Edit Bill' : 'New Bill'}
         </h1>
         {isEdit && editRec ? (
           <Button

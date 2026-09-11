@@ -319,7 +319,9 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
      heading is the coloured type pill and delete's is a red disc over a
      centred line - both graphics rather than lines of text, so both stay in
      the body and ariaLabel names the dialog instead. */
-  const title = mode === 'edit' ? `Edit ${cfg.label.toLowerCase()}` : null
+  /* cfg.label, not its lowercase form: a sheet's title is its name -
+     "Edit Expense" - and this was the one place still lowercasing it. */
+  const title = mode === 'edit' ? `Edit ${cfg.label}` : null
 
   const deleteHeading = planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?'
 

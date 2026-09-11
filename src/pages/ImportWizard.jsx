@@ -1013,10 +1013,10 @@ export default function ImportWizard() {
   }
 
   const STEP_LABELS = {
-    1: 'Select file',
-    2: 'Preview & validate',
-    3: 'Opening balances',
-    4: 'Confirm import',
+    1: 'Select File',
+    2: 'Preview & Validate',
+    3: 'Opening Balances',
+    4: 'Confirm Import',
     5: 'Done',
   }
 
