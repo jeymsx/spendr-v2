@@ -23,38 +23,65 @@
  * look blue.
  */
 
-/* Left end to the spent boundary. Four stops rather than two because a
-   two-stop blend across a 180-degree fan reads as one muddy colour in the
-   middle; the turns are what make it look like a spectrum. */
-const RAMP = ['#3b5bdb', '#7950f2', '#12b886', '#fd7e14']
+/* ── The ramp is built from the accent, not hardcoded ──────────────────
+ *
+ * It was a fixed blue-violet-teal-orange spectrum, which looked good and was
+ * wrong: this app lets you pick an accent, every other coloured surface obeys
+ * it, and a rainbow here made the one big graph the only thing on the page
+ * that ignored the setting. On Azure the gauge is blues now; on Coral it is
+ * corals.
+ *
+ * A sweep, still, rather than one flat colour - a fan of 34 identical ticks
+ * has nothing to follow along it. The travel comes from a small hue rotation
+ * plus rising lightness, so it reads as one family getting brighter rather
+ * than as a different colour arriving.
+ *
+ * Lightness is clamped to 0.30-0.72 whatever the accent. Below that the dark
+ * end disappears into a dark page, above it the light end washes out on a
+ * white one, and this component cannot see which theme it is in.
+ */
 
-const hex = (h) => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16))
-const toHex = (c) => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('')
+const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v))
 
-/** A colour `t` of the way along RAMP, 0..1. */
-function rampAt(t) {
-  const clamped = Math.max(0, Math.min(1, t))
-  const span = (RAMP.length - 1) * clamped
-  const i = Math.min(RAMP.length - 2, Math.floor(span))
-  const f = span - i
-  const a = hex(RAMP[i]), b = hex(RAMP[i + 1])
-  return toHex(a.map((v, k) => v + (b[k] - v) * f))
+function hexToHsl(hex) {
+  const [r, g, b] = [1, 3, 5].map(i => parseInt(hex.slice(i, i + 2), 16) / 255)
+  const max = Math.max(r, g, b), min = Math.min(r, g, b)
+  const l = (max + min) / 2
+  const d = max - min
+  if (!d) return [0, 0, l]
+  const sat = l > 0.5 ? d / (2 - max - min) : d / (max + min)
+  const h = max === r ? ((g - b) / d + (g < b ? 6 : 0))
+    : max === g ? (b - r) / d + 2
+    : (r - g) / d + 4
+  return [h * 60, sat, l]
 }
 
-/* A wider box, and the tick count kept.
+const hslCss = (h, s, l) => `hsl(${((h % 360) + 360) % 360} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`
 
-   The page gives this 350px between its gutters and the fan was capped at
-   280, so a sixth of the width was going spare. Growing into it is where
-   the extra size comes from - the arc is 18% bigger and each tick is bolder
-   at 8px across the rim against 6.4 before.
+/** Four stops from one accent hex: same family, rotating and brightening. */
+function rampFor(accent) {
+  const hex = /^#[0-9a-f]{6}$/i.test(accent ?? '') ? accent : '#2D9DFF'
+  const [h, s0, l] = hexToHsl(hex)
+  const s = clamp(s0, 0.45, 0.95)
+  const lo = clamp(l * 0.78, 0.30, 0.52)
+  const hi = clamp(l * 1.24, 0.52, 0.72)
+  // Hue leads by -14 and trails to +22: enough to see the turn, not enough
+  // to leave the accent's own family.
+  return [-14, -2, 10, 22].map((dh, i, arr) =>
+    hslCss(h + dh, s, lo + (hi - lo) * (i / (arr.length - 1))))
+}
 
-   Dropping to 28 ticks was tried on the way here and reverted. Fewer ticks
-   on a bigger radius pushes the pitch out faster than the ticks widen, so
-   the ring went airy: gap-to-pitch at the rim ran 0.55 where the reference
-   sits near 0.44. At 34 on this radius it is 0.44 - the rim pitch is 14.4
-   and the ticks are 8.0 - which is the density being matched. The size and
-   the spacing were never in competition; the box width was doing that work
-   on its own. */
+/** A colour `t` of the way along `ramp`, 0..1. Stops are hsl() strings, so
+ *  the blend happens in the browser via color-mix rather than here. */
+function rampAt(ramp, t) {
+  const c = clamp(t, 0, 1)
+  const span = (ramp.length - 1) * c
+  const i = Math.min(ramp.length - 2, Math.floor(span))
+  const f = span - i
+  // color-mix interpolates two hsl() strings without parsing them back out.
+  return `color-mix(in srgb, ${ramp[i + 1]} ${Math.round(f * 100)}%, ${ramp[i]})`
+}
+
 const TICKS = 34
 const W = 330
 const CY = 158          // centre sits on the baseline, so the fan is a half
@@ -81,8 +108,14 @@ export default function BudgetGauge({
   label = 'Spent',
   leftNote,
   rightNote,
+  /* The accent hex. Passed in rather than read off the CSS variable here,
+     because the page already holds it from useTheme and a component reaching
+     into computed styles for a value React is already tracking is a second
+     source of the same truth. */
+  accent,
   className = '',
 }) {
+  const ramp = rampFor(accent)
   const value = Number(pct) || 0
   /* Clamped for the geometry only. An over-budget month fills the fan - there
      is no more arc to give it - and the true figure is in leftNote, which is
@@ -121,7 +154,7 @@ export default function BudgetGauge({
       on,
       d,
       // Normalised across the lit span, not across the whole fan.
-      color: on ? rampAt(filled > 1 ? i / (filled - 1) : 1) : null,
+      color: on ? rampAt(ramp, filled > 1 ? i / (filled - 1) : 1) : null,
     }
   })
 

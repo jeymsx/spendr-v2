@@ -369,6 +369,7 @@ export default function Budget() {
                 has to be said in words or it is not said at all. */}
             <BudgetGauge
               className="mt-1"
+              accent={accentColor}
               pct={totals.pct}
               amount={fmt(totals.spent)}
               leftNote={`${Math.round(totals.pct)}% spent`}
@@ -380,30 +381,34 @@ export default function Budget() {
                 three separate facts rather than one strip belonging to the
                 gauge above it. */}
             <div className="grid grid-cols-3 gap-3 mt-5 text-center">
+              {/* Figure first, label under it. The labels are the same three
+                  words every month and the figures are the only part that
+                  changes, so leading with the label made the eye read three
+                  headings before reaching anything worth knowing. */}
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  {remaining >= 0 ? 'Remaining' : 'Over by'}
-                </p>
-                <p className={`text-[15px] font-bold tabular-nums mt-0.5 ${tone.textClass}`}>
+                <p className={`text-[17px] font-bold tabular-nums ${tone.textClass}`}>
                   {fmtCompact(Math.abs(remaining))}
+                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5 text-slate-500 dark:text-slate-400">
+                  {remaining >= 0 ? 'Remaining' : 'Over by'}
                 </p>
               </div>
               <div>
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  Days left
-                </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
+                <p className="text-[17px] font-bold tabular-nums text-slate-800 dark:text-slate-100">
                   {daysLeft}
+                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5 text-slate-500 dark:text-slate-400">
+                  Days left
                 </p>
               </div>
               <div>
                 {/* The number that actually changes behaviour: what today's
                     share of what is left looks like. */}
-                <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                  A day
-                </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
+                <p className="text-[17px] font-bold tabular-nums text-slate-800 dark:text-slate-100">
                   {remaining > 0 ? fmtCompact(perDay) : '—'}
+                </p>
+                <p className="text-[10px] font-semibold uppercase tracking-wider mt-0.5 text-slate-500 dark:text-slate-400">
+                  A day
                 </p>
               </div>
             </div>
