@@ -48,6 +48,10 @@ export function AddFlowProvider({ children }) {
   // Belt and braces: the forms are handed onCancel/onSaved so they close the
   // overlay directly, but if anything inside one does navigate, the overlay
   // must not be left floating over a page that has changed underneath it.
+  // Reacts to a navigation, which is an external event rather than
+  // anything this component can derive. The overlay must not be left
+  // floating over a page that changed underneath it.
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setFlow(null) }, [location.key])
 
   useEffect(() => {

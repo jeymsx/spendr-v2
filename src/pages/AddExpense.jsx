@@ -160,10 +160,19 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   const termIsCustom  = customTerm
     || (installMonths > 1 && !INSTALLMENT_TERMS.includes(installMonths))
 
-  // Picking a non-credit account cancels any term already chosen.
-  useEffect(() => {
-    if (!isCredit && installMonths !== 0) { setInstallMonths(0); setCustomTerm(false) }
-  }, [isCredit, installMonths])
+  /* Picking a non-credit account cancels any term already chosen.
+
+     Done in the one handler every account change goes through, rather than
+     in an effect watching `isCredit`. The effect cleared the term a render
+     LATE, so for one pass the form still held a payment plan for an account
+     that cannot carry one - and because it had to list `installMonths` as a
+     dependency it also re-ran on every term the user picked, only to decide
+     it had nothing to do. */
+  function chooseAccount(acct) {
+    setAccount(acct)
+    setAcctError(false)
+    if (acct?.type !== 'credit') { setInstallMonths(0); setCustomTerm(false) }
+  }
 
   useEffect(() => {
     const t = setTimeout(() => amountInputRef.current?.focus(), 80)
@@ -269,7 +278,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
     const cat = (categories ?? []).find(c => c.name === tpl.category)
     const acct = (accounts ?? []).find(a => a.name === tpl.account)
     if (cat)  { setCategory(cat);  setCatError(false) }
-    if (acct) { setAccount(acct);  setAcctError(false) }
+    if (acct) chooseAccount(acct)
   }
 
   return (
@@ -501,7 +510,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         onClose={() => setShowAcctSheet(false)}
         accounts={accounts ?? []}
         selected={account}
-        onSelect={acct => { setAccount(acct); setAcctError(false) }}
+        onSelect={chooseAccount}
       />
       <TxConfirmSheet
         open={showConfirm}

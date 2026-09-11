@@ -147,6 +147,10 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
   // reset mode when a different transaction is opened
   useEffect(() => {
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (tx) setMode('detail')
     setSaving(false)
     // Hydrates the form when the sheet opens. Listing every field would

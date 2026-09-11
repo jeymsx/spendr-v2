@@ -82,7 +82,15 @@ export default function WebTransactions() {
     return () => window.removeEventListener('keydown', onKey)
   }, [sheetOpen])
 
-  useEffect(() => { setVisible(PAGE) }, [deferred, type, account, category, month])
+  /* Back to the first page when the filters change - adjusted during render,
+     not in an effect, so the list is never committed once at the previous
+     page length under the new filter. */
+  const filterSig = [deferred, type, account, category, month].join('\u001e')
+  const [prevFilterSig, setPrevFilterSig] = useState(filterSig)
+  if (prevFilterSig !== filterSig) {
+    setPrevFilterSig(filterSig)
+    setVisible(PAGE)
+  }
 
   // Charges dated ahead are committed, not spent — the same rule the mobile
   // history uses, so both agree on what "happened". Everything this page

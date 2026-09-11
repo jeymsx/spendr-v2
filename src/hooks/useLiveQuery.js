@@ -15,6 +15,10 @@ export function useLiveQuery(querier, deps = [], defaultResult = undefined) {
   const [error,  setError]   = useState(null)
 
   useEffect(() => {
+    // This IS the subscription. A live query pushes values in from
+    // outside React, and the only way to render them is to put them in
+    // state - there is nothing here to derive during render.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setError(null)
 
     const subscription = liveQuery(querier).subscribe({

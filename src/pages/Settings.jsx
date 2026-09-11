@@ -439,6 +439,10 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
 
   useEffect(() => {
     if (!open) return
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaving(false)
     setName(initName || '')
     setCurrency(initCurrency || 'PHP')
@@ -542,6 +546,10 @@ export function RestoreBackupSheet({ open, onClose }) {
   useScrollLock(open)
 
   useEffect(() => {
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) { setStep(1); setInfo(null); setRaw(null); setError(''); setInput(''); setLoading(false) }
   }, [open])
 
@@ -715,6 +723,10 @@ export function ResetConfirmModal({ open, onClose }) {
   const { signOut } = useAuth()
 
   useEffect(() => {
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) { setStep(1); setInput(''); setLoading(false) }
   }, [open])
 
@@ -1705,6 +1717,10 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
   useEffect(() => {
     if (!open) return
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaving(false)
     setNameError(false)
     setReassignTarget(null)
@@ -2162,6 +2178,10 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
   useEffect(() => {
     if (!open) return
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSaving(false); setNameError(false)
     if (template?.id) {
       setName(template.name ?? '')

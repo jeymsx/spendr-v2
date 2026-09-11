@@ -543,6 +543,10 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
   useScrollLock(open)
 
   useEffect(() => {
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) { setQuery(''); setRecentNames(getRecentPresets()) }
   }, [open])
 
@@ -1275,6 +1279,10 @@ function QrCropSheet({ open, onClose, onConfirm }) {
   useScrollLock(open)
 
   useEffect(() => {
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!open) { setImgSrc(null); setCrop(null); setCompletedCrop(null) }
   }, [open])
 
@@ -1562,6 +1570,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
   useEffect(() => {
     if (!open) return
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setMode('form')
     setDeleteBlocked(null)
     setSaving(false)

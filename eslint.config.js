@@ -71,6 +71,27 @@ export default [
          hidden here. AccountDetail's ref-write-during-render is the one worth
          fixing first: it is idempotent today, but it is the kind of thing
          that breaks under concurrent rendering. */
+      /* Kept on, and worth the suppressions it costs.
+
+         27 reports. Six were real and are fixed: a credit-card term that
+         was cleared a render after the account changed, an Insights
+         animation counter that re-rendered the page twice per range change,
+         a desktop account selection that painted empty before correcting
+         itself, and two transaction lists that rendered every loaded row
+         once more under the new filter before cutting back to one page.
+
+         The remaining 21 are correct as written and are suppressed at the
+         line, each with its reason. Fifteen are one shape: a sheet loading
+         its fields from a record when it opens. The documented alternative
+         - unmount it, or give it a key - is not available to them, because
+         each sheet renders null only after its own exit animation has run,
+         so the parent cannot take it away at the moment it closes. The rest
+         are a Dexie subscription, a sync kicked off on sign-in, two
+         deliberate animation gates, and two reactions to navigation.
+
+         So: a useful rule with a high false-positive rate against this
+         codebase's sheet pattern, not a rule to switch off. A new
+         setState-in-an-effect still has to justify itself. */
       'react-hooks/set-state-in-effect': 'warn',
       'react-hooks/refs': 'warn',
       'react-hooks/immutability': 'warn',

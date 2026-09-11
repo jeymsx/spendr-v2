@@ -645,9 +645,23 @@ export default function Transactions() {
   const [calMonth,       setCalMonth]       = useState(() => new Date().getMonth())
   const [calSelected,    setCalSelected]    = useState(null)
 
-  useEffect(() => {
+  /* Back to the first page whenever the filters change.
+
+     Adjusted during render rather than in an effect. The effect committed
+     one paint with the NEW filter and the OLD count, so changing a filter
+     after several rounds of "Load more" rendered hundreds of rows purely to
+     throw all but the first page away on the next pass. Comparing a
+     signature is content-based too, where the effect re-ran whenever
+     `accountFilters` was rebuilt with the same names in it. */
+  const filterSig = [
+    search, typeFilter, accountFilters.join('\u001f'), categoryFilter,
+    dateRange, customFrom, customTo, amountMin, amountMax,
+  ].join('\u001e')
+  const [prevFilterSig, setPrevFilterSig] = useState(filterSig)
+  if (prevFilterSig !== filterSig) {
+    setPrevFilterSig(filterSig)
     setVisibleCount(PAGE_SIZE)
-  }, [search, typeFilter, accountFilters, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
+  }
 
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])),

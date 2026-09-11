@@ -28,6 +28,10 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
 
   useEffect(() => {
     if (open && template) {
+      // Hydrate-on-open. The sheet renders null when closed but stays
+      // mounted through its own exit animation, so the parent can neither
+      // unmount nor re-key it to reset these fields for the next record.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setAmountStr(numToMoneyStr(template.amount ?? 0))
       setDescription(template.description ?? '')
       setSaving(false)

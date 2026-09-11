@@ -444,6 +444,10 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
   useEffect(() => {
     if (open) {
       if (editDebt) {
+        // Hydrate-on-open. The sheet renders null when closed but stays
+        // mounted through its own exit animation, so the parent can neither
+        // unmount nor re-key it to reset these fields for the next record.
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setContact(editDebt.contact ?? editDebt.name ?? '')
         setAmountStr(editDebt.amount != null ? numToMoneyStr(editDebt.amount) : '')
         setPaidStr(editDebt.amountPaid != null ? numToMoneyStr(editDebt.amountPaid) : '0')
@@ -716,6 +720,10 @@ export function PaymentSheet({ open, onClose, debt }) {
   }, [open])
 
   useEffect(() => {
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (open) { setAmountStr('0'); setAccount(null); setAcctError(false) }
   }, [open])
 

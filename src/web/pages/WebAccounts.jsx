@@ -96,9 +96,6 @@ export default function WebAccounts() {
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
 
-  const selected = useMemo(() =>
-    (accounts ?? []).find(a => a.id === selectedId) ?? null, [accounts, selectedId])
-
   // Deep link from the dashboard: /accounts?open=<account name>. Same
   // contract the mobile Accounts page honours. The param is cleared once
   // consumed so a reload or a later rename doesn't keep re-forcing it.
@@ -106,21 +103,32 @@ export default function WebAccounts() {
   useEffect(() => {
     if (!openParam || !(accounts ?? []).length) return
     const hit = accounts.find(a => a.name === openParam)
+    // Consumes a deep link: reads ?open= and then rewrites the URL. Both
+    // halves are effects on the outside world, not derivable state - the
+    // fallback selection below it is the part that could be derived.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (hit) setSelectedId(hit.id)
     setSearchParams({}, { replace: true })
   }, [openParam, accounts, setSearchParams])
 
-  // Fall back to the first account whenever the selection doesn't resolve -
-  // on first load, and again after the selected account is deleted from the
-  // form sheet. Keying on id means a rename keeps the selection instead.
-  // Skipped while a deep link is still pending, or it would claim the
-  // selection first and the link would appear to do nothing.
-  useEffect(() => {
-    if (openParam) return
+  /* Falls back to the first account whenever the selection doesn't resolve -
+     on first load, and again once the selected account is deleted from the
+     form sheet. Keying on id means a rename keeps the selection instead.
+     Skipped while a deep link is still pending, or the fallback would claim
+     the selection first and the link would appear to do nothing.
+
+     Resolved during render rather than written back through an effect, so
+     there is no first paint with an empty detail pane and no second render
+     to correct it. `selectedId` stays the user's stated choice; this is what
+     that choice resolves to against the accounts that actually exist. */
+  const effectiveId = useMemo(() => {
     const list = accounts ?? []
-    if (!list.length) return
-    if (!list.some(a => a.id === selectedId)) setSelectedId(list[0].id)
-  }, [openParam, accounts, selectedId])
+    if (openParam || !list.length) return selectedId
+    return list.some(a => a.id === selectedId) ? selectedId : list[0].id
+  }, [accounts, openParam, selectedId])
+
+  const selected = useMemo(() =>
+    (accounts ?? []).find(a => a.id === effectiveId) ?? null, [accounts, effectiveId])
 
   // Unfiltered on purpose — available credit must see future installments,
   // which is exactly what the history hides.
@@ -210,7 +218,7 @@ export default function WebAccounts() {
                   </p>
                 </div>
                 {g.items.map(a => {
-                  const active = a.id === selectedId
+                  const active = a.id === effectiveId
                   const cs = creditStatus[a.name]
                   return (
                     <button

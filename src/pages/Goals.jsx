@@ -285,6 +285,10 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
 
   useEffect(() => {
     if (!open) return
+    // Hydrate-on-open. The sheet renders null when closed but stays
+    // mounted through its own exit animation, so the parent can neither
+    // unmount nor re-key it to reset these fields for the next record.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfirmDelete(false)
     setSaving(false)
     if (goal) {

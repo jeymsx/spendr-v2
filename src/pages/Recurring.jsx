@@ -222,6 +222,10 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
   useEffect(() => {
     if (!open) return
     if (editRec) {
+      // Hydrate-on-open. The sheet renders null when closed but stays
+      // mounted through its own exit animation, so the parent can neither
+      // unmount nor re-key it to reset these fields for the next record.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(editRec.name ?? '')
       setAmountStr(editRec.amount != null ? numToMoneyStr(editRec.amount) : '')
       setCategory(categories.find(c => c.name === editRec.category) ?? null)

@@ -150,6 +150,10 @@ export default function SyncManager() {
      preserve-manual-memoization objected to the same thing and is now off
      in eslint.config.js - see the note there. */
   useEffect(() => {
+    // Fires a network round-trip when the signed-in user changes, and
+    // runSync reports its progress through state. An effect is the
+    // correct place for it; the state is a consequence, not the point.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (user?.id) runSync({ silent: true })
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 

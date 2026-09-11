@@ -386,6 +386,10 @@ function SpendingTrivia({ trivia, triviaKey }) {
   const [fade, setFade] = useState(true)
 
   useEffect(() => {
+    // Math.random() cannot run during render - purity forbids it, and
+    // a re-render would reshuffle the trivia mid-read. Picking once
+    // per window, in an effect, is the only place left.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setIdx(Math.floor(Math.random() * Math.max(trivia.length, 1)))
     setFade(true)
   }, [triviaKey, trivia.length])
@@ -426,9 +430,13 @@ function SpendingTrivia({ trivia, triviaKey }) {
 
 // ── By Category ────────────────────────────────────────────────────────────────
 
+/* `animKey` is also this component's React key at the call site, so a new
+   window remounts it and the selection clears itself. That replaces an effect
+   which cleared `selected` a render AFTER the new segments had already been
+   handed to the chart - long enough to highlight a slice belonging to a
+   window that was no longer on screen. */
 function SpendingByCategory({ segments, total, animKey, rangeLabel }) {
   const [selected, setSelected] = useState(null)
-  useEffect(() => setSelected(null), [animKey])
 
   if (!segments.length) {
     return (
@@ -677,6 +685,10 @@ function TopTransactions({ txs, catMap }) {
 function AccountBreakdown({ data, animKey }) {
   const [ready, setReady] = useState(false)
   useEffect(() => {
+    // A deliberate two-pass paint: the bars mount at zero, then a
+    // frame later transition to their real width. Deriving `ready`
+    // during render would skip the frame the animation needs.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setReady(false)
     const raf = requestAnimationFrame(() => { const t = setTimeout(() => setReady(true), 60); return () => clearTimeout(t) })
     return () => cancelAnimationFrame(raf)
@@ -716,14 +728,21 @@ function AccountBreakdown({ data, animKey }) {
 export default function Insights() {
   const [range,       setRange]       = useState('1m')
   const [monthOffset, setMonthOffset] = useState(0)
-  const [animKey,     setAnimKey]     = useState(0)
+
+  /* Identifies the window on screen. Recharts restarts a series' animation
+     when its key changes, and the gradient ids are namespaced with it so two
+     windows can never collide in <defs>.
+
+     Derived from the two values that define the window rather than bumped by
+     an effect. The counter re-rendered the whole page a second time on every
+     range change, and on the first of those two renders the charts were
+     still carrying the previous window's key. */
+  const animKey = `${range}-${monthOffset}`
 
   const { rangeStart, rangeEnd, year, month } = useMemo(() => {
     const w = getRangeWindow(range, monthOffset)
     return { rangeStart: w.start, rangeEnd: w.end, year: w.year, month: w.month }
   }, [range, monthOffset])
-
-  useEffect(() => { setAnimKey(k => k + 1) }, [range, monthOffset])
 
   const rangeTxs   = useLiveQuery(() =>
     db.transactions.where('date').between(rangeStart, rangeEnd, true, false).toArray(),
@@ -933,6 +952,7 @@ export default function Insights() {
 
         {/* By category */}
         <SpendingByCategory
+          key={animKey}
           segments={categorySegments} total={totalSpent}
           animKey={animKey} rangeLabel={rangeLabel}
         />
