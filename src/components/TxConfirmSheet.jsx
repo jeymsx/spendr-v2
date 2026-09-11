@@ -2,6 +2,7 @@ import { useState, useEffect, useLayoutEffect, useRef } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { accountBrand } from '../lib/accountBrands'
 import SwipeConfirm from './SwipeConfirm'
+import Button from './ui/Button'
 import CategoryGlyph from './CategoryGlyph'
 import BrandMark from './BrandMark'
 
@@ -478,43 +479,25 @@ export default function TxConfirmSheet({
               confirmingLabel={savingLabel}
               busy={saving}
             />
-            <button
-              onClick={close}
-              disabled={saving}
-              className="w-full py-3 rounded-full text-sm font-semibold
-                text-slate-500 dark:text-slate-400
-                active:bg-slate-100 dark:active:bg-white/[0.06]
-                disabled:opacity-40 transition-colors"
-            >
+            <Button variant="quiet" size="sm" block onClick={close} disabled={saving}>
               Cancel
-            </button>
+            </Button>
           </div>
         ) : (
         <div className="flex gap-3">
-          <button
-            onClick={close}
-            disabled={saving}
-            className="flex-1 py-3.5 rounded-full text-sm font-semibold
-              text-slate-600 dark:text-slate-300
-              bg-slate-100 dark:bg-white/[0.06]
-              active:bg-slate-200 dark:active:bg-white/[0.10]
-              disabled:opacity-40 transition-colors"
-          >
+          <Button variant="secondary" className="flex-1" onClick={close} disabled={saving}>
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
+            className="flex-[2]"
+            loading={saving}
             onClick={() => {
               onConfirm(saveTemplate && onSaveTemplate ? templatePayload() : null)
             }}
-            disabled={saving}
-            className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-              bg-primary
-              disabled:opacity-50 disabled:shadow-none
-              active:scale-[0.98] transition-all duration-100"
           >
             {saving ? savingLabel
               : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save Transaction')}
-          </button>
+          </Button>
         </div>
         )}
       </div>

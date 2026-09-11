@@ -9,6 +9,7 @@ import { EXPENSE_PRESETS, INFLOW_PRESETS, SYSTEM_CATS, EMOJI_SUGGESTIONS, CAT_PA
 import { useToast } from '../context/ToastContext'
 import CategoryGlyph from '../components/CategoryGlyph'
 import Confetti from '../components/Confetti'
+import Button from '../components/ui/Button'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -484,16 +485,13 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
               >
                 Cancel
               </button>
-              <button
-                onClick={addCustom}
-                disabled={!customName.trim()}
-                className="flex-[2] py-3 rounded-full text-sm font-semibold text-white
-                  bg-primary disabled:opacity-40
-                 
-                  active:scale-[0.98] transition-all duration-100"
+              <Button
+                size="sm"
+                className="flex-[2]"
+                onClick={addCustom} disabled={!customName.trim()}
               >
                 Add Account
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -824,16 +822,13 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
               >
                 Cancel
               </button>
-              <button
-                onClick={addCustom}
-                disabled={!customName.trim()}
-                className="flex-[2] py-3 rounded-full text-sm font-semibold text-white
-                  bg-primary disabled:opacity-40 disabled:shadow-none
-                 
-                  active:scale-[0.98] transition-all duration-100"
+              <Button
+                size="sm"
+                className="flex-[2]"
+                onClick={addCustom} disabled={!customName.trim()}
               >
                 Add Category
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -874,16 +869,11 @@ function StepDone({ onFinish, saving }) {
         </p>
       </div>
 
-      <button
-        onClick={onFinish}
-        disabled={saving}
-        className="w-full py-4 rounded-full bg-primary text-white font-semibold text-[15px]
-          active:scale-[0.98] transition-all duration-100 disabled:opacity-60 flex items-center justify-center gap-2"
-      >
+      <Button size="lg" block onClick={onFinish} disabled={saving}>
         {saving
           ? <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
           : 'Get started →'}
-      </button>
+      </Button>
     </div>
   )
 }

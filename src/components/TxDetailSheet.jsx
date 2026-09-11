@@ -10,6 +10,7 @@ import AccountPickerSheet from './AccountPickerSheet'
 import { useToast } from '../context/ToastContext'
 import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
 import CategoryGlyph from './CategoryGlyph'
+import Button from './ui/Button'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -427,23 +428,16 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               <div className="h-5" />
 
               <div className="flex gap-3">
-                <button
+                <Button
+                  variant="dangerTint"
+                  className="flex-1"
                   onClick={() => setMode('confirm-delete')}
-                  className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                    text-red-500 dark:text-red-400
-                    bg-red-50 dark:bg-red-500/10
-                    active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
                 >
                   Delete
-                </button>
-                <button
-                  onClick={enterEdit}
-                  className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                    bg-primary
-                    active:scale-[0.98] transition-transform duration-100"
-                >
+                </Button>
+                <Button className="flex-[2]" onClick={enterEdit}>
                   Edit
-                </button>
+                </Button>
               </div>
             </>
           )}
@@ -531,25 +525,19 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               })()}
 
               <div className="flex gap-2.5 mt-5">
-                <button
-                  onClick={() => setMode('detail')}
-                  disabled={saving}
-                  className="flex-1 py-3.5 rounded-full text-[15px] font-semibold
-                    text-slate-600 dark:text-slate-300
-                    bg-slate-100 dark:bg-white/[0.07]
-                    disabled:opacity-40 active:scale-[0.98] transition-transform duration-75"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setMode('detail')} disabled={saving}
                 >
                   Cancel
-                </button>
-                <button
-                  onClick={handleSave}
-                  disabled={saving || !parseFloat(editAmount)}
-                  className="flex-[1.6] py-3.5 rounded-full text-[15px] font-semibold text-white
-                    bg-primary disabled:opacity-40
-                    active:scale-[0.98] transition-transform duration-75"
+                </Button>
+                <Button
+                  className="flex-[1.6]"
+                  onClick={handleSave} disabled={saving || !parseFloat(editAmount)}
                 >
                   {saving ? 'Saving…' : 'Save'}
-                </button>
+                </Button>
               </div>
             </div>
           )}
@@ -590,25 +578,20 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               )}
 
               <div className="flex gap-2.5 mt-5">
-                <button
-                  onClick={() => setMode('detail')}
-                  disabled={saving}
-                  className="flex-1 py-3.5 rounded-full text-[15px] font-semibold
-                    text-slate-600 dark:text-slate-300
-                    bg-slate-100 dark:bg-white/[0.07]
-                    disabled:opacity-40 active:scale-[0.98] transition-transform duration-75"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setMode('detail')} disabled={saving}
                 >
                   Cancel
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={saving}
-                  className="flex-[1.6] py-3.5 rounded-full text-[15px] font-semibold text-white
-                    bg-red-500 disabled:opacity-40
-                    active:scale-[0.98] transition-transform duration-75"
+                </Button>
+                <Button
+                  variant="danger"
+                  className="flex-[1.6]"
+                  onClick={handleDelete} disabled={saving}
                 >
                   {saving ? 'Deleting…' : planCount > 1 ? `Delete all ${planCount}` : 'Delete'}
-                </button>
+                </Button>
               </div>
             </div>
           )}

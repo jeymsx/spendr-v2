@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import Button from './ui/Button'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -60,23 +61,12 @@ export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, t
         </div>
 
         <div className="flex flex-col gap-2.5 px-5">
-          <button
-            onClick={() => { close(); setTimeout(onSaveAnyway, 260) }}
-            className="w-full py-4 rounded-full text-sm font-semibold text-white
-              bg-primary
-              active:scale-[0.98] transition-all duration-100"
-          >
+          <Button size="lg" block onClick={() => { close(); setTimeout(onSaveAnyway, 260) }}>
             Save anyway
-          </button>
-          <button
-            onClick={close}
-            className="w-full py-4 rounded-full text-sm font-semibold
-              text-slate-600 dark:text-slate-300
-              bg-slate-100 dark:bg-white/[0.07]
-              active:scale-[0.98] transition-all duration-100"
-          >
+          </Button>
+          <Button variant="secondary" size="lg" block onClick={close}>
             Cancel
-          </button>
+          </Button>
         </div>
       </div>
     </div>

@@ -29,6 +29,7 @@ import SegTabs from '../components/SegTabs'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
+import Button from '../components/ui/Button'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -411,17 +412,11 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
             </p>
           )}
 
-          <button
-            onClick={handleSync}
-            disabled={syncing || !url.trim()}
-            className="w-full py-4 rounded-full bg-primary text-white font-semibold text-[15px]
-              active:scale-[0.98] transition-all duration-100
-              disabled:opacity-50 flex items-center justify-center gap-2"
-          >
+          <Button size="lg" block onClick={handleSync} disabled={syncing || !url.trim()}>
             {syncing
               ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Syncing…</>
               : 'Sync Now'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -504,26 +499,12 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
 
 
           <div className="flex gap-3 pt-1">
-            <button
-              onClick={close}
-              disabled={saving}
-              className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                text-slate-600 dark:text-slate-300
-                bg-slate-100 dark:bg-white/[0.06]
-                disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
-            >
+            <Button variant="secondary" className="flex-1" onClick={close} disabled={saving}>
               Cancel
-            </button>
-            <button
-              onClick={handleSave}
-              disabled={saving}
-              className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                bg-primary
-                disabled:opacity-40 disabled:shadow-none
-                active:scale-[0.98] transition-all duration-100"
-            >
+            </Button>
+            <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
               {saving ? 'Saving…' : 'Save Profile'}
-            </button>
+            </Button>
           </div>
         </div>
       </div>
@@ -627,21 +608,12 @@ export function RestoreBackupSheet({ open, onClose }) {
             <input ref={fileRef} type="file" accept=".json,application/json"
               onChange={handleFile} className="hidden" />
             <div className="flex flex-col gap-2.5">
-              <button
-                onClick={() => fileRef.current?.click()}
-                className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-primary
-                  active:scale-[0.98] transition-transform duration-100"
-              >
+              <Button block onClick={() => fileRef.current?.click()}>
                 Choose file
-              </button>
-              <button
-                onClick={onClose}
-                className="w-full py-3.5 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
-                  active:scale-[0.98] transition-transform duration-100"
-              >
+              </Button>
+              <Button variant="secondary" block onClick={onClose}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -687,23 +659,16 @@ export function RestoreBackupSheet({ open, onClose }) {
             </div>
 
             <div className="flex flex-col gap-2.5">
-              <button
-                onClick={handleRestore}
-                disabled={input.trim().toUpperCase() !== 'RESTORE' || loading}
-                className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-red-500
-                  disabled:opacity-40 active:scale-[0.98] transition-all duration-100"
+              <Button
+                variant="danger"
+                block
+                onClick={handleRestore} disabled={input.trim().toUpperCase() !== 'RESTORE' || loading}
               >
                 {loading ? 'Restoring…' : 'Replace my data'}
-              </button>
-              <button
-                onClick={onClose}
-                disabled={loading}
-                className="w-full py-3.5 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
-                  active:scale-[0.98] transition-transform duration-100"
-              >
+              </Button>
+              <Button variant="secondary" block onClick={onClose} disabled={loading}>
                 Cancel
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -781,22 +746,17 @@ export function ResetConfirmModal({ open, onClose }) {
               </p>
             </div>
             <div className="flex gap-3 pt-1">
-              <button
-                onClick={onClose}
-                className="flex-1 py-3 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
-                  active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors"
-              >
+              <Button variant="secondary" size="sm" className="flex-1" onClick={onClose}>
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                className="flex-1"
                 onClick={() => setStep(2)}
-                className="flex-1 py-3 rounded-full text-sm font-semibold text-white
-                  bg-red-500
-                  active:scale-[0.98] transition-all duration-100"
               >
                 Continue
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -817,25 +777,22 @@ export function ResetConfirmModal({ open, onClose }) {
               />
             </div>
             <div className="flex gap-3">
-              <button
-                onClick={onClose}
-                disabled={loading}
-                className="flex-1 py-3 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
-                  disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors"
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
+                onClick={onClose} disabled={loading}
               >
                 Cancel
-              </button>
-              <button
-                onClick={handleReset}
-                disabled={loading || input !== 'RESET'}
-                className="flex-1 py-3 rounded-full text-sm font-semibold text-white
-                  bg-red-500
-                  disabled:opacity-40 disabled:shadow-none
-                  active:scale-[0.98] transition-all duration-100"
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                className="flex-1"
+                onClick={handleReset} disabled={loading || input !== 'RESET'}
               >
                 {loading ? 'Resetting…' : 'Reset App'}
-              </button>
+              </Button>
             </div>
           </>
         )}
@@ -1133,17 +1090,11 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
   )
 
   const saveButton = (
-            <button
-              onClick={saveAll}
-              disabled={!hasPendingChanges || saving}
-              className="w-full py-3.5 rounded-full text-sm font-semibold text-white
-                bg-primary
-                disabled:opacity-30 disabled:shadow-none
-                active:scale-[0.98] transition-all duration-100 flex items-center justify-center gap-2">
+            <Button block onClick={saveAll} disabled={!hasPendingChanges || saving}>
               {saving
                 ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> Saving…</>
                 : 'Save Changes'}
-            </button>
+            </Button>
   )
 
   if (asPage) {
@@ -1573,15 +1524,10 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
                     directly above says Expense or Inflow, and a button that
                     repeats the thing sitting above it is the house style of
                     forms, not of iOS. */}
-                <button
-                  onClick={openAdd}
-                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-[15px] font-semibold
-                    bg-primary text-white
-                    active:scale-[0.98] transition-transform duration-100"
-                >
+                <Button block onClick={openAdd}>
                   <IconPlus size={15} strokeWidth="2.5" />
                   Add Category
-                </button>
+                </Button>
                 <button
                   onClick={() => setBrowseOpen(true)}
                   className="w-full flex items-center justify-center gap-2 py-3 rounded-full text-sm font-semibold
@@ -1953,18 +1899,16 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             </div>
 
             <div className="flex gap-3 pt-1">
-              <button onClick={close} disabled={saving}
-                className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
-                  disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={close} disabled={saving}
+              >
                 Cancel
-              </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                  bg-primary
-                  disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
+              </Button>
+              <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Category'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -1990,17 +1934,20 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-1">Permanently delete this category?</p>
             <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-7">No transactions are using it. This cannot be undone.</p>
             <div className="flex gap-3">
-              <button onClick={() => setMode('form')} disabled={saving}
-                className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06] disabled:opacity-40">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setMode('form')} disabled={saving}
+              >
                 Keep It
-              </button>
-              <button onClick={handleDeleteDirect} disabled={saving}
-                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                  bg-red-500
-                  disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-[2]"
+                onClick={handleDeleteDirect} disabled={saving}
+              >
                 {saving ? 'Deleting…' : 'Delete Category'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -2076,17 +2023,20 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             )}
 
             <div className="flex gap-3">
-              <button onClick={() => setMode('form')} disabled={saving}
-                className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06] disabled:opacity-40">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={() => setMode('form')} disabled={saving}
+              >
                 Cancel
-              </button>
-              <button onClick={handleReassignAndDelete} disabled={saving || !reassignTarget || reassignOptions.length === 0}
-                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                  bg-red-500
-                  disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
+              </Button>
+              <Button
+                variant="danger"
+                className="flex-[2]"
+                onClick={handleReassignAndDelete} disabled={saving || !reassignTarget || reassignOptions.length === 0}
+              >
                 {saving ? 'Moving…' : 'Reassign & Delete'}
-              </button>
+              </Button>
             </div>
           </div>
         )}
@@ -2410,18 +2360,16 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
             {/* Actions */}
             <div className="flex gap-3 pt-1">
-              <button onClick={close} disabled={saving}
-                className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
-                  disabled:opacity-40 transition-colors">
+              <Button
+                variant="secondary"
+                className="flex-1"
+                onClick={close} disabled={saving}
+              >
                 Cancel
-              </button>
-              <button onClick={handleSave} disabled={saving}
-                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                  bg-primary
-                  disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100">
+              </Button>
+              <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Template'}
-              </button>
+              </Button>
             </div>
             <div className="h-8 shrink-0" />
           </div>
@@ -2524,15 +2472,10 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
       )}
 
       <div className="px-5">
-        <button
-          onClick={openAdd}
-          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-[15px] font-semibold
-            bg-primary text-white
-            active:scale-[0.98] transition-transform duration-100"
-        >
+        <Button block onClick={openAdd}>
           <IconPlus size={15} strokeWidth="2.5" />
           Add Template
-        </button>
+        </Button>
         <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-2.5">
           Hold a template to quickly delete it
         </p>
@@ -3357,23 +3300,22 @@ export default function Settings() {
               </p>
             </div>
             <div className="flex gap-3 pt-1">
-              <button
-                onClick={() => setShowSignOutConfirm(false)}
-                disabled={loggingOut}
-                className="flex-1 py-3 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
-                  active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors">
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
+                onClick={() => setShowSignOutConfirm(false)} disabled={loggingOut}
+              >
                 Cancel
-              </button>
-              <button
-                onClick={async () => { await handleLogout(); setShowSignOutConfirm(false) }}
-                disabled={loggingOut}
-                className="flex-1 py-3 rounded-full text-sm font-semibold text-white
-                  bg-red-500
-                  disabled:opacity-40 disabled:shadow-none
-                  active:scale-[0.98] transition-all duration-100">
+              </Button>
+              <Button
+                variant="danger"
+                size="sm"
+                className="flex-1"
+                onClick={async () => { await handleLogout(); setShowSignOutConfirm(false) }} disabled={loggingOut}
+              >
                 {loggingOut ? 'Signing out…' : 'Continue'}
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -3399,20 +3341,21 @@ export default function Settings() {
               </p>
             </div>
             <div className="flex gap-3 pt-1">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
                 onClick={() => setShowExportConfirm(false)}
-                className="flex-1 py-3 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
-                  active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors">
+              >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1"
                 onClick={() => { setShowExportConfirm(false); handleExport() }}
-                className="flex-1 py-3 rounded-full text-sm font-semibold text-white
-                  bg-primary
-                  active:scale-[0.98] transition-all duration-100">
+              >
                 Download
-              </button>
+              </Button>
             </div>
           </div>
         </div>
@@ -3438,20 +3381,21 @@ export default function Settings() {
               </p>
             </div>
             <div className="flex gap-3 pt-1">
-              <button
+              <Button
+                variant="secondary"
+                size="sm"
+                className="flex-1"
                 onClick={() => setShowBackupConfirm(false)}
-                className="flex-1 py-3 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.07]
-                  active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors">
+              >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
+                size="sm"
+                className="flex-1"
                 onClick={() => { setShowBackupConfirm(false); handleFullBackup() }}
-                className="flex-1 py-3 rounded-full text-sm font-semibold text-white
-                  bg-primary
-                  active:scale-[0.98] transition-all duration-100">
+              >
                 Download
-              </button>
+              </Button>
             </div>
           </div>
         </div>

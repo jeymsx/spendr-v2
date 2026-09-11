@@ -14,6 +14,7 @@ import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import { IconCalendar, IconChevronLeft, IconTemplate, IconWarning} from '../components/icons'
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
+import Button from '../components/ui/Button'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -379,16 +380,13 @@ export default function Transfer({ onCancel, onSaved } = {}) {
       </div>
 
       <div className="px-4 pt-5">
-        <button
-          onClick={onConfirmPress}
-          disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id}
-          className="w-full py-4 rounded-full text-sm font-semibold text-white
-            bg-primary
-            disabled:opacity-40 disabled:shadow-none
-            active:scale-[0.98] transition-all duration-100"
+        <Button
+          size="lg"
+          block
+          onClick={onConfirmPress} disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id}
         >
           Review Transfer
-        </button>
+        </Button>
       </div>
 
       {/* ── Sheets ── */}

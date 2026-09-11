@@ -12,6 +12,7 @@ import BrandWatermark from '../components/BrandWatermark'
 import CategoryGlyph from '../components/CategoryGlyph'
 import CategoryRail from '../components/CategoryRail'
 import FadeScroller from '../components/FadeScroller'
+import Button from '../components/ui/Button'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -547,14 +548,9 @@ function FilterModal({
              footer needs padding rather than a safe-area reach-through. */
           style={{ paddingBottom: '16px' }}
         >
-          <button
-            onClick={close}
-            className="w-full py-4 rounded-full text-sm font-semibold text-white
-              bg-primary
-              active:scale-[0.98] transition-all duration-100"
-          >
+          <Button size="lg" block onClick={close}>
             Show {filteredCount} {filteredCount === 1 ? 'transaction' : 'transactions'}
-          </button>
+          </Button>
         </div>
       </div>
     </div>

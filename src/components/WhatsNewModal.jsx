@@ -4,6 +4,7 @@ import {
   IconSparkle, IconQuickLog, IconBell, IconBillHistory, IconDebt,
   IconCategories, IconDrawn, IconPalette, IconSettings, IconContrast,
 } from './icons'
+import Button from './ui/Button'
 
 const CURRENT_VERSION = '0.3.0'
 
@@ -147,13 +148,9 @@ export default function WhatsNewModal({ onClose }) {
             which is not where anyone looks. This list is keyed to a version,
             so acknowledging the version IS "don't show it again". */}
         <div className="px-5 pb-5 pt-3 border-t border-slate-100 dark:border-white/[0.06]">
-          <button
-            onClick={() => dismiss(true)}
-            className="w-full py-3 rounded-full text-sm font-semibold text-white
-              bg-primary
-              active:scale-[0.98] transition-all duration-100">
+          <Button size="sm" block onClick={() => dismiss(true)}>
             Got it
-          </button>
+          </Button>
         </div>
       </div>
     </div>

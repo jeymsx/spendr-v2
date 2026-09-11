@@ -4,6 +4,7 @@ import Papa from 'papaparse'
 import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { IconCheck, IconUpload, ACCOUNT_TYPE_ICON, IconCashUI, IconImport, IconBankUI, IconBalance, IconSparkle } from '../components/icons'
+import Button from '../components/ui/Button'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -541,24 +542,13 @@ function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
 
       {/* Actions */}
       <div className="px-5 flex gap-3">
-        <button
-          onClick={onBack}
-          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-full text-sm font-semibold
-            text-slate-600 dark:text-slate-300
-            bg-slate-100 dark:bg-white/[0.06]
-            active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
-        >
+        <Button variant="secondary" className="flex-1" onClick={onBack}>
           <IconArrowLeft />
           Back
-        </button>
-        <button
-          onClick={onNext}
-          className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-            bg-primary
-            active:scale-[0.98] transition-all duration-100"
-        >
+        </Button>
+        <Button className="flex-[2]" onClick={onNext}>
           Continue →
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -681,23 +671,13 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
       </div>
 
       <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-full text-sm font-semibold
-            text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
-            active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
-        >
+        <Button variant="secondary" className="flex-1" onClick={onBack}>
           <IconArrowLeft />
           Back
-        </button>
-        <button
-          onClick={handleContinue}
-          className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-            bg-primary
-            active:scale-[0.98] transition-all duration-100"
-        >
+        </Button>
+        <Button className="flex-[2]" onClick={handleContinue}>
           Continue →
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -913,25 +893,11 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
       )}
 
       <div className="flex gap-3">
-        <button
-          onClick={onBack}
-          disabled={importing}
-          className="flex items-center justify-center gap-1.5 flex-1 py-3.5 rounded-full text-sm font-semibold
-            text-slate-600 dark:text-slate-300
-            bg-slate-100 dark:bg-white/[0.06]
-            disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
-        >
+        <Button variant="secondary" className="flex-1" onClick={onBack} disabled={importing}>
           <IconArrowLeft />
           Back
-        </button>
-        <button
-          onClick={handleImport}
-          disabled={importing}
-          className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-            bg-primary
-            disabled:opacity-50 disabled:shadow-none
-            active:scale-[0.98] transition-all duration-100"
-        >
+        </Button>
+        <Button className="flex-[2]" onClick={handleImport} disabled={importing}>
           {importing ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -940,7 +906,7 @@ function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDone }) {
           ) : (
             `Import ${rows.length} Transactions`
           )}
-        </button>
+        </Button>
       </div>
     </div>
   )
@@ -978,23 +944,12 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
       </div>
 
       <div className="w-full space-y-3">
-        <button
-          onClick={() => navigate('/')}
-          className="w-full py-3.5 rounded-full text-sm font-semibold text-white
-            bg-primary
-            active:scale-[0.98] transition-all duration-100"
-        >
+        <Button block onClick={() => navigate('/')}>
           Go to Dashboard
-        </button>
-        <button
-          onClick={onImportAnother}
-          className="w-full py-3.5 rounded-full text-sm font-semibold
-            text-slate-600 dark:text-slate-300
-            bg-slate-100 dark:bg-white/[0.06]
-            active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
-        >
+        </Button>
+        <Button variant="secondary" block onClick={onImportAnother}>
           Import Another File
-        </button>
+        </Button>
       </div>
     </div>
   )

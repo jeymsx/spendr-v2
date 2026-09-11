@@ -34,6 +34,7 @@ import { cardGradient } from '../lib/accentTheme'
 import {
   fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole,
 } from '../lib/accountMeta'
+import Button from '../components/ui/Button'
 
 /* Re-exported, not redefined. They moved to lib/accountMeta.js so that
    components/CardStyle.jsx can have them without importing a page - see the
@@ -689,20 +690,20 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
           className="px-5 pt-3 shrink-0 border-t border-slate-100 dark:border-white/[0.06]"
           style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
         >
-          <button
+          {/* The hairline it used to carry is gone with the migration: at
+              slate-200/60 over a slate-100 fill it was a rounding error, and
+              no other secondary button in the app has one. */}
+          <Button
+            variant="secondary"
+            block
             onClick={() => { close(); setTimeout(onCustom, 260) }}
-            className="w-full flex items-center justify-center gap-2 py-3.5 rounded-full text-sm font-semibold
-              text-slate-600 dark:text-slate-300
-              bg-slate-100 dark:bg-white/[0.06]
-              border border-slate-200/60 dark:border-white/[0.08]
-              active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
           >
             <span className="w-5 h-5 rounded-full bg-slate-300 dark:bg-white/[0.15]
               flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-white">
               +
             </span>
             Custom Account
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -1481,37 +1482,24 @@ function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
         {/* Footer */}
         <div className="px-5 pt-2 shrink-0 flex gap-3">
           {!imgSrc ? (
-            <button
-              onClick={() => fileRef.current?.click()}
-              className="flex-1 py-3.5 rounded-full text-sm font-semibold text-white
-                bg-primary
-                active:scale-[0.98] transition-all duration-100"
-            >
+            <Button className="flex-1" onClick={() => fileRef.current?.click()}>
               Choose Photo
-            </button>
+            </Button>
           ) : (
             <>
               {/* Straight back to the picker. Clearing to the empty state
                   meant picking the wrong screenshot cost two taps to fix -
                   one to empty it, one to ask again. */}
-              <button
+              <Button
+                variant="secondary"
+                className="flex-1"
                 onClick={() => fileRef.current?.click()}
-                className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                  text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
-                  active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
               >
                 Change
-              </button>
-              <button
-                onClick={handleConfirm}
-                disabled={!completedCrop}
-                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                  bg-primary
-                  disabled:opacity-40 disabled:shadow-none
-                  active:scale-[0.98] transition-all duration-100"
-              >
+              </Button>
+              <Button className="flex-[2]" onClick={handleConfirm} disabled={!completedCrop}>
                 Use Photo
-              </button>
+              </Button>
             </>
           )}
         </div>
@@ -1940,15 +1928,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     ? 'This account has sub-accounts. Delete or re-assign them first.'
                     : `This account has ${deleteBlocked} ${deleteBlocked === 1 ? 'transaction' : 'transactions'}. Remove those transactions first.`}
                 </p>
-                <button
-                  onClick={() => setMode('form')}
-                  className="w-full py-3.5 rounded-full text-sm font-semibold
-                    text-slate-600 dark:text-slate-300
-                    bg-slate-100 dark:bg-white/[0.06]
-                    active:bg-slate-200 transition-colors"
-                >
+                <Button variant="secondary" block onClick={() => setMode('form')}>
                   Go Back
-                </button>
+                </Button>
               </>
             ) : (
               <>
@@ -1959,26 +1941,20 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   This cannot be undone.
                 </p>
                 <div className="flex gap-3">
-                  <button
-                    onClick={() => setMode('form')}
-                    disabled={saving}
-                    className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                      text-slate-600 dark:text-slate-300
-                      bg-slate-100 dark:bg-white/[0.06]
-                      disabled:opacity-40 transition-colors"
+                  <Button
+                    variant="secondary"
+                    className="flex-1"
+                    onClick={() => setMode('form')} disabled={saving}
                   >
                     Cancel
-                  </button>
-                  <button
-                    onClick={handleDelete}
-                    disabled={saving}
-                    className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                      bg-red-500
-                      disabled:opacity-40 disabled:shadow-none
-                      active:scale-[0.98] transition-all duration-100"
+                  </Button>
+                  <Button
+                    variant="danger"
+                    className="flex-[2]"
+                    onClick={handleDelete} disabled={saving}
                   >
                     {saving ? 'Deleting…' : 'Delete Account'}
-                  </button>
+                  </Button>
                 </div>
               </>
             )}
@@ -2420,27 +2396,17 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 its own, because a sheet's only other way out is the scrim. */}
             <div className="flex gap-3 pt-2">
               {!isPage && (
-                <button
-                  onClick={close}
-                  disabled={saving}
-                  className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                    text-slate-600 dark:text-slate-300
-                    bg-slate-100 dark:bg-white/[0.06]
-                    disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={close} disabled={saving}
                 >
                   Cancel
-                </button>
+                </Button>
               )}
-              <button
-                onClick={handleSave}
-                disabled={saving}
-                className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                  bg-primary
-                  disabled:opacity-40 disabled:shadow-none
-                  active:scale-[0.98] transition-all duration-100"
-              >
+              <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Account'}
-              </button>
+              </Button>
             </div>
 
             {/* Last, and quiet. Text on the page rather than a filled red
@@ -2507,24 +2473,19 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               )}
 
               <div className="flex gap-3 pt-1">
-                <button
-                  onClick={() => setMode('form')}
-                  disabled={saving}
-                  className="flex-1 py-3.5 rounded-full text-sm font-semibold
-                    text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
-                    disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
+                <Button
+                  variant="secondary"
+                  className="flex-1"
+                  onClick={() => setMode('form')} disabled={saving}
                 >
                   Cancel
-                </button>
-                <button
-                  onClick={handleAdjust}
-                  disabled={saving || diff === 0}
-                  className="flex-[2] py-3.5 rounded-full text-sm font-semibold text-white
-                    bg-primary
-                    disabled:opacity-40 disabled:shadow-none active:scale-[0.98] transition-all duration-100"
+                </Button>
+                <Button
+                  className="flex-[2]"
+                  onClick={handleAdjust} disabled={saving || diff === 0}
                 >
                   {saving ? 'Adjusting…' : 'Apply Adjustment'}
-                </button>
+                </Button>
               </div>
             </div>
           )

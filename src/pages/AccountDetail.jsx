@@ -19,6 +19,7 @@ import {
   AccountFormSheet, QrViewerModal, StatCard, CreditTxSection, DetailTxRow,
   TYPE_LABEL, fmt, fmtCompact, fmtCycleDate, nextOccurrence, nextOccurrenceDate,
 } from './Accounts'
+import Button from '../components/ui/Button'
 
 /**
  * One account, as a page rather than a sheet.
@@ -939,14 +940,15 @@ export default function AccountDetail() {
                 </div>
               ))}
             </div>
-            <button
+            <Button
+              variant="tint"
+              size="sm"
+              block
+              className="mb-5"
               onClick={() => { setFormPrefill({ parentName: account.name }); setFormOpen(true) }}
-              className="w-full py-3 rounded-full text-sm font-semibold text-primary
-                bg-primary/[0.08] dark:bg-primary/[0.12]
-                active:bg-primary/[0.15] transition-colors mb-5"
             >
               + Add Sub-account
-            </button>
+            </Button>
 
             {acctTxs.length > 0 && (
               <>

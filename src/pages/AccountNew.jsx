@@ -15,6 +15,7 @@ import Confetti from '../components/Confetti'
 import {
   TYPE_OPTIONS, defaultRole, buildAccountRow, createAccount,
 } from './Accounts'
+import Button from '../components/ui/Button'
 
 /**
  * Creating an account, as a guided page rather than one long sheet.
@@ -335,22 +336,12 @@ function CreatedStep({ draft, onDone, onAddTransaction }) {
       </p>
 
       <div className="w-full mt-8 flex flex-col gap-2.5" style={{ animation: 'pageFadeIn 0.5s 0.3s ease both' }}>
-        <button
-          onClick={onDone}
-          className="w-full py-3.5 rounded-full text-sm font-semibold text-white bg-primary
-            shadow-[0_6px_20px_-6px_rgba(var(--color-primary-rgb),0.6)]
-            active:scale-[0.98] transition-transform duration-100"
-        >
+        <Button block onClick={onDone}>
           Done
-        </button>
-        <button
-          onClick={onAddTransaction}
-          className="w-full py-3 rounded-full text-sm font-semibold
-            text-slate-600 dark:text-slate-300
-            active:bg-slate-100 dark:active:bg-white/[0.06] transition-colors"
-        >
+        </Button>
+        <Button variant="secondary" size="sm" block onClick={onAddTransaction}>
           Add a transaction
-        </button>
+        </Button>
       </div>
     </section>
   )

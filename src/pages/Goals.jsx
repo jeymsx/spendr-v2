@@ -15,6 +15,7 @@ import { parseMoney, numToMoneyStr, moneyChangeHandler } from '../utils/moneyInp
 import {
   allocateGoals, isFundable, GOAL_ICONS, nextRank, reRank, pace,
 } from '../lib/goals'
+import Button from '../components/ui/Button'
 
 /**
  * Savings goals.
@@ -424,20 +425,18 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
                 out of the account — a goal only ever described the balance.
               </p>
               <div className="flex gap-2 mt-5">
-                <button
-                  onClick={() => setConfirmDelete(false)}
-                  className="flex-1 py-3 rounded-full text-sm font-semibold
-                    bg-white dark:bg-white/[0.07] text-slate-700 dark:text-slate-200
-                    border border-slate-200 dark:border-white/[0.09] active:scale-[0.98] transition-transform">
+                <Button variant="outline" size="sm" className="flex-1"
+                  onClick={() => setConfirmDelete(false)}>
                   Keep it
-                </button>
-                <button
-                  onClick={handleDelete}
-                  disabled={saving}
-                  className="flex-1 py-3 rounded-full text-sm font-semibold text-white bg-red-500
-                    active:scale-[0.98] transition-transform disabled:opacity-60">
+                </Button>
+                <Button
+                  variant="danger"
+                  size="sm"
+                  className="flex-1"
+                  onClick={handleDelete} disabled={saving}
+                >
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
           ) : (
@@ -564,37 +563,20 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
                 </span>
               </label>
 
-              <button
-                onClick={handleSave}
-                disabled={!canSave}
-                className="mt-6 w-full py-3.5 rounded-full text-sm font-semibold text-white bg-primary
-                  active:scale-[0.98] transition-all duration-100
-                  disabled:opacity-40 disabled:shadow-none"
-              >
+              <Button block className="mt-6" onClick={handleSave} disabled={!canSave}>
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create goal'}
-              </button>
+              </Button>
 
               {isEdit && (
                 <div className="flex gap-2 mt-2.5 mb-2">
-                  <button
-                    onClick={handleArchive}
-                    disabled={saving}
-                    className="flex-1 py-3 rounded-full text-[13px] font-semibold
-                      bg-white dark:bg-white/[0.07] text-slate-700 dark:text-slate-200
-                      border border-slate-200 dark:border-white/[0.09]
-                      active:scale-[0.98] transition-transform disabled:opacity-60">
+                  <Button variant="outline" size="sm" className="flex-1"
+                    onClick={handleArchive} disabled={saving}>
                     {goal.archivedAt ? 'Restore' : 'Archive'}
-                  </button>
-                  <button
-                    onClick={() => setConfirmDelete(true)}
-                    disabled={saving}
-                    className="flex-1 py-3 rounded-full text-[13px] font-semibold
-                      text-red-600 dark:text-red-400
-                      bg-red-50 dark:bg-red-500/[0.10]
-                      border border-red-100 dark:border-red-500/20
-                      active:scale-[0.98] transition-transform disabled:opacity-60">
+                  </Button>
+                  <Button variant="dangerTint" size="sm" className="flex-1"
+                    onClick={() => setConfirmDelete(true)} disabled={saving}>
                     Delete
-                  </button>
+                  </Button>
                 </div>
               )}
             </>

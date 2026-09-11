@@ -14,6 +14,7 @@ import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import { IconCalendar, IconChevronLeft, IconTemplate} from '../components/icons'
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
+import Button from '../components/ui/Button'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -274,16 +275,9 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
       </div>
 
       <div className="px-4 pt-5">
-        <button
-          onClick={onConfirmPress}
-          disabled={saving || amount <= 0}
-          className="w-full py-4 rounded-full text-sm font-semibold text-white
-            bg-primary
-            disabled:opacity-40 disabled:shadow-none
-            active:scale-[0.98] transition-all duration-100"
-        >
+        <Button size="lg" block onClick={onConfirmPress} disabled={saving || amount <= 0}>
           Review Inflow
-        </button>
+        </Button>
       </div>
 
       {/* ── Sheets ── */}

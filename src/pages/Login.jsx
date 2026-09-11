@@ -1,6 +1,7 @@
 ﻿import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import Button from '../components/ui/Button'
 
 function GoogleIcon() {
   return (
@@ -92,15 +93,7 @@ export default function Login() {
             Sign in to continue
           </p>
 
-          <button
-            onClick={handleGoogleSignIn}
-            disabled={signingIn}
-            className="w-full flex items-center justify-center gap-3
-              py-3.5 rounded-full text-sm font-semibold
-              bg-primary text-white
-              disabled:opacity-50 disabled:shadow-none
-              active:scale-[0.98] transition-all duration-100"
-          >
+          <Button block onClick={handleGoogleSignIn} disabled={signingIn}>
             {signingIn ? (
               <>
                 <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -112,7 +105,7 @@ export default function Login() {
                 Sign in with Google
               </>
             )}
-          </button>
+          </Button>
 
           {error && (
             <p className="mt-3 text-xs text-center text-red-500 dark:text-red-400">{error}</p>
