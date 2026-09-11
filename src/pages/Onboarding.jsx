@@ -958,7 +958,7 @@ export default function Onboarding() {
         setSigningIn(false)
       }
     })
-  }, [user, navigate])
+  }, [user, navigate, showToast])
 
   async function handleSignIn() {
     setSigningIn(true)

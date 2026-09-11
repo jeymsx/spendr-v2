@@ -424,16 +424,21 @@ export default function AccountDetail() {
     if (accounts && hadAccount.current) navigate('/accounts', { replace: true })
   }, [accounts, account, navigate])
 
+  /* Keyed on the NAME, and reading the name, so the dependency list is
+     honest rather than narrowed behind a disable. `account` comes from a
+     .find() and is a fresh object every render; depending on it would
+     recompute this filter over every transaction on each pass. */
+  const accountName = account?.name
   const acctTxs = useMemo(() => {
-    if (!account) return []
+    if (!accountName) return []
     return (transactions ?? [])
       .filter(tx =>
-        tx.account === account.name ||
-        tx.fromAccount === account.name ||
-        tx.toAccount === account.name
+        tx.account === accountName ||
+        tx.fromAccount === accountName ||
+        tx.toAccount === accountName
       )
       .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
-  }, [transactions, account?.name])
+  }, [transactions, accountName])
 
   // Running balance, newest first: start at the current balance and reverse
   // each transaction to recover the balance before it. getCreditStatus is
@@ -477,9 +482,9 @@ export default function AccountDetail() {
     [trendRange],
   )
   const trend = useMemo(() => {
-    if (!account) return []
-    return buildTrend(acctTxs, account.name, isCredit, totalUsed, range)
-  }, [acctTxs, account?.name, isCredit, totalUsed, range])
+    if (!accountName) return []
+    return buildTrend(acctTxs, accountName, isCredit, totalUsed, range)
+  }, [acctTxs, accountName, isCredit, totalUsed, range])
 
   // What this balance is already promised to. Every goal is passed in, not
   // just this account's: a higher-ranked goal can drain the balance before the

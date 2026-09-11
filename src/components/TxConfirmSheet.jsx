@@ -76,6 +76,11 @@ export default function TxConfirmSheet({
       setSaveTemplate(false)
       setTemplateName(description?.trim() || '')
     }
+    // Hydrates the form when the sheet opens. Listing every field would
+    // re-run the effect that SETS them and clobber edits in progress;
+    // `open` plus the record id is what actually means "something else is
+    // being edited now".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open])
 
   const close = () => {

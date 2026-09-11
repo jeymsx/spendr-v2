@@ -49,7 +49,6 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
     const on = rail?.querySelector('[data-on="true"]')
     if (!rail || !on) return
     rail.scrollTo({ left: Math.max(0, on.offsetLeft - (rail.clientWidth - on.offsetWidth) / 2) })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   if (!categories.length) {

@@ -616,7 +616,11 @@ export default function Goals() {
 
   // One date for the whole render, so two rows can never disagree about what
   // "this month" is if the clock ticks over mid-paint.
-  const today = useMemo(() => new Date(), [goalRows])
+  //
+  // Deps are empty, not [goalRows]. Keying it on goalRows re-read the clock
+  // whenever the goals changed, which is the exact thing the comment says it
+  // is here to prevent.
+  const today = useMemo(() => new Date(), [])
 
   const alloc = useMemo(
     () => allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [] }),

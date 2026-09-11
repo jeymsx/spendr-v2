@@ -195,7 +195,14 @@ export default function Budget() {
   const categories   = useLiveQuery(() => db.categories.toArray(), [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [])
 
-  const now = new Date()
+  /* One clock reading for the whole render.
+
+     It was a bare `new Date()`, so it changed identity every render and had
+     to be left out of the memos below to keep them from recomputing every
+     time - which is how it ended up as two exhaustive-deps warnings. Stable
+     now, so it can be listed honestly, and as a bonus the month heading and
+     the filter cutoff can no longer straddle midnight. */
+  const now = useMemo(() => new Date(), [])
   const monthName = `${MONTHS[now.getMonth()]} ${now.getFullYear()}`
 
   // Same rule as every other spend surface: this month, up to end of today.
@@ -204,7 +211,7 @@ export default function Budget() {
     const cutoff = scheduledCutoff()
     return (transactions ?? []).filter(t =>
       t.type === 'expense' && (t.date ?? '').startsWith(pfx) && (t.date ?? '') <= cutoff)
-  }, [transactions])
+  }, [transactions, now])
 
   const spentByCat = useMemo(() => {
     const m = {}
@@ -243,7 +250,7 @@ export default function Budget() {
   const daysLeft = useMemo(() => {
     const end = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate()
     return Math.max(1, end - now.getDate() + 1)
-  }, [])
+  }, [now])
 
   const remaining = totals.budget - totals.spent
   const perDay = remaining > 0 ? remaining / daysLeft : 0

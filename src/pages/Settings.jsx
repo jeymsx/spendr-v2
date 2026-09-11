@@ -1725,6 +1725,11 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
       setBudget('0')
       setMode('form')
     }
+    // Hydrates the form when the sheet opens. Listing every field would
+    // re-run the effect that SETS them and clobber edits in progress;
+    // `open` plus the record id is what actually means "something else is
+    // being edited now".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, category?.id, startAtDelete])
 
   async function runDeleteCheck() {
@@ -2171,6 +2176,11 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
       setName(''); setType('expense'); setAmountStr('0'); setDesc('')
       setCategory(null); setAccount(null); setFromAcct(null); setToAcct(null)
     }
+    // Hydrates the form when the sheet opens. Listing every field would
+    // re-run the effect that SETS them and clobber edits in progress;
+    // `open` plus the record id is what actually means "something else is
+    // being edited now".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, template?.id])
 
   const close = () => {

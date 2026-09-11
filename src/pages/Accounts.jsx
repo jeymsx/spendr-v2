@@ -809,7 +809,7 @@ export default function Accounts() {
     const acct = accounts.find(a => a.name === decodeURIComponent(name))
     if (acct) navigate(`/accounts/${acct.id}`, { replace: true })
     else setSearchParams({}, { replace: true })
-  }, [accounts, searchParams])
+  }, [accounts, searchParams, navigate, setSearchParams])
 
   // Adding an account is its own page now - it shows the card you are making
   // as you make it, and skips the credit fields for accounts that cannot have
@@ -1597,6 +1597,11 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setParentName(prefill?.parentName ?? null)
       setScheme('')
     }
+    // Hydrates the form when the sheet opens. Listing every field would
+    // re-run the effect that SETS them and clobber edits in progress;
+    // `open` plus the record id is what actually means "something else is
+    // being edited now".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, account?.id])
 
   const close = () => {

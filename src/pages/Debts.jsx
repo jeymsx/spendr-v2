@@ -962,7 +962,10 @@ export default function Debts() {
   }, [])
 
   const allDebts = useLiveQuery(() => db.debts.orderBy('createdAt').reverse().toArray(), [], undefined)
-  const rows = allDebts ?? []
+  /* Memoised because `allDebts ?? []` produces a NEW array on every render
+     while the query is still loading, which changed the identity of the
+     useCallback below it every pass and defeated the useMemo below that. */
+  const rows = useMemo(() => allDebts ?? [], [allDebts])
 
   const forView = useCallback(
     (v) => v === 'all' ? rows : rows.filter(d => d.type === v),

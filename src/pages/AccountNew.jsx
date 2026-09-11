@@ -505,7 +505,6 @@ function StyleStep({ draft, set, action }) {
     const left = on.offsetLeft - row.scrollLeft
     if (left >= 0 && left + on.offsetWidth <= row.clientWidth) return
     row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2 })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   /**
@@ -786,7 +785,6 @@ export default function AccountNew() {
     const left = on.offsetLeft - row.scrollLeft
     if (left >= 0 && left + on.offsetWidth <= row.clientWidth) return   // already visible
     row.scrollTo({ left: on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2 })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [current])
 
   const taken = useMemo(

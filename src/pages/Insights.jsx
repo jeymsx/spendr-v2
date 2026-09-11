@@ -388,7 +388,7 @@ function SpendingTrivia({ trivia, triviaKey }) {
   useEffect(() => {
     setIdx(Math.floor(Math.random() * Math.max(trivia.length, 1)))
     setFade(true)
-  }, [triviaKey])
+  }, [triviaKey, trivia.length])
 
   if (!trivia.length) return null
   const item = trivia[idx % trivia.length]

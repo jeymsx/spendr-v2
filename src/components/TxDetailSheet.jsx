@@ -149,6 +149,11 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
   useEffect(() => {
     if (tx) setMode('detail')
     setSaving(false)
+    // Hydrates the form when the sheet opens. Listing every field would
+    // re-run the effect that SETS them and clobber edits in progress;
+    // `open` plus the record id is what actually means "something else is
+    // being edited now".
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tx?.id])
 
   function enterEdit() {
