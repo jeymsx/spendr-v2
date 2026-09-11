@@ -37,6 +37,30 @@ recording so nobody re-downloads them hoping:
 | Smart | yes | 3.7:1 wordmark |
 | Maynilad, Converge, Cignal | no | not in the library |
 
+## AI and Google subscriptions
+
+`claude.svg`, `gemini.svg`, `google.svg` are simple-icons like the other 25 —
+24x24, one path, already the right shape. `chatgpt.svg` is from
+[logos-download](https://logos-download.com/brands/chatgpt/), because OpenAI
+is no longer in simple-icons; it arrives as a single-path square mark and
+needed only the usual strip.
+
+Names matched: Claude Pro / claude.ai, ChatGPT Plus / ChatGPT Pro / OpenAI,
+Gemini Advanced, Google One. iCloud+ was already covered.
+
+## Maynilad — downloaded, not shipped
+
+`logos-download.com/brands/maynilad/` has it, and it is a 1.74:1 lockup:
+the droplet mark plus the wordmark, ten paths over two brand colours, with a
+`<style>` block that would leak globally once inlined.
+
+Cropping it needs real path geometry, not the coordinate-pair scan that
+worked for Meralco — that file uses absolute commands, this one is relative,
+so scanning its numbers as x/y pairs gives bounds that are simply wrong.
+Shipping a bad crop would put a sliver of a wordmark in the chip. It stays
+out until the droplet is isolated properly, and Maynilad keeps its category
+glyph meanwhile, which is what this seam is for.
+
 This folder is still the seam. A bill whose name resolves to no file keeps
 its category glyph, which is what Maynilad and Globe look like today. Add an
 alias in `src/lib/billBrands.js` if the name you use is not the slug.

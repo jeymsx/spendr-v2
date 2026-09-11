@@ -37,6 +37,10 @@ export const BILL_BRAND_COLORS = {
   applemusic:    '#fa243c',
   icloud:        '#3693f3',
   apple:         '#000000',
+  claude:        '#d97757',
+  chatgpt:       '#000000',
+  gemini:        '#8e75b2',
+  google:        '#4285f4',
   /* Meralco's own orange. The mark is two-tone at source - a dark spark
      behind an orange one - and flattens to the orange, which is the half
      that carries the brand. */
@@ -94,6 +98,14 @@ const ALIASES = {
   discord: 'discord', discordnitro: 'discord', nitro: 'discord',
   audible: 'audible',
   apple: 'apple',
+  /* The AI subscriptions. "Claude Pro", "ChatGPT Plus", "Gemini
+     Advanced", "Google One" - the plan word is what people actually
+     type, so each maps from the product rather than the company. */
+  claudepro: 'claude', claudeai: 'claude', claude: 'claude',
+  chatgptplus: 'chatgpt', chatgptpro: 'chatgpt', chatgpt: 'chatgpt',
+  openai: 'chatgpt',
+  geminiadvanced: 'gemini', googlegemini: 'gemini', gemini: 'gemini',
+  googleone: 'google', googlestorage: 'google', google: 'google',
   /* Philippine utilities. The electricity bill is called all of these. */
   meralco: 'meralco', meralcobill: 'meralco', kuryente: 'meralco',
 }
