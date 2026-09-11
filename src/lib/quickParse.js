@@ -120,12 +120,25 @@ const STOPWORDS = new Set([
 /**
  * A category you used six months ago should not outvote last week's.
  *
- * MEASURED: no effect. 30, 60, 90, 180 days and no decay at all scored
- * identically (75%/80%) on the real ledger. That is not a bug in the decay -
- * it is that decay only changes an answer when a merchant genuinely SWITCHED
- * category, and this user has almost none of those. Kept because the failure
- * it guards against is real and the cost is one Math.pow, but it is unproven
- * on real data and should not be defended as if it were earning its keep.
+ * MEASURED, on the real ledger, once the option was actually threaded
+ * through to ageWeight - the first attempt read opts.halfLifeDays into a
+ * local and never passed it, so every row of the first sweep silently ran
+ * at 90 and I wrote up the resulting flat table as a finding about the data:
+ *
+ *     30 days   offered 74%   correct 80%
+ *     60 days           75%           80%
+ *     90 days           75%           80%   <- here
+ *     180 days          74%           80%
+ *     no decay          75%           79%
+ *
+ * So decay is not inert, but it is worth about one point of precision
+ * against no decay at all, and on 179 test rows one point is one
+ * transaction. Real, and indistinguishable from noise at this sample size.
+ * 90 is at the optimum or tied for it.
+ *
+ * Kept at 90 on that basis rather than on conviction. The failure it guards
+ * - a merchant you have genuinely stopped filing one way - is real, and this
+ * ledger happens to contain almost none of them.
  */
 const HALF_LIFE_DAYS = 90
 /** A single word needs corroboration; a whole phrase does not. See phrasesOf. */
