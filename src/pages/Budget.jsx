@@ -17,6 +17,7 @@ import SectionLabel from '../components/ui/SectionLabel'
 import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
+import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
 
 /**
  * The month's budget, in full.
@@ -325,8 +326,9 @@ export default function Budget() {
       </header>
 
       {loading ? (
-        <div className="px-5 mt-6">
-          <div className="h-32 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
+        <div className="px-5 mt-2 flex flex-col gap-7">
+          <SkeletonHero />
+          <SkeletonList rows={4} />
         </div>
       ) : totals.budget === 0 ? (
         <div>

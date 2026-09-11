@@ -22,6 +22,7 @@ import SectionLabel from '../components/ui/SectionLabel'
 import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
+import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
 
 /**
  * Savings goals.
@@ -680,10 +681,14 @@ export default function Goals() {
         </IconButton>
       </header>
 
+      {/* The loading state is the page's own shape, not three grey
+          rectangles: the hero, the stat row and the list, at the sizes
+          they arrive at, so nothing below them moves when they do. */}
       {loading ? (
-        <div className="px-5 mt-6 flex flex-col gap-3">
-          <div className="h-28 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
-          <div className="h-20 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
+        <div className="px-5 mt-2 flex flex-col gap-7">
+          <SkeletonHero />
+          <SkeletonStatTrio />
+          <SkeletonList rows={3} />
         </div>
       ) : alloc.active.length === 0 && archived.length === 0 ? (
         <div>

@@ -1358,6 +1358,61 @@ input[type="date"]::-webkit-datetime-edit {
   line-height: 1.1;
 }
 
+/* ── Skeleton ─────────────────────────────────────────────
+   A sweep, not a pulse.
+
+   `animate-pulse` fades the whole element in and out, so eight placeholders
+   breathe in unison and the page reads as flashing. This moves a gradient
+   across a block that never changes opacity - one element, one animated
+   property, and that property is `transform`, so it stays on the compositor
+   instead of repainting a list of them every frame.
+
+   The base and the sheen are separate tokens because the sweep has to be
+   lighter than the block in both themes, and in dark mode "lighter" is a
+   different distance than in light. */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  background: rgba(15, 23, 42, 0.08);
+}
+
+.dark .skeleton {
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.55),
+    transparent
+  );
+  animation: skeleton-sweep 1.5s ease-in-out infinite;
+}
+
+.dark .skeleton::after {
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255, 255, 255, 0.07),
+    transparent
+  );
+}
+
+@keyframes skeleton-sweep {
+  to { transform: translateX(100%); }
+}
+
+/* A loading state is decoration; someone who has asked for less motion has
+   asked for less of exactly this. The blocks stay, the sweep stops. */
+@media (prefers-reduced-motion: reduce) {
+  .skeleton::after { animation: none; }
+}
+
 /* The editable figure inside AmountHero, at the hero's own 40px.
 
    Both of these need !important for the same reason: the rule above sets

@@ -21,6 +21,7 @@ import Card from '../components/ui/Card'
 import DetailRow from '../components/ui/DetailRow'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
+import Skeleton, { SkeletonList, SkeletonRow } from '../components/ui/Skeleton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -297,9 +298,11 @@ export default function RecurringDetail() {
   if (rec === undefined) {
     return (
       <div className="px-5 pt-safe-header">
-        <div className="h-9 w-9 rounded-2xl bg-slate-100 dark:bg-white/[0.05] animate-pulse" />
-        <div className="mt-6 h-24 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
-        <div className="mt-3 h-16 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
+        <Skeleton className="h-9 w-9 rounded-full" />
+        {/* 116px, which is what the bill card measures - so the card does not
+            grow into place when the row arrives. */}
+        <Skeleton className="mt-6 h-[116px] rounded-2xl" />
+        <SkeletonList rows={3} className="mt-7" />
       </div>
     )
   }
@@ -503,9 +506,7 @@ export default function RecurringDetail() {
         <div className="px-5">
           <Card clip>
             {history === null ? (
-              <div className="px-4 py-6">
-                <div className="h-4 w-32 rounded bg-slate-100 dark:bg-white/[0.05] animate-pulse" />
-              </div>
+              <SkeletonRow lines={1} />
             ) : history.length === 0 ? (
               <EmptyState
                 size="sm"

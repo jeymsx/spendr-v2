@@ -25,6 +25,7 @@ import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
+import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -608,11 +609,14 @@ export default function Recurring() {
         </IconButton>
       </header>
 
+      {/* The loading state is the page's own shape, not three grey
+          rectangles: the hero, the stat row and the list, at the sizes
+          they arrive at, so nothing below them moves when they do. */}
       {loading ? (
-        <div className="px-5 mt-6 flex flex-col gap-3">
-          <div className="h-24 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
-          <div className="h-9 rounded-full bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
-          <div className="h-40 rounded-2xl bg-slate-100 dark:bg-white/[0.04] animate-pulse" />
+        <div className="px-5 mt-2 flex flex-col gap-7">
+          <SkeletonHero />
+          <SkeletonStatTrio />
+          <SkeletonList rows={3} />
         </div>
       ) : enriched.length === 0 ? (
         <EmptyState

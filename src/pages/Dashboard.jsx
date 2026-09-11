@@ -20,6 +20,7 @@ import IconButton from '../components/ui/IconButton'
 import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
+import Skeleton from '../components/ui/Skeleton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -826,9 +827,10 @@ export default function Dashboard() {
 
 // ── Skeleton loader ────────────────────────────────────────────────────────────
 
-function Skel({ className }) {
-  return <div className={`rounded-xl bg-slate-200 dark:bg-white/[0.06] animate-pulse ${className}`} />
-}
+/* Kept as a name, because this file uses it fifteen times and `Skel` reads
+   better in a layout sketch than the full import. It is the shared block
+   now - same grey, same sweep, no second recipe. */
+const Skel = ({ className }) => <Skeleton className={className} />
 
 function DashboardSkeleton() {
   return (
@@ -844,7 +846,7 @@ function DashboardSkeleton() {
 
       {/* net worth card */}
       <div className="px-5 mt-4">
-        <div className="rounded-3xl p-6 bg-slate-200 dark:bg-white/[0.06] animate-pulse h-40" />
+        <Skel className="rounded-3xl h-40" />
       </div>
 
       {/* account cards */}
