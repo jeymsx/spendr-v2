@@ -1160,6 +1160,42 @@ html.dark body {
   animation: slideDown 0.24s cubic-bezier(0.32, 0.72, 0, 1) forwards;
 }
 
+/* ── Where a sheet sits: floating card, or docked to the bottom ─────────
+ *
+ * CLASSES, not inline styles, and that distinction is load-bearing. The
+ * desktop layer restyles `.sheet-panel` into a centred modal further down
+ * this file - `html.web .sheet-panel` sets position, left, top, right,
+ * bottom, width, max-height and border-radius. An inline style on the panel
+ * beats any stylesheet rule, so geometry written into the element's style
+ * attribute silently defeats that and the modal comes out stretched from the
+ * middle of the window to 12px off the bottom with its buttons below the
+ * fold. It did exactly that for two commits.
+ *
+ * As a class, `html.web .sheet-panel` (0,2,1) outranks `.sheet-float`
+ * (0,1,0) on every property both of them set, so the desktop modal is
+ * unaffected by either of these.
+ *
+ * The choice between them is measured at open time - see Sheet.jsx. A card
+ * that fits gets four rounded corners and stands off the edges; one that has
+ * to scroll docks, because a scrolling card with a gap beneath it puts its
+ * own bottom edge and the screen's in the same place and the rounded corners
+ * then read as a rendering mistake.                                     */
+
+.sheet-float {
+  inset-inline: 12px;
+  bottom: max(12px, env(safe-area-inset-bottom));
+  border-radius: 28px;
+  /* 56px of page left showing above it, plus the gap below. */
+  max-height: calc(100% - 68px);
+}
+
+.sheet-dock {
+  inset-inline: 0;
+  bottom: 0;
+  border-radius: 28px 28px 0 0;
+  max-height: calc(100% - 56px);
+}
+
 @keyframes fadeIn {
   from { opacity: 0; }
   to   { opacity: 1; }

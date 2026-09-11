@@ -1,8 +1,8 @@
-import { useState, useEffect, useLayoutEffect, useRef } from 'react'
-import { useScrollLock } from '../hooks/useScrollLock'
+import { useState, useEffect } from 'react'
 import { accountBrand } from '../lib/accountBrands'
 import SwipeConfirm from './SwipeConfirm'
 import Button from './ui/Button'
+import Sheet from './ui/Sheet'
 import CategoryGlyph from './CategoryGlyph'
 import BrandMark from './BrandMark'
 
@@ -193,11 +193,6 @@ function Divider() {
   return <div className="h-4" />
 }
 
-/* How much screen a floating card leaves alone: a clear gap under it, and at
-   least this much of the page still showing above it. Below that it docks. */
-const FLOAT_GAP = 12
-const FLOAT_TOP_MIN = 56
-
 export default function TxConfirmSheet({
   open,
   onClose,
@@ -225,18 +220,8 @@ export default function TxConfirmSheet({
      and writes three things at once. */
   swipeToConfirm = false,
 }) {
-  const [closing,       setClosing]       = useState(false)
-  useScrollLock(open)
-  const [saveTemplate,  setSaveTemplate]  = useState(false)
-  /* Whether this sheet had to give up floating. See FLOAT_* below. */
-  const [docked,        setDocked]        = useState(false)
-  const panelRef = useRef(null)
+  const [saveTemplate, setSaveTemplate] = useState(false)
 
-  /* Above the effects, not next to the markup that reads them: the layout
-     effect below lists hasFee in its dependency array, and a dependency array
-     is evaluated during render - so declaring it further down put a const in
-     its own temporal dead zone and threw on the first render. `npm run check`
-     catches exactly this. */
   const cfg    = TYPE_CONFIG[type] ?? TYPE_CONFIG.expense
   const hasFee = type === 'transfer' && fee > 0
 
@@ -250,39 +235,10 @@ export default function TxConfirmSheet({
     }
   }, [open])
 
-  /* Float or dock, decided by measurement rather than by guessing.
-
-     A confirmation is a card: four rounded corners, standing off the edges of
-     the screen, with the page visible around it. That only works while the
-     whole thing fits - a card taller than the screen has to scroll, and a
-     scrolling card with a gap under it puts its own bottom edge and the
-     screen's bottom edge in the same place, so the rounded corners read as a
-     rendering mistake. Past that height it becomes an ordinary bottom sheet:
-     flush to the bottom, rounded on top only, scrolling inside.
-
-     Measured once per open, in a LAYOUT effect so the geometry is settled
-     before the first paint. The measurement is taken in the floating state,
-     which is the narrower of the two, so the content height it sees is the
-     larger one - the decision errs toward docking, never toward a card that
-     is a few pixels too tall. */
-  useLayoutEffect(() => {
-    if (!open) return
-    const el = panelRef.current
-    if (!el) return
-    const room = window.innerHeight - FLOAT_TOP_MIN - FLOAT_GAP
-    /* No set-state-in-effect disable needed here, unlike the reset effect
-       above: measuring in a layout effect and setting what you measured is
-       the sanctioned use, and the rule does not flag it. */
-    setDocked(el.scrollHeight > room)
-  }, [open, installment, hasFee, saveTemplate])
-
-  const close = () => {
-    if (saving) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  if (!open && !closing) return null
+  /* The overlay, the panel, the grab handle, the scroll lock, the exit
+     animation, the float-or-dock measurement, Escape, the focus trap and the
+     dialog role all live in <Sheet> now. What is left in this file is what
+     the sheet is ABOUT. */
 
   /* The template's name, worked out rather than asked for.
 
@@ -317,37 +273,59 @@ export default function TxConfirmSheet({
     ...(toAccount   ? { toAccount:   toAccount.name   } : {}),
   })
 
-  return (
-    <div className="fixed inset-0 z-[120]">
-      <div
-        className="sheet-overlay absolute inset-0 bg-black/50 backdrop-blur-sm"
-        onClick={close}
+  /* The actions are Sheet's `footer`, which pins them under the scrolling
+     body. They used to be the last thing inside a panel that scrolled as one
+     piece, so on a short screen - and on desktop, where the modal is capped
+     at 84vh - Save Transaction sat below the fold. */
+  const actions = swipeToConfirm ? (
+    /* Stacked, not side by side. A drag needs the full width to have any
+       travel in it, and a 52px pill next to a Cancel button would give the
+       gesture about 200px to happen in. */
+    <div className="flex flex-col gap-2">
+      <SwipeConfirm
+        onConfirm={() => onConfirm(null)}
+        label={confirmLabel ?? 'Swipe to confirm'}
+        confirmingLabel={savingLabel}
+        busy={saving}
       />
-      <div
-        ref={panelRef}
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute px-5 pt-6 overflow-y-auto overscroll-contain',
-          'bg-white dark:bg-[#111820]',
-          docked
-            ? 'bottom-0 inset-x-0 rounded-t-[28px] border-t border-slate-100 dark:border-white/[0.07]'
-            : 'inset-x-3 rounded-[28px] border border-slate-100 dark:border-white/[0.07] shadow-[0_18px_50px_rgba(0,0,0,0.22)]',
-        ].join(' ')}
-        style={docked
-          ? {
-            maxHeight: `calc(100% - ${FLOAT_TOP_MIN}px)`,
-            paddingBottom: 'max(32px, env(safe-area-inset-bottom))',
-          }
-          : {
-            // bottom, not inset-y: the card is content-height and sits above
-            // the home indicator, so the gap has to clear the safe area too.
-            bottom: `max(${FLOAT_GAP}px, env(safe-area-inset-bottom))`,
-            maxHeight: `calc(100% - ${FLOAT_TOP_MIN + FLOAT_GAP}px)`,
-            paddingBottom: 22,
-          }}
+      <Button variant="quiet" size="sm" block onClick={onClose} disabled={saving}>
+        Cancel
+      </Button>
+    </div>
+  ) : (
+    <div className="flex gap-3">
+      <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+        Cancel
+      </Button>
+      <Button
+        className="flex-[2]"
+        loading={saving}
+        onClick={() => {
+          onConfirm(saveTemplate && onSaveTemplate ? templatePayload() : null)
+        }}
       >
-        <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
+        {saving ? savingLabel
+          : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save Transaction')}
+      </Button>
+    </div>
+  )
 
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={120}
+      scrim={50}
+      /* Not while it is writing: the sheet that is saving a transaction must
+         not be dismissed out from under the write. */
+      dismissible={!saving}
+      /* The heading is centred and carries a subtitle, so it stays in the
+         body rather than using Sheet's own left-aligned title - but the
+         dialog still needs a name, and this is it. */
+      ariaLabel={`Confirm ${cfg.noun}`}
+      footer={actions}
+    >
+      <div>
         {/* A name for what is about to happen, then the rule, then the figure.
 
             The sheet used to open on a chip and a number with nothing saying
@@ -467,40 +445,7 @@ export default function TxConfirmSheet({
           </div>
         )}
 
-        {/* actions */}
-        {swipeToConfirm ? (
-          /* Stacked, not side by side. A drag needs the full width to have
-             any travel in it, and a 52px pill next to a Cancel button would
-             give the gesture about 200px to happen in. */
-          <div className="flex flex-col gap-2">
-            <SwipeConfirm
-              onConfirm={() => onConfirm(null)}
-              label={confirmLabel ?? 'Swipe to confirm'}
-              confirmingLabel={savingLabel}
-              busy={saving}
-            />
-            <Button variant="quiet" size="sm" block onClick={close} disabled={saving}>
-              Cancel
-            </Button>
-          </div>
-        ) : (
-        <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={close} disabled={saving}>
-            Cancel
-          </Button>
-          <Button
-            className="flex-[2]"
-            loading={saving}
-            onClick={() => {
-              onConfirm(saveTemplate && onSaveTemplate ? templatePayload() : null)
-            }}
-          >
-            {saving ? savingLabel
-              : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save Transaction')}
-          </Button>
-        </div>
-        )}
       </div>
-    </div>
+    </Sheet>
   )
 }

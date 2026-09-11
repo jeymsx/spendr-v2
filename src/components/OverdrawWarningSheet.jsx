@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react'
 import Button from './ui/Button'
+import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -18,37 +18,32 @@ const fmt = (v) => {
 export default function OverdrawWarningSheet({
   open, onClose, onSaveAnyway, accountName, balance = 0, amount = 0,
 }) {
-  const [closing, setClosing] = useState(false)
-
-  const close = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }, [onClose])
-
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') close() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open, close])
-
-  if (!open && !closing) return null
+  /* Sheet owns the overlay, the panel, Escape, the scroll lock, the focus
+     trap and the exit animation. */
 
   const after = (balance ?? 0) - (amount ?? 0)
 
   return (
-    <div className="fixed inset-0 z-[110]">
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-        ].join(' ')}
-        style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mt-5 mb-5" />
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={110}
+      ariaLabel="Not enough balance"
+      footer={(
+        <div className="flex flex-col gap-2.5">
+          {/* The action fires after the exit animation rather than with it:
+              both callers open another sheet in response, and two sheets
+              crossing over each other reads as a glitch. */}
+          <Button size="lg" block onClick={() => { onClose(); setTimeout(onSaveAnyway, 260) }}>
+            Save anyway
+          </Button>
+          <Button variant="secondary" size="lg" block onClick={onClose}>
+            Cancel
+          </Button>
+        </div>
+      )}
+    >
+      <div>
 
         <div className="flex justify-center mb-4">
           <div className="w-14 h-14 rounded-2xl bg-red-50 dark:bg-red-500/[0.12] flex items-center justify-center">
@@ -88,15 +83,7 @@ export default function OverdrawWarningSheet({
           </div>
         </div>
 
-        <div className="flex flex-col gap-2.5 px-5">
-          <Button size="lg" block onClick={() => { close(); setTimeout(onSaveAnyway, 260) }}>
-            Save anyway
-          </Button>
-          <Button variant="secondary" size="lg" block onClick={close}>
-            Cancel
-          </Button>
-        </div>
       </div>
-    </div>
+    </Sheet>
   )
 }
