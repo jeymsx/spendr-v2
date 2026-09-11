@@ -361,7 +361,22 @@ export default function SettingsAccent() {
           ref={railRef}
           onScroll={onScroll}
           onClick={onRailClick}
-          className="flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory py-2"
+          /* pb-12 -mb-10, not py-2, and the pair has to stay together.
+
+             overflow-x: auto does not leave the other axis alone - the spec
+             computes a non-visible overflow on one axis to `auto` on the
+             other, so this scroller clips VERTICALLY too. The front card's
+             shadow is 0 26px 52px -12px, which reaches 40px below the card,
+             and there were 8px of room: it came off square along the bottom
+             edge of the rail.
+
+             So the bottom padding is 48px, enough for the shadow to finish
+             inside the clip box, and the negative margin takes 40 of them
+             back out of the layout. Net 8px, exactly what py-2 gave, with
+             nothing below it moving. The name block underneath has no
+             background and paints later, so it sits over the shadow's tail
+             rather than being hidden by it. */
+          className="flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pt-2 pb-12 -mb-10"
           style={{
             paddingInline: 'calc(50% - 114px)',
             scrollPaddingInline: 'calc(50% - 114px)',
