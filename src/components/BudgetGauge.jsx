@@ -46,7 +46,20 @@ const W = 280
 const CY = 134          // centre sits on the baseline, so the fan is a half
 const R_OUT = 128
 const R_IN = 99
-const STROKE = 5
+
+/* Each tick TAPERS: wide at the rim, narrow at the hub.
+
+   A uniform stroke is what a <line> gives you, and in a fan it reads wrong -
+   the ticks crowd together as they approach the centre, so a constant width
+   makes the inner ring denser than the outer one and the whole thing looks
+   heavier on the inside than the outside. Tapering pays that back: the gaps
+   stay even because the strokes narrow at the same rate the arc does.
+   
+   It is also why these are paths rather than lines. A stroke cannot change
+   width along its length, so the shape has to be drawn. */
+const W_OUT = 3.2       // half-width at the rim
+const W_IN = 1.05       // half-width at the hub
+const PAD = W_OUT       // so the widest cap cannot clip the viewBox
 
 export default function BudgetGauge({
   pct,
@@ -67,13 +80,32 @@ export default function BudgetGauge({
     const a = Math.PI * (1 - i / (TICKS - 1))
     const cos = Math.cos(a), sin = Math.sin(a)
     const on = i < filled
+
+    /* Screen coords, so y runs down: the outward radial unit is
+       (cos, -sin) and rotating it a quarter turn gives (sin, cos), which
+       is the direction the tick's width is measured along. */
+    const px = Math.sin(a), py = Math.cos(a)
+    const ox = W / 2 + R_OUT * cos, oy = CY - R_OUT * sin
+    const ix = W / 2 + R_IN * cos,  iy = CY - R_IN * sin
+
+    const p = (x, y) => `${x.toFixed(2)} ${y.toFixed(2)}`
+    /* Round cap at the rim bulging outward (sweep 0), down one side,
+       round cap at the hub bulging inward (sweep 1), back up. Both sweeps
+       were worked out at the top of the arc, where the outward direction
+       is -y: right-to-left over the top is a decreasing angle on screen,
+       hence 0, and left-to-right under the hub is increasing, hence 1. */
+    const d = [
+      `M ${p(ox + px * W_OUT, oy + py * W_OUT)}`,
+      `A ${W_OUT} ${W_OUT} 0 0 0 ${p(ox - px * W_OUT, oy - py * W_OUT)}`,
+      `L ${p(ix - px * W_IN, iy - py * W_IN)}`,
+      `A ${W_IN} ${W_IN} 0 0 1 ${p(ix + px * W_IN, iy + py * W_IN)}`,
+      'Z',
+    ].join(' ')
+
     return {
       i,
       on,
-      x1: W / 2 + R_IN * cos,
-      y1: CY - R_IN * sin,
-      x2: W / 2 + R_OUT * cos,
-      y2: CY - R_OUT * sin,
+      d,
       // Normalised across the lit span, not across the whole fan.
       color: on ? rampAt(filled > 1 ? i / (filled - 1) : 1) : null,
     }
@@ -82,7 +114,7 @@ export default function BudgetGauge({
   return (
     <div className={`relative ${className}`} style={{ maxWidth: W, marginInline: 'auto' }}>
       <svg
-        viewBox={`0 0 ${W} ${CY + STROKE}`}
+        viewBox={`0 0 ${W} ${CY + PAD}`}
         className="w-full block"
         role="img"
         aria-label={`${label}: ${Math.round(value)}% of budget`}
@@ -91,19 +123,15 @@ export default function BudgetGauge({
             an inline stroke cannot. */}
         <g className="text-slate-200 dark:text-white/[0.13]">
           {ticks.filter(t => !t.on).map(t => (
-            <line
-              key={t.i}
-              x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-              stroke="currentColor" strokeWidth={STROKE} strokeLinecap="round"
-            />
+            <path key={t.i} d={t.d} fill="currentColor" />
           ))}
         </g>
 
         {ticks.filter(t => t.on).map(t => (
-          <line
+          <path
             key={t.i}
-            x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-            stroke={t.color} strokeWidth={STROKE} strokeLinecap="round"
+            d={t.d}
+            fill={t.color}
             className="gauge-tick"
             /* Swept rather than appearing at once: the fan fills the way the
                month did. 14ms apart is fast enough to read as one motion and
