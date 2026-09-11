@@ -1402,8 +1402,11 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
   const [localExpense,   setLocalExpense]   = useState([])
   const [localInflow,    setLocalInflow]    = useState([])
 
-  const categories   = useLiveQuery(() => db.categories.toArray(),   [], [])
-  const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
+  const categories = useLiveQuery(() => db.categories.toArray(), [], [])
+  /* No transactions query any more. This screen read EVERY transaction in the
+     database - a live query that re-ran on each new expense - to draw the
+     budget bar that used to sit at the top. The bar has gone to the pages
+     that own it, and the read went with it. */
 
   const expenseCats = useMemo(() =>
     (categories ?? []).filter(c => c.type === 'expense')
@@ -1486,9 +1489,10 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
 
   const listBody = (
     <>
-              {activeTab === 'expense' && (
-                <BudgetSummaryCard categories={categories} transactions={transactions} />
-              )}
+              {/* No budget summary here. This screen is for naming, ordering
+                  and colouring categories; the month's budget total belongs
+                  to the Budget page and to Monthly Budgets, which both show
+                  it already. Three copies of one figure is two too many. */}
 
               <div className="mx-5 rounded-2xl overflow-hidden
                 bg-white border border-slate-100
