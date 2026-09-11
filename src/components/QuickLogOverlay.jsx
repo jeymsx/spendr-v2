@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
+import { useState, useEffect, useLayoutEffect, useMemo, useRef, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -8,6 +8,23 @@ import { IconTick, IconWarning, IconBell } from './icons'
 
 const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const money = (v) => '₱' + _php.format(Math.abs(v ?? 0))
+
+/** Breathing room between the text and the top of the keyboard. */
+const KEYBOARD_GAP = 16
+
+/** Window height, and where the keyboard's top edge is inside it. */
+function readViewport() {
+  if (typeof window === 'undefined') return { winH: 0, keyboardTop: 0 }
+  const vv = window.visualViewport
+  const winH = window.innerHeight
+  return {
+    winH,
+    // offsetTop is how far the visual viewport has scrolled inside the layout
+    // viewport. Adding it converts "height of the visible slice" into "where
+    // that slice ends", which is what a fixed-position child needs.
+    keyboardTop: vv ? vv.offsetTop + vv.height : winH,
+  }
+}
 
 /**
  * How long the dissolve takes on the way out.
@@ -210,26 +227,56 @@ export default function QuickLogOverlay({ onClose }) {
   }, [dismiss])
 
   /*
-    How tall the screen ACTUALLY is right now.
+    Where the visible slice of the screen actually is.
 
-    Centring the content needs this. A `fixed inset-0` overlay keeps the full
-    window height when the software keyboard opens - the keyboard covers the
-    bottom rather than shrinking the layout - so anything centred in it is
-    centred behind the keyboard, which is the one place it cannot be seen.
-    visualViewport is the only thing that reports the part still visible.
+    A `fixed inset-0` overlay is laid out against the LAYOUT viewport, which
+    the software keyboard does not shrink - so anything centred in it is
+    centred behind the keyboard, the one place it cannot be seen. Sizing the
+    box to visualViewport.height fixed the height and left a second, worse
+    bug: on iOS the visual viewport also SCROLLS when the keyboard opens
+    (offsetTop), and the box's top edge does not, so every child was drawn
+    offsetTop pixels too high and the heading ended up behind the status bar.
+
+    So read both numbers. `keyboardTop` is where the visible area ends in the
+    same coordinates the overlay is positioned in, which is the only frame
+    both halves below can agree in.
 
     Read in the initialiser rather than the effect body, because a setState
     during an effect is a cascading render and the lint rule is right.
   */
-  const [viewportH, setViewportH] = useState(
-    () => (typeof window !== 'undefined' ? window.visualViewport?.height ?? null : null),
-  )
+  const [vp, setVp] = useState(readViewport)
   useEffect(() => {
     const vv = window.visualViewport
-    if (!vv) return
-    const onResize = () => setViewportH(vv.height)
-    vv.addEventListener('resize', onResize)
-    return () => vv.removeEventListener('resize', onResize)
+    const onChange = () => setVp(readViewport())
+    // scroll as well as resize: the keyboard opening is a resize, but iOS
+    // nudging the page to reveal the caret is a scroll, and that moves the
+    // visible area just as much.
+    vv?.addEventListener('resize', onChange)
+    vv?.addEventListener('scroll', onChange)
+    window.addEventListener('orientationchange', onChange)
+    return () => {
+      vv?.removeEventListener('resize', onChange)
+      vv?.removeEventListener('scroll', onChange)
+      window.removeEventListener('orientationchange', onChange)
+    }
+  }, [])
+
+  /*
+    How tall the text block is, so it can be told whether it is in the way.
+
+    ResizeObserver rather than a one-off measure: the block grows and shrinks
+    as you type - a second chip wraps, a warning appears, the bill shortcut
+    turns up - and each of those changes whether the keyboard covers it.
+  */
+  const contentRef = useRef(null)
+  const [contentH, setContentH] = useState(0)
+  useLayoutEffect(() => {
+    const el = contentRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    // Fires once on observe, so there is no separate initial measurement.
+    const ro = new ResizeObserver(([entry]) => setContentH(entry.contentRect.height))
+    ro.observe(el)
+    return () => ro.disconnect()
   }, [])
 
   const go = useCallback(() => {
@@ -253,6 +300,18 @@ export default function QuickLogOverlay({ onClose }) {
   const cat = (categories ?? []).find(c => c.name === parsed.category) ?? null
   const ready = parsed.amount != null
   const dest = TYPE_COPY[parsed.type] ?? TYPE_COPY.expense
+
+  /*
+    Where the text would sit if nothing were in its way, and by how much the
+    keyboard is in its way. Both fall out to zero before the first
+    measurement, which is the no-keyboard layout - so the first paint is
+    already right and nothing jumps.
+  */
+  const keyboardInset = Math.max(0, vp.winH - vp.keyboardTop)
+  const contentTop    = (vp.winH - contentH) / 2
+  const overlap       = contentH
+    ? (contentTop + contentH) - (vp.keyboardTop - KEYBOARD_GAP)
+    : 0
 
   return (
     <div
@@ -295,15 +354,28 @@ export default function QuickLogOverlay({ onClose }) {
         what lets a tap on the empty space around the text fall through to the
         scrim and close.
       */}
-      <div
-        className="quick-in relative pointer-events-none flex flex-col justify-center px-6"
-        style={{ height: viewportH ? `${viewportH}px` : '100%' }}
-      >
+      <div className="quick-in relative h-full pointer-events-none flex flex-col justify-center px-6">
         {/* pointer-events-none by default, with only the parts you actually
             touch turning them back on. Text is not one of those: the heading
             is full-width, so leaving it interactive made the whole horizontal
             band at heading height a dead zone where tapping did nothing. */}
-        <div className="pointer-events-none">
+        {/*
+          Centred in the WINDOW, not in what the keyboard leaves - so opening
+          the keyboard does not move the text at all, which is the whole point
+          of measuring rather than re-centring. It only shifts if it would
+          otherwise be covered, and then only by as much as the overlap, and
+          never past the status bar: the CSS max() is there because
+          env(safe-area-inset-top) cannot be read from JavaScript.
+        */}
+        <div
+          ref={contentRef}
+          className="pointer-events-none"
+          style={overlap > 0 ? {
+            transform: `translateY(calc(-1 * min(${Math.round(overlap)}px, `
+              + `max(0px, ${Math.round(contentTop)}px - env(safe-area-inset-top) - 16px))))`,
+            transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)',
+          } : { transition: 'transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)' }}
+        >
           {/*
             A question, not a label.
 
@@ -471,12 +543,17 @@ export default function QuickLogOverlay({ onClose }) {
 
           Kept visible while disabled rather than hidden, so the target does
           not appear under a thumb already on its way down.
+
+          This is the half that DOES follow the keyboard. It is anchored to
+          the bottom of the window, so the keyboard's height is added to its
+          offset to keep it sitting just above the keys.
         */}
         <button
           onClick={go}
           disabled={!ready}
           aria-label={`Review ${dest.verb.toLowerCase()}`}
-          className="pointer-events-auto absolute bottom-6 right-6
+          style={{ bottom: `calc(${Math.round(keyboardInset)}px + 1.5rem)` }}
+          className="pointer-events-auto absolute right-6
             w-14 h-14 rounded-full bg-primary text-white
             flex items-center justify-center
             shadow-[0_8px_28px_-8px_rgba(0,0,0,0.55)]

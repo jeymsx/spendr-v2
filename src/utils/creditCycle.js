@@ -2,6 +2,11 @@ function clampDay(year, month, day) {
   return Math.min(day, new Date(year, month + 1, 0).getDate())
 }
 
+/** How many days are in a month. Handles month < 0 and > 11 by rolling. */
+function daysInMonth(year, month) {
+  return new Date(year, month + 1, 0).getDate()
+}
+
 // End-of-day helper so any transaction time on that date is included
 function eod(year, month, day) {
   return new Date(year, month, day, 23, 59, 59, 999)
@@ -17,8 +22,16 @@ function eod(year, month, day) {
 export function getCycleRange(cutoffDay, referenceDate = new Date()) {
   const d = cutoffDay ? Math.max(1, Math.min(31, cutoffDay)) : null
   if (!d) {
+    /* No cutoff day on the account, so bill by calendar month.
+
+       This returned the CURRENT month, which is not a closed cycle - it is
+       the one still running. Everything downstream treats charges before
+       cycleStart as already settled, so a card with no cutoff date dropped
+       every charge older than the 1st of this month out of its balance, and
+       reported that much more available credit than it had. Last month is
+       the most recent one that has actually closed. */
     const y = referenceDate.getFullYear(), m = referenceDate.getMonth()
-    return { cycleStart: new Date(y, m, 1), cycleEnd: eod(y, m, new Date(y, m + 1, 0).getDate()) }
+    return { cycleStart: new Date(y, m - 1, 1), cycleEnd: eod(y, m - 1, daysInMonth(y, m - 1)) }
   }
 
   const y  = referenceDate.getFullYear()
@@ -56,8 +69,16 @@ export function getCycleRange(cutoffDay, referenceDate = new Date()) {
 export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
   const d = cutoffDay ? Math.max(1, Math.min(31, cutoffDay)) : null
   if (!d) {
+    /* The month now accumulating, to match the closed cycle above.
+
+       This was two bugs in one line. It started the open cycle NEXT month,
+       leaving this month in no cycle at all, and it ended it with
+       `new Date(y, m + 2, 0).getDate()` - the last day of month m+1 - handed
+       back as a day number in month m+2, which overflows. The window it
+       produced ran 56 to 62 days in every month of the year, so "next
+       statement" quietly covered two bills' worth of charges. */
     const y = referenceDate.getFullYear(), m = referenceDate.getMonth()
-    return { cycleStart: new Date(y, m + 1, 1), cycleEnd: eod(y, m + 2, new Date(y, m + 2, 0).getDate()) }
+    return { cycleStart: new Date(y, m, 1), cycleEnd: eod(y, m, daysInMonth(y, m)) }
   }
 
   const { cycleEnd } = getCycleRange(cutoffDay, referenceDate)

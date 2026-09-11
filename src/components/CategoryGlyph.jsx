@@ -5,7 +5,7 @@ import {
   IconRepeat, IconMusic, IconBabyCarriage, IconHeartHandshake, IconBeer,
   IconPercentage, IconCreditCard, IconCashBanknote, IconBriefcase, IconChartLine,
   IconGiftCard, IconCoin, IconReceiptRefund, IconAward, IconTag, IconCoins,
-  IconPackage, IconTrendingUp, IconArrowsExchange, IconReceiptTax,
+  IconPackage, IconTrendingUp, IconArrowsExchange, IconReceiptTax, IconCash,
 } from '@tabler/icons-react'
 
 /**
@@ -87,6 +87,11 @@ const CATEGORY_ICON = {
   'Bonus':          IconAward,
   'Sold Item':      IconTag,
   'Dividends':      IconCoins,
+  /* Not one of the presets - nobody ships a "Payment" category - but common
+     enough as a hand-made inflow to be worth knowing by name. The map is
+     keyed on the name, so a category this file recognises gets a glyph
+     whether or not the app created it. */
+  'Payment':        IconCash,
 
   // ── System categories ──
   'Others':         IconPackage,
