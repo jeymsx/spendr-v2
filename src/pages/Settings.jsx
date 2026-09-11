@@ -1877,7 +1877,8 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               inputMode="decimal"
               value={budget === '0' ? '' : budget}
               onChange={moneyChangeHandler(setBudget)}
-              placeholder="₱0.00"
+              left="₱"
+              placeholder="0.00"
               /* "Optional — 0 means no budget" was the placeholder, which is
                  three jobs for one line: what goes in the box, that the box is
                  optional, and what zero does. A placeholder can only do the

@@ -582,9 +582,14 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
               shows as a placeholder rather than a typed-in 0 you have to
               clear. */}
           <EditRow label={errors.paid ? 'Already paid *' : 'Already paid'}>
+            {/* The peso rides in the value, not in a leading span. A RowInput
+                is right-aligned and flex-1, so a span would claim the space
+                and push the mark back against the label - the same reason
+                TxDetailSheet's edit rows do it this way. The strip on the way
+                out is what keeps parseMoney seeing digits. */}
             <RowInput
-              value={paidStr === '0' ? '' : paidStr}
-              onChange={e => { moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
+              value={paidStr && paidStr !== '0' ? `₱${paidStr}` : ''}
+              onChange={e => { e.target.value = e.target.value.replace(/[^0-9.]/g, ''); moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
               placeholder="₱0.00"
               inputMode="decimal"
             />

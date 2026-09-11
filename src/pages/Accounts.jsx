@@ -42,6 +42,7 @@ import IconButton from '../components/ui/IconButton'
 import Sheet from '../components/ui/Sheet'
 import Card from '../components/ui/Card'
 import { fieldFrame } from '../components/ui/Field'
+import MoneyField from '../components/ui/MoneyField'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
@@ -2058,13 +2059,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             {(!isEdit || type !== 'credit') && (
               <div>
                 <SectionLabel>{isEdit ? 'Balance' : 'Starting balance'}</SectionLabel>
-                <input
-                  type="text"
-                  inputMode="decimal"
+                <MoneyField
                   value={startingBal === '0' ? '' : startingBal}
                   onChange={moneyChangeHandler(setStartingBal)}
-                  placeholder="₱0.00"
-                  className={inputClass(false)}
                 />
                 {isEdit && adjustDiff !== 0 && (
                   <p className={`mt-2 px-1 text-[12px] font-medium ${
@@ -2087,25 +2084,17 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
                 <div>
                   <SectionLabel>Credit limit</SectionLabel>
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <MoneyField
                     value={creditLimit === '0' ? '' : creditLimit}
                     onChange={moneyChangeHandler(setCreditLimit)}
-                    placeholder="₱0.00"
-                    className={inputClass(false)}
                   />
                 </div>
 
                 <div>
                   <SectionLabel>Minimum payment</SectionLabel>
-                  <input
-                    type="text"
-                    inputMode="decimal"
+                  <MoneyField
                     value={minPayment === '0' ? '' : minPayment}
                     onChange={moneyChangeHandler(setMinPayment)}
-                    placeholder="₱0.00"
-                    className={inputClass(false)}
                   />
                 </div>
 
