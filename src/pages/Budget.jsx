@@ -493,12 +493,10 @@ export default function Budget() {
                     </div>
                   ))}
                 </Card>
-                <Link
-                  to="/settings"
-                  className="block text-center mt-3 text-[13px] font-semibold text-primary active:opacity-70"
-                >
-                  Set limits in Settings
-                </Link>
+                {/* No "Set limits in Settings" link. It pointed at the settings
+                    index, from a page that now carries "Edit limits" in its own
+                    header - a second, vaguer route to the screen already one tap
+                    away above. */}
               </div>
             </section>
           )}

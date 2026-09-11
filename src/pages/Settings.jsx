@@ -14,7 +14,6 @@ import { useAuth } from '../context/AuthContext'
 import { useSyncManager } from '../components/SyncManager'
 import SubPage from '../components/SubPage'
 import db, { UNSYNCED } from '../db/db'
-import { scheduledCutoff } from '../utils/scheduled'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -74,10 +73,6 @@ const fmt = (v) => {
   return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
 }
 
-function monthPrefix() {
-  const n = new Date()
-  return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
-}
 
 function fmtRelTime(isoStr) {
   if (!isoStr) return 'Never'
@@ -806,59 +801,12 @@ export function ResetConfirmModal({ open, onClose }) {
 
 // ── Budget summary card (inside category manager) ──────────────────────────────
 
-function BudgetSummaryCard({ categories, transactions }) {
-  const { totalBudgeted, totalSpent, pct } = useMemo(() => {
-    const pfx          = monthPrefix()
-    // A charge dated later this month is committed, not spent - see
-    // utils/scheduled, which lists budgets among the surfaces that hide it.
-    // Without this an installment plan booked the whole term against the
-    // month it was created in.
-    const cutoff       = scheduledCutoff()
-    const budgetedCats = (categories ?? []).filter(c => c.type === 'expense' && (c.budget ?? 0) > 0)
-    const totalBudgeted = budgetedCats.reduce((s, c) => s + (c.budget ?? 0), 0)
-    const monthTxs      = (transactions ?? []).filter(t =>
-      t.type === 'expense' && (t.date ?? '').startsWith(pfx) && (t.date ?? '') <= cutoff)
-    const totalSpent    = monthTxs.reduce((s, t) => s + (t.amount ?? 0), 0)
-    const pct           = totalBudgeted > 0 ? Math.min((totalSpent / totalBudgeted) * 100, 100) : 0
-    return { totalBudgeted, totalSpent, pct }
-  }, [categories, transactions])
+/* BudgetSummaryCard lived here: a headline total with a progress bar,
+   shown at the top of both budget screens. The Budget page opens with
+   the same figure inside its gauge, and the limit editor now hangs off
+   that page - so it was the same number three times. Deleted with its
+   last caller rather than left for someone to find and reuse. */
 
-  if (totalBudgeted === 0) return null
-
-  const over     = totalSpent > totalBudgeted
-  const warn     = pct >= 75 && !over
-  const barColor = over ? '#ef4444' : warn ? '#f59e0b' : '#22c55e'
-
-  return (
-    <div className="mx-5 mb-4 px-4 py-4 rounded-2xl
-      bg-white border border-slate-100
-      dark:bg-white/[0.04] dark:border-white/[0.07]
-      shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none">
-      <div className="flex items-center justify-between mb-3">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">
-          Budget this month
-        </p>
-        {over && (
-          <span className="text-[10px] font-semibold text-red-500 bg-red-50 dark:bg-red-500/10 px-2 py-0.5 rounded-full">
-            Over budget
-          </span>
-        )}
-      </div>
-      <div className="flex items-baseline gap-1.5 mb-2.5">
-        <span className={`text-xl font-bold tabular-nums ${over ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'}`}>
-          {fmt(totalSpent)}
-        </span>
-        <span className="text-sm text-slate-400 dark:text-slate-500">of {fmt(totalBudgeted)}</span>
-      </div>
-      <div className="h-2 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
-        <div className="h-full rounded-full transition-all duration-700" style={{ width: `${pct}%`, backgroundColor: barColor }} />
-      </div>
-      <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 tabular-nums">
-        {fmt(Math.max(0, totalBudgeted - totalSpent))} remaining · {pct.toFixed(0)}% used
-      </p>
-    </div>
-  )
-}
 
 // ── Budget manager sheet ───────────────────────────────────────────────────────
 
@@ -879,14 +827,15 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
   const asPage = variant === 'page'
   const { showToast } = useToast()
   const [closing,      setClosing]      = useState(false)
-  const [editingId,    setEditingId]    = useState(null)
   const [localBudgets, setLocalBudgets] = useState({})
   const [saving,       setSaving]       = useState(false)
-  const inputRef = useRef(null)
   useScrollLock(open && !asPage)
 
-  const categories   = useLiveQuery(() => db.categories.toArray(), [], [])
-  const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
+  /* No transactions query any more. This screen read EVERY transaction in the
+     database to colour a progress bar and print a "spent" figure under each
+     row - both of which the Budget page shows already, and this screen now
+     hangs off that page. Setting a limit is the one job here. */
+  const categories = useLiveQuery(() => db.categories.toArray(), [], [])
 
   const expenseCats = useMemo(() =>
     (categories ?? [])
@@ -894,19 +843,6 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
       .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name)),
     [categories],
   )
-
-  const monthlySpend = useMemo(() => {
-    const pfx = monthPrefix()
-    // Same rule as BudgetSummaryCard: scheduled charges are not spend yet.
-    const cutoff = scheduledCutoff()
-    const map = {}
-    for (const tx of (transactions ?? [])) {
-      if (tx.type === 'expense' && (tx.date ?? '').startsWith(pfx) && (tx.date ?? '') <= cutoff) {
-        map[tx.category] = (map[tx.category] ?? 0) + (tx.amount ?? 0)
-      }
-    }
-    return map
-  }, [transactions])
 
   const hasPendingChanges = useMemo(() =>
     Object.entries(localBudgets).some(([id, str]) => {
@@ -919,29 +855,14 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
   const close = () => {
     // On a page there is no panel to slide away, so skip the exit animation
     // and let the router transition carry it.
-    if (asPage) { setEditingId(null); setLocalBudgets({}); onClose(); return }
+    if (asPage) { setLocalBudgets({}); onClose(); return }
     setClosing(true)
-    setEditingId(null)
     setLocalBudgets({})
     setTimeout(() => { setClosing(false); onClose() }, 240)
   }
 
-  function startEdit(cat) {
-    setEditingId(cat.id)
-    setLocalBudgets(prev => ({
-      ...prev,
-      [cat.id]: prev[cat.id] ?? numToMoneyStr(cat.budget ?? 0),
-    }))
-    setTimeout(() => inputRef.current?.focus(), 50)
-  }
-
   function handleLocalChange(catId, str) {
     setLocalBudgets(prev => ({ ...prev, [catId]: str }))
-  }
-
-  function removeLimit(catId) {
-    setLocalBudgets(prev => ({ ...prev, [catId]: '0' }))
-    setEditingId(null)
   }
 
   async function saveAll() {
@@ -951,13 +872,14 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
         Object.entries(localBudgets).map(([id, str]) => {
           const cat = (categories ?? []).find(c => String(c.id) === String(id))
           if (!cat) return Promise.resolve()
+          // An empty field is no limit: parseMoney('') is 0, and 0 is how
+          // "no limit" has always been stored.
           const newBudget = parseMoney(str) || 0
           if (newBudget === (cat.budget ?? 0)) return Promise.resolve()
           return db.categories.update(Number(id), { budget: newBudget })
         })
       )
       setLocalBudgets({})
-      setEditingId(null)
       close()
     } catch (e) {
       console.error('[BudgetManager] save failed:', e)
@@ -973,119 +895,86 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
   /* The list and the save button are shared; only the shell around them
      differs. The page lets the document scroll and puts the button after the
      list; the sheet scrolls internally and pins the button to the panel. */
+  /* One inset card of rows, not a stack of cards that change shape when you
+     tap them. Each row is a label and a field, which is what setting a number
+     is; the glyph keeps the category recognisable at a glance.
+
+     No summary card at the top either: this screen hangs off the Budget page,
+     which opens with the same figure in its gauge. */
   const listBody = (
     <>
-            <BudgetSummaryCard categories={categories} transactions={transactions} />
-
-            <div className="mx-4 flex flex-col gap-2 mb-6">
+            <div className="mx-4 mb-6 rounded-2xl overflow-hidden
+              bg-white border border-slate-100
+              dark:bg-white/[0.04] dark:border-white/[0.07]">
               {expenseCats.length === 0 ? (
                 <div className="py-10 text-center">
                   <p className="text-sm text-slate-400 dark:text-slate-500">No expense categories yet</p>
                 </div>
-              ) : expenseCats.map((cat) => {
-                const localStr  = localBudgets[cat.id]
-                const budget    = localStr !== undefined ? parseMoney(localStr) || 0 : (cat.budget ?? 0)
-                const spent     = monthlySpend[cat.name] ?? 0
-                const pct       = budget > 0 ? Math.min((spent / budget) * 100, 100) : 0
-                const over      = budget > 0 && spent > budget
-                const warn      = pct >= 75 && !over
-                const accentHex = over ? '#ef4444' : warn ? '#f59e0b' : null
-                const isEditing = editingId === cat.id
-                const isDirty   = localStr !== undefined && (parseMoney(localStr) || 0) !== (cat.budget ?? 0)
+              ) : expenseCats.map((cat, i) => {
+                /* The field's text: whatever has been typed, else the saved
+                   limit, and an empty string for zero - a category with no
+                   limit shows the placeholder rather than "0", because 0 is
+                   not a limit anyone set. */
+                const localStr = localBudgets[cat.id]
+                const saved    = cat.budget ?? 0
+                const text     = localStr !== undefined
+                  ? (localStr === '0' ? '' : localStr)
+                  : (saved > 0 ? numToMoneyStr(saved) : '')
+                const isDirty  = localStr !== undefined && (parseMoney(localStr) || 0) !== saved
 
                 return (
-                  <div
+                  /* A <label>, so the whole row is the field's target: tapping
+                     anywhere on it - the glyph, the name, the empty space -
+                     puts the caret in the amount, which is how a row like this
+                     behaves on this platform. */
+                  <label
                     key={cat.id}
                     className={[
-                      'rounded-2xl overflow-hidden transition-all duration-200',
-                      isEditing
-                        ? 'bg-white dark:bg-[#131c28] border-2 border-primary/40 dark:border-primary/30 shadow-[0_0_0_4px_rgba(var(--color-primary-rgb),0.08)]'
-                        : isDirty
-                          ? 'bg-white dark:bg-white/[0.04] border border-primary/30 dark:border-primary/20 shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]'
-                          : 'bg-white dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07] shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none active:scale-[0.99]',
+                      'flex items-center gap-3 px-4 h-[58px] cursor-text',
+                      i > 0 ? 'border-t border-slate-100 dark:border-white/[0.06]' : '',
+                      isDirty ? 'bg-primary/[0.04] dark:bg-primary/[0.07]' : '',
                     ].join(' ')}
                   >
-                    {isEditing ? (
-                      /* ── Inline edit state ── */
-                      <div className="px-4 pt-4 pb-3">
-                        <div className="flex items-center gap-2.5 mb-4">
-                          <span className="leading-none"><CategoryGlyph cat={cat} size={20} /></span>
-                          <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">{cat.name}</span>
-                          <span className="text-[11px] text-slate-400 dark:text-slate-500 ml-auto">monthly limit</span>
-                        </div>
-                        <div className="flex items-baseline gap-1.5 mb-3 px-1">
-                          <span className="text-xl font-semibold text-slate-400 dark:text-slate-500 leading-none mb-0.5">₱</span>
-                          <input
-                            ref={inputRef}
-                            type="text"
-                            inputMode="decimal"
-                            value={(localBudgets[cat.id] ?? '0') === '0' ? '' : (localBudgets[cat.id] ?? '')}
-                            onChange={e => {
-                              const handler = moneyChangeHandler(str => handleLocalChange(cat.id, str))
-                              handler(e)
-                            }}
-                            placeholder="0"
-                            className="flex-1 bg-transparent text-3xl font-bold tabular-nums text-slate-900 dark:text-white outline-none min-w-0 tracking-tight"
-                          />
-                        </div>
-                        {(cat.budget ?? 0) > 0 && (
-                          <button
-                            onClick={() => removeLimit(cat.id)}
-                            className="text-[11px] font-semibold text-red-400 active:opacity-50">
-                            Remove limit
-                          </button>
-                        )}
-                      </div>
-                    ) : (
-                      /* ── Display state ── */
-                      <button onClick={() => startEdit(cat)} className="w-full text-left px-4 py-3.5">
-                        <div className="flex items-center gap-3 mb-2">
-                          <span className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                            style={{ '--cat-color': cat.color ?? '#64748b' }}>
-                            <CategoryGlyph cat={cat} size={19} />
-                          </span>
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
-                            {budget > 0 && (
-                              // tone-ink, because amber and red here are FILL
-                              // colours: at 10px they measured 2.15:1 in light
-                              // mode. The class shifts them per theme, which an
-                              // inline colour cannot do - mixing toward black
-                              // would be exactly wrong on a dark background.
-                              <p
-                                className={accentHex ? 'tone-ink text-[10px] tabular-nums mt-0.5' : 'text-[10px] tabular-nums mt-0.5 text-slate-500 dark:text-slate-400'}
-                                style={accentHex ? { '--tone': accentHex } : undefined}
-                              >
-                                {fmt(spent)} spent
-                              </p>
-                            )}
-                          </div>
-                          <div className={[
-                            'shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-bold tabular-nums',
-                            over ? 'bg-red-50 dark:bg-red-500/15 text-red-500 dark:text-red-400'
-                              : warn ? 'bg-amber-50 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400'
-                              : budget > 0 ? 'bg-primary/[0.08] dark:bg-primary/[0.14] accent-ink'
-                              : 'bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500',
-                          ].join(' ')}>
-                            {budget > 0 ? fmt(budget) : '+ Limit'}
-                          </div>
-                        </div>
-                        {budget > 0 && (
-                          <div className="ml-12 h-1.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
-                            <div
-                              className="h-full rounded-full transition-all duration-700"
-                              style={{
-                                width: `${pct}%`,
-                                background: accentHex
-                                  ? `linear-gradient(90deg, ${accentHex}88, ${accentHex})`
-                                  : 'linear-gradient(90deg, rgba(var(--color-primary-rgb),0.5), rgba(var(--color-primary-rgb),1))',
-                              }}
-                            />
-                          </div>
-                        )}
-                      </button>
-                    )}
-                  </div>
+                    <span
+                      className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                      style={{ '--cat-color': cat.color ?? '#64748b' }}
+                    >
+                      <CategoryGlyph cat={cat} size={19} />
+                    </span>
+
+                    <span className="flex-1 min-w-0 text-sm font-semibold text-slate-800 dark:text-white truncate">
+                      {cat.name}
+                    </span>
+
+                    {/* Sign and number are one unit with a hair of space, not
+                        two items in the row's 12px rhythm. The sign appears
+                        only once there is a number for it to belong to; in
+                        front of the placeholder it reads as a value of
+                        nothing. */}
+                    <span className="flex items-baseline gap-1 shrink-0">
+                      {text !== '' && (
+                        <span className="text-sm font-medium text-slate-400 dark:text-slate-500">₱</span>
+                      )}
+                    {/* Sized in `ch` from its own contents, so the field is
+                        exactly as wide as the number and the peso sign sits
+                        against it. A fixed width right-aligns the digits but
+                        strands the sign at the far end of the box. `ch` is
+                        exact here because the figures are tabular. */}
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      value={text}
+                      onChange={moneyChangeHandler(str => handleLocalChange(cat.id, str))}
+                      placeholder="No limit"
+                      aria-label={`${cat.name} monthly limit`}
+                      style={{ width: text ? `${text.length + 0.5}ch` : '7.5ch' }}
+                      className="shrink-0 bg-transparent text-right outline-none
+                        text-sm font-semibold tabular-nums
+                        text-slate-800 dark:text-white
+                        placeholder:font-normal placeholder:text-slate-400 dark:placeholder:text-slate-600"
+                      />
+                    </span>
+                  </label>
                 )
               })}
             </div>
@@ -1100,13 +989,13 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
             </Button>
   )
 
+  /* No line under the title. "Tap a category to set its monthly limit"
+     described the old flow - tap a card, it becomes an editor - and the rows
+     are fields now: you tap one and type. */
   if (asPage) {
     return (
       <SubPage title="Monthly limits" onBack={close}>
-        <p className="px-5 -mt-1 mb-1 text-center text-[13px] text-slate-500 dark:text-slate-400">
-          Tap a category to set its monthly limit
-        </p>
-        <div className="pt-3">{listBody}</div>
+        <div className="pt-4">{listBody}</div>
         <div className="px-5 -mt-3">{saveButton}</div>
       </SubPage>
     )
