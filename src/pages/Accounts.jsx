@@ -18,23 +18,29 @@ import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS } from '../lib/phAccounts'
 import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
-import { IconBank, IconCard, IconCheck, IconPhone, IconPlus, IconWallet, IconWalletUI, IconBankUI, IconTrash} from '../components/icons'
+import { IconBank, IconCard, IconPhone, IconPlus, IconWallet, IconWalletUI, IconBankUI, IconTrash} from '../components/icons'
 import { deleteAccountRemote } from '../lib/sync'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
-import SchemeMark, { SCHEME_OPTIONS } from '../components/SchemeMark'
+import SchemeMark from '../components/SchemeMark'
+import {
+  PreviewCard, CardDesignGallery, ColorRail, SchemeRail,
+} from '../components/CardStyle'
 import CategoryGlyph from '../components/CategoryGlyph'
+import SubPage from '../components/SubPage'
 import { cardGradient } from '../lib/accentTheme'
+import {
+  fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole,
+} from '../lib/accountMeta'
+
+/* Re-exported, not redefined. They moved to lib/accountMeta.js so that
+   components/CardStyle.jsx can have them without importing a page - see the
+   note there. Every `from './Accounts'` import in the app still resolves. */
+export { fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole }
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
-
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-export const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
 
 export function fmtCompact(v) {
   const abs = Math.abs(v ?? 0)
@@ -68,26 +74,6 @@ function fmtTxTime(isoStr) {
 }
 
 // ── Constants ──────────────────────────────────────────────────────────────────
-
-export const PALETTE = [
-  '#10b981', '#2D9DFF', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#f97316',
-  '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#a78bfa', '#64748b', '#0ea5e9',
-]
-
-export const TYPE_OPTIONS = [
-  { value: 'cash',    label: 'Cash',        shortLabel: 'Cash'     },
-  { value: 'ewallet', label: 'E-Wallet',    shortLabel: 'E-Wallet' },
-  { value: 'savings', label: 'Savings',     shortLabel: 'Savings'  },
-  { value: 'bank',    label: 'Bank',        shortLabel: 'Bank'     },
-  { value: 'credit',  label: 'Credit Card', shortLabel: 'Credit'   },
-]
-
-export const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map(t => [t.value, t.label]))
-
-export function defaultRole(type) {
-  if (type === 'credit') return 'credit'
-  return ['cash', 'ewallet'].includes(type) ? 'spending' : 'savings'
-}
 
 /**
  * Grouped by what an account COUNTS AS, not by what kind of institution runs
@@ -1267,9 +1253,80 @@ function AccountSortSheet({ open, onClose, accounts }) {
   )
 }
 
+/**
+ * Customise card: the create flow's third step, reachable while editing.
+ *
+ * Editing an account used to offer fourteen solid swatches in a wrapped grid
+ * and no way to change the design at all - so a card made with the gallery
+ * could never be changed again, and the two screens disagreed about what
+ * choosing a colour even looked like. This is the same CardDesignGallery and
+ * the same ColorRail the create flow shows, in a sheet.
+ *
+ * It writes through to the form's own state rather than holding a copy, so
+ * Cancel on the form still discards everything and there is no second draft
+ * to reconcile.
+ */
+function CardStyleSheet({ open, onClose, draft, set }) {
+  const [closing, setClosing] = useState(false)
+  useScrollLock(open)
+
+  const close = () => {
+    setClosing(true)
+    setTimeout(() => { setClosing(false); onClose() }, 240)
+  }
+
+  if (!open && !closing) return null
+
+  return (
+    <div className="fixed inset-0 z-[150]">
+      <div className="sheet-overlay absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={close} />
+      <div
+        className={[
+          closing ? 'sheet-panel-exit' : 'sheet-panel',
+          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+          'bg-white dark:bg-[#111820]',
+          'border-t border-slate-100 dark:border-white/[0.07]',
+          'max-h-[94vh] overflow-y-auto',
+        ].join(' ')}
+        style={{
+          touchAction: 'pan-y',
+          overscrollBehavior: 'contain',
+          paddingBottom: 'max(20px, env(safe-area-inset-bottom))',
+        }}
+      >
+        <div className="pt-5 px-5 pb-1">
+          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+          <div className="flex items-center justify-between">
+            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Customise card</h3>
+            <button
+              onClick={close}
+              className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
+                bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
+            >
+              Done
+            </button>
+          </div>
+        </div>
+
+        {/* The card stands up here, exactly as it does on the create flow's
+            style step - that upright card is the thing being chosen, and it
+            is what makes this read as the same screen rather than a
+            different one that happens to share a colour row. */}
+        <div className="pt-2 pb-1">
+          <CardDesignGallery draft={draft} set={set} />
+        </div>
+
+        <div className="mt-3 px-5">
+          <ColorRail draft={draft} set={set} />
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ── QR Crop Sheet ─────────────────────────────────────────────────────────────
 
-function QrCropSheet({ open, onClose, onConfirm }) {
+function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
   const [closing,       setClosing]       = useState(false)
   const [imgSrc,        setImgSrc]        = useState(null)
   const [crop,          setCrop]          = useState(null)
@@ -1282,9 +1339,12 @@ function QrCropSheet({ open, onClose, onConfirm }) {
     // Hydrate-on-open. The sheet renders null when closed but stays
     // mounted through its own exit animation, so the parent can neither
     // unmount nor re-key it to reset these fields for the next record.
+    // The photo arrives as a prop now, so opening means "crop this".
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (!open) { setImgSrc(null); setCrop(null); setCompletedCrop(null) }
-  }, [open])
+    setImgSrc(open ? (initialSrc ?? null) : null)
+    setCrop(null)
+    setCompletedCrop(null)
+  }, [open, initialSrc])
 
   const close = () => {
     setClosing(true)
@@ -1352,12 +1412,23 @@ function QrCropSheet({ open, onClose, onConfirm }) {
         {/* Header */}
         <div className="pt-5 px-5 pb-4 border-b border-slate-50 dark:border-white/[0.04] shrink-0">
           <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <div>
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Crop QR Photo</h3>
-              {imgSrc && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Drag to reposition · 5:7 ratio</p>}
+          {/* gap-4 and a shrink-0 Cancel, because the hint underneath is a
+              full sentence: without them it ran under the button and wrapped
+              a single orphaned word onto a third line. Short enough now to
+              hold one line at 390px, with room to spare either side. */}
+          <div className="flex items-start justify-between gap-4">
+            <div className="min-w-0">
+              <h3 className="text-base font-semibold text-slate-800 dark:text-white">Crop QR photo</h3>
+              {imgSrc && (
+                <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
+                  Drag the box over the code
+                </p>
+              )}
             </div>
-            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
+            <button
+              onClick={close}
+              className="shrink-0 pt-0.5 text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60"
+            >
               Cancel
             </button>
           </div>
@@ -1420,8 +1491,11 @@ function QrCropSheet({ open, onClose, onConfirm }) {
             </button>
           ) : (
             <>
+              {/* Straight back to the picker. Clearing to the empty state
+                  meant picking the wrong screenshot cost two taps to fix -
+                  one to empty it, one to ask again. */}
               <button
-                onClick={() => setImgSrc(null)}
+                onClick={() => fileRef.current?.click()}
                 className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
                   text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-white/[0.06]
                   active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
@@ -1540,9 +1614,24 @@ export async function createAccount(row, balance) {
   })
 }
 
-export function AccountFormSheet({ open, onClose, account, prefill = null }) {
+/**
+ * The account form, as a bottom sheet or as a whole page.
+ *
+ * `variant` decides the chrome and nothing else - every field, the save, the
+ * delete and the balance adjustment are the same code either way, which is
+ * the point. Editing is a page on mobile because it is long: name, kind,
+ * network, role, five credit fields, grouping and a QR photo do not belong
+ * in something you drag up from the bottom of the screen. Creating from a
+ * preset stays a sheet, and so does the desktop, where a sheet is already
+ * rendered as a centred modal by the .web rules in index.css.
+ */
+export function AccountFormSheet({ open, onClose, account, prefill = null, variant = 'sheet' }) {
+  const isPage = variant === 'page'
   const [closing,    setClosing]    = useState(false)
-  useScrollLock(open)
+  /* Not on a page. The lock is what stops the body scrolling behind a sheet;
+     on a page the body IS the form, and locking it left everything below the
+     colour row unreachable. */
+  useScrollLock(open && !isPage)
   const { showToast } = useToast()
   const [saving,     setSaving]     = useState(false)
   const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete' | 'adjust'
@@ -1562,11 +1651,47 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
   const [nameError,      setNameError]      = useState(false)
   const [qrImage,        setQrImage]        = useState(null)
   const [qrCropOpen,     setQrCropOpen]     = useState(false)
+  const [qrSrc,          setQrSrc]          = useState(null)
+  const qrFileRef = useRef(null)
   const [parentName,     setParentName]     = useState(null)
   const [scheme,         setScheme]         = useState('')
+  const [design,         setDesign]         = useState('')
+  const [customColor,    setCustomColor]    = useState(false)
+  const [styleOpen,      setStyleOpen]      = useState(false)
   const allAccounts = useLiveQuery(() => db.accounts.toArray(), [], [])
 
   const isEdit = !!account?.id
+
+  /**
+   * The institution's own colour, recovered from its name.
+   *
+   * ColorRail's first swatch puts the house colours back, so it has to know
+   * what they were - and for a brand with no hard-coded gradient the only
+   * record of that is the preset grid the account was made from. Looked up
+   * by name rather than stored, because the name is already the key
+   * everywhere else that resolves a brand.
+   */
+  const presetColor = useMemo(() => {
+    const n = name.trim().toLowerCase()
+    return PH_ACCOUNTS.find(p => p.name.toLowerCase() === n)?.color ?? null
+  }, [name])
+
+  /**
+   * The shape components/CardStyle.jsx speaks.
+   *
+   * The form keeps one useState per field, which is right for a form; the
+   * card components came from the create flow's reducer and take a draft
+   * plus a patch function. Adapting here means neither side has to change,
+   * and there is exactly one copy of the truth - these fields - rather than
+   * a draft that could drift from them.
+   */
+  const draft = { name, type, color, customColor, design, scheme, creditLimit, presetColor }
+  const setDraft = useCallback((patch) => {
+    if ('color'       in patch) setColor(patch.color)
+    if ('customColor' in patch) setCustomColor(patch.customColor)
+    if ('design'      in patch) setDesign(patch.design)
+    if ('scheme'      in patch) setScheme(patch.scheme)
+  }, [])
 
   useEffect(() => {
     if (!open) return
@@ -1593,6 +1718,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setQrImage(account.qrImage ?? null)
       setParentName(account.parentName ?? null)
       setScheme(account.scheme ?? '')
+      setDesign(account.design ?? '')
+      setCustomColor(!!account.customColor)
     } else {
       const t = prefill?.type ?? 'cash'
       setName(prefill?.name ?? '')
@@ -1608,6 +1735,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
       setQrImage(null)
       setParentName(prefill?.parentName ?? null)
       setScheme('')
+      setDesign('')
+      // A preset hands over its house colour, which is not an override.
+      setCustomColor(false)
     }
     // Hydrates the form when the sheet opens. Listing every field would
     // re-run the effect that SETS them and clobber edits in progress;
@@ -1622,6 +1752,26 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
     setTimeout(() => { setClosing(false); onClose() }, 240)
   }
 
+  /* The picker opens from the form, not from inside the crop sheet.
+
+     It used to be the sheet's job, which meant tapping "Add Payment QR"
+     opened a sheet whose entire content was a second dashed box saying
+     "Choose a photo" - a whole screen spent asking again. Now the sheet is
+     only ever entered with an image in hand, and it is only ever about the
+     crop. */
+  const pickQrFile = () => qrFileRef.current?.click()
+
+  function onQrFileChange(e) {
+    const file = e.target.files?.[0]
+    // Cleared before the early return, so picking the SAME file again still
+    // fires a change event.
+    e.target.value = ''
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => { setQrSrc(reader.result); setQrCropOpen(true) }
+    reader.readAsDataURL(file)
+  }
+
   async function handleSave() {
     if (!name.trim()) { setNameError(true); return }
     setSaving(true)
@@ -1630,7 +1780,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
       const data = buildAccountRow({
         name: cleanName, type, role, color, creditLimit,
         statementDay, dueDay, cutoffDay, minPayment,
-        qrImage, parentName, scheme,
+        qrImage, parentName, scheme, design, customColor,
       })
 
       if (isEdit) {
@@ -1762,29 +1912,25 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
   if (!open && !closing) return null
 
-  return (
+  /* One body, two chromes. Everything below is identical whether this is a
+     sheet or a page - only the frame around it changes, at the bottom of the
+     component. */
+  const inner = (
     <>
-    <div className="fixed inset-0 z-[100]">
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[92vh] overflow-y-auto',
-        ].join(' ')}
-        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-      >
-        {/* sticky handle + title */}
-        <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10
-          border-b border-slate-50 dark:border-white/[0.04]">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
+        {/* On a page, SubPage has already drawn the title and the back
+            button, so this row keeps only the actions. */}
+        <div className={isPage
+          ? 'px-5 pb-1'
+          : `sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10
+             border-b border-slate-50 dark:border-white/[0.04]`}>
+          {!isPage && <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />}
           {mode === 'form' ? (
-            <div className="flex items-center justify-between">
-              <h3 className="text-base font-semibold text-slate-800 dark:text-white">
-                {isEdit ? 'Edit Account' : 'New Account'}
-              </h3>
+            <div className={`flex items-center ${isPage ? 'justify-end' : 'justify-between'}`}>
+              {!isPage && (
+                <h3 className="text-base font-semibold text-slate-800 dark:text-white">
+                  {isEdit ? 'Edit Account' : 'New Account'}
+                </h3>
+              )}
               {isEdit && (
                 <div className="flex items-center gap-2">
                   {type !== 'credit' && (
@@ -1796,13 +1942,18 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
                       Adjust Balance
                     </button>
                   )}
-                  <button
-                    onClick={handleDeleteCheck}
-                    className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
-                      bg-red-50 dark:bg-red-500/10 active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
-                  >
-                    Delete
-                  </button>
+                  {/* Only in the sheet. On a page it is the last thing on
+                      the form instead - a destructive action does not belong
+                      at the top of a screen, a thumb's width from Back. */}
+                  {!isPage && (
+                    <button
+                      onClick={handleDeleteCheck}
+                      className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
+                        bg-red-50 dark:bg-red-500/10 active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
+                    >
+                      Delete
+                    </button>
+                  )}
                 </div>
               )}
             </div>
@@ -1825,6 +1976,37 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
         {/* ── Form mode ── */}
         {mode === 'form' && (
           <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
+
+            {/* The card, lying flat, at the top.
+
+                This screen used to open on a text input, which is a strange
+                way to start editing something whose whole point is that it
+                looks like a card. It is the same face the create flow shows
+                while you fill it in, and it updates on every keystroke and
+                every tap below.
+
+                Flat rather than upright because this is a preview, not a
+                choice - the card only stands up in Customise card, where the
+                thing being chosen IS how it looks. */}
+            <div className="pt-1 pb-1">
+              <PreviewCard draft={draft} large />
+
+              {/* One button rather than a design row inline. The gallery is
+                  six full card faces and a colour row; opening it in place
+                  would push every field on this page below the fold. */}
+              <button
+                type="button"
+                onClick={() => setStyleOpen(true)}
+                className="mx-auto mt-4 flex items-center gap-2 px-4 py-2 rounded-full
+                  text-xs font-semibold text-primary
+                  bg-primary/[0.08] dark:bg-primary/[0.14]
+                  border border-primary/20 dark:border-primary/25
+                  active:scale-95 transition-transform duration-75"
+              >
+                <IconCard size={14} />
+                Customise card
+              </button>
+            </div>
 
             {/* Name */}
             <div>
@@ -1870,26 +2052,15 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
 
             {/* Card network — what the plastic actually carries. Cash has no
                 network; everything else can, since PH e-wallets issue Visa and
-                Mastercard debit too. Stored unindexed, so no migration. */}
+                Mastercard debit too. Stored unindexed, so no migration.
+
+                The marks themselves, not their names in chips: the mark IS
+                the name on a real card, and it is what you look at to check
+                which network yours is on. Same control as the create flow. */}
             {type !== 'cash' && (
               <div>
                 <Label>Card Network</Label>
-                <div className="flex flex-wrap gap-2">
-                  {SCHEME_OPTIONS.map(o => (
-                    <button
-                      key={o.value || 'none'}
-                      onClick={() => setScheme(o.value)}
-                      className={[
-                        'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
-                        scheme === o.value
-                          ? 'bg-primary text-white'
-                          : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
-                      ].join(' ')}
-                    >
-                      {o.label}
-                    </button>
-                  ))}
-                </div>
+                <SchemeRail value={scheme} onChange={v => setScheme(v)} />
               </div>
             )}
 
@@ -1923,32 +2094,40 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
               </div>
             )}
 
-            {/* Color */}
-            <div>
-              <Label>Color</Label>
-              <div className="flex flex-wrap gap-2.5">
-                {PALETTE.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setColor(c)}
-                    className="w-9 h-9 rounded-xl flex items-center justify-center active:scale-90 transition-transform duration-75 shadow-sm"
-                    style={{ backgroundColor: c }}
-                  >
-                    {color === c && <IconCheck size={13} strokeWidth="3" stroke="white" />}
-                  </button>
-                ))}
-              </div>
-            </div>
+            {/* No colour row here.
+
+                It was one, briefly, and it was the same control that sits in
+                Customise card two taps away - so the page asked about the
+                card's appearance in two places and left the reader to work
+                out whether they were the same setting. Appearance lives
+                behind the one button, next to the design it belongs with;
+                this page is the account's facts. */}
 
             {/* Group under parent */}
             {type !== 'credit' && !isParentItself && potentialParents.length > 0 && (
               <div>
                 <Label>Group Under</Label>
-                <div className="flex flex-wrap gap-2">
+                {/* One line that scrolls, not a wrapping block.
+
+                    Wrapped, this grew a row for every account you own and
+                    pushed the rest of the form down by however many that
+                    happens to be - the one field on the page whose height
+                    depended on your data. It scrolls now, like the network
+                    row above it, and None stays pinned at the left margin
+                    where the default belongs. */}
+                {/* No snapping. snap-start on the first chip made the
+                    browser align it to the scrollport's edge on load, which
+                    ate the 20px of padding and left None flush against the
+                    screen, 20px left of its own label. Chips are not pages;
+                    there is nothing here worth snapping to. */}
+                <div
+                  className="flex items-center gap-2 overflow-x-auto no-scrollbar px-5 -mx-5 py-0.5"
+                  style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
+                >
                   <button
                     onClick={() => setParentName(null)}
                     className={[
-                      'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
+                      'shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
                       parentName === null
                         ? 'bg-primary text-white'
                         : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
@@ -1961,7 +2140,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
                       key={acct.id}
                       onClick={() => setParentName(acct.name)}
                       className={[
-                        'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
+                        'shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
                         parentName === acct.name
                           ? 'bg-primary text-white'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
@@ -2066,67 +2245,105 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
               </div>
             )}
 
-            {/* Payment QR */}
+            {/* Payment QR.
+
+                Adding one used to take two taps at a dashed box that said
+                the same thing twice: this one opened a sheet whose empty
+                state was another dashed box, and only THAT opened the
+                picker. The picker opens from here now, and the sheet appears
+                with the photo already in it, cropping.
+
+                The preview is bigger and it is a button - tapping the QR you
+                are looking at to replace it is the obvious move, and the two
+                pills beside it were the only way to do anything. */}
             <div>
               <Label>Payment QR <span className="font-normal text-slate-400 normal-case">(optional)</span></Label>
               {qrImage ? (
-                <div className="flex items-center gap-3">
-                  <img
-                    src={qrImage}
-                    alt="Payment QR"
-                    className="rounded-2xl object-cover"
-                    style={{ width: 80, height: 112, aspectRatio: '5/7' }}
-                  />
-                  <div className="flex flex-col gap-2">
-                    <button
-                      type="button"
-                      onClick={() => setQrCropOpen(true)}
-                      className="px-4 py-2 rounded-xl text-xs font-semibold
-                        text-primary bg-primary/[0.08] dark:bg-primary/[0.12]
-                        active:bg-primary/[0.15] transition-colors"
-                    >
-                      Change
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setQrImage(null)}
-                      className="px-4 py-2 rounded-xl text-xs font-semibold
-                        text-red-500 bg-red-50 dark:bg-red-500/10
-                        active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
-                    >
-                      Remove
-                    </button>
+                <div className="flex items-start gap-4">
+                  <button
+                    type="button"
+                    onClick={pickQrFile}
+                    className="shrink-0 rounded-2xl overflow-hidden bg-white
+                      border border-slate-200/80 dark:border-white/10
+                      active:scale-95 transition-transform duration-75"
+                    aria-label="Replace payment QR"
+                  >
+                    <img
+                      src={qrImage}
+                      alt="Payment QR"
+                      className="block object-cover"
+                      style={{ width: 96, height: 134 }}
+                    />
+                  </button>
+                  <div className="flex-1 min-w-0 pt-1">
+                    <p className="text-[13px] font-medium text-slate-600 dark:text-slate-300">
+                      Shown on this account so you can be paid without opening the bank app.
+                    </p>
+                    <div className="flex items-center gap-2 mt-3">
+                      <button
+                        type="button"
+                        onClick={pickQrFile}
+                        className="px-3.5 py-2 rounded-xl text-xs font-semibold
+                          text-primary bg-primary/[0.08] dark:bg-primary/[0.12]
+                          active:bg-primary/[0.15] transition-colors"
+                      >
+                        Replace
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setQrImage(null)}
+                        className="px-3.5 py-2 rounded-xl text-xs font-semibold
+                          text-red-500 dark:text-red-400
+                          active:bg-red-50 dark:active:bg-red-500/10 transition-colors"
+                      >
+                        Remove
+                      </button>
+                    </div>
                   </div>
                 </div>
               ) : (
                 <button
                   type="button"
-                  onClick={() => setQrCropOpen(true)}
-                  className="w-full flex items-center justify-center gap-2 py-4 rounded-2xl
+                  onClick={pickQrFile}
+                  className="w-full flex items-center justify-center gap-2.5 py-5 rounded-2xl
                     border-2 border-dashed border-slate-200 dark:border-white/10
                     text-slate-400 dark:text-slate-500
                     active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
                 >
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/>
                   </svg>
-                  <span className="text-sm font-medium">Add Payment QR</span>
+                  <span className="text-sm font-medium">Choose a screenshot</span>
                 </button>
               )}
+              <input
+                ref={qrFileRef}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={onQrFileChange}
+              />
             </div>
 
-            {/* Action buttons */}
+            {/* Action buttons.
+
+                No Cancel on a page: the back button in the header is the
+                cancel, and offering two of them side by side invites the
+                question of whether they do different things. The sheet keeps
+                its own, because a sheet's only other way out is the scrim. */}
             <div className="flex gap-3 pt-2">
-              <button
-                onClick={close}
-                disabled={saving}
-                className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
-                  text-slate-600 dark:text-slate-300
-                  bg-slate-100 dark:bg-white/[0.06]
-                  disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
-              >
-                Cancel
-              </button>
+              {!isPage && (
+                <button
+                  onClick={close}
+                  disabled={saving}
+                  className="flex-1 py-3.5 rounded-2xl text-sm font-semibold
+                    text-slate-600 dark:text-slate-300
+                    bg-slate-100 dark:bg-white/[0.06]
+                    disabled:opacity-40 active:bg-slate-200 dark:active:bg-white/[0.10] transition-colors"
+                >
+                  Cancel
+                </button>
+              )}
               <button
                 onClick={handleSave}
                 disabled={saving}
@@ -2138,6 +2355,22 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
                 {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Account'}
               </button>
             </div>
+
+            {/* Last, and quiet. Text on the page rather than a filled red
+                button: deleting an account is rare and irreversible, and a
+                solid red block competes with Save for the eye every time
+                someone comes here to change a credit limit. */}
+            {isPage && isEdit && (
+              <button
+                onClick={handleDeleteCheck}
+                disabled={saving}
+                className="mt-1 mx-auto px-4 py-2.5 rounded-xl text-[13px] font-semibold
+                  text-red-500 dark:text-red-400 disabled:opacity-40
+                  active:bg-red-50 dark:active:bg-red-500/10 transition-colors"
+              >
+                Delete account
+              </button>
+            )}
           </div>
         )}
 
@@ -2268,12 +2501,44 @@ export function AccountFormSheet({ open, onClose, account, prefill = null }) {
           </div>
         )}
         <div className="h-8" />
+    </>
+  )
+
+  return (
+    <>
+    {isPage ? (
+      <SubPage title={isEdit ? 'Edit account' : 'New account'} onBack={close}>
+        {inner}
+      </SubPage>
+    ) : (
+      <div className="fixed inset-0 z-[100]">
+        <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
+        <div
+          className={[
+            closing ? 'sheet-panel-exit' : 'sheet-panel',
+            'absolute bottom-0 inset-x-0 rounded-t-[28px]',
+            'bg-white dark:bg-[#111820]',
+            'border-t border-slate-100 dark:border-white/[0.07]',
+            'max-h-[92vh] overflow-y-auto',
+          ].join(' ')}
+          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
+        >
+          {inner}
+        </div>
       </div>
-    </div>
+    )}
+
+    <CardStyleSheet
+      open={styleOpen}
+      onClose={() => setStyleOpen(false)}
+      draft={draft}
+      set={setDraft}
+    />
 
     <QrCropSheet
       open={qrCropOpen}
-      onClose={() => setQrCropOpen(false)}
+      initialSrc={qrSrc}
+      onClose={() => { setQrCropOpen(false); setQrSrc(null) }}
       onConfirm={base64 => setQrImage(base64)}
     />
     </>

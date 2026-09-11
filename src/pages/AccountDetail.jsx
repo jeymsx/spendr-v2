@@ -612,8 +612,12 @@ export default function AccountDetail() {
               <IconQr />
             </button>
           )}
+          {/* A page now, not a sheet - the form outgrew one, and it opens on
+              the card rather than on a text field. The sheet below stays
+              mounted, because adding a sub-account from here is a short
+              create and belongs in one. */}
           <button
-            onClick={() => { setFormPrefill(null); setFormOpen(true) }}
+            onClick={() => navigate(`/accounts/${account.id}/edit`)}
             className="px-3 py-1.5 rounded-xl text-xs font-semibold
               text-primary bg-primary/[0.08] dark:bg-primary/[0.15]
               active:bg-primary/[0.15] transition-colors"
