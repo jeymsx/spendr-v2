@@ -11,6 +11,7 @@ import BrandWatermark from '../components/BrandWatermark'
 import {
   PreviewCard, CardDesignGallery, ColorRail, SchemeRail,
 } from '../components/CardStyle'
+import Confetti from '../components/Confetti'
 import {
   TYPE_OPTIONS, defaultRole, buildAccountRow, createAccount,
 } from './Accounts'
@@ -292,6 +293,69 @@ function StyleStep({ draft, set, action }) {
   )
 }
 
+/**
+ * What you see the moment the account exists.
+ *
+ * Creating one used to end in a toast and a jump to the list, where the card
+ * you had just spent three steps choosing was one tile among nine, at a
+ * third of the size, with nothing marking it as new. Three steps of
+ * deciding, and no moment of having decided.
+ *
+ * So the card gets the screen once, at full size, lying flat - the same face
+ * from the gallery, now an account rather than a preview. Confetti says the
+ * thing happened; the buttons say what can happen next.
+ */
+function CreatedStep({ draft, onDone, onAddTransaction }) {
+  const isCredit = draft.type === 'credit'
+
+  return (
+    <section className="flex-1 flex flex-col items-center justify-center px-5 text-center">
+      <Confetti />
+
+      <div style={{ animation: 'pageFadeIn 0.45s ease both' }}>
+        <h2 className="text-[28px] font-bold tracking-tight text-slate-900 dark:text-white">
+          You&rsquo;re all set!
+        </h2>
+        <p className="mt-2 text-[14px] leading-relaxed text-slate-500 dark:text-slate-400">
+          <span className="font-semibold text-slate-700 dark:text-slate-200">{draft.name.trim()}</span>
+          {' '}has been added to your accounts.
+        </p>
+      </div>
+
+      {/* Rises a little later than the text, so the card arrives rather than
+          appearing with it. */}
+      <div className="w-full mt-7" style={{ animation: 'quickIn 0.5s 0.12s cubic-bezier(0.32, 0.72, 0, 1) both' }}>
+        <PreviewCard draft={draft} large />
+      </div>
+
+      <p className="mt-5 text-[12.5px] leading-relaxed text-slate-400 dark:text-slate-500 max-w-[300px]">
+        {isCredit
+          ? 'Charges you log to it count against the limit, and installments spread across the statements they will land on.'
+          : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}
+      </p>
+
+      <div className="w-full mt-8 flex flex-col gap-2.5" style={{ animation: 'pageFadeIn 0.5s 0.3s ease both' }}>
+        <button
+          onClick={onDone}
+          className="w-full py-3.5 rounded-2xl text-sm font-semibold text-white bg-primary
+            shadow-[0_6px_20px_-6px_rgba(var(--color-primary-rgb),0.6)]
+            active:scale-[0.98] transition-transform duration-100"
+        >
+          Done
+        </button>
+        <button
+          onClick={onAddTransaction}
+          className="w-full py-3 rounded-2xl text-sm font-semibold
+            text-slate-600 dark:text-slate-300
+            active:bg-slate-100 dark:active:bg-white/[0.06] transition-colors"
+        >
+          Add a transaction
+        </button>
+      </div>
+    </section>
+  )
+}
+
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function AccountNew() {
@@ -301,6 +365,7 @@ export default function AccountNew() {
 
   const [step, setStep] = useState(0)
   const [saving, setSaving] = useState(false)
+  const [created, setCreated] = useState(false)
   const [touchedName, setTouchedName] = useState(false)
   const [filter, setFilter] = useState('all')
 
@@ -447,8 +512,9 @@ export default function AccountNew() {
         customColor: draft.customColor,
       })
       await createAccount(row, isCredit ? 0 : parseMoney(draft.startingBal))
-      showToast('Account created')
-      navigate('/accounts', { replace: true })
+      /* No toast, and no navigation. The next screen IS the confirmation,
+         and a toast sliding over it would be the same news twice. */
+      setCreated(true)
     } catch (e) {
       console.error('[AccountNew] save failed:', e)
       showToast('Failed to create account', 'error')
@@ -510,6 +576,22 @@ export default function AccountNew() {
   // action wrapper on steps one and two, which are the ones long enough to
   // scroll a button under the navbar. Each piece of padding now belongs to
   // the thing that needs it.
+  /* Replaces the whole page rather than sitting on top of it: the form is
+     finished, there is nothing left to go back to, and a step header
+     counting "3/3" over a screen that says the account exists would be
+     describing the wrong thing. Below every hook, so hookcheck stays true. */
+  if (created) {
+    return (
+      <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-4">
+        <CreatedStep
+          draft={draft}
+          onDone={() => navigate('/accounts', { replace: true })}
+          onAddTransaction={() => navigate('/expense', { replace: true })}
+        />
+      </div>
+    )
+  }
+
   return (
     <div className="flex flex-col min-h-[calc(100dvh-5rem)] pb-4">
       {/* ── Header ── */}

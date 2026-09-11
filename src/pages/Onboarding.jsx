@@ -8,6 +8,7 @@ import { ACCOUNT_TYPE_ICON, IconCashUI, IconTick, IconSparkle } from '../compone
 import { EXPENSE_PRESETS, INFLOW_PRESETS, SYSTEM_CATS, EMOJI_SUGGESTIONS, CAT_PALETTE, LOCKED_EXPENSE, LOCKED_INFLOW } from '../lib/phCategories'
 import { useToast } from '../context/ToastContext'
 import CategoryGlyph from '../components/CategoryGlyph'
+import Confetti from '../components/Confetti'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -853,42 +854,15 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
 // ── Step 7: Done / celebration ─────────────────────────────────────────────────
 
-const CONFETTI_COLORS = ['#2D9DFF', '#34D399', '#F472B6', '#FBBF24', '#A78BFA', '#FB7185', '#38BDF8']
-
 function StepDone({ onFinish, saving }) {
-  const particles = useState(() =>
-    Array.from({ length: 70 }, (_, i) => ({
-      id: i,
-      x: Math.random() * 100,
-      delay: Math.random() * 0.8,
-      duration: 0.8 + Math.random() * 0.7,
-      color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-      w: 6 + Math.random() * 7,
-      h: 4 + Math.random() * 5,
-      rotation: Math.random() * 360,
-      spin: Math.random() > 0.5 ? 360 : -360,
-    }))
-  )[0]
-
   return (
     <div className="flex-1 flex flex-col items-center justify-center gap-8 relative overflow-hidden text-center px-2">
-      {/* confetti */}
-      <div className="fixed inset-0 pointer-events-none overflow-hidden z-50">
-        {particles.map(p => (
-          <div
-            key={p.id}
-            className="absolute rounded-[2px]"
-            style={{
-              left: `${p.x}%`,
-              top: '-12px',
-              width: p.w,
-              height: p.h,
-              backgroundColor: p.color,
-              animation: `confettiFall ${p.duration}s ${p.delay}s ease-in forwards`,
-            }}
-          />
-        ))}
-      </div>
+      {/* Lives in components/Confetti.jsx now - the account-created screen
+          shows the same burst, and two of these would drift. `rotation` and
+          `spin` went with the move: both were computed per particle and
+          neither was ever read, because the keyframe hardcodes its own
+          720deg. */}
+      <Confetti />
 
       <div style={{ animation: 'pageFadeIn 0.5s ease both' }}>
         {/* Stars, not a party popper. Untitled UI has no confetti, and a
