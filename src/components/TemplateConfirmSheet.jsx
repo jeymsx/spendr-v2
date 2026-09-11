@@ -2,12 +2,12 @@ import { useState, useEffect } from 'react'
 import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { useScrollLock } from '../hooks/useScrollLock'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { IconTemplate } from './icons'
 import CategoryGlyph from './CategoryGlyph'
 import Button from './ui/Button'
+import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const TYPE_CONFIG = {
@@ -17,8 +17,6 @@ const TYPE_CONFIG = {
 }
 
 export default function TemplateConfirmSheet({ open, onClose, template }) {
-  const [closing,     setClosing]     = useState(false)
-  useScrollLock(open)
   const { showToast } = useToast()
   const [saving,      setSaving]      = useState(false)
   const [amountStr,   setAmountStr]   = useState('')
@@ -39,13 +37,8 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
     }
   }, [open, template])
 
-  const close = () => {
-    if (saving) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
-
-  if (!open && !closing) return null
+  /* Sheet owns the overlay, the panel, the handle, the scroll lock, Escape,
+     the focus trap and the exit animation. */
   if (!template) return null
 
   const cfg         = TYPE_CONFIG[template.type] ?? TYPE_CONFIG.expense
@@ -83,7 +76,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
         })
       }
       showToast('Transaction saved')
-      close()
+      onClose()
     } catch (e) {
       console.error('[TemplateConfirmSheet] save failed:', e)
       showToast('Failed to save transaction', 'error')
@@ -91,17 +84,28 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
     }
   }
 
-  return (
-    <div className="fixed inset-0 z-[120]">
-      <div className="sheet-overlay absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={close} />
-      <div
-        className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px] px-5 pt-6
-          bg-white dark:bg-[#111820]
-          border-t border-slate-100 dark:border-white/[0.07]`}
-        style={{ paddingBottom: 'max(32px, env(safe-area-inset-bottom))' }}
-      >
-        <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5" />
+  const actions = (
+    <div className="flex gap-3">
+      <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+        Cancel
+      </Button>
+      <Button className="flex-[2]" onClick={handleSave} loading={saving} disabled={amount <= 0}>
+        {saving ? 'Saving…' : 'Save transaction'}
+      </Button>
+    </div>
+  )
 
+  return (
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={120}
+      scrim={50}
+      dismissible={!saving}
+      ariaLabel={`Use template ${template.name}`}
+      footer={actions}
+    >
+      <div className="pt-1">
         {/* Badge + template name */}
         <div className="flex items-center gap-2 mb-4">
           <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}>
@@ -187,15 +191,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           )}
         </div>
 
-        <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={close} disabled={saving}>
-            Cancel
-          </Button>
-          <Button className="flex-[2]" onClick={handleSave} disabled={saving || amount <= 0}>
-            {saving ? 'Saving…' : 'Save transaction'}
-          </Button>
-        </div>
       </div>
-    </div>
+    </Sheet>
   )
 }

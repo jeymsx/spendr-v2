@@ -1,9 +1,10 @@
 import { useState, useCallback, useRef } from 'react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { useScrollLock } from '../hooks/useScrollLock'
 import { deleteTemplateRemote } from '../lib/sync'
-import { IconTemplate } from './icons'
+import { IconTemplate, IconTransferUI } from './icons'
+import CategoryGlyph from './CategoryGlyph'
+import Sheet from './ui/Sheet'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -56,8 +57,13 @@ function TemplateRow({ tpl, onTap, onLongPressDelete }) {
       className={`flex items-center gap-3 px-4 py-3.5 select-none cursor-pointer transition-colors duration-75
         ${pressed ? 'bg-slate-50 dark:bg-white/[0.06]' : 'active:bg-slate-50 dark:active:bg-white/[0.04]'}`}
     >
-      <div className={`w-9 h-9 rounded-xl flex items-center justify-center text-[18px] shrink-0 ${tc.bg}`}>
-        {tpl.type === 'transfer' ? '🔄' : (tpl.categoryIcon ?? '⚡')}
+      <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${tc.bg}`}>
+        {/* The glyph, like every other category chip in the app. This row
+            printed the raw emoji, so a template on Food showed a burger
+            where the transaction list shows a fork and knife. */}
+        {tpl.type === 'transfer'
+          ? <IconTransferUI size={18} />
+          : <CategoryGlyph cat={tpl.category_} size={18} emoji="⚡" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{tpl.name}</p>
@@ -73,8 +79,6 @@ function TemplateRow({ tpl, onTap, onLongPressDelete }) {
 }
 
 export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
-  const [closing, setClosing] = useState(false)
-  useScrollLock(open)
   const [deleting, setDeleting] = useState(null)
 
   const rawTemplates = useLiveQuery(() => db.templates.toArray(), [], [])
@@ -84,14 +88,12 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
     .filter(t => !type || t.type === type)
     .map(t => {
       const cat = (categories ?? []).find(c => c.name === t.category)
-      return { ...t, categoryIcon: cat?.icon ?? '⚡' }
+      // The whole category, not just its emoji: CategoryGlyph reads the
+      // name first and falls back to the emoji, and it needs both.
+      return { ...t, category_: cat ?? { name: t.category, icon: '⚡' } }
     })
     .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
 
-  const close = () => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
 
   async function confirmDelete(tpl) {
     setDeleting(tpl.id)
@@ -100,31 +102,18 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
     setDeleting(null)
   }
 
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[130]" style={{ touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={`${closing ? 'sheet-panel-exit' : 'sheet-panel'} absolute bottom-0 inset-x-0 rounded-t-[28px]
-          bg-slate-50 dark:bg-[#0d1117]
-          border-t border-slate-100 dark:border-white/[0.07]
-          max-h-[80vh] flex flex-col`}
-        style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
-      >
-        {/* Header */}
-        <div className="pt-5 px-5 pb-3 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">Quick templates</h3>
-            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-              Close
-            </button>
-          </div>
-        </div>
-
-        {/* List */}
-        <div className="overflow-y-auto flex-1" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
+    /* 80vh, because a template list is long and browsing it is the task. The
+       "Close" text button in the old header is gone: the scrim, Escape and
+       the handle all close a sheet, and Sheet provides all three. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={130}
+      maxHeight="80dvh"
+      title="Quick templates"
+    >
+      <div className="-mx-5">
           {templates.length === 0 ? (
             <div className="py-14 text-center px-8">
               <p className="mb-3 flex justify-center text-slate-400 dark:text-slate-500"><IconTemplate size={30} /></p>
@@ -146,7 +135,10 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
                   ) : (
                     <TemplateRow
                       tpl={tpl}
-                      onTap={t => { close(); setTimeout(() => onSelect(t), 260) }}
+                      /* Close, then hand over - the 260ms clears Sheet's
+                         240ms exit, so the confirmation does not cross this
+                         panel on its way up. */
+                      onTap={t => { onClose(); setTimeout(() => onSelect(t), 260) }}
                       onLongPressDelete={confirmDelete}
                     />
                   )}
@@ -157,12 +149,10 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
               ))}
             </div>
           )}
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-3">
-            Hold a template to delete it
-          </p>
-          <div className="h-8 shrink-0" />
-        </div>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-3">
+          Hold a template to delete it
+        </p>
       </div>
-    </div>
+    </Sheet>
   )
 }
