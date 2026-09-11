@@ -113,6 +113,11 @@ export function categoryIcon(cat) {
  * note in components/icons.jsx.
  */
 export default function CategoryGlyph({ cat, size = 20, emoji = '📦', className = '', color = true }) {
+  /* static-components fires here and is wrong. It sees a component value
+     produced inside render and assumes a fresh type each time, which would
+     remount the subtree. `categoryIcon` is a lookup in CATEGORY_ICON, a
+     module-level frozen map, so the same category always yields the same
+     identity - there is nothing being constructed. */
   const Icon = categoryIcon(cat)
   if (Icon) {
     /* The glyph takes the category's colour by default.
@@ -128,6 +133,7 @@ export default function CategoryGlyph({ cat, size = 20, emoji = '📦', classNam
        a selected tile - and for the onboarding grids, whose rows are already
        colour-coded by selection state. */
     return (
+      // eslint-disable-next-line react-hooks/static-components
       <Icon
         size={size}
         stroke={1.8}

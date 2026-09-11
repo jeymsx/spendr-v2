@@ -17,10 +17,13 @@ import reactRefresh from 'eslint-plugin-react-refresh'
  * and hookcheck are the two to retire; tdzcheck has no lint equivalent and
  * stays either way.
  *
- * Unused variables are a WARNING, not an error. There is a real backlog of
- * them - two dead imports in Dashboard predate this config - and turning them
- * into errors would mean either a large unrelated cleanup or `npm run lint`
- * being permanently red, which trains you to ignore it.
+ * Unused variables are an ERROR. They were a warning while a backlog of 33
+ * existed; that backlog is now zero, and the reason to promote them is not
+ * tidiness. Two of those 33 described real defects - a dead template sheet
+ * that made a whole feature do nothing when tapped, and an option in
+ * quickParse that was read and never passed, which silently invalidated a
+ * published measurement. Both looked exactly like the 31 that were only
+ * clutter. At zero, the next one fails the build instead of joining a crowd.
  */
 export default [
   { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'seed-*.js'] },
@@ -69,20 +72,44 @@ export default [
          fixing first: it is idempotent today, but it is the kind of thing
          that breaks under concurrent rendering. */
       'react-hooks/set-state-in-effect': 'warn',
-      'react-hooks/static-components': 'warn',
-      'react-hooks/purity': 'warn',
       'react-hooks/refs': 'warn',
-      'react-hooks/use-memo': 'warn',
-      'react-hooks/preserve-manual-memoization': 'warn',
       'react-hooks/immutability': 'warn',
       'react-hooks/globals': 'warn',
+
+      /* Kept because it EARNED it. static-components found a real defect:
+         FilterModal declared SectionLabel in its own body, making a new
+         component type every render. Its one false positive - CategoryGlyph
+         rendering a component looked up from a frozen module-level map - is
+         suppressed at that line with a reason. */
+      'react-hooks/static-components': 'warn',
+
+      /* purity likewise: one site, suppressed with a reason, rule left on. */
+      'react-hooks/purity': 'warn',
+
+      /* OFF. These two are React Compiler rules, and this app does not use
+         the compiler. Between them they produced exactly two reports, both
+         wrong, and neither could be suppressed at the point it complained
+         about - the ranges they report do not line up with an
+         eslint-disable-next-line, so the directive lands as "unused" while
+         the warning stays.
+
+         use-memo wanted a lazy useState initialiser hoisted, which would
+         change when the clock is read. preserve-manual-memoization objected
+         to a deliberately hand-narrowed dependency list, which is the whole
+         point of the line it flagged. Neither has caught anything real here,
+         and both cost more attention than they return. Revisit if this app
+         ever adopts the compiler. */
+      'react-hooks/use-memo': 'off',
+      'react-hooks/preserve-manual-memoization': 'off',
 
       // The one that catches the class of bug that has actually shipped here.
       'no-undef': 'error',
 
-      // A backlog exists; see the note above. Args and rest siblings are
-      // exempt because destructuring-to-omit is a deliberate idiom.
-      'no-unused-vars': ['warn', {
+      /* An ERROR, now that the count is zero - see the note at the top.
+         Args and rest siblings stay exempt because destructuring-to-omit is
+         a deliberate idiom, and a leading underscore is the escape hatch for
+         something genuinely kept on purpose. */
+      'no-unused-vars': ['error', {
         args: 'none',
         ignoreRestSiblings: true,
         varsIgnorePattern: '^_',
@@ -92,10 +119,34 @@ export default [
       // unavailable in private mode. That is deliberate, not sloppy.
       'no-empty': ['error', { allowEmptyCatch: true }],
 
-      // Fast-refresh only works if a module's exports are all components.
-      // Warning, because Settings.jsx deliberately exports sheets AND helpers
-      // that the web layer reuses.
-      'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
+      /* OFF, and this is a trade rather than a surrender.
+
+         It fired 55 times across 14 files, and every one is a deliberate
+         pattern this codebase is built on:
+
+           25  icons.jsx      exports `const IconBell = uui(Bell01)` - these
+                              ARE components, but they are call results, so
+                              allowConstantExport cannot see that
+           12  Accounts.jsx   exports the rows and sections AccountDetail
+                              reuses, alongside its own page
+            3  the contexts   each exports a Provider and its useX hook,
+                              which is the standard React context shape
+
+         The rule is about ONE thing: Vite's fast refresh needs every export
+         in a module to be a component, or editing that file triggers a full
+         page reload instead of a hot swap. It has no effect on the build, on
+         correctness, or on what ships.
+
+         Satisfying it would mean 25 icon files, or splitting every context
+         in two, to buy faster hot reloads in three files nobody edits often.
+         Fifty-five permanent warnings cost more than that: this session lost
+         a dead feature and a bad measurement inside a warning stream, and
+         the fix for that is fewer warnings that are all real, not more.
+
+         What is given up, written down so it is a decision and not a
+         surprise: editing icons.jsx, Accounts.jsx or a context does a full
+         reload rather than a hot swap. */
+      'react-refresh/only-export-components': 'off',
     },
   },
 

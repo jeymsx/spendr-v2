@@ -128,6 +128,12 @@ export default function WebSettings() {
   const viewPref = useMemo(() => getViewPreference(), [])
   const monthOpts = useMemo(last12Months, [])
 
+  /* use-memo suggests hoisting this, which would be wrong. It is a LAZY
+     useState initialiser: the function body runs once, on mount, and never
+     again. Reading the clock there is the correct place to read it - the
+     default month should be the month you opened the page in, and a useMemo
+     would recompute it on a dependency change nobody wants. The rule is off
+     in eslint.config.js - see the note there. */
   const [reportMonth, setReportMonth] = useState(() => {
     const d = new Date()
     return `${d.getFullYear()}-${d.getMonth() + 1}`

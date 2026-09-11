@@ -874,6 +874,11 @@ export default function Accounts() {
      has only just finished. Only the touch path can hit this - a mouse drag
      needs 8px of travel, which already cancels the click. */
   const dragEndedAt = useRef(0)
+  /* purity fires on the performance.now() here. It is inside a closure that
+     only ever runs from a pointer handler - dnd-kit calls it to decide
+     whether a tap was the tail of a drag - so it never executes during
+     render, which is the thing the rule is protecting. */
+  // eslint-disable-next-line react-hooks/purity
   const tapAfterDrag = () => performance.now() - dragEndedAt.current < 300
 
   /**

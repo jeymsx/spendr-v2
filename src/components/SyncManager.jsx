@@ -142,7 +142,13 @@ export default function SyncManager() {
     }
   }, [user?.id])
 
-  // Sync on mount / user change (silent — no chip shown unless error)
+  /* Sync on mount / user change (silent - no chip shown unless error).
+
+     Both disables are the same decision. The effect must fire when the USER
+     changes and at no other time; runSync is redeclared every render, so
+     listing it would sync on every render instead. preserve-manual-memoization
+     preserve-manual-memoization objected to the same thing and is now off
+     in eslint.config.js - see the note there. */
   useEffect(() => {
     if (user?.id) runSync({ silent: true })
   }, [user?.id]) // eslint-disable-line react-hooks/exhaustive-deps

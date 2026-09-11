@@ -269,6 +269,24 @@ function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, onAmount
 
 // ── Filter sheet ───────────────────────────────────────────────────────────────
 
+/* Hoisted out of FilterModal.
+
+   Declaring a component inside another makes a NEW component type on every
+   render, so React unmounts the old subtree and mounts a fresh one each time
+   the parent re-renders - any state or focus inside it is discarded.
+   Harmless for a label, wrong as a habit, and the rule cannot tell which it
+   is looking at. */
+function SectionLabel({ children }) {
+  return (
+    <div className="flex items-center gap-2.5 mb-3">
+      <div className="w-[3px] h-3.5 rounded-full bg-primary shrink-0" />
+      <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
+        {children}
+      </p>
+    </div>
+  )
+}
+
 function FilterModal({
   open, onClose,
   typeFilter,
@@ -305,17 +323,6 @@ function FilterModal({
       .filter(c => c.type !== 'transfer' && (typeFilter === 'all' || c.type === typeFilter || !c.type))
       .reduce((map, c) => { map[c.name] = map[c.name] ?? c; return map }, {})
   )
-
-  function SectionLabel({ children }) {
-    return (
-      <div className="flex items-center gap-2.5 mb-3">
-        <div className="w-[3px] h-3.5 rounded-full bg-primary shrink-0" />
-        <p className="text-[11px] font-bold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-          {children}
-        </p>
-      </div>
-    )
-  }
 
   return (
     <div className="fixed inset-0 z-[100]">

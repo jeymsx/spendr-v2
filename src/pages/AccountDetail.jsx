@@ -412,10 +412,16 @@ export default function AccountDetail() {
   // gone. Landing on "not found" after deleting something yourself reads as a
   // fault, so a delete that happens while you are here returns you to the
   // list; a URL that never resolved still gets the explanation below.
+  //
+  // The flag is set INSIDE the effect, not during render. Writing a ref while
+  // rendering is idempotent here and worked, but render is allowed to run and
+  // be thrown away under concurrent React, and a "have I ever seen this
+  // account" flag set by a discarded render is how you get sent back to the
+  // list for an account that still exists.
   const hadAccount = useRef(false)
-  if (account) hadAccount.current = true
   useEffect(() => {
-    if (accounts && !account && hadAccount.current) navigate('/accounts', { replace: true })
+    if (account) { hadAccount.current = true; return }
+    if (accounts && hadAccount.current) navigate('/accounts', { replace: true })
   }, [accounts, account, navigate])
 
   const acctTxs = useMemo(() => {
