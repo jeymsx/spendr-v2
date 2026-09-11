@@ -680,7 +680,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
               disabled:opacity-40 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >
-            {saving ? 'Saving…' : editDebt ? 'Save changes' : 'Add debt'}
+            {saving ? 'Saving…' : editDebt ? 'Save Changes' : 'Add debt'}
           </button>
         </div>
       </div>

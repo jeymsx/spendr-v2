@@ -568,7 +568,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
                   active:scale-[0.98] transition-all duration-100
                   disabled:opacity-40 disabled:shadow-none"
               >
-                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
+                {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Create goal'}
               </button>
 
               {isEdit && (

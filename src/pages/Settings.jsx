@@ -1603,15 +1603,28 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
               </div>
 
               <div className="px-5 flex flex-col gap-2 pb-6">
+                {/* Solid, like the other ten primary buttons in the app.
+
+                    This was a tinted outline - accent text on a 7% accent
+                    wash inside an accent border - which existed nowhere else:
+                    the count is ten solid to two tinted, and the other tinted
+                    one is the template button below, fixed at the same time.
+                    It also measured 2.85:1 in light mode, because accent text
+                    on a near-white wash is the same problem .accent-ink
+                    exists for.
+
+                    "Add Category", not "Add Expense Category". The tab
+                    directly above says Expense or Inflow, and a button that
+                    repeats the thing sitting above it is the house style of
+                    forms, not of iOS. */}
                 <button
                   onClick={openAdd}
-                  className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold
-                    text-primary bg-primary/[0.07] dark:bg-primary/[0.12]
-                    border border-primary/20 dark:border-primary/30
+                  className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[15px] font-semibold
+                    bg-primary text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.3)]
                     active:scale-[0.98] transition-transform duration-100"
                 >
                   <IconPlus size={15} strokeWidth="2.5" />
-                  Add {activeTab === 'expense' ? 'Expense' : 'Inflow'} Category
+                  Add Category
                 </button>
                 <button
                   onClick={() => setBrowseOpen(true)}
@@ -1621,7 +1634,7 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
                     border border-slate-200 dark:border-white/[0.07]
                     active:scale-[0.98] transition-transform duration-100"
                 >
-                  Browse presets
+                  Browse Presets
                 </button>
                 <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-1">
                   Hold a category to quickly delete it
@@ -2458,10 +2471,21 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
 
 // ── Template manager sheet ─────────────────────────────────────────────────────
 
-export function TemplateManagerSheet({ open, onClose }) {
+/**
+ * Quick Templates.
+ *
+ * `variant="page"` is the mobile route at /settings/templates, with the
+ * app's back disc; `variant="sheet"` is the desktop modal that
+ * src/web/pages/WebSettings.jsx still uses. Same split as Categories and
+ * Monthly Budgets, and for the same reason: editing a template opens a form
+ * sheet, and a sheet on top of a sheet is a stack the phone has no way to
+ * explain. On a page the form is the only sheet on screen.
+ */
+function TemplateManager({ open, onClose, variant = 'sheet' }) {
+  const asPage = variant === 'page'
   const { showToast } = useToast()
   const [closing,    setClosing]    = useState(false)
-  useScrollLock(open)
+  useScrollLock(open && !asPage)
   const [formOpen,   setFormOpen]   = useState(false)
   const [editingTpl, setEditingTpl] = useState(null)
 
@@ -2473,6 +2497,9 @@ export function TemplateManagerSheet({ open, onClose }) {
     Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
 
   const close = () => {
+    // On a page there is no panel to slide away, so skip the exit animation
+    // and let the router transition carry it.
+    if (asPage) { onClose(); return }
     setClosing(true)
     setTimeout(() => { setClosing(false); onClose() }, 240)
   }
@@ -2491,6 +2518,89 @@ export function TemplateManagerSheet({ open, onClose }) {
 
   if (!open && !closing) return null
 
+  /* The list and the add button are shared; only the shell differs. The page
+     lets the document scroll, the sheet scrolls inside its panel. */
+  const listBody = (
+    <>
+      {(templates ?? []).length === 0 ? (
+        <div className="py-14 text-center px-8">
+          <p className="mb-3 flex justify-center text-slate-400 dark:text-slate-500"><IconTemplate size={30} /></p>
+          <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No templates yet</p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
+            Add one below, or toggle &ldquo;Save as template&rdquo; when confirming any transaction
+          </p>
+        </div>
+      ) : (
+        <div className="mx-5 rounded-2xl overflow-hidden bg-white border border-slate-100
+          dark:bg-white/[0.04] dark:border-white/[0.07] shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none mb-3">
+          {(templates ?? []).map((tpl, i) => (
+            <div key={tpl.id}>
+              <TemplateRow
+                tpl={tpl}
+                cat={catMap[tpl.category]}
+                onTap={openEdit}
+                onLongPressDelete={deleteTpl}
+              />
+              {i < (templates ?? []).length - 1 && (
+                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="px-5">
+        <button
+          onClick={openAdd}
+          className="w-full flex items-center justify-center gap-2 py-3.5 rounded-2xl text-[15px] font-semibold
+            bg-primary text-white shadow-[0_4px_16px_rgba(var(--color-primary-rgb),0.3)]
+            active:scale-[0.98] transition-transform duration-100"
+        >
+          <IconPlus size={15} strokeWidth="2.5" />
+          Add Template
+        </button>
+        <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-2.5">
+          Hold a template to quickly delete it
+        </p>
+      </div>
+      <div className="h-8 shrink-0" />
+    </>
+  )
+
+  const formSheet = (
+    <TemplateFormSheet
+      open={formOpen}
+      onClose={() => setFormOpen(false)}
+      template={editingTpl}
+      allAccounts={accounts ?? []}
+      allCategories={categories ?? []}
+    />
+  )
+
+  if (asPage) {
+    return (
+      <>
+        <SubPage
+          title="Quick Templates"
+          action={(
+            <button
+              onClick={openAdd}
+              className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0
+                bg-primary text-white shadow-[0_2px_10px_rgba(var(--color-primary-rgb),0.35)]
+                active:scale-90 transition-transform duration-75"
+              aria-label="New template"
+            >
+              <IconPlus />
+            </button>
+          )}
+        >
+          <div className="pt-4">{listBody}</div>
+        </SubPage>
+        {formSheet}
+      </>
+    )
+  }
+
   return (
     <>
       <div className="fixed inset-0 z-[110]" style={{ touchAction: 'none' }}>
@@ -2501,7 +2611,6 @@ export function TemplateManagerSheet({ open, onClose }) {
             max-h-[92vh] flex flex-col`}
           style={{ paddingBottom: 'max(24px, env(safe-area-inset-bottom))' }}
         >
-          {/* Header */}
           <div className="sticky top-0 pt-5 px-5 pb-3 bg-slate-50 dark:bg-[#0d1117] z-10
             border-b border-slate-100 dark:border-white/[0.04] shrink-0">
             <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
@@ -2513,63 +2622,27 @@ export function TemplateManagerSheet({ open, onClose }) {
             </div>
           </div>
 
-          {/* List */}
           <div className="overflow-y-auto flex-1 pt-4" style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-            {(templates ?? []).length === 0 ? (
-              <div className="py-14 text-center px-8">
-                <p className="mb-3 flex justify-center text-slate-400 dark:text-slate-500"><IconTemplate size={30} /></p>
-                <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No templates yet</p>
-                <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-                  Add one below, or toggle "Save as template" when confirming any transaction
-                </p>
-              </div>
-            ) : (
-              <div className="mx-5 rounded-2xl overflow-hidden bg-white border border-slate-100
-                dark:bg-white/[0.04] dark:border-white/[0.07] shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none mb-3">
-                {(templates ?? []).map((tpl, i) => (
-                  <div key={tpl.id}>
-                    <TemplateRow
-                      tpl={tpl}
-                      cat={catMap[tpl.category]}
-                      onTap={openEdit}
-                      onLongPressDelete={deleteTpl}
-                    />
-                    {i < (templates ?? []).length - 1 && (
-                      <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-                    )}
-                  </div>
-                ))}
-              </div>
-            )}
-
-            <div className="px-5">
-              <button onClick={openAdd}
-                className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl text-sm font-semibold
-                  text-primary bg-primary/[0.07] dark:bg-primary/[0.12]
-                  border border-primary/20 dark:border-primary/30
-                  active:scale-[0.98] transition-transform duration-100">
-                <IconPlus size={15} strokeWidth="2.5" />
-                Add Template
-              </button>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-2.5">
-                Hold a template to quickly delete it
-              </p>
-            </div>
-            <div className="h-8 shrink-0" />
+            {listBody}
           </div>
         </div>
       </div>
-
-      <TemplateFormSheet
-        open={formOpen}
-        onClose={() => setFormOpen(false)}
-        template={editingTpl}
-        allAccounts={accounts ?? []}
-        allCategories={categories ?? []}
-      />
+      {formSheet}
     </>
   )
 }
+
+/** The desktop modal. Imported by src/web/pages/WebSettings.jsx. */
+export function TemplateManagerSheet(props) {
+  return <TemplateManager {...props} variant="sheet" />
+}
+
+/** The mobile route at /settings/templates. */
+export function TemplatesPage() {
+  const navigate = useNavigate()
+  return <TemplateManager open onClose={() => navigate(-1)} variant="page" />
+}
+
 
 // ── Month picker (custom — avoids browser native dropdown dark-mode issues) ───
 
@@ -2887,7 +2960,6 @@ export default function Settings() {
   const { status: syncStatus, runSync } = useSyncManager()
 
   const [profileOpen,  setProfileOpen]  = useState(false)
-  const [tmplMgrOpen,  setTmplMgrOpen]  = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
   const [legalOpen,    setLegalOpen]    = useState(false)
@@ -3166,7 +3238,7 @@ export default function Settings() {
             label="Quick Templates"
             sublabel="One-tap repeat transactions"
             right={<IconChevronRight size={14} strokeWidth="2" />}
-            onTap={() => setTmplMgrOpen(true)}
+            onTap={() => navigate('/settings/templates')}
           />
         </SectionCard>
       </div>
@@ -3579,10 +3651,6 @@ export default function Settings() {
         onClose={() => setProfileOpen(false)}
         displayName={displayName}
         currency={currency}
-      />
-      <TemplateManagerSheet
-        open={tmplMgrOpen}
-        onClose={() => setTmplMgrOpen(false)}
       />
       <RestoreBackupSheet open={restoreOpen} onClose={() => setRestoreOpen(false)} />
       <ResetConfirmModal
