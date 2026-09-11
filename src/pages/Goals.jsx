@@ -19,6 +19,7 @@ import IconButton from '../components/ui/IconButton'
 import Sheet from '../components/ui/Sheet'
 import StatTrio from '../components/ui/StatTrio'
 import SectionLabel from '../components/ui/SectionLabel'
+import InfoButton from '../components/ui/InfoButton'
 import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
@@ -778,6 +779,14 @@ export default function Goals() {
                 inset="gutter"
                 gap="loose"
                 hint="Top of the list is funded first."
+                action={
+                  <InfoButton title="How goals are funded">
+                    Goals read your real balances. When several goals share an
+                    account, the one highest in the list fills first and the
+                    rest take what is left, so the totals always match the
+                    money you actually have.
+                  </InfoButton>
+                }
               >
                 In funding order
               </SectionLabel>
@@ -888,13 +897,9 @@ export default function Goals() {
             </section>
           )}
 
-          {/* How the split works, said once, at the bottom - where someone
-              who has just been surprised by a number will look for it. */}
-          <p className="px-5 mt-7 text-[12px] leading-relaxed text-slate-500 dark:text-slate-400">
-            Goals read your real balances. When several goals share an account,
-            the one highest in the list fills first and the rest take what is
-            left, so the totals always match the money you actually have.
-          </p>
+          {/* The four-line explainer that used to sit here is now behind the
+              (i) beside "In funding order" - next to the concept it explains,
+              instead of four lines of prose below everything on every visit. */}
         </>
       )}
 

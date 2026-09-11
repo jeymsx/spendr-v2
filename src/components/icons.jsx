@@ -70,6 +70,20 @@ export function IconCheck({ size = 14, strokeWidth = '2.5', stroke = 'currentCol
   )
 }
 
+/* Settings had its own copy at a fixed 18px. The dot is a 0.01-long line
+   with a round cap rather than a <circle>, which is how Feather draws it -
+   one shape, and it takes the same stroke width so it cannot drift out of
+   weight with the stem above it. */
+export function IconInfo({ size = 18, strokeWidth = '1.8', stroke = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10" />
+      <line x1="12" y1="16" x2="12" y2="12" />
+      <line x1="12" y1="8" x2="12.01" y2="8" />
+    </svg>
+  )
+}
+
 export function IconUpload({ size = 18, strokeWidth = '1.8', stroke = 'currentColor' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">

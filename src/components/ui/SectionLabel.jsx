@@ -52,6 +52,16 @@ import { cx } from './cx'
  *
  * The hint wears the same type as Field's, so an explanation under a label
  * and an explanation under an input are one look.
+ *
+ * ── action ──
+ *
+ * A control on the caption's right - an (i) that opens the long version, a
+ * "See all". It is a slot rather than something the caller wraps in its own
+ * flex row, because that row has three decisions in it (baseline or centre,
+ * where the gap goes, whether the label may grow) and a hand-rolled one gets
+ * them subtly different each time. It also has to sit on the LABEL line
+ * specifically, not beside the label-and-hint block, or an (i) floats in the
+ * vertical middle of two lines of text.
  */
 
 const BASE = 'block text-xs font-semibold text-slate-500 dark:text-slate-400'
@@ -76,6 +86,8 @@ export default function SectionLabel({
   children,
   /** One sentence under the label, for what the screen does not show. */
   hint = null,
+  /** A control on the label's right - an InfoButton, a "See all". */
+  action = null,
   htmlFor = null,
   inset = 'field',
   gap = 'normal',
@@ -87,7 +99,7 @@ export default function SectionLabel({
   const pad = INSET[inset] ?? INSET.field
   const below = GAP[gap] ?? GAP.normal
 
-  if (!hint) {
+  if (!hint && !action) {
     return (
       <Tag htmlFor={htmlFor ?? undefined} className={cx(BASE, pad, below, className)}>
         {children}
@@ -95,14 +107,32 @@ export default function SectionLabel({
     )
   }
 
-  return (
-    <div className={cx(below, className)}>
+  /* The label line. The inset moves out to this row when there is an action,
+     so the control lands on the gutter rather than 20px inside it - the
+     label keeps BASE for its type and drops the padding it would double. */
+  const line = action
+    ? (
+      <div className={cx('flex items-center justify-between gap-2', pad)}>
+        <Tag htmlFor={htmlFor ?? undefined} className={cx(BASE, 'min-w-0')}>
+          {children}
+        </Tag>
+        {action}
+      </div>
+    )
+    : (
       <Tag htmlFor={htmlFor ?? undefined} className={cx(BASE, pad)}>
         {children}
       </Tag>
-      <p className={cx('mt-1 text-[11.5px] leading-snug text-slate-400 dark:text-slate-500', pad)}>
-        {hint}
-      </p>
+    )
+
+  return (
+    <div className={cx(below, className)}>
+      {line}
+      {hint && (
+        <p className={cx('mt-1 text-[11.5px] leading-snug text-slate-400 dark:text-slate-500', pad)}>
+          {hint}
+        </p>
+      )}
     </div>
   )
 }

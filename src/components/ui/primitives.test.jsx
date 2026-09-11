@@ -78,6 +78,37 @@ describe('SectionLabel', () => {
     expect(hint.className).toContain('text-slate-400')
   })
 
+  it('puts an action on the label line, not below the hint', () => {
+    // An (i) beside a label-and-hint block floats in the vertical middle of
+    // two lines of text. It belongs on the label's own row.
+    render(
+      <SectionLabel hint="Top of the list is funded first." action={<button>i</button>}>
+        In funding order
+      </SectionLabel>,
+    )
+    const row = screen.getByText('In funding order').parentElement
+    expect(row.className).toContain('flex')
+    expect(row.contains(screen.getByRole('button', { name: 'i' }))).toBe(true)
+    expect(row.textContent).not.toContain('funded first')
+  })
+
+  it('takes an action with no hint, and still spaces itself', () => {
+    const { container } = render(
+      <SectionLabel gap="loose" action={<button>i</button>}>Accounts</SectionLabel>,
+    )
+    expect(container.firstChild.className).toContain('mb-3')
+    expect(screen.getByRole('button', { name: 'i' })).toBeTruthy()
+  })
+
+  it('insets the action row, not the label inside it', () => {
+    // Otherwise the padding applies twice and the control lands 20px inside
+    // the gutter instead of on it.
+    render(<SectionLabel inset="gutter" action={<button>i</button>}>x</SectionLabel>)
+    const label = screen.getByText('x')
+    expect(label.className).not.toContain('px-5')
+    expect(label.parentElement.className).toContain('px-5')
+  })
+
   it('keeps the hint out of the label element itself', () => {
     // htmlFor names ONE control; folding a sentence into the label would make
     // the control's accessible name the label plus the explanation.

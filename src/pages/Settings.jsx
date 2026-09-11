@@ -26,6 +26,7 @@ import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { syncToSheets } from '../lib/sheetsSync'
 import {
   IconCheck, IconChevronRight, IconPlus, IconUpload, IconTick, IconWarning, IconTemplate, IconTransferUI, IconArrowDown,
+  IconInfo,
 } from '../components/icons'
 import CategoryGlyph, { presetCategoryIcon as CATEGORY_ICON_BY_NAME } from '../components/CategoryGlyph'
 import SegTabs from '../components/SegTabs'
@@ -199,16 +200,6 @@ function IconCloud() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M18 10h-1.26A8 8 0 109 20h9a5 5 0 000-10z" />
-    </svg>
-  )
-}
-
-function IconInfo() {
-  return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="10" />
-      <line x1="12" y1="8" x2="12" y2="12" />
-      <line x1="12" y1="16" x2="12.01" y2="16" />
     </svg>
   )
 }
