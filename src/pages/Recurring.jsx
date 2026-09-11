@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -17,6 +17,8 @@ import {
 import CategoryGlyph from '../components/CategoryGlyph'
 import BillMark from '../components/BillMark'
 import IconButton from '../components/ui/IconButton'
+import Sheet from '../components/ui/Sheet'
+import StatTrio from '../components/ui/StatTrio'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -208,7 +210,6 @@ function EmptyBlock({ icon, title, body, action, tone = 'calm' }) {
  * also strand you on a detail page for a bill that no longer exists.
  */
 export function RecurringFormSheet({ open, onClose, editRec, categories, accounts, showDelete = true }) {
-  const [closing,      setClosing]      = useState(false)
   const { showToast } = useToast()
   const { user } = useAuth()
   const [name,         setName]         = useState('')
@@ -253,20 +254,6 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     setConfirmDel(false)
   }, [open, editRec, categories, accounts])
 
-  const handleClose = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }, [onClose])
-
-  const handleCloseRef = useRef(handleClose)
-  useEffect(() => { handleCloseRef.current = handleClose }, [handleClose])
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') handleCloseRef.current() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-
   async function handleSave() {
     const errs = {}
     if (!name.trim()) errs.name = 'Required'
@@ -295,7 +282,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
         await db.recurring.add(data)
         showToast('Recurring saved')
       }
-      handleClose()
+      onClose()
     } catch (e) {
       console.error('[RecurringForm] save failed:', e)
       showToast('Failed to save', 'error')
@@ -310,7 +297,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     try {
       await db.recurring.delete(editRec.id)
       await deleteRecurringRemote(user?.id, editRec.id)
-      handleClose()
+      onClose()
     } catch (e) {
       console.error('[RecurringForm] delete failed:', e)
       showToast('Failed to delete', 'error')
@@ -324,238 +311,217 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     [categories],
   )
 
-  if (!open && !closing) return null
-
+  /* Sheet owns the overlay, the panel, the grab handle, the 92dvh cap, the
+     scroll lock, Escape, the focus trap and the exit animation. The Delete
+     button rides on the title row as `titleAction`, and Save is the pinned
+     `footer` - in the old panel it was the last thing in a column that
+     scrolled, so on a short screen it sat below the fold. */
   return (
     <>
-      <div className="fixed inset-0 z-[100]">
-        <div
-          className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
-          onClick={handleClose}
-        />
-        <div
-          className={[
-            closing ? 'sheet-panel-exit' : 'sheet-panel',
-            'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-            'bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]',
-            'flex flex-col',
-          ].join(' ')}
-          style={{
-            maxHeight: '92dvh',
-            paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
-          }}
-        >
-          {/* Handle + title */}
-          <div className="pt-4 px-5 pb-3 shrink-0">
-            <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-            <div className="flex items-center justify-between">
-              <h2 className="text-base font-semibold text-slate-800 dark:text-white">
-                {editRec ? 'Edit Recurring' : 'Add Recurring'}
-              </h2>
-              {editRec && showDelete && (
-                <button
-                  onClick={handleDelete}
-                  disabled={deleting}
-                  className={[
-                    'text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150',
-                    confirmDel
-                      ? 'bg-red-500 text-white'
-                      : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
-                  ].join(' ')}
-                >
-                  {deleting ? 'Deleting…' : confirmDel ? 'Confirm Delete' : 'Delete'}
-                </button>
-              )}
-            </div>
-          </div>
+      <Sheet
+        open={open}
+        onClose={onClose}
+        scrim={40}
+        maxHeight="92dvh"
+        title={editRec ? 'Edit Recurring' : 'Add Recurring'}
+        titleAction={editRec && showDelete && (
+          <button
+            onClick={handleDelete}
+            disabled={deleting}
+            className={[
+              'text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150',
+              confirmDel
+                ? 'bg-red-500 text-white'
+                : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
+            ].join(' ')}
+          >
+            {deleting ? 'Deleting…' : confirmDel ? 'Confirm Delete' : 'Delete'}
+          </button>
+        )}
+        footer={(
+          <button
+            onClick={handleSave}
+            disabled={saving}
+            className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
+              bg-primary
+              disabled:opacity-40 disabled:shadow-none
+              active:scale-[0.98] transition-all duration-100"
+          >
+            {saving ? 'Saving…' : editRec ? 'Save changes' : 'Add Recurring'}
+          </button>
+        )}
+      >
+        <div className="space-y-4">
 
-          {/* Scrollable fields */}
-          <div className="overflow-y-auto flex-1 px-5 space-y-4">
-
-            {/* Name */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Name</p>
-              <input
-                type="text"
-                value={name}
-                onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: null })) }}
-                placeholder="e.g. Netflix, Rent, Gym"
-                className={[
-                  'w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white',
-                  'bg-white dark:bg-white/[0.05] outline-none',
-                  'placeholder:text-slate-300 dark:placeholder:text-slate-600',
-                  errors.name
-                    ? 'border border-red-300 dark:border-red-500/40'
-                    : 'border border-slate-200/80 dark:border-white/[0.08]',
-                ].join(' ')}
-              />
-              {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
-            </div>
-
-            {/* Amount */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Amount</p>
-              <div className={[
-                'flex items-center h-[52px] px-4 rounded-2xl',
-                'bg-white dark:bg-white/[0.05]',
-                errors.amount
+          {/* Name */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Name</p>
+            <input
+              type="text"
+              value={name}
+              onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: null })) }}
+              placeholder="e.g. Netflix, Rent, Gym"
+              className={[
+                'w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white',
+                'bg-white dark:bg-white/[0.05] outline-none',
+                'placeholder:text-slate-300 dark:placeholder:text-slate-600',
+                errors.name
                   ? 'border border-red-300 dark:border-red-500/40'
                   : 'border border-slate-200/80 dark:border-white/[0.08]',
-              ].join(' ')}>
-                <span className="text-slate-400 dark:text-slate-500 mr-1.5 text-sm shrink-0">₱</span>
-                <input
-                  type="text" inputMode="decimal"
-                  value={amountStr}
-                  onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
-                  placeholder="0.00"
-                  className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 tabular-nums w-0"
-                />
-              </div>
-              {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount}</p>}
-            </div>
-
-            {/* Frequency */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">Frequency</p>
-              <div className="grid grid-cols-4 gap-2">
-                {FREQ_OPTIONS.map(opt => (
-                  <button
-                    key={opt.value}
-                    onClick={() => setFrequency(opt.value)}
-                    className={[
-                      'py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150',
-                      frequency === opt.value
-                        /* seg-active, not text-primary. Measured, the accent
-                           as text is 2.63:1 on its own 8% tint - worse than
-                           on bare white, and nowhere near the 4.5:1 that
-                           14px semibold needs. The class mixes it 65% into
-                           black for light mode and leaves it alone in dark,
-                           giving 5.53:1 and 5.59:1. Same mechanism as the
-                           Insights segmented control, for the same reason. */
-                        ? 'seg-active border-primary/40 bg-primary/[0.08] dark:bg-primary/[0.12]'
-                        : 'border-slate-200 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 bg-white dark:bg-white/[0.03]',
-                    ].join(' ')}
-                    style={frequency === opt.value ? { '--seg-color': 'var(--color-primary)' } : undefined}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Category */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Category</p>
-              <button
-                onClick={() => setShowCatPick(true)}
-                className={[
-                  'w-full h-[52px] px-4 rounded-2xl flex items-center gap-3 text-left',
-                  'bg-white dark:bg-white/[0.05]',
-                  'active:bg-slate-50 dark:active:bg-white/[0.08] transition-colors',
-                  errors.category
-                    ? 'border border-red-300 dark:border-red-500/40'
-                    : 'border border-slate-200/80 dark:border-white/[0.08]',
-                ].join(' ')}
-              >
-                {category ? (
-                  <>
-                    <span className="leading-none"><CategoryGlyph cat={category} size={20} /></span>
-                    <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">{category.name}</span>
-                  </>
-                ) : (
-                  <span className="flex-1 text-sm text-slate-400 dark:text-slate-500">Select category</span>
-                )}
-                <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={15} strokeWidth="2" /></span>
-              </button>
-              {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
-            </div>
-
-            {/* Account */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Account</p>
-              <button
-                onClick={() => setShowAcctPick(true)}
-                className={[
-                  'w-full h-[52px] px-4 rounded-2xl flex items-center gap-3 text-left',
-                  'bg-white dark:bg-white/[0.05]',
-                  'active:bg-slate-50 dark:active:bg-white/[0.08] transition-colors',
-                  errors.account
-                    ? 'border border-red-300 dark:border-red-500/40'
-                    : 'border border-slate-200/80 dark:border-white/[0.08]',
-                ].join(' ')}
-              >
-                {account ? (
-                  <>
-                    <span className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: account.color ?? '#2D9DFF' }} />
-                    <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">{account.name}</span>
-                  </>
-                ) : (
-                  <span className="flex-1 text-sm text-slate-400 dark:text-slate-500">Select account</span>
-                )}
-                <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={15} strokeWidth="2" /></span>
-              </button>
-              {errors.account && <p className="mt-1 text-xs text-red-500">{errors.account}</p>}
-            </div>
-
-            {/* Next date */}
-            <div>
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Next due date</p>
-              <input
-                type="date"
-                value={nextDate}
-                onChange={e => { setNextDate(e.target.value); setErrors(p => ({ ...p, nextDate: null })) }}
-                className={[
-                  'block w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white',
-                  'bg-white dark:bg-white/[0.05] outline-none dark:[color-scheme:dark]',
-                  errors.nextDate
-                    ? 'border border-red-300 dark:border-red-500/40'
-                    : 'border border-slate-200/80 dark:border-white/[0.08]',
-                ].join(' ')}
-              />
-              {errors.nextDate && <p className="mt-1 text-xs text-red-500">{errors.nextDate}</p>}
-            </div>
-
-            {/* Active toggle */}
-            <div className="flex items-center justify-between px-4 py-3.5 rounded-2xl
-              bg-white dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.08]">
-              <div>
-                <p className="text-sm font-medium text-slate-800 dark:text-white">Active</p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
-                  {active ? 'Will appear in upcoming' : 'Paused — not shown in upcoming'}
-                </p>
-              </div>
-              <button
-                onClick={() => setActive(p => !p)}
-                className={[
-                  'w-12 h-6.5 rounded-full relative transition-all duration-200 shrink-0',
-                  active ? 'bg-primary' : 'bg-slate-200 dark:bg-white/[0.1]',
-                ].join(' ')}
-                style={{ height: '26px', width: '46px' }}
-              >
-                <span className={[
-                  'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200',
-                  active ? 'left-[22px]' : 'left-0.5',
-                ].join(' ')} />
-              </button>
-            </div>
-            <div className="h-4 shrink-0" />
+              ].join(' ')}
+            />
+            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
           </div>
 
-          {/* Save */}
-          <div className="px-5 pt-3 shrink-0">
+          {/* Amount */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Amount</p>
+            <div className={[
+              'flex items-center h-[52px] px-4 rounded-2xl',
+              'bg-white dark:bg-white/[0.05]',
+              errors.amount
+                ? 'border border-red-300 dark:border-red-500/40'
+                : 'border border-slate-200/80 dark:border-white/[0.08]',
+            ].join(' ')}>
+              <span className="text-slate-400 dark:text-slate-500 mr-1.5 text-sm shrink-0">₱</span>
+              <input
+                type="text" inputMode="decimal"
+                value={amountStr}
+                onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
+                placeholder="0.00"
+                className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 tabular-nums w-0"
+              />
+            </div>
+            {errors.amount && <p className="mt-1 text-xs text-red-500">{errors.amount}</p>}
+          </div>
+
+          {/* Frequency */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-2">Frequency</p>
+            <div className="grid grid-cols-4 gap-2">
+              {FREQ_OPTIONS.map(opt => (
+                <button
+                  key={opt.value}
+                  onClick={() => setFrequency(opt.value)}
+                  className={[
+                    'py-2.5 rounded-2xl border text-sm font-semibold transition-all duration-150',
+                    frequency === opt.value
+                      /* seg-active, not text-primary. Measured, the accent
+                         as text is 2.63:1 on its own 8% tint - worse than
+                         on bare white, and nowhere near the 4.5:1 that
+                         14px semibold needs. The class mixes it 65% into
+                         black for light mode and leaves it alone in dark,
+                         giving 5.53:1 and 5.59:1. Same mechanism as the
+                         Insights segmented control, for the same reason. */
+                      ? 'seg-active border-primary/40 bg-primary/[0.08] dark:bg-primary/[0.12]'
+                      : 'border-slate-200 dark:border-white/[0.08] text-slate-500 dark:text-slate-400 bg-white dark:bg-white/[0.03]',
+                  ].join(' ')}
+                  style={frequency === opt.value ? { '--seg-color': 'var(--color-primary)' } : undefined}
+                >
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Category */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Category</p>
             <button
-              onClick={handleSave}
-              disabled={saving}
-              className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
-                bg-primary
-                disabled:opacity-40 disabled:shadow-none
-                active:scale-[0.98] transition-all duration-100"
+              onClick={() => setShowCatPick(true)}
+              className={[
+                'w-full h-[52px] px-4 rounded-2xl flex items-center gap-3 text-left',
+                'bg-white dark:bg-white/[0.05]',
+                'active:bg-slate-50 dark:active:bg-white/[0.08] transition-colors',
+                errors.category
+                  ? 'border border-red-300 dark:border-red-500/40'
+                  : 'border border-slate-200/80 dark:border-white/[0.08]',
+              ].join(' ')}
             >
-              {saving ? 'Saving…' : editRec ? 'Save changes' : 'Add Recurring'}
+              {category ? (
+                <>
+                  <span className="leading-none"><CategoryGlyph cat={category} size={20} /></span>
+                  <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">{category.name}</span>
+                </>
+              ) : (
+                <span className="flex-1 text-sm text-slate-400 dark:text-slate-500">Select category</span>
+              )}
+              <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={15} strokeWidth="2" /></span>
+            </button>
+            {errors.category && <p className="mt-1 text-xs text-red-500">{errors.category}</p>}
+          </div>
+
+          {/* Account */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Account</p>
+            <button
+              onClick={() => setShowAcctPick(true)}
+              className={[
+                'w-full h-[52px] px-4 rounded-2xl flex items-center gap-3 text-left',
+                'bg-white dark:bg-white/[0.05]',
+                'active:bg-slate-50 dark:active:bg-white/[0.08] transition-colors',
+                errors.account
+                  ? 'border border-red-300 dark:border-red-500/40'
+                  : 'border border-slate-200/80 dark:border-white/[0.08]',
+              ].join(' ')}
+            >
+              {account ? (
+                <>
+                  <span className="w-4 h-4 rounded-full shrink-0" style={{ backgroundColor: account.color ?? '#2D9DFF' }} />
+                  <span className="flex-1 text-sm font-medium text-slate-800 dark:text-white">{account.name}</span>
+                </>
+              ) : (
+                <span className="flex-1 text-sm text-slate-400 dark:text-slate-500">Select account</span>
+              )}
+              <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={15} strokeWidth="2" /></span>
+            </button>
+            {errors.account && <p className="mt-1 text-xs text-red-500">{errors.account}</p>}
+          </div>
+
+          {/* Next date */}
+          <div>
+            <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1.5">Next due date</p>
+            <input
+              type="date"
+              value={nextDate}
+              onChange={e => { setNextDate(e.target.value); setErrors(p => ({ ...p, nextDate: null })) }}
+              className={[
+                'block w-full h-[52px] px-4 rounded-2xl text-sm text-slate-800 dark:text-white',
+                'bg-white dark:bg-white/[0.05] outline-none dark:[color-scheme:dark]',
+                errors.nextDate
+                  ? 'border border-red-300 dark:border-red-500/40'
+                  : 'border border-slate-200/80 dark:border-white/[0.08]',
+              ].join(' ')}
+            />
+            {errors.nextDate && <p className="mt-1 text-xs text-red-500">{errors.nextDate}</p>}
+          </div>
+
+          {/* Active toggle */}
+          <div className="flex items-center justify-between px-4 py-3.5 rounded-2xl
+            bg-white dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.08]">
+            <div>
+              <p className="text-sm font-medium text-slate-800 dark:text-white">Active</p>
+              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                {active ? 'Will appear in upcoming' : 'Paused — not shown in upcoming'}
+              </p>
+            </div>
+            <button
+              onClick={() => setActive(p => !p)}
+              className={[
+                'w-12 h-6.5 rounded-full relative transition-all duration-200 shrink-0',
+                active ? 'bg-primary' : 'bg-slate-200 dark:bg-white/[0.1]',
+              ].join(' ')}
+              style={{ height: '26px', width: '46px' }}
+            >
+              <span className={[
+                'absolute top-0.5 w-5 h-5 rounded-full bg-white shadow-sm transition-all duration-200',
+                active ? 'left-[22px]' : 'left-0.5',
+              ].join(' ')} />
             </button>
           </div>
+          <div className="h-4" />
         </div>
-      </div>
+      </Sheet>
 
       {/* Nested pickers at z-[110] */}
       <CategoryPickerSheet
@@ -721,49 +687,23 @@ export default function Recurring() {
               {active.length} active {active.length === 1 ? 'bill' : 'bills'}
             </p>
 
-            {/* Three tiles, not three bare columns.
- 
-                This was a naked grid, lifted from Goals - but on Goals the
-                same grid sits directly under a progress bar, which anchors it
-                to something. Here there was nothing above it but a centred
-                figure and nothing below but the tab switch, so three small
-                labels floated in open space and the top of the page read as
-                unfinished. Giving each one the card material makes them
-                objects, and the row reads as a set of three readings rather
-                than leftover text.
- 
-                Centred, because a one-digit number left-aligned in a 112px
-                tile looks like it lost its label. */}
-            <div className="grid grid-cols-3 gap-2.5 mt-5">
-              <Card className="px-2 py-3 text-center">
-                <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
-                  Due now
-                </p>
-                <p className={`text-[19px] leading-none font-semibold tabular-nums mt-1.5 ${
-                  stats.dueNow > 0
-                    ? 'text-red-500 dark:text-red-400'
-                    : 'text-slate-800 dark:text-white'
-                }`}>
-                  {stats.dueNow}
-                </p>
-              </Card>
-              <Card className="px-2 py-3 text-center">
-                <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
-                  This week
-                </p>
-                <p className="text-[19px] leading-none font-semibold tabular-nums mt-1.5 text-slate-800 dark:text-white">
-                  {stats.thisWeek}
-                </p>
-              </Card>
-              <Card className="px-2 py-3 text-center">
-                <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
-                  Paused
-                </p>
-                <p className="text-[19px] leading-none font-semibold tabular-nums mt-1.5 text-slate-800 dark:text-white">
-                  {stats.paused}
-                </p>
-              </Card>
-            </div>
+            {/* The tiles are gone. They were here because three small labels
+                floated in open space and the top of the page read as
+                unfinished - but the answer to that is the figure being large
+                and first, which is what StatTrio does, and what every other
+                page's stat row now does too. */}
+            <StatTrio
+              className="mt-5"
+              items={[
+                {
+                  label: 'Due now',
+                  value: stats.dueNow,
+                  tone: stats.dueNow > 0 ? 'text-red-500 dark:text-red-400' : '',
+                },
+                { label: 'This week', value: stats.thisWeek },
+                { label: 'Paused', value: stats.paused },
+              ]}
+            />
           </section>
 
           {/* ── Which list ── */}

@@ -1,4 +1,4 @@
-import { useState, useMemo, useRef, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
@@ -12,6 +12,8 @@ import { useAuth } from '../context/AuthContext'
 import { deleteDebtRemote } from '../lib/sync'
 import { IconPlus, IconChevronLeft } from '../components/icons'
 import IconButton from '../components/ui/IconButton'
+import Sheet from '../components/ui/Sheet'
+import StatTrio from '../components/ui/StatTrio'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -151,20 +153,9 @@ function Card({ children, className = '' }) {
 }
 
 /** One of the three readings under the headline figure. */
-function StatTile({ label, value, tone = '' }) {
-  return (
-    <Card className="px-2 py-3 text-center">
-      <p className="text-[9.5px] font-semibold text-slate-500 dark:text-slate-400">
-        {label}
-      </p>
-      <p className={`text-[17px] leading-none font-semibold tabular-nums mt-1.5 ${
-        tone || 'text-slate-800 dark:text-white'
-      }`}>
-        {value}
-      </p>
-    </Card>
-  )
-}
+/* StatTile lived here - a bordered tile with the label above the figure.
+   Its callers are StatTrio now, which is the same row the Budget, Goals
+   and Bills pages use. */
 
 // ── Debt Card ──────────────────────────────────────────────────────────────────
 
@@ -424,7 +415,6 @@ function EmptyState({ view, onAdd }) {
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
 
 export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
-  const [closing,    setClosing]    = useState(false)
   const { showToast } = useToast()
   const { user } = useAuth()
   const [contact,    setContact]    = useState('')
@@ -465,20 +455,6 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
     }
   }, [open, editDebt, defaultTab])
 
-  const handleClose = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }, [onClose])
-
-  const handleCloseRef = useRef(handleClose)
-  useEffect(() => { handleCloseRef.current = handleClose }, [handleClose])
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') handleCloseRef.current() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
-
   async function handleSave() {
     const errs = {}
     if (!contact.trim()) errs.contact = 'Required'
@@ -505,7 +481,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
         await db.debts.add({ ...data, createdAt: new Date().toISOString() })
         showToast('Debt saved')
       }
-      handleClose()
+      onClose()
     } catch (e) {
       console.error('[DebtForm] save failed:', e)
       showToast('Failed to save debt', 'error')
@@ -520,7 +496,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
     try {
       await db.debts.delete(editDebt.id)
       await deleteDebtRemote(user?.id, editDebt.id)
-      handleClose()
+      onClose()
     } catch (e) {
       console.error('[DebtForm] delete failed:', e)
       showToast('Failed to delete debt', 'error')
@@ -528,49 +504,45 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
     }
   }
 
-  if (!open && !closing) return null
-
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div
-        className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
-        onClick={handleClose}
-      />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]',
-          'flex flex-col',
-        ].join(' ')}
-        style={{
-          maxHeight: '92dvh',
-          paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
-        }}
-      >
-        {/* Handle + title */}
-        <div className="pt-4 px-5 pb-3 shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-slate-800 dark:text-white">
-              {editDebt ? 'Edit debt' : 'Add debt'}
-            </h2>
-            {editDebt && (
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className={[
-                  'text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150',
-                  confirmDel
-                    ? 'bg-red-500 text-white'
-                    : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
-                ].join(' ')}
-              >
-                {deleting ? 'Deleting…' : confirmDel ? 'Confirm Delete' : 'Delete'}
-              </button>
-            )}
-          </div>
-        </div>
+    /* Sheet owns the overlay, the panel, the grab handle, the scroll lock,
+       Escape, the focus trap and the exit animation. Delete rides on the
+       title row as `titleAction`, and Save is pinned under the scrolling body
+       as `footer` so it cannot end up below the fold on a short screen. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      scrim={40}
+      maxHeight="92dvh"
+      title={editDebt ? 'Edit debt' : 'Add debt'}
+      titleAction={editDebt && (
+        <button
+          onClick={handleDelete}
+          disabled={deleting}
+          className={[
+            'text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150',
+            confirmDel
+              ? 'bg-red-500 text-white'
+              : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
+          ].join(' ')}
+        >
+          {deleting ? 'Deleting…' : confirmDel ? 'Confirm Delete' : 'Delete'}
+        </button>
+      )}
+      footer={(
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
+            bg-primary
+            disabled:opacity-40 disabled:shadow-none
+            active:scale-[0.98] transition-all duration-100"
+        >
+          {saving ? 'Saving…' : editDebt ? 'Save changes' : 'Add debt'}
+        </button>
+      )}
+    >
+      <div>
 
         {/* ── The body ──
             Rebuilt from a stack of six outlined boxes, each with a small-caps
@@ -584,115 +556,97 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
             the transaction. Here it was the third field down, the same size as
             a note, which made a debt feel like a form to fill rather than a
             number to record. */}
-        <div className="overflow-y-auto flex-1 px-5">
 
-          <div className="flex flex-col items-center pt-1 pb-5">
-            <input
-              type="text"
-              inputMode="decimal"
-              autoFocus={!editDebt}
-              placeholder="0.00"
-              value={amountStr}
-              onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
-              aria-label="Amount"
-              className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
-                text-slate-900 dark:text-white outline-none
-                placeholder-slate-200 dark:placeholder-slate-800"
-            />
-            <p className={`text-xs mt-2 tracking-wide ${
-              errors.amount ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-400 dark:text-slate-500'
-            }`}>
-              {errors.amount ?? 'Amount'}
-            </p>
-          </div>
-
-          {/* Direction, as the app's segmented control - and the pill takes
-              the colour of the side it is on, so the control itself says
-              which way the money goes. Red and green are load-bearing here in
-              a way they are not on a chart: they are the two states. */}
-          <SegTabs
-            tabs={[
-              { value: 'i_owe',      label: 'I owe'      },
-              { value: 'owed_to_me', label: 'Owed to me' },
-            ]}
-            value={type}
-            onChange={setType}
-            color={type === 'i_owe' ? '#ef4444' : '#10b981'}
+        <div className="flex flex-col items-center pt-1 pb-5">
+          <input
+            type="text"
+            inputMode="decimal"
+            autoFocus={!editDebt}
+            placeholder="0.00"
+            value={amountStr}
+            onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
+            aria-label="Amount"
+            className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
+              text-slate-900 dark:text-white outline-none
+              placeholder-slate-200 dark:placeholder-slate-800"
           />
-
-          <RowGroup className="mt-4">
-            <EditRow label={errors.contact ? 'Who *' : 'Who'}>
-              <RowInput
-                value={contact}
-                onChange={e => { setContact(e.target.value); setErrors(p => ({ ...p, contact: null })) }}
-                placeholder={type === 'i_owe' ? 'Who you owe' : 'Who owes you'}
-                autoFocus={false}
-              />
-            </EditRow>
-
-            {/* "Already paid" rather than "Amount Paid": this is a debt you
-                are recording after the fact, and the question is how much of
-                it is behind you. Zero is the answer almost every time, so it
-                shows as a placeholder rather than a typed-in 0 you have to
-                clear. */}
-            <EditRow label={errors.paid ? 'Already paid *' : 'Already paid'}>
-              <RowInput
-                value={paidStr === '0' ? '' : paidStr}
-                onChange={e => { moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
-                placeholder="0.00"
-                inputMode="decimal"
-              />
-            </EditRow>
-
-            <EditRow label="Due date">
-              <RowDate
-                value={dueDate}
-                onChange={e => setDueDate(e.target.value)}
-                display={dueDate ? fmtDueDate(dueDate) : ''}
-              />
-            </EditRow>
-
-            <EditRow label="Note" isLast>
-              <RowInput
-                value={notes}
-                onChange={e => setNotes(e.target.value)}
-                placeholder="Optional"
-              />
-            </EditRow>
-          </RowGroup>
-
-          {(errors.contact || errors.paid) && (
-            <p className="mt-2 px-1 text-xs text-red-500 dark:text-red-400">
-              {errors.contact ? 'Say who this debt is with.' : errors.paid}
-            </p>
-          )}
-
-          <div className="h-4 shrink-0" />
+          <p className={`text-xs mt-2 tracking-wide ${
+            errors.amount ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-400 dark:text-slate-500'
+          }`}>
+            {errors.amount ?? 'Amount'}
+          </p>
         </div>
 
+        {/* Direction, as the app's segmented control - and the pill takes
+            the colour of the side it is on, so the control itself says
+            which way the money goes. Red and green are load-bearing here in
+            a way they are not on a chart: they are the two states. */}
+        <SegTabs
+          tabs={[
+            { value: 'i_owe',      label: 'I owe'      },
+            { value: 'owed_to_me', label: 'Owed to me' },
+          ]}
+          value={type}
+          onChange={setType}
+          color={type === 'i_owe' ? '#ef4444' : '#10b981'}
+        />
 
-        {/* Save */}
-        <div className="px-5 pt-3 shrink-0">
-          <button
-            onClick={handleSave}
-            disabled={saving}
-            className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
-              bg-primary
-              disabled:opacity-40 disabled:shadow-none
-              active:scale-[0.98] transition-all duration-100"
-          >
-            {saving ? 'Saving…' : editDebt ? 'Save changes' : 'Add debt'}
-          </button>
-        </div>
+        <RowGroup className="mt-4">
+          <EditRow label={errors.contact ? 'Who *' : 'Who'}>
+            <RowInput
+              value={contact}
+              onChange={e => { setContact(e.target.value); setErrors(p => ({ ...p, contact: null })) }}
+              placeholder={type === 'i_owe' ? 'Who you owe' : 'Who owes you'}
+              autoFocus={false}
+            />
+          </EditRow>
+
+          {/* "Already paid" rather than "Amount Paid": this is a debt you
+              are recording after the fact, and the question is how much of
+              it is behind you. Zero is the answer almost every time, so it
+              shows as a placeholder rather than a typed-in 0 you have to
+              clear. */}
+          <EditRow label={errors.paid ? 'Already paid *' : 'Already paid'}>
+            <RowInput
+              value={paidStr === '0' ? '' : paidStr}
+              onChange={e => { moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
+              placeholder="0.00"
+              inputMode="decimal"
+            />
+          </EditRow>
+
+          <EditRow label="Due date">
+            <RowDate
+              value={dueDate}
+              onChange={e => setDueDate(e.target.value)}
+              display={dueDate ? fmtDueDate(dueDate) : ''}
+            />
+          </EditRow>
+
+          <EditRow label="Note" isLast>
+            <RowInput
+              value={notes}
+              onChange={e => setNotes(e.target.value)}
+              placeholder="Optional"
+            />
+          </EditRow>
+        </RowGroup>
+
+        {(errors.contact || errors.paid) && (
+          <p className="mt-2 px-1 text-xs text-red-500 dark:text-red-400">
+            {errors.contact ? 'Say who this debt is with.' : errors.paid}
+          </p>
+        )}
+
+        <div className="h-4 shrink-0" />
       </div>
-    </div>
+    </Sheet>
   )
 }
 
 // ── Payment Sheet ──────────────────────────────────────────────────────────────
 
 export function PaymentSheet({ open, onClose, debt }) {
-  const [closing,       setClosing]       = useState(false)
   const { showToast } = useToast()
   const [amountStr,     setAmountStr]     = useState('0')
   const [account,       setAccount]       = useState(null)
@@ -701,20 +655,6 @@ export function PaymentSheet({ open, onClose, debt }) {
   const [saving,        setSaving]        = useState(false)
 
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], [])
-
-  const handleClose = useCallback(() => {
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }, [onClose])
-
-  const handleCloseRef = useRef(handleClose)
-  useEffect(() => { handleCloseRef.current = handleClose }, [handleClose])
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e) => { if (e.key === 'Escape') handleCloseRef.current() }
-    document.addEventListener('keydown', onKey)
-    return () => document.removeEventListener('keydown', onKey)
-  }, [open])
 
   useEffect(() => {
     // Hydrate-on-open. The sheet renders null when closed but stays
@@ -762,7 +702,7 @@ export function PaymentSheet({ open, onClose, debt }) {
         await db.debts.update(debt.id, { amountPaid: newPaid })
       })
       showToast('Payment recorded')
-      handleClose()
+      onClose()
     } catch (e) {
       console.error('[PaymentSheet] save failed:', e)
       showToast('Failed to record payment', 'error')
@@ -771,150 +711,138 @@ export function PaymentSheet({ open, onClose, debt }) {
     }
   }
 
-  if (!open && !closing) return null
-
   const initials    = getInitials(debt?.contact ?? debt?.name ?? '')
   const avatarColor = getAvatarColor(debt?.contact ?? debt?.name ?? '')
 
   return (
     <>
-      <div className="fixed inset-0 z-[100]">
-        <div
-          className="sheet-overlay absolute inset-0 bg-black/40 backdrop-blur-sm"
-          onClick={handleClose}
-        />
-        <div
-          className={[
-            closing ? 'sheet-panel-exit' : 'sheet-panel',
-            'absolute bottom-0 inset-x-0 rounded-t-[28px] px-5 pt-5',
-            'bg-white dark:bg-[#111820] border-t border-slate-100 dark:border-white/[0.07]',
-            'flex flex-col',
-          ].join(' ')}
-          /* Capped and scrollable, the same as the debt form sheet. The
-             amount is a real text input now, so the OS keyboard comes up over
-             the bottom of the screen - a fixed-height panel would put the
-             confirm button underneath it. */
-          style={{
-            maxHeight: '92dvh',
-            paddingBottom: 'max(24px, env(safe-area-inset-bottom))',
-          }}
-        >
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-5 shrink-0" />
-
-          {/* Everything between the handle and the button scrolls, so the
-              panel can give way when the keyboard takes the bottom half of
-              the screen instead of pushing the confirm button off it. */}
-          <div className="overflow-y-auto flex-1 min-h-0 -mx-5 px-5">
-            {/* Contact info */}
-            {debt && (
-              <div className="flex items-center gap-3 mb-5">
-                <div
-                  className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
-                  style={{ backgroundColor: avatarColor }}
-                >
-                  {initials}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
-                    {debt.contact ?? debt.name}
-                  </p>
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500">
-                    Remaining:{' '}
-                    <span className="font-medium tabular-nums text-slate-600 dark:text-slate-300">
-                      {fmt(remaining)}
-                    </span>
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {/* ── Amount ──
-                The same field Add expense, Add inflow and Transfer use, down to
-                the class: one big centred `amount-input`, inputMode="decimal",
-                driven by moneyChangeHandler.
-
-                It replaced a bespoke 10-key pad. The pad looked deliberate, and
-                was the odd one out - every other place in the app where you type
-                money uses the system keyboard, so the one screen with its own
-                keypad taught a gesture that worked nowhere else. It also could
-                not do the things a real input does for free: no caret, no
-                select-all, no paste, no hardware keyboard on the desktop build,
-                and no dictation.
-
-                autoFocus so the keyboard arrives on open, which is what the pad
-                did by simply being there. */}
-            <div className="flex flex-col items-center pt-2 pb-6 shrink-0">
-              <input
-                type="text"
-                inputMode="decimal"
-                autoFocus
-                placeholder="0.00"
-                value={amountStr === '0' ? '' : amountStr}
-                onChange={moneyChangeHandler(setAmountStr)}
-                aria-label="Payment amount"
-                className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
-                  text-slate-900 dark:text-white outline-none
-                  placeholder-slate-200 dark:placeholder-slate-800"
-              />
-              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">
-                {isIOwe ? 'Paying' : 'Receiving'}
-              </p>
-            </div>
-
-            {paymentAmount > remaining && remaining > 0 && (
-              <p className="text-center text-xs text-amber-600 dark:text-amber-400 mb-3 -mt-1">
-                Cannot exceed remaining balance of {fmt(remaining)}
-              </p>
-            )}
-
-            {/* Account picker */}
-            <button
-              onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
-              className={[
-                'w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left mb-3',
-                'bg-white dark:bg-white/[0.05] transition-colors',
-                'active:bg-slate-50 dark:active:bg-white/[0.08]',
-                acctError && !account
-                  ? 'border border-red-300 dark:border-red-500/40'
-                  : 'border border-slate-200/80 dark:border-white/[0.08]',
-              ].join(' ')}
-            >
-              <span
-                className="w-5 h-5 rounded-md shrink-0"
-                style={{ backgroundColor: account?.color ?? '#cbd5e1' }}
-              />
-              <span className={`flex-1 text-sm ${account ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                {account?.name ?? (isIOwe ? 'Pay from account…' : 'Receive into account…')}
-              </span>
-              {account && (
-                <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
-                  {fmt(account.balance)}
-                </span>
-              )}
-              {acctError && !account && (
-                <span className="text-xs text-red-500 shrink-0">Required</span>
-              )}
-            </button>
-          </div>
-
-
-          {/* The keypad carried its own confirm, so losing it means the
-              sheet needs one. Full width and the app's accent, the same as
-              every other primary action. */}
+      {/* Sheet owns the overlay, the panel, the grab handle, the scroll lock,
+          Escape, the focus trap and the exit animation. */}
+      <Sheet
+        open={open}
+        onClose={onClose}
+        scrim={40}
+        /* Capped and scrollable, the same as the debt form sheet. The amount
+           is a real text input, so the OS keyboard comes up over the bottom
+           of the screen - a fixed-height panel would put the confirm button
+           underneath it. Sheet pins the button under the scrolling body, so
+           what gives way is the content rather than the action. */
+        maxHeight="92dvh"
+        /* No visible heading - the sheet opens from a debt row that already
+           names the contact, and the contact block below repeats it. This
+           names the dialog for a screen reader instead. */
+        ariaLabel={isIOwe ? 'Record payment' : 'Record receipt'}
+        footer={(
+          /* The keypad carried its own confirm, so losing it means the
+             sheet needs one. Full width and the app's accent, the same as
+             every other primary action. */
           <button
             onClick={onConfirmPress}
             disabled={isDisabled || saving}
-            className="w-full mt-4 py-[15px] rounded-2xl font-semibold text-[15px] text-white
+            className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
               bg-primary
               disabled:opacity-40 disabled:shadow-none
-              active:scale-[0.98] transition-all duration-100 shrink-0"
+              active:scale-[0.98] transition-all duration-100"
           >
             {saving
               ? 'Saving…'
               : isIOwe ? 'Record payment' : 'Record receipt'}
           </button>
+        )}
+      >
+        <div>
+          {/* Contact info */}
+          {debt && (
+            <div className="flex items-center gap-3 mb-5">
+              <div
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white text-sm font-bold shrink-0"
+                style={{ backgroundColor: avatarColor }}
+              >
+                {initials}
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
+                  {debt.contact ?? debt.name}
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                  Remaining:{' '}
+                  <span className="font-medium tabular-nums text-slate-600 dark:text-slate-300">
+                    {fmt(remaining)}
+                  </span>
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* ── Amount ──
+              The same field Add expense, Add inflow and Transfer use, down to
+              the class: one big centred `amount-input`, inputMode="decimal",
+              driven by moneyChangeHandler.
+
+              It replaced a bespoke 10-key pad. The pad looked deliberate, and
+              was the odd one out - every other place in the app where you type
+              money uses the system keyboard, so the one screen with its own
+              keypad taught a gesture that worked nowhere else. It also could
+              not do the things a real input does for free: no caret, no
+              select-all, no paste, no hardware keyboard on the desktop build,
+              and no dictation.
+
+              autoFocus so the keyboard arrives on open, which is what the pad
+              did by simply being there. */}
+          <div className="flex flex-col items-center pt-2 pb-6 shrink-0">
+            <input
+              type="text"
+              inputMode="decimal"
+              autoFocus
+              placeholder="0.00"
+              value={amountStr === '0' ? '' : amountStr}
+              onChange={moneyChangeHandler(setAmountStr)}
+              aria-label="Payment amount"
+              className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
+                text-slate-900 dark:text-white outline-none
+                placeholder-slate-200 dark:placeholder-slate-800"
+            />
+            <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">
+              {isIOwe ? 'Paying' : 'Receiving'}
+            </p>
+          </div>
+
+          {paymentAmount > remaining && remaining > 0 && (
+            <p className="text-center text-xs text-amber-600 dark:text-amber-400 mb-3 -mt-1">
+              Cannot exceed remaining balance of {fmt(remaining)}
+            </p>
+          )}
+
+          {/* Account picker */}
+          <button
+            onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
+            className={[
+              'w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left mb-3',
+              'bg-white dark:bg-white/[0.05] transition-colors',
+              'active:bg-slate-50 dark:active:bg-white/[0.08]',
+              acctError && !account
+                ? 'border border-red-300 dark:border-red-500/40'
+                : 'border border-slate-200/80 dark:border-white/[0.08]',
+            ].join(' ')}
+          >
+            <span
+              className="w-5 h-5 rounded-md shrink-0"
+              style={{ backgroundColor: account?.color ?? '#cbd5e1' }}
+            />
+            <span className={`flex-1 text-sm ${account ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
+              {account?.name ?? (isIOwe ? 'Pay from account…' : 'Receive into account…')}
+            </span>
+            {account && (
+              <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
+                {fmt(account.balance)}
+              </span>
+            )}
+            {acctError && !account && (
+              <span className="text-xs text-red-500 shrink-0">Required</span>
+            )}
+          </button>
         </div>
-      </div>
+      </Sheet>
 
       <AccountPickerSheet
         open={showAcctSheet}
@@ -1097,25 +1025,22 @@ export default function Debts() {
               {headline.sub}
             </p>
 
-            <div className="grid grid-cols-3 gap-2.5 mt-5">
-              {view === 'all' ? (
-                <>
-                  <StatTile label="I owe"      value={fmtCompact(totals.owe)}
-                    tone={totals.owe > 0 ? 'text-red-500 dark:text-red-400' : ''} />
-                  <StatTile label="Owed to me" value={fmtCompact(totals.owed)}
-                    tone={totals.owed > 0 ? 'text-emerald-600 dark:text-emerald-400' : ''} />
-                  <StatTile label="Overdue"    value={totals.overdue}
-                    tone={totals.overdue > 0 ? 'text-red-500 dark:text-red-400' : ''} />
-                </>
-              ) : (
-                <>
-                  <StatTile label="Overdue"   value={totals.overdue}
-                    tone={totals.overdue > 0 ? 'text-red-500 dark:text-red-400' : ''} />
-                  <StatTile label="This week" value={totals.dueWeek} />
-                  <StatTile label="Settled"   value={settled.length} />
-                </>
-              )}
-            </div>
+            <StatTrio
+              className="mt-5"
+              items={view === 'all' ? [
+                { label: 'I owe', value: fmtCompact(totals.owe),
+                  tone: totals.owe > 0 ? 'text-red-500 dark:text-red-400' : '' },
+                { label: 'Owed to me', value: fmtCompact(totals.owed),
+                  tone: totals.owed > 0 ? 'text-emerald-600 dark:text-emerald-400' : '' },
+                { label: 'Overdue', value: totals.overdue,
+                  tone: totals.overdue > 0 ? 'text-red-500 dark:text-red-400' : '' },
+              ] : [
+                { label: 'Overdue', value: totals.overdue,
+                  tone: totals.overdue > 0 ? 'text-red-500 dark:text-red-400' : '' },
+                { label: 'This week', value: totals.dueWeek },
+                { label: 'Settled', value: settled.length },
+              ]}
+            />
           </section>
 
           {/* ── Which side ── */}

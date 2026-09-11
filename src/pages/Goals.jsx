@@ -10,13 +10,14 @@ import { CSS } from '@dnd-kit/utilities'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
-import { useScrollLock } from '../hooks/useScrollLock'
 import { parseMoney, numToMoneyStr, moneyChangeHandler } from '../utils/moneyInput'
 import {
   allocateGoals, isFundable, GOAL_ICONS, nextRank, reRank, pace,
 } from '../lib/goals'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
+import Sheet from '../components/ui/Sheet'
+import StatTrio from '../components/ui/StatTrio'
 
 /**
  * Savings goals.
@@ -273,7 +274,6 @@ function AccountSplitRow({ name, split, isLast }) {
 
 function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
   const { showToast } = useToast()
-  const [closing, setClosing] = useState(false)
   const [name, setName] = useState('')
   const [icon, setIcon] = useState('🎯')
   const [target, setTarget] = useState('0')
@@ -281,7 +281,6 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
   const [targetDate, setTargetDate] = useState('')
   const [saving, setSaving] = useState(false)
   const [confirmDelete, setConfirmDelete] = useState(false)
-  useScrollLock(open)
 
   const isEdit = !!goal
 
@@ -308,11 +307,9 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
     }
   }, [open, goal])
 
-  function close() {
-    if (closing) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
-  }
+  /* Sheet owns the overlay, the panel, the handle, the scroll lock, Escape,
+     the focus trap and the exit animation. Closing is just onClose now - the
+     parent sets open to false and Sheet animates out. */
 
   const fundable = useMemo(() => (accounts ?? []).filter(isFundable), [accounts])
 
@@ -346,7 +343,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
         })
       }
       showToast(isEdit ? 'Goal updated' : 'Goal created')
-      close()
+      onClose()
     } catch (e) {
       console.error('[Goals] save failed:', e)
       showToast('Failed to save goal', 'error')
@@ -359,7 +356,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
     try {
       await db.goals.delete(goal.id)
       showToast('Goal deleted')
-      close()
+      onClose()
     } catch (e) {
       console.error('[Goals] delete failed:', e)
       showToast('Failed to delete goal', 'error')
@@ -379,7 +376,7 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
       // Archiving frees the money it was holding, which is the whole point -
       // say so, because the other goals' numbers are about to move.
       showToast(on ? 'Archived — its funding is freed up' : 'Goal restored')
-      close()
+      onClose()
     } catch (e) {
       console.error('[Goals] archive failed:', e)
       showToast('Failed to archive goal', 'error')
@@ -387,204 +384,204 @@ function GoalFormSheet({ open, goal, accounts, allGoals, onClose }) {
     }
   }
 
-  if (!open && !closing) return null
+  /* The actions are Sheet's `footer`, which pins them under the scrolling
+     body. They used to be the last thing inside a panel that scrolled as one
+     piece: on a short screen "Create goal" sat below the fold of a form long
+     enough to need scrolling in the first place.
+
+     Which set shows is the mode. The delete confirmation REPLACES the form's
+     actions rather than adding to them - while it is asking, the only two
+     answers are its own. */
+  const actions = confirmDelete ? (
+    <div className="flex gap-2">
+      <Button variant="outline" size="sm" className="flex-1"
+        onClick={() => setConfirmDelete(false)}>
+        Keep it
+      </Button>
+      <Button
+        variant="danger"
+        size="sm"
+        className="flex-1"
+        onClick={handleDelete} disabled={saving}
+      >
+        Delete
+      </Button>
+    </div>
+  ) : (
+    <div className="flex flex-col gap-2.5">
+      <Button block onClick={handleSave} disabled={!canSave}>
+        {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
+      </Button>
+
+      {isEdit && (
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" className="flex-1"
+            onClick={handleArchive} disabled={saving}>
+            {goal.archivedAt ? 'Restore' : 'Archive'}
+          </Button>
+          <Button variant="dangerTint" size="sm" className="flex-1"
+            onClick={() => setConfirmDelete(true)} disabled={saving}>
+            Delete
+          </Button>
+        </div>
+      )}
+    </div>
+  )
 
   return (
-    <div className="fixed inset-0 z-[100]">
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-slate-50 dark:bg-[#0d1117]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[88vh] flex flex-col',
-        ].join(' ')}
-      >
-        <div className="pt-5 px-5 pb-3 border-b border-slate-100 dark:border-white/[0.04] shrink-0">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">
-              {isEdit ? 'Edit goal' : 'New goal'}
-            </h3>
-            <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-              Cancel
-            </button>
+    /* 88vh as it was, in dvh - the form is long enough that the difference is
+       a whole field on a phone with the URL bar showing. A height also docks
+       the panel, which is what a sheet that means to scroll wants.
+
+       The header's "Cancel" is gone with the rest of the chrome: the scrim,
+       Escape and the handle all dismiss this now, and the footer's own
+       buttons are the ones that decide anything. */
+    <Sheet
+      open={open}
+      onClose={onClose}
+      title={isEdit ? 'Edit goal' : 'New goal'}
+      maxHeight="88dvh"
+      footer={actions}
+    >
+      <div className="py-4">
+
+        {confirmDelete ? (
+          <div className="py-2">
+            <p className="text-[15px] font-semibold text-slate-800 dark:text-white">
+              Delete “{goal?.name}”?
+            </p>
+            <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+              The goal goes; your money does not move. Nothing was ever taken
+              out of the account — a goal only ever described the balance.
+            </p>
           </div>
-        </div>
+        ) : (
+          <>
+            {/* Name */}
+            <label className="block">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                What are you saving for
+              </span>
+              <input
+                value={name}
+                onChange={e => setName(e.target.value)}
+                placeholder="Emergency fund"
+                maxLength={40}
+                className="mt-1.5 w-full px-3.5 py-3 rounded-2xl text-[15px]
+                  bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
+                  border border-slate-200 dark:border-white/[0.08]
+                  placeholder:text-slate-400 dark:placeholder:text-slate-600
+                  focus:outline-none focus:border-primary"
+              />
+            </label>
 
-        <div className="overflow-y-auto flex-1 px-5 py-4"
-          style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}>
-
-          {confirmDelete ? (
-            <div className="py-2">
-              <p className="text-[15px] font-semibold text-slate-800 dark:text-white">
-                Delete “{goal?.name}”?
-              </p>
-              <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-                The goal goes; your money does not move. Nothing was ever taken
-                out of the account — a goal only ever described the balance.
-              </p>
-              <div className="flex gap-2 mt-5">
-                <Button variant="outline" size="sm" className="flex-1"
-                  onClick={() => setConfirmDelete(false)}>
-                  Keep it
-                </Button>
-                <Button
-                  variant="danger"
-                  size="sm"
-                  className="flex-1"
-                  onClick={handleDelete} disabled={saving}
-                >
-                  Delete
-                </Button>
+            {/* Icon */}
+            <div className="mt-4">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Icon
+              </span>
+              <div className="mt-1.5 grid grid-cols-8 gap-1.5">
+                {GOAL_ICONS.map(g => (
+                  <button
+                    key={g}
+                    onClick={() => setIcon(g)}
+                    className={`aspect-square rounded-xl flex items-center justify-center text-[18px]
+                      active:scale-90 transition-transform duration-75 ${
+                        icon === g
+                          ? 'bg-primary/15 ring-2 ring-primary'
+                          : 'bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08]'
+                      }`}
+                    aria-label={g}
+                    aria-pressed={icon === g}
+                  >
+                    {g}
+                  </button>
+                ))}
               </div>
             </div>
-          ) : (
-            <>
-              {/* Name */}
-              <label className="block">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  What are you saving for
-                </span>
+
+            {/* Target */}
+            <label className="block mt-4">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Target amount
+              </span>
+              <div className="mt-1.5 flex items-center gap-2 px-3.5 py-3 rounded-2xl
+                bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08]
+                focus-within:border-primary">
+                <span className="text-[15px] font-semibold text-slate-400 dark:text-slate-500">₱</span>
                 <input
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  placeholder="Emergency fund"
-                  maxLength={40}
-                  className="mt-1.5 w-full px-3.5 py-3 rounded-2xl text-[15px]
-                    bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
-                    border border-slate-200 dark:border-white/[0.08]
-                    placeholder:text-slate-400 dark:placeholder:text-slate-600
-                    focus:outline-none focus:border-primary"
+                  value={target}
+                  onChange={moneyChangeHandler(setTarget)}
+                  inputMode="decimal"
+                  className="flex-1 min-w-0 bg-transparent text-[15px] tabular-nums
+                    text-slate-800 dark:text-white focus:outline-none"
                 />
-              </label>
-
-              {/* Icon */}
-              <div className="mt-4">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Icon
-                </span>
-                <div className="mt-1.5 grid grid-cols-8 gap-1.5">
-                  {GOAL_ICONS.map(g => (
-                    <button
-                      key={g}
-                      onClick={() => setIcon(g)}
-                      className={`aspect-square rounded-xl flex items-center justify-center text-[18px]
-                        active:scale-90 transition-transform duration-75 ${
-                          icon === g
-                            ? 'bg-primary/15 ring-2 ring-primary'
-                            : 'bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08]'
-                        }`}
-                      aria-label={g}
-                      aria-pressed={icon === g}
-                    >
-                      {g}
-                    </button>
-                  ))}
-                </div>
               </div>
+            </label>
 
-              {/* Target */}
-              <label className="block mt-4">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Target amount
-                </span>
-                <div className="mt-1.5 flex items-center gap-2 px-3.5 py-3 rounded-2xl
-                  bg-white dark:bg-white/[0.05] border border-slate-200 dark:border-white/[0.08]
-                  focus-within:border-primary">
-                  <span className="text-[15px] font-semibold text-slate-400 dark:text-slate-500">₱</span>
-                  <input
-                    value={target}
-                    onChange={moneyChangeHandler(setTarget)}
-                    inputMode="decimal"
-                    className="flex-1 min-w-0 bg-transparent text-[15px] tabular-nums
-                      text-slate-800 dark:text-white focus:outline-none"
-                  />
-                </div>
-              </label>
-
-              {/* Funding accounts */}
-              <div className="mt-4">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Funded by
-                </span>
-                <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
-                  Progress is read from these balances. Credit cards are not
-                  listed — a card holds debt, not savings.
+            {/* Funding accounts */}
+            <div className="mt-4">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Funded by
+              </span>
+              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1 leading-snug">
+                Progress is read from these balances. Credit cards are not
+                listed — a card holds debt, not savings.
+              </p>
+              {fundable.length === 0 ? (
+                <p className="text-[13px] text-amber-600 dark:text-amber-400 mt-2">
+                  You have no cash, e-wallet, bank or savings account yet.
                 </p>
-                {fundable.length === 0 ? (
-                  <p className="text-[13px] text-amber-600 dark:text-amber-400 mt-2">
-                    You have no cash, e-wallet, bank or savings account yet.
-                  </p>
-                ) : (
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {fundable.map(a => {
-                      const on = picked.includes(a.name)
-                      return (
-                        <button
-                          key={a.name}
-                          onClick={() => setPicked(p =>
-                            on ? p.filter(n => n !== a.name) : [...p, a.name])}
-                          aria-pressed={on}
-                          className={`px-3 py-2 rounded-xl text-[13px] font-medium
-                            active:scale-[0.96] transition-transform duration-75 ${
-                              on
-                                ? 'bg-primary text-white'
-                                : 'bg-white dark:bg-white/[0.05] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/[0.08]'
-                            }`}
-                        >
-                          {a.name}
-                          <span className={`ml-1.5 tabular-nums ${on ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>
-                            {fmtCompact(a.balance ?? 0)}
-                          </span>
-                        </button>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-
-              {/* Target date */}
-              <label className="block mt-4">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Target date <span className="normal-case font-normal text-slate-400 dark:text-slate-500">— optional</span>
-                </span>
-                <input
-                  type="date"
-                  value={targetDate}
-                  onChange={e => setTargetDate(e.target.value)}
-                  className="mt-1.5 w-full px-3.5 py-3 rounded-2xl text-[15px]
-                    bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
-                    border border-slate-200 dark:border-white/[0.08]
-                    focus:outline-none focus:border-primary"
-                />
-                <span className="block text-[12px] text-slate-500 dark:text-slate-400 mt-1.5">
-                  Adds a monthly figure to hit it on time.
-                </span>
-              </label>
-
-              <Button block className="mt-6" onClick={handleSave} disabled={!canSave}>
-                {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
-              </Button>
-
-              {isEdit && (
-                <div className="flex gap-2 mt-2.5 mb-2">
-                  <Button variant="outline" size="sm" className="flex-1"
-                    onClick={handleArchive} disabled={saving}>
-                    {goal.archivedAt ? 'Restore' : 'Archive'}
-                  </Button>
-                  <Button variant="dangerTint" size="sm" className="flex-1"
-                    onClick={() => setConfirmDelete(true)} disabled={saving}>
-                    Delete
-                  </Button>
+              ) : (
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {fundable.map(a => {
+                    const on = picked.includes(a.name)
+                    return (
+                      <button
+                        key={a.name}
+                        onClick={() => setPicked(p =>
+                          on ? p.filter(n => n !== a.name) : [...p, a.name])}
+                        aria-pressed={on}
+                        className={`px-3 py-2 rounded-xl text-[13px] font-medium
+                          active:scale-[0.96] transition-transform duration-75 ${
+                            on
+                              ? 'bg-primary text-white'
+                              : 'bg-white dark:bg-white/[0.05] text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-white/[0.08]'
+                          }`}
+                      >
+                        {a.name}
+                        <span className={`ml-1.5 tabular-nums ${on ? 'text-white/70' : 'text-slate-400 dark:text-slate-500'}`}>
+                          {fmtCompact(a.balance ?? 0)}
+                        </span>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
-            </>
-          )}
-        </div>
+            </div>
+
+            {/* Target date */}
+            <label className="block mt-4">
+              <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">
+                Target date <span className="normal-case font-normal text-slate-400 dark:text-slate-500">— optional</span>
+              </span>
+              <input
+                type="date"
+                value={targetDate}
+                onChange={e => setTargetDate(e.target.value)}
+                className="mt-1.5 w-full px-3.5 py-3 rounded-2xl text-[15px]
+                  bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
+                  border border-slate-200 dark:border-white/[0.08]
+                  focus:outline-none focus:border-primary"
+              />
+              <span className="block text-[12px] text-slate-500 dark:text-slate-400 mt-1.5">
+                Adds a monthly figure to hit it on time.
+              </span>
+            </label>
+          </>
+        )}
       </div>
-    </div>
+    </Sheet>
   )
 }
 
@@ -719,35 +716,24 @@ export default function Goals() {
               <GoalBar pct={alloc.totals.pct} complete={alloc.totals.pct >= 100} />
             </div>
 
-            <div className="grid grid-cols-3 gap-3 mt-5">
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Funded
-                </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-emerald-600 dark:text-emerald-400">
-                  {alloc.totals.complete} / {alloc.totals.count}
-                </p>
-              </div>
-              <div>
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Still to save
-                </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
-                  {fmtCompact(Math.max(0, alloc.totals.target - alloc.totals.saved))}
-                </p>
-              </div>
-              <div>
-                {/* Money in fundable accounts that no goal has claimed. Not
-                    "spare" - it is simply unspoken-for, which is a different
-                    and more useful thing to know. */}
-                <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">
-                  Unassigned
-                </p>
-                <p className="text-[15px] font-bold tabular-nums mt-0.5 text-slate-800 dark:text-slate-100">
-                  {fmtCompact(alloc.totals.unassigned)}
-                </p>
-              </div>
-            </div>
+            {/* "Unassigned" is money in fundable accounts that no goal has
+                claimed. Not "spare" - it is simply unspoken-for, which is a
+                different and more useful thing to know. */}
+            <StatTrio
+              className="mt-5"
+              items={[
+                {
+                  label: 'Funded',
+                  value: `${alloc.totals.complete} / ${alloc.totals.count}`,
+                  tone: 'text-emerald-600 dark:text-emerald-400',
+                },
+                {
+                  label: 'Still to save',
+                  value: fmtCompact(Math.max(0, alloc.totals.target - alloc.totals.saved)),
+                },
+                { label: 'Unassigned', value: fmtCompact(alloc.totals.unassigned) },
+              ]}
+            />
           </section>
 
           {/* ── The goals, in funding order ── */}
@@ -856,7 +842,14 @@ export default function Goals() {
         goal={editing}
         accounts={accounts}
         allGoals={goalRows}
-        onClose={() => { setFormOpen(false); setEditing(null) }}
+        /* `editing` is deliberately left alone here. The sheet's old close()
+           deferred onClose by 240ms, so clearing it landed AFTER the exit
+           animation; Sheet calls onClose the moment you dismiss, and clearing
+           it now would flip the title to "New goal" and drop the
+           Archive/Delete row halfway through the slide down. Every path that
+           opens the sheet sets it - null for a new goal, the row for an edit -
+           so a stale value can never be read. */
+        onClose={() => setFormOpen(false)}
       />
     </div>
   )

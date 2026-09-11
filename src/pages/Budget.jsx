@@ -12,6 +12,7 @@ import BudgetGauge from '../components/BudgetGauge'
 import CategoryGlyph from '../components/CategoryGlyph'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
+import StatTrio from '../components/ui/StatTrio'
 
 /**
  * The month's budget, in full.
@@ -390,38 +391,21 @@ export default function Budget() {
                 invisible columns under a symmetrical arc, so the row read as
                 three separate facts rather than one strip belonging to the
                 gauge above it. */}
-            <div className="grid grid-cols-3 gap-3 mt-5 text-center">
-              {/* Figure first, label under it. The labels are the same three
-                  words every month and the figures are the only part that
-                  changes, so leading with the label made the eye read three
-                  headings before reaching anything worth knowing. */}
-              <div>
-                <p className={`text-[17px] font-bold tabular-nums ${tone.textClass}`}>
-                  {fmtCompact(Math.abs(remaining))}
-                </p>
-                <p className="text-xs font-semibold mt-0.5 text-slate-500 dark:text-slate-400">
-                  {remaining >= 0 ? 'Remaining' : 'Over by'}
-                </p>
-              </div>
-              <div>
-                <p className="text-[17px] font-bold tabular-nums text-slate-800 dark:text-slate-100">
-                  {daysLeft}
-                </p>
-                <p className="text-xs font-semibold mt-0.5 text-slate-500 dark:text-slate-400">
-                  Days left
-                </p>
-              </div>
-              <div>
-                {/* The number that actually changes behaviour: what today's
-                    share of what is left looks like. */}
-                <p className="text-[17px] font-bold tabular-nums text-slate-800 dark:text-slate-100">
-                  {remaining > 0 ? fmtCompact(perDay) : '—'}
-                </p>
-                <p className="text-xs font-semibold mt-0.5 text-slate-500 dark:text-slate-400">
-                  A day
-                </p>
-              </div>
-            </div>
+            {/* The shape every page's stat row now uses - see ui/StatTrio.
+                "A day" is the number that actually changes behaviour: what
+                today's share of what is left looks like. */}
+            <StatTrio
+              className="mt-5"
+              items={[
+                {
+                  label: remaining >= 0 ? 'Remaining' : 'Over by',
+                  value: fmtCompact(Math.abs(remaining)),
+                  tone: tone.textClass,
+                },
+                { label: 'Days left', value: daysLeft },
+                { label: 'A day', value: remaining > 0 ? fmtCompact(perDay) : '—' },
+              ]}
+            />
           </section>
 
           {/* The "what is breaking" card was here. It named the categories
