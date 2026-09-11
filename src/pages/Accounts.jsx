@@ -875,7 +875,6 @@ export default function Accounts() {
           {(accounts ?? []).length > 1 && (
             <IconButton
               label="Sort accounts"
-              variant="tint"
               onClick={() => setSortOpen(true)}
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -884,7 +883,7 @@ export default function Accounts() {
               </svg>
             </IconButton>
           )}
-          <IconButton label="Add account" variant="primary" onClick={openAdd}>
+          <IconButton label="Add account" onClick={openAdd}>
             <IconPlus size={19} strokeWidth="2.5" />
           </IconButton>
         </div>

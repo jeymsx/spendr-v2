@@ -25,7 +25,7 @@ export default function SubPage({ title, action = null, onBack, children, classN
   const navigate = useNavigate()
   return (
     <div className={`pb-nav ${className}`}>
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
+      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         <IconButton label="Back" onClick={onBack ?? (() => navigate(-1))}>
           <IconChevronLeft />
         </IconButton>

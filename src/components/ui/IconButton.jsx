@@ -19,6 +19,18 @@ import { cx } from './cx'
  * and a 95% press, and a plain slate fill. Same control, same job, three
  * looks - so `surface` here is the neutral one that every subpage header
  * already used, and the two primary-tinted ones on Accounts join it.
+ *
+ * ── The glyph is white in dark mode, never the accent ──
+ *
+ * A header icon was three different colours depending on which page you were
+ * on: slate-300 on the sub-pages, white on a filled accent disc for every
+ * "+", and the accent itself on a washed accent disc for Settings and Sort.
+ * Three colours for one job, and the accent ones read as the loudest thing
+ * on a screen whose actual subject is a number.
+ *
+ * So the chip is quiet everywhere and the glyph is white. `primary` survives
+ * for the one case that earns it - a control whose accent fill means "this
+ * is ON", like the calendar toggle on Transactions - and not for chrome.
  */
 
 const PRESS = 'active:scale-90 transition-transform duration-75'
@@ -26,7 +38,8 @@ const PRESS = 'active:scale-90 transition-transform duration-75'
 const VARIANT = {
   /** The default: a raised neutral chip, for back and toolbar actions. */
   surface: 'bg-white text-slate-600 border border-slate-200/80 shadow-sm ' +
-    'dark:bg-white/[0.07] dark:text-slate-300 dark:border-white/[0.09]',
+    'dark:bg-primary/[0.10] dark:text-white dark:border-primary/[0.20] ' +
+    'dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
   /** Filled with the accent - an add button, a confirm. */
   primary: 'bg-primary text-white',
   /** A washed accent, for a secondary action that still wants the colour. */

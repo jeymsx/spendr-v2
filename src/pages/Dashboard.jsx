@@ -546,7 +546,12 @@ export default function Dashboard() {
     <div className="min-h-full pb-4">
 
       {/* ── Header ──────────────────────────────────────────────────────────── */}
-      <header className="flex items-center justify-between px-5 pt-safe-header pb-2">
+      {/* items-start, not items-center: this is the one header whose left
+          side is two lines, and centring the Settings chip against both of
+          them dropped it ~8px below where the same chip sits on every other
+          page. Aligned to the top, it lands on the same line as the back
+          button on Budget, Goals and the rest. */}
+      <header className="flex items-start justify-between px-5 pt-safe-header pb-2">
         <div>
           <h1 className="text-xl tracking-tight text-slate-500 dark:text-slate-400">
             {getGreeting()},{' '}
@@ -556,7 +561,7 @@ export default function Dashboard() {
           </h1>
           <ContextHint hint={getContextHint(txAll, budgetCategories, upcomingRecurring)} />
         </div>
-        <IconButton label="Settings" variant="tint" onClick={() => navigate('/settings')}>
+        <IconButton label="Settings" onClick={() => navigate('/settings')}>
           <IconSettings />
         </IconButton>
       </header>
@@ -829,12 +834,12 @@ function DashboardSkeleton() {
   return (
     <div className="min-h-full pb-4">
       {/* header */}
-      <div className="flex items-center justify-between px-5 pt-safe-header pb-2">
+      <div className="flex items-start justify-between px-5 pt-safe-header pb-2">
         <div className="flex flex-col gap-2">
           <Skel className="h-6 w-20" />
           <Skel className="h-4 w-36" />
         </div>
-        <Skel className="h-9 w-9 rounded-2xl" />
+        <Skel className="h-9 w-9 rounded-full" />
       </div>
 
       {/* net worth card */}

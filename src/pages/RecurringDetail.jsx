@@ -16,6 +16,7 @@ import {
 } from '../utils/recurring'
 import CategoryGlyph from '../components/CategoryGlyph'
 import IconButton from '../components/ui/IconButton'
+import Button from '../components/ui/Button'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -339,7 +340,7 @@ export default function RecurringDetail() {
   return (
     <div className="pb-nav">
       {/* ── Header: back, centred name, one door to editing ── */}
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
+      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         <IconButton label="Back to bills" onClick={back}>
           <IconChevronLeft />
         </IconButton>
@@ -348,14 +349,14 @@ export default function RecurringDetail() {
           {rec.name}
         </h1>
 
-        <button
+        <Button
+          variant="tint"
+          size="xs"
+          className="shrink-0 px-4"
           onClick={() => setFormOpen(true)}
-          className="px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0
-            text-primary bg-primary/[0.08] dark:bg-primary/[0.15]
-            active:bg-primary/[0.15] transition-colors"
         >
           Edit
-        </button>
+        </Button>
       </header>
 
       {/* ── The bill itself ──

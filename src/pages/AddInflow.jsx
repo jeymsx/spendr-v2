@@ -162,19 +162,19 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
     <div className="flex flex-col bg-transparent pb-6">
 
       {/* ── Header ── */}
-      <header className="flex items-center gap-3 px-4 pt-safe-header pb-2 shrink-0">
+      <header className="flex items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
         <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add inflow</h1>
-        <button
+        <Button
+          variant="tint"
+          size="xs"
+          className="shrink-0 px-3.5 gap-1.5"
           onClick={() => setShowTemplates(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold
-            text-primary bg-primary/[0.08] dark:bg-primary/[0.12]
-            border border-primary/20 active:scale-95 transition-transform duration-75"
         >
           <IconTemplate size={14} /> Templates
-        </button>
+        </Button>
       </header>
 
       {/* ── Amount ── */}

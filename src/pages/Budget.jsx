@@ -314,7 +314,7 @@ export default function Budget() {
   return (
     <div className="pb-10">
       {/* ── Header ── */}
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
+      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         {/* Back to wherever you came from - the dashboard card or Settings -
             with a fallback for the case where this page IS the first entry.
             See the hook. */}
@@ -332,7 +332,7 @@ export default function Budget() {
             Settings that opened a different screen about the same thing. */}
         <Button
           variant="tint"
-          size="sm"
+          size="xs"
           className="shrink-0 px-4"
           onClick={() => navigate('/settings/budgets')}
         >

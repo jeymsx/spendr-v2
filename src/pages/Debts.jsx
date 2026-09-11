@@ -988,14 +988,14 @@ export default function Debts() {
           The + is an icon and nothing else. It was a "＋ Add Debt" pill, which
           is the widest possible way to say a thing every other page in the app
           says in 36px. */}
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
+      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         <IconButton label="Back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           Debts
         </h1>
-        <IconButton label="New debt" variant="primary" onClick={openAdd}>
+        <IconButton label="New debt" onClick={openAdd}>
           <IconPlus />
         </IconButton>
       </header>

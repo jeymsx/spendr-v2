@@ -581,7 +581,7 @@ export default function AccountDetail() {
   return (
     <div className="pb-10">
       {/* ── Header: back, centred title, edit ── */}
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
+      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         <IconButton label="Back to accounts" onClick={back}>
           <IconChevronLeft />
         </IconButton>
@@ -592,27 +592,22 @@ export default function AccountDetail() {
 
         <div className="flex items-center gap-1.5 shrink-0">
           {account.qrImage && (
-            <button
-              onClick={() => setQrVisible(true)}
-              className="w-9 h-9 rounded-full flex items-center justify-center
-                text-emerald-500 dark:text-emerald-400 active:opacity-60 transition-opacity"
-              aria-label="Show payment QR"
-            >
+            <IconButton label="Show payment QR" onClick={() => setQrVisible(true)}>
               <IconQr />
-            </button>
+            </IconButton>
           )}
           {/* A page now, not a sheet - the form outgrew one, and it opens on
               the card rather than on a text field. The sheet below stays
               mounted, because adding a sub-account from here is a short
               create and belongs in one. */}
-          <button
+          <Button
+            variant="tint"
+            size="xs"
+            className="shrink-0 px-4"
             onClick={() => navigate(`/accounts/${account.id}/edit`)}
-            className="px-3 py-1.5 rounded-xl text-xs font-semibold
-              text-primary bg-primary/[0.08] dark:bg-primary/[0.15]
-              active:bg-primary/[0.15] transition-colors"
           >
             Edit
-          </button>
+          </Button>
         </div>
       </header>
 

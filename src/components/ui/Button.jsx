@@ -59,7 +59,7 @@ const VARIANT = {
     'dark:text-slate-400 dark:active:bg-white/[0.06]',
 }
 
-/* 40 / 44 / 48px tall, and those are exact rather than approximate: every
+/* 36 / 40 / 44 / 48px tall, and those are exact rather than approximate: every
    size states its line-height, so the height is padding + leading and not
    whatever line-height the button happened to inherit. `text-sm` already
    carries its own 20px leading, which is why md does not repeat it.
@@ -71,6 +71,14 @@ const VARIANT = {
    default cannot be too small. sm is 40 and is only for dismissive halves
    of a pair in dense rows. */
 const SIZE = {
+  /* 36px, which is the height of an IconButton chip - and that is the whole
+     reason it exists. A header row is chips plus, sometimes, one text action
+     ("Edit limits", "Templates", "Edit"). Those were 28px hand-rolled pills
+     on three pages and a 40px `sm` Button on Budget, and because the row is
+     items-center, the 40px one pushed the back chip 2px down: the same
+     control landed at a different height depending on which page you were
+     looking at. At 36 the row is exactly one chip tall everywhere. */
+  xs: 'py-2 text-[13px] leading-5',
   sm: 'py-2.5 text-[13px] leading-5',
   md: 'py-3 text-sm',
   lg: 'py-3.5 text-[15px] leading-5',

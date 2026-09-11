@@ -656,7 +656,7 @@ export default function Goals() {
   return (
     <div className="pb-10">
       {/* ── Header ── */}
-      <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
+      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         <IconButton label="Back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
         </IconButton>
@@ -665,7 +665,6 @@ export default function Goals() {
         </h1>
         <IconButton
           label="New goal"
-          variant="primary"
           onClick={() => { setEditing(null); setFormOpen(true) }}
         >
           <IconPlus />

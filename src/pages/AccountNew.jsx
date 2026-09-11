@@ -664,7 +664,7 @@ export default function AccountNew() {
           }}
           aria-hidden="true"
         />
-        <header className="relative flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
+        <header className="relative flex items-center gap-2 px-5 pt-safe-header pb-3 shrink-0">
           <IconButton
             label={step === 0 ? 'Back to accounts' : 'Previous step'}
             onClick={back}

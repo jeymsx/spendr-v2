@@ -1474,7 +1474,7 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
         <SubPage
           title="Categories"
           action={(
-            <IconButton label="New category" variant="primary" onClick={openAdd}>
+            <IconButton label="New category" onClick={openAdd}>
               <IconPlus />
             </IconButton>
           )}
@@ -2392,7 +2392,7 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
         <SubPage
           title="Quick templates"
           action={(
-            <IconButton label="New template" variant="primary" onClick={openAdd}>
+            <IconButton label="New template" onClick={openAdd}>
               <IconPlus />
             </IconButton>
           )}
