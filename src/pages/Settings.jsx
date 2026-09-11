@@ -24,7 +24,7 @@ import { useScrollLock } from '../hooks/useScrollLock'
 import { syncToSheets } from '../lib/sheetsSync'
 import { IconCheck, IconChevronRight, IconPlus, IconUpload,
   IconTick, IconWarning, IconTemplate, IconTransferUI } from '../components/icons'
-import CategoryGlyph from '../components/CategoryGlyph'
+import CategoryGlyph, { categoryIcon } from '../components/CategoryGlyph'
 import SegTabs from '../components/SegTabs'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
@@ -1856,6 +1856,15 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
             <div>
               <FieldLabel>Icon</FieldLabel>
+              {/* Worth saying out loud, because the preview below now shows
+                  the real thing and the two will disagree: a preset name has
+                  a drawn icon, and the emoji is what a custom name gets. */}
+              {categoryIcon({ name: name.trim() }) && (
+                <p className="-mt-1 mb-2 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
+                  “{name.trim()}” has its own icon. The emoji is the fallback
+                  if you rename it to something custom.
+                </p>
+              )}
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">
                 <div className="grid grid-cols-8 gap-1.5">
                   {EMOJI_OPTIONS.map(e => (
@@ -1890,9 +1899,18 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
             <div className="flex items-center gap-3 px-4 py-3 rounded-2xl
               bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">
-              <div className="w-10 h-10 rounded-2xl flex items-center justify-center text-[20px] shrink-0"
+              {/* The glyph this category will really have.
+
+                  CategoryGlyph reads the NAME: a preset name resolves to an
+                  SVG and anything else keeps the emoji. Printing the emoji
+                  here made the preview disagree with every other screen -
+                  type "Food" and the preview showed a box while the
+                  transaction list showed a fork and knife. Passing the draft
+                  as a category gets both cases right, including the one where
+                  the emoji is the answer. */}
+              <div className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
                 style={{ backgroundColor: color + '22' }}>
-                {icon}
+                <CategoryGlyph cat={{ name: name.trim(), color, icon }} size={20} />
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{name || 'Category Name'}</p>
@@ -1921,9 +1939,9 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
         {mode === 'confirm-delete' && (
           <div className="pt-6 pb-2">
             <div className="flex items-center justify-center gap-3 mb-6">
-              <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-[24px]"
+              <div className="w-12 h-12 rounded-2xl flex items-center justify-center"
                 style={{ backgroundColor: (category?.color ?? '#2D9DFF') + '22' }}>
-                {category?.icon ?? '📦'}
+                <CategoryGlyph cat={category} size={24} />
               </div>
               <p className="text-base font-semibold text-slate-800 dark:text-white">{category?.name}</p>
             </div>
@@ -1958,7 +1976,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
             <div className="flex items-center gap-3 mb-5 px-1">
               <div className="flex items-center gap-2 px-3 py-2 rounded-xl bg-red-50 dark:bg-red-500/10 border border-red-100 dark:border-red-500/20 flex-1 min-w-0">
-                <span className="text-base shrink-0">{category?.icon ?? '📦'}</span>
+                <span className="shrink-0"><CategoryGlyph cat={category} size={16} /></span>
                 <p className="text-xs font-semibold text-red-600 dark:text-red-400 truncate">{category?.name}</p>
               </div>
               <span className="text-slate-400 dark:text-slate-500 shrink-0 text-sm">→</span>
@@ -1995,9 +2013,9 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
                         ? 'ring-2 ring-primary/40 bg-primary/[0.06] dark:bg-primary/[0.12]'
                         : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.08]',
                     ].join(' ')}>
-                    <div className="w-9 h-9 rounded-xl flex items-center justify-center text-[18px] shrink-0"
+                    <div className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                       style={{ backgroundColor: (cat.color ?? '#2D9DFF') + '22' }}>
-                      {cat.icon ?? '📦'}
+                      <CategoryGlyph cat={cat} size={18} />
                     </div>
                     <p className="flex-1 text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
                     {reassignTarget?.id === cat.id && (
@@ -2268,7 +2286,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
                   className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
                     bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
                     active:bg-slate-50 dark:active:bg-white/[0.10] transition-colors">
-                  <span className="text-[20px] leading-none">{category?.icon ?? '🏷️'}</span>
+                  <span className="leading-none"><CategoryGlyph cat={category} size={20} emoji="🏷️" /></span>
                   <span className={`flex-1 text-sm ${category ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
                     {category?.name ?? 'Select category'}
                   </span>
