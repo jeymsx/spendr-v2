@@ -30,6 +30,8 @@ import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
 import Button from '../components/ui/Button'
+import Sheet from '../components/ui/Sheet'
+import SwatchRail from '../components/ui/SwatchRail'
 import IconButton from '../components/ui/IconButton'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
@@ -1634,8 +1636,6 @@ export function CategoriesPage() {
 
 function CategoryFormSheet({ open, onClose, category, defaultType, allCategories, startAtDelete, zIndex = 100 }) {
   const { showToast } = useToast()
-  const [closing,        setClosing]        = useState(false)
-  useScrollLock(open)
   const [saving,         setSaving]         = useState(false)
   const [mode,           setMode]           = useState('form')
   const [txCount,        setTxCount]        = useState(0)
@@ -1692,12 +1692,6 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
     const count = await db.transactions.where('category').equals(category.name).count()
     setTxCount(count)
     setMode(count > 0 ? 'reassign' : 'confirm-delete')
-  }
-
-  const close = () => {
-    if (saving) return
-    setClosing(true)
-    setTimeout(() => { setClosing(false); onClose() }, 240)
   }
 
   async function handleSave() {
@@ -1757,47 +1751,73 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
     }
   }
 
-  if (!open && !closing) return null
-
   const sheetTitle = {
     form:             isEdit ? 'Edit Category' : 'New Category',
     'confirm-delete': 'Delete Category',
     reassign:         'Reassign Transactions',
   }[mode]
 
+  /* One action row per mode, pinned by Sheet under the scrolling body.
+
+     They used to be the last thing inside each mode's block, so on a short
+     screen you scrolled past the icon grid to reach Save. And the header was
+     a sticky opaque bar with a border under it, which clipped the rows
+     passing beneath it on a hard straight line - the thing FadeScroller
+     exists to avoid, and which every sheet on the primitive now gets. */
+  const footer = {
+    form: (
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
+          Cancel
+        </Button>
+        <Button className="flex-[2]" onClick={handleSave} loading={saving}>
+          {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Category'}
+        </Button>
+      </div>
+    ),
+    'confirm-delete': (
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={() => setMode('form')} disabled={saving}>
+          Keep It
+        </Button>
+        <Button variant="danger" className="flex-[2]" onClick={handleDeleteDirect} loading={saving}>
+          {saving ? 'Deleting…' : 'Delete Category'}
+        </Button>
+      </div>
+    ),
+    reassign: (
+      <div className="flex gap-3">
+        <Button variant="secondary" className="flex-1" onClick={() => setMode('form')} disabled={saving}>
+          Cancel
+        </Button>
+        <Button
+          variant="danger"
+          className="flex-[2]"
+          onClick={handleReassignAndDelete}
+          loading={saving}
+          disabled={!reassignTarget || reassignOptions.length === 0}
+        >
+          {saving ? 'Moving…' : 'Reassign & Delete'}
+        </Button>
+      </div>
+    ),
+  }[mode]
+
   return (
-    <div className="fixed inset-0" style={{ zIndex, touchAction: 'none' }}>
-      <div className="sheet-overlay absolute inset-0 bg-black/45 backdrop-blur-sm" onClick={close} />
-      <div
-        className={[
-          closing ? 'sheet-panel-exit' : 'sheet-panel',
-          'absolute bottom-0 inset-x-0 rounded-t-[28px]',
-          'bg-white dark:bg-[#111820]',
-          'border-t border-slate-100 dark:border-white/[0.07]',
-          'max-h-[92vh] overflow-y-auto',
-        ].join(' ')}
-        style={{ touchAction: 'pan-y', overscrollBehavior: 'contain' }}
-      >
-        {/* Header */}
-        <div className="sticky top-0 pt-5 px-5 pb-3 bg-white dark:bg-[#111820] z-10 border-b border-slate-50 dark:border-white/[0.04]">
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mb-4" />
-          <div className="flex items-center justify-between">
-            <h3 className="text-base font-semibold text-slate-800 dark:text-white">{sheetTitle}</h3>
-            {mode === 'form' && isEdit && (
-              <button onClick={runDeleteCheck}
-                className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
-                  bg-red-50 dark:bg-red-500/10 active:bg-red-100 dark:active:bg-red-500/20 transition-colors">
-                Delete
-              </button>
-            )}
-            {mode !== 'form' && (
-              <button onClick={() => setMode('form')} disabled={saving}
-                className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-                Cancel
-              </button>
-            )}
-          </div>
-        </div>
+    <Sheet
+      open={open}
+      onClose={onClose}
+      z={zIndex}
+      dismissible={!saving}
+      title={sheetTitle}
+      titleAction={mode === 'form' && isEdit ? (
+        <Button variant="dangerTint" size="sm" className="px-4" onClick={runDeleteCheck}>
+          Delete
+        </Button>
+      ) : null}
+      footer={footer}
+    >
+      <div>
 
         {/* Form mode */}
         {mode === 'form' && (
@@ -1855,16 +1875,17 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             </div>
 
             <div>
+              {/* The same rail the card designer uses. This was eight rounded
+                  rectangles stretched to fill the row and ticked with a white
+                  check - the same job as the card's colour row, drawn as a
+                  different object two screens away. */}
               <FieldLabel>Color</FieldLabel>
-              <div className="flex gap-3">
-                {CAT_COLORS.map(c => (
-                  <button key={c} onClick={() => setColor(c)}
-                    className="flex-1 h-10 rounded-xl flex items-center justify-center active:scale-90 transition-transform duration-75 shadow-sm"
-                    style={{ backgroundColor: c }}>
-                    {color === c && <IconCheck size={13} strokeWidth="3" stroke="white" />}
-                  </button>
-                ))}
-              </div>
+              <SwatchRail
+                colors={CAT_COLORS}
+                value={color}
+                onChange={setColor}
+                ariaLabel="Category colour"
+              />
             </div>
 
             <div className="flex items-center gap-3 px-4 py-3 rounded-2xl
@@ -1893,18 +1914,6 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               )}
             </div>
 
-            <div className="flex gap-3 pt-1">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={close} disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-                {saving ? 'Saving…' : isEdit ? 'Save Changes' : 'Add Category'}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -1928,22 +1937,6 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
             )}
             <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-1">Permanently delete this category?</p>
             <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-7">No transactions are using it. This cannot be undone.</p>
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setMode('form')} disabled={saving}
-              >
-                Keep It
-              </Button>
-              <Button
-                variant="danger"
-                className="flex-[2]"
-                onClick={handleDeleteDirect} disabled={saving}
-              >
-                {saving ? 'Deleting…' : 'Delete Category'}
-              </Button>
-            </div>
           </div>
         )}
 
@@ -2017,27 +2010,10 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               </div>
             )}
 
-            <div className="flex gap-3">
-              <Button
-                variant="secondary"
-                className="flex-1"
-                onClick={() => setMode('form')} disabled={saving}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                className="flex-[2]"
-                onClick={handleReassignAndDelete} disabled={saving || !reassignTarget || reassignOptions.length === 0}
-              >
-                {saving ? 'Moving…' : 'Reassign & Delete'}
-              </Button>
-            </div>
           </div>
         )}
-        <div className="h-8" />
       </div>
-    </div>
+    </Sheet>
   )
 }
 

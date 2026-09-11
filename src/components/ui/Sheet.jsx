@@ -77,6 +77,13 @@ export default function Sheet({
   onClose,
   /** Heading text. Also the sheet's accessible name, via aria-labelledby. */
   title = null,
+  /**
+   * A control on the title's right - a Delete, a Cancel out of a sub-mode.
+   * A separate slot rather than part of `title` so the heading element holds
+   * text only: put a button inside the h3 and its label becomes part of the
+   * dialog's accessible name.
+   */
+  titleAction = null,
   /** When there is no visible title, name the dialog for screen readers. */
   ariaLabel = null,
   /** Pinned under the body - a row of actions that must stay reachable. */
@@ -162,7 +169,7 @@ export default function Sheet({
     const natural = (el.clientHeight - body.clientHeight) + body.scrollHeight
     const room = window.innerHeight - FLOAT_TOP_MIN - FLOAT_GAP
     setDocked(prev => prev || natural > room)
-  }, [open, children, footer])
+  }, [open, children, footer, titleAction])
 
   /* Focus in on open, and back where it came from on close. Without this a
      screen reader stays parked on the button that opened the sheet and a
@@ -254,12 +261,12 @@ export default function Sheet({
         )}
 
         {title && (
-          <h3
-            id={titleId}
-            className="shrink-0 px-5 pb-3 text-[17px] font-semibold text-slate-900 dark:text-white"
-          >
-            {title}
-          </h3>
+          <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-3">
+            <h3 id={titleId} className="text-[17px] font-semibold text-slate-900 dark:text-white">
+              {title}
+            </h3>
+            {titleAction}
+          </div>
         )}
 
         <FadeScroller
