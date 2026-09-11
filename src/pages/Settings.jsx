@@ -31,6 +31,7 @@ import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
 import Button from '../components/ui/Button'
 import Sheet from '../components/ui/Sheet'
+import Field from '../components/ui/Field'
 import SwatchRail from '../components/ui/SwatchRail'
 import IconButton from '../components/ui/IconButton'
 
@@ -317,9 +318,18 @@ function inputClass(error = false) {
   ].join(' ')
 }
 
+/**
+ * The caption over a GROUP - a segmented control, an icon grid, a colour rail.
+ *
+ * Text fields do not use this any more; they carry their label in a notch in
+ * their own border (see ui/Field). What is left here labels things a notch
+ * cannot go round, and it is sentence case at 12px rather than 11px uppercase
+ * with widest tracking: three of those stacked down a form was the look being
+ * complained about, and shouting was most of it.
+ */
 function FieldLabel({ children }) {
   return (
-    <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-1.5 px-1">
+    <p className="text-[12px] font-medium text-slate-400 dark:text-slate-500 mb-2 px-1">
       {children}
     </p>
   )
@@ -1822,12 +1832,14 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
         {/* Form mode */}
         {mode === 'form' && (
           <div className="pt-5 pb-2 flex flex-col gap-5">
-            <div>
-              <FieldLabel>Category Name</FieldLabel>
-              <input value={name} onChange={e => { setName(e.target.value); setNameError(false) }}
-                placeholder="e.g. Groceries" maxLength={30} className={inputClass(nameError)} />
-              {nameError && <p className="text-xs text-red-500 mt-1.5 px-1">Name is required</p>}
-            </div>
+            <Field
+              label="Category name"
+              value={name}
+              onChange={e => { setName(e.target.value); setNameError(false) }}
+              placeholder="e.g. Groceries"
+              maxLength={30}
+              error={nameError ? 'Name is required' : null}
+            />
 
             <div>
               <FieldLabel>Type</FieldLabel>
@@ -1921,16 +1933,17 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               </div>
             </div>
 
-            <div>
-              <FieldLabel>Monthly Budget (optional)</FieldLabel>
-              <input type="text" inputMode="decimal" value={budget === '0' ? '' : budget}
-                onChange={moneyChangeHandler(setBudget)} placeholder="0 = no budget" className={inputClass()} />
-              {parseMoney(budget) > 0 && (
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 px-1">
-                  Spending alerts when you approach {fmt(parseMoney(budget))} this month
-                </p>
-              )}
-            </div>
+            <Field
+              label="Monthly budget"
+              type="text"
+              inputMode="decimal"
+              value={budget === '0' ? '' : budget}
+              onChange={moneyChangeHandler(setBudget)}
+              placeholder="Optional — 0 means no budget"
+              hint={parseMoney(budget) > 0
+                ? `Spending alerts when you approach ${fmt(parseMoney(budget))} this month`
+                : null}
+            />
 
           </div>
         )}
