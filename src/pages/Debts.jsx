@@ -3,9 +3,11 @@ import { useSearchParams, useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import AccountPickerSheet from '../components/AccountPickerSheet'
+import AccountSelectRow from '../components/AccountSelectRow'
 import SegTabs from '../components/SegTabs'
 import { RowGroup, EditRow, RowInput, RowDate } from '../components/FormRows'
 import { useAuth } from '../context/AuthContext'
@@ -632,6 +634,9 @@ export function PaymentSheet({ open, onClose, debt }) {
   const [saving,        setSaving]        = useState(false)
 
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], [])
+  /* A credit card's balance is what you OWE, so the row shows headroom
+     instead. Derived from the ledger, which is why it is passed in. */
+  const creditAvailMap = useCreditAvailMap(accounts)
 
   useEffect(() => {
     // Hydrate-on-open. The sheet renders null when closed but stays
@@ -790,34 +795,25 @@ export function PaymentSheet({ open, onClose, debt }) {
             </p>
           )}
 
-          {/* Account picker */}
-          <button
-            onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
-            className={[
-              'w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left mb-3',
-              'bg-white dark:bg-white/[0.05] transition-colors',
-              'active:bg-slate-50 dark:active:bg-white/[0.08]',
-              acctError && !account
-                ? 'border border-red-300 dark:border-red-500/40'
-                : 'border border-slate-200/80 dark:border-white/[0.08]',
-            ].join(' ')}
-          >
-            <span
-              className="w-5 h-5 rounded-md shrink-0"
-              style={{ backgroundColor: account?.color ?? '#cbd5e1' }}
+          {/* The same field as the expense, inflow and transfer forms: the
+              card, the name, the balance under it, a Choose chip. It used to
+              be a 20px colour square and the balance floated where the
+              chevron belongs, so the row never looked tappable.
+
+              The label is just "Select account". The direction was in the
+              placeholder - "Pay from account…" / "Receive into account…" -
+              but the hero two rows up already says Paying or Receiving, so
+              that was the same word twice. It survives as the aria-label,
+              which is the one reader that cannot see the hero. */}
+          <div className="mb-3">
+            <AccountSelectRow
+              account={account}
+              creditAvailable={account ? creditAvailMap?.[account.name] : null}
+              error={acctError}
+              ariaLabel={isIOwe ? 'Pay from' : 'Receive into'}
+              onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
             />
-            <span className={`flex-1 text-sm ${account ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-              {account?.name ?? (isIOwe ? 'Pay from account…' : 'Receive into account…')}
-            </span>
-            {account && (
-              <span className="text-xs text-slate-400 dark:text-slate-500 tabular-nums shrink-0">
-                {fmt(account.balance)}
-              </span>
-            )}
-            {acctError && !account && (
-              <span className="text-xs text-red-500 shrink-0">Required</span>
-            )}
-          </button>
+          </div>
         </div>
       </Sheet>
 

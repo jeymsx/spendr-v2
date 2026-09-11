@@ -134,6 +134,14 @@ function GoalRow({ goal, onEdit, today }) {
   const p = pace(goal, today)
   const dateLabel = fmtTargetDate(goal.targetDate)
 
+  /* The right-hand half of that line. Null when there is no date, so an
+     undated goal says nothing there rather than padding the row. */
+  const note =
+    p && !p.done && p.overdue ? { text: `${fmtCompact(goal.remaining)} short · ${dateLabel} passed`, tone: 'text-red-500 dark:text-red-400' }
+    : p && !p.done            ? { text: `${fmtCompact(p.perMonth)}/mo · ${dateLabel}`,               tone: 'text-slate-400 dark:text-slate-500' }
+    : p?.done && dateLabel    ? { text: `Ahead of ${dateLabel}`,                                     tone: 'text-emerald-600 dark:text-emerald-400' }
+    : null
+
   return (
     <div
       ref={setNodeRef}
@@ -187,39 +195,34 @@ function GoalRow({ goal, onEdit, today }) {
             <GoalBar pct={goal.pct} complete={goal.complete} />
           </div>
 
-          <div className="flex items-baseline justify-between gap-3 mt-2">
-            <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate min-w-0">
+          {/* One line under the bar. It was four.
+
+              The percentage went first - the bar draws it and the two figures
+              above it state it, so a third copy in words was the row telling
+              you one ratio three ways. "Attach an account and this starts
+              tracking itself" went next: it sat directly under "No account
+              attached", which is the same sentence twice, so the warning
+              became the COLOUR of that line instead of a line of its own.
+              And the pace note moved up beside it, because a rate and a
+              deadline are two numbers rather than a sentence - "₱1.8K a month
+              to reach it by Jun 2027" is how a report reads, "₱1.8K/mo · Jun
+              2027" is how an app does. */}
+          <div className="flex items-baseline justify-between gap-2 mt-2">
+            <span className={`text-[11px] truncate min-w-0 ${
+              goal.linkedCount === 0
+                ? 'text-amber-600 dark:text-amber-400'
+                : 'text-slate-500 dark:text-slate-400'
+            }`}>
               {goal.linkedCount === 0
                 ? 'No account attached'
                 : (goal.accounts ?? []).join(' · ')}
             </span>
-            <span className="text-[11px] tabular-nums shrink-0 text-slate-400 dark:text-slate-500">
-              {Math.round(goal.pct)}%
-            </span>
+            {note && (
+              <span className={`text-[11px] tabular-nums shrink-0 ${note.tone}`}>
+                {note.text}
+              </span>
+            )}
           </div>
-
-          {/* The line that changes behaviour: what it costs per month to
-              actually land on the date. Only shown when there is a date and
-              something still to save. */}
-          {p && !p.done && (
-            <p className={`text-[11px] mt-1.5 tabular-nums ${
-              p.overdue ? 'text-red-500 dark:text-red-400' : 'text-slate-500 dark:text-slate-400'
-            }`}>
-              {p.overdue
-                ? `${fmtCompact(goal.remaining)} short, and ${dateLabel} has passed`
-                : `${fmtCompact(p.perMonth)} a month to reach it by ${dateLabel}`}
-            </p>
-          )}
-          {p?.done && dateLabel && (
-            <p className="text-[11px] mt-1.5 text-emerald-600 dark:text-emerald-400">
-              Funded, ahead of {dateLabel}
-            </p>
-          )}
-          {goal.linkedCount === 0 && (
-            <p className="text-[11px] mt-1.5 text-amber-600 dark:text-amber-400">
-              Attach an account and this starts tracking itself
-            </p>
-          )}
         </button>
       </div>
     </div>
@@ -774,7 +777,7 @@ export default function Goals() {
               <SectionLabel
                 inset="gutter"
                 gap="loose"
-                hint="Top of the list is funded first. Drag the handle to change who gets the money."
+                hint="Top of the list is funded first."
               >
                 In funding order
               </SectionLabel>
@@ -806,11 +809,12 @@ export default function Goals() {
           {/* ── Reconciliation ── */}
           {splitEntries.length > 0 && (
             <section className="mt-7">
-              <SectionLabel
-                inset="gutter"
-                gap="loose"
-                hint="Every peso counted once. What is left over is money no goal has claimed."
-              >
+              {/* No hint. It used to read "Every peso counted once. What is
+                  left over is money no goal has claimed." - which is now the
+                  last row of this card, as a figure, with the accounts it
+                  belongs to counted. A sentence promising what the next card
+                  shows is a sentence the card makes redundant. */}
+              <SectionLabel inset="gutter" gap="loose">
                 Where it comes from
               </SectionLabel>
               <div className="px-5">
