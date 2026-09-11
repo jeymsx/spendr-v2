@@ -41,6 +41,7 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import Sheet from '../components/ui/Sheet'
 import Card from '../components/ui/Card'
+import { fieldFrame } from '../components/ui/Field'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
@@ -163,17 +164,24 @@ export function typeIcon(type) {
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────
 
+/**
+ * The account form's eight text inputs, wearing the app's field.
+ *
+ * This was a private recipe: 48px tall at radius 16, a white/6% dark fill, a
+ * white/9% hairline and a focus ring - none of which matched the capsule
+ * every other form in the app uses, and all of which had to be kept in step
+ * with it by hand. It is fieldFrame now, which owns the height, the fill, the
+ * hairline and the invalid state in one place.
+ *
+ * `block` replaces the frame's flex, because these are bare inputs rather
+ * than a row with a glyph in it; everything else comes through untouched.
+ */
 function inputClass(error = false) {
   return [
-    'w-full h-[48px] px-4 rounded-2xl text-sm font-medium',
-    'text-slate-800 dark:text-white',
-    'bg-white dark:bg-white/[0.06]',
-    error
-      ? 'border border-red-300 dark:border-red-500/40'
-      : 'border border-slate-200/80 dark:border-white/[0.09]',
-    'placeholder-slate-400 dark:placeholder-slate-500',
-    'outline-none focus:ring-2 focus:ring-primary/30',
-    'shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none',
+    fieldFrame(error).replace('flex items-center gap-3', 'block w-full'),
+    'text-sm font-medium text-slate-800 dark:text-white',
+    'placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal',
+    'outline-none',
   ].join(' ')
 }
 
@@ -1494,9 +1502,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const isPage = variant === 'page'
   const { showToast } = useToast()
   const [saving,     setSaving]     = useState(false)
-  const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete' | 'adjust'
+  const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete'
   const [deleteBlocked, setDeleteBlocked] = useState(null)
-  const [adjustBal,  setAdjustBal]  = useState('0')
 
   /* No scroll lock of its own any more, and no condition to get wrong.
 
@@ -1686,11 +1693,43 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               })
             }
           }
+
+          /* The balance correction, inside the same transaction as the rename
+             above and deliberately after it: the rename has already moved
+             every row onto cleanName, so this one is written against the name
+             the account now has rather than the one it had when the form
+             opened. Either both land or neither does.
+
+             The row is an ordinary inflow or expense, not a special kind:
+             the balance IS the ledger, so the only honest way to change it is
+             to add the movement that explains the difference. */
+          if (adjustDiff !== 0) {
+            const now = new Date()
+            const nowISO = now.toISOString()
+            await db.transactions.add({
+              txId:        crypto.randomUUID(),
+              type:        adjustDiff > 0 ? 'inflow' : 'expense',
+              date:        nowISO,
+              description: 'Balance adjustment',
+              category:    adjustDiff > 0 ? 'Income' : 'Others',
+              account:     cleanName,
+              amount:      Math.abs(adjustDiff),
+              synced:      UNSYNCED,
+              updatedAt:   nowISO,
+            })
+            const newBal = parseMoney(startingBal)
+            await db.accounts.update(account.id, { balance: newBal, updatedAt: nowISO })
+            await db.balances.put({ account: cleanName, balance: newBal })
+          }
         })
       } else {
         await createAccount(data, parseMoney(startingBal))
       }
-      showToast(isEdit ? 'Account updated' : 'Account created')
+      showToast(
+        !isEdit ? 'Account created'
+        : adjustDiff !== 0 ? `Balance corrected to ${fmt(parseMoney(startingBal))}`
+        : 'Account updated',
+      )
       close()
     } catch (e) {
       console.error('[AccountForm] save failed:', e)
@@ -1738,42 +1777,6 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
     }
   }
 
-  async function handleAdjust() {
-    const newBal     = parseMoney(adjustBal)
-    const currentBal = account?.balance ?? 0
-    const diff       = newBal - currentBal
-    if (diff === 0) return
-    setSaving(true)
-    try {
-      const now    = new Date()
-      const txDate = new Date(now.getFullYear(), now.getMonth(), now.getDate(),
-                              now.getHours(), now.getMinutes(), now.getSeconds())
-      const dateISO = txDate.toISOString()
-      const updISO  = now.toISOString()
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
-        await db.transactions.add({
-          txId:        crypto.randomUUID(),
-          type:        diff > 0 ? 'inflow' : 'expense',
-          date:        dateISO,
-          description: 'Balance adjustment',
-          category:    diff > 0 ? 'Income' : 'Others',
-          account:     account.name,
-          amount:      Math.abs(diff),
-          synced:      UNSYNCED,
-          updatedAt:   updISO,
-        })
-        await db.accounts.update(account.id, { balance: newBal, updatedAt: updISO })
-        await db.balances.put({ account: account.name, balance: newBal })
-      })
-      showToast(`Balance adjusted to ${fmt(newBal)}`)
-      close()
-    } catch (e) {
-      console.error('[AccountForm] adjust failed:', e)
-      showToast('Failed to adjust balance', 'error')
-      setSaving(false)
-    }
-  }
-
   const isParentItself = (allAccounts ?? []).some(a => a.parentName === account?.name)
   const potentialParents = (allAccounts ?? []).filter(a =>
     !a.parentName && a.type !== 'credit' && a.name !== name
@@ -1787,7 +1790,11 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   /* Hoisted out of the adjust block, which used to be an IIFE: the Apply
      button is Sheet's footer now, and it needs the same difference the
      preview inside the body shows. */
-  const adjustDiff = parseMoney(adjustBal) - (account?.balance ?? 0)
+  /* What saving will write, if anything. Zero for a new account and for a
+     credit card, neither of which shows the field. */
+  const adjustDiff = isEdit && type !== 'credit'
+    ? parseMoney(startingBal) - (account?.balance ?? 0)
+    : 0
 
   /* The delete confirmation's content, defined once.
 
@@ -1847,22 +1854,6 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
      component. */
   const inner = (
     <>
-        {/* Page only. SubPage has already drawn the title and the back
-            button, so this row keeps only the action - and in the sheet the
-            heading, the grab handle and the same controls are Sheet's own
-            `title`, `handle` and `titleAction`. */}
-        {isPage && mode === 'form' && isEdit && type !== 'credit' && (
-          <div className="px-5 pb-1 flex items-center justify-end">
-            <button
-              onClick={() => { setAdjustBal(numToMoneyStr(account?.balance ?? 0)); setMode('adjust') }}
-              className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
-                bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
-            >
-              Adjust balance
-            </button>
-          </div>
-        )}
-
         {/* ── Form mode ──
             Still rendered under the page's delete modal: the account has not
             been deleted, so the form has no business disappearing. */}
@@ -2045,10 +2036,28 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               </div>
             )}
 
-            {/* Starting balance — add mode only */}
-            {!isEdit && (
+{/* The balance, in both modes.
+
+                Editing it used to mean leaving: an "Adjust balance" pill in
+                the corner swapped the whole form for a second screen with a
+                read-only "Current balance" card, one input, and its own
+                Cancel and Apply pair. Three of those four things were already
+                on the form you came from, and the fourth is a number you
+                type - which is a field, not a screen.
+
+                So it is a field. What makes it safe to edit directly is the
+                line underneath: the balance is not a number the app stores
+                for you, it is the sum of your ledger, and correcting it
+                WRITES a transaction. Saying so as you type is the whole
+                design - the old screen said it too, but only after you had
+                committed to going there.
+
+                Not for credit cards: what they owe comes off the statement
+                and the ledger, and typing over it would be a fiction. The
+                old pill was hidden for them too. */}
+            {(!isEdit || type !== 'credit') && (
               <div>
-                <SectionLabel>Starting balance</SectionLabel>
+                <SectionLabel>{isEdit ? 'Balance' : 'Starting balance'}</SectionLabel>
                 <input
                   type="text"
                   inputMode="decimal"
@@ -2057,6 +2066,17 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   placeholder="0.00"
                   className={inputClass(false)}
                 />
+                {isEdit && adjustDiff !== 0 && (
+                  <p className={`mt-2 px-1 text-[12px] font-medium ${
+                    adjustDiff > 0
+                      ? 'text-emerald-600 dark:text-emerald-400'
+                      : 'text-red-500 dark:text-red-400'
+                  }`}>
+                    {adjustDiff > 0
+                      ? `Records a ${fmt(adjustDiff)} inflow to correct the balance`
+                      : `Records a ${fmt(Math.abs(adjustDiff))} expense to correct the balance`}
+                  </p>
+                )}
               </div>
             )}
 
@@ -2247,67 +2267,6 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
           </div>
         )}
 
-        {/* ── Adjust balance mode ── */}
-        {mode === 'adjust' && (
-          <div className="px-5 pt-5 pb-2 flex flex-col gap-4">
-            {/* Current balance pill */}
-            <Card surface="recessed" className="px-4 py-3.5">
-              <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-1">
-                Current balance
-              </p>
-              <p className="text-2xl font-bold tabular-nums text-slate-900 dark:text-white">
-                {fmt(account?.balance ?? 0)}
-              </p>
-            </Card>
-
-            {/* New balance input */}
-            <div>
-              <SectionLabel>Correct balance</SectionLabel>
-              <input
-                type="text"
-                inputMode="decimal"
-                value={adjustBal === '0' ? '' : adjustBal}
-                onChange={moneyChangeHandler(setAdjustBal)}
-                placeholder="0.00"
-                className={inputClass()}
-                autoFocus
-              />
-            </div>
-
-            {/* Difference preview */}
-            {adjustDiff !== 0 && (
-              <div className={`px-4 py-3 rounded-2xl text-sm font-medium ${
-                adjustDiff > 0
-                  ? 'bg-emerald-50 dark:bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
-                  : 'bg-red-50 dark:bg-red-500/10 text-red-600 dark:text-red-400'
-              }`}>
-                {adjustDiff > 0
-                  ? `+${fmt(adjustDiff)} will be recorded as an inflow`
-                  : `${fmt(Math.abs(adjustDiff))} will be recorded as an expense`}
-              </div>
-            )}
-
-            {/* Page only - in the sheet this pair is Sheet's footer. */}
-            {isPage && (
-              <div className="flex gap-3 pt-1">
-                <Button
-                  variant="secondary"
-                  className="flex-1"
-                  onClick={() => setMode('form')} disabled={saving}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  className="flex-[2]"
-                  onClick={handleAdjust} disabled={saving || adjustDiff === 0}
-                >
-                  {saving ? 'Adjusting…' : 'Apply adjustment'}
-                </Button>
-              </div>
-            )}
-          </div>
-        )}
-
         {/* ── Confirm delete mode ──
             The heading came out of the panel header and into the body: it is
             centred and topped with the trash icon, which is not what Sheet's
@@ -2331,41 +2290,22 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   /* The sheet's chrome, by mode. On a page none of it applies - SubPage
      carries the title and Back, and the buttons stay in the body. */
   const sheetTitle =
-    mode === 'form'     ? (isEdit ? 'Edit account' : 'New account')
-    : mode === 'adjust' ? 'Adjust balance'
+    mode === 'form' ? (isEdit ? 'Edit account' : 'New account')
     /* confirm-delete keeps its centred, icon-topped heading in the body, so
        the dialog takes its name from ariaLabel instead. */
     : null
 
   const sheetTitleAction =
     mode === 'form' && isEdit ? (
-      <div className="flex items-center gap-2">
-        {type !== 'credit' && (
-          <button
-            onClick={() => { setAdjustBal(numToMoneyStr(account?.balance ?? 0)); setMode('adjust') }}
-            className="text-xs font-semibold text-primary px-3 py-1.5 rounded-xl
-              bg-primary/10 dark:bg-primary/15 active:bg-primary/20 transition-colors"
-          >
-            Adjust balance
-          </button>
-        )}
-        {/* Only in the sheet. On a page it is the last thing on the form
-            instead - a destructive action does not belong at the top of a
-            screen, a thumb's width from Back. */}
-        <button
-          onClick={handleDeleteCheck}
-          className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
-            bg-red-50 dark:bg-red-500/10 active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
-        >
-          Delete
-        </button>
-      </div>
-    ) : mode === 'adjust' ? (
-      /* The way back out of a sub-mode, on the heading's own row - which is
-         what titleAction is for. */
-      <button onClick={() => setMode('form')} disabled={saving}
-        className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
-        Cancel
+      /* Only in the sheet. On a page Delete is the last thing on the form
+         instead - a destructive action does not belong at the top of a
+         screen, a thumb's width from Back. */
+      <button
+        onClick={handleDeleteCheck}
+        className="text-xs font-semibold text-red-500 dark:text-red-400 px-3 py-1.5 rounded-xl
+          bg-red-50 dark:bg-red-500/10 active:bg-red-100 dark:active:bg-red-500/20 transition-colors"
+      >
+        Delete
       </button>
     ) : null
 
@@ -2381,22 +2321,6 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
           {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add account'}
         </Button>
       </div>
-    ) : mode === 'adjust' ? (
-      <div className="flex gap-3">
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={() => setMode('form')} disabled={saving}
-        >
-          Cancel
-        </Button>
-        <Button
-          className="flex-[2]"
-          onClick={handleAdjust} disabled={saving || adjustDiff === 0}
-        >
-          {saving ? 'Adjusting…' : 'Apply adjustment'}
-        </Button>
-      </div>
     ) : null
 
   return (
@@ -2407,11 +2331,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
          screen that was no longer there - and Back would have left the
          account entirely rather than returning to the form behind it. */
       <SubPage
-        title={
-          mode === 'adjust' ? 'Adjust balance'
-          : isEdit          ? 'Edit account'
-          : 'New account'
-        }
+        title={isEdit ? 'Edit account' : 'New account'}
         onBack={mode === 'form' ? close : () => setMode('form')}
       >
         {inner}
