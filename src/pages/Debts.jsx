@@ -20,6 +20,7 @@ import SectionLabel from '../components/ui/SectionLabel'
 import Sheet from '../components/ui/Sheet'
 import StatTrio from '../components/ui/StatTrio'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
+import ProgressBar from '../components/ui/ProgressBar'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -260,12 +261,7 @@ function DebtCard({ debt, onEdit, onPayment }) {
           ))}
         </div>
 
-        <div className="mt-3 h-1.5 bg-slate-100 dark:bg-white/[0.08] rounded-full overflow-hidden">
-          <div
-            className={`h-full rounded-full transition-[width] duration-500 ${barColor}`}
-            style={{ width: `${Math.max(pct > 0 ? 2 : 0, pct)}%` }}
-          />
-        </div>
+        <ProgressBar className="mt-3" value={pct} fillClass={barColor} />
 
         {debt.notes && (
           <p className="mt-2.5 text-[11.5px] text-slate-500 dark:text-slate-400 line-clamp-2">{debt.notes}</p>

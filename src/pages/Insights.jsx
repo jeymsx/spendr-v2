@@ -12,6 +12,8 @@ import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
+import ProgressBar from '../components/ui/ProgressBar'
+import { AccountChip } from '../components/AccountPickerSheet'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -697,19 +699,32 @@ function AccountBreakdown({ data, animKey }) {
   return (
     <div>
       <SectionHeading>By account</SectionHeading>
+      {/* The account as its card, on the left, the way the picker, the sort
+          sheet and every transaction sheet draw it. It was an 8px colour
+          dot - the account reduced to the one thing about it you never
+          learned, on the one screen that compares them. */}
       <div className="mx-5 flex flex-col gap-2">
         {data.map((d, i) => (
           <Card key={i} padding="sm">
-            <div className="flex items-center justify-between mb-2">
-              <div className="flex items-center gap-2 min-w-0">
-                <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
-                <span className="text-[13px] font-medium text-slate-700 dark:text-slate-300 truncate">{d.name}</span>
+            <div className="flex items-center gap-3">
+              {d.acct
+                ? <AccountChip acct={d.acct} size="sm" />
+                : (
+                  /* An account that has since been deleted still has spending
+                     against it, and no card to draw. */
+                  <span
+                    className="w-[40px] h-[28px] rounded-[8px] shrink-0 border border-dashed
+                      border-slate-300 dark:border-white/20"
+                    aria-hidden="true"
+                  />
+                )}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-baseline justify-between gap-2">
+                  <span className="text-[13px] font-semibold text-slate-800 dark:text-white truncate">{d.name}</span>
+                  <span className="text-[13px] font-semibold text-slate-700 dark:text-slate-200 tabular-nums shrink-0">{fmt(d.value)}</span>
+                </div>
+                <ProgressBar className="mt-2" value={ready ? (d.value / max) * 100 : 0} color={d.color} />
               </div>
-              <span className="text-[13px] font-semibold text-slate-800 dark:text-white tabular-nums shrink-0 ml-2">{fmt(d.value)}</span>
-            </div>
-            <div className="h-1.5 bg-slate-100 dark:bg-white/[0.07] rounded-full overflow-hidden">
-              <div className="h-full rounded-full transition-all duration-700 ease-out"
-                style={{ width: ready ? `${(d.value / max) * 100}%` : '0%', backgroundColor: d.color }} />
             </div>
           </Card>
         ))}
@@ -875,7 +890,8 @@ export default function Insights() {
     const map = {}
     for (const tx of expenses) {
       const acct = acctMap[tx.account]
-      if (!map[tx.account]) map[tx.account] = { name: tx.account, value: 0, color: acct?.color ?? '#6366f1' }
+      // The account itself, not just its colour: the row draws its card.
+      if (!map[tx.account]) map[tx.account] = { name: tx.account, value: 0, color: acct?.color ?? '#6366f1', acct: acct ?? null }
       map[tx.account].value += tx.amount ?? 0
     }
     return Object.values(map).sort((a, b) => b.value - a.value)

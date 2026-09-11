@@ -18,6 +18,7 @@ import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
+import ProgressBar from '../components/ui/ProgressBar'
 
 /**
  * The month's budget, in full.
@@ -138,12 +139,8 @@ function CategoryRow({ cat }) {
         </div>
       </div>
 
-      <div className="mt-2.5 h-1.5 rounded-full bg-slate-200 dark:bg-white/[0.10] overflow-hidden">
-        <div
-          className="h-full rounded-full transition-all duration-700"
-          style={{ width: `${Math.min(pct, 100)}%`, backgroundColor: color }}
-        />
-      </div>
+      {/* Each category against its own limit, so the track is full width. */}
+      <ProgressBar className="mt-2.5" value={pct} color={color} />
     </div>
   )
 }
@@ -191,27 +188,9 @@ function AllocationRow({ cat, maxLimit }) {
         </span>
       </div>
 
-      <div className="relative h-2.5">
-        {/* The limit, to scale. */}
-        <div
-          className="absolute inset-y-0 left-0 rounded-full bg-slate-200 dark:bg-white/[0.10]"
-          style={{ width: `${trackPct}%` }}
-        />
-        {/* What was spent, on the same scale. */}
-        <div
-          className="absolute inset-y-0 left-0 rounded-full transition-all duration-700"
-          style={{ width: `${spentPct}%`, backgroundColor: color }}
-        />
-        {/* Once the bar has covered its own track, the limit needs marking or
-            the overshoot is invisible. */}
-        {over && (
-          <span
-            className="absolute -top-1 -bottom-1 w-[2px] rounded-full bg-slate-900/45 dark:bg-white/70"
-            style={{ left: `calc(${trackPct}% - 1px)` }}
-            aria-hidden="true"
-          />
-        )}
-      </div>
+      {/* The categories against EACH OTHER: the track's own length carries
+          the size of the budget, so Food's limit visibly dwarfs Transpo's. */}
+      <ProgressBar size="md" value={spentPct} scale={trackPct} color={color} marker={over} />
     </div>
   )
 }

@@ -23,6 +23,7 @@ import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
+import ProgressBar from '../components/ui/ProgressBar'
 
 /**
  * Savings goals.
@@ -116,14 +117,11 @@ function IconCheck() {
  */
 function GoalBar({ pct, complete }) {
   return (
-    <div className="h-2 rounded-full bg-slate-200 dark:bg-white/[0.10] overflow-hidden">
-      <div
-        className={`h-full rounded-full transition-[width] duration-700 ${
-          complete ? 'bg-emerald-500' : 'bg-primary'
-        }`}
-        style={{ width: `${Math.max(pct > 0 ? 2 : 0, Math.min(100, pct))}%` }}
-      />
-    </div>
+    <ProgressBar
+      size="md"
+      value={pct}
+      fillClass={complete ? 'bg-emerald-500' : 'bg-primary'}
+    />
   )
 }
 
@@ -249,10 +247,7 @@ function AccountSplitRow({ name, split, isLast }) {
           {fmtCompact(split.balance)}
         </span>
       </div>
-      <div className="mt-2 h-1.5 rounded-full bg-slate-200 dark:bg-white/[0.10] overflow-hidden">
-        <div className="h-full rounded-full bg-primary transition-[width] duration-700"
-          style={{ width: `${Math.min(100, pct)}%` }} />
-      </div>
+      <ProgressBar className="mt-2" value={pct} fillClass="bg-primary" />
       <div className="flex items-baseline justify-between gap-3 mt-1.5">
         <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate min-w-0">
           {split.goals.length === 0
