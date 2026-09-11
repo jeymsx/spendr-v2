@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect, checkOverdraw } from '../db/txHelpers'
+import { applyBalanceEffect, checkOverdraw, saveTemplate } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -164,7 +164,11 @@ export default function Transfer({ onCancel, onSaved } = {}) {
     setShowConfirm(true)
   }
 
-  async function handleSave() {
+  /* templateData, which this used to ignore: the confirmation sheet offered
+     "Save as template" on every transfer while handleSave took no argument,
+     so the toggle wrote nothing at all. Both skipConfirm paths call this with
+     no argument, which is the same as declining. */
+  async function handleSave(templateData) {
     setSaving(true)
     try {
       const now     = new Date()
@@ -208,6 +212,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
           await applyBalanceEffect({ type: 'expense', amount: fee, account: fromAccount.name })
         }
       })
+      if (templateData) await saveTemplate(templateData)
       showToast('Transfer saved')
       if (onSaved) onSaved(); else navigate('/')
     } catch (e) {

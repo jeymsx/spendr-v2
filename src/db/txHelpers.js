@@ -246,3 +246,30 @@ export async function restoreDeletedTxs(txs) {
   }
   return restored
 }
+
+/**
+ * Write a quick-transaction template, replacing one of the same name and type.
+ *
+ * It upserts rather than adds because the name is no longer typed - it is
+ * derived from the record being saved (its note, or the two accounts, or the
+ * category), so saving the same transfer twice used to mean two identical
+ * "Metrobank → Maya" rows in the picker with nothing to tell them apart.
+ * Replacing keeps the newest amount, which is the one you just confirmed.
+ *
+ * `name` is a plain index, not a unique one, so this is a lookup and a
+ * decision rather than a caught constraint error.
+ */
+export async function saveTemplate(row) {
+  if (!row?.name) return null
+  const existing = await db.templates
+    .where('name').equals(row.name)
+    .filter(t => t.type === row.type)
+    .first()
+
+  const payload = { ...row, createdAt: new Date().toISOString() }
+  if (existing) {
+    await db.templates.update(existing.id, payload)
+    return existing.id
+  }
+  return db.templates.add(payload)
+}

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect, checkOverdraw } from '../db/txHelpers'
+import { applyBalanceEffect, checkOverdraw, saveTemplate } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -238,9 +238,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
           account: account.name,
         })
       })
-      if (templateData) {
-        await db.templates.add({ ...templateData, createdAt: new Date().toISOString() })
-      }
+      if (templateData) await saveTemplate(templateData)
       showToast(count > 1 ? `${count} payments scheduled` : 'Expense saved')
       if (onSaved) onSaved(); else navigate('/')
     } catch (e) {

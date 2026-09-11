@@ -32,11 +32,18 @@
  * corals.
  *
  * A sweep, still, rather than one flat colour - a fan of 34 identical ticks
- * has nothing to follow along it. The travel comes from a small hue rotation
- * plus rising lightness, so it reads as one family getting brighter rather
- * than as a different colour arriving.
+ * has nothing to follow along it. But the travel is LIGHTNESS ONLY, at a
+ * fixed hue and saturation.
  *
- * Lightness is clamped to 0.30-0.72 whatever the accent. Below that the dark
+ * It used to rotate the hue -14deg to +22deg as well, on the theory that a
+ * little turn reads as one family. It does not. Azure sits at hue 208, so the
+ * bright end landed near 230 at 72% lightness, which is periwinkle - the top
+ * of the fan came out visibly violet on a blue theme, and a colour nobody
+ * chose showing up in the one big graph on the page reads as decoration for
+ * its own sake. One hue, dark to light: the sweep is still there to follow
+ * and every tick is the accent.
+ *
+ * Lightness is clamped to 0.32-0.66 whatever the accent. Below that the dark
  * end disappears into a dark page, above it the light end washes out on a
  * white one, and this component cannot see which theme it is in.
  */
@@ -58,17 +65,15 @@ function hexToHsl(hex) {
 
 const hslCss = (h, s, l) => `hsl(${((h % 360) + 360) % 360} ${Math.round(s * 100)}% ${Math.round(l * 100)}%)`
 
-/** Four stops from one accent hex: same family, rotating and brightening. */
+/** Two stops from one accent hex: its own hue, darker to lighter. */
 function rampFor(accent) {
   const hex = /^#[0-9a-f]{6}$/i.test(accent ?? '') ? accent : '#2D9DFF'
   const [h, s0, l] = hexToHsl(hex)
   const s = clamp(s0, 0.45, 0.95)
-  const lo = clamp(l * 0.78, 0.30, 0.52)
-  const hi = clamp(l * 1.24, 0.52, 0.72)
-  // Hue leads by -14 and trails to +22: enough to see the turn, not enough
-  // to leave the accent's own family.
-  return [-14, -2, 10, 22].map((dh, i, arr) =>
-    hslCss(h + dh, s, lo + (hi - lo) * (i / (arr.length - 1))))
+  // Two is all a single-hue ramp needs: rampAt interpolates between them, so
+  // four evenly spaced stops on one line described the same colours twice.
+  return [clamp(l * 0.72, 0.32, 0.50), clamp(l * 1.18, 0.54, 0.66)]
+    .map(li => hslCss(h, s, li))
 }
 
 /** A colour `t` of the way along `ramp`, 0..1. Stops are hsl() strings, so

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect } from '../db/txHelpers'
+import { applyBalanceEffect, saveTemplate } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -136,9 +136,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
         })
         await applyBalanceEffect({ type: 'inflow', amount, account: account.name })
       })
-      if (templateData) {
-        await db.templates.add({ ...templateData, createdAt: new Date().toISOString() })
-      }
+      if (templateData) await saveTemplate(templateData)
       showToast('Inflow saved')
       if (onSaved) onSaved(); else navigate('/')
     } catch (e) {
