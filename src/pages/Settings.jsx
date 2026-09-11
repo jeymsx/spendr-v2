@@ -24,7 +24,7 @@ import { useScrollLock } from '../hooks/useScrollLock'
 import { syncToSheets } from '../lib/sheetsSync'
 import { IconCheck, IconChevronRight, IconPlus, IconUpload,
   IconTick, IconWarning, IconTemplate, IconTransferUI } from '../components/icons'
-import CategoryGlyph, { categoryIcon } from '../components/CategoryGlyph'
+import CategoryGlyph, { presetCategoryIcon as CATEGORY_ICON_BY_NAME } from '../components/CategoryGlyph'
 import SegTabs from '../components/SegTabs'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
@@ -1859,10 +1859,10 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               {/* Worth saying out loud, because the preview below now shows
                   the real thing and the two will disagree: a preset name has
                   a drawn icon, and the emoji is what a custom name gets. */}
-              {categoryIcon({ name: name.trim() }) && (
+              {CATEGORY_ICON_BY_NAME({ name: name.trim() }) && (
                 <p className="-mt-1 mb-2 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
-                  “{name.trim()}” has its own icon. The emoji is the fallback
-                  if you rename it to something custom.
+                  “{name.trim()}” has its own icon, so it keeps that whichever
+                  you pick here.
                 </p>
               )}
               <div className="p-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04] border border-slate-100 dark:border-white/[0.07]">

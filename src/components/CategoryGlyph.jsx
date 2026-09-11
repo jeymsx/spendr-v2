@@ -6,6 +6,12 @@ import {
   IconPercentage, IconCreditCard, IconCashBanknote, IconBriefcase, IconChartLine,
   IconGiftCard, IconCoin, IconReceiptRefund, IconAward, IconTag, IconCoins,
   IconPackage, IconTrendingUp, IconArrowsExchange, IconReceiptTax, IconCash,
+  // The emoji-picker equivalents (EMOJI_ICON below).
+  IconCar, IconDeviceGamepad2, IconMassage, IconPill, IconDeviceMobile,
+  IconGlassFull, IconCoffee, IconBallFootball, IconTarget, IconBottle,
+  IconBuildingHospital, IconPizza, IconSoup, IconGasStation, IconTrain,
+  IconHeart, IconMoodKid, IconPlant2, IconSpray, IconScissors, IconTent,
+  IconSalad, IconSparkles,
 } from '@tabler/icons-react'
 
 /**
@@ -100,8 +106,66 @@ const CATEGORY_ICON = {
   'Transfer Fee':   IconReceiptTax,
 }
 
-/** The component for a category, or null when it is not a known preset. */
+/**
+ * The drawn equivalent of every emoji the category picker offers.
+ *
+ * ── Why this exists ──
+ *
+ * The icon grid is emoji, and it should stay emoji: it is what a person
+ * recognises at a glance, it is what the row already stores in
+ * `categories.icon`, and that field syncs as free text - so keeping it means
+ * no migration, no new column, and no chance of an older client rendering a
+ * glyph key as the literal word "cart".
+ *
+ * But an emoji rendered as an emoji is a colour illustration sitting in a set
+ * of 1.8-weight line icons, and the preview in the form disagreed with every
+ * other screen the moment a category's name was not one of the 39 presets.
+ * Drawing the emoji instead settles both: pick the cart, see the cart, and
+ * see the same cart in the transaction list.
+ *
+ * Keyed on the emoji, so it only ever applies to the 40 the grid can produce.
+ * Anything else - an emoji typed in from a phone keyboard, a category
+ * imported from a CSV - falls through and renders as itself, which is the
+ * long tail this component's whole design is built to keep.
+ *
+ * Two of the forty have no honest glyph in Tabler (the teddy bear and the
+ * broom), so they get the nearest object rather than a wrong one: a child's
+ * face and a spray bottle.
+ */
+const EMOJI_ICON = {
+  '🍔': IconToolsKitchen2,  '🛍️': IconShoppingBag,     '🚗': IconCar,
+  '🎮': IconDeviceGamepad2, '💆': IconMassage,          '🧾': IconReceipt2,
+  '📦': IconPackage,        '💰': IconCoins,            '🏠': IconHome2,
+  '💊': IconPill,           '🎓': IconSchool,           '✈️': IconPlane,
+  '🐾': IconPaw,            '💻': IconDeviceLaptop,     '🎁': IconGift,
+  '🔧': IconTool,           '📱': IconDeviceMobile,     '🏋️': IconBarbell,
+  '🎵': IconMusic,          '🍷': IconGlassFull,        '☕': IconCoffee,
+  '🎬': IconMovie,          '⚽': IconBallFootball,     '🎯': IconTarget,
+  '💅': IconSparkles,       '🧴': IconBottle,           '🛒': IconShoppingCart,
+  '🏥': IconBuildingHospital, '🌮': IconSalad,          '🍕': IconPizza,
+  '🍜': IconSoup,           '⛽': IconGasStation,       '🚇': IconTrain,
+  '💳': IconCreditCard,     '🎀': IconHeart,            '🧸': IconMoodKid,
+  '🪴': IconPlant2,         '🧹': IconSpray,            '💈': IconScissors,
+  '🎪': IconTent,
+}
+
+/**
+ * The component for a category, or null when nothing is known for it.
+ *
+ * The NAME comes first and the emoji second, which is the order that leaves
+ * every existing category looking exactly as it does today: `Food` stores a
+ * burger emoji and has always drawn a fork and knife, and that stays true.
+ * The emoji only decides for a category the name map does not cover - which
+ * is precisely the case that used to fall out of the icon set.
+ */
 export function categoryIcon(cat) {
+  return presetCategoryIcon(cat) ?? EMOJI_ICON[cat?.icon] ?? null
+}
+
+/** Only the name-derived one, for callers that need to know a preset has its
+ *  own icon regardless of which emoji is stored - the category form says so
+ *  next to its picker. */
+export function presetCategoryIcon(cat) {
   return CATEGORY_ICON[cat?.name] ?? null
 }
 
