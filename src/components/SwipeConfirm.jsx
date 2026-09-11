@@ -9,6 +9,22 @@ import { useCallback, useEffect, useRef, useState } from 'react'
  * confirmation is still a tap, and a deliberate drag is the cheapest way to
  * make the last step need intent.
  *
+ * ── The white shape and the circle are one thing ──
+ *
+ * The track is the accent colour end to end. Over it sits a single white
+ * capsule, pinned to the left, whose RIGHT CAP is the circle - so as it
+ * grows there is no second shape behind anything, just one form getting
+ * longer with the arrow riding its leading end. At rest its width equals its
+ * height and it is exactly a circle.
+ *
+ * This took three tries. A fill that stopped flush past a separate knob left
+ * a hard vertical cut beside the circle. Rounding that fill with
+ * border-radius 9999 produced a lopsided blob, because a radius larger than
+ * half the box is scaled proportionally - a 26x52 element does not round to
+ * a circle, it rounds to a 13x26 ellipse. Hence the explicit KNOB/2 here:
+ * 22px is never more than half of either dimension, so the cap is always a
+ * true semicircle.
+ *
  * ── Why a pointerdown anywhere on the track, not only the knob ──
  *
  * A 44px knob on a 320px track is a small target for a thumb arriving at the
@@ -128,66 +144,43 @@ export default function SwipeConfirm({
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); done.current = true; onConfirm?.() }
       }}
       className={`relative h-[52px] rounded-full overflow-hidden select-none
-        bg-primary/[0.18] dark:bg-primary/[0.22]
-        ${disabled ? 'opacity-40' : ''} ${className}`}
+        bg-primary ${disabled ? 'opacity-40' : ''} ${className}`}
       style={{
         // The gesture owns the axis, or the sheet scrolls under the finger.
         touchAction: 'none',
         cursor: disabled || busy ? 'default' : 'grab',
       }}
     >
-      {/* Fills in behind the knob, so the pill reads as being completed
-          rather than as a knob travelling along an empty groove.
-
-          It ends at the knob's CENTRE, is the knob's height, and is fully
-          rounded - so its right cap is a half circle of exactly the knob's
-          radius, sitting exactly under the knob's left half. The knob covers
-          it completely and there is no edge to see.
-
-          It was the full height of the track and four pixels PAST the knob,
-          with square corners. That put a hard vertical cut just past the
-          circle: a slab of accent with a straight edge, which reads as the
-          fill having been sliced rather than as the knob sitting on it. */}
-      <div
-        className="absolute bg-primary"
-        style={{
-          top: PAD,
-          bottom: PAD,
-          left: PAD,
-          width: x + KNOB / 2,
-          borderRadius: 9999,
-          transition: dragging ? 'none' : 'width 220ms cubic-bezier(0.32, 0.72, 0, 1)',
-        }}
-      />
-
+      {/* White on the accent, fading as the capsule comes to cover it. */}
       <span
         className="absolute inset-0 flex items-center justify-center
-          text-[14px] font-semibold pointer-events-none"
-        style={{
-          // Fades as the knob approaches, so the label is not read through
-          // the thing covering it.
-          opacity: 1 - progress * 0.85,
-          color: progress > 0.4 ? '#fff' : 'var(--color-primary)',
-        }}
+          text-[14px] font-semibold text-white pointer-events-none"
+        style={{ opacity: 1 - progress * 0.8 }}
       >
         {showLabel}
       </span>
 
-      {/* Ringed in the accent, like LimitMeter's handle. A plain white disc
-          with only a shadow reads as a hole punched in the pill; the ring
-          makes it an object sitting on top of it, and it is the one thing
-          that stops the knob dissolving into the white fill's own cap
-          underneath. 2px, because at 44px across the 3-on-14 proportion
-          LimitMeter uses would be a 9px band. */}
+      {/* The one white shape. Explicit 22px radius, never 9999 - see above. */}
       <span
-        className="absolute top-1/2 rounded-full bg-white flex items-center justify-center
-          shadow-[0_2px_8px_rgba(0,0,0,0.25)] pointer-events-none"
+        className="absolute bg-white shadow-[0_1px_4px_rgba(0,0,0,0.2)] pointer-events-none"
         style={{
-          left: PAD + x,
-          width: KNOB,
-          height: KNOB,
-          transform: 'translateY(-50%)',
-          border: '2px solid var(--color-primary)',
+          top: PAD,
+          bottom: PAD,
+          left: PAD,
+          width: KNOB + x,
+          borderRadius: KNOB / 2,
+          transition: dragging ? 'none' : 'width 220ms cubic-bezier(0.32, 0.72, 0, 1)',
+        }}
+      />
+
+      {/* Rides the capsule's leading cap, which is why it is positioned
+          against the same x rather than parented to the shape - a child
+          centred in a growing box would drift left as the box grew. */}
+      <span
+        className="absolute top-1/2 flex items-center justify-center pointer-events-none"
+        style={{
+          left: PAD + x + KNOB / 2,
+          transform: 'translate(-50%, -50%)',
           transition: dragging ? 'none' : 'left 220ms cubic-bezier(0.32, 0.72, 0, 1)',
         }}
       >
