@@ -105,12 +105,17 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
   useQuickPrefill({
     categories,
     accounts,
+    /* REPLACES the form rather than merging into it - see AddExpense. A
+       quick log is a new transaction, so anything the line does not name
+       goes back to empty instead of inheriting the last one's answer. */
     apply: (p) => {
-      if (p.amount != null) setAmountStr(numToMoneyStr(p.amount))
-      if (p.description) setDescription(p.description)
-      if (p.category) setCategory(p.category)
-      if (p.account) setAccount(p.account)
+      setAmountStr(p.amount != null ? numToMoneyStr(p.amount) : '0')
+      setDescription(p.description || '')
+      setCategory(p.category ?? null)
+      setAccount(p.account ?? null)
       if (p.date) setDate(p.date)
+      setCatError(false)
+      setAcctError(false)
     },
   })
 

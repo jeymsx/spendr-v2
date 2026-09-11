@@ -123,14 +123,21 @@ export default function Transfer({ onCancel, onSaved } = {}) {
   useQuickPrefill({
     accounts,
     categories: [],
+    /* REPLACES the form rather than merging into it - see AddExpense. It
+       matters most here: a stale `from` account inherited from the previous
+       transfer moves real money out of the wrong place. */
     apply: (p) => {
-      if (p.amount != null) setAmountStr(numToMoneyStr(p.amount))
-      if (p.fromAccount) setFromAccount(p.fromAccount)
-      if (p.toAccount) setToAccount(p.toAccount)
+      setAmountStr(p.amount != null ? numToMoneyStr(p.amount) : '0')
+      setFromAccount(p.fromAccount ?? null)
+      setToAccount(p.toAccount ?? null)
       if (p.date) setDate(p.date)
       // "500 from gcash to maya, 18 tf" - the fee is the second half of how
       // people actually say a transfer, so it should not need a second visit.
-      if (p.fee != null) setFeeStr(numToMoneyStr(p.fee))
+      // Back to zero when this line does not mention one, or the last
+      // transfer's fee rides along on a transfer that had none.
+      setFeeStr(p.fee != null ? numToMoneyStr(p.fee) : '0')
+      setFromError(false)
+      setToError(false)
     },
   })
 

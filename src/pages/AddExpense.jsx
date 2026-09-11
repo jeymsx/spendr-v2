@@ -124,12 +124,22 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   useQuickPrefill({
     categories,
     accounts,
+    /* REPLACES the form rather than merging into it, because a quick log is
+       a new transaction and not an edit of whatever was on screen. Merging
+       leaves the previous entry's category and account in place whenever the
+       new line does not name them - and quietly keeps installMonths, so a
+       second log onto a credit account would inherit a payment plan nobody
+       asked for. */
     apply: (p) => {
-      if (p.amount != null) setAmountStr(numToMoneyStr(p.amount))
-      if (p.description) setDescription(p.description)
-      if (p.category) setCategory(p.category)
-      if (p.account) setAccount(p.account)
+      setAmountStr(p.amount != null ? numToMoneyStr(p.amount) : '0')
+      setDescription(p.description || '')
+      setCategory(p.category ?? null)
+      setAccount(p.account ?? null)
       if (p.date) setDate(p.date)
+      setInstallMonths(0)
+      setCustomTerm(false)
+      setCatError(false)
+      setAcctError(false)
     },
   })
 

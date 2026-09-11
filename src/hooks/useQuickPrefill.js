@@ -10,27 +10,36 @@ import { useLocation } from 'react-router-dom'
  * queries to arrive before resolving those names to the objects the pickers
  * expect; running before they load would silently drop both.
  *
- * Applied ONCE, tracked by a ref. Without that, a re-render after the user has
- * edited a field would overwrite their correction with the parse - which is
- * the sort of thing that feels haunted.
+ * Applied once per NAVIGATION, keyed on location.key.
+ *
+ * It has to be a re-render guard AND allow a second quick log, and a plain
+ * `done` boolean cannot be both. It was one, and the bug was this: quick-log
+ * from a page you are already on - /expense to /expense - does not remount
+ * the component, so the ref stayed true from the first parse and every
+ * later one was dropped on the floor. You would type "999 uniqlo maya",
+ * confirm, and sit looking at the previous entry.
+ *
+ * location.key is fresh for every navigation and stable across re-renders,
+ * which is exactly the distinction needed: the same parse must not be
+ * reapplied over a correction you have since typed, a new one always must.
  */
 export function useQuickPrefill({ categories, accounts, apply }) {
   const location = useLocation()
-  const done = useRef(false)
+  const appliedKey = useRef(null)
   const applyRef = useRef(apply)
   useEffect(() => { applyRef.current = apply }, [apply])
 
   const prefill = location.state?.prefill
 
   useEffect(() => {
-    if (done.current || !prefill) return
+    if (!prefill || appliedKey.current === location.key) return
     // Only proceed once there is something to resolve names against.
     const needsCats = prefill.category != null
     const needsAccts = prefill.account != null || prefill.fromAccount != null || prefill.toAccount != null
     if (needsCats && !(categories ?? []).length) return
     if (needsAccts && !(accounts ?? []).length) return
 
-    done.current = true
+    appliedKey.current = location.key
     const byName = (list, name) =>
       name ? (list ?? []).find(x => x.name === name) ?? null : null
 
@@ -44,7 +53,7 @@ export function useQuickPrefill({ categories, accounts, apply }) {
       fromAccount: byName(accounts, prefill.fromAccount),
       toAccount: byName(accounts, prefill.toAccount),
     })
-  }, [prefill, categories, accounts])
+  }, [prefill, location.key, categories, accounts])
 
   return Boolean(prefill)
 }
