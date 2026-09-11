@@ -15,6 +15,7 @@ import {
   toMonthlyAmount, parseDateLocal, daysUntil, dueStatus, DUE_TONE,
 } from '../utils/recurring'
 import CategoryGlyph from '../components/CategoryGlyph'
+import BillMark from '../components/BillMark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -84,12 +85,16 @@ function BillRow({ rec, onOpen, isLast }) {
         className="w-full flex items-center gap-3 px-4 py-4 text-left
           active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
       >
-        <span
-          className="w-10 h-10 rounded-2xl flex items-center justify-center text-lg shrink-0"
-          style={{ backgroundColor: (rec._catColor ?? '#64748b') + (dim ? '14' : '20') }}
-        >
-          <CategoryGlyph cat={rec._cat} size={20} emoji="🔁" />
-        </span>
+        {/* The brand's own mark when the name is one we know, the category
+            tile when it is not. Both are the same 40px box, so the row does
+            not reflow between a Netflix and a Meralco. */}
+        <BillMark
+          name={rec.name}
+          cat={rec._cat}
+          size={20}
+          dim={dim}
+          boxClass="w-10 h-10 rounded-2xl"
+        />
 
         <span className="flex-1 min-w-0">
           <span className={`block text-[14px] font-semibold truncate ${

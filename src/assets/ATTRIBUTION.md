@@ -19,6 +19,27 @@ so the box was tightened onto the ink.
 | `metrobank.svg` | `0 0 1280 256` | `8 8 247 245` | logomark only, wordmark framed out |
 | `bpi.svg` | `0 0 792 612` | `81 157 631 297` | dead margin removed |
 
+## Subscription brands — `bill-logos/`
+
+From [simple-icons](https://github.com/simple-icons/simple-icons) v16,
+**CC0 1.0** (the icons; the repo's code is MIT) — the same source as the card
+networks below. 25 files, ~21KB of path data.
+
+Stored as shipped apart from three removals: `<title>`, `role="img"`, and
+unused `xmlns:xlink`. Paths untouched, no `viewBox` cropping needed — every
+one arrives as a 24x24 logomark. No paint is added; `.bill-mark` fills them
+with `currentColor`.
+
+netflix, spotify, youtube, youtubemusic, applemusic, icloud, apple, hbo, max,
+crunchyroll, steam, playstation, figma, notion, github, dropbox, zoom,
+duolingo, coursera, udemy, grab, shopee, tiktok, discord, audible.
+
+Brand hexes in `src/lib/billBrands.js` are from simple-icons' published
+`simple-icons.json`, not sampled by eye.
+
+Philippine utilities — Meralco, Maynilad, Globe, PLDT — are deliberately
+absent; see `bill-logos/README.md`.
+
 ## Card networks — `scheme-logos/`
 
 From [simple-icons](https://github.com/simple-icons/simple-icons), **CC0 1.0**
