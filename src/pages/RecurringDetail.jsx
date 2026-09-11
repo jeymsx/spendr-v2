@@ -17,6 +17,7 @@ import {
 import CategoryGlyph from '../components/CategoryGlyph'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
+import { CardThumb } from '../components/AccountLine'
 import Card from '../components/ui/Card'
 import DetailRow from '../components/ui/DetailRow'
 import EmptyState from '../components/ui/EmptyState'
@@ -353,34 +354,58 @@ export default function RecurringDetail() {
           the card because it is the question you opened this page to answer. */}
       <section className="px-5 mt-1">
         <Card clip padding="md">
+          {/* Two lines, and only ever two.
+
+              There used to be a third, and it was "Paused", or "Active since
+              May 2025", or nothing at all, depending on the bill - so the
+              card stood at three different heights and pausing one visibly
+              resized it. A card that changes shape when its state changes
+              reads as something you assembled rather than something the app
+              draws.
+
+              Both remaining lines always render, so the height is constant
+              by construction rather than by a min-height. The state says
+              itself in a chip beside the name - a column the name already
+              occupies, so saying it costs no height - and in the dimmed
+              glyph and greyed figure, which is what tells you at a glance
+              without reading anything. The facts it used to carry are in
+              the Details list below, where the rest of the facts are. */}
           <div className="flex items-center gap-3.5">
             <div
-              className="w-14 h-14 rounded-2xl flex items-center justify-center text-[26px] shrink-0"
+              className={`w-14 h-14 rounded-2xl flex items-center justify-center text-[26px] shrink-0 ${
+                rec.active ? '' : 'opacity-40 saturate-50'
+              }`}
               style={{ backgroundColor: (cat?.color ?? '#64748b') + '20' }}
             >
               <CategoryGlyph cat={cat} size={26} emoji="🔁" />
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">
-                {rec.name}
-              </p>
-              <p className="mt-0.5 text-[22px] leading-tight font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+              <div className="flex items-center gap-2">
+                <p className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">
+                  {rec.name}
+                </p>
+                {/* Paused still says so - it changes what every date on this
+                    page means - but as a chip in a column the name already
+                    occupies, so saying it costs no height. */}
+                {!rec.active && (
+                  <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold
+                    bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
+                    Paused
+                  </span>
+                )}
+              </div>
+
+              <p className={`mt-0.5 text-[22px] leading-tight font-semibold tracking-tight tabular-nums ${
+                rec.active
+                  ? 'text-slate-900 dark:text-white'
+                  : 'text-slate-400 dark:text-slate-500'
+              }`}>
                 {fmt(rec.amount)}
                 <span className="text-[13px] font-medium text-slate-500 dark:text-slate-400 ml-1">
                   /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
                 </span>
               </p>
-              {/* Paused says so here rather than only in a toggle further
-                  down: it changes what every date on this page means. */}
-              {!rec.active ? (
-                <p className="text-[12px] text-amber-600 dark:text-amber-400 mt-0.5 font-medium">
-                  Paused
-                </p>
-              ) : activeSince ? (
-                <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">
-                  Active since {activeSince}
-                </p>
-              ) : null}
+
             </div>
           </div>
         </Card>
@@ -425,7 +450,18 @@ export default function RecurringDetail() {
         <SectionHeading>Details</SectionHeading>
         <div className="px-5">
           <Card clip>
-            <DetailRow label="Account"  value={rec.account || '—'} />
+            {/* The account as its card, the same way the transaction
+                sheets draw it - a coloured name is not how you recognise an
+                account anywhere else in the app. */}
+            <DetailRow
+              label="Account"
+              value={acct ? (
+                <span className="inline-flex items-center gap-2 align-middle">
+                  <CardThumb account={acct} sm />
+                  {acct.name}
+                </span>
+              ) : (rec.account || '—')}
+            />
             <DetailRow label="Category" value={rec.category || '—'} />
             {/* Just "Monthly". It read "Monthly · every month", which says
                 the same thing twice - the label is already "Repeats". */}
@@ -444,6 +480,9 @@ export default function RecurringDetail() {
               label="Status"
               value={rec.active ? 'Active' : 'Paused'}
               tone={rec.active ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'}
+              /* Came off the hero with the third line. How long you have had
+                 a subscription is a fact about it, not a headline. */
+              sub={activeSince ? `Since ${activeSince}` : null}
               isLast
             />
           </Card>
