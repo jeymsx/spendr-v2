@@ -407,7 +407,16 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
             <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">
               Installment
             </p>
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            {/* -mx-4 px-4 to cancel the form's own px-4.
+
+                Without it the scrollport stopped where the form's padding
+                did, so a chip scrolling out was cut off 16px short of the
+                screen with a strip of empty page beyond it - the row read as
+                clipped rather than as continuing past the edge. Widening the
+                port to the full screen and putting the 16px back as padding
+                keeps the resting row aligned with every other field while
+                letting the chips run off both sides. */}
+            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4 scroll-px-4">
               {[0, ...INSTALLMENT_TERMS].map(n => (
                 <button
                   key={n}
