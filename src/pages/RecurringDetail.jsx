@@ -573,7 +573,8 @@ export default function RecurringDetail() {
         description={rec.name}
         category={cat}
         account={acct}
-        confirmLabel="Post bill"
+        swipeToConfirm
+        confirmLabel="Swipe to post bill"
         savingLabel="Posting…"
       />
 

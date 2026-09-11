@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useScrollLock } from '../hooks/useScrollLock'
+import SwipeConfirm from './SwipeConfirm'
 import CategoryGlyph from './CategoryGlyph'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
@@ -70,6 +71,12 @@ export default function TxConfirmSheet({
      same review either way, but the verb is the caller's. */
   confirmLabel   = null,
   savingLabel    = 'Saving…',
+  /* Drag the last step instead of tapping it. Opt-in, not the default: the
+     expense and inflow forms already made you open this sheet on purpose,
+     and adding a gesture to every save would tax the common case to guard
+     the rare one. Posting a bill is the rare one - it fires from a list row
+     and writes three things at once. */
+  swipeToConfirm = false,
 }) {
   const [closing,       setClosing]       = useState(false)
   useScrollLock(open)
@@ -232,6 +239,29 @@ export default function TxConfirmSheet({
         )}
 
         {/* actions */}
+        {swipeToConfirm ? (
+          /* Stacked, not side by side. A drag needs the full width to have
+             any travel in it, and a 52px pill next to a Cancel button would
+             give the gesture about 200px to happen in. */
+          <div className="flex flex-col gap-2">
+            <SwipeConfirm
+              onConfirm={() => onConfirm(null)}
+              label={confirmLabel ?? 'Swipe to confirm'}
+              confirmingLabel={savingLabel}
+              busy={saving}
+            />
+            <button
+              onClick={close}
+              disabled={saving}
+              className="w-full py-3 rounded-2xl text-sm font-semibold
+                text-slate-500 dark:text-slate-400
+                active:bg-slate-100 dark:active:bg-white/[0.06]
+                disabled:opacity-40 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        ) : (
         <div className="flex gap-3">
           <button
             onClick={close}
@@ -261,6 +291,7 @@ export default function TxConfirmSheet({
               : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save Transaction')}
           </button>
         </div>
+        )}
       </div>
     </div>
   )
