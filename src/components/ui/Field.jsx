@@ -2,58 +2,93 @@ import { useId } from 'react'
 import { cx } from './cx'
 
 /**
- * A text field whose label sits in a notch in its own border.
+ * One text field, one look, everywhere.
  *
- * Replaces the pattern this app used everywhere: an 11px uppercase
- * letter-spaced caption floating above an input, which stacks two objects and
- * a gap for every field and reads like a form generated rather than designed.
- * Here the label belongs to the field.
+ * ── What it settles ──
  *
- * ── It is a real input, and it has to be ──
+ * The app had three field idioms. The add-forms: a 12px sentence-case label
+ * above a 52px filled row at radius 16. Settings: an 11px UPPERCASE
+ * letter-spaced caption above a 48px row at radius 16, with a focus ring. And
+ * several pages had a one-off of their own. Same control, two sizes, two label
+ * styles, two shadows.
  *
- * The frame is decoration; the control inside is an ordinary <input>. That is
- * not a detail on iOS: a contenteditable or a div-with-a-caret loses the
- * keyboard type (`inputMode="decimal"` is why the amount field opens a number
- * pad), loses autofill, loses the Done bar, loses select-all and dictation,
- * and is invisible to VoiceOver. So nothing here fakes a field - the styling
- * moves, the element does not.
+ * This is the add-forms' version, because that is the one that already read as
+ * designed rather than generated - with the radius taken to a capsule to match
+ * the buttons. 52px tall, label above in sentence case, filled, a hairline
+ * border, and the same inset highlight in dark that the app's other surfaces
+ * use.
  *
- * (The app's viewport is `maximum-scale=1, user-scalable=no`, so iOS will not
- * zoom on focus whatever the font size. The 15px here is for reading, not to
- * dodge that.)
+ * (An earlier attempt cut the label into a notch in the border - the outlined
+ * Material look. It worked, and it was still wrong for this app: every other
+ * surface here is filled, so an outlined field was the odd one out. What the
+ * notch taught about legend geometry is in the git history rather than here.)
  *
- * ── How the notch is cut ──
+ * ── It is a real <input>, and that is the point ──
  *
- * A <fieldset> with a <legend> in it, which is the one construction where a
- * border has a genuine hole rather than something painted over it. The
- * alternative - a label with a background colour matching the surface - is
- * fine until the field sits on a card, a gradient or a coloured sheet, and
- * then the chip shows. This app has all three, so: a hole.
- *
- * The legend is one pixel tall and invisible - it cuts the hole and nothing
- * else. The visible label is a real <label>, positioned on the border line,
- * which is also what gives the input its accessible name; the fieldset is
- * aria-hidden, so a screen reader hears one label rather than a group
- * announcement and then a field.
- *
- * Why one pixel: see the note on the legend itself. Briefly, a legend only
- * straddles the top border when the fieldset sizes itself to its content, and
- * this one cannot - it is an absolute overlay. So the gap was landing 10px
- * below the line while the label sat on it.
+ * Nothing here fakes a control. A contenteditable or a div-with-a-caret loses
+ * the keyboard type - `inputMode="decimal"` is why a money field opens a
+ * number pad - and loses autofill, the Done bar, select-all, dictation and
+ * VoiceOver with it. Only the styling moved.
  */
+
+/**
+ * The words above a field, and above anything else that behaves like one - a
+ * segmented control, an icon grid, a colour rail.
+ *
+ * Exported so there is one answer to "how does a label look". Settings had
+ * 11px uppercase with widest tracking and the forms had 12px sentence case;
+ * three of the former stacked down a sheet is what reads as machine output,
+ * so the forms' version wins.
+ */
+export function FieldLabel({ children, htmlFor = null, className = '' }) {
+  const Tag = htmlFor ? 'label' : 'p'
+  return (
+    <Tag
+      htmlFor={htmlFor ?? undefined}
+      className={cx(
+        'block text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1',
+        className,
+      )}
+    >
+      {children}
+    </Tag>
+  )
+}
+
+/**
+ * The frame every field wears: capsule, filled, hairline, 52px.
+ *
+ * Exported because plenty of "fields" in this app are not inputs - the
+ * account row opens a picker, the date row holds a native date control, the
+ * category row is a button. They take the frame and skip the rest.
+ */
+export function fieldFrame(invalid = false) {
+  return cx(
+    'flex items-center gap-3 px-5 h-[52px] rounded-full',
+    'bg-white dark:bg-primary/[0.07]',
+    'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]',
+    'border transition-colors duration-150',
+    invalid
+      ? 'border-red-300 dark:border-red-500/45'
+      : 'border-slate-200/80 dark:border-primary/[0.14]',
+  )
+}
+
 export default function Field({
-  /** The words in the notch. */
+  /** The words above the field. */
   label,
-  /** Shown under the field, muted. */
+  /** Shown under it, muted. */
   hint = null,
   /** A string turns the frame red and replaces the hint. */
   error = null,
+  /** Leading content inside the frame - an icon, a currency mark. */
+  left = null,
   /** Trailing content inside the frame - a unit, a tick, a chevron. */
   right = null,
   /**
    * Anything other than a plain input: a <select>, or a button that opens a
-   * picker. It gets the same frame and the same notch, so a field that is not
-   * a text box still looks like a field.
+   * picker. It gets the same frame, so a field that is not a text box still
+   * looks like one.
    */
   children = null,
   className = '',
@@ -69,86 +104,39 @@ export default function Field({
 
   return (
     <div className={cx('w-full', className)}>
-      <div className={cx('relative', disabled && 'opacity-60')}>
-        {/* The frame: exactly the row's box, so the value sits on the frame's
-            centre line.
+      {/* htmlFor only when this wraps a real input: pointing a label at a
+          <button> or a native date picker that a caller passed as children
+          would name something it does not own. */}
+      {label && <FieldLabel htmlFor={children ? null : id}>{label}</FieldLabel>}
 
-            px-4 puts the notch 16px in. On a capsule the top border only goes
-            properly horizontal past the 25px cap, but between 16 and 25 it
-            has risen all of 1.7px - so the gap costs nothing visible there,
-            and 16px keeps the label and the value near the edge instead of
-            34px inside it. */}
-        <fieldset
-          aria-hidden="true"
-          className={cx(
-            'absolute inset-0 rounded-full border px-4 pointer-events-none',
-            'transition-colors duration-150',
-            invalid
-              ? 'border-red-300 dark:border-red-500/50'
-              : 'border-slate-200/90 dark:border-white/[0.10]',
-          )}
-        >
-          {/* A ONE-PIXEL legend, which is the whole trick.
+      <div className={cx(fieldFrame(invalid), disabled && 'opacity-60')}>
+        {left && (
+          <span className="shrink-0 flex items-center text-slate-400 dark:text-slate-500">
+            {left}
+          </span>
+        )}
 
-              A legend only straddles its fieldset's top border when the
-              fieldset is sized by its content. This one is an absolute
-              overlay with a fixed height, so the legend does not straddle
-              anything: its box hangs 16px DOWN from the border, and the gap
-              goes with it. Measured, after wondering why the label looked
-              like it was floating above the notch - it was: the notch was
-              10px lower.
+        {children ?? (
+          <input
+            id={id}
+            disabled={disabled}
+            aria-invalid={invalid || undefined}
+            aria-describedby={hint || error ? msgId : undefined}
+            className={cx(
+              'flex-1 min-w-0 bg-transparent outline-none',
+              'text-sm font-medium text-slate-800 dark:text-white',
+              'placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal',
+              inputClassName,
+            )}
+            {...rest}
+          />
+        )}
 
-              At 1px tall the gap is exactly the border line, wherever that
-              line is, and the words go back to being positioned on their
-              own. The invisible span inside sets the width, so the hole is
-              always as wide as the label plus its padding. */}
-          <legend className="block h-px p-0">
-            <span className="block px-1.5 text-[11px] leading-none invisible">
-              {label}
-            </span>
-          </legend>
-        </fieldset>
-
-        <label
-          htmlFor={id}
-          className={cx(
-            /* Centred on the border: an 11px line at -6px sits half above the
-               1px gap and half below it. */
-            'absolute -top-[6px] left-4 px-1.5 text-[11px] font-medium leading-none',
-            invalid
-              ? 'text-red-500 dark:text-red-400'
-              : 'text-slate-400 dark:text-slate-500',
-          )}
-        >
-          {label}
-        </label>
-
-        {/* pl-[22px] is the fieldset's px-4 plus the legend's own px-1.5, so
-            the value and its label start on the same vertical line. */}
-        <div className="relative flex items-center gap-2 pl-[22px] pr-4">
-          {children ?? (
-            <input
-              id={id}
-              disabled={disabled}
-              aria-invalid={invalid || undefined}
-              aria-describedby={hint || error ? msgId : undefined}
-              className={cx(
-                'peer flex-1 min-w-0 h-[50px] bg-transparent outline-none',
-                'text-[15px] font-medium',
-                'text-slate-800 dark:text-white',
-                'placeholder:text-slate-400 dark:placeholder:text-slate-600',
-                'placeholder:font-normal',
-                inputClassName,
-              )}
-              {...rest}
-            />
-          )}
-          {right && (
-            <span className="shrink-0 flex items-center text-slate-400 dark:text-slate-500">
-              {right}
-            </span>
-          )}
-        </div>
+        {right && (
+          <span className="shrink-0 flex items-center text-slate-400 dark:text-slate-500">
+            {right}
+          </span>
+        )}
       </div>
 
       {(error || hint) && (

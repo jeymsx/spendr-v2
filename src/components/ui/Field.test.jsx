@@ -63,20 +63,32 @@ describe('Field', () => {
       .toBe('0 = no budget')
   })
 
-  it('cuts the notch with a 1px invisible legend, and labels separately', () => {
-    // The legend is a hole-punch, not a label: at 1px it cuts exactly the
-    // border line, wherever the browser has put that line. It carries the
-    // same words only to size the hole.
+  it('wears the shared frame: a capsule, 52px, filled', () => {
+    // The look is the point of the component, so the three things that make a
+    // field recognisable as one are pinned here.
     const { container } = render(<Field label="Name" value="" onChange={() => {}} />)
-    const fs = container.querySelector('fieldset')
-    expect(fs.getAttribute('aria-hidden')).toBe('true')
-    const legend = fs.querySelector('legend')
-    expect(legend.className).toContain('h-px')
-    expect(legend.querySelector('span').className).toContain('invisible')
-    expect(legend.textContent).toBe('Name')
-    // ...and the accessible name comes from a real label outside it.
-    const input = screen.getByLabelText('Name')
-    expect(document.querySelector(`label[for="${input.id}"]`).closest('fieldset')).toBe(null)
+    const frame = container.querySelector('input').parentElement.className
+    expect(frame).toContain('rounded-full')
+    expect(frame).toContain('h-[52px]')
+    expect(frame).toContain('bg-white')
+  })
+
+  it('turns the frame red when it is invalid', () => {
+    const { container } = render(
+      <Field label="Name" error="Required" value="" onChange={() => {}} />,
+    )
+    expect(container.querySelector('input').parentElement.className)
+      .toContain('border-red-300')
+  })
+
+  it('labels children without claiming to own them', () => {
+    // A <label for> pointed at a picker button would name a control it does
+    // not wrap, so with children the label is a plain caption.
+    const { container } = render(
+      <Field label="Category"><button type="button">Groceries</button></Field>,
+    )
+    expect(container.querySelector('label')).toBe(null)
+    expect(screen.getByText('Category').tagName).toBe('P')
   })
 
   it('disabled reaches the input', () => {

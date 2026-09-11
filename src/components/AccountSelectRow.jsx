@@ -2,6 +2,7 @@ import { accountBrand } from '../lib/accountBrands'
 import { fmt } from '../lib/accountMeta'
 import BrandMark from './BrandMark'
 import { IconChevronRight } from './icons'
+import { fieldFrame } from './ui/Field'
 
 /**
  * The account field on the expense, inflow and transfer forms.
@@ -50,14 +51,14 @@ export default function AccountSelectRow({
       type="button"
       onClick={onClick}
       aria-label={ariaLabel ? `${ariaLabel}: ${account?.name ?? 'none selected'}` : undefined}
+      /* The same frame as the text fields it sits between - capsule, filled,
+         hairline - because it is a field: it names a value and opens a picker
+         to change it. It keeps its own height rather than the frame's 52px,
+         since a card thumbnail and two lines of text need more room. */
       className={[
-        'w-full flex items-center gap-3 pl-3 pr-2.5 py-2.5 rounded-2xl text-left',
-        'active:bg-slate-50 dark:active:bg-primary/[0.12] transition-colors',
-        'bg-white dark:bg-primary/[0.07]',
-        error
-          ? 'border border-red-300 dark:border-red-500/40'
-          : 'border border-slate-200/80 dark:border-primary/[0.14]',
-        'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]',
+        fieldFrame(error).replace('h-[52px]', 'py-2.5').replace('px-5', 'pl-4 pr-2.5'),
+        'w-full text-left',
+        'active:bg-slate-50 dark:active:bg-primary/[0.12]',
       ].join(' ')}
     >
       {/* The card. 1.586 is the real card ratio, the same one the full-size

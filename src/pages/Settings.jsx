@@ -31,7 +31,7 @@ import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
 import Button from '../components/ui/Button'
 import Sheet from '../components/ui/Sheet'
-import Field from '../components/ui/Field'
+import Field, { FieldLabel, fieldFrame } from '../components/ui/Field'
 import SwatchRail from '../components/ui/SwatchRail'
 import IconButton from '../components/ui/IconButton'
 
@@ -304,36 +304,25 @@ function SettingsRow({ iconEl, label, sublabel, right, onTap, destructive = fals
   )
 }
 
+/**
+ * The frame, for the inputs in this file that are not <Field>s yet.
+ *
+ * Built from fieldFrame so there is one capsule, one height and one fill
+ * rather than this file's own 48px radius-16 version - which is what made
+ * Settings' fields visibly different objects from the add-forms'.
+ */
 function inputClass(error = false) {
   return [
-    'w-full h-[48px] px-4 rounded-2xl text-sm font-medium',
-    'text-slate-800 dark:text-white',
-    'bg-white dark:bg-white/[0.06]',
-    error
-      ? 'border border-red-300 dark:border-red-500/40'
-      : 'border border-slate-200/80 dark:border-white/[0.09]',
+    fieldFrame(error).replace('flex items-center gap-3', 'w-full block'),
+    'text-sm font-medium text-slate-800 dark:text-white',
     'placeholder-slate-400 dark:placeholder-slate-500',
-    'outline-none focus:ring-2 focus:ring-primary/30',
-    'shadow-[0_1px_3px_rgba(0,0,0,0.05)] dark:shadow-none',
+    'outline-none',
   ].join(' ')
 }
 
-/**
- * The caption over a GROUP - a segmented control, an icon grid, a colour rail.
- *
- * Text fields do not use this any more; they carry their label in a notch in
- * their own border (see ui/Field). What is left here labels things a notch
- * cannot go round, and it is sentence case at 12px rather than 11px uppercase
- * with widest tracking: three of those stacked down a form was the look being
- * complained about, and shouting was most of it.
- */
-function FieldLabel({ children }) {
-  return (
-    <p className="text-[12px] font-medium text-slate-400 dark:text-slate-500 mb-2 px-1">
-      {children}
-    </p>
-  )
-}
+/* FieldLabel now comes from ui/Field, so this file and the add-forms cannot
+   drift apart again. It was 11px uppercase with widest tracking here and 12px
+   sentence case there, for the same job. */
 
 // ── Profile sheet ──────────────────────────────────────────────────────────────
 

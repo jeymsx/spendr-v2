@@ -9,6 +9,7 @@ import { getCreditStatus } from '../utils/creditCycle'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import AccountSelectRow from '../components/AccountSelectRow'
 import TxConfirmSheet from '../components/TxConfirmSheet'
+import { fieldFrame } from '../components/ui/Field'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
@@ -332,10 +333,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">
             Transfer Fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
           </p>
-          <div className="flex items-center gap-3 px-4 h-[52px] rounded-2xl
-            bg-white dark:bg-primary/[0.07]
-            border border-slate-200/80 dark:border-primary/[0.14]
-            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]">
+          <div className={fieldFrame()}>
             <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">₱</span>
             <input
               type="text"
@@ -357,10 +355,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
         {/* Date — last */}
         <div>
           <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mb-1.5 px-1">Date</p>
-          <div className="flex items-center gap-3 px-4 h-[52px] rounded-2xl
-            bg-white dark:bg-primary/[0.07]
-            border border-slate-200/80 dark:border-primary/[0.14]
-            shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]">
+          <div className={fieldFrame()}>
             <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
             <input
               type="date"
