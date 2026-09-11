@@ -72,10 +72,15 @@ export function RowDate({ value, onChange, display }) {
         {display || 'Pick a date'}
       </span>
       <IconChevron />
+      {/* Chrome opens the calendar only from the indicator icon or a key
+          press - clicking the field itself just focuses a segment, and the
+          indicator is invisible here, so on desktop this row read as dead.
+          iOS Safari opens on any tap, so it was a web-only hole. */}
       <input
         type="date"
         value={value}
         onChange={onChange}
+        onClick={e => { try { e.currentTarget.showPicker?.() } catch { /* older engine */ } }}
         aria-label="Date"
         className="absolute inset-0 w-full h-full opacity-0 cursor-pointer
           [color-scheme:light] dark:[color-scheme:dark]"

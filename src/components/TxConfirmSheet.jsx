@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react'
-import { accountBrand } from '../lib/accountBrands'
 import SwipeConfirm from './SwipeConfirm'
 import Button from './ui/Button'
 import DetailRow from './ui/DetailRow'
 import Divider from './ui/Divider'
 import Sheet from './ui/Sheet'
 import CategoryGlyph from './CategoryGlyph'
-import BrandMark from './BrandMark'
+import AmountHero from './ui/AmountHero'
+import AccountLine, { TransferLegs } from './AccountLine'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -30,132 +30,6 @@ const TYPE_CONFIG = {
   expense:  { noun: 'expense',  sign: '−', color: '#ef4444' },
   inflow:   { noun: 'inflow',   sign: '+', color: '#22c55e' },
   transfer: { noun: 'transfer', sign: '',  color: 'var(--color-primary)' },
-}
-
-/**
- * The rule over the amount.
- *
- * Decorative, deliberately. It is the one mark on the sheet that says "this is
- * a measured figure" rather than a number that was typed into a box, and it
- * does the job the chip was doing badly: the centre tick is tall and solid and
- * the rest fall away toward the edges, so the eye is delivered to the middle -
- * which is exactly where the amount sits underneath.
- *
- * Drawn, not imported: 41 lines cost less than any asset, and the ticks either
- * side take currentColor, so one class answers both themes.
- */
-function AmountRule({ color }) {
-  const TICKS = 41
-  const W = 232
-  const H = 24
-  const mid = (TICKS - 1) / 2
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} width="100%" height={H} aria-hidden="true"
-      className="block mx-auto" style={{ maxWidth: W }}>
-      {Array.from({ length: TICKS }, (_, i) => {
-        const away = Math.abs(i - mid) / mid       // 0 at the centre, 1 at the ends
-        const isMid = i === mid
-        const h = isMid ? H : 7 + (1 - away) * 5
-        // 0.75 in, so the round cap on the outermost tick cannot clip.
-        const x = 0.75 + i * ((W - 1.5) / (TICKS - 1))
-        return (
-          <line key={i}
-            x1={x} y1={(H - h) / 2} x2={x} y2={(H + h) / 2}
-            stroke={isMid ? color : 'currentColor'}
-            strokeWidth={isMid ? 2 : 1.25}
-            strokeLinecap="round"
-            /* Squared, not linear. A linear fade still left legible ticks
-               hard against the ends, which reads as a rule that has been cut
-               off rather than one that has faded out. */
-            opacity={isMid ? 1 : 0.12 + (1 - away) ** 2 * 0.5}
-          />
-        )
-      })}
-    </svg>
-  )
-}
-
-/**
- * An account, as the card you already recognise.
- *
- * It was a name and an 8px colour dot on a row labelled "From" - the account
- * reduced to the one thing about it you never learned. Everywhere else in the
- * app an account is its card: GCash is the blue one, SPayLater the burnt
- * orange one, and you pick it out without reading. accountBrand gives the
- * same gradient and mark the full-size faces use, so the thumbnail here is
- * the same object seen smaller - the same call AccountSelectRow makes on the
- * form you just came from, at the same 46x29.
- *
- * `delta` is what this account is out or up by, and it is the whole reason the
- * two transfer legs exist: with a fee, the amount leaving the source is not
- * the amount arriving at the destination, and that is worth seeing on the two
- * rows it happens to rather than inferring from a total.
- */
-/**
- * The card itself, at the real card ratio - 46x29 and 38x24 are both 1.586:1,
- * the same proportion the full-size faces use, so this is that object seen
- * smaller rather than a differently shaped swatch.
- *
- * `sm` is for the transfer pair, where two of these share one row: it buys
- * the names 8px each, which is the difference between "Maya Savings" fitting
- * and being truncated.
- */
-function CardThumb({ account, sm = false }) {
-  const brand = accountBrand(account)
-  return (
-    <span
-      className={`shrink-0 rounded-lg overflow-hidden text-white
-        flex items-center justify-center ${sm ? 'w-[38px] h-[24px]' : 'w-[46px] h-[29px]'}`}
-      style={{ background: `linear-gradient(135deg, ${brand.from} 0%, ${brand.to} 100%)` }}
-    >
-      <BrandMark mark={brand.mark} size={sm ? 13 : 15} />
-    </span>
-  )
-}
-
-function AccountLine({ role, account }) {
-  return (
-    <div className="flex items-center gap-3 py-2.5">
-      <CardThumb account={account} />
-      <span className="flex-1 min-w-0">
-        <span className="block text-[11px] leading-tight text-slate-400 dark:text-slate-500">
-          {role}
-        </span>
-        <span className="block text-[14px] font-semibold leading-tight truncate
-          text-slate-800 dark:text-slate-100">
-          {account.name}
-        </span>
-      </span>
-    </div>
-  )
-}
-
-/**
- * One side of a transfer: the card, then what it is here and what it is
- * called, on one line.
- *
- * No figure. Each leg used to carry what that account was out or up by, so a
- * fee showed as -5,025 leaving and +5,000 arriving. Without a fee those were
- * the headline amount twice more with signs on it, and with one the fee row
- * above already states the difference - three numbers to say what two say.
- * The leg's job is to name the account, not to restate the arithmetic.
- */
-function TransferLeg({ role, account }) {
-  return (
-    <div className="flex items-center gap-2 min-w-0">
-      <CardThumb account={account} sm />
-      <span className="min-w-0">
-        <span className="block text-[11px] leading-tight text-slate-400 dark:text-slate-500">
-          {role}
-        </span>
-        <span className="block text-[14px] font-semibold leading-tight truncate
-          text-slate-800 dark:text-slate-100">
-          {account.name}
-        </span>
-      </span>
-    </div>
-  )
 }
 
 export default function TxConfirmSheet({
@@ -307,22 +181,15 @@ export default function TxConfirmSheet({
           </p>
         </div>
 
-        <div className="text-center mt-5 mb-6">
-          <div className="text-slate-400 dark:text-slate-600">
-            <AmountRule color={cfg.color} />
-          </div>
-          <p
-            className="text-[40px] font-bold mt-1 tabular-nums leading-none"
-            style={{ color: cfg.color }}
-          >
-            {cfg.sign}{fmt(amount)}
-          </p>
-          {installment && (
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 font-medium">
-              per month · {installment.months} months · {fmt(installment.total)} total
-            </p>
-          )}
-        </div>
+        <AmountHero
+          color={cfg.color}
+          className="mt-5 mb-6"
+          sub={installment
+            ? `per month · ${installment.months} months · ${fmt(installment.total)} total`
+            : null}
+        >
+          {cfg.sign}{fmt(amount)}
+        </AmountHero>
 
         {/* One list, not a stack of cards.
 
@@ -363,24 +230,7 @@ export default function TxConfirmSheet({
               gone: "Total from GCash" and "Received by Maya" said in words
               exactly what the legs and the fee row now say between them. */}
           {(fromAccount || toAccount) && (
-            /* A grid, not flex: 1fr a side gives the two legs equal room
-               whatever the names are, so the arrow stays on the centre line of
-               the sheet instead of drifting toward the longer name. */
-            <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 py-2.5">
-              {fromAccount
-                ? <TransferLeg role="From" account={fromAccount} />
-                : <span />}
-              <span className="text-slate-400 dark:text-slate-500" aria-hidden="true">
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none"
-                  stroke="currentColor" strokeWidth="2.4"
-                  strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M5 12h13M13 6l6 6-6 6" />
-                </svg>
-              </span>
-              {toAccount
-                ? <TransferLeg role="To" account={toAccount} />
-                : <span />}
-            </div>
+            <TransferLegs from={fromAccount} to={toAccount} />
           )}
 
           {/* Installment schedule */}

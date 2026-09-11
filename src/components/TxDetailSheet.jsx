@@ -9,6 +9,8 @@ import AccountPickerSheet from './AccountPickerSheet'
 import { useToast } from '../context/ToastContext'
 import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
 import CategoryGlyph from './CategoryGlyph'
+import AmountHero from './ui/AmountHero'
+import { CardThumb, TransferLegs } from './AccountLine'
 import Button from './ui/Button'
 import Card from './ui/Card'
 import DetailRow from './ui/DetailRow'
@@ -313,14 +315,13 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
     ),
   }[mode]
 
-  /* Edit and confirm-delete head themselves with a line of text, so they hand
-     it to Sheet and get aria-labelledby pointing at it. Detail's heading is
-     the coloured type pill - a graphic, not a line of text - so it stays in
+  /* Only edit heads itself with Sheet's own left-aligned title. Detail's
+     heading is the coloured type pill and delete's is a red disc over a
+     centred line - both graphics rather than lines of text, so both stay in
      the body and ariaLabel names the dialog instead. */
-  const title = {
-    edit:             `Edit ${cfg.label.toLowerCase()}`,
-    'confirm-delete': planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?',
-  }[mode] ?? null
+  const title = mode === 'edit' ? `Edit ${cfg.label.toLowerCase()}` : null
+
+  const deleteHeading = planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?'
 
   return (
     <>
@@ -359,8 +360,8 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
            is the `if (saving) return` the old local close() opened with. */
         dismissible={!saving}
         title={title}
-        /* Only used when there is no title - which is detail mode. */
-        ariaLabel={`${cfg.label} details`}
+        /* Used whenever there is no title - detail and delete. */
+        ariaLabel={mode === 'confirm-delete' ? deleteHeading : `${cfg.label} details`}
         titleAction={mode === 'edit' ? (
           <IconButton
             label="Back to details"
@@ -379,47 +380,74 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
           {/* ── DETAIL MODE ── */}
           {mode === 'detail' && (
             <>
-              {/* The type, as a pill, in place of a title. The timestamp used
-                  to sit opposite it and say exactly what the Date row below
-                  says - the corner it freed went to a close button, which
-                  Sheet's handle and scrim have now made unnecessary. */}
-              <div className="flex items-center">
+              {/* The type, as a pill, centred where the confirm sheet puts
+                  its title. This sheet has no title of its own - the pill is
+                  the only thing naming what you are looking at, so it sits
+                  where the name goes rather than hard left. */}
+              <div className="flex justify-center">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.badge}`}>
                   {cfg.label}
                 </span>
               </div>
 
-              {/* The figure, given room. Tighter tracking at this size: at
-                  42px the default spacing makes a long peso amount sprawl. */}
-              <div className="text-center pt-5 pb-6">
-                <p className="text-[40px] font-semibold tabular-nums leading-none tracking-tight"
-                  style={{ color: cfg.color }}>
-                  {cfg.sign}{fmt(rec.amount)}
-                </p>
-                {rec.description && (
-                  <p className="text-[15px] text-slate-500 dark:text-slate-400 mt-2.5">{rec.description}</p>
+              <AmountHero color={cfg.color} className="mt-5 mb-6">
+                {cfg.sign}{fmt(rec.amount)}
+              </AmountHero>
+
+              {/* One list, not a card of rows.
+
+                  This is the confirm sheet's stack, and deliberately: the two
+                  sheets show the same transaction either side of the moment it
+                  is written, and this one used to box its rows in a recessed
+                  card while the other laid them flat. Same object, two
+                  containers, so arriving from the ledger looked like a
+                  different kind of thing from arriving from the form.
+
+                  Every row is `isLast` on purpose - nothing is drawn between
+                  them. A label hard left and its value hard right is already
+                  two columns, and the sheet owns the horizontal inset, so
+                  `padded={false}` keeps them on its gutter. */}
+              <div className="flex flex-col">
+                {rec.description && rec.description.trim() && (
+                  <DetailRow label="Note" value={rec.description} padded={false} isLast />
+                )}
+                {cat && (
+                  <DetailRow
+                    label="Category"
+                    value={<><CategoryGlyph cat={cat} size={14} className="inline-block mr-1.5 -mt-px" />{cat.name}</>}
+                    padded={false}
+                    isLast
+                  />
+                )}
+                {/* The account is a row like the others, with its card as
+                    the value rather than a coloured dot. It was a two-line
+                    block of its own under the list - a fourth fact about the
+                    transaction, presented as though it were a different kind
+                    of fact. */}
+                {acct && (
+                  <DetailRow
+                    label="Account"
+                    value={(
+                      <span className="inline-flex items-center gap-2 align-middle">
+                        <CardThumb account={acct} sm />
+                        {acct.name}
+                      </span>
+                    )}
+                    padded={false}
+                    isLast
+                  />
+                )}
+                <DetailRow
+                  label="Date"
+                  value={fmtDisplayDate(rec.date)}
+                  sub={fmtTime(rec.date)}
+                  padded={false}
+                  isLast
+                />
+                {(fromAcct || toAcct) && (
+                  <TransferLegs from={fromAcct} to={toAcct} />
                 )}
               </div>
-
-              {/* One group, hairline separators. `rows` is built first so the
-                  last row knows it is last without every branch repeating the
-                  check. */}
-              {(() => {
-                const rows = [
-                  cat      && { key: 'cat',  label: 'Category', value: <><CategoryGlyph cat={cat} size={14} className="inline-block mr-1.5 -mt-px" />{cat.name}</> },
-                  acct     && { key: 'acct', label: 'Account',  value: acct.name,     dot: acct.color },
-                  fromAcct && { key: 'from', label: 'From',     value: fromAcct.name, dot: fromAcct.color },
-                  toAcct   && { key: 'to',   label: 'To',       value: toAcct.name,   dot: toAcct.color },
-                  { key: 'date', label: 'Date', value: fmtDisplayDate(rec.date), sub: fmtTime(rec.date) },
-                ].filter(Boolean)
-                return (
-                  <Card surface="recessed" clip>
-                    {rows.map((r, i) => (
-                      <DetailRow key={r.key} {...r} isLast={i === rows.length - 1} />
-                    ))}
-                  </Card>
-                )
-              })()}
             </>
           )}
 
@@ -509,30 +537,79 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
           {/* ── CONFIRM DELETE MODE ── */}
           {mode === 'confirm-delete' && (
-            <div className="pt-1">
-              <p className="text-[13px] text-center text-slate-500 dark:text-slate-400 mb-4 px-2">
-                This cannot be undone from here, though the toast afterwards
-                offers one.
-              </p>
+            <div>
+              {/* The same shape as the sheet you just came from: something
+                  centred at the top naming what this is, then the figure,
+                  then the flat list. Delete used to be the odd one out - a
+                  left-aligned title, a centred paragraph and a boxed card -
+                  so the last screen before a destructive act was the one that
+                  looked least like the app.
 
-              {/* What is about to go, shown as the object it is rather than
-                  three centred lines of prose. Same group as everywhere else,
-                  so the thing you are deleting looks like the thing you were
-                  just looking at. */}
-              <Card surface="recessed" clip>
-                <DetailRow
-                  label={planCount > 1 ? `${planCount} payments` : 'Amount'}
-                  value={planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(rec.amount)}`}
-                />
-                {rec.description && (
-                  <DetailRow label="Note" value={rec.description} />
+                  A red disc rather than the type pill: the pill says what the
+                  transaction IS, and at this moment what matters is what is
+                  about to happen to it. This is the disc the sign-out and
+                  reset confirmations already use. */}
+              <div className="flex justify-center">
+                <span className="w-14 h-14 rounded-2xl flex items-center justify-center
+                  bg-red-100 dark:bg-red-500/15 text-red-500 dark:text-red-400">
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2" />
+                    <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+                    <path d="M10 11v6M14 11v6" />
+                  </svg>
+                </span>
+              </div>
+
+              <div className="text-center mt-4">
+                <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white">
+                  {deleteHeading}
+                </h3>
+                <p className="mt-1 mx-auto max-w-[268px] text-[12.5px] leading-snug
+                  text-slate-400 dark:text-slate-500">
+                  This cannot be undone from here, though the toast afterwards
+                  offers one.
+                </p>
+              </div>
+
+              <AmountHero color={cfg.color} className="mt-5 mb-6">
+                {planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(rec.amount)}`}
+              </AmountHero>
+
+              {/* The same flat list the detail sheet uses, including the
+                  account as its card. You are being asked about one specific
+                  transaction, so it should look like the one you were just
+                  looking at. */}
+              <div className="flex flex-col">
+                {planCount > 1 && (
+                  <DetailRow label="Payments" value={`${planCount}`} padded={false} isLast />
+                )}
+                {rec.description && rec.description.trim() && (
+                  <DetailRow label="Note" value={rec.description} padded={false} isLast />
                 )}
                 <DetailRow
                   label="Balance"
                   value="Reversed automatically"
+                  padded={false}
                   isLast
                 />
-              </Card>
+                {acct && (
+                  <DetailRow
+                    label="Account"
+                    value={(
+                      <span className="inline-flex items-center gap-2 align-middle">
+                        <CardThumb account={acct} sm />
+                        {acct.name}
+                      </span>
+                    )}
+                    padded={false}
+                    isLast
+                  />
+                )}
+                {(fromAcct || toAcct) && (
+                  <TransferLegs from={fromAcct} to={toAcct} />
+                )}
+              </div>
 
               {/* Deleting one month would strand the rest, so the whole plan
                   goes. Say so before it happens rather than after. */}
