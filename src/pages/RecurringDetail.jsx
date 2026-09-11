@@ -14,10 +14,10 @@ import {
   FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
 } from '../utils/recurring'
-import CategoryGlyph from '../components/CategoryGlyph'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
 import { CardThumb } from '../components/AccountLine'
+import BillMark from '../components/BillMark'
 import Card from '../components/ui/Card'
 import DetailRow from '../components/ui/DetailRow'
 import EmptyState from '../components/ui/EmptyState'
@@ -371,14 +371,22 @@ export default function RecurringDetail() {
               without reading anything. The facts it used to carry are in
               the Details list below, where the rest of the facts are. */}
           <div className="flex items-center gap-3.5">
-            <div
-              className={`w-14 h-14 rounded-2xl flex items-center justify-center text-[26px] shrink-0 ${
-                rec.active ? '' : 'opacity-40 saturate-50'
-              }`}
-              style={{ backgroundColor: (cat?.color ?? '#64748b') + '20' }}
-            >
-              <CategoryGlyph cat={cat} size={26} emoji="🔁" />
-            </div>
+            {/* The brand's own mark, which the bills LIST has drawn all
+                along - this page was still painting the generic category tile,
+                so Netflix was a red repeat-arrows glyph here and the Netflix
+                logo one screen back. BillMark falls through to that same tile
+                for a bill no icon set knows ("Gym", "Meralco"), so nothing
+                regresses; it just stops ignoring the art we already ship.
+
+                `dim` is the component's own paused treatment, which replaces
+                the opacity-40/saturate-50 this had bolted on the outside. */}
+            <BillMark
+              name={rec.name}
+              cat={cat}
+              size={30}
+              dim={!rec.active}
+              boxClass="w-14 h-14 rounded-2xl"
+            />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
                 <p className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">
