@@ -1,6 +1,6 @@
 {
   "name": "spendr",
-  "description": "Mobile-first personal finance PWA for Filipinos — offline-first, multi-account, with Supabase sync",
+  "description": "Mobile-first personal finance PWA for Filipinos \u2014 offline-first, multi-account, with Supabase sync",
   "private": true,
   "version": "0.3.0",
   "type": "module",
@@ -11,7 +11,8 @@
     "check": "node scripts/check.mjs",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "design": "node scripts/designcheck.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

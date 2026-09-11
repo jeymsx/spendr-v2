@@ -592,6 +592,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
           {query && (
             <button
               onClick={() => setQuery('')}
+              aria-label="Clear search"
               className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
                 bg-slate-300/80 dark:bg-white/[0.15] flex items-center justify-center
                 text-slate-600 dark:text-slate-300 active:opacity-70"
@@ -1374,6 +1375,8 @@ export function QrViewerModal({ open, onClose, qrImage, accountName }) {
   useScrollLock(open)
   if (!open) return null
   return (
+    /* design-ok: a lightbox, not a sheet. There is no panel - the image sits
+       on full black and a tap anywhere closes it. */
     <div
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90"
       style={{ touchAction: 'none' }}

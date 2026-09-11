@@ -1438,7 +1438,7 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
                             onTap={openEdit}
                             onLongPressDelete={openDelete}
                           />
-                          {i < visibleCats.length - 1 && <div className="h-px bg-slate-50 dark:bg-white/[0.04] ml-14 mr-4" />}
+                          {i < visibleCats.length - 1 && <Divider inset="glyph" />}
                         </div>
                       ))}
                     </SortableContext>
@@ -2394,9 +2394,7 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
                 onTap={openEdit}
                 onLongPressDelete={deleteTpl}
               />
-              {i < (templates ?? []).length - 1 && (
-                <div className="h-px bg-slate-50 dark:bg-white/[0.04] mx-4" />
-              )}
+              {i < (templates ?? []).length - 1 && <Divider inset="row" />}
             </div>
           ))}
         </div>
@@ -2667,9 +2665,7 @@ export function PolicySheet({ open, type, onClose }) {
 
               return (
                 <div key={i}>
-                  {i > 0 && (
-                    <div className="h-px bg-slate-100 dark:bg-white/[0.05] my-4" />
-                  )}
+                  {i > 0 && <Divider className="my-4" />}
                   <div className="flex gap-3 items-start">
                     {/* Index badge */}
                     <div

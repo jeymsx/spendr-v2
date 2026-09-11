@@ -277,6 +277,7 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
         {query && (
           <button
             onClick={() => setQuery('')}
+            aria-label="Clear search"
             className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
               bg-white/[0.15] flex items-center justify-center text-slate-300 active:opacity-70"
           >

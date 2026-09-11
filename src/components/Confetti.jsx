@@ -39,6 +39,8 @@ export default function Confetti({ count = 70 }) {
   if (reduced) return null
 
   return (
+    /* design-ok: not a dialog. A decorative canvas over the whole screen,
+       pointer-events-none and aria-hidden - nothing to focus or dismiss. */
     <div className="fixed inset-0 pointer-events-none overflow-hidden z-50" aria-hidden="true">
       {particles.map(p => (
         <div

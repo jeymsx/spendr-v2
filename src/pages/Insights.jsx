@@ -269,7 +269,7 @@ function MonthNav({ monthOffset, onMonth }) {
 
   return (
     <div className="flex items-center justify-center gap-3 pb-1 mt-4">
-      <button onClick={() => onMonth(monthOffset - 1)}
+      <button onClick={() => onMonth(monthOffset - 1)} aria-label="Previous month"
         className="p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="15 18 9 12 15 6"/>
@@ -281,7 +281,7 @@ function MonthNav({ monthOffset, onMonth }) {
           <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>
         )}
       </button>
-      <button onClick={() => onMonth(monthOffset + 1)} disabled={isCurrent}
+      <button onClick={() => onMonth(monthOffset + 1)} disabled={isCurrent} aria-label="Next month"
         className="p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200 disabled:opacity-25">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="9 18 15 12 9 6"/>

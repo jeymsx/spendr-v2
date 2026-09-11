@@ -314,6 +314,9 @@ export default function QuickLogOverlay({ onClose }) {
     : 0
 
   return (
+    /* design-ok: not a sheet. A full-screen gesture surface with its own
+       enter and exit, positioned against the visual viewport rather than
+       the layout viewport - see the note above; Sheet does not do that. */
     <div
       className={`fixed inset-0 z-[200] transition-opacity duration-200 ease-out
         ${closing ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
