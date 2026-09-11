@@ -30,24 +30,25 @@ function IconTransfer() {
   )
 }
 
+/* No descriptions. "Record money spent" under "Expense" tells someone who
+   opened a finance app to log an expense nothing they did not know, and three
+   of them made a three-item sheet twice as tall as it needed to be. The
+   coloured arrow says the direction; the word says the rest. */
 const ACTIONS = [
   {
     label: 'Expense',
-    description: 'Record money spent',
     path: '/expense',
     Icon: IconArrowUp,
     iconBg: 'bg-red-500/[0.10] border border-red-500/[0.20] text-red-500 dark:text-red-400 shadow-sm dark:shadow-[inset_0_1px_0_rgba(239,68,68,0.12)]',
   },
   {
     label: 'Inflow',
-    description: 'Record money received',
     path: '/inflow',
     Icon: IconArrowDown,
     iconBg: 'bg-emerald-500/[0.10] border border-emerald-500/[0.20] text-emerald-600 dark:text-emerald-400 shadow-sm dark:shadow-[inset_0_1px_0_rgba(16,185,129,0.12)]',
   },
   {
     label: 'Transfer',
-    description: 'Move between accounts',
     path: '/transfer',
     Icon: IconTransfer,
     iconBg: 'bg-primary/[0.10] border border-primary/[0.20] text-primary shadow-sm dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
@@ -74,7 +75,7 @@ export default function AddActionSheet({ open, onClose }) {
     <Sheet open={open} onClose={onClose} ariaLabel="Add a transaction">
       <div className="pt-1 pb-2">
         <div className="flex flex-col gap-3.5">
-          {ACTIONS.map(({ label, description, path, Icon, iconBg }) => (
+          {ACTIONS.map(({ label, path, Icon, iconBg }) => (
             <button
               key={path}
               onClick={() => handleAction(path)}
@@ -83,10 +84,9 @@ export default function AddActionSheet({ open, onClose }) {
               <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${iconBg}`}>
                 <Icon />
               </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-semibold text-[14px] leading-snug text-slate-900 dark:text-white">{label}</p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{description}</p>
-              </div>
+              <p className="flex-1 min-w-0 font-semibold text-[15px] text-slate-900 dark:text-white">
+                {label}
+              </p>
               <svg className="text-slate-300 dark:text-slate-600 shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="5,2 9,7 5,12" />
               </svg>

@@ -3062,7 +3062,7 @@ export default function Settings() {
           <SettingsRow
             iconEl={<RowIcon color="amber"><IconTag /></RowIcon>}
             label="Categories"
-            sublabel="Customize expense and inflow categories"
+            /* No sublabel: "Categories" is the whole of it. */
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => navigate('/settings/categories')}
           />
@@ -3070,7 +3070,7 @@ export default function Settings() {
           <SettingsRow
             iconEl={<RowIcon color="green"><IconTarget /></RowIcon>}
             label="Monthly budgets"
-            sublabel="Set spending limits per category"
+            /* No sublabel: "Monthly budgets" is the whole of it. */
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => navigate('/settings/budgets')}
           />

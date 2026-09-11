@@ -41,8 +41,12 @@ export default function AccountSelectRow({
 
   /* Credit shows headroom, everything else shows what is in it. A card's
      "balance" is what you owe, which is the one number you are not deciding
-     against when you pick it to spend from. */
-  const sub = !account ? 'Tap to choose'
+     against when you pick it to spend from.
+
+     Empty shows nothing rather than "Tap to choose": the row already says
+     "Select account" and carries a "Choose" chip, so that was the same
+     instruction three times in one row. */
+  const sub = !account ? null
     : account.type === 'credit' ? `${fmt(creditAvailable ?? 0)} available`
     : `Balance: ${fmt(account.balance ?? 0)}`
 
@@ -86,11 +90,13 @@ export default function AccountSelectRow({
         }`}>
           {account?.name ?? emptyText}
         </span>
-        <span className="block text-[11px] truncate tabular-nums text-slate-400 dark:text-slate-500">
-          {error && !account
-            ? <span className="text-red-500 dark:text-red-400 font-medium tabular-nums">{errorText}</span>
-            : sub}
-        </span>
+        {(sub || (error && !account)) && (
+          <span className="block text-[11px] truncate tabular-nums text-slate-400 dark:text-slate-500">
+            {error && !account
+              ? <span className="text-red-500 dark:text-red-400 font-medium tabular-nums">{errorText}</span>
+              : sub}
+          </span>
+        )}
       </span>
 
       {/* Not a button. The row is the target; this says so. */}
