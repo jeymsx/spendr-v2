@@ -45,22 +45,74 @@ Six things would close that gap, roughly in order of value per hour:
 
 ## 1. Security and correctness — do these first
 
-### RLS is missing on `templates` and `user_preferences`
+### ~~RLS is missing on `templates` and `user_preferences`~~ — wrong, they have it
 
-Both are created in `003_schema.sql` with no `enable row level security` and no
-policy anywhere, and both sync: `pushTable('templates', …)` at sync.js:433,
-`pullSimpleTable` at :550. Every other synced table has a policy —
-transactions, accounts, categories, debts and recurring in `001_init.sql`, goals
-in `004_goals.sql`.
+Checked against the database on 2026-09-11. Every Spendr table has RLS on
+with a policy:
 
-The anon key ships in the client. With open signups, any account can read and
-write every user's templates, which hold descriptions, amounts, categories and
-accounts. One migration fixes it; write it before inviting a second user.
+    accounts 1   categories 1   debts 1      goals 1     recurring 1
+    templates 1  transactions 1 user_preferences 1
 
-### Two migrations are still unapplied
+This was the number-one item in this plan and it was a false alarm. Worth
+recording HOW it was wrong, because the same mistake is easy to repeat.
 
-`004_goals.sql` and `005_account_design.sql`. Until they run, goals do not sync
-and card designs fall back via the drop-and-retry path in `optionalSync`.
+`003_schema.sql` really does create `templates` and `user_preferences` with
+no `enable row level security` and no `create policy`, and no other migration
+adds one — the only RLS in this repo is in `001_init.sql` and `004_goals.sql`.
+All of that is true. The conclusion drawn from it was not: RLS can be enabled
+from the Supabase dashboard, and that leaves nothing behind in these files.
+The migrations show what the repo would build from scratch, never what the
+live database currently is.
+
+The table DDL does not settle it either. `enable row level security` and
+`create policy` are separate objects and never appear in a `create table`
+definition, so reading the DDL out of the Supabase editor proves nothing in
+either direction.
+
+What settles it:
+
+```sql
+select c.relname as table_name, c.relrowsecurity as rls_enabled,
+       count(p.polname) as policies
+from pg_class c
+left join pg_policy p on p.polrelid = c.oid
+where c.relnamespace = 'public'::regnamespace and c.relkind = 'r'
+group by c.relname, c.relrowsecurity
+order by c.relrowsecurity, c.relname;
+```
+
+`rls_enabled` false is wide open. true with zero policies is deny-all, which
+is safe but means writes to that table are already failing silently.
+
+Two things still worth doing:
+
+1. A policy EXISTING is not the same as a policy being right. One written
+   `using (true)` is as open as no RLS at all. Confirm the predicates read
+   `auth.uid() = user_id`:
+
+   ```sql
+   select tablename, policyname, cmd, qual, with_check
+   from pg_policies where schemaname = 'public' order by tablename;
+   ```
+
+2. Fold the two into `003_schema.sql` anyway. The database is correct today
+   and the repo cannot rebuild it — a fresh project from these migrations
+   would come up with two unprotected tables.
+
+### Not Spendr's, but in the same project
+
+The same query returned `jobs` (4 policies) and `latr_state` (RLS on, **zero**
+policies). Neither is a Spendr table. `latr_state` is therefore deny-all for
+normal clients: whatever app owns it can only write through the service role
+or the SQL editor. Flagged here only because it showed up in the audit — it
+is someone else's to fix.
+
+### ~~Two migrations are still unapplied~~ — done
+
+`004_goals.sql` and `005_account_design.sql` were both applied on 2026-09-11.
+Goals sync and card designs no longer take the drop-and-retry path in
+`optionalSync`. Worth a deliberate check that goals actually round-trip now,
+since that path has never run against a real remote table.
 
 ### Demo rows must go before signing in on localhost
 
