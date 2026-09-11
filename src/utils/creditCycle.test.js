@@ -200,8 +200,6 @@ describe('getCreditStatus - a statement that billed nothing', () => {
   const acct = { name: 'Card', type: 'credit', creditLimit: 50000, cutoffDate: 15, minimumPayment: 200 }
   const charge = (m, d, amount) =>
     ({ type: 'expense', account: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
-  const payment = (m, d, amount) =>
-    ({ type: 'transfer', fromAccount: 'Cash', toAccount: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
 
   // Nothing inside Apr 15 - May 14; the charge lands on the cycle after.
   const noBill = getCreditStatus(acct, [charge(5, 20, 2500)], at(2026, 5, 21))
