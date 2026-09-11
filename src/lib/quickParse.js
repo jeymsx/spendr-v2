@@ -648,6 +648,26 @@ export function quickParse(input, ctx = {}) {
   if (xfer) {
     const a = matchName(xfer[1], acctNames)
     const b = matchName(xfer[2], acctNames)
+
+    /*
+      When it ALMOST parsed as a transfer, say so.
+
+      Falling through to an expense in silence is the worst of the options.
+      "200 from maya savings to maya" on a device with no Maya Savings account
+      matches "Maya" on both sides, refuses the transfer, and quietly produces
+      an expense on Maya described "Savings Maya" - which looks filled in and
+      is wrong in the one way that costs money.
+
+      Only raised when at least one side IS a real account, which is what
+      separates a near-miss transfer from ordinary English: "150 lunch to go"
+      and "500 gift to mom" resolve on neither side and say nothing.
+    */
+    if (!(a && b && a !== b) && (a || b)) {
+      result.transferIssue = a && b
+        ? { reason: 'same-account', account: a }
+        : { reason: 'unknown-account', typed: (a ? xfer[2] : xfer[1]).trim() }
+    }
+
     if (a && b && a !== b) {
       result.type = 'transfer'
       result.fromAccount = a

@@ -590,6 +590,49 @@ describe('transfer fees, typed the way people say them', () => {
   })
 })
 
+describe('a transfer that almost parsed', () => {
+  const ctx = (extra = {}) => ({
+    accounts: FX_ACCOUNTS, categories: FX_CATEGORIES,
+    knowledge: KNOW, today: new Date(FIXTURE_NOW), ...extra,
+  })
+
+  it('says when both sides resolved to the same account', () => {
+    // The exact failure a real device hit. With no "Maya Savings" account,
+    // "maya savings" falls back to matching "Maya", both sides agree, the
+    // transfer is refused, and an EXPENSE on Maya described "Savings Maya"
+    // appears instead - filled-looking and wrong in the expensive field.
+    const thin = ctx({ accounts: [{ name: 'Maya' }, { name: 'GCash' }] })
+    const r = quickParse('200 from maya savings to maya', thin)
+    expect(r.type).toBe('expense')
+    expect(r.transferIssue).toMatchObject({ reason: 'same-account', account: 'Maya' })
+  })
+
+  it('says which account it did not recognise', () => {
+    const r = quickParse('500 from gcash to seabank', ctx())
+    expect(r.transferIssue).toMatchObject({ reason: 'unknown-account', typed: 'seabank' })
+  })
+
+  it('stays quiet when neither side is an account', () => {
+    // Ordinary English is full of "X to Y". Warning on these would make the
+    // hint meaningless within a day.
+    for (const s of ['150 lunch to go', '500 gift to mom', '200 back to school']) {
+      expect(quickParse(s, ctx()).transferIssue).toBeUndefined()
+    }
+  })
+
+  it('stays quiet on a transfer that worked', () => {
+    const r = quickParse('500 from gcash to bpi', ctx({
+      accounts: [{ name: 'GCash' }, { name: 'BPI' }],
+    }))
+    expect(r.type).toBe('transfer')
+    expect(r.transferIssue).toBeUndefined()
+  })
+
+  it('stays quiet on an ordinary expense', () => {
+    expect(quickParse('180 grab', ctx()).transferIssue).toBeUndefined()
+  })
+})
+
 describe('the corpus - what must and must not be understood', () => {
   const ctx = {
     accounts: FX_ACCOUNTS, categories: FX_CATEGORIES,
