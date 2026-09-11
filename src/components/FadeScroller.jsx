@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect } from 'react'
+import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHandle } from 'react'
 
 /**
  * A scroll area whose content fades out at whichever edge it runs past.
@@ -31,39 +31,60 @@ import { useRef, useState, useCallback, useEffect } from 'react'
  *
  * One rAF per scroll burst: a scroll fires dozens of times per gesture and
  * each measure reads layout.
+ *
+ * ── Both axes ──
+ *
+ * `axis="x"` does the same thing sideways, for the rails: a row of colour
+ * swatches that runs to the screen edge is cut off mid-circle, and a circle
+ * sliced down the middle reads as broken rather than as continuing. Same
+ * reasoning as the vertical case, same dynamic depth - no fade at the end you
+ * have reached, so the row never implies swatches that are not there.
  */
-export default function FadeScroller({
+const FadeScroller = forwardRef(function FadeScroller({
   children,
   className = '',
   fade = 28,
+  /** 'y' for a list, 'x' for a rail. */
+  axis = 'y',
   style,
   ...rest
-}) {
+}, forwardedRef) {
   const ref = useRef(null)
   const frame = useRef(0)
-  const [edge, setEdge] = useState({ top: 0, bottom: 0 })
+  // `start`/`end` rather than top/bottom: the same two numbers serve both axes.
+  const [edge, setEdge] = useState({ start: 0, end: 0 })
+  const horizontal = axis === 'x'
 
   const measure = useCallback(() => {
     const el = ref.current
     if (!el) return
-    const max = el.scrollHeight - el.clientHeight
-    // 1px rather than 0: sub-pixel layout leaves a scrollHeight a hair over
-    // clientHeight on lists that visibly do not scroll.
+    const max = horizontal
+      ? el.scrollWidth - el.clientWidth
+      : el.scrollHeight - el.clientHeight
+    const pos = horizontal ? el.scrollLeft : el.scrollTop
+    // 1px rather than 0: sub-pixel layout leaves a scroll size a hair over the
+    // client size on lists that visibly do not scroll.
     if (max <= 1) {
-      setEdge(prev => (prev.top === 0 && prev.bottom === 0 ? prev : { top: 0, bottom: 0 }))
+      setEdge(prev => (prev.start === 0 && prev.end === 0 ? prev : { start: 0, end: 0 }))
       return
     }
     const next = {
-      top: Math.round(Math.min(fade, Math.max(0, el.scrollTop))),
-      bottom: Math.round(Math.min(fade, Math.max(0, max - el.scrollTop))),
+      start: Math.round(Math.min(fade, Math.max(0, pos))),
+      end: Math.round(Math.min(fade, Math.max(0, max - pos))),
     }
-    setEdge(prev => (prev.top === next.top && prev.bottom === next.bottom ? prev : next))
-  }, [fade])
+    setEdge(prev => (prev.start === next.start && prev.end === next.end ? prev : next))
+  }, [fade, horizontal])
 
   const onScroll = useCallback(() => {
     if (frame.current) return
     frame.current = requestAnimationFrame(() => { frame.current = 0; measure() })
   }, [measure])
+
+  /* The scrolling node itself is the forwarded handle, for a caller that has
+     to measure it - the swatch rails scroll their selection into view. Via
+     useImperativeHandle rather than assigning someone else's ref object
+     ourselves, which is what the immutability rule is there to stop. */
+  useImperativeHandle(forwardedRef, () => ref.current, [])
 
   useEffect(() => {
     measure()
@@ -83,14 +104,15 @@ export default function FadeScroller({
     }
   }, [measure, children])
 
-  const mask = `linear-gradient(to bottom, transparent 0px, #000 ${edge.top}px, `
-    + `#000 calc(100% - ${edge.bottom}px), transparent 100%)`
+  const mask = `linear-gradient(to ${horizontal ? 'right' : 'bottom'}, `
+    + `transparent 0px, #000 ${edge.start}px, `
+    + `#000 calc(100% - ${edge.end}px), transparent 100%)`
 
   return (
     <div
       ref={ref}
       onScroll={onScroll}
-      className={`overflow-y-auto no-scrollbar ${className}`}
+      className={`${horizontal ? 'overflow-x-auto' : 'overflow-y-auto'} no-scrollbar ${className}`}
       style={{
         // Safari still wants the prefix, and this ships as a PWA on iOS.
         maskImage: mask,
@@ -102,4 +124,6 @@ export default function FadeScroller({
       {children}
     </div>
   )
-}
+})
+
+export default FadeScroller

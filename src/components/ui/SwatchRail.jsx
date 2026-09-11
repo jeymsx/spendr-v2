@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import FadeScroller from '../FadeScroller'
 import { cx } from './cx'
 
 /**
@@ -28,6 +29,14 @@ import { cx } from './cx'
  * A pair spelled "#a855f7,#ec4899" renders as a 135deg gradient and rings
  * with its first stop, because ringing a two-colour swatch in two colours is
  * a worse problem than picking one.
+ *
+ * ── Why it fades at the ends ──
+ *
+ * Bleeding to the screen edge is what says "there is more", but it also cuts
+ * the swatch at that edge in half, and half a circle against the panel edge
+ * looks like a mistake rather than an invitation. FadeScroller's mask on the
+ * x axis takes the last one out gently instead, and only at the end you have
+ * not reached - so a rail that fits has no fade at all.
  */
 export default function SwatchRail({
   /** Hex strings, or "from,to" pairs for a gradient. */
@@ -53,12 +62,13 @@ export default function SwatchRail({
   }, [])
 
   return (
-    <div
+    <FadeScroller
       ref={railRef}
+      axis="x"
       role="group"
       aria-label={ariaLabel}
       className={cx(
-        'flex items-center gap-3 overflow-x-auto no-scrollbar snap-x',
+        'flex items-center gap-3 snap-x',
         '-mx-5 px-5 scroll-px-5 py-2.5',
         className,
       )}
@@ -88,6 +98,6 @@ export default function SwatchRail({
           />
         )
       })}
-    </div>
+    </FadeScroller>
   )
 }

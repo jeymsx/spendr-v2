@@ -5,6 +5,7 @@ import { PALETTE, TYPE_LABEL, fmt } from '../lib/accountMeta'
 import { parseMoney } from '../utils/moneyInput'
 import BrandMark from './BrandMark'
 import BrandWatermark from './BrandWatermark'
+import FadeScroller from './FadeScroller'
 import SchemeMark, { SCHEME_OPTIONS } from './SchemeMark'
 
 /**
@@ -403,9 +404,13 @@ export function ColorRail({ draft, set }) {
   }, [])
 
   return (
-    <div
+    /* Feathered at both ends, like every other rail: a swatch cut in half by
+       the panel edge looks broken, and the mask is zero at whichever end you
+       have already reached. */
+    <FadeScroller
       ref={swatchRef}
-      className="flex items-center gap-3 overflow-x-auto no-scrollbar snap-x px-5 py-2.5 -mx-5"
+      axis="x"
+      className="flex items-center gap-3 snap-x px-5 scroll-px-5 py-2.5 -mx-5"
       style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
     >
       {brandColor && (
@@ -483,7 +488,7 @@ export function ColorRail({ draft, set }) {
           />
         )
       })}
-    </div>
+    </FadeScroller>
   )
 }
 
