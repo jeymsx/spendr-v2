@@ -29,6 +29,13 @@ const fmt = (v) => {
   const n = v ?? 0
   return (n < 0 ? '−₱' : '₱') + _php.format(Math.abs(n))
 }
+/* Whole pesos. A budget limit is a round number somebody typed - there are
+   no centavos in "15,000" - and the two zeroes made the longest string on
+   the line the least informative part of it. `fmt` stays for everything
+   actually measured, where the centavos are real. */
+const _phpWhole = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 0 })
+const fmtWhole = (v) => ((v ?? 0) < 0 ? '−₱' : '₱') + _phpWhole.format(Math.abs(Math.round(v ?? 0)))
+
 function fmtCompact(v) {
   const abs = Math.abs(v ?? 0)
   const sign = (v ?? 0) < 0 ? '−₱' : '₱'
@@ -365,7 +372,7 @@ export default function Budget() {
               pct={totals.pct}
               amount={fmt(totals.spent)}
               leftNote={`${Math.round(totals.pct)}% spent`}
-              rightNote={`${fmt(totals.budget)} limit`}
+              rightNote={`${fmtWhole(totals.budget)} limit`}
             />
 
             {/* Centred. Left-aligned they hung off the left edge of three

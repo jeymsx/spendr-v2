@@ -41,11 +41,25 @@ function rampAt(t) {
   return toHex(a.map((v, k) => v + (b[k] - v) * f))
 }
 
+/* A wider box, and the tick count kept.
+
+   The page gives this 350px between its gutters and the fan was capped at
+   280, so a sixth of the width was going spare. Growing into it is where
+   the extra size comes from - the arc is 18% bigger and each tick is bolder
+   at 8px across the rim against 6.4 before.
+
+   Dropping to 28 ticks was tried on the way here and reverted. Fewer ticks
+   on a bigger radius pushes the pitch out faster than the ticks widen, so
+   the ring went airy: gap-to-pitch at the rim ran 0.55 where the reference
+   sits near 0.44. At 34 on this radius it is 0.44 - the rim pitch is 14.4
+   and the ticks are 8.0 - which is the density being matched. The size and
+   the spacing were never in competition; the box width was doing that work
+   on its own. */
 const TICKS = 34
-const W = 280
-const CY = 134          // centre sits on the baseline, so the fan is a half
-const R_OUT = 128
-const R_IN = 99
+const W = 330
+const CY = 158          // centre sits on the baseline, so the fan is a half
+const R_OUT = 151
+const R_IN = 117
 
 /* Each tick TAPERS: wide at the rim, narrow at the hub.
 
@@ -57,8 +71,8 @@ const R_IN = 99
    
    It is also why these are paths rather than lines. A stroke cannot change
    width along its length, so the shape has to be drawn. */
-const W_OUT = 3.2       // half-width at the rim
-const W_IN = 1.05       // half-width at the hub
+const W_OUT = 4.0       // half-width at the rim
+const W_IN = 1.4        // half-width at the hub
 const PAD = W_OUT       // so the widest cap cannot clip the viewBox
 
 export default function BudgetGauge({
@@ -146,17 +160,18 @@ export default function BudgetGauge({
           without restating them. */}
       <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: '49%' }}>
         <p className="text-[12px] font-medium text-slate-400 dark:text-slate-500">{label}</p>
-        <p className="mt-0.5 text-[30px] leading-none font-semibold tracking-tight tabular-nums
+        <p className="mt-0.5 text-[32px] leading-none font-semibold tracking-tight tabular-nums
           text-slate-900 dark:text-white">
           {amount}
         </p>
       </div>
 
       {(leftNote || rightNote) && (
-        /* mt-1, not -mt-1. The arc's endpoints sit on the very bottom edge
-           of the viewBox, so a negative margin put the notes level with the
-           tips of the outermost ticks and the row read as part of the fan. */
-        <div className="flex items-baseline justify-between gap-3 mt-1 px-1">
+        /* mt-3. The arc's endpoints sit on the very bottom edge of the
+           viewBox, so anything less than a clear gap leaves the row level
+           with the tips of the outermost ticks and reading as part of the
+           fan rather than as a caption under it. */
+        <div className="flex items-baseline justify-between gap-3 mt-3 px-1">
           <span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400">{leftNote}</span>
           <span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400">{rightNote}</span>
         </div>
