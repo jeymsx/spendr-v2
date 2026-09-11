@@ -6,10 +6,12 @@ import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { IconTemplate } from './icons'
 import CategoryGlyph from './CategoryGlyph'
+import AmountHero from './ui/AmountHero'
+import { CardThumb, TransferLegs } from './AccountLine'
 import Button from './ui/Button'
-import Card from './ui/Card'
 import DetailRow from './ui/DetailRow'
 import Sheet from './ui/Sheet'
+import { fieldFrame } from './ui/Field'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const TYPE_CONFIG = {
@@ -88,14 +90,35 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
 
   /* Built as a list so the shared row can draw its own separators and know
      which one is last. Same four conditions, in the same order. */
+  /* The same two rows the confirm and detail sheets draw, drawn the same way.
+
+     The category glyph had no alignment of its own, so it sat on the text
+     baseline and hung below the name - which is the "weird icon" you can see
+     without being able to name. The other sheets pass
+     `inline-block mr-1.5 -mt-px`; so does this one now.
+
+     The account was an 8px colour dot. Everywhere else in the app an account
+     is its card - GCash is the blue one - and this was the last sheet still
+     reducing it to the one thing about it you never learned. */
   const detailRows = [
     category && {
       label: 'Category',
-      value: <><CategoryGlyph cat={category} size={15} /> {category.name}</>,
+      value: (
+        <>
+          <CategoryGlyph cat={category} size={14} className="inline-block mr-1.5 -mt-px" />
+          {category.name}
+        </>
+      ),
     },
-    account     && { label: 'Account', value: account.name,     dot: account.color     },
-    fromAccount && { label: 'From',    value: fromAccount.name, dot: fromAccount.color },
-    toAccount   && { label: 'To',      value: toAccount.name,   dot: toAccount.color   },
+    account && {
+      label: 'Account',
+      value: (
+        <span className="inline-flex items-center gap-2 align-middle">
+          <CardThumb account={account} sm />
+          {account.name}
+        </span>
+      ),
+    },
   ].filter(Boolean)
 
   const actions = (
@@ -119,69 +142,80 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
       ariaLabel={`Use template ${template.name}`}
       footer={actions}
     >
-      <div className="pt-1">
-        {/* Badge + template name */}
-        <div className="flex items-center gap-2 mb-4">
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold ${cfg.badge}`}>
+      {/* The confirm sheet's shape, because this IS a confirm sheet.
+
+          It had its own: a left-aligned badge row, two label-dot-value pills
+          for the amount and the note, and the facts boxed in a recessed card.
+          Saving a transaction from a template and saving one from the form
+          are the same act one tap apart, and they looked like different
+          screens. */}
+      <div>
+        <div className="flex items-center justify-center gap-2">
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.badge}`}>
             {cfg.label}
           </span>
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
-            <IconTemplate size={13} className="inline-block mr-1 -mt-px" /> {template.name}
+            <IconTemplate size={13} className="inline-block mr-1 -mt-px" />
+            {template.name}
           </span>
         </div>
 
-        {/* Editable amount */}
-        <div className="flex items-center gap-2 px-4 py-3.5 rounded-2xl mb-2
-          bg-slate-50 dark:bg-white/[0.04]
-          border border-slate-100 dark:border-white/[0.07]">
-          <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0 font-medium">Amount</span>
-          <span className="text-slate-300 dark:text-slate-600 mx-1">·</span>
-          <span className="text-slate-500 dark:text-slate-400 text-sm shrink-0">₱</span>
-          <input
-            type="text"
-            inputMode="decimal"
-            value={amountStr}
-            onChange={moneyChangeHandler(setAmountStr)}
-            className="flex-1 bg-transparent text-sm font-bold text-slate-800 dark:text-white
-              outline-none tabular-nums min-w-0"
-          />
-        </div>
-
-        {/* Editable description (only for expense/inflow) */}
-        {template.type !== 'transfer' && (
-          <div className="flex items-center gap-2 px-4 py-3.5 rounded-2xl mb-3
-            bg-slate-50 dark:bg-white/[0.04]
-            border border-slate-100 dark:border-white/[0.07]">
-            <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0 font-medium">Note</span>
-            <span className="text-slate-300 dark:text-slate-600 mx-1">·</span>
+        {/* The amount, large and still editable - a template's figure is the
+            one thing you change on the way past. The input sizes itself to
+            its digits so the row stays optically centred as you type; `ch`
+            works because the figure is tabular-nums. */}
+        <AmountHero color={cfg.color} className="mt-5 mb-6">
+          <span className="inline-flex items-baseline justify-center">
+            <span>{cfg.sign}₱</span>
             <input
               type="text"
-              value={description}
-              onChange={e => setDescription(e.target.value)}
-              placeholder="Add note…"
-              maxLength={100}
-              className="flex-1 bg-transparent text-sm text-slate-800 dark:text-white
-                placeholder-slate-400 dark:placeholder-slate-500 outline-none min-w-0"
+              inputMode="decimal"
+              value={amountStr}
+              onChange={moneyChangeHandler(setAmountStr)}
+              aria-label="Amount"
+              style={{ width: `${Math.max(amountStr.length, 1) + 0.5}ch` }}
+              className="amount-hero-input bg-transparent outline-none text-inherit
+                font-bold tracking-tight tabular-nums"
             />
-          </div>
-        )}
+          </span>
+        </AmountHero>
 
-        {/* Detail rows. One recessed group rather than four floating pills -
-            same rows, same conditions, drawn by the shared DetailRow. */}
-        {detailRows.length > 0 && (
-          <Card surface="recessed" clip className="mb-5">
-            {detailRows.map((row, i) => (
-              <DetailRow
-                key={row.label}
-                label={row.label}
-                value={row.value}
-                dot={row.dot}
-                isLast={i === detailRows.length - 1}
-              />
-            ))}
-          </Card>
-        )}
+        {/* One list, not a card of rows - matching the confirm sheet, where
+            every row is `isLast` because nothing is drawn between them and
+            the sheet already owns the gutter. */}
+        <div className="flex flex-col">
+          {template.type !== 'transfer' && (
+            <div className="py-2.5">
+              <div className={fieldFrame(false)}>
+                <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">Note</span>
+                <input
+                  type="text"
+                  value={description}
+                  onChange={e => setDescription(e.target.value)}
+                  placeholder="Optional"
+                  maxLength={100}
+                  className="flex-1 min-w-0 bg-transparent outline-none text-right
+                    text-[14px] font-medium text-slate-800 dark:text-white
+                    placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal"
+                />
+              </div>
+            </div>
+          )}
 
+          {detailRows.map(row => (
+            <DetailRow
+              key={row.label}
+              label={row.label}
+              value={row.value}
+              padded={false}
+              isLast
+            />
+          ))}
+
+          {(fromAccount || toAccount) && (
+            <TransferLegs from={fromAccount} to={toAccount} />
+          )}
+        </div>
       </div>
     </Sheet>
   )

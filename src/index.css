@@ -1358,6 +1358,19 @@ input[type="date"]::-webkit-datetime-edit {
   line-height: 1.1;
 }
 
+/* The editable figure inside AmountHero, at the hero's own 40px.
+
+   Both of these need !important for the same reason: the rule above sets
+   every input to 16px !important so iOS does not zoom the page on focus, and
+   an !important declaration can only be beaten by another one. A Tailwind
+   text-[40px] on the element loses silently - utilities live in a layer, and
+   layered rules never outrank unlayered !important - which is why the
+   template sheet's amount rendered at 16px next to a 40px peso sign. */
+.amount-hero-input {
+  font-size: 2.5rem !important;
+  line-height: 1;
+}
+
 /* ── Tap highlight ────────────────────────────────────── */
 button, a {
   -webkit-tap-highlight-color: transparent;
