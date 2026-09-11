@@ -46,7 +46,7 @@ export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, t
           </div>
         </div>
 
-        <div className="px-6 text-center mb-6">
+        <div className="text-center mb-6">
           <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-1.5">
             Possible duplicate
           </h3>

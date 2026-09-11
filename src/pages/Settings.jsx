@@ -1821,7 +1821,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
         {/* Form mode */}
         {mode === 'form' && (
-          <div className="px-5 pt-5 pb-2 flex flex-col gap-5">
+          <div className="pt-5 pb-2 flex flex-col gap-5">
             <div>
               <FieldLabel>Category Name</FieldLabel>
               <input value={name} onChange={e => { setName(e.target.value); setNameError(false) }}
@@ -1919,7 +1919,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
         {/* Confirm delete */}
         {mode === 'confirm-delete' && (
-          <div className="px-5 pt-6 pb-2">
+          <div className="pt-6 pb-2">
             <div className="flex items-center justify-center gap-3 mb-6">
               <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-[24px]"
                 style={{ backgroundColor: (category?.color ?? '#2D9DFF') + '22' }}>
@@ -1942,7 +1942,7 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
 
         {/* Reassign mode */}
         {mode === 'reassign' && (
-          <div className="px-5 pt-5 pb-2">
+          <div className="pt-5 pb-2">
             <div className="flex items-start gap-3 px-4 py-3.5 mb-5 rounded-2xl
               bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
               <span className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400"><IconWarning size={20} /></span>

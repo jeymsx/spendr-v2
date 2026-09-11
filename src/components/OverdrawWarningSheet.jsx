@@ -55,7 +55,7 @@ export default function OverdrawWarningSheet({
           </div>
         </div>
 
-        <div className="px-6 text-center mb-5">
+        <div className="text-center mb-5">
           <h3 className="text-base font-semibold text-slate-800 dark:text-white mb-1.5">
             Not enough in {accountName}
           </h3>
@@ -65,7 +65,7 @@ export default function OverdrawWarningSheet({
           </p>
         </div>
 
-        <div className="px-5 mb-6">
+        <div className="mb-6">
           <div className="rounded-2xl bg-slate-50 dark:bg-white/[0.04] px-4 py-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 dark:text-slate-500">Available</span>
