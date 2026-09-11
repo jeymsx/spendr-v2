@@ -1038,6 +1038,29 @@ html.dark body {
   color: color-mix(in srgb, var(--cat-color, #94a3b8) 75%, white);
 }
 
+/* ── Budget gauge ──────────────────────────────────────────────────
+   The lit ticks sweep in left to right, staggered by animation-delay from
+   the component. `backwards` matters: without it every tick paints at full
+   opacity until its own delay elapses, which is the whole fan appearing and
+   then re-appearing one tick at a time. */
+.gauge-tick {
+  opacity: 0;
+  /* `both`, not `backwards forwards`. The shorthand takes ONE fill-mode, so
+     naming two made the whole declaration unparseable - no animation applied
+     and every lit tick stayed at the opacity: 0 above it. The fan rendered
+     with only its grey half visible. */
+  animation: gaugeTickIn 0.28s ease-out both;
+}
+
+@keyframes gaugeTickIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .gauge-tick { animation: none; opacity: 1; }
+}
+
 /* ── Bill brand marks ──────────────────────────────────────────────
    The asset files ship with no paint at all - see assets/ATTRIBUTION.md,
    which strips it so one rule can colour them. The account watermarks take

@@ -4,7 +4,10 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useTheme } from '../context/ThemeContext'
 import { scheduledCutoff } from '../utils/scheduled'
-import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
+/* budgetTone only. The horizontal meter this page used to headline with is
+   now an arc; Dashboard still renders BudgetMeter, so the component stays. */
+import { budgetTone } from '../components/BudgetMeter'
+import BudgetGauge from '../components/BudgetGauge'
 import CategoryGlyph from '../components/CategoryGlyph'
 
 /**
@@ -320,14 +323,23 @@ export default function Budget() {
             <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
               {monthName}
             </p>
-            <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
-              {fmt(totals.spent)}
-            </p>
-            <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
-              of {fmt(totals.budget)} budgeted
-            </p>
 
-            <BudgetMeter pct={totals.pct} className="mt-5" height={30} />
+            {/* The amount, the share and the limit were three stacked lines
+                above a horizontal meter - four rows saying one thing. The
+                arc holds all of it: the figure sits inside the measurement,
+                and the two notes under the ends are the only facts the
+                geometry cannot carry.
+
+                leftNote takes the UNCLAMPED percentage on purpose. The fan
+                stops at full because there is no more arc to give, so 118%
+                has to be said in words or it is not said at all. */}
+            <BudgetGauge
+              className="mt-1"
+              pct={totals.pct}
+              amount={fmt(totals.spent)}
+              leftNote={`${Math.round(totals.pct)}% spent`}
+              rightNote={`${fmt(totals.budget)} limit`}
+            />
 
             <div className="grid grid-cols-3 gap-3 mt-5">
               <div>
