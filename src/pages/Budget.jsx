@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useTheme } from '../context/ThemeContext'
@@ -10,6 +11,7 @@ import { budgetTone } from '../components/BudgetMeter'
 import BudgetGauge from '../components/BudgetGauge'
 import CategoryGlyph from '../components/CategoryGlyph'
 import IconButton from '../components/ui/IconButton'
+import Button from '../components/ui/Button'
 
 /**
  * The month's budget, in full.
@@ -232,6 +234,7 @@ function AllocationRow({ cat, maxLimit }) {
 
 export default function Budget() {
   const navigate = useNavigate()
+  const back = useBack('/')
   const { accentColor } = useTheme()
   const categories   = useLiveQuery(() => db.categories.toArray(), [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [])
@@ -311,7 +314,10 @@ export default function Budget() {
     <div className="pb-10">
       {/* ── Header ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <IconButton label="Back" onClick={() => navigate(-1)}>
+        {/* Back to wherever you came from - the dashboard card or Settings -
+            with a fallback for the case where this page IS the first entry.
+            See the hook. */}
+        <IconButton label="Back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         {/* The month is the title. "Budget" named the page you had just
@@ -320,7 +326,17 @@ export default function Budget() {
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           {monthName}
         </h1>
-        <span className="w-9 shrink-0" />
+        {/* The way to the limits. This page reports the month; setting the
+            numbers is a different job, and it used to be a second entry in
+            Settings that opened a different screen about the same thing. */}
+        <Button
+          variant="tint"
+          size="sm"
+          className="shrink-0 px-4"
+          onClick={() => navigate('/settings/budgets')}
+        >
+          Edit limits
+        </Button>
       </header>
 
       {loading ? (

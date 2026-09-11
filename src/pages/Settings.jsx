@@ -8,6 +8,7 @@ import {
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import { useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
 import { useSyncManager } from '../components/SyncManager'
@@ -1101,7 +1102,7 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
 
   if (asPage) {
     return (
-      <SubPage title="Monthly budgets">
+      <SubPage title="Monthly limits" onBack={close}>
         <p className="px-5 -mt-1 mb-1 text-center text-[13px] text-slate-500 dark:text-slate-400">
           Tap a category to set its monthly limit
         </p>
@@ -1153,10 +1154,17 @@ export function BudgetManagerSheet(props) {
   return <BudgetManager {...props} variant="sheet" />
 }
 
-/** The mobile route at /settings/budgets. */
+/**
+ * The mobile route at /settings/budgets - the limit editor.
+ *
+ * Reached from "Edit limits" on the Budget page, so back normally means back
+ * to that page. The fallback is /budget rather than / for the case where this
+ * URL was opened directly: this screen is part of the Budget page, and landing
+ * on it from a deep link should leave you inside that, not on the dashboard.
+ */
 export function BudgetsPage() {
-  const navigate = useNavigate()
-  return <BudgetManager open onClose={() => navigate(-1)} variant="page" />
+  const back = useBack('/budget')
+  return <BudgetManager open onClose={back} variant="page" />
 }
 
 // ── Category row ───────────────────────────────────────────────────────────────
@@ -3067,12 +3075,22 @@ export default function Settings() {
             onTap={() => navigate('/settings/categories')}
           />
           <RowDivider />
+          {/* Straight to the Budget page, which is where the month's budget
+              lives. This row used to open a SECOND screen about budgets - the
+              limit editor - so the app had two budget destinations that did
+              not know about each other: one with the gauge, reached from the
+              dashboard card, and one with the limits, reached from here.
+
+              Now there is one destination and the editor hangs off it, behind
+              "Edit limits". /settings/budgets is still a route - that is where
+              the button goes, and the desktop settings still opens the same
+              manager as a modal. */}
           <SettingsRow
             iconEl={<RowIcon color="green"><IconTarget /></RowIcon>}
-            label="Monthly budgets"
-            /* No sublabel: "Monthly budgets" is the whole of it. */
+            label="Budget"
+            sublabel="This month, and the limits behind it"
             right={<IconChevronRight size={14} strokeWidth="2" />}
-            onTap={() => navigate('/settings/budgets')}
+            onTap={() => navigate('/budget')}
           />
           <RowDivider />
           <SettingsRow
