@@ -35,6 +35,7 @@ import {
   fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole,
 } from '../lib/accountMeta'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
 
 /* Re-exported, not redefined. They moved to lib/accountMeta.js so that
    components/CardStyle.jsx can have them without importing a page - see the
@@ -582,16 +583,11 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
               <h2 className="text-base font-semibold text-slate-800 dark:text-white">Add Account</h2>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">Select a preset or create a custom one</p>
             </div>
-            <button
-              onClick={close}
-              className="w-8 h-8 rounded-full bg-slate-100 dark:bg-white/[0.08]
-                flex items-center justify-center text-slate-500 dark:text-slate-400
-                active:bg-slate-200 dark:active:bg-white/[0.14] transition-colors"
-            >
+            <IconButton label="Close" size="sm" onClick={close}>
               <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
                 <line x1="1" y1="1" x2="11" y2="11"/><line x1="11" y1="1" x2="1" y2="11"/>
               </svg>
-            </button>
+            </IconButton>
           </div>
         </div>
 
@@ -915,32 +911,20 @@ export default function Accounts() {
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Accounts</h1>
         <div className="flex items-center gap-2">
           {(accounts ?? []).length > 1 && (
-            <button
+            <IconButton
+              label="Sort accounts"
+              variant="tint"
               onClick={() => setSortOpen(true)}
-              className="w-9 h-9 rounded-full flex items-center justify-center transition-colors duration-150
-                border shadow-sm
-                bg-white dark:bg-primary/[0.10]
-                border-slate-200/80 dark:border-primary/[0.20]
-                text-slate-500 dark:text-slate-300
-                dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]
-                active:scale-95"
-              aria-label="Sort accounts"
             >
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M8 18V6M8 6L5 9M8 6l3 3" />
                 <path d="M16 6v12M16 18l-3-3M16 18l3-3" />
               </svg>
-            </button>
+            </IconButton>
           )}
-          <button
-            onClick={openAdd}
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-              bg-primary text-white
-              active:scale-90 transition-transform duration-75"
-            aria-label="Add account"
-          >
+          <IconButton label="Add account" variant="primary" onClick={openAdd}>
             <IconPlus size={19} strokeWidth="2.5" />
-          </button>
+          </IconButton>
         </div>
       </div>
 

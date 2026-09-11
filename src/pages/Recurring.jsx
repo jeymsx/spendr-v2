@@ -16,6 +16,7 @@ import {
 } from '../utils/recurring'
 import CategoryGlyph from '../components/CategoryGlyph'
 import BillMark from '../components/BillMark'
+import IconButton from '../components/ui/IconButton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -669,28 +670,15 @@ export default function Recurring() {
           labelled another is a small break you feel without being able to
           name. */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back"
-        >
+        <IconButton label="Back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           Bills
         </h1>
-        <button
-          onClick={() => setShowForm(true)}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-primary text-white
-            active:scale-90 transition-transform duration-75"
-          aria-label="New bill"
-        >
+        <IconButton label="New bill" variant="primary" onClick={() => setShowForm(true)}>
           <IconPlus />
-        </button>
+        </IconButton>
       </header>
 
       {loading ? (

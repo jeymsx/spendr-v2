@@ -9,6 +9,7 @@ import { scheduledCutoff } from '../utils/scheduled'
 import { budgetTone } from '../components/BudgetMeter'
 import BudgetGauge from '../components/BudgetGauge'
 import CategoryGlyph from '../components/CategoryGlyph'
+import IconButton from '../components/ui/IconButton'
 
 /**
  * The month's budget, in full.
@@ -310,16 +311,9 @@ export default function Budget() {
     <div className="pb-10">
       {/* ── Header ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back"
-        >
+        <IconButton label="Back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
         {/* The month is the title. "Budget" named the page you had just
             tapped to get to, and the month was a second line under it saying
             the thing the page is actually about. */}

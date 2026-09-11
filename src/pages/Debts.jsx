@@ -11,6 +11,7 @@ import { RowGroup, EditRow, RowInput, RowDate } from '../components/FormRows'
 import { useAuth } from '../context/AuthContext'
 import { deleteDebtRemote } from '../lib/sync'
 import { IconPlus, IconChevronLeft } from '../components/icons'
+import IconButton from '../components/ui/IconButton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -252,15 +253,13 @@ function DebtCard({ debt, onEdit, onPayment }) {
             )}
           </div>
 
-          <button
+          <IconButton
+            label={`Edit ${debt.contact ?? debt.name}`}
+            size="sm"
             onClick={() => onEdit(debt)}
-            className="w-8 h-8 rounded-full flex items-center justify-center shrink-0
-              text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/[0.06]
-              active:bg-slate-200 dark:active:bg-white/[0.1] transition-colors"
-            aria-label={`Edit ${debt.contact ?? debt.name}`}
           >
             <IconEdit />
-          </button>
+          </IconButton>
         </div>
 
         <div className="mt-3.5 grid grid-cols-3 gap-1">
@@ -363,15 +362,13 @@ function SettledSection({ debts, onEdit }) {
                   <p className="text-[13px] font-semibold tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
                     {fmt(d.amount)}
                   </p>
-                  <button
+                  <IconButton
+                    label={`Edit ${d.contact ?? d.name}`}
+                    size="sm"
                     onClick={() => onEdit(d)}
-                    className="w-8 h-8 rounded-full flex items-center justify-center shrink-0
-                      text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-white/[0.06]
-                      active:bg-slate-200 dark:active:bg-white/[0.1] transition-colors"
-                    aria-label={`Edit ${d.contact ?? d.name}`}
                   >
                     <IconEdit />
-                  </button>
+                  </IconButton>
                 </div>
                 {i < debts.length - 1 && (
                   <div className="h-px bg-slate-100 dark:bg-white/[0.06] mx-4" />
@@ -1064,28 +1061,15 @@ export default function Debts() {
           is the widest possible way to say a thing every other page in the app
           says in 36px. */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back"
-        >
+        <IconButton label="Back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           Debts
         </h1>
-        <button
-          onClick={openAdd}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-primary text-white
-            active:scale-90 transition-transform duration-75"
-          aria-label="New debt"
-        >
+        <IconButton label="New debt" variant="primary" onClick={openAdd}>
           <IconPlus />
-        </button>
+        </IconButton>
       </header>
 
       {loading ? (

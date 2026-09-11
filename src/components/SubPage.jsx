@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom'
 import { IconChevronLeft } from './icons'
+import IconButton from './ui/IconButton'
 
 /**
  * The app's sub-page shell: back disc, centred title, optional right action.
@@ -25,16 +26,9 @@ export default function SubPage({ title, action = null, onBack, children, classN
   return (
     <div className={`pb-nav ${className}`}>
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <button
-          onClick={onBack ?? (() => navigate(-1))}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back"
-        >
+        <IconButton label="Back" onClick={onBack ?? (() => navigate(-1))}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
 
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           {title}

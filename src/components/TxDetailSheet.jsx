@@ -11,6 +11,7 @@ import { useToast } from '../context/ToastContext'
 import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
 import CategoryGlyph from './CategoryGlyph'
 import Button from './ui/Button'
+import IconButton from './ui/IconButton'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const fmt = (v) => {
@@ -352,30 +353,22 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   saying the same thing twice on a card with three facts on
                   it. Dropping it here frees the corner for the close button
                   the missing grab handle left the sheet without. */}
-              <button
-                onClick={close}
-                className="w-8 h-8 -mr-1 rounded-full flex items-center justify-center
-                  bg-slate-100 dark:bg-white/[0.07]
-                  text-slate-500 dark:text-slate-400
-                  active:scale-90 transition-transform duration-75"
-                aria-label="Close"
-              >
+              <IconButton label="Close" size="sm" className="-mr-1" onClick={close}>
                 <IconClose />
-              </button>
+              </IconButton>
             </div>
           )}
           {mode === 'edit' && (
             <div className="flex items-center gap-3">
-              <button
+              <IconButton
+                label="Back to details"
+                size="sm"
                 onClick={() => setMode('detail')}
-                className="w-8 h-8 rounded-full flex items-center justify-center
-                  bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400
-                  active:scale-90 transition-transform duration-75"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="15 18 9 12 15 6" />
                 </svg>
-              </button>
+              </IconButton>
               <h3 className="text-sm font-semibold text-slate-800 dark:text-white">Edit {cfg.label}</h3>
             </div>
           )}

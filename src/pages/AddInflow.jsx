@@ -15,6 +15,7 @@ import DupWarningSheet from '../components/DupWarningSheet'
 import { IconCalendar, IconChevronLeft, IconTemplate} from '../components/icons'
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -161,15 +162,9 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
 
       {/* ── Header ── */}
       <header className="flex items-center gap-3 px-4 pt-safe-header pb-2 shrink-0">
-        <button
-          onClick={() => (onCancel ? onCancel() : navigate(-1))}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-        >
+        <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
         <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add Inflow</h1>
         <button
           onClick={() => setShowTemplates(true)}

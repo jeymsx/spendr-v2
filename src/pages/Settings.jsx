@@ -30,6 +30,7 @@ import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
 import { setViewMode, getViewPreference } from '../web/useViewMode'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -1571,15 +1572,9 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
         <SubPage
           title="Categories"
           action={(
-            <button
-              onClick={openAdd}
-              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-                bg-primary text-white
-                active:scale-90 transition-transform duration-75"
-              aria-label="New category"
-            >
+            <IconButton label="New category" variant="primary" onClick={openAdd}>
               <IconPlus />
-            </button>
+            </IconButton>
           )}
         >
           <div className="px-5 pb-1">{tabBar}</div>
@@ -2500,15 +2495,9 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
         <SubPage
           title="Quick Templates"
           action={(
-            <button
-              onClick={openAdd}
-              className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-                bg-primary text-white
-                active:scale-90 transition-transform duration-75"
-              aria-label="New template"
-            >
+            <IconButton label="New template" variant="primary" onClick={openAdd}>
               <IconPlus />
-            </button>
+            </IconButton>
           )}
         >
           <div className="pt-4">{listBody}</div>
@@ -3157,15 +3146,16 @@ export default function Settings() {
                   <option key={`${year}-${month}`} value={`${year}-${month}`}>{label}</option>
                 ))}
               </select>
-              <button
-                onClick={handleGenerateReport}
-                disabled={generatingReport}
-                className="flex items-center justify-center gap-1.5 w-10 h-10 rounded-full text-white bg-primary disabled:opacity-50 active:scale-95 transition-all duration-100 shrink-0"
+              <IconButton
+                label="Download monthly report"
+                variant="primary"
+                size="lg"
+                onClick={handleGenerateReport} disabled={generatingReport}
               >
                 {generatingReport
                   ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                   : <IconDownload />}
-              </button>
+              </IconButton>
             </div>
           </div>
         </SectionCard>

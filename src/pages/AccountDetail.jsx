@@ -20,6 +20,7 @@ import {
   TYPE_LABEL, fmt, fmtCompact, fmtCycleDate, nextOccurrence, nextOccurrenceDate,
 } from './Accounts'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
 
 /**
  * One account, as a page rather than a sheet.
@@ -542,16 +543,9 @@ export default function AccountDetail() {
   if (!account) {
     return (
       <div className="pt-safe-header px-5">
-        <button
-          onClick={back}
-          className="w-9 h-9 -ml-1 rounded-full flex items-center justify-center
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back to accounts"
-        >
+        <IconButton label="Back to accounts" className="-ml-1" onClick={back}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
         <div className="py-20 text-center">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Account not found</p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
@@ -588,16 +582,9 @@ export default function AccountDetail() {
     <div className="pb-10">
       {/* ── Header: back, centred title, edit ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <button
-          onClick={back}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back to accounts"
-        >
+        <IconButton label="Back to accounts" onClick={back}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
 
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           {account.name}

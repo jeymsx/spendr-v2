@@ -16,6 +16,7 @@ import BrandWatermark from '../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
 import { allocateGoals } from '../lib/goals'
 import { cardGradient } from '../lib/accentTheme'
+import IconButton from '../components/ui/IconButton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -555,13 +556,9 @@ export default function Dashboard() {
           </h1>
           <ContextHint hint={getContextHint(txAll, budgetCategories, upcomingRecurring)} />
         </div>
-        <button
-          onClick={() => navigate('/settings')}
-          className="w-9 h-9 rounded-full flex items-center justify-center bg-white dark:bg-primary/[0.10] border border-slate-200 dark:border-primary/[0.20] text-slate-500 dark:text-slate-300 active:scale-95 transition-transform shadow-sm dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]"
-          aria-label="Settings"
-        >
+        <IconButton label="Settings" variant="tint" onClick={() => navigate('/settings')}>
           <IconSettings />
-        </button>
+        </IconButton>
       </header>
 
       {/* ── Net Worth Card ───────────────────────────────────────────────────── */}

@@ -15,6 +15,7 @@ import {
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
 } from '../utils/recurring'
 import CategoryGlyph from '../components/CategoryGlyph'
+import IconButton from '../components/ui/IconButton'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -317,16 +318,9 @@ export default function RecurringDetail() {
   if (!rec) {
     return (
       <div className="px-5 pt-safe-header">
-        <button
-          onClick={back}
-          className="w-9 h-9 rounded-full flex items-center justify-center
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back to bills"
-        >
+        <IconButton label="Back to bills" onClick={back}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
         <div className="py-20 text-center">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200">Bill not found</p>
           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">It may have been deleted.</p>
@@ -346,16 +340,9 @@ export default function RecurringDetail() {
     <div className="pb-nav">
       {/* ── Header: back, centred name, one door to editing ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <button
-          onClick={back}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back to bills"
-        >
+        <IconButton label="Back to bills" onClick={back}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
 
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           {rec.name}

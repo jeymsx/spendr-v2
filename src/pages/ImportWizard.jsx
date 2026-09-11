@@ -5,6 +5,7 @@ import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { IconCheck, IconUpload, ACCOUNT_TYPE_ICON, IconCashUI, IconImport, IconBankUI, IconBalance, IconSparkle } from '../components/icons'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -1065,19 +1066,15 @@ export default function ImportWizard() {
       <div className="sticky top-0 z-10 bg-white dark:bg-[#0d1117]
         border-b border-slate-100 dark:border-white/[0.06]">
         <div className="flex items-center gap-3 px-4 pt-safe-header pb-3">
-          <button
+          <IconButton
+            label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}
             onClick={() => {
               if (step === 1 || step === 5) navigate(fromOnboarding ? '/' : '/settings')
               else setStep(s => s - 1)
             }}
-            aria-label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}
-            className="w-9 h-9 rounded-full flex items-center justify-center
-              text-slate-500 dark:text-slate-400
-              bg-slate-100 dark:bg-white/[0.06]
-              active:bg-slate-200 dark:active:bg-white/[0.12] transition-colors"
           >
             <IconArrowLeft />
-          </button>
+          </IconButton>
           <div className="flex-1">
             <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400 dark:text-slate-500">
               {step < 5 ? `Step ${step} of 4` : 'Complete'}

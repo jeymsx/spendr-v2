@@ -16,6 +16,7 @@ import {
   allocateGoals, isFundable, GOAL_ICONS, nextRank, reRank, pace,
 } from '../lib/goals'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
 
 /**
  * Savings goals.
@@ -659,28 +660,19 @@ export default function Goals() {
     <div className="pb-10">
       {/* ── Header ── */}
       <header className="flex items-center gap-2 px-4 pt-safe-header pb-3">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-            text-slate-600 dark:text-slate-300 shadow-sm
-            active:scale-90 transition-transform duration-75"
-          aria-label="Back"
-        >
+        <IconButton label="Back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
-        </button>
+        </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           Goals
         </h1>
-        <button
+        <IconButton
+          label="New goal"
+          variant="primary"
           onClick={() => { setEditing(null); setFormOpen(true) }}
-          className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-            bg-primary text-white
-            active:scale-90 transition-transform duration-75"
-          aria-label="New goal"
         >
           <IconPlus />
-        </button>
+        </IconButton>
       </header>
 
       {loading ? (

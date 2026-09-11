@@ -16,6 +16,7 @@ import {
   TYPE_OPTIONS, defaultRole, buildAccountRow, createAccount,
 } from './Accounts'
 import Button from '../components/ui/Button'
+import IconButton from '../components/ui/IconButton'
 
 /**
  * Creating an account, as a guided page rather than one long sheet.
@@ -664,16 +665,12 @@ export default function AccountNew() {
           aria-hidden="true"
         />
         <header className="relative flex items-center gap-2 px-4 pt-safe-header pb-3 shrink-0">
-          <button
+          <IconButton
+            label={step === 0 ? 'Back to accounts' : 'Previous step'}
             onClick={back}
-            className="w-9 h-9 rounded-full flex items-center justify-center shrink-0
-              bg-white dark:bg-white/[0.07] border border-slate-200/80 dark:border-white/[0.09]
-              text-slate-600 dark:text-slate-300 shadow-sm
-              active:scale-90 transition-transform duration-75"
-            aria-label={step === 0 ? 'Back to accounts' : 'Previous step'}
           >
             <IconChevronLeft />
-          </button>
+          </IconButton>
           <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
             New Account
           </h1>
