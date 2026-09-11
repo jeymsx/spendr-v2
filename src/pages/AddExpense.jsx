@@ -369,7 +369,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
                   key={n}
                   onClick={() => { setCustomTerm(false); setInstallMonths(n) }}
                   className={[
-                    'shrink-0 px-3.5 h-[38px] rounded-xl text-xs font-semibold',
+                    'shrink-0 px-3.5 h-[38px] rounded-full text-xs font-semibold',
                     'border transition-colors duration-150 active:scale-95',
                     !termIsCustom && installMonths === n
                       ? 'bg-primary border-primary text-white'
@@ -382,7 +382,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
               <button
                 onClick={() => setCustomTerm(true)}
                 className={[
-                  'shrink-0 px-3.5 h-[38px] rounded-xl text-xs font-semibold',
+                  'shrink-0 px-3.5 h-[38px] rounded-full text-xs font-semibold',
                   'border transition-colors duration-150 active:scale-95',
                   termIsCustom
                     ? 'bg-primary border-primary text-white'
@@ -406,7 +406,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
                     const digits = e.target.value.replace(/[^0-9]/g, '').slice(0, 2)
                     setInstallMonths(digits ? Math.min(Number(digits), MAX_TERM) : 0)
                   }}
-                  className="shrink-0 w-[72px] px-2 h-[38px] rounded-xl text-xs font-semibold tabular-nums text-center
+                  className="shrink-0 w-[72px] px-2 h-[38px] rounded-full text-xs font-semibold tabular-nums text-center
                     bg-white dark:bg-primary/[0.07] text-slate-800 dark:text-white outline-none
                     border border-primary/60 dark:border-primary/60
                     placeholder-slate-300 dark:placeholder-slate-600"

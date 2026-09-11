@@ -18,11 +18,15 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import AccountPickerSheet from '../components/AccountPickerSheet'
+import CategoryRail from '../components/CategoryRail'
+import AccountSelectRow from '../components/AccountSelectRow'
+import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { syncToSheets } from '../lib/sheetsSync'
-import { IconCheck, IconChevronRight, IconPlus, IconUpload,
-  IconTick, IconWarning, IconTemplate, IconTransferUI } from '../components/icons'
+import {
+  IconCheck, IconChevronRight, IconPlus, IconUpload, IconTick, IconWarning, IconTemplate, IconTransferUI, IconArrowDown,
+} from '../components/icons'
 import CategoryGlyph, { presetCategoryIcon as CATEGORY_ICON_BY_NAME } from '../components/CategoryGlyph'
 import SegTabs from '../components/SegTabs'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
@@ -2047,7 +2051,6 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
   const [name,      setName]      = useState('')
   const [type,      setType]      = useState('expense')
   const [amountStr, setAmountStr] = useState('0')
-  const [desc,      setDesc]      = useState('')
   const [category,  setCategory]  = useState(null)
   const [account,   setAccount]   = useState(null)
   const [fromAcct,  setFromAcct]  = useState(null)
@@ -2057,6 +2060,8 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
   const [showAcct,  setShowAcct]  = useState(false)
   const [showFrom,  setShowFrom]  = useState(false)
   const [showTo,    setShowTo]    = useState(false)
+
+  const creditAvailMap = useCreditAvailMap(allAccounts ?? [])
 
   const isEdit = !!template?.id
   const expenseCats = (allCategories ?? []).filter(c => c.type === 'expense')
@@ -2074,13 +2079,12 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
       setName(template.name ?? '')
       setType(template.type ?? 'expense')
       setAmountStr(numToMoneyStr(template.amount ?? 0))
-      setDesc(template.description ?? '')
       setCategory((allCategories ?? []).find(c => c.name === template.category) ?? null)
       setAccount((allAccounts ?? []).find(a => a.name === template.account) ?? null)
       setFromAcct((allAccounts ?? []).find(a => a.name === template.fromAccount) ?? null)
       setToAcct((allAccounts ?? []).find(a => a.name === template.toAccount) ?? null)
     } else {
-      setName(''); setType('expense'); setAmountStr('0'); setDesc('')
+      setName(''); setType('expense'); setAmountStr('0')
       setCategory(null); setAccount(null); setFromAcct(null); setToAcct(null)
     }
     // Hydrates the form when the sheet opens. Listing every field would
@@ -2097,7 +2101,12 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
       const data = {
         name: name.trim(), type,
         amount: parseMoney(amountStr) || 0,
-        description: desc.trim(),
+        /* The template's name IS its note. There were two fields - "Template
+           name" and "Default note" - and on every template anyone actually
+           made they said the same thing twice: "Grab to work" and "Grab". One
+           field, written to both columns, so the picker has a name and the
+           confirm sheet opens with the note already filled. */
+        description: name.trim(),
         category: category?.name ?? null,
         account: account?.name ?? null,
         fromAccount: fromAcct?.name ?? null,
@@ -2157,7 +2166,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
            that is writing a template must not be dismissed out from under the
            write. */
         dismissible={!saving}
-        title={isEdit ? 'Edit Template' : 'New Template'}
+        title={isEdit ? 'Edit template' : 'New template'}
         titleAction={(
           <div className="flex items-center gap-3">
             {isEdit && (
@@ -2183,135 +2192,159 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
               Cancel
             </Button>
             <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add Template'}
+              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add template'}
             </Button>
           </div>
         )}
       >
-          <div className="pt-5 pb-2 flex flex-col gap-4">
-            {/* Name */}
-            <div>
-              <SectionLabel>Template name</SectionLabel>
-              <input value={name} onChange={e => { setName(e.target.value); setNameError(false) }}
-                placeholder="e.g. Jeep fare" maxLength={40}
-                className={inputClass(nameError)} />
-              {nameError && <p className="text-xs text-red-500 mt-1.5 px-1">Name is required</p>}
-            </div>
+          {/* The add forms' layout, because this is the same form.
 
-            {/* Type */}
-            <div>
-              <SectionLabel>Type</SectionLabel>
-              {isEdit ? (
-                <p className="h-[48px] flex items-center px-4 rounded-2xl text-sm font-medium
-                  text-slate-700 dark:text-slate-300 bg-slate-50 dark:bg-white/[0.04]
-                  border border-slate-200/80 dark:border-white/[0.09]">
-                  {TMPL_TYPE_STYLE[type]?.label ?? type}
-                  <span className="ml-2 text-xs text-slate-400">(cannot change)</span>
-                </p>
-              ) : (
-                <div className="grid grid-cols-3 gap-2">
-                  {['expense', 'inflow', 'transfer'].map(t => (
-                    <button key={t} onClick={() => { setType(t); setCategory(null); setAccount(null); setFromAcct(null); setToAcct(null) }}
-                      className={`py-2.5 rounded-2xl text-xs font-semibold transition-all duration-75 active:scale-[0.97]
-                        ${type === t ? 'bg-primary text-white'
-                          : 'bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400'}`}>
+              A template IS a pre-filled expense, inflow or transfer, and this
+              screen asked for the same five things the add pages ask for -
+              in a different order, with different controls, and with the
+              amount as the third of six identical 48px rows. So: the figure
+              large and first, the type under it, then the same rail and the
+              same account row those pages use. */}
+          <div className="pb-2">
+            <div className="flex flex-col items-center px-6 pt-6 pb-6">
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                value={amountStr === '0' ? '' : amountStr}
+                onChange={moneyChangeHandler(setAmountStr)}
+                aria-label="Default amount"
+                className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
+                  text-slate-900 dark:text-white outline-none
+                  placeholder-slate-200 dark:placeholder-slate-800"
+              />
+              <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">
+                Default amount
+              </p>
+
+              {/* The type, directly under the figure - it decides the figure's
+                  sign and everything below, so it belongs with it rather than
+                  in the list of fields it governs. Locked on edit, as before:
+                  changing it would strand the category and accounts. */}
+              <div className="flex items-center gap-2 mt-5">
+                {['expense', 'inflow', 'transfer'].map(t => {
+                  const on = type === t
+                  return (
+                    <button
+                      key={t}
+                      type="button"
+                      disabled={isEdit}
+                      aria-pressed={on}
+                      onClick={() => {
+                        setType(t)
+                        setCategory(null); setAccount(null); setFromAcct(null); setToAcct(null)
+                      }}
+                      className={[
+                        'h-9 px-4 rounded-full text-[13px] font-semibold border',
+                        'transition-colors duration-150',
+                        isEdit ? 'opacity-60' : 'active:scale-95',
+                        on
+                          ? 'seg-active border-primary/40 bg-primary/[0.08] dark:bg-primary/[0.12]'
+                          : 'border-slate-200/80 dark:border-primary/[0.14] text-slate-500 dark:text-slate-400 bg-white dark:bg-primary/[0.07]',
+                      ].join(' ')}
+                      style={on ? { '--seg-color': 'var(--color-primary)' } : undefined}
+                    >
                       {TMPL_TYPE_STYLE[t]?.label}
                     </button>
-                  ))}
-                </div>
+                  )
+                })}
+              </div>
+              {isEdit && (
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+                  Type cannot change after saving
+                </p>
               )}
             </div>
 
-            {/* Amount */}
-            <div>
-              <SectionLabel>Default amount</SectionLabel>
-              <div className="flex items-center gap-2 px-4 h-[48px] rounded-2xl
-                bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]">
-                <span className="text-slate-400 dark:text-slate-500 text-sm">₱</span>
-                <input type="text" inputMode="decimal" value={amountStr === '0' ? '' : amountStr}
-                  onChange={moneyChangeHandler(setAmountStr)}
-                  placeholder="0.00"
-                  className="flex-1 bg-transparent text-sm font-medium text-slate-800 dark:text-white outline-none tabular-nums" />
-              </div>
-            </div>
-
-            {/* Description */}
-            <div>
-              <SectionLabel>Default note <span className="font-normal text-slate-400 normal-case">(optional)</span></SectionLabel>
-              <input value={desc} onChange={e => setDesc(e.target.value)}
-                placeholder="e.g. Morning commute" maxLength={100}
-                className={inputClass()} />
-            </div>
-
-            {/* Category (expense/inflow only) */}
-            {type !== 'transfer' && (
+            <div className="flex flex-col gap-5">
+              {/* Description - which is the template's name. */}
               <div>
-                <SectionLabel>Category</SectionLabel>
-                <button onClick={() => setShowCat(true)}
-                  className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
-                    bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
-                    active:bg-slate-50 dark:active:bg-white/[0.10] transition-colors">
-                  <span className="leading-none"><CategoryGlyph cat={category} size={20} emoji="🏷️" /></span>
-                  <span className={`flex-1 text-sm ${category ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {category?.name ?? 'Select category'}
-                  </span>
-                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
-                </button>
-              </div>
-            )}
-
-            {/* Account (expense/inflow) or From/To (transfer) */}
-            {type !== 'transfer' ? (
-              <div>
-                <SectionLabel>Account</SectionLabel>
-                <button onClick={() => setShowAcct(true)}
-                  className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
-                    bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
-                    active:bg-slate-50 dark:active:bg-white/[0.10] transition-colors">
-                  {account
-                    ? <span className="w-5 h-5 rounded-md shrink-0" style={{ backgroundColor: account.color }} />
-                    : <span className="w-5 h-5 rounded-md shrink-0 bg-slate-200 dark:bg-white/10" />}
-                  <span className={`flex-1 text-sm ${account ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                    {account?.name ?? 'Select account'}
-                  </span>
-                  <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
-                </button>
-              </div>
-            ) : (
-              <>
-                <div>
-                  <SectionLabel>From account</SectionLabel>
-                  <button onClick={() => setShowFrom(true)}
-                    className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
-                      bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
-                      active:bg-slate-50 dark:active:bg-white/[0.10] transition-colors">
-                    {fromAcct
-                      ? <span className="w-5 h-5 rounded-md shrink-0" style={{ backgroundColor: fromAcct.color }} />
-                      : <span className="w-5 h-5 rounded-md shrink-0 bg-slate-200 dark:bg-white/10" />}
-                    <span className={`flex-1 text-sm ${fromAcct ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                      {fromAcct?.name ?? 'Select account'}
-                    </span>
-                    <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
-                  </button>
+                <div className="flex items-baseline gap-2">
+                  <SectionLabel>Description</SectionLabel>
+                  {nameError && (
+                    <p className="text-xs font-medium text-red-500 dark:text-red-400 mb-1.5">
+                      Required
+                    </p>
+                  )}
                 </div>
-                <div>
-                  <SectionLabel>To account</SectionLabel>
-                  <button onClick={() => setShowTo(true)}
-                    className="w-full flex items-center gap-3 px-4 h-[48px] rounded-2xl text-left
-                      bg-white dark:bg-white/[0.06] border border-slate-200/80 dark:border-white/[0.09]
-                      active:bg-slate-50 dark:active:bg-white/[0.10] transition-colors">
-                    {toAcct
-                      ? <span className="w-5 h-5 rounded-md shrink-0" style={{ backgroundColor: toAcct.color }} />
-                      : <span className="w-5 h-5 rounded-md shrink-0 bg-slate-200 dark:bg-white/10" />}
-                    <span className={`flex-1 text-sm ${toAcct ? 'font-medium text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'}`}>
-                      {toAcct?.name ?? 'Select account'}
-                    </span>
-                    <span className="text-slate-300 dark:text-slate-600"><IconChevronRight size={14} strokeWidth="2" /></span>
-                  </button>
+                <div className={fieldFrame(nameError)}>
+                  <input
+                    value={name}
+                    onChange={e => { setName(e.target.value); setNameError(false) }}
+                    placeholder="Jeep fare, morning coffee"
+                    maxLength={40}
+                    className="flex-1 min-w-0 bg-transparent outline-none
+                      text-sm font-medium text-slate-800 dark:text-white
+                      placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal"
+                  />
                 </div>
-              </>
-            )}
+              </div>
 
+              {/* Category - the rail, not a row that opens another sheet. */}
+              {type !== 'transfer' && (
+                <div>
+                  <SectionLabel>Category</SectionLabel>
+                  <CategoryRail
+                    categories={visibleCats}
+                    selected={category}
+                    onSelect={setCategory}
+                    gutter={20}
+                  />
+                </div>
+              )}
+
+              {/* Account, or the two legs - the same control the add forms
+                  use, so an account is its card here too. */}
+              {type !== 'transfer' ? (
+                <div>
+                  <SectionLabel>Account</SectionLabel>
+                  <AccountSelectRow
+                    account={account}
+                    creditAvailable={account ? creditAvailMap?.[account.name] : null}
+                    onClick={() => setShowAcct(true)}
+                  />
+                </div>
+              ) : (
+                /* The transfer page's arrangement: two rows and an arrow,
+                   no headings. A heading over each would be 25px of one-sided
+                   weight above the connector, so the divider would never sit
+                   in the middle of the gap it divides - and the arrow already
+                   says which way the money goes, in one glyph instead of two
+                   words. The role survives for a screen reader in ariaLabel,
+                   which is the only thing the headings were carrying. */
+                <>
+                  <AccountSelectRow
+                    account={fromAcct}
+                    emptyText="Select source"
+                    ariaLabel="Transfer from"
+                    creditAvailable={fromAcct ? creditAvailMap?.[fromAcct.name] : null}
+                    onClick={() => setShowFrom(true)}
+                  />
+
+                  <div className="flex items-center gap-3 px-1">
+                    <Divider className="flex-1" />
+                    <div className="w-7 h-7 rounded-full bg-slate-100 dark:bg-white/[0.07]
+                      flex items-center justify-center text-slate-400 dark:text-slate-500">
+                      <IconArrowDown />
+                    </div>
+                    <Divider className="flex-1" />
+                  </div>
+
+                  <AccountSelectRow
+                    account={toAcct}
+                    emptyText="Select destination"
+                    ariaLabel="Transfer to"
+                    creditAvailable={toAcct ? creditAvailMap?.[toAcct.name] : null}
+                    onClick={() => setShowTo(true)}
+                  />
+                </>
+              )}
+            </div>
           </div>
       </Sheet>
 

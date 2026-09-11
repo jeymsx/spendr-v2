@@ -25,6 +25,24 @@ export function IconChevronLeft({ size = 18, strokeWidth = '2', stroke = 'curren
   )
 }
 
+/**
+ * Downward arrow, for the connector between a transfer's two accounts.
+ *
+ * It was a local function in Transfer.jsx and a second, differently drawn one
+ * in AddActionSheet.jsx - which is how the template form ended up importing a
+ * name from here that this file had never exported. AddActionSheet keeps its
+ * own: that sheet's icons are a 20x20 family at stroke 2.2, and pulling one
+ * of them onto this 24x24 grid would leave it the odd weight in its own row.
+ */
+export function IconArrowDown({ size = 16, strokeWidth = '2', stroke = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19" />
+      <polyline points="19 12 12 19 5 12" />
+    </svg>
+  )
+}
+
 export function IconCalendar({ size = 16, strokeWidth = '1.8', stroke = 'currentColor' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
