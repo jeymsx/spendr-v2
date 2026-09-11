@@ -65,6 +65,11 @@ export default function TxConfirmSheet({
   toAccount,
   onSaveTemplate = null,  // if provided, shows save-as-template toggle
   installment    = null,  // { months, monthly, total, firstLabel, lastLabel }
+  /* The confirm button's words. "Save Transaction" is right when a form is
+     being saved and wrong when a bill is being posted - the sheet is the
+     same review either way, but the verb is the caller's. */
+  confirmLabel   = null,
+  savingLabel    = 'Saving…',
 }) {
   const [closing,       setClosing]       = useState(false)
   useScrollLock(open)
@@ -252,7 +257,8 @@ export default function TxConfirmSheet({
               disabled:opacity-50 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
           >
-            {saving ? 'Saving…' : installment ? `Schedule ${installment.months} Payments` : 'Save Transaction'}
+            {saving ? savingLabel
+              : confirmLabel ?? (installment ? `Schedule ${installment.months} Payments` : 'Save Transaction')}
           </button>
         </div>
       </div>

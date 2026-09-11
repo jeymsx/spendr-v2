@@ -2,11 +2,12 @@ import { useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { postRecurringCharge } from '../db/txHelpers'
+import { postRecurringCharge, deleteTxGroup } from '../db/txHelpers'
 import { useToast } from '../context/ToastContext'
 import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
+import TxConfirmSheet from '../components/TxConfirmSheet'
 import { RecurringFormSheet } from './Recurring'
 import { IconChevronLeft } from '../components/icons'
 import {
@@ -149,6 +150,7 @@ export default function RecurringDetail() {
 
   const [formOpen,  setFormOpen]  = useState(false)
   const [posting,   setPosting]   = useState(false)
+  const [confirmPost, setConfirmPost] = useState(false)
   const [toggling,  setToggling]  = useState(false)
   const [overdraw,  setOverdraw]  = useState(null)
   const [confirmDel, setConfirmDel] = useState(false)
@@ -224,6 +226,7 @@ export default function RecurringDetail() {
   }, [history])
 
   const cat  = useMemo(() => (categories ?? []).find(c => c.name === rec?.category), [categories, rec])
+  const acct = useMemo(() => (accounts ?? []).find(a => a.name === rec?.account), [accounts, rec])
   const due  = rec ? dueStatus(rec.nextDate) : null
   const monthly = rec ? toMonthlyAmount(rec.amount, rec.frequency) : 0
 
@@ -231,10 +234,34 @@ export default function RecurringDetail() {
 
   async function handlePost({ force = false } = {}) {
     if (!rec) return
+    setConfirmPost(false)
     setPosting(true)
     try {
-      await postRecurringCharge(rec, { allowOverdraw: force })
-      showToast(`${rec.name} posted`)
+      const { tx } = await postRecurringCharge(rec, { allowOverdraw: force })
+      /* Undo, because a posted bill moves three things at once - a
+         transaction appears, the account balance drops, and the bill's due
+         date jumps a period - and finding all three to put back by hand is
+         not a reasonable ask of someone who tapped the wrong row.
+
+         deleteTxGroup does exactly that reversal and already did before this
+         existed; it is what deleting the charge from history runs. It also
+         writes a sync tombstone, so an undone post does not come back on the
+         next pull.
+
+         runAction in ToastContext nulls its own ref and dismisses before
+         calling, so this cannot fire twice and double-credit the balance. */
+      showToast(`${rec.name} posted`, 'success', tx ? {
+        actionLabel: 'Undo',
+        onAction: async () => {
+          try {
+            await deleteTxGroup([tx])
+            showToast('Post undone')
+          } catch (err) {
+            console.error('[RecurringDetail] undo post failed:', err)
+            showToast('Could not undo', 'error')
+          }
+        },
+      } : {})
     } catch (e) {
       if (e?.name === 'OverdrawError') {
         setOverdraw({ accountName: e.account, balance: e.balance, amount: e.amount })
@@ -406,7 +433,7 @@ export default function RecurringDetail() {
         <ActionTile
           icon={<IconBolt />}
           label={posting ? 'Posting…' : 'Post now'}
-          onClick={() => handlePost()}
+          onClick={() => setConfirmPost(true)}
           disabled={posting}
           tone="accent"
         />
@@ -525,6 +552,29 @@ export default function RecurringDetail() {
         showDelete={false}
         categories={categories ?? []}
         accounts={accounts ?? []}
+      />
+
+      {/* The same sheet the expense form uses to review a transaction before
+          saving it, which is what this is - so posting a bill and saving an
+          expense are one habit rather than two. onSaveTemplate is left off,
+          which is what hides its save-as-template row: a bill is already the
+          template.
+
+          It exists because Post now was a single tap that wrote a
+          transaction, moved a balance and advanced a due date, sitting
+          directly under a row you might have opened by mistake. */}
+      <TxConfirmSheet
+        open={confirmPost}
+        onClose={() => setConfirmPost(false)}
+        onConfirm={() => handlePost()}
+        saving={posting}
+        type="expense"
+        amount={rec.amount}
+        description={rec.name}
+        category={cat}
+        account={acct}
+        confirmLabel="Post bill"
+        savingLabel="Posting…"
       />
 
       <OverdrawWarningSheet

@@ -92,9 +92,11 @@ export async function applyBalanceEffect(tx) {
  * @returns the new nextDate
  */
 export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
-  // Pay Now is a single tap with no confirm step, so this is the only place an
-  // overdraw can be caught. Callers surface OverdrawError as a sheet and retry
-  // with allowOverdraw when the user confirms.
+  /* The overdraw check lives here rather than in the caller because it has to
+     happen inside the same decision as the write. There IS a review sheet in
+     front of this now, but it shows what the charge is, not whether the
+     account can take it - and a balance can change between the two. Callers
+     surface OverdrawError as a sheet and retry with allowOverdraw. */
   if (!allowOverdraw) {
     const over = await checkOverdraw(rec.account, rec.amount)
     if (over) throw new OverdrawError(over.name, over.balance ?? 0, rec.amount)
@@ -103,8 +105,14 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
   const nowISO      = new Date().toISOString()
   const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
 
+  /* Returned to the caller so it can offer an Undo. deleteTxGroup already
+     reverses everything this does - the balance, the row, and the bill's
+     nextDate via recurringPrevDate below - so undoing a post needs no new
+     code, only the row it wrote. */
+  let addedId = null
+
   await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
-    await db.transactions.add({
+    addedId = await db.transactions.add({
       txId:              crypto.randomUUID(),
       type:              'expense',
       amount:            rec.amount,
@@ -122,7 +130,7 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
     await db.recurring.update(rec.id, { nextDate: newNextDate })
   })
 
-  return newNextDate
+  return { nextDate: newNextDate, tx: addedId ? await db.transactions.get(addedId) : null }
 }
 
 /**
