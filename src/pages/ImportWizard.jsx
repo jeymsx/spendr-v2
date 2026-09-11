@@ -646,7 +646,7 @@ function StepOpeningBalances({ rows, onBack, onNext }) {
                     ? setCreditLimits(prev => ({ ...prev, [name]: e.target.value }))
                     : setBalances(prev => ({ ...prev, [name]: e.target.value }))
                   }
-                  placeholder="0.00"
+                  placeholder="₱0.00"
                   className="w-28 text-right text-slate-800 dark:text-white
                     placeholder:text-slate-300 dark:placeholder:text-slate-600
                     bg-transparent focus:outline-none text-[15px] tabular-nums"

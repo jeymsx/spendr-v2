@@ -184,7 +184,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
           ref={amountInputRef}
           type="text"
           inputMode="decimal"
-          placeholder="0.00"
+          placeholder="₱0.00"
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           className="amount-input font-semibold tabular-nums bg-transparent text-center w-full

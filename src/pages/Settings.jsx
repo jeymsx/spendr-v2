@@ -1877,10 +1877,15 @@ function CategoryFormSheet({ open, onClose, category, defaultType, allCategories
               inputMode="decimal"
               value={budget === '0' ? '' : budget}
               onChange={moneyChangeHandler(setBudget)}
-              placeholder="Optional — 0 means no budget"
+              placeholder="₱0.00"
+              /* "Optional — 0 means no budget" was the placeholder, which is
+                 three jobs for one line: what goes in the box, that the box is
+                 optional, and what zero does. A placeholder can only do the
+                 first, and it vanishes the moment you type - which is when the
+                 other two still matter. They are the hint now. */
               hint={parseMoney(budget) > 0
                 ? `Spending alerts when you approach ${fmt(parseMoney(budget))} this month`
-                : null}
+                : 'Optional. Leave empty for no budget.'}
             />
 
           </div>
@@ -2210,7 +2215,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
               <input
                 type="text"
                 inputMode="decimal"
-                placeholder="0.00"
+                placeholder="₱0.00"
                 value={amountStr === '0' ? '' : amountStr}
                 onChange={moneyChangeHandler(setAmountStr)}
                 aria-label="Default amount"

@@ -214,7 +214,7 @@ export default function RecurringForm() {
             <input
               type="text"
               inputMode="decimal"
-              placeholder="0.00"
+              placeholder="₱0.00"
               value={amountStr === '0' ? '' : amountStr}
               onChange={e => {
                 moneyChangeHandler(setAmountStr)(e)

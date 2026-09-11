@@ -537,7 +537,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
             type="text"
             inputMode="decimal"
             autoFocus={!editDebt}
-            placeholder="0.00"
+            placeholder="₱0.00"
             value={amountStr}
             onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
             aria-label="Amount"
@@ -585,7 +585,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
             <RowInput
               value={paidStr === '0' ? '' : paidStr}
               onChange={e => { moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
-              placeholder="0.00"
+              placeholder="₱0.00"
               inputMode="decimal"
             />
           </EditRow>
@@ -769,7 +769,7 @@ export function PaymentSheet({ open, onClose, debt }) {
               type="text"
               inputMode="decimal"
               autoFocus
-              placeholder="0.00"
+              placeholder="₱0.00"
               value={amountStr === '0' ? '' : amountStr}
               onChange={moneyChangeHandler(setAmountStr)}
               aria-label="Payment amount"

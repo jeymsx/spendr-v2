@@ -2063,7 +2063,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   inputMode="decimal"
                   value={startingBal === '0' ? '' : startingBal}
                   onChange={moneyChangeHandler(setStartingBal)}
-                  placeholder="0.00"
+                  placeholder="₱0.00"
                   className={inputClass(false)}
                 />
                 {isEdit && adjustDiff !== 0 && (
@@ -2092,7 +2092,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     inputMode="decimal"
                     value={creditLimit === '0' ? '' : creditLimit}
                     onChange={moneyChangeHandler(setCreditLimit)}
-                    placeholder="0.00"
+                    placeholder="₱0.00"
                     className={inputClass(false)}
                   />
                 </div>
@@ -2104,7 +2104,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     inputMode="decimal"
                     value={minPayment === '0' ? '' : minPayment}
                     onChange={moneyChangeHandler(setMinPayment)}
-                    placeholder="0.00"
+                    placeholder="₱0.00"
                     className={inputClass(false)}
                   />
                 </div>
