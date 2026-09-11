@@ -9,6 +9,19 @@ import { IconTick, IconWarning, IconBell } from './icons'
 const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 const money = (v) => '₱' + _php.format(Math.abs(v ?? 0))
 
+/**
+ * How long the dissolve takes on the way out.
+ *
+ * Matches the duration-200 on the shell below; the two have to agree or the
+ * overlay either unmounts mid-fade or hangs visible after it has finished.
+ * Zero when the reader has asked for less motion - waiting 200ms for an
+ * animation that is not playing is just lag.
+ */
+const EXIT_MS = 200
+const exitDelay = () =>
+  (typeof window !== 'undefined'
+    && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : EXIT_MS)
+
 const TYPE_COPY = {
   expense:  { verb: 'Expense',  to: '/expense'  },
   inflow:   { verb: 'Inflow',   to: '/inflow'   },
@@ -156,6 +169,29 @@ export default function QuickLogOverlay({ onClose }) {
 
   const examples = useMemo(() => examplesFor(txAll, accounts), [txAll, accounts])
 
+  /*
+    Leaving takes 200ms, and the component has to stay mounted for it.
+
+    AppLayout renders this on demand - `{quickOpen && <QuickLogOverlay/>}` -
+    so calling onClose() unmounts the whole tree in the next frame and the app
+    snaps back with no exit at all. The other sheets in this app solve it with
+    an `open` prop and `if (!open && !closing) return null`; that is not
+    available here, and it is not wanted either, because being mounted only
+    while open is what gives the field a clean state every time.
+
+    So the child holds the door instead: paint the closing state, then tell
+    the parent once the fade has actually finished.
+  */
+  const [closing, setClosing] = useState(false)
+  const exitTimer = useRef(null)
+  useEffect(() => () => clearTimeout(exitTimer.current), [])
+
+  const dismiss = useCallback(() => {
+    if (exitTimer.current) return        // already on its way out
+    setClosing(true)
+    exitTimer.current = setTimeout(onClose, exitDelay())
+  }, [onClose])
+
   // Mounted only while open (AppLayout guards it), so the field starts empty
   // every time without a reset effect - which is what an `open` prop plus
   // `setText('')` on close was doing, at the cost of a setState inside an
@@ -168,10 +204,10 @@ export default function QuickLogOverlay({ onClose }) {
   }, [])
 
   useEffect(() => {
-    const onKey = (e) => { if (e.key === 'Escape') onClose() }
+    const onKey = (e) => { if (e.key === 'Escape') dismiss() }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose])
+  }, [dismiss])
 
   /*
     How tall the screen ACTUALLY is right now.
@@ -200,23 +236,30 @@ export default function QuickLogOverlay({ onClose }) {
     const dest = TYPE_COPY[parsed.type] ?? TYPE_COPY.expense
     // Router state, not a query string: the payload holds names with spaces
     // and it has no business being visible or shareable.
+    // Navigate first, dissolve second. The destination is then revealed
+    // THROUGH the fading scrim rather than after it, which is the difference
+    // between a transition and two separate events.
     navigate(dest.to, { state: { prefill: parsed } })
-    onClose()
-  }, [parsed, navigate, onClose])
+    dismiss()
+  }, [parsed, navigate, dismiss])
 
   /* Straight to the bill's own page, which is where posting a charge lives. */
   const goBill = useCallback(() => {
     if (!parsed.recurringMatch) return
     navigate(`/recurring/${parsed.recurringMatch.id}`)
-    onClose()
-  }, [parsed.recurringMatch, navigate, onClose])
+    dismiss()
+  }, [parsed.recurringMatch, navigate, dismiss])
 
   const cat = (categories ?? []).find(c => c.name === parsed.category) ?? null
   const ready = parsed.amount != null
   const dest = TYPE_COPY[parsed.type] ?? TYPE_COPY.expense
 
   return (
-    <div className="fixed inset-0 z-[200]" style={{ touchAction: 'none' }}>
+    <div
+      className={`fixed inset-0 z-[200] transition-opacity duration-200 ease-out
+        ${closing ? 'opacity-0 pointer-events-none' : 'opacity-100'}`}
+      style={{ touchAction: 'none' }}
+    >
       {/*
         Very dark, lightly blurred. The app behind survives as faint structure
         rather than as fog: at 40px of blur it became a milky nothing, which
@@ -231,11 +274,16 @@ export default function QuickLogOverlay({ onClose }) {
         This is also the Cancel button. Tapping anywhere off the content
         closes, which is why there is no longer a row of screen spent on a
         word saying so.
+
+        The shell stops taking pointer events the moment it starts leaving.
+        Without that the scrim spends the 200ms of its own fade swallowing
+        the first tap on the page underneath - which, after a navigation,
+        is exactly when you are most likely to make one.
       */}
       <div
         className="sheet-overlay absolute inset-0
           bg-white/88 dark:bg-black/[0.88] backdrop-blur-[10px]"
-        onClick={onClose}
+        onClick={dismiss}
       />
 
       {/*
@@ -248,7 +296,7 @@ export default function QuickLogOverlay({ onClose }) {
         scrim and close.
       */}
       <div
-        className="relative pointer-events-none flex flex-col justify-center px-6"
+        className="quick-in relative pointer-events-none flex flex-col justify-center px-6"
         style={{ height: viewportH ? `${viewportH}px` : '100%' }}
       >
         {/* pointer-events-none by default, with only the parts you actually

@@ -1285,6 +1285,33 @@ input, textarea, [contenteditable] {
   animation: fadeOut 0.22s ease forwards;
 }
 
+/* Quick log arrives and leaves as a dissolve.
+
+   It used to cut on both ends. The overlay is mounted on demand, so closing
+   it unmounted the tree in a single frame and the app snapped back - a hard
+   edge on a surface you touch several times a day. Entry was no better: the
+   scrim faded itself in and the text appeared on top of it, fully formed.
+
+   Enter is the CONTENT only, because the scrim already has its own fade and
+   double-fading it reads as two separate things happening. Exit is the whole
+   shell, handled in the component as an opacity transition, so the scrim, the
+   text and the button leave together rather than in pieces.
+
+   8px of rise, not more. Past about ten it stops reading as the thing
+   settling and starts reading as the thing travelling. */
+.quick-in {
+  animation: quickIn 0.24s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+}
+
+@keyframes quickIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .quick-in { animation: none; }
+}
+
 @keyframes fadeOut {
   from { opacity: 1; }
   to   { opacity: 0; }
