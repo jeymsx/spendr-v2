@@ -346,7 +346,7 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
         const det     = creditDetailMap[acct.name] ?? {}
         const { stmtTotal = 0, stmtRange = '', nextStatementTotal = 0, nextRange = '',
                 balanceUsed = 0, available = 0, usedPct = 0, limit = 0,
-                dueDate = '—', minimumPayment = 0 } = det
+                dueDate = '—', minimumDue = 0 } = det
         const barFill = Math.max((usedPct / 100) * 450, 0)
         const usedColor = usedPct >= 90 ? RED : usedPct >= 70 ? '#f59e0b' : colors.primary
 
@@ -394,10 +394,10 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
                   <Text style={{ fontSize: 7, color: GRAY_TEXT }}>AVAILABLE CREDIT</Text>
                   <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: GREEN, marginTop: 1 }}>{fmt(available)}</Text>
                 </View>
-                {minimumPayment > 0 && (
+                {minimumDue > 0 && (
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 7, color: GRAY_TEXT }}>MIN. DUE</Text>
-                    <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(minimumPayment)}</Text>
+                    <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(minimumDue)}</Text>
                   </View>
                 )}
               </View>

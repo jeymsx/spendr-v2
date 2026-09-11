@@ -109,7 +109,8 @@ export async function fetchReportData(year, month) {
   const creditDetailMap = {}
   for (const acct of creditAccounts) {
     const { cycleStart, cycleEnd, thisTotal: stmtTotal, nextTotal,
-            nextStatementTotal, laterTotal, nextCycleEnd, currentBalance: balanceUsed }
+            nextStatementTotal, laterTotal, nextCycleEnd, currentBalance: balanceUsed,
+            minimumDue }
       = getCreditStatus(acct, txsAsOf, asOf)
     const { cycleStart: nextStart } = getNextCycleRange(acct.cutoffDate, asOf)
 
@@ -138,7 +139,9 @@ export async function fetchReportData(year, month) {
       usedPct,
       limit,
       dueDate:      fmtDate(dueDateObj),
-      minimumPayment: acct.minimumPayment ?? 0,
+      // What is still owed on the closed statement, capped at the account's
+      // minimum - not the stored minimum printed against any balance at all.
+      minimumDue,
     }
   }
 

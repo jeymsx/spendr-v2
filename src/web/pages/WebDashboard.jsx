@@ -150,9 +150,13 @@ export default function WebDashboard() {
                         </p>
                         {st.stmtPaid
                           ? <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Statement paid</p>
-                          : <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
-                              {money(st.thisTotal ?? 0)} due
-                            </p>}
+                          : st.hasStatement
+                            ? <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                                {money(st.stmtOutstanding ?? 0)} due
+                              </p>
+                            /* Billed nothing, so neither paid nor owing. It used
+                               to read "₱0.00 due" in warning amber. */
+                            : <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">Nothing due</p>}
                       </div>
                     </Link>
                   )

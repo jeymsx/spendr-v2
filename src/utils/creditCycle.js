@@ -190,10 +190,29 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
   const laterTotal         = sum(laterCharges)
   const totalPayments      = sum(payments)
 
-  const stmtPaid = totalPayments >= thisTotal
+  /* Three states, where there used to be two.
+
+     `totalPayments >= thisTotal` is also true of 0 >= 0, so a cycle that
+     billed nothing came back "paid" and the account page put a green tick
+     on a statement that had never asked for anything. Whether a bill EXISTS
+     and whether it is SETTLED are separate questions.
+
+     The balance math keeps using the settled test by itself, so none of
+     this changes a single peso - `stmtSettled` is exactly the old flag. */
+  const hasStatement    = thisTotal > 0
+  const stmtSettled     = totalPayments >= thisTotal
+  const stmtPaid        = hasStatement && stmtSettled
+  const stmtOutstanding = Math.max(0, thisTotal - totalPayments)
+
+  /* What the issuer would actually ask for by the due date. The account's
+     stored minimum, but never more than is still owed on the closed
+     statement - and nothing at all once that statement is settled, or when
+     there was never one. A 150 peso statement cannot carry a 200 peso
+     minimum either. */
+  const minimumDue = Math.min(account?.minimumPayment ?? 0, stmtOutstanding)
   // Statement settled → only the unbilled charges remain outstanding.
   // Partially paid → statement remainder plus the unbilled charges.
-  const currentBalance = stmtPaid
+  const currentBalance = stmtSettled
     ? nextTotal
     : Math.max(0, thisTotal + nextTotal - totalPayments)
 
@@ -202,7 +221,7 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
     thisCharges, nextCharges, nextStatementCharges, laterCharges, payments,
     // nextTotal === nextStatementTotal + laterTotal, by construction.
     thisTotal, nextTotal, nextStatementTotal, laterTotal, totalPayments,
-    stmtPaid, currentBalance,
+    stmtPaid, hasStatement, stmtOutstanding, minimumDue, currentBalance,
     availableCredit: (account?.creditLimit ?? 0) - currentBalance,
   }
 }

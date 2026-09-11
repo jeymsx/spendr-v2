@@ -196,6 +196,82 @@ describe('getCreditStatus — payments', () => {
   })
 })
 
+describe('getCreditStatus - a statement that billed nothing', () => {
+  const acct = { name: 'Card', type: 'credit', creditLimit: 50000, cutoffDate: 15, minimumPayment: 200 }
+  const charge = (m, d, amount) =>
+    ({ type: 'expense', account: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
+  const payment = (m, d, amount) =>
+    ({ type: 'transfer', fromAccount: 'Cash', toAccount: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
+
+  // Nothing inside Apr 15 - May 14; the charge lands on the cycle after.
+  const noBill = getCreditStatus(acct, [charge(5, 20, 2500)], at(2026, 5, 21))
+
+  it('is not "paid" - nobody asked for anything', () => {
+    expect(noBill.thisTotal).toBe(0)
+    expect(noBill.hasStatement).toBe(false)
+    expect(noBill.stmtPaid).toBe(false)
+  })
+
+  it('asks for no minimum', () => {
+    expect(noBill.minimumDue).toBe(0)
+  })
+
+  it('still locks the charge against the limit', () => {
+    // The guard that matters: separating "billed" from "settled" must not
+    // move a single peso of the balance.
+    expect(noBill.currentBalance).toBe(2500)
+    expect(noBill.availableCredit).toBe(47500)
+  })
+
+  it('an empty ledger is not a paid statement either', () => {
+    const empty = getCreditStatus(acct, [], at(2026, 5, 21))
+    expect(empty.hasStatement).toBe(false)
+    expect(empty.stmtPaid).toBe(false)
+    expect(empty.minimumDue).toBe(0)
+    expect(empty.currentBalance).toBe(0)
+  })
+})
+
+describe('getCreditStatus - minimumDue', () => {
+  const acct = { name: 'Card', type: 'credit', creditLimit: 50000, cutoffDate: 15, minimumPayment: 200 }
+  const charge = (m, d, amount) =>
+    ({ type: 'expense', account: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
+  const payment = (m, d, amount) =>
+    ({ type: 'transfer', fromAccount: 'Cash', toAccount: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
+  const on = (txs) => getCreditStatus(acct, txs, at(2026, 5, 21))
+
+  it('is the account minimum while the statement is unpaid', () => {
+    expect(on([charge(4, 20, 3000)]).minimumDue).toBe(200)
+  })
+
+  it('drops to nothing once the statement is settled', () => {
+    expect(on([charge(4, 20, 3000), payment(5, 20, 3000)]).minimumDue).toBe(0)
+  })
+
+  it('shrinks to what is left when a part payment covers most of it', () => {
+    // 100 still owed, so asking for the full 200 minimum would overstate it.
+    expect(on([charge(4, 20, 3000), payment(5, 20, 2900)]).minimumDue).toBe(100)
+  })
+
+  it('is the full minimum when a part payment leaves more than it', () => {
+    expect(on([charge(4, 20, 3000), payment(5, 20, 1000)]).minimumDue).toBe(200)
+  })
+
+  it('never exceeds a statement smaller than the minimum', () => {
+    expect(on([charge(4, 20, 150)]).minimumDue).toBe(150)
+  })
+
+  it('is zero when the account has no minimum set', () => {
+    const noMin = getCreditStatus({ ...acct, minimumPayment: null }, [charge(4, 20, 3000)], at(2026, 5, 21))
+    expect(noMin.minimumDue).toBe(0)
+  })
+
+  it('tracks stmtOutstanding, which is what it is capped by', () => {
+    expect(on([charge(4, 20, 3000), payment(5, 20, 1000)]).stmtOutstanding).toBe(2000)
+    expect(on([charge(4, 20, 3000), payment(5, 20, 5000)]).stmtOutstanding).toBe(0)
+  })
+})
+
 describe('nextDueDate', () => {
   it('rolls to next month once the day has passed', () => {
     expect(ymd(nextDueDate(10, at(2026, 5, 21)))).toBe('2026-06-10')

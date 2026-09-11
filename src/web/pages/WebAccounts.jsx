@@ -342,9 +342,14 @@ export default function WebAccounts() {
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-slate-800 dark:text-white">
                           {cycleDay(nextOccurrence(selected.dueDate))}
                         </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
-                          min {moneyCompact(selected.minimumPayment ?? 0)}
-                        </p>
+                        {/* The minimum still owed, not the account's stored
+                            figure - which was printed even against a settled
+                            statement. */}
+                        {(st.minimumDue ?? 0) > 0 && (
+                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                            min {moneyCompact(st.minimumDue)}
+                          </p>
+                        )}
                       </div>
                     </div>
                   </>

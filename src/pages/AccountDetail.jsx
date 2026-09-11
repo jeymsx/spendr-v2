@@ -67,6 +67,35 @@ const DAY_MS = 864e5
 const HOUR_MS = 36e5
 
 /**
+ * How the statement-balance card is coloured, by what the statement is.
+ *
+ * Three states rather than two. Red carries a claim - you owe this - and so
+ * does green: you were billed and you settled it. A cycle that billed nothing
+ * supports neither, and it used to get green plus a tick regardless, because
+ * "payments >= charges" is also true of zero against zero.
+ */
+const STMT_TONE = {
+  none: {
+    box:   'bg-slate-50 dark:bg-white/[0.04] border border-slate-200/70 dark:border-white/10',
+    label: 'text-slate-400 dark:text-slate-500',
+    value: 'text-slate-500 dark:text-slate-400',
+    note:  'text-slate-400 dark:text-slate-500',
+  },
+  paid: {
+    box:   'bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20',
+    label: 'text-emerald-500 dark:text-emerald-400',
+    value: 'text-emerald-600 dark:text-emerald-400',
+    note:  'text-emerald-500 dark:text-emerald-400',
+  },
+  owing: {
+    box:   'bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20',
+    label: 'text-red-400 dark:text-red-500',
+    value: 'text-red-500 dark:text-red-400',
+    note:  'text-red-400 dark:text-red-500',
+  },
+}
+
+/**
  * The ranges the chart can show.
  *
  * `points` is the number of samples, not a bucket size, so each range gets a
@@ -468,9 +497,11 @@ export default function AccountDetail() {
     return {
       ...status,
       nextStart, nextEnd,
-      minimumDue: account.minimumPayment ?? 0,
+      // minimumDue now comes from ...status, which caps it at what is still
+      // owed rather than printing the account's stored figure regardless.
       nextDue:    nextOccurrence(account.dueDate),
       dueSoon:    dueDate && ((dueDate - new Date()) / DAY_MS) <= 7,
+      tone:       !status.hasStatement ? 'none' : status.stmtPaid ? 'paid' : 'owing',
     }
   }, [account, txsWithRunning])
 
@@ -751,7 +782,7 @@ export default function AccountDetail() {
                   Statement balance paid
                 </p>
               </div>
-            ) : creditData.dueSoon && creditData.nextDue ? (
+            ) : creditData.dueSoon && creditData.nextDue && creditData.stmtOutstanding > 0 ? (
               <div className="mb-3 px-3 py-2 rounded-xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-100 dark:border-amber-500/20 flex items-center gap-2">
                 <span className="text-amber-500 dark:text-amber-400"><IconWarning size={16} /></span>
                 <p className="text-xs font-semibold text-amber-700 dark:text-amber-400">
@@ -762,23 +793,23 @@ export default function AccountDetail() {
             ) : null}
 
             <div className="grid grid-cols-2 gap-2 mb-5">
-              <div className={`col-span-2 px-4 py-3 rounded-2xl flex items-center justify-between ${
-                creditData.stmtPaid
-                  ? 'bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20'
-                  : 'bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20'
-              }`}>
+              {/* Red says "you owe this", green says "you settled it". A cycle
+                  that billed nothing is neither, and colouring it either way
+                  states something untrue - so it gets the neutral surface and
+                  says so in words. */}
+              <div className={`col-span-2 px-4 py-3 rounded-2xl flex items-center justify-between ${STMT_TONE[creditData.tone].box}`}>
                 <div>
-                  <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${
-                    creditData.stmtPaid ? 'text-emerald-500 dark:text-emerald-400' : 'text-red-400 dark:text-red-500'
-                  }`}>Statement Balance</p>
-                  <p className={`text-xl font-bold tabular-nums ${
-                    creditData.stmtPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
-                  }`}>{fmt(creditData.thisTotal)}</p>
-                  {creditData.stmtPaid ? (
-                    <p className="text-[10px] text-emerald-500 dark:text-emerald-400 mt-0.5">Paid ✓</p>
-                  ) : creditData.nextDue ? (
-                    <p className="text-[10px] text-red-400 dark:text-red-500 mt-0.5">Due {creditData.nextDue}</p>
-                  ) : null}
+                  <p className={`text-[10px] font-semibold uppercase tracking-wider mb-0.5 ${STMT_TONE[creditData.tone].label}`}>
+                    Statement Balance
+                  </p>
+                  <p className={`text-xl font-bold tabular-nums ${STMT_TONE[creditData.tone].value}`}>
+                    {fmt(creditData.thisTotal)}
+                  </p>
+                  <p className={`text-[10px] mt-0.5 ${STMT_TONE[creditData.tone].note}`}>
+                    {creditData.tone === 'none'  ? 'Nothing billed this cycle'
+                      : creditData.tone === 'paid' ? 'Paid ✓'
+                      : creditData.nextDue ? `Due ${creditData.nextDue}` : 'Unpaid'}
+                  </p>
                 </div>
                 {creditData.nextTotal > 0 && (
                   <div className="text-right">
@@ -799,7 +830,9 @@ export default function AccountDetail() {
                 )}
               </div>
               <StatCard label="Available Credit" value={fmt(creditData.availableCredit)} />
-              <StatCard label="Minimum Due" value={fmt(creditData.minimumDue)} />
+              {/* An em dash rather than a zero: nothing is being asked for,
+                  which is not the same as being asked for nothing. */}
+              <StatCard label="Minimum Due" value={creditData.minimumDue > 0 ? fmt(creditData.minimumDue) : '—'} />
             </div>
 
             <CreditTxSection
