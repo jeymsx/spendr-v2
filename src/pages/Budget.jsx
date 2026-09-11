@@ -57,13 +57,18 @@ function IconChevronLeft() {
 
 // ── Bits ───────────────────────────────────────────────────────────────────────
 
-function SectionLabel({ children, hint }) {
+/**
+ * A section heading, and only that.
+ *
+ * It used to take a `hint` and every one of the three sections passed one, so
+ * each heading came with a sentence explaining the section under it. Three of
+ * those down one page reads as annotated design notes rather than an app -
+ * normal UI states the section and lets the content speak.
+ */
+function SectionLabel({ children }) {
   return (
     <div className="px-5 mb-2.5">
       <p className="text-[13px] font-semibold text-slate-700 dark:text-slate-200">{children}</p>
-      {hint && (
-        <p className="text-[12px] leading-snug text-slate-500 dark:text-slate-400 mt-0.5">{hint}</p>
-      )}
     </div>
   )
 }
@@ -84,15 +89,40 @@ function CategoryRow({ cat }) {
   const { color, textClass } = budgetTone(pct)
   const left = cat.budget - cat.spent
 
+  /* Two states worth marking, and they are not the same news. Over means the
+     limit is already gone; near means it will be if nothing changes. The
+     percentage beside them says which by colour, but a percentage has to be
+     read - a badge on the tile is caught while scanning. */
+  const over = cat.spent > cat.budget
+  const near = !over && cat.budget > 0 && pct >= 75
+
   return (
     <div className="px-4 py-3.5">
       <div className="flex items-center gap-3">
-        <span
-          className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-          style={{ '--cat-color': cat?.color ?? '#64748b' }}
-          aria-hidden="true"
-        >
-          <CategoryGlyph cat={cat} size={20} emoji="💸" />
+        {/* relative, so the badge can hang off the tile's corner. The tile
+            keeps aria-hidden; the badge carries its own label, because "!"
+            on its own tells a screen reader nothing. */}
+        <span className="relative shrink-0">
+          <span
+            className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center"
+            style={{ '--cat-color': cat?.color ?? '#64748b' }}
+            aria-hidden="true"
+          >
+            <CategoryGlyph cat={cat} size={20} emoji="💸" />
+          </span>
+          {(over || near) && (
+            <span
+              className={`absolute -top-1 -right-1 w-[17px] h-[17px] rounded-full
+                flex items-center justify-center text-[11px] font-bold leading-none
+                text-white ring-2 ring-white dark:ring-[#111820] ${
+                  over ? 'bg-red-500' : 'bg-amber-500'
+                }`}
+              title={over ? 'Over budget' : 'Close to the limit'}
+            >
+              <span className="sr-only">{over ? 'Over budget' : 'Close to the limit'}</span>
+              <span aria-hidden="true">!</span>
+            </span>
+          )}
         </span>
         <div className="flex-1 min-w-0">
           <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-100 truncate">
@@ -258,8 +288,6 @@ export default function Budget() {
   const remaining = totals.budget - totals.spent
   const perDay = remaining > 0 ? remaining / daysLeft : 0
   const tone = budgetTone(totals.pct, accentColor)
-  const over = budgeted.filter(c => c.spent > c.budget)
-  const near = budgeted.filter(c => c.spent <= c.budget && c.budget > 0 && (c.spent / c.budget) >= 0.75)
 
   // The scale for every row: the largest limit OR spend, whichever is bigger.
   // Limits alone would clip the overshoot of whichever category set the
@@ -285,8 +313,11 @@ export default function Budget() {
         >
           <IconChevronLeft />
         </button>
+        {/* The month is the title. "Budget" named the page you had just
+            tapped to get to, and the month was a second line under it saying
+            the thing the page is actually about. */}
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          Budget
+          {monthName}
         </h1>
         <span className="w-9 shrink-0" />
       </header>
@@ -320,10 +351,6 @@ export default function Budget() {
         <>
           {/* ── The month at a glance ── */}
           <section className="px-5">
-            <p className="text-center text-[11px] font-semibold uppercase tracking-widest text-slate-500 dark:text-slate-400">
-              {monthName}
-            </p>
-
             {/* The amount, the share and the limit were three stacked lines
                 above a horizontal meter - four rows saying one thing. The
                 arc holds all of it: the figure sits inside the measurement,
@@ -341,7 +368,11 @@ export default function Budget() {
               rightNote={`${fmt(totals.budget)} limit`}
             />
 
-            <div className="grid grid-cols-3 gap-3 mt-5">
+            {/* Centred. Left-aligned they hung off the left edge of three
+                invisible columns under a symmetrical arc, so the row read as
+                three separate facts rather than one strip belonging to the
+                gauge above it. */}
+            <div className="grid grid-cols-3 gap-3 mt-5 text-center">
               <div>
                 <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                   {remaining >= 0 ? 'Remaining' : 'Over by'}
@@ -371,35 +402,20 @@ export default function Budget() {
             </div>
           </section>
 
-          {/* ── What is breaking ── */}
-          {(over.length > 0 || near.length > 0) && (
-            <section className="px-5 mt-6">
-              <div
-                className={`rounded-2xl px-4 py-3 border ${
-                  over.length > 0
-                    ? 'bg-red-50 dark:bg-red-500/[0.08] border-red-100 dark:border-red-500/20'
-                    : 'bg-amber-50 dark:bg-amber-500/[0.08] border-amber-100 dark:border-amber-500/20'
-                }`}
-              >
-                <p className={`text-[13px] font-semibold ${
-                  over.length > 0
-                    ? 'text-red-700 dark:text-red-400'
-                    : 'text-amber-700 dark:text-amber-400'
-                }`}>
-                  {over.length > 0
-                    ? `Over budget in ${over.length} categor${over.length === 1 ? 'y' : 'ies'}`
-                    : `${near.length} categor${near.length === 1 ? 'y is' : 'ies are'} close to the limit`}
-                </p>
-                <p className="text-[12px] text-slate-600 dark:text-slate-300 mt-0.5">
-                  {(over.length > 0 ? over : near).map(c => c.name).join(', ')}
-                </p>
-              </div>
-            </section>
-          )}
+          {/* The "what is breaking" card was here. It named the categories
+              that were over or near, three rows above the list that names
+              them again with their numbers - so the same news twice, and the
+              card could only ever say one of the two states because it chose
+              between over and near.
+
+              The warning is on the row it is about now: a badge on the
+              category's own tile. Nothing is lost, because the list is
+              already sorted closest-to-limit first, so what is breaking is
+              still what you see first. */}
 
           {/* ── Spent against each limit ── */}
           <section className="mt-7">
-            <SectionLabel hint="Closest to its limit first.">By category</SectionLabel>
+            <SectionLabel>By category</SectionLabel>
             <div className="px-5">
               <Card>
                 {budgeted.map((cat, i) => (
@@ -415,11 +431,7 @@ export default function Budget() {
           {/* ── Every limit on one scale ── */}
           {budgeted.length > 1 && (
             <section className="mt-7">
-              <SectionLabel
-                hint="One scale across every row, so a longer track means a bigger limit and a bar past its track means overspent."
-              >
-                Where the budget goes
-              </SectionLabel>
+              <SectionLabel>Where the budget goes</SectionLabel>
               <div className="px-5">
                 <Card className="px-4 py-4">
                   <div className="flex flex-col gap-4">
@@ -435,9 +447,7 @@ export default function Budget() {
           {/* ── Spending with no limit against it ── */}
           {unbudgeted.length > 0 && (
             <section className="mt-7">
-              <SectionLabel hint="No limit set, so none of this counts toward the figures above.">
-                Unbudgeted · {fmtCompact(totals.other)}
-              </SectionLabel>
+              <SectionLabel>Unbudgeted · {fmtCompact(totals.other)}</SectionLabel>
               <div className="px-5">
                 <Card>
                   {unbudgeted.slice(0, 8).map((c, i) => (
