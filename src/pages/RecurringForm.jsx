@@ -172,23 +172,34 @@ export default function RecurringForm() {
 
   return (
     <div className="flex flex-col bg-transparent pb-6">
-      <header className="flex items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
+      {/* The sub-page header, not the add-forms' left-aligned one.
+
+          Expense, inflow and transfer put their title hard left because they
+          are reached from the FAB, which is not a place - there is nothing
+          behind them to be "inside of". A bill is reached from the bills
+          list and, when editing, from one bill's own page, both of which
+          carry a centred title. So this is SubPage's header exactly: back
+          disc, centred title, one action, and a 36px spacer when there is no
+          action - without it "centred" lands half a button left of centre. */}
+      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3 shrink-0">
         <IconButton label="Back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">
+        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           {isEdit ? 'Edit bill' : 'New bill'}
         </h1>
-        {isEdit && editRec && (
+        {isEdit && editRec ? (
           <Button
             variant={confirmDel ? 'danger' : 'dangerTint'}
             size="xs"
-            className="px-3"
+            className="px-3 shrink-0"
             onClick={handleDelete}
             disabled={deleting}
           >
             {deleting ? 'Deleting…' : confirmDel ? 'Confirm delete' : 'Delete'}
           </Button>
+        ) : (
+          <span className="w-9 shrink-0" aria-hidden="true" />
         )}
       </header>
 

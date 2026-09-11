@@ -37,6 +37,10 @@ export const BILL_BRAND_COLORS = {
   applemusic:    '#fa243c',
   icloud:        '#3693f3',
   apple:         '#000000',
+  /* Meralco's own orange. The mark is two-tone at source - a dark spark
+     behind an orange one - and flattens to the orange, which is the half
+     that carries the brand. */
+  meralco:       '#ef924f',
   hbo:           '#000000',
   max:           '#525252',
   crunchyroll:   '#ff5e00',
@@ -90,6 +94,8 @@ const ALIASES = {
   discord: 'discord', discordnitro: 'discord', nitro: 'discord',
   audible: 'audible',
   apple: 'apple',
+  /* Philippine utilities. The electricity bill is called all of these. */
+  meralco: 'meralco', meralcobill: 'meralco', kuryente: 'meralco',
 }
 
 /* Longest first, so "applemusic" is tested before "apple". */

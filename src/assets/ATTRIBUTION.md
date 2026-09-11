@@ -37,8 +37,29 @@ duolingo, coursera, udemy, grab, shopee, tiktok, discord, audible.
 Brand hexes in `src/lib/billBrands.js` are from simple-icons' published
 `simple-icons.json`, not sampled by eye.
 
-Philippine utilities — Meralco, Maynilad, Globe, PLDT — are deliberately
-absent; see `bill-logos/README.md`.
+### Philippine utilities
+
+`meralco.svg` is from [PHLogos](https://phlogos.com/)
+([paymongo-archive/phlogos](https://github.com/paymongo-archive/phlogos),
+**MIT**, archived) — a free logo library published by PayMongo. MIT is a
+copyright licence and grants nothing in trademark; the position is the same
+as for every other mark here, and is set out under "The trademark position"
+below.
+
+Cropped hard. The file ships as the spark above the word MERALCO in a
+325x271 box; the six letter paths are dropped and the `viewBox` is squared
+around the spark's own bounds. A wordmark is unreadable in a 40px chip, which
+is the rule `bill-logos/README.md` states and the reason most of that library
+is not usable here.
+
+Flattened to one colour, `#ef924f`. The source mark is two-tone - a dark
+spark behind an orange one - and `.bill-mark` paints every path in
+`currentColor`, so the orange is what carries it.
+
+Still absent, and for the reason the README gives: **Maynilad, Converge,
+Cignal** are not in PHLogos at all, and **Globe, PLDT, Smart** are in it but
+unusable - Globe as a 274KB, 916-path mesh illustration, PLDT and Smart as
+3.5:1 wordmarks. A bill with no file keeps its category glyph.
 
 ## Card networks — `scheme-logos/`
 

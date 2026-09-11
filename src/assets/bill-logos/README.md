@@ -21,17 +21,25 @@ which `BillMark` sets to the brand's own hex.
 
 ## Philippine utilities
 
-Meralco, Maynilad, Globe, PLDT, Converge, Cignal and the rest are **not in
-simple-icons and are not here**, for the reason `brand-logos/README.md`
-gives about bank art: there is no licensed source for them, Settings states
-this app is unaffiliated with these companies and uses their names only as
-labels, and shipping their trademarks would contradict that.
+`meralco.svg` is here now, from [PHLogos](https://phlogos.com/) — PayMongo's
+free logo library, MIT-licensed. That answers the "no licensed source" half
+of the objection; the trademark half is unchanged and is the same position
+every other mark here sits in (see `../ATTRIBUTION.md`).
 
-This folder is the seam. A bill whose name resolves to no file keeps its
-category glyph, which is what Meralco and Maynilad look like today — so
-adding `meralco.svg` to your own build is a one-file change with nothing
-else to touch. Add an alias in `src/lib/billBrands.js` if the name you use
-is not the slug.
+**The rest of that library did not survive the 40px chip**, which is worth
+recording so nobody re-downloads them hoping:
+
+| brand | in PHLogos | why not |
+|---|---|---|
+| Meralco | yes | **shipped** — cropped to the spark, wordmark dropped |
+| Globe | yes | 274KB, 916 paths, 606 fills — a mesh illustration |
+| PLDT | yes | 3.5:1 wordmark |
+| Smart | yes | 3.7:1 wordmark |
+| Maynilad, Converge, Cignal | no | not in the library |
+
+This folder is still the seam. A bill whose name resolves to no file keeps
+its category glyph, which is what Maynilad and Globe look like today. Add an
+alias in `src/lib/billBrands.js` if the name you use is not the slug.
 
 ## Adding one
 
