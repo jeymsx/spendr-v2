@@ -811,6 +811,24 @@ export default function Dashboard() {
         </div>
       </section>
 
+      {/*
+        The sheet the template chips open.
+
+        It was imported at the top of this file and never rendered: the chip
+        set quickTemplate and quickConfirmOpen, nothing read either, and
+        tapping a template did nothing at all. ESLint had been saying so the
+        whole time - 'TemplateConfirmSheet' is defined but never used, and
+        'quickTemplate' is assigned a value but never used - in a warning
+        stream long enough that nobody reads it.
+
+        Left mounted rather than conditionally rendered so the sheet keeps
+        its own exit animation; it returns null when closed.
+      */}
+      <TemplateConfirmSheet
+        open={quickConfirmOpen}
+        onClose={() => setQuickConfirmOpen(false)}
+        template={quickTemplate}
+      />
     </div>
   )
 }
