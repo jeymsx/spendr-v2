@@ -673,6 +673,7 @@ export default function Goals() {
         </h1>
         <IconButton
           label="New goal"
+          variant="primary"
           onClick={() => { setEditing(null); setFormOpen(true) }}
         >
           <IconPlus />

@@ -10,7 +10,6 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import ReactCrop from 'react-image-crop'
 import 'react-image-crop/dist/ReactCrop.css'
-import { useTheme } from '../context/ThemeContext'
 import db, { UNSYNCED } from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
@@ -21,6 +20,11 @@ import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInp
 import { IconBank, IconCard, IconPhone, IconPlus, IconWallet, IconWalletUI, IconBankUI, IconTrash} from '../components/icons'
 import { deleteAccountRemote } from '../lib/sync'
 import { accountBrand } from '../lib/accountBrands'
+import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
+/* Aliased: this file already has an AccountChip, and it is a different
+   thing - a tappable name-and-dot chip in the quick-add sheet. This one
+   is the account's card face at row size. */
+import { AccountChip as AccountCardFace } from '../components/AccountPickerSheet'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
@@ -30,7 +34,6 @@ import {
 } from '../components/CardStyle'
 import CategoryGlyph from '../components/CategoryGlyph'
 import SubPage from '../components/SubPage'
-import { cardGradient } from '../lib/accentTheme'
 import {
   fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole,
 } from '../lib/accountMeta'
@@ -177,49 +180,37 @@ function inputClass(error = false) {
 // ── Summary bar ────────────────────────────────────────────────────────────────
 
 
-function SummaryBar({ summary, hidden, onToggleHide, accentColor, theme }) {
+/**
+ * What you are worth, in the shape every other page leads with.
+ *
+ * This was a blue gradient panel with a dot grid, a specular highlight and
+ * three compact figures side by side - the only surface of its kind in the
+ * app, and it sat directly above a column of real gradient cards, so the
+ * page opened with a card-shaped thing that is not a card.
+ *
+ * Bills, Goals and AccountDetail all lead the same way instead: a small
+ * label, the one figure large, and a line of context under it. Three equal
+ * 17px numbers is a table; one 38px number with its parts underneath says
+ * which of the three you came to read.
+ *
+ * Net worth is the headline because assets and credit used are its two
+ * halves - the figure is the answer and the line below is the working.
+ */
+function SummaryBar({ summary, hidden }) {
   return (
-    <div
-      className="mx-5 mb-6 rounded-3xl p-5 relative overflow-hidden"
-      style={{ background: cardGradient(accentColor, theme) }}
-    >
-      <div
-        className="absolute inset-0 opacity-20 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse 80% 60% at 20% 10%, rgba(255,255,255,0.5) 0%, transparent 60%)' }}
-      />
-      <div
-        className="absolute inset-0 opacity-[0.06] pointer-events-none"
-        style={{ backgroundImage: 'radial-gradient(circle, white 1px, transparent 1px)', backgroundSize: '16px 16px' }}
-      />
-      <div className="relative">
-        <div className="flex items-center justify-between mb-4">
-          <span className="text-xs font-semibold text-white/60">Overview</span>
-          <button onClick={onToggleHide} className="text-white/60 hover:text-white/90 transition-colors active:scale-95">
-            {hidden ? <IconEyeOff /> : <IconEye />}
-          </button>
-        </div>
-        <div className="grid grid-cols-3 gap-2">
-          <div>
-            <p className="text-white/55 text-xs font-semibold mb-1">Assets</p>
-            <p className="text-white font-bold text-[17px] tabular-nums leading-tight">
-              {hidden ? '₱ ••••' : fmtCompact(summary.assets)}
-            </p>
-          </div>
-          <div>
-            <p className="text-white/55 text-xs font-semibold mb-1">Credit used</p>
-            <p className="text-white font-bold text-[17px] tabular-nums leading-tight">
-              {hidden ? '₱ ••••' : fmtCompact(summary.creditUsed)}
-            </p>
-          </div>
-          <div>
-            <p className="text-white/55 text-xs font-semibold mb-1">Net worth</p>
-            <p className="text-white font-bold text-[17px] tabular-nums leading-tight">
-              {hidden ? '₱ ••••' : fmtCompact(summary.net)}
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
+    <section className="px-5 mb-6">
+      <SectionLabel inset="none" gap="none" className="text-center">Net worth</SectionLabel>
+      <p className="mt-0.5 text-center text-[38px] leading-none font-semibold tracking-tight
+        tabular-nums text-slate-900 dark:text-white">
+        {hidden ? '₱ ••••' : fmtCompact(summary.net)}
+      </p>
+      <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
+        {hidden ? '•••• assets' : `${fmtCompact(summary.assets)} assets`}
+        {summary.creditUsed > 0 && (
+          hidden ? ' · •••• credit used' : ` · ${fmtCompact(summary.creditUsed)} credit used`
+        )}
+      </p>
+    </section>
   )
 }
 
@@ -664,7 +655,6 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
 // ── Main page ──────────────────────────────────────────────────────────────────
 
 export default function Accounts() {
-  const { accentColor, theme } = useTheme()
   const { showToast } = useToast()
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -865,6 +855,16 @@ export default function Accounts() {
       <div className="flex items-center justify-between px-5 pt-safe-header pb-5">
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Accounts</h1>
         <div className="flex items-center gap-2">
+          {/* The eye came off the gradient panel with the panel. It belongs
+              with the page's other controls rather than floating in a corner
+              of one figure - it hides every balance on the screen, not just
+              that one. */}
+          <IconButton
+            label={balanceHidden ? 'Show balances' : 'Hide balances'}
+            onClick={() => setBalanceHidden(h => !h)}
+          >
+            {balanceHidden ? <IconEyeOff /> : <IconEye />}
+          </IconButton>
           {(accounts ?? []).length > 1 && (
             <IconButton
               label="Sort accounts"
@@ -876,20 +876,14 @@ export default function Accounts() {
               </svg>
             </IconButton>
           )}
-          <IconButton label="Add account" onClick={openAdd}>
+          <IconButton label="Add account" variant="primary" onClick={openAdd}>
             <IconPlus size={19} strokeWidth="2.5" />
           </IconButton>
         </div>
       </div>
 
       {/* ── Summary ── */}
-      <SummaryBar
-        summary={summary}
-        hidden={balanceHidden}
-        onToggleHide={() => setBalanceHidden(h => !h)}
-        accentColor={accentColor}
-        theme={theme}
-      />
+      <SummaryBar summary={summary} hidden={balanceHidden} />
 
       {/* ── Empty state ── */}
       {(accounts ?? []).length === 0 && (
@@ -1026,7 +1020,17 @@ export default function Accounts() {
 
 // ── Account Sort Sheet ─────────────────────────────────────────────────────────
 
-function SortableAccountItem({ acct, childCount }) {
+/**
+ * A row in the sort sheet, which is a row in the account picker with a drag
+ * handle where the picker's tick would be.
+ *
+ * It was a 12px colour dot inside a tinted square - the same "24px colour
+ * swatch" the forms carried until AccountSelectRow replaced it with the card
+ * itself. So the list you reorder looked nothing like the list the ordering
+ * is FOR, and a card you recognise by its colour was reduced, on the one
+ * screen about arranging them, to a dot.
+ */
+function SortableAccountItem({ acct, childCount, creditAvailMap }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: acct.id })
   const style = { transform: CSS.Transform.toString(transform), transition }
 
@@ -1052,18 +1056,24 @@ function SortableAccountItem({ acct, childCount }) {
           <circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="19" r="1.5"/>
         </svg>
       </button>
-      <div className="flex-1 flex items-center gap-3 px-3 py-3">
-        <span
-          className="w-9 h-9 rounded-xl shrink-0 flex items-center justify-center"
-          style={{ backgroundColor: (acct.color ?? '#2D9DFF') + '28' }}
-        >
-          <span className="w-3 h-3 rounded-full" style={{ backgroundColor: acct.color ?? '#2D9DFF' }} />
-        </span>
+      <div className="flex-1 flex items-center gap-3 pl-1 pr-4 py-3 min-w-0">
+        <AccountCardFace acct={acct} />
         <div className="flex-1 min-w-0">
           <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{acct.name}</p>
-          {childCount > 0 && (
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">{childCount} sub-account{childCount !== 1 ? 's' : ''}</p>
-          )}
+          <p className="text-xs text-slate-400 dark:text-slate-500 truncate">
+            {TYPE_LABEL[acct.type] ?? acct.type}
+            {childCount > 0 && ` · ${childCount} sub-account${childCount !== 1 ? 's' : ''}`}
+          </p>
+        </div>
+        <div className="text-right shrink-0">
+          <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
+            {acct.type === 'credit'
+              ? fmt(creditAvailMap?.[acct.name] ?? 0)
+              : fmt(acct.balance)}
+          </p>
+          <p className="text-[10px] text-slate-400 dark:text-slate-500">
+            {acct.type === 'credit' ? 'available' : 'balance'}
+          </p>
         </div>
       </div>
     </div>
@@ -1072,6 +1082,10 @@ function SortableAccountItem({ acct, childCount }) {
 
 function AccountSortSheet({ open, onClose, accounts }) {
   const [localList, setLocalList] = useState([])
+  /* A credit card's row shows headroom rather than what you owe, the same way
+     the picker's does - derived from the ledger, so it comes from the hook
+     rather than off the row. */
+  const creditAvailMap = useCreditAvailMap(accounts)
   const isDraggingRef = useRef(false)
 
   const parentNames = useMemo(() =>
@@ -1151,6 +1165,7 @@ function AccountSortSheet({ open, onClose, accounts }) {
                   <SortableAccountItem
                     acct={acct}
                     childCount={childCountMap[acct.name] ?? 0}
+                    creditAvailMap={creditAvailMap}
                   />
                   {i < localList.length - 1 && (
                     <Divider inset="glyph" />

@@ -29,8 +29,18 @@ import { cx } from './cx'
  * on a screen whose actual subject is a number.
  *
  * So the chip is quiet everywhere and the glyph is white. `primary` survives
- * for the one case that earns it - a control whose accent fill means "this
- * is ON", like the calendar toggle on Transactions - and not for chrome.
+ * for the two cases that earn it, and both are about MEANING rather than
+ * decoration:
+ *
+ *   - the page's create action. One accent button per header, and it is the
+ *     "+" that makes the thing the page lists. A header of five identical
+ *     quiet chips gives the same weight to "go back" and "add an account";
+ *     the glyph is still white, which is what the rule was about.
+ *   - a control whose fill means "this is ON" - the calendar toggle and the
+ *     filter button on Transactions.
+ *
+ * Everything else - back, settings, sort, hide balances, show QR - is chrome
+ * and stays quiet.
  */
 
 const PRESS = 'active:scale-90 transition-transform duration-75'

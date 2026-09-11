@@ -971,7 +971,7 @@ export default function Debts() {
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           Debts
         </h1>
-        <IconButton label="New debt" onClick={openAdd}>
+        <IconButton label="New debt" variant="primary" onClick={openAdd}>
           <IconPlus />
         </IconButton>
       </header>

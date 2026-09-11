@@ -616,7 +616,7 @@ export default function Recurring() {
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           Bills
         </h1>
-        <IconButton label="New bill" onClick={() => setShowForm(true)}>
+        <IconButton label="New bill" variant="primary" onClick={() => setShowForm(true)}>
           <IconPlus />
         </IconButton>
       </header>

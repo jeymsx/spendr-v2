@@ -1,6 +1,7 @@
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
+import { TYPE_LABEL } from '../lib/accountMeta'
 import BrandMark from './BrandMark'
 import Card from './ui/Card'
 import Sheet from './ui/Sheet'
@@ -11,7 +12,6 @@ const fmt = (v) => {
   return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
 }
 
-const TYPE_LABEL = { cash: 'Cash', savings: 'Savings', credit: 'Credit', ewallet: 'E-Wallet', bank: 'Bank' }
 
 /**
  * The account's own card face, at chip size.
@@ -32,7 +32,11 @@ const TYPE_LABEL = { cash: 'Cash', savings: 'Savings', credit: 'Credit', ewallet
  * account to pay from is a question about balances, and a face big enough to
  * carry one legibly is a face too big to fit eight of on a screen.
  */
-function AccountChip({ acct, size = 'md' }) {
+/* Exported: the sort sheet draws the same rows as this picker, and used to
+   draw them with a coloured dot in a tinted square - the pattern
+   AccountSelectRow replaced on the forms. Sorting the accounts and choosing
+   one should show you the same list. */
+export function AccountChip({ acct, size = 'md' }) {
   const brand = accountBrand(acct)
   const big = size === 'md'
   return (

@@ -24,12 +24,14 @@ export const PALETTE = [
   '#ec4899', '#14b8a6', '#6366f1', '#84cc16', '#a78bfa', '#64748b', '#0ea5e9',
 ]
 
+/* Sentence case, like every other label in the app: these are common nouns,
+   not brand names. `value` is the stored key and does not move. */
 export const TYPE_OPTIONS = [
   { value: 'cash',    label: 'Cash',        shortLabel: 'Cash'     },
-  { value: 'ewallet', label: 'E-Wallet',    shortLabel: 'E-Wallet' },
+  { value: 'ewallet', label: 'E-wallet',    shortLabel: 'E-wallet' },
   { value: 'savings', label: 'Savings',     shortLabel: 'Savings'  },
   { value: 'bank',    label: 'Bank',        shortLabel: 'Bank'     },
-  { value: 'credit',  label: 'Credit Card', shortLabel: 'Credit'   },
+  { value: 'credit',  label: 'Credit card', shortLabel: 'Credit'   },
 ]
 
 export const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map(t => [t.value, t.label]))
