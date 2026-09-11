@@ -174,6 +174,17 @@ function goalToRow(r, userId) {
   }
 }
 
+/* No local_id: the key IS the identity, here and in IndexedDB. See the
+   DIVERGENCE note in migrations/006_badges.sql. */
+function badgeToRow(r, userId) {
+  return {
+    user_id:    userId,
+    key:        r.key,
+    earned_at:  r.earnedAt ?? null,
+    updated_at: r.updatedAt ?? r.earnedAt ?? new Date().toISOString(),
+  }
+}
+
 function templateToRow(r, userId) {
   return {
     user_id:     userId,
@@ -434,6 +445,8 @@ export async function syncToSupabase(userId) {
   // Last, and fault-isolated: see optionalSync above.
   await optionalSync('goals push', () =>
     pushTable('goals', db.goals, goalToRow, userId, 'user_id,name'))
+  await optionalSync('badges push', () =>
+    pushTable('badges', db.badges, badgeToRow, userId, 'user_id,key'))
   await pushPreferences(userId)
 }
 
@@ -550,6 +563,7 @@ export async function syncFromSupabase(userId) {
   await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending)
   await optionalSync('goals pull', () =>
     pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending))
+  await optionalSync('badges pull', () => pullBadges(userId))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()
@@ -637,6 +651,51 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
       if (remotets > localts) {
         await dexieTable.update(target.id, fromRow(row))
       }
+    }
+  }
+}
+
+/**
+ * Badges, merged rather than reconciled.
+ *
+ * pullSimpleTable cannot serve this table: it matches rows by `local_id` and
+ * writes with `dexieTable.update(target.id, …)`, and badges have neither - the
+ * badge's key is its primary key (see db/db.js v10).
+ *
+ * The merge rule is also different, and simpler than last-write-wins: a badge
+ * is earned or it is not, so the union is what both sides want, and where the
+ * two disagree about WHEN, the earlier date is the true one. You did the thing
+ * on the day you did it; syncing a second device later must not re-date it.
+ *
+ * Nothing is ever deleted here. A badge missing remotely is one this device
+ * earned offline and has not pushed yet, not one that was taken away.
+ */
+async function pullBadges(userId) {
+  const { data, error } = await supabase
+    .from('badges')
+    .select('*')
+    .eq('user_id', userId)
+  if (error) throw new Error(`badges pull: ${error.message}`)
+  if (!data?.length) return
+
+  for (const row of data) {
+    if (!row.key) continue
+    const local = await db.badges.get(row.key)
+    const remoteAt = row.earned_at ?? null
+
+    if (!local) {
+      await db.badges.put({ key: row.key, earnedAt: remoteAt, synced: SYNCED })
+      continue
+    }
+
+    // Earlier wins. A missing date on either side loses to a real one.
+    const localAt = local.earnedAt ?? null
+    const earliest = !localAt ? remoteAt
+      : !remoteAt ? localAt
+      : (new Date(remoteAt) < new Date(localAt) ? remoteAt : localAt)
+
+    if (earliest !== localAt) {
+      await db.badges.put({ ...local, earnedAt: earliest, synced: SYNCED })
     }
   }
 }

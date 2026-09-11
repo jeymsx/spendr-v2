@@ -74,6 +74,18 @@ export function IconCheck({ size = 14, strokeWidth = '2.5', stroke = 'currentCol
    with a round cap rather than a <circle>, which is how Feather draws it -
    one shape, and it takes the same stroke width so it cannot drift out of
    weight with the stem above it. */
+/* A rosette: the disc, and two ribbon tails crossing behind it. The tails are
+   what separate it from a plain circle at 16px, which is why they are drawn
+   long enough to break the disc's silhouette rather than tucked under it. */
+export function IconAward({ size = 18, strokeWidth = '1.8', stroke = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="9" r="6" />
+      <path d="M8.2 13.9 7 22l5-3 5 3-1.2-8.1" />
+    </svg>
+  )
+}
+
 export function IconInfo({ size = 18, strokeWidth = '1.8', stroke = 'currentColor' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth={strokeWidth} strokeLinecap="round" strokeLinejoin="round">

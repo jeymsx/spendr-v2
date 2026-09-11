@@ -78,6 +78,25 @@ db.version(9).stores({
   goals: '++id, name, priority, *accounts, archivedAt',
 })
 
+// v10 - badges.
+//
+// One row per EARNED badge, keyed by the definition's own string key
+// ('first-peso', 'green-month'). Not '++id': there is no such thing as two
+// First Pesos, and a natural primary key makes awarding an idempotent put
+// rather than a read-then-insert that two tabs can race.
+//
+// Nothing about the badge itself is stored - no name, no description, no
+// artwork path. Those live in lib/badges.js, which means copy can be reworded
+// and art replaced without a migration, and a key that no longer exists in
+// the table of definitions simply stops rendering instead of becoming a row
+// nobody can explain. What IS stored is the one fact the code cannot
+// recompute: WHEN it was earned. Re-deriving that from the ledger is not
+// possible for most of them, and for the rest it would move every time the
+// data behind it changed.
+db.version(10).stores({
+  badges: 'key, earnedAt',
+})
+
 // ── Seed data ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_ACCOUNTS = [

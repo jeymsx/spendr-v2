@@ -26,9 +26,10 @@ import { EXPENSE_PRESETS, INFLOW_PRESETS } from '../lib/phCategories'
 import { syncToSheets } from '../lib/sheetsSync'
 import {
   IconCheck, IconChevronRight, IconPlus, IconUpload, IconTick, IconWarning, IconTemplate, IconTransferUI, IconArrowDown,
-  IconInfo,
+  IconInfo, IconAward,
 } from '../components/icons'
 import CategoryGlyph, { presetCategoryIcon as CATEGORY_ICON_BY_NAME } from '../components/CategoryGlyph'
+import { BADGES as BADGE_LIST } from '../lib/badges'
 import SegTabs from '../components/SegTabs'
 import { deleteCategoryRemote, deleteTemplateRemote } from '../lib/sync'
 import { inspectBackup, restoreBackup } from '../lib/backup'
@@ -2779,6 +2780,14 @@ export default function Settings() {
 
   const txCount     = useLiveQuery(() => db.transactions.count(), [], 0)
 
+  /* Counted from the stored rows rather than by running the full evaluation
+     here. useBadges reads seven tables and awards as a side effect of doing
+     so; Settings needs one number for a sublabel and has no business paying
+     for that. The dashboard mounts BadgeChip on every launch, so the table is
+     current by the time anyone reaches this row. */
+  const badgeCount = useLiveQuery(() => db.badges.count(), [], null)
+  const badgeSub = badgeCount === null ? undefined : `${badgeCount} of ${BADGE_LIST.length} earned`
+
   const [reportMonth, setReportMonth] = useState(() => {
     const d = new Date()
     return { year: d.getFullYear(), month: d.getMonth() + 1 }
@@ -3041,6 +3050,17 @@ export default function Settings() {
             sublabel="One-tap repeat transactions"
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => navigate('/settings/templates')}
+          />
+          <RowDivider />
+          {/* Also reachable from the dashboard header, which is where anyone
+              actually looking for it will go. This row is for the person who
+              opened Settings to see what the app has in it. */}
+          <SettingsRow
+            iconEl={<RowIcon color="violet"><IconAward /></RowIcon>}
+            label="Badges"
+            sublabel={badgeSub}
+            right={<IconChevronRight size={14} strokeWidth="2" />}
+            onTap={() => navigate('/badges')}
           />
         </SectionCard>
       </div>

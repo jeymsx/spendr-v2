@@ -17,6 +17,7 @@ import BudgetMeter, { budgetTone } from '../components/BudgetMeter'
 import { allocateGoals } from '../lib/goals'
 import { cardGradient } from '../lib/accentTheme'
 import IconButton from '../components/ui/IconButton'
+import BadgeChip from '../components/BadgeChip'
 import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
@@ -565,9 +566,16 @@ export default function Dashboard() {
           </h1>
           <ContextHint hint={getContextHint(txAll, budgetCategories, upcomingRecurring)} />
         </div>
-        <IconButton label="Settings" onClick={() => navigate('/settings')}>
-          <IconSettings />
-        </IconButton>
+        {/* Two controls, and only one of them is a disc. BadgeChip wears the
+            same paint at the same 36px so the pair reads as one row, but its
+            SHAPE is a shield - which is how you can tell at a glance that it
+            does not open another list of switches. See BadgeChip. */}
+        <div className="flex items-center gap-1.5 shrink-0">
+          <BadgeChip />
+          <IconButton label="Settings" onClick={() => navigate('/settings')}>
+            <IconSettings />
+          </IconButton>
+        </div>
       </header>
 
       {/* ── Net worth Card ───────────────────────────────────────────────────── */}

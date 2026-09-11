@@ -1654,3 +1654,27 @@ html.web.dark select,
 html.web.dark input[type="date"] {
   color-scheme: dark;
 }
+
+/* ── The badges chip ──────────────────────────────────────────────────────────
+
+   The one header control that is not a disc. It wears IconButton's `surface`
+   paint - the same white/hairline in light, the same primary wash in dark - so
+   it has the settings chip's weight beside it, but the paint is on a shield
+   path rather than a rounded box, which is the whole point: the shape says
+   what it opens before you read anything.
+
+   Fill and stroke rather than background and border, because the surface here
+   IS an SVG path. Kept in CSS instead of Tailwind fill-* utilities so the dark
+   value can reference --color-primary-rgb and follow the accent preset the way
+   every other chip does. */
+.badge-chip-face {
+  fill: #ffffff;
+  stroke: rgba(203, 213, 225, 0.9);
+  filter: drop-shadow(0 1px 1.5px rgba(0, 0, 0, 0.07));
+}
+
+.dark .badge-chip-face {
+  fill: rgba(var(--color-primary-rgb), 0.10);
+  stroke: rgba(var(--color-primary-rgb), 0.22);
+  filter: none;
+}
