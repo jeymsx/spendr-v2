@@ -307,7 +307,7 @@ function BalanceTrend({ data, color, isCredit, rangeKey, rangeTitle }) {
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null
               return (
-                <div className="bg-white dark:bg-[#1a2130] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
+                <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
                   <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
                   <p className="font-medium text-slate-700 dark:text-white tabular-nums">
                     {fmt(payload[0].value)}

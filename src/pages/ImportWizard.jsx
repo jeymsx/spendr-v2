@@ -1023,7 +1023,7 @@ export default function ImportWizard() {
   return (
     <div className="page-enter min-h-screen pb-8">
       {/* Header */}
-      <div className="sticky top-0 z-10 bg-white dark:bg-[#0d1117]">
+      <div className="sticky top-0 z-10 bg-white dark:bg-page">
         <div className="flex items-center gap-3 px-5 pt-safe-header pb-3">
           <IconButton
             label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}

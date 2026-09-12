@@ -1049,7 +1049,7 @@ function SortableAccountItem({ acct, childCount, creditAvailMap }) {
       style={style}
       className={[
         'flex items-center',
-        isDragging ? 'relative z-10 rounded-2xl bg-white dark:bg-[#1a2130] shadow-2xl ring-1 ring-primary/30 opacity-95 scale-[1.02]' : '',
+        isDragging ? 'relative z-10 rounded-2xl bg-lifted shadow-2xl ring-1 ring-primary/30 opacity-95 scale-[1.02]' : '',
       ].join(' ')}
     >
       <button

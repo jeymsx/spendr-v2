@@ -168,12 +168,17 @@ describe('Sheet', () => {
   })
 
   it('takes its surface from the caller when given one', () => {
+    // The default is bg-panel. A caller passing bg-page - the account sorter
+    // and the three Settings sheets that want to read as the page rather than
+    // as something laid on it - must REPLACE it, not be appended after it:
+    // two bg- utilities on one element are resolved by stylesheet order, not
+    // class order, so which one wins would be luck.
     const { container } = render(
-      <Sheet open onClose={() => {}} surface="bg-slate-50 dark:bg-[#0d1117]">x</Sheet>,
+      <Sheet open onClose={() => {}} surface="bg-page">x</Sheet>,
     )
     const cls = container.querySelector('.sheet-panel').className
-    expect(cls).toContain('bg-slate-50')
-    expect(cls).not.toContain('bg-white')
+    expect(cls).toContain('bg-page')
+    expect(cls).not.toContain('bg-panel')
   })
 
   it('puts the stacking order and the scrim where it was told', () => {

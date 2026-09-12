@@ -10,7 +10,7 @@ import { useRef, useState, useCallback, useEffect, forwardRef, useImperativeHand
  *
  * The fade is a mask rather than an overlay gradient, and that matters here:
  * an overlay has to be painted in the panel's own background colour to work,
- * and the dark panel is `#111820` while the rows inside it are translucent
+ * and the panel is `bg-panel` while the rows inside it are translucent
  * cards over it - so a solid scrim would be visible as a flat patch the
  * moment either value was retuned. A mask removes the pixels instead, so
  * whatever is behind shows through and there is no colour to keep in step.

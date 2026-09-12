@@ -149,7 +149,7 @@ export default function Sheet({
    * in one class list is decided by stylesheet order, not by which came
    * last.
    */
-  surface = 'bg-white dark:bg-[#111820]',
+  surface = 'bg-panel',
   className = '',
   bodyClassName = '',
   children,

@@ -152,7 +152,7 @@ function GoalRow({ goal, onEdit, today }) {
       <div
         className={`flex items-start gap-3 px-4 py-3.5 ${
           isDragging
-            ? 'rounded-2xl bg-white dark:bg-[#1a2130] ring-1 ring-primary/30 shadow-2xl'
+            ? 'rounded-2xl bg-lifted ring-1 ring-primary/30 shadow-2xl'
             : ''
         }`}
       >

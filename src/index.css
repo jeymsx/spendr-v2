@@ -4,6 +4,53 @@
 :root {
   --color-primary: #2D9DFF;
   --color-primary-rgb: 45, 157, 255;
+
+  /* ── The three dark surfaces, named ────────────────────────────────────────
+
+     These were literals - #0d1117, #111820 and #1a2130 - spread across fifteen
+     call sites, every one of them written as a light/dark PAIR:
+
+         bg-slate-50 dark:bg-[#0d1117]
+         bg-white    dark:bg-[#111820]
+
+     Which is two decisions at every site, and the second one is a hex nobody
+     can hold in their head. The failure that follows is not that a value is
+     wrong, it is that the next person picks whichever pair they happened to
+     copy: three of these already had a fourth spelling in `.card`, and a
+     tooltip and a drag proxy ended up on different greys for no reason.
+
+     Registered as Tailwind colours in tailwind.config.js, so the call sites
+     become `bg-page`, `bg-panel`, `bg-lifted` - one class, both themes, and
+     the light values are exactly slate-50 and white, so nothing moved.
+
+     They are three because they do three jobs:
+
+       page    what the app sits ON. Full-screen loaders, the login screen, a
+               sticky header that has to disappear into the page behind it.
+       panel   a sheet or a modal - something laid on top of the page.
+       lifted  something floating above a PANEL: a drag proxy, a tooltip, an
+               onboarding dialog. It has to separate from the card it came
+               from, which is the whole reason it is lighter than `panel`.
+
+     Not to be confused with Card's `surface="raised"`, which is `.card` and a
+     translucent blue-grey rather than any of these. */
+  /* The dark palette, named once. Split out from the swap below because one
+     screen needs a dark surface WITHOUT being in dark mode - see
+     `dark-lifted` in tailwind.config.js - and the value must not be written
+     twice. */
+  --dark-page:   #0d1117;
+  --dark-panel:  #111820;
+  --dark-lifted: #1a2130;
+
+  --surface-page:   #f8fafc;   /* slate-50 */
+  --surface-panel:  #ffffff;
+  --surface-lifted: #ffffff;
+}
+
+html.dark {
+  --surface-page:   var(--dark-page);
+  --surface-panel:  var(--dark-panel);
+  --surface-lifted: var(--dark-lifted);
 }
 
 /* ── Base ─────────────────────────────────────────────── */

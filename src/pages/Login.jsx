@@ -43,7 +43,7 @@ export default function Login() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0d1117]">
+      <div className="min-h-screen flex items-center justify-center bg-page">
         <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
       </div>
     )
@@ -51,7 +51,7 @@ export default function Login() {
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center px-6
-      bg-slate-50 dark:bg-[#0d1117] relative overflow-hidden">
+      bg-page relative overflow-hidden">
 
       {/* Ambient glows */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Run the four AST checkers over src/**.
+ * Run the five AST checkers over src/**.
  *
  * These exist because `vite build` succeeding proves nothing about whether the
  * app runs: esbuild transforms each module in isolation, so an identifier that
@@ -12,7 +12,12 @@
  * importcheck is the mirror image: it catches what a green `npm run check` and
  * a clean eslint BOTH miss, because an import statement binds its identifiers
  * and every scope-based analysis therefore sees a valid binding. Only reading
- * the target module's real exports finds it. This session alone they caught an undefined `<SegTabs>`,
+ * the target module's real exports finds it.
+ *
+ * designcheck is the odd one out - it is about design drift rather than
+ * crashes, and it ran as `npm run design` on its own while 18 real problems
+ * remained, because a check that fails on a clean tree gets switched off. They
+ * are fixed, so it gates now. This session alone they caught an undefined `<SegTabs>`,
  * fourteen unbound identifiers in a form, two parse failures from a mangled
  * import, and a `tplCat` that never existed.
  *
@@ -29,7 +34,8 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
-const CHECKERS = ['scopecheck.mjs', 'tdzcheck.mjs', 'hookcheck.mjs', 'importcheck.mjs']
+const CHECKERS = ['scopecheck.mjs', 'tdzcheck.mjs', 'hookcheck.mjs', 'importcheck.mjs',
+                  'designcheck.mjs']
 
 function collect(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -59,7 +65,7 @@ for (const checker of CHECKERS) {
     const verdict = out.split('\n').find(l => /problem\(s\)/.test(l)) ?? `exit ${r.status}`
     console.log(`FAIL  ${name.padEnd(11)} ${verdict.trim()}`)
     for (const line of out.split('\n')) {
-      if (/^(UNBOUND|TDZ|HOOK|IMPORT|PARSE)/.test(line)) console.log(`        ${line}`)
+      if (/^(UNBOUND|TDZ|HOOK|IMPORT|DESIGN|PARSE)/.test(line)) console.log(`        ${line}`)
     }
   } else {
     const verdict = out.split('\n').find(l => l.startsWith('OK')) ?? 'ok'

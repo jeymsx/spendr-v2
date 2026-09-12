@@ -353,7 +353,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
 
   return (
     /* The same z and the same 45% scrim it drew by hand, and Sheet's default
-       white/[#111820] panel is the surface it already had.
+       `bg-panel` surface is the one it already had.
 
        No maxHeight: this panel never asked for a height, so it keeps floating
        while it fits and lets Sheet dock it when it does not. The line under
@@ -1049,7 +1049,7 @@ function BudgetManager({ open, onClose, variant = 'sheet' }) {
       z={100}
       scrim={45}
       maxHeight="88vh"
-      surface="bg-slate-50 dark:bg-[#0d1117]"
+      surface="bg-page"
       title="Monthly Budgets"
       titleAction={(
         <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
@@ -1189,7 +1189,7 @@ function CategoryPresetsSheet({ open, onClose, activeTab, existingCategories }) 
   return (
     /* z 120, because this opens from the category manager at 100 and has to
        sit above it, and the same 45% scrim it drew by hand. Sheet's default
-       white / [#111820] panel is exactly the surface it already had, so no
+       `bg-panel` surface is exactly the one it already had, so no
        `surface` here.
 
        75vh through `maxHeight` rather than a max-h utility or a style
@@ -1259,7 +1259,7 @@ function SortableCategoryRow({ cat, onTap, onLongPressDelete }) {
       style={style}
       className={[
         'flex items-center',
-        isDragging ? 'relative z-10 rounded-2xl bg-white dark:bg-[#1a2130] shadow-2xl ring-1 ring-primary/30 opacity-95 scale-[1.02]' : '',
+        isDragging ? 'relative z-10 rounded-2xl bg-lifted shadow-2xl ring-1 ring-primary/30 opacity-95 scale-[1.02]' : '',
       ].join(' ')}
     >
       {/* Drag handle */}
@@ -1534,7 +1534,7 @@ function CategoryManager({ open, onClose, variant = 'sheet' }) {
         z={100}
         scrim={45}
         maxHeight="92vh"
-        surface="bg-slate-50 dark:bg-[#0d1117]"
+        surface="bg-page"
         title="Manage Categories"
         titleAction={(
           <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
@@ -2142,7 +2142,7 @@ function TemplateFormSheet({ open, onClose, template, allAccounts, allCategories
     <>
       {/* The same z 120 it drew by hand - it opens from the template manager
           at 110 and has to sit above it - and the same 45% scrim. Sheet's
-          default white / [#111820] panel is exactly the surface this had, so
+          default `bg-panel` surface is exactly the one this had, so
           no `surface` here.
 
           92vh goes through `maxHeight` rather than the old max-h utility:
@@ -2490,7 +2490,7 @@ function TemplateManager({ open, onClose, variant = 'sheet' }) {
         z={110}
         scrim={45}
         maxHeight="92vh"
-        surface="bg-slate-50 dark:bg-[#0d1117]"
+        surface="bg-page"
         title="Quick Templates"
         titleAction={(
           <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
@@ -2528,7 +2528,7 @@ export function AccentColorSheet({ open, onClose, accentColor, setAccentColor })
      exit. */
   return (
     /* The same z 100 and the same 45% scrim it drew by hand, and Sheet's
-       default white / [#111820] panel is exactly the surface it already had.
+       default `bg-panel` surface is exactly the one it already had.
 
        No maxHeight: this panel never asked for a height, so it keeps floating
        while the eight swatches fit and lets Sheet dock it when they do not.
@@ -2635,7 +2635,7 @@ export function PolicySheet({ open, type, onClose }) {
 
   return (
     /* The same z 100 and the same 45% scrim the hand-rolled overlay drew, and
-       Sheet's default white / [#111820] panel is the surface it already had.
+       Sheet's default `bg-panel` surface is the one it already had.
 
        88vh through `maxHeight` rather than the old max-h utility: that prop is
        what sets --sheet-max, and an inline height would outrank

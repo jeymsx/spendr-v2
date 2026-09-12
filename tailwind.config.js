@@ -10,6 +10,18 @@ export default {
         primary: 'var(--color-primary, #2D9DFF)',
         'primary-dark': 'var(--color-primary, #2D9DFF)',
         navy: '#0b0f14',
+        /* The app's three surfaces. Defined in index.css and swapped under
+           html.dark, so `bg-page` is correct in both themes and a call site
+           never spells a light/dark pair again. See the note there. */
+        page:   'var(--surface-page, #f8fafc)',
+        panel:  'var(--surface-panel, #ffffff)',
+        lifted: 'var(--surface-lifted, #ffffff)',
+        /* The dark lifted surface, unconditionally. Onboarding is drawn in the
+           dark palette whatever the theme setting - 28 unconditional
+           `text-white`, not one `dark:` variant - so a theme-aware token would
+           turn its dialogs white in light mode. This is the same value the
+           swap uses, not a second copy of it. */
+        'dark-lifted': 'var(--dark-lifted, #1a2130)',
       },
       fontFamily: {
         sans: ['Inter', 'sans-serif'],

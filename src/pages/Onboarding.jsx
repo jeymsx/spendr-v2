@@ -437,9 +437,21 @@ function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAddCustom
 
       {/* Custom account modal */}
       {showCustomForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+        /* design-ok: not a Sheet, and it cannot be one. Sheet's panel is
+            `bg-panel`, which is theme-aware - and this screen is drawn in the
+            dark palette whatever the theme setting (28 unconditional
+            `text-white`, not one `dark:` variant), so a Sheet here would be a
+            white panel on a dark screen in light mode. It also runs before the
+            app shell exists, where Sheet's scroll lock and stacking order have
+            nothing to sit in. Centred, and dismissed by the backdrop. */
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Custom account"
+        >
           <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setShowCustomForm(false)} />
-          <div className="relative w-full max-w-sm bg-[#1a2130] border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
+          <div className="relative w-full max-w-sm bg-dark-lifted border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
             <h3 className="text-base font-semibold text-white">Custom account</h3>
             <input
               type="text"
@@ -761,12 +773,24 @@ function StepPickCategories({ type, stepNum, locked, presets, selectedNames, onT
 
       {/* Custom category modal */}
       {showCustomForm && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-6">
+        /* design-ok: not a Sheet, and it cannot be one. Sheet's panel is
+            `bg-panel`, which is theme-aware - and this screen is drawn in the
+            dark palette whatever the theme setting (28 unconditional
+            `text-white`, not one `dark:` variant), so a Sheet here would be a
+            white panel on a dark screen in light mode. It also runs before the
+            app shell exists, where Sheet's scroll lock and stacking order have
+            nothing to sit in. Centred, and dismissed by the backdrop. */
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center px-6"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Custom category"
+        >
           <div
             className="absolute inset-0 bg-black/60 backdrop-blur-sm"
             onClick={() => setShowCustomForm(false)}
           />
-          <div className="relative w-full max-w-sm bg-[#1a2130] border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
+          <div className="relative w-full max-w-sm bg-dark-lifted border border-white/[0.12] rounded-3xl p-6 space-y-4 shadow-2xl">
             <h3 className="text-base font-semibold text-white">Custom category</h3>
 
             <input

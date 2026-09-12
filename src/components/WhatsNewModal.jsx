@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import db from '../db/db'
 import {
   IconSparkle, IconQuickLog, IconBell, IconBillHistory, IconDebt,
@@ -6,6 +5,7 @@ import {
 } from './icons'
 import Button from './ui/Button'
 import Divider from './ui/Divider'
+import Sheet from './ui/Sheet'
 
 const CURRENT_VERSION = '0.3.0'
 
@@ -70,95 +70,87 @@ const WHATS_NEW = [
   },
 ]
 
+/**
+ * What changed in this version.
+ *
+ * ── It is a Sheet now ──
+ *
+ * It used to hand-roll the whole thing: a `fixed inset-0` overlay, its own
+ * backdrop, its own 220ms hide animation, and `items-end sm:items-center` to
+ * sit at the bottom on a phone and centred on a desktop.
+ *
+ * That last line is Sheet's job described exactly - Sheet docks to the bottom
+ * and the `html.web .sheet-panel` rules centre it on desktop - so this was the
+ * twenty-ninth hand-rolled sheet, which is the thing designcheck's overlay
+ * rule exists to catch. It was right, and the conversion removes the backdrop,
+ * the timer, the `hiding` state and the breakpoint, and gains a scroll lock,
+ * Escape, a focus trap and a real dialog role that none of it had.
+ *
+ * The header stays in the body rather than using Sheet's `title`, because it
+ * is an icon, a heading and a version line - and `title` is text only, on
+ * purpose: it becomes the dialog's accessible name.
+ */
 export default function WhatsNewModal({ onClose }) {
-  const [hiding, setHiding] = useState(false)
+  /* Acknowledging the version IS "don't show it again" - the list is keyed to
+     one. Before, "Got it" dismissed without writing whatsNewSeen, so it came
+     back on the very next launch and the only way to stop it was a small grey
+     link below, which is not where anyone looks.
 
-  function dismiss(persist) {
-    setHiding(true)
-    setTimeout(async () => {
-      if (persist) {
-        await db.meta.put({ key: 'whatsNewSeen', value: CURRENT_VERSION })
-      }
-      onClose()
-    }, 220)
+     Written before onClose, not after a timer: Sheet plays its own exit and
+     calls onClose the moment you dismiss, so there is nothing left to wait
+     for. */
+  async function acknowledge() {
+    try { await db.meta.put({ key: 'whatsNewSeen', value: CURRENT_VERSION }) }
+    catch (e) { console.warn('[whatsnew] could not record', e) }
+    onClose()
   }
 
   return (
-    <div className="fixed inset-0 z-[400] flex items-end sm:items-center justify-center p-4"
-      style={{ touchAction: 'none' }}>
-      {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black/60 backdrop-blur-sm transition-opacity duration-220 ${hiding ? 'opacity-0' : 'opacity-100'}`}
-        onClick={() => dismiss(false)}
-      />
-
-      {/* Card */}
-      <div className={[
-        'relative w-full max-w-sm rounded-3xl overflow-hidden',
-        'bg-white dark:bg-[#111820]',
-        'border border-slate-100 dark:border-white/[0.07]',
-        'shadow-[0_24px_64px_rgba(0,0,0,0.4)]',
-        'transition-all duration-220',
-        hiding ? 'opacity-0 translate-y-4 scale-[0.97]' : 'opacity-100 translate-y-0 scale-100',
-      ].join(' ')}>
-
-        {/* Header */}
-        <div className="px-6 pt-6 pb-4">
-          <div className="flex items-center gap-3 mb-1">
-            <div className="w-10 h-10 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
-              <span className="accent-ink"><IconSparkle size={20} /></span>
-            </div>
-            <div>
-              <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">What's new</h2>
-              <p className="text-[11px] font-semibold accent-ink">Version {CURRENT_VERSION}</p>
-            </div>
-          </div>
+    <Sheet
+      open
+      onClose={onClose}
+      ariaLabel={`What's new in version ${CURRENT_VERSION}`}
+      z={400}
+      footer={<Button size="sm" block onClick={acknowledge}>Got it</Button>}
+    >
+      {/* Header. Not Sheet's `title`, which is text only - see the note. */}
+      <div className="flex items-center gap-3 pb-4">
+        <div className="w-10 h-10 rounded-2xl bg-primary/10 dark:bg-primary/20 flex items-center justify-center shrink-0">
+          <span className="accent-ink"><IconSparkle size={20} /></span>
         </div>
-
-        <Divider />
-
-        {/* Feature list */}
-        <div className="px-5 py-4 flex flex-col gap-3.5 max-h-[55vh] overflow-y-auto no-scrollbar">
-          {WHATS_NEW.map(({ Icon, title, desc }) => (
-            <div key={title} className="flex items-start gap-3">
-              {/* A tinted disc rather than a bare glyph. An 18px stroke icon
-                  on the card's own white sits too light next to a bold title
-                  and the column reads as unfinished; the disc gives it the
-                  same weight the emoji had.
-
-                  .accent-ink, not text-primary: the raw accent is a FILL
-                  colour and measures 2.85:1 on white at the default blue,
-                  1.6:1 on Honey. The disc is primary at 10% over white, so
-                  the glyph is effectively accent-on-white and needs the
-                  shifted ink to clear 3:1. */}
-              <span className="w-8 h-8 rounded-xl bg-primary/10 dark:bg-primary/20
-                accent-ink flex items-center justify-center shrink-0 mt-0.5">
-                <Icon size={17} />
-              </span>
-              <div className="min-w-0">
-                <p className="text-sm font-semibold text-slate-800 dark:text-white leading-snug">{title}</p>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{desc}</p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Actions.
-
-            One button, and it persists. Before, "Got it" dismissed without
-            writing whatsNewSeen, so the modal came back on the very next app
-            load and the only way to stop it was a small grey link below -
-            which is not where anyone looks. This list is keyed to a version,
-            so acknowledging the version IS "don't show it again". */}
-        <Divider />
-
-        <div className="px-5 pb-5 pt-3">
-          <Button size="sm" block onClick={() => dismiss(true)}>
-            Got it
-          </Button>
+        <div>
+          <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">What&apos;s new</h2>
+          <p className="text-[11px] font-semibold accent-ink">Version {CURRENT_VERSION}</p>
         </div>
       </div>
-    </div>
+
+      <Divider />
+
+      <div className="py-4 flex flex-col gap-3.5">
+        {WHATS_NEW.map(({ Icon, title, desc }) => (
+          <div key={title} className="flex items-start gap-3">
+            {/* A tinted disc rather than a bare glyph. An 18px stroke icon on
+                the card's own white sits too light next to a bold title and
+                the column reads as unfinished; the disc gives it the same
+                weight the emoji had.
+
+                .accent-ink, not text-primary: the raw accent is a FILL colour
+                and measures 2.85:1 on white at the default blue, 1.6:1 on
+                Honey. The disc is primary at 10% over white, so the glyph is
+                effectively accent-on-white and needs the shifted ink to clear
+                3:1. */}
+            <span className="w-8 h-8 rounded-xl bg-primary/10 dark:bg-primary/20
+              accent-ink flex items-center justify-center shrink-0 mt-0.5">
+              <Icon size={17} />
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-slate-800 dark:text-white leading-snug">{title}</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5 leading-relaxed">{desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </Sheet>
   )
 }
 

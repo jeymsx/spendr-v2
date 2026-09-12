@@ -8,7 +8,7 @@ const WebApp = lazy(() => import('./web/WebApp'))
 
 function Booting() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-[#0d1117]">
+    <div className="min-h-screen flex items-center justify-center bg-page">
       <div className="w-8 h-8 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
     </div>
   )

@@ -111,7 +111,7 @@ function CategoryRow({ cat }) {
             <span
               className={`absolute -top-1 -right-1 w-[17px] h-[17px] rounded-full
                 flex items-center justify-center text-[11px] font-bold leading-none
-                text-white ring-2 ring-white dark:ring-[#111820] ${
+                text-white ring-2 ring-panel ${
                   over ? 'bg-red-500' : 'bg-amber-500'
                 }`}
               title={over ? 'Over budget' : 'Close to the limit'}

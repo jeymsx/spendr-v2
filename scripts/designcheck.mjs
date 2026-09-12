@@ -21,19 +21,28 @@
  * memory. A rule with no escape gets deleted the first time it is wrong; a
  * rule whose exceptions are all written down stays.
  *
- * Three things are waived today and all three are genuinely not sheets: the
- * confetti layer (decoration, pointer-events-none), the quick-log overlay
- * (positioned against the visual viewport, which Sheet does not do) and the
- * QR lightbox (no panel - a tap anywhere closes it).
+ * Waived today, and every one of them is genuinely not a sheet: the confetti
+ * layer (decoration, pointer-events-none), the quick-log overlay (positioned
+ * against the visual viewport, which Sheet does not do), the QR lightbox (no
+ * panel - a tap anywhere closes it), the badge card (centred, and Sheet docks
+ * to the bottom) and Onboarding's two dialogs (Sheet's panel is theme-aware
+ * and that screen is dark whatever the theme, so a Sheet there would be white
+ * on black in light mode).
  *
- * ── Not yet gating ──
+ * ── It gates ──
  *
- * `npm run design`, not part of `npm run check`, because 18 real problems
- * remain and a check that fails on a clean tree gets switched off. Fifteen
- * are the same missing token - #0d1117, #111820 and #1a2130 are the page
- * ground, the sheet panel and the raised modal, and none of them has a name.
- * The other three are WhatsNewModal and two Onboarding modals that should be
- * <Sheet>. Fix those and move this into CHECKERS in check.mjs.
+ * This ran as `npm run design` on its own for a while, deliberately, because
+ * 18 real problems remained and a check that fails on a clean tree gets
+ * switched off rather than fixed.
+ *
+ * Fifteen of them were one missing idea: #0d1117, #111820 and #1a2130 are the
+ * page ground, the panel and the lifted surface, and none of them had a name -
+ * so every call site spelled a light/dark pair by hand. They are `bg-page`,
+ * `bg-panel` and `bg-lifted` now, defined in index.css. Of the other three,
+ * WhatsNewModal really was a twenty-ninth hand-rolled sheet and became one;
+ * the two Onboarding dialogs are waived above.
+ *
+ * It is in CHECKERS in check.mjs now, so `npm run check` fails on new drift.
  *
  *   npm run design
  *   node scripts/designcheck.mjs src/pages/Foo.jsx

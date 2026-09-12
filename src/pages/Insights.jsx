@@ -155,7 +155,7 @@ function DailyAreaChart({ data, chartType = 'expenses' }) {
               if (!active || !payload?.length) return null
               const val = payload[0].value
               return (
-                <div className="bg-white dark:bg-[#1a2130] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
+                <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
                   <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
                   <p className="font-medium text-slate-700 dark:text-white">{val < 0 ? '−' : ''}{fmtCompact(Math.abs(val))}</p>
                 </div>
@@ -190,7 +190,7 @@ function MultiBarChart({ data }) {
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null
               return (
-                <div className="bg-white dark:bg-[#1a2130] border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
+                <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
                   <p className="font-semibold text-slate-600 dark:text-slate-300 mb-1">{label}</p>
                   {payload.map(p => (
                     <p key={p.dataKey} className="font-medium" style={{ color: p.fill }}>
