@@ -167,13 +167,71 @@ describe('getCreditStatus — payments', () => {
     expect(s.currentBalance).toBe(0)
   })
 
-  it('a payment BEFORE the cutoff was settling the previous statement', () => {
-    // Paid on May 10, cutoff 15: that money went to the Mar 15 - Apr 14 bill,
-    // so it must not be credited against Apr 15 - May 14.
-    const s = getCreditStatus(acct, [charge(4, 20, 3000), payment(5, 10, 3000)], at(2026, 5, 21))
-    expect(s.totalPayments).toBe(0)
-    expect(s.stmtPaid).toBe(false)
+  /**
+   * Rewritten when the balance learned to carry.
+   *
+   * This used to assert that a payment made before the cutoff was worth
+   * NOTHING - totalPayments 0, still ₱3,000 owed - on the reasoning that the
+   * money had gone to the previous statement. The reasoning is sound and the
+   * fixture did not support it: there was no previous statement in it, so the
+   * old code simply threw a ₱3,000 payment away and reported ₱3,000 owed by
+   * someone who had just handed over ₱3,000.
+   *
+   * So the fixture gets the earlier bill its comment assumed, and the
+   * assertion becomes the thing actually worth protecting: a payment settles
+   * exactly one statement's worth of debt and is not double-counted against a
+   * later one.
+   */
+  it('a payment before the cutoff settles the earlier statement, not this one', () => {
+    const txs = [
+      charge(3, 20, 3000),   // billed on the Mar 15 - Apr 14 statement
+      payment(5, 10, 3000),  // paid before the May 15 cutoff: settles that one
+      charge(4, 20, 3000),   // billed on the Apr 15 - May 14 statement
+    ]
+    const s = getCreditStatus(acct, txs, at(2026, 5, 21))
+    expect(s.thisTotal).toBe(3000)        // this statement asked for 3,000
+    expect(s.billedTotal).toBe(6000)      // 6,000 has been billed in total
+    expect(s.paidTotal).toBe(3000)        // and 3,000 of it paid
+    expect(s.stmtPaid).toBe(false)        // so this statement is still open
     expect(s.currentBalance).toBe(3000)
+  })
+
+  /**
+   * The bug the carried balance exists for.
+   *
+   * A statement you never pay used to VANISH at the next cutoff: its charges
+   * fell outside the new cycle window, so the card reported nothing owed and
+   * handed back the full credit limit.
+   */
+  it('an unpaid statement survives the next cutoff, and the one after', () => {
+    const txs = [charge(4, 20, 10000)]
+    for (const [m, d] of [[5, 21], [6, 21], [7, 21]]) {
+      const s = getCreditStatus(acct, txs, at(2026, m, d))
+      expect(s.currentBalance).toBe(10000)
+      expect(s.availableCredit).toBe(40000)
+    }
+  })
+
+  it('a shortfall survives too, rather than being forgiven at the cutoff', () => {
+    const txs = [charge(4, 20, 10000), payment(5, 20, 3000)]
+    expect(getCreditStatus(acct, txs, at(2026, 5, 21)).currentBalance).toBe(7000)
+    expect(getCreditStatus(acct, txs, at(2026, 6, 21)).currentBalance).toBe(7000)
+  })
+
+  /**
+   * An overpayment is a credit sitting on the card. It has to survive into the
+   * next cycle and offset new charges - throwing it away would bill you twice
+   * for money the bank is already holding.
+   */
+  it('carries an overpayment forward as a credit', () => {
+    const over = [charge(4, 20, 1000), payment(5, 20, 5000)]
+    const s1 = getCreditStatus(acct, over, at(2026, 5, 21))
+    expect(s1.carried).toBe(-4000)        // the card owes you
+    expect(s1.currentBalance).toBe(0)     // never shown as a negative debt
+
+    const s2 = getCreditStatus(acct, [...over, charge(5, 25, 2000)], at(2026, 6, 21))
+    expect(s2.currentBalance).toBe(0)     // 4,000 credit absorbs 2,000 of charges
+    expect(s2.carried).toBe(-2000)
   })
 
   it('a part payment leaves the remainder outstanding', () => {

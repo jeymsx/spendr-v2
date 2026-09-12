@@ -182,6 +182,10 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
   const nextStatementCharges = []
   const laterCharges         = []
   const payments             = []
+  /* Everything billed on a statement before this one, and everything paid
+     before this cycle opened. Both used to be discarded. */
+  const priorCharges         = []
+  const priorPayments        = []
 
   // Single pass. The previous copies of this ran three or four .filter()
   // sweeps over every transaction, per card, on every render.
@@ -204,10 +208,16 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
         // Same charge, split by which bill it will land on.
         if (d <= nextCycleEnd) nextStatementCharges.push(tx)
         else                   laterCharges.push(tx)
+      } else {
+        // Billed on an EARLIER statement. It used to be dropped here, on the
+        // assumption that an older statement had been settled - see the note
+        // over billedTotal below for what that cost.
+        priorCharges.push(tx)
       }
-      // Charges older than the closed cycle are already settled — ignored.
     } else if (d > cycleEnd) {
       payments.push(tx)
+    } else {
+      priorPayments.push(tx)
     }
   }
 
@@ -219,6 +229,24 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
   const laterTotal         = sum(laterCharges)
   const totalPayments      = sum(payments)
 
+  /* ── The carried balance ──────────────────────────────────────────────────
+
+     Everything ever billed, against everything ever paid. This is the whole
+     of the fix for a card that forgot its own debt.
+
+     What it replaces: `thisTotal - totalPayments`, a single cycle's charges
+     against the payments made since that cycle closed. Anything outside that
+     window did not exist, so an unpaid statement DISAPPEARED at the next
+     cutoff - a ₱10,000 balance you never paid read as ₱10,000 owed in
+     September and ₱0 owed in October, with the full credit limit available
+     again. Partial payments lost their shortfall the same way, and an
+     overpayment's credit was thrown away rather than carried.
+
+     Nothing here needs a new field on a transaction or a new table. The rows
+     were always right; only the window was wrong. */
+  const billedTotal = sum(priorCharges) + thisTotal
+  const paidTotal   = sum(priorPayments) + totalPayments
+
   /* Three states, where there used to be two.
 
      `totalPayments >= thisTotal` is also true of 0 >= 0, so a cycle that
@@ -229,9 +257,13 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
      The balance math keeps using the settled test by itself, so none of
      this changes a single peso - `stmtSettled` is exactly the old flag. */
   const hasStatement    = thisTotal > 0
-  const stmtSettled     = totalPayments >= thisTotal
+  /* Owed on everything billed so far, which can go NEGATIVE - that is an
+     overpayment sitting on the card as a credit, and it is real money that
+     has to survive into next month rather than being rounded away. */
+  const carried         = billedTotal - paidTotal
+  const stmtSettled     = carried <= 0
   const stmtPaid        = hasStatement && stmtSettled
-  const stmtOutstanding = Math.max(0, thisTotal - totalPayments)
+  const stmtOutstanding = Math.max(0, carried)
 
   /* What the issuer would actually ask for by the due date. The account's
      stored minimum, but never more than is still owed on the closed
@@ -239,17 +271,21 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
      there was never one. A 150 peso statement cannot carry a 200 peso
      minimum either. */
   const minimumDue = Math.min(account?.minimumPayment ?? 0, stmtOutstanding)
-  // Statement settled → only the unbilled charges remain outstanding.
-  // Partially paid → statement remainder plus the unbilled charges.
-  const currentBalance = stmtSettled
-    ? nextTotal
-    : Math.max(0, thisTotal + nextTotal - totalPayments)
+  /* What the card is holding right now: what is still owed on everything
+     billed, plus everything charged since the cutoff that has not been billed
+     yet. Clamped at zero only at the very end, so an overpaid card offsets
+     new charges instead of showing them at full value. */
+  const currentBalance = Math.max(0, carried + nextTotal)
 
   return {
     cycleStart, cycleEnd, nextCycleEnd,
     thisCharges, nextCharges, nextStatementCharges, laterCharges, payments,
+    priorCharges, priorPayments,
     // nextTotal === nextStatementTotal + laterTotal, by construction.
     thisTotal, nextTotal, nextStatementTotal, laterTotal, totalPayments,
+    /* billedTotal/paidTotal are the running figures; `carried` is what they
+       come to, signed - negative means the card owes YOU. */
+    billedTotal, paidTotal, carried,
     stmtPaid, hasStatement, stmtOutstanding, minimumDue, currentBalance,
     availableCredit: (account?.creditLimit ?? 0) - currentBalance,
   }
