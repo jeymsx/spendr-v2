@@ -30,7 +30,7 @@ export function parseInstallmentLabel(description) {
 
 /** True when this row looks like part of an installment plan.
  *
- * @param {Transaction} tx
+ * @param {Partial<Transaction>} [tx]
  */
 export function isInstallmentRow(tx) {
   return !!tx?.installmentId || !!parseInstallmentLabel(tx?.description)
@@ -41,8 +41,8 @@ export function isInstallmentRow(tx) {
  * Returns [tx] when it isn't part of a plan, so callers can treat the result
  * uniformly.
  *
- * @param {Transaction} tx
- * @param {Transaction[]} allTxs
+ * @param {Partial<Transaction>} [tx]
+ * @param {Array<Partial<Transaction>>} [allTxs]
  */
 export function findInstallmentGroup(tx, allTxs) {
   if (!tx) return []
@@ -69,8 +69,8 @@ export function findInstallmentGroup(tx, allTxs) {
 }
 
 /**
- * @param {Transaction} a
- * @param {Transaction} b
+ * @param {Partial<Transaction>} a
+ * @param {Partial<Transaction>} b
  */
 function byDate(a, b) {
   return String(a.date ?? '').localeCompare(String(b.date ?? ''))

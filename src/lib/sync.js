@@ -37,7 +37,7 @@ async function getPendingDeletes() {
  * @param {string} table
  * @param {Record<string, any>} row  a row as Supabase returned it
  */
-function isPendingDelete(pending, table, row) {
+export function isPendingDelete(pending, table, row) {
   return pending.some(p =>
     p.table === table &&
     Object.entries(p.match ?? {}).every(([k, v]) => row[k] === v),
@@ -67,11 +67,20 @@ async function flushPendingDeletes(userId) {
 
 // ── Row mapping: Dexie → Supabase ─────────────────────────────────────────────
 
+/* ── The row mappers are exported for tests ──────────────────────────────────
+   Every one of them is pure: a record in, a record out, no clock beyond a
+   fallback timestamp and no database. They are also where the two schemas
+   disagree - Dexie keys a one-sided entry on `account` and Supabase keys
+   everything on from_account/to_account - and that asymmetry is invisible
+   until a transfer comes back from a pull pointing the wrong way.
+
+   Nothing else imports them. The export exists so sync.test.js can. */
+
 /**
  * @param {Transaction} r
  * @param {string} userId
  */
-function toSupabaseRow(r, userId) {
+export function toSupabaseRow(r, userId) {
   const type = r.type
   /* local_id is always null here and filled by the caller, so the literal on
      its own infers `null` as its type. @type instead of a value change. */
@@ -101,7 +110,7 @@ function toSupabaseRow(r, userId) {
  * @param {Account} r
  * @param {string} userId
  */
-function accountToRow(r, userId) {
+export function accountToRow(r, userId) {
   return {
     user_id:         userId,
     name:            r.name,
@@ -130,7 +139,7 @@ function accountToRow(r, userId) {
  * @param {Category} r
  * @param {string} userId
  */
-function categoryToRow(r, userId) {
+export function categoryToRow(r, userId) {
   return {
     user_id:    userId,
     name:       r.name,
@@ -147,7 +156,7 @@ function categoryToRow(r, userId) {
  * @param {Debt} r
  * @param {string} userId
  */
-function debtToRow(r, userId) {
+export function debtToRow(r, userId) {
   return {
     user_id:     userId,
     local_id:    r.id,
@@ -167,7 +176,7 @@ function debtToRow(r, userId) {
  * @param {Recurring} r
  * @param {string} userId
  */
-function recurringToRow(r, userId) {
+export function recurringToRow(r, userId) {
   return {
     user_id:    userId,
     local_id:   r.id,
@@ -186,7 +195,7 @@ function recurringToRow(r, userId) {
  * @param {Goal} r
  * @param {string} userId
  */
-function goalToRow(r, userId) {
+export function goalToRow(r, userId) {
   return {
     user_id:     userId,
     local_id:    r.id,
@@ -212,7 +221,7 @@ function goalToRow(r, userId) {
  * @param {BadgeRow} r
  * @param {string} userId
  */
-function badgeToRow(r, userId) {
+export function badgeToRow(r, userId) {
   return {
     user_id:    userId,
     key:        r.key,
@@ -225,7 +234,7 @@ function badgeToRow(r, userId) {
  * @param {Template} r
  * @param {string} userId
  */
-function templateToRow(r, userId) {
+export function templateToRow(r, userId) {
   return {
     user_id:     userId,
     local_id:    r.id,
@@ -247,7 +256,7 @@ function templateToRow(r, userId) {
  * @param {Record<string, any>} row  a row as Supabase returned it
  * @returns {Transaction}
  */
-function toDexieRecord(row) {
+export function toDexieRecord(row) {
   const type = row.type
   return {
     txId:        row.tx_id,
@@ -267,7 +276,7 @@ function toDexieRecord(row) {
 }
 
 /** @param {Record<string, any>} row  a row as Supabase returned it */
-function rowToAccount(row) {
+export function rowToAccount(row) {
   return {
     name:           row.name,
     type:           row.type,
@@ -293,7 +302,7 @@ function rowToAccount(row) {
 }
 
 /** @param {Record<string, any>} row  a row as Supabase returned it */
-function rowToCategory(row) {
+export function rowToCategory(row) {
   return {
     name:       row.name,
     icon:       row.icon,
@@ -306,7 +315,7 @@ function rowToCategory(row) {
 }
 
 /** @param {Record<string, any>} row  a row as Supabase returned it */
-function rowToDebt(row) {
+export function rowToDebt(row) {
   return {
     name:       row.name,
     contact:    row.contact,
@@ -321,7 +330,7 @@ function rowToDebt(row) {
 }
 
 /** @param {Record<string, any>} row  a row as Supabase returned it */
-function rowToRecurring(row) {
+export function rowToRecurring(row) {
   return {
     name:      row.name,
     amount:    row.amount,
@@ -335,7 +344,7 @@ function rowToRecurring(row) {
 }
 
 /** @param {Record<string, any>} row  a row as Supabase returned it */
-function rowToTemplate(row) {
+export function rowToTemplate(row) {
   return {
     name:        row.name,
     type:        row.type,
@@ -351,7 +360,7 @@ function rowToTemplate(row) {
 }
 
 /** @param {Record<string, any>} row  a row as Supabase returned it */
-function rowToGoal(row) {
+export function rowToGoal(row) {
   return {
     name:       row.name,
     icon:       row.icon,
