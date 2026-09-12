@@ -46,11 +46,6 @@ export const SCHEME_LABEL = Object.fromEntries(
   SCHEME_OPTIONS.filter(o => o.value).map(o => [o.value, o.label]),
 )
 
-/** True when this scheme has art to render, so callers can skip the slot. */
-export function hasSchemeMark(scheme) {
-  return !!scheme && !!BY_KEY[scheme]
-}
-
 /**
  * A file that declares its own hex fills is painting a brand palette and must
  * not be overridden; one that only carries `currentColor` is a silhouette

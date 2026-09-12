@@ -26,12 +26,3 @@ export function scheduledCutoff() {
   return d.toISOString()
 }
 
-/** True when this charge is dated beyond today. */
-export function isScheduled(tx, cutoff = scheduledCutoff()) {
-  return (tx?.date ?? '') > cutoff
-}
-
-/** Drop charges dated beyond today. Pass a cutoff to avoid recomputing per call. */
-export function postedOnly(txs, cutoff = scheduledCutoff()) {
-  return (txs ?? []).filter(t => (t?.date ?? '') <= cutoff)
-}

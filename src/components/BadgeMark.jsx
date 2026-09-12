@@ -33,10 +33,6 @@ const ART_BY_KEY = Object.fromEntries(
   Object.entries(ART).map(([path, url]) => [path.split('/').pop().replace(/\.png$/, ''), url]),
 )
 
-export function hasArt(key) {
-  return !!ART_BY_KEY[key]
-}
-
 /** The bundled URL for a badge's artwork, or null. The unlock card needs it as
  *  a CSS mask so the shine is clipped to the badge instead of to its box. */
 export function badgeArtUrl(key) {

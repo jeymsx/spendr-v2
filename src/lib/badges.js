@@ -419,9 +419,6 @@ export const BADGES = [
   },
 ]
 
-/** Lookup by key, for the detail sheet and for rendering a stored row. */
-export const BADGE_BY_KEY = Object.fromEntries(BADGES.map(b => [b.key, b]))
-
 /**
  * Which badges the data currently satisfies.
  *

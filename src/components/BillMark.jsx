@@ -28,12 +28,6 @@ const BY_SLUG = Object.fromEntries(
   ]),
 )
 
-/** True when this bill has art, so callers can decide layout before rendering. */
-export function hasBillMark(name) {
-  const key = billBrandKey(name)
-  return !!(key && BY_SLUG[key])
-}
-
 export default function BillMark({ name, cat, size = 20, boxClass = '', dim = false }) {
   const key = billBrandKey(name)
   const svg = key ? BY_SLUG[key] : null

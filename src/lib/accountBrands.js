@@ -375,8 +375,3 @@ export function accountBrand(account) {
   }
 }
 
-/** `background` value for a card face. */
-export function brandGradient(account) {
-  const { from, to } = accountBrand(account)
-  return `linear-gradient(135deg, ${from} 0%, ${to} 100%)`
-}

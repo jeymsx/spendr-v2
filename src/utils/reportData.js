@@ -7,15 +7,6 @@ import { scheduledCutoff } from './scheduled'
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-// Sign before the symbol. Intl puts the minus before the digits, so prefixing
-// the peso sign rendered "PHP-5,000.00". Net savings is negative in any month
-// you outspend your income, and net worth is negative when credit owed exceeds
-// assets - both are printed on the report.
-export const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
-
 // ── fetchReportData ────────────────────────────────────────────────────────────
 
 /**

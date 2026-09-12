@@ -80,8 +80,6 @@ export const FREQ_ORDER = [
 
 export const FREQ_LABEL = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.label]))
 export const FREQ_SHORT = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.short]))
-export const FREQ_EVERY = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.every]))
-
 /** A YYYY-MM-DD string as a local date, not a UTC one. */
 export function parseDateLocal(str) {
   if (!str) return null
@@ -122,12 +120,6 @@ export const DUE_TONE = {
   late: 'text-red-500 dark:text-red-400 font-semibold',
   soon: 'text-amber-600 dark:text-amber-400 font-medium',
   calm: 'text-slate-500 dark:text-slate-400',
-}
-
-/** "Sep 14" */
-export function fmtDate(str) {
-  const d = parseDateLocal(str)
-  return d ? d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) : ''
 }
 
 /** "Sep 14, 2026" — for a date far enough out that the year matters. */

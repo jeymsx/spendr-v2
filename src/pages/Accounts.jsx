@@ -20,7 +20,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
 import { PH_ACCOUNTS, PH_GROUPS, POPULAR_ACCOUNTS } from '../lib/phAccounts'
 import { useToast } from '../context/ToastContext'
-import { IconBank, IconCard, IconPhone, IconPlus, IconWallet } from '../components/icons'
+import { IconPlus } from '../components/icons'
 import { accountBrand } from '../lib/accountBrands'
 /* Aliased: this file already has an AccountChip, and it is a different
    thing - a tappable name-and-dot chip in the quick-add sheet. This one
@@ -132,13 +132,6 @@ function IconEyeOff() {
       <line x1="1" y1="1" x2="23" y2="23" />
     </svg>
   )
-}
-
-export function typeIcon(type) {
-  if (type === 'cash')    return <IconWallet />
-  if (type === 'ewallet') return <IconPhone />
-  if (type === 'credit')  return <IconCard />
-  return <IconBank />
 }
 
 // ── Shared helpers ─────────────────────────────────────────────────────────────

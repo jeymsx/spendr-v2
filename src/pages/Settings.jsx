@@ -43,7 +43,7 @@ import { CategoryManagerSheet, CategoriesPage } from './settings/Categories'
 import { BudgetManagerSheet, BudgetsPage } from './settings/Budgets'
 import { RestoreBackupSheet, ResetConfirmModal } from './settings/Backup'
 import { SheetsConfigSheet, ProfileSheet } from './settings/Profile'
-import { AccentColorSheet, PolicySheet } from './settings/Policy'
+import { PolicySheet } from './settings/Policy'
 
 // ── Toggle switch ──────────────────────────────────────────────────────────────
 
@@ -846,4 +846,4 @@ export { BudgetsPage, BudgetManagerSheet }
 export { TemplatesPage, TemplateManagerSheet }
 export { ProfileSheet, SheetsConfigSheet }
 export { RestoreBackupSheet, ResetConfirmModal }
-export { AccentColorSheet, PolicySheet }
+export { PolicySheet }
