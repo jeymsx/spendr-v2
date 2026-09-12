@@ -1,14 +1,14 @@
 import { useState } from 'react'
 import SubPage from '../components/SubPage'
 import BadgeMark from '../components/BadgeMark'
+import BadgeCard from '../components/BadgeCard'
+import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
-import Divider from '../components/ui/Divider'
 import ProgressBar from '../components/ui/ProgressBar'
 import SectionLabel from '../components/ui/SectionLabel'
 import InfoButton from '../components/ui/InfoButton'
-import Sheet from '../components/ui/Sheet'
 import { SkeletonHero } from '../components/ui/Skeleton'
-import { useBadges } from '../hooks/useBadges'
+import { useBadges } from '../context/BadgeContext'
 
 /** "12 Sep 2026" - the same shape the rest of the app dates things in. */
 function fmtEarned(iso) {
@@ -145,36 +145,29 @@ export default function Badges() {
       )}
 
       {/* ── One badge, in full ──
-          Sheet stays mounted through its exit animation, so `open` is held
-          rather than cleared on close - clearing it would blank the sheet
-          halfway through the slide down. Every path that opens it sets it. */}
-      <Sheet open={!!open} onClose={() => setOpen(null)} ariaLabel={open?.name ?? 'Badge'}>
-        {open && (
-          <div className="flex flex-col items-center text-center pb-2">
-            <BadgeMark badge={open} earned={open.earned} size={104} />
+          The same card you get the moment a badge is earned, not a bottom
+          sheet of its own. A badge that looked like one object when you earned
+          it and a different one when you came back to look at it would read as
+          two different badges.
 
-            <h3 className="mt-4 text-[19px] font-semibold tracking-tight text-slate-900 dark:text-white">
-              {open.name}
-            </h3>
-            <p className="mt-1.5 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400 max-w-[16rem]">
-              {open.earned ? open.blurb : open.how}
-            </p>
-
-            <div className="w-full mt-5">
-              <Divider />
-              <p className={`pt-3.5 text-[12px] font-semibold ${
-                open.earned
-                  ? 'text-emerald-600 dark:text-emerald-400'
-                  : 'text-slate-400 dark:text-slate-500'
-              }`}>
-                {open.earned
-                  ? (fmtEarned(open.earnedAt) ? `Earned ${fmtEarned(open.earnedAt)}` : 'Earned')
-                  : 'Not yet earned'}
-              </p>
-            </div>
-          </div>
-        )}
-      </Sheet>
+          Keyed, so the flip and the burst start clean each time rather than
+          the second badge you open inheriting the first's finished animations.
+          Earned ones celebrate; locked ones do not - there is nothing to throw
+          paper at, and doing it anyway would say the opposite of what the card
+          says. */}
+      {open && (
+        <BadgeCard
+          key={open.key}
+          badge={open}
+          eyebrow={open.earned
+            ? (fmtEarned(open.earnedAt) ? `Earned ${fmtEarned(open.earnedAt)}` : 'Earned')
+            : 'Not yet earned'}
+          body={open.earned ? open.blurb : open.how}
+          celebrate={open.earned}
+          onClose={() => setOpen(null)}
+          actions={<Button variant="quiet" block onClick={() => setOpen(null)}>Done</Button>}
+        />
+      )}
     </SubPage>
   )
 }

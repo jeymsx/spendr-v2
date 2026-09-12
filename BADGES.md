@@ -1,19 +1,14 @@
 # Badges — what shipped, and what you need to do
 
-Everything is built, tested and running. The feature **works right now** without
-any artwork: each badge has a drawn SVG form — a hexagon with a rim, a raised
-face and a gloss, in the badge's own hue — that is good enough to ship. The
-rendered images are an upgrade, not a dependency: drop them in and they take
-over automatically, one at a time if you like.
+Built, tested, running, **and the artwork is in.** All ten rendered badges are
+cropped, masked to their own outline and living in `src/assets/badges/`.
 
-Three things need you:
+**One thing still needs you: run the SQL in §2.** That is it. Until you do,
+badges work exactly as they do now — they just stay on this device instead of
+syncing.
 
-1. **Run the SQL** (below) in the Supabase SQL editor.
-2. **Paste the ChatGPT prompt** (below) and save the image it gives you.
-3. **Hand me the image** — I crop it into ten files and they appear.
-
-Until (1), badges still work; they just stay on this device. Until (2)/(3), the
-drawn versions show. Nothing is blocked on anything.
+§3 keeps the prompt that produced the art, and §3b regenerates any single badge
+at full size if you ever want to redo one.
 
 ---
 
@@ -290,25 +285,34 @@ and the silhouette is the thing that makes ten badges read as one set.
 
 ## 4. What to do when you wake up
 
-1. Run the SQL above. (2 minutes)
-2. Paste the prompt into ChatGPT, ask for the image, download the PNG.
-3. Save it anywhere and tell me the path. I will:
-   - crop it into 10 files at `src/assets/badges/<key>.png`
-   - verify each one lands on the right badge
-   - check them at 62px (the grid) and 104px (the detail sheet), light and dark
+**Run the SQL in §2.** Two minutes in the Supabase SQL editor. Nothing else is
+outstanding.
 
-The filenames I will use — this is also the order they appear in the prompt, so
-cell 1 is `first-peso` and cell 10 is `six-figures`:
+### How the art got in, in case you redo it
+
+The sheet came back on a dark bloom rather than a transparent background, so
+each badge was cut out from its own edges rather than with a hand-drawn mask:
+the badge has a hard boundary and the bloom is smooth, so thresholding the edge
+magnitude and taking each row's and column's span between the first and last
+strong edge describes the hexagon exactly — including its real rounded tips,
+which a hand-built polygon kept clipping.
+
+The crop window is 296 x 348, not square: the columns are only 300 apart, so
+anything wider drags the neighbouring badge's edge into the mask. Files land at
+320 x 320, quantised to 255 colours — 321 KB for all ten, and no banding, since
+each badge is a single hue family.
+
+Filenames are the badge keys, in the prompt's reading order:
 
 ```
 first-peso   seven-days   century      under-budget  green-month
 goal-funded  debt-cleared on-autopilot diversified   six-figures
 ```
 
-**No code changes are needed when the art lands.** `BadgeMark` picks up anything
-in `src/assets/badges/` at build time via `import.meta.glob`, keyed by filename.
-A badge with a file uses it; a badge without keeps its drawn form. The two can
-coexist, so a partial set is fine.
+**No code change is needed to swap any of them.** `BadgeMark` picks up whatever
+is in `src/assets/badges/` at build time through `import.meta.glob`, keyed by
+filename. A badge with a file uses it; one without falls back to its drawn
+hexagon, so a partial set is fine.
 
 ---
 
@@ -318,9 +322,13 @@ coexist, so a partial set is fine.
 |------|---------------|
 | `src/lib/badges.js` | The 10 definitions and what earns each one. **Edit copy here.** |
 | `src/lib/badges.test.js` | 26 tests pinning the lines above — the month rules, the streak, the credit exclusion |
-| `src/hooks/useBadges.js` | Reads the tables, awards as a side effect, never un-awards |
-| `src/components/BadgeMark.jsx` | The artwork: the PNG if present, the drawn shield if not |
-| `src/components/BadgeChip.jsx` | The shield-shaped button in the dashboard header |
+| `src/context/BadgeContext.jsx` | Reads the tables, awards as a side effect, never un-awards, queues celebrations |
+| `src/components/BadgeMark.jsx` | The artwork: the PNG if present, the drawn hexagon if not |
+| `src/components/BadgeChip.jsx` | The hexagon button in the dashboard header |
+| `src/components/BadgeCard.jsx` | The centred card: the flip, the sway, the shine, the burst |
+| `src/components/BadgeUnlocked.jsx` | The unlock queue, feeding that card |
+| `src/components/Confetti.jsx` | Both bursts — falling, and thrown outward from a point |
+| `src/assets/badges/` | The ten rendered PNGs |
 | `src/pages/Badges.jsx` | The page at `/badges` |
 | `src/db/db.js` (v10) | The local `badges` table |
 | `src/lib/sync.js` | `badgeToRow`, `pullBadges`, and the two `optionalSync` calls |
@@ -340,16 +348,43 @@ coexist, so a partial set is fine.
 - **Locked badges show their real shape, greyed** — not question marks. A hidden
   badge is one nobody can work toward, and tapping a locked one says exactly how
   it is earned. Nothing here is a secret.
-- **The drawn stand-in is a hexagon too**, with a rim, a raised inner face and a
-  gloss wedge, and its glyph is a pale tint of the badge's own hue rather than
-  white — so it is recognisably the same family as the rendered set while it
-  waits for it. It does not attempt the facets or the sparkles: SVG can fake
-  depth honestly but not gemstone, and a bad imitation would look worse beside a
-  real one than a clean simpler thing does.
-- **There is no toast, no confetti, no "badge unlocked!" interruption.** Badges
-  land quietly and the count on the header goes up. If you want a celebration on
-  earning one, say so — it is a small addition, but it is the kind of thing that
-  gets annoying on the fourth time, so I left it out.
+- **The drawn fallback is still there**, a hexagon with a rim, a raised inner
+  face and a gloss wedge, its glyph a pale tint of the badge's own hue rather
+  than white. Nothing renders it now that all ten have art — it is what an
+  eleventh badge would wear until you generated one for it.
+- **Earning one shows a centred card**, not a bottom sheet: the badge flips
+  face-up, confetti bursts *out of the badge*, and it then settles into a slow
+  left-right tilt while a highlight sweeps across it. It is centred because
+  every other overlay in the app is a sheet, and a sheet is for doing a task —
+  this is a reward with one button, and it wants to be looked at.
+- **The badge is a button.** Tapping it presses in and throws the confetti
+  again. It changes nothing and the card works untouched, but the badge is the
+  one thing on that card anybody actually wants to touch.
+- **The idle animation is a tilt, not a spin.** A looping full turn would read
+  as the badge arriving again every few seconds, which undoes the one moment the
+  entrance flip exists to create.
+- **Tapping a badge on the badges page opens the same card**, not a sheet of
+  its own — with the earned date as its eyebrow instead of "Badge unlocked". A
+  badge that looked like one object when you earned it and a different one when
+  you came back to look at it would read as two different badges. Locked badges
+  open it too, without the confetti or the shine: there is nothing to celebrate
+  about one you have not earned.
+- **The card is opaque in light and translucent in dark.** On a light scrim
+  there is nothing to be translucent against — the page behind is nearly the
+  same value, so transparency only muddies the text. On dark it earns its keep,
+  and the backdrop blur, not the fill, is what carries legibility.
+- **It only fires for badges earned in front of you.** The provider writes the
+  first settled evaluation silently: opening the app on a ledger that already
+  qualifies — a fresh install after a sync pull, or the first run of this
+  feature against months of history — satisfies several at once and none of them
+  were just earned. Six cards stacked up on launch is the failure mode that
+  guard exists to prevent.
+- **One card at a time**, from a queue. Two at once would stack and the tap
+  meant for the first would dismiss the second.
+- **All of it is off under `prefers-reduced-motion`** — the flip, the burst and
+  the shine. A spinning object, forty fast-moving particles and a repeating
+  specular sweep is close to the worst case for anyone who set that, and none of
+  it carries meaning the card does not also say in words.
 - **Badges are also in Settings → Manage**, for the person who opened Settings to
   see what the app has in it.
 

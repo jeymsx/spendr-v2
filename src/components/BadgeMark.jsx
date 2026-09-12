@@ -37,6 +37,12 @@ export function hasArt(key) {
   return !!ART_BY_KEY[key]
 }
 
+/** The bundled URL for a badge's artwork, or null. The unlock card needs it as
+ *  a CSS mask so the shine is clipped to the badge instead of to its box. */
+export function badgeArtUrl(key) {
+  return ART_BY_KEY[key] ?? null
+}
+
 /* Fixed hues, not the accent.
  *
  * Everything else in this app follows the accent preset, and a medal must not:

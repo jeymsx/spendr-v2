@@ -1,5 +1,5 @@
 import { useNavigate } from 'react-router-dom'
-import { useBadges } from '../hooks/useBadges'
+import { useBadges } from '../context/BadgeContext'
 
 /**
  * The badges entry point in the dashboard header.
@@ -41,13 +41,20 @@ export default function BadgeChip({ className = '' }) {
       ].join(' ')}
     >
       {/* The same hexagon the badges themselves wear, at 36px so it sits on
-          IconButton's baseline. Corners rounded by the stroke rather than by
-          the path - see HEX_OUTER in BadgeMark for why. The stroke is doing
-          two jobs here, the radius and the hairline, so it cannot be thinned
-          without squaring the corners off. */}
+          IconButton's baseline.
+
+          Points at top and bottom with flat vertical sides, matching the
+          rendered artwork - which came back in that orientation rather than
+          the flat-top one this was first drawn in. A chip that does not match
+          the thing it opens is a chip that has to be explained. Proportions
+          follow the art too: 280 x 332 there is 30 x 36 here.
+
+          Corners are rounded by the stroke rather than by the path - see
+          HEX_OUTER in BadgeMark. The stroke does two jobs, the radius and the
+          hairline, so thinning it squares the corners off. */}
       <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true" className="absolute inset-0 m-auto">
         <polygon
-          points="11,4 25,4 32,18 25,32 11,32 4,18"
+          points="18,4 30,11 30,25 18,32 6,25 6,11"
           className="badge-chip-face"
           strokeWidth="3.5"
           strokeLinejoin="round"

@@ -9,6 +9,8 @@ import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { isSupabaseConfigured } from '../lib/supabase'
 import WhatsNewModal, { CURRENT_VERSION } from '../components/WhatsNewModal'
+import { BadgeProvider } from '../context/BadgeContext'
+import BadgeUnlocked from '../components/BadgeUnlocked'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 
@@ -121,6 +123,12 @@ export default function AppLayout() {
   }, [])
 
   return (
+    /* BadgeProvider wraps the layout rather than the app: it is inside the
+       router, because the unlock card links to /badges, and outside every
+       page, so the one evaluation is shared by the dashboard chip and the
+       badges screen instead of running twice - and so a badge earned on the
+       way to another route still gets its card. */
+    <BadgeProvider>
     <div className="h-[100dvh] flex flex-col overflow-hidden relative">
       {/*
         IMPORTANT: no z-index on <main>. Adding z-index creates a stacking context,
@@ -173,6 +181,10 @@ export default function AppLayout() {
       {showWhatsNew && !whatsNewDismissed && (
         <WhatsNewModal onClose={() => setWhatsNewDismissed(true)} />
       )}
+
+      {/* Renders nothing until a badge is actually earned. */}
+      <BadgeUnlocked />
     </div>
+    </BadgeProvider>
   )
 }
