@@ -12,7 +12,8 @@ import { useToast } from '../../context/ToastContext'
 import Sheet from '../../components/ui/Sheet'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
-import { GoalRing, IconGrip, fmtCompact } from './shared'
+import { GoalRing, IconGrip } from './shared'
+import { fmtCompact } from '../../lib/money'
 
 /**
  * Drag the goals into the order they are funded in.

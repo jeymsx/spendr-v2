@@ -1,8 +1,7 @@
 import { useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
-import { fmt } from '../../lib/money'
-import { fmtCompact } from './shared'
+import { fmt, fmtCompact } from '../../lib/money'
 import { SectionHeader } from './Tiles'
 
 // ── Upcoming ───────────────────────────────────────────────────────────────────

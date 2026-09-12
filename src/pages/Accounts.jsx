@@ -30,8 +30,9 @@ import BrandMark from '../components/BrandMark'
 import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark from '../components/SchemeMark'
 import {
-  fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole,
+  PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole,
 } from '../lib/accountMeta'
+import { fmt } from '../lib/money'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import Sheet from '../components/ui/Sheet'

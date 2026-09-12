@@ -10,25 +10,11 @@
 import { useEffect, useRef } from 'react'
 import { AccountChip } from '../../components/AccountPickerSheet'
 import { cx } from '../../components/ui/cx'
+import { fmtCompact } from '../../lib/money'
 
 // ── Money and dates ──────────────────────────────────────────────────────────
 
-const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-/** The full figure, signed. */
-export const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _php.format(Math.abs(n))
-}
-
-/** The short one, for anywhere a column is narrower than a peso amount. */
-export function fmtCompact(v) {
-  const abs = Math.abs(v ?? 0)
-  const sign = (v ?? 0) < 0 ? '−₱' : '₱'
-  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
-  if (abs >= 1_000) return sign + (abs / 1_000).toFixed(1) + 'K'
-  return sign + _php.format(abs)
-}
 
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 

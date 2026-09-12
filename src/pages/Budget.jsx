@@ -19,6 +19,7 @@ import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
+import { fmt } from '../lib/money'
 
 /**
  * The month's budget, in full.
@@ -33,12 +34,6 @@ import ProgressBar from '../components/ui/ProgressBar'
  * report a budget blown by a plan that has barely started. See
  * utils/scheduled.js; this is the same cutoff every other spend surface uses.
  */
-
-const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _php.format(Math.abs(n))
-}
 /* Whole pesos. A budget limit is a round number somebody typed - there are
    no centavos in "15,000" - and the two zeroes made the longest string on
    the line the least informative part of it. `fmt` stays for everything

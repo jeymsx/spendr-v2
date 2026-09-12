@@ -1,5 +1,5 @@
 import { accountBrand } from '../lib/accountBrands'
-import { fmt } from '../lib/accountMeta'
+import { fmt } from '../lib/money'
 import BrandMark from './BrandMark'
 import { IconChevronRight } from './icons'
 import { fieldFrame } from './ui/Field'

@@ -15,7 +15,8 @@ import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
 import { PH_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
-import { fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole } from '../../lib/accountMeta'
+import { PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole } from '../../lib/accountMeta'
+import { fmt } from '../../lib/money'
 import SubPage from '../../components/SubPage'
 import {
   PreviewCard, CardDesignGallery, ColorRail, SchemeRail,

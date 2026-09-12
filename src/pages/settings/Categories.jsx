@@ -32,7 +32,8 @@ import SectionLabel from '../../components/ui/SectionLabel'
 import SwatchRail from '../../components/ui/SwatchRail'
 import IconButton from '../../components/ui/IconButton'
 import Field from '../../components/ui/Field'
-import { CAT_COLORS, DEFAULT_CAT_NAMES, EMOJI_OPTIONS, fmt } from './shared'
+import { CAT_COLORS, DEFAULT_CAT_NAMES, EMOJI_OPTIONS } from './shared'
+import { fmt } from '../../lib/money'
 
 // ── Category row ───────────────────────────────────────────────────────────────
 

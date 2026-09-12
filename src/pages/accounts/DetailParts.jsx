@@ -9,7 +9,7 @@ import CategoryGlyph from '../../components/CategoryGlyph'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
-import { fmt } from '../../lib/accountMeta'
+import { fmt } from '../../lib/money'
 import { fmtTxDate, fmtTxTime } from './shared'
 
 // ── Account detail sheet ───────────────────────────────────────────────────────

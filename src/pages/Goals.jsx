@@ -19,8 +19,9 @@ import LimitMeter from '../components/LimitMeter'
 import GoalFormSheet from './goals/GoalFormSheet'
 import GoalSortSheet from './goals/GoalSortSheet'
 import {
-  GoalRing, IconPlus, IconReorder, fmt, fmtCompact, fmtTargetDate,
+  GoalRing, IconPlus, IconReorder, fmtTargetDate,
 } from './goals/shared'
+import { fmt, fmtCompact } from '../lib/money'
 
 /**
  * Savings goals.

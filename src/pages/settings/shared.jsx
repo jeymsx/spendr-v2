@@ -45,12 +45,6 @@ export const ACCENT_COLORS = [
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-export const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
-
 
 export function fmtRelTime(isoStr) {
   if (!isoStr) return 'Never'

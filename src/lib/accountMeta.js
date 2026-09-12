@@ -11,14 +11,6 @@
  * working everywhere it already did.
  */
 
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
-/** Peso, two decimals, with a real minus sign rather than a hyphen. */
-/** @param {number} [v] */
-export const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
 
 export const PALETTE = [
   '#10b981', '#2D9DFF', '#8b5cf6', '#06b6d4', '#f59e0b', '#ef4444', '#f97316',

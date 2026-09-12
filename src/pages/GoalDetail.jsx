@@ -13,7 +13,8 @@ import EmptyState from '../components/ui/EmptyState'
 import Skeleton, { SkeletonList } from '../components/ui/Skeleton'
 import { AccountChip } from '../components/AccountPickerSheet'
 import GoalFormSheet from './goals/GoalFormSheet'
-import { GoalRing, fmt, fmtCompact, fmtTargetDate, fmtDateFull } from './goals/shared'
+import { GoalRing, fmtTargetDate, fmtDateFull } from './goals/shared'
+import { fmt, fmtCompact } from '../lib/money'
 
 /**
  * One goal.
