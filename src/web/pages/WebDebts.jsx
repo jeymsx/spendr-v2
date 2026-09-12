@@ -3,7 +3,8 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 // Reused: ~290 lines of debt form plus the partial-payment flow, which writes
 // a transaction and adjusts the balance.
-import { DebtFormSheet, PaymentSheet } from '../../pages/Debts'
+import { DebtFormSheet } from '../../pages/debts/DebtFormSheet'
+import { PaymentSheet } from '../../pages/debts/PaymentSheet'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money } from '../components/WebPanel'
 
 const TABS = [

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getAvatarColor } from './Debts'
+import { getAvatarColor } from './debts/shared'
 
 /**
  * The debt avatars carry white initials at 14px bold, which needs 4.5:1.
