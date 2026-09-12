@@ -101,12 +101,22 @@ const TONE = {
  * The stroke grows the shape by half its width on every side, which is why
  * these numbers stop short of the box. */
 const HEX_OUTER = '32,4 56,18.4 56,45.6 32,60 8,45.6 8,18.4'
-const HEX_FACE  = '32,10 50.5,21 50.5,43 32,54 13.5,43 13.5,21'
 
-/* How far the inner face rides above centre. This is the whole depth cue:
-   the rim it leaves is 5 units at the top and 8 at the bottom, so the badge
-   reads as a solid object lit from above rather than as two flat hexagons. */
-const FACE_LIFT = 1.5
+/* The inner face: HEX_OUTER inset by 5.5 PERPENDICULARLY, which is not the
+   same as scaling it or subtracting 5.5 from each coordinate.
+ *
+ * Insetting a polygon moves every edge along its own normal, so each vertex
+ * travels along its angle bisector by d/cos(theta) - 1.167d at the top and
+ * bottom points, 1.131d at the four shoulders, decomposing to exactly d
+ * horizontally on the vertical sides. Getting that wrong is visible: the first
+ * version was eyeballed and came out at a slightly different aspect ratio from
+ * the outer, so the gap between the two hexagons was wider at the shoulders
+ * than at the sides.
+ *
+ * 5.5 is measured off the artwork rather than chosen. The rendered badges have
+ * a uniform rim: scanning six-figures.png gives 28px at the top, 26 at the
+ * bottom and 25-29 at the sides on a 303px shape, which is ~5.5 units here. */
+const HEX_FACE = '32,10.4 50.5,21.5 50.5,42.5 32,53.6 13.5,42.5 13.5,21.5'
 
 /**
  * The glyphs, on a 24x24 grid, every one centred on (12, 12).
@@ -334,7 +344,7 @@ export default function BadgeMark({
             some engines and the viewport in others, and this has to be exact
             in both. */}
         <clipPath id={`${gid}-clip`}>
-          <polygon points={HEX_FACE} transform={`translate(0 ${-FACE_LIFT})`} />
+          <polygon points={HEX_FACE} />
         </clipPath>
       </defs>
 
@@ -349,11 +359,15 @@ export default function BadgeMark({
           strokeLinejoin="round"
         />
 
-        {/* The raised face, lifted off centre so the bottom rim is thicker
-            than the top. That asymmetry is the depth. */}
+        {/* The inner face, concentric with the rim.
+            It used to ride 1.5 units high, on the theory that a thicker bottom
+            rim reads as depth. Measured against the artwork that was simply
+            wrong - the real badges have a uniform rim, and they get their
+            depth from the gradient and the reflection, not from an off-centre
+            frame. At 1.5 the bottom rim was 60% thicker than the top and read
+            as a mistake rather than as lighting. */}
         <polygon
           points={HEX_FACE}
-          transform={`translate(0 ${-FACE_LIFT})`}
           fill={`url(#${gid}-face)`}
           stroke={`url(#${gid}-face)`}
           strokeWidth="4"
@@ -376,11 +390,9 @@ export default function BadgeMark({
           clipPath={`url(#${gid}-clip)`}
         />
 
-        {/* One transform for all ten, which is only possible because every
+        {/* One transform for all twenty, which is only possible because every
             glyph above is centred on (12, 12) in its own grid. It lands the
-            glyph centre on the FACE's centre - (32, 32) less the lift - so
-            the mark sits on the raised surface rather than on the whole
-            badge, which would read one and a half units low.
+            glyph centre on (32, 32), which is the centre of both hexagons.
 
             The stroke is the badge's own hue lifted almost to white, not
             white. Pure white makes the glyph a separate object stuck on top
@@ -388,7 +400,7 @@ export default function BadgeMark({
             material, which is what the rendered set does with its faceted
             marks and what this has to match while it stands in for them. */}
         <g
-          transform={`translate(${32 - 12 * 1.4} ${32 - FACE_LIFT - 12 * 1.4}) scale(1.4)`}
+          transform={`translate(${32 - 12 * 1.4} ${32 - 12 * 1.4}) scale(1.4)`}
           stroke={earned ? shade(from, 0.76) : '#F1F5F9'}
           strokeWidth="1.6"
           strokeLinecap="round"
