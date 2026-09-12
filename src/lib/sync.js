@@ -246,6 +246,13 @@ export function templateToRow(r, userId) {
     account:     r.account      ?? null,
     from_account: r.fromAccount ?? null,
     to_account:  r.toAccount    ?? null,
+    /* Spread rather than `created_at: r.createdAt ?? null`.
+
+       The column defaults to now(), and a default only applies when the
+       column is OMITTED - an explicit null stores a null. So a template with
+       no local createdAt has to leave the key out entirely to keep the
+       behaviour it has today, which is to be stamped by the server. */
+    ...(r.createdAt ? { created_at: r.createdAt } : {}),
     updated_at:  r.updatedAt ?? r.createdAt ?? new Date().toISOString(),
   }
 }
@@ -566,6 +573,11 @@ export async function syncToSupabase(userId) {
  *  @type {Record<string, string[]>} */
 const OPTIONAL_COLS = {
   accounts: ['design', 'custom_color'],
+  /* created_at is declared in 003_schema.sql, so it should be there - but a
+     live table can have drifted from the migrations, and this is the existing
+     net for exactly that. If it is missing the push drops the column and
+     retries instead of failing template sync outright. */
+  templates: ['created_at'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,

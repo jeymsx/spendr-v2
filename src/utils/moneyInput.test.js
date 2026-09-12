@@ -79,29 +79,27 @@ describe('moneyChangeHandler', () => {
   })
 
   /**
-   * A REAL BUG, pinned rather than fixed.
+   * The regression test for a real bug.
    *
-   * A second decimal point escapes the two-decimal cap: "12.34.56" becomes
-   * "12.3456", and that is what parseMoney hands the ledger - a sub-centavo
-   * amount from a field that is supposed to refuse one.
+   * A second decimal point used to escape the two-decimal cap: "12.34.56"
+   * became "12.3456", and parseMoney handed that sub-centavo amount to the
+   * ledger from a field whose whole job is to refuse one.
    *
-   * The cause is one stale variable. `parts` is computed once from the raw
-   * value, and the branch that joins the extra points away does not recompute
-   * it, so the next line still sees `parts.length === 3` and its
-   * `parts.length === 2` guard never fires:
+   * One stale variable. `parts` was computed once from the raw value, so
+   * after the extra points were joined away it still reported the original
+   * count, and the guard below - which only fires at a length of exactly 2 -
+   * never ran:
    *
-   *     const parts = v.split('.')                                   // 3 parts
+   *     const parts = v.split('.')                                   // 3
    *     if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('')
    *     if (parts.length === 2 && parts[1].length > 2) ...           // skipped
    *
-   * Left alone because fixing it changes what the field accepts, which is a
-   * behaviour change to every amount in the app and not mine to make
-   * unattended. One line - re-split `v` after the join - and this test flips
-   * to expecting '12.34'.
+   * Re-splitting after the join is the fix. These are the two inputs that
+   * used to get through.
    */
-  it('lets a SECOND decimal point past the two-decimal cap', () => {
-    expect(typed('12.34.56')).toBe('12.3456')
-    expect(typed('1.2.3.4')).toBe('1.234')
+  it('holds the two-decimal cap even against a second decimal point', () => {
+    expect(typed('12.34.56')).toBe('12.34')
+    expect(typed('1.2.3.4')).toBe('1.23')
   })
 
   it('strips a leading zero rather than writing 0123', () => {

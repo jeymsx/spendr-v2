@@ -19,8 +19,17 @@ export function numToMoneyStr(num) {
 export function moneyChangeHandler(setState) {
   return (/** @type {{target: {value: string}}} */ e) => {
     let v = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
-    const parts = v.split('.')
-    if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('')
+    /* Re-split after the join, which is the whole bug this used to have.
+       `parts` was computed once from the raw value, so after the extra points
+       were joined away it still reported the ORIGINAL count - and the
+       two-decimal guard below, which only fires at a length of exactly 2,
+       never ran. Typing "12.34.56" produced "12.3456", and parseMoney handed
+       that sub-centavo amount straight to the ledger. */
+    let parts = v.split('.')
+    if (parts.length > 2) {
+      v = parts[0] + '.' + parts.slice(1).join('')
+      parts = v.split('.')
+    }
     if (parts.length === 2 && parts[1].length > 2) v = parts[0] + '.' + parts[1].slice(0, 2)
     const intPart = v.split('.')[0]
     if (intPart.length > 10) return

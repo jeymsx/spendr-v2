@@ -181,22 +181,23 @@ describe('categories, debts, bills and templates', () => {
   })
 
   /**
-   * A found asymmetry, pinned rather than fixed.
+   * templateToRow used to drop created_at while rowToTemplate read it, so a
+   * template's creation date did not survive a round trip.
    *
-   * templateToRow does not send created_at, but rowToTemplate reads it - so a
-   * template's local createdAt does not survive a round trip. It is harmless
-   * today for two reasons: the remote column defaults to now(), so the value
-   * becomes the sync time rather than null, and nothing in the app reads a
-   * template's createdAt at all - Templates.jsx writes it and sorts by name.
-   *
-   * Left alone because changing what a push writes is a behaviour change to
-   * the sync path, and this test is here to make the asymmetry visible rather
-   * than to bless it.
+   * The key is spread in rather than set to null, and that distinction is the
+   * test: the remote column defaults to now(), and a Postgres default applies
+   * only when the column is OMITTED. Sending an explicit null would store a
+   * null and make the round trip worse than the bug.
    */
-  it('does NOT carry a template createdAt to the server', () => {
+  it('carries a template createdAt to the server and back', () => {
     const row = templateToRow({ name: 'Rent', type: 'expense', createdAt: 'a' }, UID)
-    expect(/** @type {Record<string, any>} */ (row).created_at).toBeUndefined()
-    expect(rowToTemplate(row).createdAt).toBeUndefined()
+    expect(/** @type {Record<string, any>} */ (row).created_at).toBe('a')
+    expect(rowToTemplate(row).createdAt).toBe('a')
+  })
+
+  it('omits created_at entirely when there is none, so the server default applies', () => {
+    const row = templateToRow({ name: 'Rent', type: 'expense' }, UID)
+    expect('created_at' in row).toBe(false)
   })
 })
 
