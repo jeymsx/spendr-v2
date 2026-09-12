@@ -294,7 +294,9 @@ export default function Settings() {
             label="Skip confirmation"
             sublabel="Save instantly, no review step"
             right={<ToggleSwitch on={skipConfirm} />}
-            onTap={() => db.meta.put({ key: 'skipConfirm', value: !skipConfirm })}
+            onTap={() => db.meta.put({
+              key: 'skipConfirm', value: !skipConfirm, updatedAt: new Date().toISOString(),
+            })}
           />
           <RowDivider />
           {/* Without this, choosing "switch to mobile" in the desktop sidebar

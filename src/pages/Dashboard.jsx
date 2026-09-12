@@ -12,7 +12,6 @@ import {
 } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
 import { scheduledCutoff } from '../utils/scheduled'
-import { allocateGoals } from '../lib/goals'
 import { cardGradient } from '../lib/accentTheme'
 import IconButton from '../components/ui/IconButton'
 import BadgeChip from '../components/BadgeChip'
@@ -21,6 +20,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { fmt } from '../lib/money'
 import {
   ContextHint, getContextHint, getGreeting, monthPrefix, useCountUp,
+  quickActionCounts,
 } from './dashboard/shared'
 import { useWalletClip } from './dashboard/wallet'
 import DashboardSkeleton from './dashboard/Skeleton'
@@ -256,27 +256,13 @@ export default function Dashboard() {
    *            Archiving or spending it clears it, and until you do, money is
    *            sitting there having quietly finished its job.
    */
-  const actionCounts = useMemo(() => {
-    // One boundary for all three, so two badges cannot disagree about what
-    // "today" is if the clock ticks over mid-render.
-    const today = new Date(); today.setHours(0, 0, 0, 0)
-    const onOrBefore = (iso) => {
-      if (!iso) return false
-      const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`)
-      return !Number.isNaN(d.getTime()) && d <= today
-    }
-
-    const bills = (recurring ?? [])
-      .filter(r => r.active && onOrBefore(r.nextDate)).length
-
-    const debtCount = (debts ?? []).filter(d =>
-      Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)) > 0 && onOrBefore(d.dueDate)).length
-
-    const alloc = allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [] })
-    const goals = alloc.active.filter(g => g.complete).length
-
-    return { bills, debts: debtCount, goals }
-  }, [recurring, debts, goalRows, accounts])
+  const actionCounts = useMemo(
+    () => quickActionCounts({
+      recurring: recurring ?? [], debts: debts ?? [],
+      goals: goalRows ?? [], accounts: accounts ?? [],
+    }),
+    [recurring, debts, goalRows, accounts],
+  )
 
   const creditOutstanding = useMemo(() =>
     (accounts || [])

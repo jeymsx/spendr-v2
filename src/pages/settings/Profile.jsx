@@ -132,8 +132,11 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
   async function handleSave() {
     setSaving(true)
     try {
-      await db.meta.put({ key: 'displayName', value: name.trim() })
-      await db.meta.put({ key: 'currency',    value: currency })
+      /* Stamped, like every other preference write: pullPreferences takes
+         the newer of the two sides and cannot do that without a time. */
+      const now = new Date().toISOString()
+      await db.meta.put({ key: 'displayName', value: name.trim(), updatedAt: now })
+      await db.meta.put({ key: 'currency',    value: currency,    updatedAt: now })
       /* Straight to onClose rather than through the old close(), which
          opened with `if (saving) return`. That guard only ever passed here
          because it read the pre-click `saving` out of a stale closure;

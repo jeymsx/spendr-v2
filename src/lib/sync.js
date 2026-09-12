@@ -389,13 +389,22 @@ async function pushPreferences(userId) {
     db.meta.get('skipConfirm'),
   ])
   const accentColor = localStorage.getItem('accentColor') ?? '#2D9DFF'
+  /* The newest of the three local stamps, not `now`.
+     
+     Sending `now` would make every push look newer than every pull, which
+     defeats the comparison on the other side the moment two devices are in
+     play - the second device's pull would always lose to whichever one
+     synced last, regardless of who actually changed a setting. */
+  const localTs = [nameMeta, currencyMeta, skipMeta]
+    .map(m => (m?.updatedAt ? new Date(m.updatedAt).getTime() : 0))
+    .reduce((a, b) => Math.max(a, b), 0)
   const row = {
     user_id:      userId,
     display_name: nameMeta?.value ?? null,
     currency:     currencyMeta?.value ?? 'PHP',
     accent_color: accentColor,
     skip_confirm: skipMeta?.value ?? false,
-    updated_at:   new Date().toISOString(),
+    updated_at:   new Date(localTs || Date.now()).toISOString(),
   }
   const { error } = await supabase
     .from('user_preferences')
@@ -404,7 +413,7 @@ async function pushPreferences(userId) {
 }
 
 /** @param {string} userId */
-async function pullPreferences(userId) {
+export async function pullPreferences(userId) {
   const { data, error } = await supabase
     .from('user_preferences')
     .select('*')
@@ -415,18 +424,40 @@ async function pullPreferences(userId) {
     throw new Error(`user_preferences pull: ${error.message}`)
   }
   if (!data) return
-  if (data.display_name) {
-    await db.meta.put({ key: 'displayName', value: data.display_name })
-    await db.meta.put({ key: 'userName',    value: data.display_name })
+
+  /* ── Newer wins, which every other table already did and this did not ──
+     
+     This used to overwrite local unconditionally, and fullSync pulls BEFORE
+     it pushes - so a preference changed since the last sync was reverted by
+     the next one and then pushed back in its reverted state. Turn on "Skip
+     confirmation", switch away from the app and back, and it is off again on
+     both devices. Same for the display name, the currency and the accent.
+     
+     The fix is the rule pullSimpleTable has always used - compare updated_at
+     and take the newer - which needs the local side to carry a time, so the
+     three writers stamp one now. A local row with no stamp counts as 0 and
+     loses, which is right: it predates this and the remote value is all the
+     information there is. */
+  const remoteTs = data.updated_at ? new Date(data.updated_at).getTime() : 0
+  /** @param {string} key */
+  const localIsNewer = async (key) => {
+    const row = await db.meta.get(key)
+    const localTs = row?.updatedAt ? new Date(row.updatedAt).getTime() : 0
+    return localTs > remoteTs
   }
-  if (data.currency) {
-    await db.meta.put({ key: 'currency', value: data.currency })
+
+  if (data.display_name && !(await localIsNewer('displayName'))) {
+    await db.meta.put({ key: 'displayName', value: data.display_name, updatedAt: data.updated_at })
+    await db.meta.put({ key: 'userName',    value: data.display_name, updatedAt: data.updated_at })
+  }
+  if (data.currency && !(await localIsNewer('currency'))) {
+    await db.meta.put({ key: 'currency', value: data.currency, updatedAt: data.updated_at })
   }
   if (data.accent_color) {
     localStorage.setItem('accentColor', data.accent_color)
   }
-  if (data.skip_confirm != null) {
-    await db.meta.put({ key: 'skipConfirm', value: data.skip_confirm })
+  if (data.skip_confirm != null && !(await localIsNewer('skipConfirm'))) {
+    await db.meta.put({ key: 'skipConfirm', value: data.skip_confirm, updatedAt: data.updated_at })
   }
 }
 

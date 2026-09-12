@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import { allocateGoals } from '../../lib/goals'
 import { IconBank, IconCard, IconPhone, IconWallet, IconWarning, IconBell } from '../../components/icons'
 import CategoryGlyph from '../../components/CategoryGlyph'
 
@@ -136,4 +137,67 @@ export const ACCOUNT_ICON = {
 export function monthPrefix() {
   const n = new Date()
   return `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
+}
+
+// ── Quick-action badges ──────────────────────────────────────────────────────
+
+/**
+ * How many days ahead a badge starts warning.
+ *
+ * Seven, because that is what the rest of the app already means by "soon":
+ * `dueStatus()` in utils/recurring tones 1-7 days amber, and the Debts page
+ * has a "Due this week" stat counting exactly this window.
+ *
+ * It used to be zero - overdue and due-today only - which made the badge mean
+ * "late" while every other surface was already warning in amber a week out.
+ * A bill you could see flagged on the Bills page had no dot on the home
+ * screen until the morning it was due, which is the day it is least useful.
+ */
+export const DUE_SOON_DAYS = 7
+
+/**
+ * The three numbers on the quick-action row.
+ *
+ *   Bills  - an active bill due within the window, or already past it.
+ *   Debts  - one with money still owed, due within the window or past it.
+ *   Goals  - a goal whose target the real balance has already reached.
+ *            Archiving or spending it clears it, and until you do, money is
+ *            sitting there having quietly finished its job.
+ *
+ * Pure, and takes `today`, so the badge that told a user their debt was
+ * invisible the day before it was due can be tested rather than reasoned
+ * about. One boundary is computed for all three, so two badges cannot
+ * disagree about what "today" is if the clock ticks over mid-render.
+ *
+ * @param {object} input
+ * @param {Array<Partial<Recurring>>} [input.recurring]
+ * @param {Array<Partial<Debt>>} [input.debts]
+ * @param {Array<Partial<Goal>>} [input.goals]
+ * @param {Array<Partial<Account>>} [input.accounts]
+ * @param {Date} [input.today]
+ * @returns {{bills: number, debts: number, goals: number}}
+ */
+export function quickActionCounts({
+  recurring = [], debts = [], goals = [], accounts = [], today = new Date(),
+} = {}) {
+  const start = new Date(today)
+  start.setHours(0, 0, 0, 0)
+  const horizon = new Date(start)
+  horizon.setDate(start.getDate() + DUE_SOON_DAYS)
+
+  /** Due inside the window, or already past it. */
+  const dueSoon = (iso) => {
+    if (!iso) return false
+    const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`)
+    return !Number.isNaN(d.getTime()) && d <= horizon
+  }
+
+  const bills = recurring.filter(r => r.active && dueSoon(r.nextDate)).length
+
+  const debtCount = debts.filter(d =>
+    Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)) > 0 && dueSoon(d.dueDate)).length
+
+  const alloc = allocateGoals({ goals, accounts })
+
+  return { bills, debts: debtCount, goals: alloc.active.filter(g => g.complete).length }
 }
