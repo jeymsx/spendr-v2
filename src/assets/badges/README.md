@@ -14,5 +14,6 @@ manifest to update and no flag to flip.
 A badge with no file here keeps its drawn SVG form, so a partial set is fine and
 the two can coexist indefinitely.
 
-Transparent background, roughly 300px tall, 8:9-ish. See `BADGES.md` at the repo
-root for the prompt that generates them.
+Square, transparent background. The drawn stand-in is a 64x64 hexagon, so a
+square crop drops straight in at the same size. See `BADGES.md` at the repo root
+for the prompt that generates them.

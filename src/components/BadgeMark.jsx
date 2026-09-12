@@ -57,100 +57,142 @@ const TONE = {
   gold:   ['#FDD64B', '#E67700'],
 }
 
-/* The shield, on a 0 0 64 72 box.
+/* The hexagon, on a 0 0 64 64 box.
  *
  * Drawn once and shared by all ten, because the thing that makes a set of
- * badges look like a set is the silhouette, not the glyph. Corner radius 8 at
- * the top, tapering to a point at the bottom centre. */
-const SHIELD = 'M6 14a8 8 0 0 1 8-8h36a8 8 0 0 1 8 8v22c0 13-9 22-26 30C15 58 6 49 6 36z'
+ * badges look like a set is the silhouette, not the glyph.
+ *
+ * Flat top and bottom with points left and right, which is the orientation
+ * that tiles and the one that reads as a badge rather than as a warning sign.
+ * Slightly taller than a true hexagon (half-width 26 against half-height 28) -
+ * a mathematically correct flat-top hex is 15% wider than tall and reads as
+ * squashed beside square tiles.
+ *
+ * ── The corners are rounded by the stroke, not by the path ──
+ *
+ * Filling AND stroking the same polygon in the same paint, with a round
+ * linejoin, rounds every vertex for free and keeps the geometry six plain
+ * points. Writing the radii into the path means twelve curve commands that
+ * have to be recomputed by hand the moment the proportions change, and the
+ * two faces below would each need their own set.
+ *
+ * The stroke grows the shape by half its width on every side, which is why
+ * these numbers stop short of the box. */
+const HEX_OUTER = '19,4 45,4 58,32 45,60 19,60 6,32'
+const HEX_FACE  = '21.5,10 42.5,10 52.5,32 42.5,54 21.5,54 11.5,32'
+
+/* How far the inner face rides above centre. This is the whole depth cue:
+   the rim it leaves is 5 units at the top and 8 at the bottom, so the badge
+   reads as a solid object lit from above rather than as two flat hexagons. */
+const FACE_LIFT = 1.5
 
 /**
- * The glyphs, on a 24x24 grid with a 2px stroke, so they carry the same weight
- * as the rest of the app's icons even though they are only ever seen white on
- * a saturated ground. Stroke-only, no fills: a filled glyph inside a filled
- * shield loses its edges at 40px.
+ * The glyphs, on a 24x24 grid, every one centred on (12, 12).
+ *
+ * ── Why they were redrawn ──
+ *
+ * The first set was ten icons rather than one set. Measured in the browser,
+ * their bounding boxes ranged from 11 x 14.5 (the flame) to 18 x 20.4 (the
+ * repeat arrows) - a 29% spread in the largest dimension - and two of them
+ * were not centred on their own box at all, the flame sitting 1.7 units high.
+ * Inside identical shields that reads as the shields being wrong, because the
+ * silhouette is the constant your eye measures against.
+ *
+ * So each one now fills the live area to the OPTICAL sizes rather than the
+ * same numeric box, which is not the same thing: a circle inscribed in an
+ * 18-unit square encloses ~21% less area than the square and reads smaller,
+ * so round forms overshoot. Squares get 18, circles 20 across, wide forms
+ * 20 x 16, tall or pointed ones 16 x 20.
+ *
+ * Stroke-only, no fills: a filled glyph inside a filled shield loses its
+ * edges at 40px. 1.7 units, which lands at ~2.2 shield units through the
+ * transform below - the same visual weight as the app's 2px icons.
  */
 const GLYPH = {
-  /* Not the peso SIGN - a currency mark inside a medal reads as a price tag.
-     A coin with the double bar of the peso across it. */
+  /* Not the peso SIGN alone - a bare currency mark inside a medal reads as a
+     price tag. A coin, with the mark on its face. Circle, so it overshoots
+     the square forms: r 9.5 is 19 across plus the stroke. */
   peso: (
     <>
-      <circle cx="12" cy="12" r="8" />
-      <path d="M9.5 16.5V8h3.2a2.8 2.8 0 0 1 0 5.6H9.5" />
-      <path d="M8 11h6.5M8 13.4h6.5" />
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M9.4 17.2V6.9h3.4a3.3 3.3 0 0 1 0 6.6H9.4" />
+      <path d="M6.7 10h8.6M6.7 12.8h7.4" />
     </>
   ),
-  flame: <path d="M12 3c3.5 3.5 5.5 6 5.5 9a5.5 5.5 0 0 1-11 0c0-1.6.7-3 2-4.4.4 1.4 1.2 2.2 2.2 2.4C10.2 8 10.8 5.4 12 3z" />,
+  /* Pointed, so it takes the full 20 of height - a tapering form loses the
+     most apparent mass and would otherwise read as the smallest of the ten. */
+  flame: <path d="M12 2.4c4.6 4.6 7.2 8.1 7.2 11.6a7.2 7.2 0 0 1-14.4 0c0-2.1.9-4 2.7-5.9.5 1.8 1.6 2.9 2.9 3.2C9.5 8.5 10.4 5.1 12 2.4z" />,
   stack: (
     <>
-      <path d="M12 3 3 7.5 12 12l9-4.5z" />
-      <path d="M3 12.5 12 17l9-4.5" />
-      <path d="M3 17.5 12 22l9-4.5" />
+      <path d="M12 3.2 3.4 7.6 12 12l8.6-4.4z" />
+      <path d="M3.4 12.2 12 16.6l8.6-4.4" />
+      <path d="M3.4 16.4 12 20.8l8.6-4.4" />
     </>
   ),
   /* A gauge, not a shield. The badge is ALREADY a shield, and a shield inside
      one reads as a rendering fault - the glyph has to say something the
-     silhouette does not. An arc with the needle low says "inside the limit",
-     which is the thing Under Budget is about. */
+     silhouette does not. The needle low says "inside the limit", which is
+     what Under Budget is about. */
   gauge: (
     <>
-      <path d="M3.5 17.5a9 9 0 1 1 17 0" />
-      <path d="M12 17.5 8 11.5" />
-      <circle cx="12" cy="17.5" r="1.2" />
+      <path d="M2.8 16a9.2 9.2 0 1 1 18.4 0" />
+      <path d="M12 16 7.2 8.8" />
+      <circle cx="12" cy="16" r="1.4" />
     </>
   ),
   trend: (
     <>
-      <path d="M3.5 16.5 9 11l4 4 7.5-7.5" />
-      <path d="M15.5 7.5h5v5" />
+      <path d="M2.8 17.4 9 11.2l4 4 8.2-8.2" />
+      <path d="M15.4 7.2h5.8v5.8" />
     </>
   ),
-  /* The notch has to be deep or the pennant reads as a rectangle with a
-     dent in it, which is what a shallower one did. */
+  /* The notch has to be deep, or the pennant reads as a rectangle with a dent
+     in it - which is what the shallower first version did. The pole starts at
+     5.4 rather than at the grid edge so the whole mark centres: a flag is
+     asymmetric, and anchoring the pole to the left would hang the glyph off
+     the shield's centreline. */
   flag: (
     <>
-      <path d="M6.5 20.5V4" />
-      <path d="M6.5 4.5h11.5l-4 4 4 4H6.5" />
+      <path d="M5.4 20V4" />
+      <path d="M5.4 4.6h13.2l-4.4 4.4 4.4 4.4H5.4" />
     </>
   ),
   check: (
     <>
-      <circle cx="12" cy="12" r="8.5" />
-      <path d="M8.5 12.2l2.6 2.6 4.9-5.3" />
+      <circle cx="12" cy="12" r="9.5" />
+      <path d="M7.8 12.3l2.9 2.9 5.5-6" />
     </>
   ),
+  /* Two arcs chasing each other, each ending in its own arrowhead. The first
+     version drew four separate strokes that read as scattered marks rather
+     than one loop, and stood 20.4 tall against an 18 grid. */
   repeat: (
     <>
-      <path d="M4 9.5A6 6 0 0 1 10 4h4.5" />
-      <path d="M12.5 1.8 15.2 4l-2.7 2.2" />
-      <path d="M20 14.5a6 6 0 0 1-6 5.5H9.5" />
-      <path d="M11.5 22.2 8.8 20l2.7-2.2" />
+      <path d="M20.2 11.4a8.2 8.2 0 0 1-14 6.2" />
+      <path d="M3.8 12.6a8.2 8.2 0 0 1 14-6.2" />
+      <path d="M3.4 19.6V15.2h4.4" />
+      <path d="M20.6 4.4V8.8h-4.4" />
     </>
   ),
   cards: (
     <>
-      <rect x="3" y="8" width="14" height="10" rx="2.5" />
-      <path d="M7 5.5h10.5A3.5 3.5 0 0 1 21 9v6" />
-      <path d="M3 11.5h14" />
+      <rect x="2.6" y="8" width="15" height="11" rx="2.6" />
+      <path d="M7 5h11.4a3 3 0 0 1 3 3v7" />
+      <path d="M2.6 11.6h15" />
     </>
   ),
-  crown: (
-    <>
-      <path d="M3.5 7.5 7 13l5-8 5 8 3.5-5.5V18a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 18z" />
-    </>
-  ),
+  crown: <path d="M2.6 7 7 13.4l5-8.4 5 8.4L21.4 7v10.6a1.6 1.6 0 0 1-1.6 1.6H4.2a1.6 1.6 0 0 1-1.6-1.6z" />,
 }
 
 export default function BadgeMark({
   badge,
   earned = false,
-  /** Rendered box, in px. The shield keeps its 64:72 ratio inside it. */
+  /** Rendered box, in px. The badge is square. */
   size = 72,
   className = '',
 }) {
   const art = ART_BY_KEY[badge.key]
   const [from, to] = TONE[badge.tone] ?? TONE.slate
-  const h = Math.round((size * 72) / 64)
 
   if (art) {
     return (
@@ -159,7 +201,7 @@ export default function BadgeMark({
         alt=""
         aria-hidden="true"
         width={size}
-        height={h}
+        height={size}
         /* grayscale rather than a lower opacity: a washed-out colour badge
            beside a full-colour one reads as a rendering fault, while a grey
            one reads as "not yet". */
@@ -168,63 +210,122 @@ export default function BadgeMark({
     )
   }
 
-  /* The drawn form. A gradient id has to be unique per badge or the first
-     one on the page wins for all ten - they share a document. */
+  /* The drawn form. Gradient and clip ids have to be unique per badge or the
+     first one on the page wins for all ten - they share a document. */
   const gid = `badge-${badge.key}`
+  const rim  = earned ? to   : '#94A3B8'
+  const face = earned ? from : '#CBD5E1'
 
   return (
     <svg
       width={size}
-      height={h}
-      viewBox="0 0 64 72"
+      height={size}
+      viewBox="0 0 64 64"
       fill="none"
       aria-hidden="true"
       className={className}
     >
       <defs>
-        <linearGradient id={`${gid}-g`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={earned ? from : '#CBD5E1'} />
-          <stop offset="100%" stopColor={earned ? to : '#94A3B8'} />
+        {/* Diagonal, not vertical. A vertical ramp on a hexagon reads as a
+            flat sticker; light arriving from the upper left is what makes it
+            read as an object with a top face and a shaded side. */}
+        <linearGradient id={`${gid}-rim`} x1="0" y1="0" x2="0.9" y2="1">
+          <stop offset="0%" stopColor={rim} />
+          <stop offset="100%" stopColor={earned ? shade(to, -0.22) : '#7A8699'} />
+        </linearGradient>
+        <linearGradient id={`${gid}-face`} x1="0.05" y1="0" x2="0.85" y2="1">
+          <stop offset="0%" stopColor={earned ? shade(from, 0.16) : '#E2E8F0'} />
+          <stop offset="55%" stopColor={face} />
+          <stop offset="100%" stopColor={earned ? to : '#B3BECC'} />
         </linearGradient>
         {/* A real clipPath element, not a CSS clip-path: percentage units in
             the CSS property resolve against the element's own bounding box in
             some engines and the viewport in others, and this has to be exact
             in both. */}
-        <clipPath id={`${gid}-c`}>
-          <path d={SHIELD} />
+        <clipPath id={`${gid}-clip`}>
+          <polygon points={HEX_FACE} transform={`translate(0 ${-FACE_LIFT})`} />
         </clipPath>
       </defs>
 
-      <path
-        d={SHIELD}
-        fill={`url(#${gid}-g)`}
-        className={earned ? '' : 'opacity-40 dark:opacity-25'}
-      />
+      <g className={earned ? '' : 'opacity-45 dark:opacity-30'}>
+        {/* The rim. Fill and stroke in the same paint with a round linejoin -
+            see HEX_OUTER for why the corners are rounded this way. */}
+        <polygon
+          points={HEX_OUTER}
+          fill={`url(#${gid}-rim)`}
+          stroke={`url(#${gid}-rim)`}
+          strokeWidth="5"
+          strokeLinejoin="round"
+        />
 
-      {/* The sheen: one soft ellipse across the top, clipped to the shield.
-          It is what stops a flat gradient reading as a coloured sticker.
-          Inside the silhouette, never a shadow cast behind it. */}
-      <ellipse
-        cx="32" cy="2" rx="34" ry="26"
-        fill="white"
-        opacity={earned ? 0.18 : 0.07}
-        clipPath={`url(#${gid}-c)`}
-      />
+        {/* The raised face, lifted off centre so the bottom rim is thicker
+            than the top. That asymmetry is the depth. */}
+        <polygon
+          points={HEX_FACE}
+          transform={`translate(0 ${-FACE_LIFT})`}
+          fill={`url(#${gid}-face)`}
+          stroke={`url(#${gid}-face)`}
+          strokeWidth="4"
+          strokeLinejoin="round"
+        />
 
-      {/* 24px glyph at 1.35 in a 64px shield, centred on (32, 32) - the
-          shield's visual centre of mass, which sits above its geometric one
-          because the bottom half tapers to a point. */}
-      <g
-        transform="translate(15.8 15.8) scale(1.35)"
-        stroke="white"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        fill="none"
-        opacity={earned ? 0.95 : 0.6}
-      >
-        {GLYPH[badge.glyph] ?? GLYPH.check}
+        {/* The gloss: one hard-edged wedge over the upper left, clipped to the
+            face. Hard-edged rather than blurred on purpose - it reads as a
+            reflection on a facet, which is the look, and a feGaussianBlur here
+            would cost a filter pass on ten elements at once.
+
+            It stops at y 42 rather than running the full height. A full-length
+            band put its edge straight through the middle of the glyph, and a
+            seam crossing the mark reads as a rendering fault rather than as
+            light. */}
+        <polygon
+          points="4,-6 31,-6 15,42 4,42"
+          fill="white"
+          opacity={earned ? 0.18 : 0.09}
+          clipPath={`url(#${gid}-clip)`}
+        />
+
+        {/* One transform for all ten, which is only possible because every
+            glyph above is centred on (12, 12) in its own grid. It lands the
+            glyph centre on the FACE's centre - (32, 32) less the lift - so
+            the mark sits on the raised surface rather than on the whole
+            badge, which would read one and a half units low.
+
+            The stroke is the badge's own hue lifted almost to white, not
+            white. Pure white makes the glyph a separate object stuck on top
+            of the badge; a tint of the ground makes it part of the same
+            material, which is what the rendered set does with its faceted
+            marks and what this has to match while it stands in for them. */}
+        <g
+          transform={`translate(${32 - 12 * 1.4} ${32 - FACE_LIFT - 12 * 1.4}) scale(1.4)`}
+          stroke={earned ? shade(from, 0.76) : '#F1F5F9'}
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          fill="none"
+        >
+          {GLYPH[badge.glyph] ?? GLYPH.check}
+        </g>
       </g>
     </svg>
   )
+}
+
+/**
+ * Lighten or darken a hex by `amount` (-1 to 1), for the third and fourth
+ * stops the two gradients need.
+ *
+ * TONE carries two colours per badge because two is what a designer picks and
+ * what stays legible when they are hand-written. The rim's shadow and the
+ * face's highlight are not further decisions - they are the same hue moved,
+ * so they are derived rather than added to the table, where they would be
+ * forty values nobody could keep in step.
+ */
+function shade(hex, amount) {
+  const n = parseInt(hex.slice(1), 16)
+  const ch = [(n >> 16) & 255, (n >> 8) & 255, n & 255].map(v => {
+    const next = amount >= 0 ? v + (255 - v) * amount : v * (1 + amount)
+    return Math.max(0, Math.min(255, Math.round(next)))
+  })
+  return `#${ch.map(v => v.toString(16).padStart(2, '0')).join('')}`
 }

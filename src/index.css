@@ -1659,9 +1659,10 @@ html.web.dark input[type="date"] {
 
    The one header control that is not a disc. It wears IconButton's `surface`
    paint - the same white/hairline in light, the same primary wash in dark - so
-   it has the settings chip's weight beside it, but the paint is on a shield
-   path rather than a rounded box, which is the whole point: the shape says
-   what it opens before you read anything.
+   it has the settings chip's weight beside it, but the paint is on a hexagon
+   rather than a rounded box, which is the whole point: the shape says what it
+   opens before you read anything, and it is the same silhouette the badges
+   inside wear.
 
    Fill and stroke rather than background and border, because the surface here
    IS an SVG path. Kept in CSS instead of Tailwind fill-* utilities so the dark

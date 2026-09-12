@@ -19,7 +19,7 @@ import { useBadges } from '../hooks/useBadges'
  *
  * ── The count is inside it ──
  *
- * A shield with nothing in it is decoration and gets ignored. The number is
+ * A hexagon with nothing in it is decoration and gets ignored. The number is
  * the reason to tap: it says there is something here and that it has a size.
  * At zero it still shows "0" rather than hiding - a new user with no badges is
  * exactly who the invitation is for, and an icon that appears only once you
@@ -40,20 +40,23 @@ export default function BadgeChip({ className = '' }) {
         className,
       ].join(' ')}
     >
-      {/* 36x36 box, 32x36 shield centred in it - the taper needs the full
-          height, and matching IconButton's 36 on BOTH axes would either
-          squash the point or push the shoulders wider than the disc. */}
-      <svg width="36" height="36" viewBox="0 0 32 36" fill="none" aria-hidden="true" className="absolute inset-0 m-auto">
-        <path
-          d="M2 8a6 6 0 0 1 6-6h16a6 6 0 0 1 6 6v10c0 7.5-4.7 12.4-14 16C6.7 30.4 2 25.5 2 18z"
+      {/* The same hexagon the badges themselves wear, at 36px so it sits on
+          IconButton's baseline. Corners rounded by the stroke rather than by
+          the path - see HEX_OUTER in BadgeMark for why. The stroke is doing
+          two jobs here, the radius and the hairline, so it cannot be thinned
+          without squaring the corners off. */}
+      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true" className="absolute inset-0 m-auto">
+        <polygon
+          points="11,4 25,4 32,18 25,32 11,32 4,18"
           className="badge-chip-face"
-          strokeWidth="1"
+          strokeWidth="3.5"
+          strokeLinejoin="round"
         />
       </svg>
 
-      {/* Nudged up 1px: the shield's optical centre sits above its box centre,
-          because everything below the shoulders narrows to a point. */}
-      <span className="relative -mt-px text-[12px] font-bold tabular-nums leading-none text-slate-600 dark:text-white">
+      {/* A hexagon is symmetric about both axes, so unlike the shield this
+          needs no optical nudge - the box centre IS the centre. */}
+      <span className="relative text-[12px] font-bold tabular-nums leading-none text-slate-600 dark:text-white">
         {loading ? '' : earnedCount}
       </span>
     </button>

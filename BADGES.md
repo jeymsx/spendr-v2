@@ -1,9 +1,10 @@
 # Badges — what shipped, and what you need to do
 
 Everything is built, tested and running. The feature **works right now** without
-any artwork: each badge has a drawn SVG form that is good enough to ship. The
-generated images are an upgrade, not a dependency — drop them in and they take
-over automatically.
+any artwork: each badge has a drawn SVG form — a hexagon with a rim, a raised
+face and a gloss, in the badge's own hue — that is good enough to ship. The
+rendered images are an upgrade, not a dependency: drop them in and they take
+over automatically, one at a time if you like.
 
 Three things need you:
 
@@ -125,97 +126,165 @@ re-date it.
 
 ## 3. The ChatGPT prompt
 
-Paste this as-is. Ask for **one image**.
+This is the glassy 3D gem style from your references — a translucent hexagon
+with an inner frame, a big diagonal glass reflection, and the glyph rendered as
+a **faceted object in the badge's own colour**, not a flat white line icon.
 
-> ⚠️ Before you paste: turn on transparent background if your ChatGPT image
-> tool offers it as a toggle. The prompt asks for it too, but the toggle is more
-> reliable. If the result comes back on a solid colour anyway, that is fine —
-> tell me and I will key it out. **Do not** ask it to add the badge names as
-> text; the app draws those itself, and baked-in text would be wrong the moment
-> we reword anything.
+Ask for **one image**. Turn on transparent background if your tool offers it as
+a toggle; the prompt asks too, but the toggle is more reliable.
+
+> **One honest caveat before you paste.** This style is detail-heavy — the
+> references you sent are single 1024×1024 renders. Ten of them on one sheet
+> means each is about 300px, and the facets and sparkles will be softer than
+> the references. Try the sheet first, because it is one generation and one
+> crop. If any badge comes back mushy, **§3b** regenerates just that one at full
+> size and I will drop it in over the sheet version.
 
 ```
-I need a single PNG containing 10 achievement badge icons for a mobile personal
-finance app, laid out on a strict grid so I can crop them apart programmatically.
+Create ONE image containing 10 achievement badge icons for a mobile personal
+finance app, laid out on a strict grid so I can crop them apart.
 
 === OUTPUT SPEC (follow exactly — this matters more than the art) ===
 
 - ONE image, landscape, 1536 x 1024 pixels.
-- TRANSPARENT background. No backdrop, no panel, no card behind the badges, no
-  cast shadows onto the background. Any glow or shine must be INSIDE the badge
+- TRANSPARENT background. No backdrop, no panel, no card, no scene. No shadow
+  cast onto the background. Every glow and reflection must sit INSIDE the badge
   silhouette.
-- A 5 x 2 grid: 5 badges across, 2 rows down. Cells are 307.2 x 512 px.
-- Each badge centred in its own cell, all 10 the SAME height (about 300 px
-  tall), with even margins. No badge touches or overlaps another. No badge
-  bleeds outside its cell.
-- NO text, NO labels, NO numbers, NO captions anywhere in the image. The app
-  renders the names itself.
+- A 5 x 2 grid: 5 badges across, 2 rows down, cells of 307 x 512 px.
+- Each badge centred in its own cell, all 10 exactly the SAME size (about 290 px
+  wide), even margins. No badge touches, overlaps, or bleeds out of its cell.
+- NO text, NO labels, NO numbers, NO captions. The app draws the names itself.
 - No frame, no border, no grid lines, no watermark.
 
-=== DESIGN SYSTEM (match this — it is an existing app, not a new one) ===
+=== THE STYLE ===
 
-The app is "Spendr", a Philippine personal-finance PWA. Its look is sleek,
-iOS-like, calm and clean. Think Apple Wallet and iOS 17 Fitness awards rather
-than a mobile game.
+Modern 3D glassmorphism achievement badges — glossy, translucent, gem-like.
+Think mobile game reward badges and Duolingo/Poe achievement art: soft, candy,
+premium. Vector-smooth, NOT photorealistic, NOT clay, NOT metal, NOT pixel art.
 
-- SHAPE: every badge is the SAME silhouette — a modern shield / rounded pin.
-  Squared shoulders with a generous 8px-scale corner radius at the top, sides
-  running straight down, then tapering to a soft rounded point at the bottom
-  centre. Roughly 8:9 width to height. The silhouette is what makes 10 badges
-  read as one set, so it must not vary between them.
-- FILL: a smooth vertical two-stop gradient, light at the top, deeper at the
-  bottom. Flat colour, no texture, no noise, no grain.
-- SHINE: one soft highlight sweeping across the upper third, clipped to the
-  badge shape. Subtle — this is glass, not chrome. No lens flares, no sparkles,
-  no starbursts, no confetti.
-- GLYPH: one simple line icon centred in the badge, pure white, stroke-only
-  (never filled), uniform ~2px-scale stroke weight, rounded caps and joins.
-  Geometric and minimal, in the style of SF Symbols, Feather or Lucide. The
-  glyph should occupy about 45% of the badge's width. Do not outline the glyph
-  in a second colour, do not add a drop shadow to it.
-- NO ribbons, NO laurel wreaths, NO stars around the edge, NO metallic bevels,
-  NO 3D extrusion, NO skeuomorphic medal texture. Flat-with-a-gradient only.
-- Every badge is rendered at the same size, same lighting, same angle. Straight
-  on, no perspective, no tilt.
+Every badge is built the same way, and this structure must not vary:
+
+1. SHAPE: a hexagon, flat top and bottom edges with points at left and right,
+   with softly rounded corners. Slightly taller than wide.
+2. OUTER FRAME: a wide translucent border of the badge's colour, lighter and
+   more transparent than the middle — like frosted glass. It reads as a thick
+   rim around the badge.
+3. INNER FRAME: a thin bright hairline hexagon just inside the outer frame,
+   following the same shape, like the bevelled edge of a piece of glass.
+4. FACE: the recessed centre panel, a smooth gradient of the badge's colour —
+   lighter at the top-left, deeper and more saturated at the bottom-right.
+5. GLASS REFLECTION: one large hard-edged diagonal running from the upper-left
+   down to the lower-right across the WHOLE badge. Everything above-left of that
+   line is brighter and glassier; everything below-right is slightly deeper in
+   tone. This single diagonal is the most important thing in the style — it is
+   what makes the badge look like glass instead of a coloured sticker.
+6. SPARKLES: two or three tiny white four-point sparkles (different sizes)
+   scattered inside the face, near the glyph. Small and sparse.
+
+=== THE GLYPH — READ THIS TWICE ===
+
+The icon in the middle is NOT a flat white line icon and NOT an outline. It is a
+small three-dimensional OBJECT that appears to be carved from the same glassy
+material as the badge, sitting on the face and catching the same light.
+
+- It is in the SAME COLOUR FAMILY as the badge, several shades LIGHTER — a
+  cream or pale tint of that hue, so it reads as the same material lit from
+  above. Not white, not grey, not a contrasting colour.
+- It has FACETS and internal shading: a bright top-left surface, a mid tone, and
+  a deeper shadow side, like a cut gem or a smooth 3D render.
+- It is SOLID and filled, with soft rounded edges. No outlines, no stroke, no
+  drop shadow.
+- It occupies roughly 45% of the badge's width, centred on the face.
 
 === THE 10 BADGES, IN READING ORDER (left to right, top row first) ===
 
 Row 1:
-1. Gradient #5BB4FF -> #1878D4 (blue). Glyph: a coin — a circle with a peso
-   sign (a "P" crossed by two short horizontal bars) inside it.
-2. Gradient #A084FA -> #6741D9 (violet). Glyph: a simple flame.
-3. Gradient #A9B6C7 -> #64748B (cool grey). Glyph: three stacked layers /
-   diamonds, like a layers icon.
-4. Gradient #74DD86 -> #2F9E44 (green). Glyph: a speedometer / gauge — a
-   half-circle arc with a short needle pointing to the lower left.
-5. Gradient #49DBB4 -> #0CA678 (teal). Glyph: a rising zigzag trend line with a
-   small arrowhead at its top right.
+1. BLUE (#5BB4FF light → #1878D4 deep). Object: a thick 3D coin seen face-on,
+   with a peso sign (a letter P crossed by two short horizontal bars) embossed
+   into it. Pale ice-blue coin on a blue badge.
+2. VIOLET (#A084FA → #6741D9). Object: a smooth 3D flame with a rounded teardrop
+   body and a curled tip. Pale lilac flame on a violet badge.
+3. COOL GREY (#A9B6C7 → #64748B). Object: three faceted diamond-shaped slabs
+   stacked with a small gap between them, like layers. Pale silver on grey.
+4. GREEN (#74DD86 → #2F9E44). Object: a 3D speedometer dial — a thick half-ring
+   arc with a short chunky needle pointing to the lower left and a small round
+   hub. Pale mint on green.
+5. TEAL (#49DBB4 → #0CA678). Object: a thick 3D arrow rising steeply to the
+   upper right, with a solid triangular arrowhead. Pale aqua on teal.
 
 Row 2:
-6. Gradient #FFC978 -> #F08C00 (amber). Glyph: a pennant flag on a vertical
-   pole, with a deep V notch cut into the flying edge.
-7. Gradient #F888AE -> #D6336C (rose). Glyph: a checkmark inside a circle.
-8. Gradient #8199FB -> #3B5BDB (indigo). Glyph: two arrows chasing each other
-   in a loop, like a repeat / recurring icon.
-9. Gradient #4BCEDF -> #0B7285 (cyan). Glyph: two overlapping payment cards
-   (rounded rectangles), the front one with a magnetic stripe line.
-10. Gradient #FDD64B -> #E67700 (gold). Glyph: a simple five-point crown.
+6. AMBER (#FFC978 → #F08C00). Object: a 3D pennant flag on a rounded pole, the
+   flag with a deep V notch cut into its flying edge. Pale cream on amber.
+7. ROSE (#F888AE → #D6336C). Object: a thick 3D checkmark with rounded ends,
+   inside a soft ring. Pale blush on rose.
+8. INDIGO (#8199FB → #3B5BDB). Object: two chunky 3D arrows curving around each
+   other into a closed circle, like a refresh symbol, each with a solid
+   arrowhead. Pale periwinkle on indigo.
+9. CYAN (#4BCEDF → #0B7285). Object: two rounded 3D payment cards overlapping,
+   the front one slightly tilted with a raised stripe across it. Pale ice on
+   cyan.
+10. GOLD (#FDD64B → #E67700). Object: a faceted 3D crown with five points, each
+    point tipped with a small round bead. Pale champagne on gold.
 
-Render all 10 in one image on the 5x2 grid described above, transparent
-background, no text.
+Render all 10 in one image on the 5x2 grid described above. Transparent
+background. No text anywhere.
 ```
+
+### 3b. Regenerating a single badge at full size
+
+If one comes back soft, use this for just that badge. It produces a single
+1024×1024 render at the same detail as your reference images.
+
+```
+Create ONE 1024 x 1024 image: a single 3D glassmorphism achievement badge,
+centred, on a fully TRANSPARENT background. No text, no shadow on the
+background, nothing else in the frame.
+
+Style: modern glassy gem achievement badge — glossy, translucent, premium,
+vector-smooth (not photorealistic, not metal, not clay).
+
+Structure, in layers:
+- A hexagon with flat top and bottom edges, points at left and right, softly
+  rounded corners, slightly taller than wide. It fills about 85% of the canvas.
+- A wide translucent frosted-glass rim in the badge colour, lighter and more
+  transparent than the centre.
+- A thin bright hairline hexagon just inside that rim, like a bevelled glass
+  edge.
+- A recessed centre face: smooth gradient, lighter at the top-left, deeper and
+  more saturated at the bottom-right.
+- ONE large hard-edged diagonal glass reflection running from the upper-left to
+  the lower-right across the whole badge. Above-left of the line is brighter and
+  glassier; below-right is deeper. This is the defining feature of the style.
+- Two or three tiny white four-point sparkles of different sizes, scattered
+  inside the face near the object.
+
+The object in the middle is NOT a flat icon and NOT an outline. It is a small
+3D object that looks carved from the same glassy material as the badge: the
+SAME colour family, several shades LIGHTER (a cream or pale tint of that hue),
+with visible facets and internal shading — a bright top-left surface, a mid
+tone, a deeper shadow side. Solid and filled, soft rounded edges, no stroke, no
+drop shadow. It occupies about 45% of the badge's width.
+
+BADGE COLOUR: <light hex> at the top-left fading to <deep hex> at the
+bottom-right.
+OBJECT: <the object description from the list>
+```
+
+Fill in the two hexes and the object line from the list in §3 above.
 
 ### If the result is not quite right
 
-Ask for a regeneration rather than an edit — editing tends to drift the
-silhouette, and the silhouette is the thing that makes them a set.
+Regenerate rather than asking for an edit — edits tend to drift the silhouette,
+and the silhouette is the thing that makes ten badges read as one set.
 
-- **Badges are different sizes** → "Regenerate. All 10 badges must be exactly
-  the same height and centred in equal cells."
-- **It added names under each badge** → "Regenerate with absolutely no text."
-- **It drew medals with ribbons** → "Regenerate. No ribbons, no laurels, no
-  metal. Flat shield shape with a gradient fill only."
-- **The background is white, not transparent** → send it anyway, I will key it.
+| What went wrong | What to say |
+|---|---|
+| The glyph came out flat white | "The centre object must be a 3D faceted object in a LIGHTER SHADE OF THE BADGE'S OWN COLOUR, not white and not an outline icon." |
+| Badges are different sizes | "Regenerate. All 10 badges exactly the same size, centred in equal cells." |
+| It added the badge names | "Regenerate with absolutely no text anywhere." |
+| It looks like metal or clay | "Regenerate: translucent glass and gem, vector-smooth, not metallic, not clay, not photorealistic." |
+| No diagonal reflection | "Add one large hard-edged diagonal glass reflection from upper-left to lower-right across the whole badge." |
+| The background is white, not transparent | Send it anyway — I will key it out. |
 
 ---
 
@@ -259,18 +328,24 @@ coexist, so a partial set is fine.
 
 ### UI decisions you may want to overrule
 
-- **The header chip is not a circle**, per your ask. It is a shield wearing
-  `IconButton`'s exact surface paint (see `.badge-chip-face` in `index.css`), at
-  the same 36px, on the same baseline as the settings gear. Same material,
-  different silhouette — which is how you can tell at a glance that it does not
-  open another list of switches.
-- **It shows the earned count inside it.** A shield with nothing in it is
+- **The header chip is not a circle**, per your ask. It is the same hexagon the
+  badges wear, in `IconButton`'s exact surface paint (see `.badge-chip-face` in
+  `index.css`), at the same 36px on the same baseline as the settings gear. Same
+  material, different silhouette — which is how you can tell at a glance that it
+  does not open another list of switches.
+- **It shows the earned count inside it.** A hexagon with nothing in it is
   decoration and gets ignored; the number is the reason to tap. It shows `0` on
   a fresh install rather than hiding, because a new user is exactly who the
   invitation is for.
 - **Locked badges show their real shape, greyed** — not question marks. A hidden
   badge is one nobody can work toward, and tapping a locked one says exactly how
   it is earned. Nothing here is a secret.
+- **The drawn stand-in is a hexagon too**, with a rim, a raised inner face and a
+  gloss wedge, and its glyph is a pale tint of the badge's own hue rather than
+  white — so it is recognisably the same family as the rendered set while it
+  waits for it. It does not attempt the facets or the sparkles: SVG can fake
+  depth honestly but not gemstone, and a bad imitation would look worse beside a
+  real one than a clean simpler thing does.
 - **There is no toast, no confetti, no "badge unlocked!" interruption.** Badges
   land quietly and the count on the header goes up. If you want a celebration on
   earning one, say so — it is a small addition, but it is the kind of thing that
