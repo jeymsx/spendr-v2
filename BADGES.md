@@ -1,15 +1,13 @@
 # Badges — what shipped, and what you need to do
 
-Built, tested, running, the SQL is applied, and **the first ten badges have
-their artwork** — cropped, masked to their own outline, living in
+Built, tested, running, the SQL is applied, and **all twenty badges have their
+artwork** — cropped, masked to their own outline, living in
 `src/assets/badges/`.
 
-**One thing needs you: generate the art for badges 11–20.** The prompt is in
-§3c. Until you do, those ten wear the drawn hexagon fallback, which is the same
-silhouette in the same hue — the grid still reads as one set.
+Nothing is outstanding.
 
-§3 keeps the prompt that produced the first ten, §3b regenerates any single
-badge at full size, and §3c is the one you want now.
+§3 is the prompt that produced the first ten, §3b regenerates any single badge
+at full size, and §3c produced the second ten.
 
 ---
 
@@ -444,27 +442,42 @@ and the silhouette is the thing that makes ten badges read as one set.
 
 ---
 
-## 4. What is left
+## 4. How the art got in, in case you redo it
 
-**Generate the art for badges 11–20** with the prompt in §3c, and send me the
-image. I crop it the same way as the first sheet and it drops straight in.
+**Neither sheet came back transparent, and they failed differently** — which is
+why there is no single cutting recipe.
 
-Nothing else is outstanding. The SQL is applied and the first ten have their
-artwork.
+**The first sheet** arrived on a dark coloured bloom. The badge has a hard
+boundary and the bloom is smooth, so it was cut on edge magnitude: threshold
+it, then take each row's and each column's span between the first and last
+strong edge. A hexagon is convex, so those two spans intersect to give the
+outline exactly — including the real rounded tips, which a hand-built polygon
+kept clipping.
 
-### How the art got in, in case you redo it
+**The second sheet** arrived on a *painted* checkerboard: ChatGPT drew the
+transparency pattern instead of leaving the alpha empty. Every checker square
+has an edge, so the first method was useless. Saturation replaced it — measured,
+the checkerboard runs 1–2 and the badge bodies 44–132 — with the same row and
+column spans on top, because the coin stack, the target's pale rings and the
+diamond are deliberately near-white and would otherwise punch holes in their
+own badges.
 
-The sheet came back on a dark bloom rather than a transparent background, so
-each badge was cut out from its own edges rather than with a hand-drawn mask:
-the badge has a hard boundary and the bloom is smooth, so thresholding the edge
-magnitude and taking each row's and column's span between the first and last
-strong edge describes the hexagon exactly — including its real rounded tips,
-which a hand-built polygon kept clipping.
+It also needed a **3px erosion** that the first did not. On a dark bloom the
+antialiased rim blends toward black and the leftover fringe is invisible on a
+dark UI; on a near-white checkerboard the same fringe is *bright*, measured at
+luminance 238 against a 151 body, and it read as a halo around every badge.
+Eroding removes the blended ring rather than trying to unmix it. 3px off a
+341px badge is under 1%.
 
-The crop window is 296 x 348, not square: the columns are only 300 apart, so
-anything wider drags the neighbouring badge's edge into the mask. Files land at
-320 x 320, quantised to 255 colours — 321 KB for all ten, and no banding, since
-each badge is a single hue family.
+Crop windows are not square, and not the same: 296 × 348 for the first sheet,
+292 × 358 for the second. The columns are only ~300 and ~299 apart, so anything
+wider drags the neighbour into the mask. The heights differ because the badges
+do (332 vs 341), and each square is sized so the badge fills the same share of
+it — otherwise the two sets would render at different sizes in a grid that only
+knows the file is square.
+
+Files land at 320 × 320, quantised to 255 colours: 625 KB for all twenty, no
+banding, since each badge is a single hue family.
 
 Filenames are the badge keys, in the prompt's reading order:
 

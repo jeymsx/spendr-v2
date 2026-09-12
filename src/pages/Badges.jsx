@@ -1,8 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import SubPage from '../components/SubPage'
 import BadgeMark from '../components/BadgeMark'
 import BadgeCard from '../components/BadgeCard'
 import Button from '../components/ui/Button'
+import Card from '../components/ui/Card'
 import SectionLabel from '../components/ui/SectionLabel'
 import InfoButton from '../components/ui/InfoButton'
 import { SkeletonBadge } from '../components/ui/Skeleton'
@@ -17,109 +18,52 @@ function fmtEarned(iso) {
 }
 
 /**
- * The collection, as a dial.
+ * One badge, on its own card.
  *
- * ── Why not a progress bar ──
+ * ── Why each badge gets a surface ──
  *
- * A bar says "you are 30% through a task", and a collection is not a task -
- * there is no finishing it on a schedule and no reason to feel behind. A ring
- * of twenty ticks says something a bar cannot: that there are exactly twenty of
- * these, that they are discrete things, and precisely which share you hold. You
- * can count the dark ones.
+ * The grid ran bare on the page for a while, which fixed the real problem -
+ * two big panels that made the page read as boxes of stuff - and introduced a
+ * smaller one: twenty hexagons floating on a flat background with nothing
+ * holding them, so the eye had no cell to rest in and the labels drifted
+ * toward whichever badge they were nearest.
  *
- * It is also the language this app already speaks. BudgetGauge draws the
- * month's spending as a fan of ticks for the same reason - a scale you are
- * somewhere on rather than a smooth quantity - so the headline figure on the
- * two pages reads as the same kind of object.
+ * A card each is the opposite trade from a card around each SECTION. It groups
+ * a badge with its own name rather than grouping twenty badges with each
+ * other, which is the grouping that was actually missing.
  *
- * ── One colour, not twenty ──
+ * ── The whole card is the target ──
  *
- * The obvious idea is to light each tick in its own badge's hue. BudgetGauge
- * settled that already and its note says why: a rainbow made the one big graph
- * on the page the only thing ignoring the accent preset. The badges below are
- * as colourful as they should be; the dial that measures them is the accent.
- */
-function BadgeDial({ earned, total, size = 168 }) {
-  const ticks = useMemo(() => {
-    const c = size / 2
-    const outer = c - 4
-    const inner = outer - 13
-    return Array.from({ length: total }, (_, i) => {
-      /* Start at twelve o'clock and run clockwise, which is the direction a
-         dial is read. -90 puts index 0 at the top. */
-      const a = ((i / total) * 360 - 90) * (Math.PI / 180)
-      return {
-        i,
-        x1: c + Math.cos(a) * inner, y1: c + Math.sin(a) * inner,
-        x2: c + Math.cos(a) * outer, y2: c + Math.sin(a) * outer,
-      }
-    })
-  }, [size, total])
-
-  return (
-    <div className="relative mx-auto" style={{ width: size, height: size }}>
-      <svg width={size} height={size} aria-hidden="true">
-        {ticks.map(t => (
-          <line
-            key={t.i}
-            x1={t.x1} y1={t.y1} x2={t.x2} y2={t.y2}
-            strokeWidth="4"
-            strokeLinecap="round"
-            className={t.i < earned
-              ? 'stroke-primary'
-              : 'stroke-slate-200 dark:stroke-white/[0.10]'}
-          />
-        ))}
-      </svg>
-
-      <div className="absolute inset-0 flex flex-col items-center justify-center">
-        <span className="text-[44px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
-          {earned}
-        </span>
-        <span className="mt-1.5 text-[12px] font-medium tabular-nums text-slate-400 dark:text-slate-500">
-          of {total}
-        </span>
-      </div>
-    </div>
-  )
-}
-
-/**
- * One tile.
- *
- * The whole tile is the target rather than the mark inside it: at 56px the
- * artwork is a small thing to hit, and there is nothing else in the cell to
- * press by accident.
- *
- * At three across every name fits on one line - "Budget Master" and
- * "No-Spend Week" are the longest and both clear it - so there is no reserved
- * second line. Four across needed one, because a wrapping name there pushed
- * its neighbours' badges out of alignment.
+ * At 72px the artwork is still a small thing to hit and there is nothing else
+ * in the cell to press by accident, so the card is the button. `interactive` gives it
+ * Button's own 2% press, because a surface that does nothing when touched
+ * reads as broken before it reads as decorative.
  */
 function BadgeTile({ badge, onOpen }) {
   return (
-    <button
-      type="button"
+    <Card
+      as="button"
+      interactive
       onClick={() => onOpen(badge)}
-      className="flex flex-col items-center gap-2 py-2 rounded-2xl
-        active:bg-slate-100/70 dark:active:bg-white/[0.05] transition-colors"
+      className="flex flex-col items-center gap-2 px-1.5 pt-3.5 pb-3"
     >
       <BadgeMark badge={badge} earned={badge.earned} size={72} />
-      <span className={`text-[11.5px] font-semibold leading-[1.25] text-center ${
+      <span className={`text-[11px] font-semibold leading-[1.25] text-center ${
         badge.earned
           ? 'text-slate-700 dark:text-slate-200'
           : 'text-slate-400 dark:text-slate-500'
       }`}>
         {badge.name}
       </span>
-    </button>
+    </Card>
   )
 }
 
-/** Three across, on the page rather than in a card - see the page note. */
+/** Three cards across. `items-stretch` so a wrapped name does not leave its
+ *  card shorter than the two beside it. */
 function BadgeGrid({ badges, onOpen }) {
   return (
-    <div className="px-4 grid grid-cols-3 gap-x-2 gap-y-4">
+    <div className="px-4 grid grid-cols-3 gap-2 items-stretch">
       {badges.map(b => <BadgeTile key={b.key} badge={b} onOpen={onOpen} />)}
     </div>
   )
@@ -136,24 +80,29 @@ function BadgeGrid({ badges, onOpen }) {
  * are visible underneath at low contrast so the set still reads as a set - and
  * so there is an answer to "what is next" for anyone who wants one.
  *
- * ── No cards behind the grids ──
+ * ── It opens on the badges ──
  *
- * The badges used to sit in `.card` panels, which was one container too many. A
- * card is a surface that groups things which would otherwise float, and twenty
- * saturated hexagons in a grid are already the most present thing on the
- * screen. The panel added an edge, a shadow, and a background competing with
- * twenty backgrounds, and it made the page read as two boxes of stuff rather
- * than as a collection. The section labels do the grouping now, which is all
- * the grouping there was ever any need for.
+ * There was a dial at the top counting the collection, and it went. On a page
+ * whose entire content is twenty pictures, a twenty-first graphic above them
+ * is the thing standing between you and what you came for - and the grid
+ * already answers "how many" better than a number does, because you can see
+ * both halves of it at once.
+ *
+ * ── One card per badge, not one card per section ──
+ *
+ * The two arrangements sound alike and are opposites. A panel around each
+ * SECTION groups twenty badges with each other, which they did not need - they
+ * are already obviously a set - while adding an edge and a background
+ * competing with twenty backgrounds. A card around each BADGE groups a badge
+ * with its own name, which is the grouping that was missing: bare on the page
+ * the labels drifted toward whichever hexagon they sat nearest.
  *
  * ── Three across ──
  *
  * Four fits the collection in five rows instead of seven, which sounds like
  * the right trade and is not: it puts the badge at 56px, and the badge is the
  * whole point of the page. These are detailed little objects - facets, a
- * bevel, sparkles - and below about 64px that detail turns to mush and they
- * stop being worth looking at. Three across gives them 72px and the extra
- * scrolling is the cheaper cost.
+ * bevel, sparkles - and below about 64px that detail turns to mush.
  *
  * ── Why locked badges show their real shape ──
  *
@@ -163,53 +112,20 @@ function BadgeGrid({ badges, onOpen }) {
  * in doing the thing, not in guessing what the thing is.
  */
 export default function Badges() {
-  const { badges, earnedCount, total, loading } = useBadges()
+  const { badges, loading } = useBadges()
   const [open, setOpen] = useState(null)
 
   const earned = badges.filter(b => b.earned)
   const locked = badges.filter(b => !b.earned)
 
-  /* The most recent one, for the line under the dial. A collection page with
-     no news on it is a page you visit once; the last thing you earned is the
-     one piece of news it always has. */
-  const latest = useMemo(() => {
-    const dated = earned.filter(b => b.earnedAt)
-    if (!dated.length) return null
-    return dated.reduce((a, b) => (new Date(b.earnedAt) > new Date(a.earnedAt) ? b : a))
-  }, [earned])
-
   return (
     <SubPage title="Badges">
       {loading ? (
-        <>
-          {/* The dial's own footprint, so the grid below does not jump when the
-              real one arrives. */}
-          <div className="mx-auto skeleton rounded-full" style={{ width: 168, height: 168 }} />
-          <div className="mt-10 px-4 grid grid-cols-3 gap-x-2 gap-y-4">
-            {Array.from({ length: 6 }, (_, i) => <SkeletonBadge key={i} />)}
-          </div>
-        </>
+        <div className="px-4 grid grid-cols-3 gap-2">
+          {Array.from({ length: 6 }, (_, i) => <SkeletonBadge key={i} />)}
+        </div>
       ) : (
         <>
-          {/* ── The collection, as one figure ── */}
-          <section className="px-5">
-            <BadgeDial earned={earnedCount} total={total} />
-
-            <p className="mt-4 text-center text-[13px] text-slate-500 dark:text-slate-400">
-              {earnedCount === 0
-                ? 'Earned by using your money well, not by using the app.'
-                : earnedCount === total
-                  ? 'Every one of them. Nothing left to earn.'
-                  : latest
-                    ? <>
-                        Latest:{' '}
-                        <span className="font-semibold text-slate-700 dark:text-slate-200">{latest.name}</span>
-                        {fmtEarned(latest.earnedAt) ? `, ${fmtEarned(latest.earnedAt)}` : ''}
-                      </>
-                    : `${total - earnedCount} still to earn`}
-            </p>
-          </section>
-
           {earned.length > 0 && (
             <section className="mt-8">
               <SectionLabel
