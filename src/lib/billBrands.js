@@ -71,6 +71,7 @@ export const BILL_BRAND_COLORS = {
  * Order matters only in that the longest match wins, which is what keeps
  * "Apple Music" off `apple` and "YouTube Music" off `youtube`.
  */
+/** @type {Record<string, string>} */
 const ALIASES = {
   netflix: 'netflix',
   spotify: 'spotify',
@@ -117,6 +118,8 @@ const KEYS = Object.keys(ALIASES).sort((a, b) => b.length - a.length)
    "Maxicare" is a health card, not HBO. */
 const WHOLE_WORD_BELOW = 6
 
+/** @param {unknown} s */
+/** @param {unknown} s */
 const squash = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '')
 
 /**
@@ -124,6 +127,8 @@ const squash = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '')
  *
  * @param {string} name  Whatever the bill is called.
  * @returns {string|null}
+ *
+ * @param {string} [name]
  */
 export function billBrandKey(name) {
   const flat = squash(name)

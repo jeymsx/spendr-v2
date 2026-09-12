@@ -14,6 +14,7 @@
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 /** Peso, two decimals, with a real minus sign rather than a hyphen. */
+/** @param {number} [v] */
 export const fmt = (v) => {
   const n = v ?? 0
   return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
@@ -36,6 +37,7 @@ export const TYPE_OPTIONS = [
 
 export const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map(t => [t.value, t.label]))
 
+/** @param {string} type */
 export function defaultRole(type) {
   if (type === 'credit') return 'credit'
   return ['cash', 'ewallet'].includes(type) ? 'spending' : 'savings'

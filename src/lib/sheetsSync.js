@@ -1,6 +1,7 @@
 import db from '../db/db'
 import { getCreditStatus } from '../utils/creditCycle'
 
+/** @param {string} url */
 export async function syncToSheets(url) {
   const [transactions, accounts] = await Promise.all([
     db.transactions.toArray(),

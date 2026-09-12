@@ -27,6 +27,7 @@ export function useFinanceSummary() {
   const loading = accounts === undefined || txAll === undefined
 
   // Credit accounts are neither spending nor savings — they're a liability.
+  /** @param {Account} a */
   const roleOf = (a) => {
     if (a.type === 'credit') return 'credit'
     if (a.role) return a.role
@@ -35,6 +36,7 @@ export function useFinanceSummary() {
 
   const balances = useMemo(() => {
     const all = accounts ?? []
+    /** @param {string} role */
     const sum = (role) => all.filter(a => roleOf(a) === role)
       .reduce((s, a) => s + (a.balance ?? 0), 0)
     return { spending: sum('spending'), savings: sum('savings') }
@@ -51,6 +53,7 @@ export function useFinanceSummary() {
   }, [txAll])
 
   const creditStatus = useMemo(() => {
+    /** @type {Record<string, any>} */
     const map = {}
     ;(accounts ?? []).filter(a => a.type === 'credit').forEach(acct => {
       // Unfiltered txAll on purpose: available credit must count every future
@@ -65,6 +68,7 @@ export function useFinanceSummary() {
     [creditStatus])
 
   const budgets = useMemo(() => {
+    /** @type {Record<string, number>} */
     const spent = {}
     monthExpenses.forEach(t => { spent[t.category] = (spent[t.category] ?? 0) + (t.amount ?? 0) })
     return (categories ?? [])
@@ -87,6 +91,7 @@ export function useFinanceSummary() {
     [recurring])
 
   const debtTotals = useMemo(() => {
+    /** @param {string} t */
     const owed = (t) => (debts ?? [])
       .filter(d => d.type === t)
       .reduce((s, d) => s + Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)), 0)

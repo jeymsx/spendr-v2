@@ -33,8 +33,51 @@ import { allocateGoals } from './goals'
  * badge that lies for four weeks and then has to be taken back.
  */
 
+/**
+ * One completed month, rolled up. Five of the twenty badges read these, which
+ * is why they are computed once and shared rather than re-derived per badge.
+ *
+ * @typedef {object} MonthStat
+ * @property {number} inflow
+ * @property {number} expense
+ * @property {Record<string, number>} byCategory
+ */
+
+/**
+ * What every badge's `test` receives. `months` and `limits` are the shared
+ * roll-up; the rest are the raw tables.
+ *
+ * @typedef {object} BadgeCtx
+ * @property {Transaction[]} transactions
+ * @property {Account[]} accounts
+ * @property {Category[]} categories
+ * @property {Debt[]} debts
+ * @property {Recurring[]} recurring
+ * @property {Goal[]} goals
+ * @property {Date} today
+ * @property {Map<string, MonthStat>} months
+ * @property {Category[]} limits
+ */
+
+/**
+ * A badge definition. Nothing here is stored - the table keeps only the key
+ * and the date - so copy can be reworded and art replaced without a migration.
+ *
+ * @typedef {object} BadgeDef
+ * @property {string} key
+ * @property {string} name
+ * @property {string} blurb
+ * @property {string} how
+ * @property {string} tone
+ * @property {string} glyph
+ * @property {(ctx: BadgeCtx) => boolean} test
+ */
+
 /** Local YYYY-MM-DD. Never toISOString: in UTC+8 a local midnight converts to
- *  the previous day, which silently shifts every date-keyed sum below. */
+ *  the previous day, which silently shifts every date-keyed sum below.
+ *
+ * @param {Date} d
+ */
 function ymd(d) {
   const y = d.getFullYear()
   const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -42,13 +85,21 @@ function ymd(d) {
   return `${y}-${m}-${day}`
 }
 
-/** The 'YYYY-MM' a stored date string belongs to. */
+/** The 'YYYY-MM' a stored date string belongs to.
+ *
+ * @param {string} iso  an ISO date; the month is its first seven characters
+ */
 function monthKey(iso) {
   return String(iso ?? '').slice(0, 7)
 }
 
 /** Months strictly before the one `today` falls in. A month still running has
- *  not finished happening, so it cannot yet have been a good one. */
+ *  not finished happening, so it cannot yet have been a good one.
+ *
+ * @param {Transaction[]} transactions
+ * @param {Date} today
+ * @returns {string[]}
+ */
 function completedMonths(transactions, today) {
   const current = monthKey(ymd(today))
   const seen = new Set()
@@ -64,6 +115,9 @@ function completedMonths(transactions, today) {
  *
  * Days are de-duplicated first, so five coffees on one day is still one day -
  * the badge is about showing up, not about volume.
+ *
+ * @param {Transaction[]} transactions
+ * @returns {number}
  */
 export function longestDayStreak(transactions) {
   const days = [...new Set(
@@ -84,7 +138,11 @@ export function longestDayStreak(transactions) {
 }
 
 /** '2026-01' -> '2026-02'. Calendar arithmetic, so a run of months means
- *  ADJACENT months and not merely three months that happen to be in the data. */
+ *  ADJACENT months and not merely three months that happen to be in the data.
+ *
+ * @param {string} key  "2026-09"
+ * @returns {string}
+ */
 function nextMonth(key) {
   const [y, m] = key.split('-').map(Number)
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
@@ -98,8 +156,13 @@ function nextMonth(key) {
  * monthly figures, the difference is five passes over every transaction you
  * have ever logged versus one - on a screen that re-runs whenever any of seven
  * tables changes.
+ *
+ * @param {Transaction[]} transactions
+ * @param {Date} today
+ * @returns {Map<string, MonthStat>}
  */
 function monthStats(transactions, today) {
+  /** @type {Map<string, MonthStat>} */
   const stats = new Map()
   for (const key of completedMonths(transactions, today)) {
     stats.set(key, { inflow: 0, expense: 0, byCategory: {} })
@@ -123,6 +186,10 @@ function monthStats(transactions, today) {
  * The adjacency is the point. "Three good months" awarded for January, April
  * and September is not a streak, it is three good months, and a badge that
  * says the first while meaning the second is a badge that lies.
+ *
+ * @param {Map<string, MonthStat>} stats
+ * @param {number} n
+ * @param {(m: MonthStat) => boolean} passes
  */
 function hasRun(stats, n, passes) {
   const good = new Set([...stats.entries()].filter(([, v]) => passes(v)).map(([k]) => k))
@@ -136,12 +203,19 @@ function hasRun(stats, n, passes) {
 }
 
 /** Every month inside every limit. Shared by Under Budget and Budget Master,
- *  so the harder badge cannot drift into meaning something else. */
+ *  so the harder badge cannot drift into meaning something else.
+ *
+ * @param {Category[]} limits
+ * @returns {(m: MonthStat) => boolean}
+ */
 function withinLimits(limits) {
   return month => month.expense > 0 && limits.every(c => (month.byCategory[c.name] ?? 0) <= c.budget)
 }
 
-/** Inflow beat spending, and both actually happened. */
+/** Inflow beat spending, and both actually happened.
+ *
+ * @param {MonthStat} month
+ */
 function inTheGreen(month) {
   return month.inflow > 0 && month.expense > 0 && month.inflow > month.expense
 }
@@ -153,6 +227,9 @@ function inTheGreen(month) {
  * not net worth: that needs the credit-statement machinery, and a badge whose
  * arithmetic you cannot check by looking at the accounts screen is a badge you
  * cannot trust.
+ *
+ * @param {Account[]} accounts
+ * @returns {number}
  */
 export function liquidTotal(accounts) {
   return (accounts ?? [])
@@ -169,6 +246,17 @@ export function liquidTotal(accounts) {
 
    `tone` is a name, not a hex, so a badge cannot drift out of the theme. It
    drives the drawn mark and the earned-date chip.                            */
+/**
+ * Typed as a whole, which is what gives every inline `test` below its ctx -
+ * annotating twenty arrow functions one at a time would say the same thing
+ * twenty times and let the twenty-first be written without it.
+ *
+ * (A plain block comment does not work here: only a doc comment carries a
+ *  type, which is a thing you find out by watching thirty-six errors not go
+ *  away.)
+ *
+ * @type {BadgeDef[]}
+ */
 export const BADGES = [
   {
     key: 'first-peso',
@@ -427,6 +515,10 @@ export const BADGES = [
  * Every `test` is wrapped. A badge that throws on some shape of data must not
  * be able to take the other nine down with it, and least of all on a screen
  * whose whole job is to be a small, pleasant reward.
+ */
+/**
+ * @param {Partial<BadgeCtx>} [input]
+ * @returns {Set<string>}
  */
 export function evaluateBadges({
   transactions = [],

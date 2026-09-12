@@ -15,7 +15,10 @@
 
 const LABEL_RE = /^(.*)\s\((\d+)\/(\d+)\)$/
 
-/** `"Laptop (2/6)"` -> `{ base: 'Laptop', index: 2, total: 6 }`, else null. */
+/** `"Laptop (2/6)"` -> `{ base: 'Laptop', index: 2, total: 6 }`, else null.
+ *
+ * @param {string} [description]
+ */
 export function parseInstallmentLabel(description) {
   const m = LABEL_RE.exec(String(description ?? '').trim())
   if (!m) return null
@@ -25,7 +28,10 @@ export function parseInstallmentLabel(description) {
   return { base: m[1], index, total }
 }
 
-/** True when this row looks like part of an installment plan. */
+/** True when this row looks like part of an installment plan.
+ *
+ * @param {Transaction} tx
+ */
 export function isInstallmentRow(tx) {
   return !!tx?.installmentId || !!parseInstallmentLabel(tx?.description)
 }
@@ -34,6 +40,9 @@ export function isInstallmentRow(tx) {
  * Every row belonging to the same plan as `tx`, including `tx`, oldest first.
  * Returns [tx] when it isn't part of a plan, so callers can treat the result
  * uniformly.
+ *
+ * @param {Transaction} tx
+ * @param {Transaction[]} allTxs
  */
 export function findInstallmentGroup(tx, allTxs) {
   if (!tx) return []
@@ -59,6 +68,10 @@ export function findInstallmentGroup(tx, allTxs) {
   return (matches.length ? matches : [tx]).slice().sort(byDate)
 }
 
+/**
+ * @param {Transaction} a
+ * @param {Transaction} b
+ */
 function byDate(a, b) {
   return String(a.date ?? '').localeCompare(String(b.date ?? ''))
 }

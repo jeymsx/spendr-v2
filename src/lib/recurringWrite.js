@@ -21,6 +21,8 @@ import { parseMoney } from '../utils/moneyInput'
  *
  * An empty object means it is fine. The keys match the form's own field
  * names so a caller can drop the result straight into its error state.
+ *
+ * @param {Record<string, any>} input
  */
 export function validateRecurring({ name, amountStr, category, account, nextDate }) {
   const errs = {}
@@ -33,7 +35,10 @@ export function validateRecurring({ name, amountStr, category, account, nextDate
   return errs
 }
 
-/** The row a valid draft becomes. Names, not ids - see the db schema. */
+/** The row a valid draft becomes. Names, not ids - see the db schema.
+ *
+ * @param {Record<string, any>} input
+ */
 export function toRecurringRow({ name, amountStr, category, account, frequency, nextDate, active }) {
   return {
     name: name.trim(),
@@ -52,6 +57,9 @@ export function toRecurringRow({ name, amountStr, category, account, frequency, 
  * Returns 'created' or 'updated' rather than a toast string: the page and the
  * sheet word their confirmations differently, and a writer that picks the
  * wording is a writer that has to know which screen called it.
+ *
+ * @param {Record<string, any>} draft
+ * @param {Recurring|null} [editRec]
  */
 export async function saveRecurring(draft, editRec = null) {
   const row = toRecurringRow(draft)

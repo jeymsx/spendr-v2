@@ -219,10 +219,10 @@ const TYPE_LEAD = 3
  * What the parser is allowed to resolve against.
  *
  * @typedef {object} ParseCtx
- * @property {Array<{name: string}>} [accounts]
- * @property {Array<{name: string, icon?: string, color?: string}>} [categories]
- * @property {Recurring[]} [recurring]
- * @property {Array<Record<string, any>>} [templates]
+ * @property {Array<Partial<Account>>} [accounts]
+ * @property {Array<Partial<Category>>} [categories]
+ * @property {Array<Partial<Recurring>>} [recurring]
+ * @property {Array<Partial<Template>>} [templates]
  * @property {Record<string, string>} [merchantMap]  the category-only shorthand
  * @property {Knowledge} [knowledge]
  * @property {Date} [today]
@@ -401,8 +401,12 @@ function median(nums) {
  * about how recent they were, and decaying it would let a well-established
  * old habit fall below the bar and vanish.
  *
- * @param {Transaction[]} transactions rows from db.transactions - all of them,
- *                every account and every type. Nothing here is account-scoped.
+ * Takes PARTIAL rows. Every field it reads is guarded, and the tests hand it
+ * two-field objects deliberately - the shape it needs is "something with a
+ * description", not a whole ledger entry.
+ *
+ * @param {Array<Partial<Transaction>>} transactions rows from db.transactions -
+ *                all of them, every account and type. Nothing is account-scoped.
  * @param {LearnOpts} [opts]
  * @returns {Knowledge}
  */
@@ -501,7 +505,7 @@ export function learnLedger(transactions = [], opts = {}) {
  * a question worth being able to ask on its own, and because it is what the
  * parser's `merchantMap` option takes.
  */
-/** @param {Transaction[]} transactions @param {LearnOpts} [opts] */
+/** @param {Array<Partial<Transaction>>} transactions @param {LearnOpts} [opts] */
 export function learnMerchants(transactions = [], opts = {}) {
   return learnLedger(transactions, opts).category
 }

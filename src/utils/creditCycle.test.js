@@ -3,10 +3,14 @@ import { getCycleRange, getNextCycleRange, getCreditStatus, nextDueDate } from '
 
 /* Local dates throughout: the cycle boundaries are built with `new Date(y, m, d)`,
    so comparing them against UTC strings is how you get an off-by-one. */
+/** @param {number} y @param {number} m @param {number} d @param {number} [h] */
 const at = (y, m, d, h = 10) => new Date(y, m - 1, d, h, 0)
+/** @param {Date} date */
 const ymd = (date) => `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+/** @param {{cycleStart: Date, cycleEnd: Date}} r */
 const span = (r) => `${ymd(r.cycleStart)} .. ${ymd(r.cycleEnd)}`
-const days = (r) => Math.round((r.cycleEnd - r.cycleStart) / 86400000)
+/** @param {{cycleStart: Date, cycleEnd: Date}} r */
+const days = (r) => Math.round((r.cycleEnd.getTime() - r.cycleStart.getTime()) / 86400000)
 
 describe('getCycleRange — a cutoff day is set', () => {
   it('after the cutoff, the closed cycle is last month to this one', () => {
@@ -148,8 +152,10 @@ describe('getCreditStatus — an installment plan', () => {
 
 describe('getCreditStatus — payments', () => {
   const acct = { name: 'Card', type: 'credit', creditLimit: 50000, cutoffDate: 15 }
+  /** @param {number} m @param {number} d @param {number} amount */
   const charge = (m, d, amount) =>
     ({ type: 'expense', account: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
+  /** @param {number} m @param {number} d @param {number} amount */
   const payment = (m, d, amount) =>
     ({ type: 'transfer', fromAccount: 'Cash', toAccount: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
 
@@ -198,6 +204,7 @@ describe('getCreditStatus — payments', () => {
 
 describe('getCreditStatus - a statement that billed nothing', () => {
   const acct = { name: 'Card', type: 'credit', creditLimit: 50000, cutoffDate: 15, minimumPayment: 200 }
+  /** @param {number} m @param {number} d @param {number} amount */
   const charge = (m, d, amount) =>
     ({ type: 'expense', account: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
 
@@ -232,10 +239,13 @@ describe('getCreditStatus - a statement that billed nothing', () => {
 
 describe('getCreditStatus - minimumDue', () => {
   const acct = { name: 'Card', type: 'credit', creditLimit: 50000, cutoffDate: 15, minimumPayment: 200 }
+  /** @param {number} m @param {number} d @param {number} amount */
   const charge = (m, d, amount) =>
     ({ type: 'expense', account: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
+  /** @param {number} m @param {number} d @param {number} amount */
   const payment = (m, d, amount) =>
     ({ type: 'transfer', fromAccount: 'Cash', toAccount: 'Card', date: new Date(2026, m - 1, d, 12).toISOString(), amount })
+  /** @param {any[]} txs */
   const on = (txs) => getCreditStatus(acct, txs, at(2026, 5, 21))
 
   it('is the account minimum while the statement is unpaid', () => {

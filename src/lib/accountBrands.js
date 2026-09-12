@@ -21,6 +21,7 @@
  */
 
 // from = top-left (lighter), to = bottom-right (deeper). Both AA-safe.
+/** @type {Record<string, {from: string, to: string}>} */
 const BRAND_GRADIENTS = {
   cash:           { from: '#0a6647', to: '#064530' },
   gcash:          { from: '#005aae', to: '#003d77' },
@@ -59,6 +60,7 @@ const NAME_RULES = [
 ]
 
 /** Glyph to use when the name matches nothing known. */
+/** @type {Record<string, string>} */
 const TYPE_MARK = {
   cash:    'cash',
   ewallet: 'wallet',
@@ -67,11 +69,15 @@ const TYPE_MARK = {
   credit:  'card',
 }
 
+/** @param {unknown} s */
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
 /**
  * Mix a hex toward black, so an unknown account's own stored colour can still
  * be made dark enough for white text instead of being shown as-is.
+ *
+ * @param {string} hex
+ * @returns {[number, number, number]|null}
  */
 function parseHex(hex) {
   const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ''))
@@ -80,6 +86,10 @@ function parseHex(hex) {
   return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
 }
 
+/**
+ * @param {number[]} rgb
+ * @returns {string}
+ */
 function toHex(rgb) {
   return '#' + rgb
     .map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
@@ -96,7 +106,11 @@ const OVERLAYS = [
   [255, 255, 255, 0.10],  // the brand watermark
 ]
 
-/** Browsers composite in gamma space, so this deliberately does not linearise. */
+/** Browsers composite in gamma space, so this deliberately does not linearise.
+ *
+ * @param {number[]} rgb
+ * @returns {number[]}
+ */
 function composite(rgb) {
   return OVERLAYS.reduce(
     (bg, [r, g, b, a]) => [
@@ -108,7 +122,12 @@ function composite(rgb) {
   )
 }
 
+/**
+ * @param {number[]} channels
+ * @returns {number}
+ */
 function relativeLuminance([r, g, b]) {
+  /** @param {number} c */
   const lin = (c) => {
     const v = c / 255
     return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
@@ -116,7 +135,11 @@ function relativeLuminance([r, g, b]) {
   return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
 }
 
-/** Contrast of white text over `rgb` once the card overlays are on top of it. */
+/** Contrast of white text over `rgb` once the card overlays are on top of it.
+ *
+ * @param {number[]} rgb
+ * @returns {number}
+ */
 function whiteContrast(rgb) {
   return 1.05 / (relativeLuminance(composite(rgb)) + 0.05)
 }
@@ -139,6 +162,10 @@ function whiteContrast(rgb) {
  * independently - text can sit over either stop, so both have to clear the
  * bar, and solving only the lighter one would leave the other unnecessarily
  * dark.
+ *
+ * @param {number[]} rgb
+ * @param {number} target
+ * @returns {number[]}
  */
 function solveStop(rgb, target) {
   let lo = 0, hi = 1
@@ -162,6 +189,9 @@ function solveStop(rgb, target) {
  * Accepts one hex, or two separated by a comma - "#a855f7,#ec4899" - which is
  * how a gradient preset is stored. One field, one column, no migration: an
  * existing single hex parses exactly as it always did.
+ *
+ * @param {string} [spec]  one hex, or two separated by a comma
+ * @param {number} [target]
  */
 function aaSafeStops(spec, target = 4.55) {
   const parts = String(spec ?? '').split(',').map(x => x.trim()).filter(Boolean)
@@ -236,6 +266,8 @@ export const GRADIENT_PRESETS = [
  * An acronym is already a monogram, so BDO and RCBC keep all their letters
  * while Metrobank reduces to M. camelCase counts as a word break, so GrabPay
  * gives GP rather than G.
+ *
+ * @param {string} [name]
  */
 export function monogram(name) {
   const tokens = String(name ?? '')
@@ -270,6 +302,9 @@ const PRODUCT_WORDS = new Set([
  * source files disagree: camelCase splitting turns UnionBank into
  * "union-bank" while the file on Commons is "unionbank", and China Bank is
  * the reverse.
+ *
+ * @param {string} [name]
+ * @returns {string[]}
  */
 export function logoCandidates(name) {
   const tokens = String(name ?? '')
@@ -311,9 +346,13 @@ export function logoCandidates(name) {
  * Only ever darker, so it cannot break the contrast solve: white text on a
  * darker background is strictly safer than on the stop it was measured
  * against.
+ *
+ * @param {{from: string, to: string}} stops
+ * @param {boolean} isCredit
  */
 function asCredit(stops, isCredit) {
   if (!isCredit) return stops
+  /** @param {string} hex */
   const deepen = (hex) => {
     const rgb = parseHex(hex)
     return rgb ? toHex(rgb.map(c => c * 0.74)) : hex
@@ -321,6 +360,7 @@ function asCredit(stops, isCredit) {
   return { from: deepen(stops.from), to: deepen(stops.to) }
 }
 
+/** @param {Account} [account] */
 export function accountBrand(account) {
   const key = norm(account?.name)
   const isCredit = account?.type === 'credit'

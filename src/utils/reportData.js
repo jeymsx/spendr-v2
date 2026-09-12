@@ -13,6 +13,9 @@ const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maxim
  * Returns structured data for the PDF from Dexie.
  * @param {number} year
  * @param {number} month  1-indexed (1 = January)
+ *
+ * @param {number} year
+ * @param {number} month
  */
 export async function fetchReportData(year, month) {
   const start = new Date(year, month - 1, 1)
@@ -57,6 +60,7 @@ export async function fetchReportData(year, month) {
   const expenses = monthTxs.filter(tx => tx.type === 'expense')
   const inflows  = monthTxs.filter(tx => tx.type === 'inflow')
 
+  /** @param {number} v */
   const r2 = (v) => Math.round(v * 100) / 100
 
   const totalIncome   = r2(inflows.reduce((s, t)  => s + (t.amount ?? 0), 0))
@@ -65,6 +69,7 @@ export async function fetchReportData(year, month) {
   const savingsRate   = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0
 
   // Category breakdown
+  /** @type {Record<string, {total: number, count: number}>} */
   const catTotals = {}
   for (const tx of expenses) {
     if (!catTotals[tx.category]) {
@@ -93,10 +98,12 @@ export async function fetchReportData(year, month) {
   const nonCreditAccounts = accounts.filter(a => a.type !== 'credit')
 
   // Credit detail: uses current billing cycle (same logic as Dashboard / account modal)
+  /** @param {Date|null} [d] */
   const fmtDate = (d) => d
     ? d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
     : '—'
 
+  /** @type {Record<string, Record<string, any>>} */
   const creditDetailMap = {}
   for (const acct of creditAccounts) {
     const { cycleStart, cycleEnd, thisTotal: stmtTotal, nextTotal,
@@ -142,6 +149,7 @@ export async function fetchReportData(year, month) {
   // it also backs out charges dated later this month, which the stored balance
   // already includes because an installment plan writes every row up front.
   const afterMonthTxs = allTxs.filter(tx => new Date(tx.date) > asOf)
+  /** @type {Record<string, number>} */
   const endingBalances = {}
   for (const acct of accounts) {
     let bal = acct.balance ?? 0
@@ -199,6 +207,10 @@ export async function fetchReportData(year, month) {
  * Fetches data then downloads the PDF.
  * @param {number} year
  * @param {number} month  1-indexed
+ *
+ * @param {number} year
+ * @param {number} month
+ * @param {string} [accentColor]
  */
 export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF') {
   const data = await fetchReportData(year, month)
@@ -211,7 +223,9 @@ export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF'
     hour: 'numeric', minute: '2-digit', hour12: true,
   })
 
-  const blob = await pdf(createElement(MonthlyReport, { ...data, accentColor, generatedAt })).toBlob()
+  const pdfAny = /** @type {any} */ (pdf)
+  const blob = await pdfAny(
+    createElement(MonthlyReport, { ...data, accentColor, generatedAt })).toBlob()
 
   const mm  = String(month).padStart(2, '0')
   const url = URL.createObjectURL(blob)

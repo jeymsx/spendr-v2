@@ -10,10 +10,25 @@ import { allocateGoals, monthsUntil, pace } from './goals'
  * allocator must never claim more money than actually exists.
  */
 
+/**
+ * The name doubles as the id here, which is a fixture convention rather than
+ * the record's - real ids are auto-increment numbers. Cast rather than
+ * renumbered: several tests read an id back to identify a row, and rewriting
+ * them to satisfy an annotation is changing the test to suit the type.
+ *
+ * @param {string} name @param {number} balance
+ * @param {string} [type] @param {number} [sort_order]
+ * @returns {Account}
+ */
 const acct = (name, balance, type = 'savings', sort_order = 0) =>
-  ({ id: name, name, balance, type, sort_order })
+  /** @type {any} */ ({ id: name, name, balance, type, sort_order })
+/**
+ * @param {string} name @param {number} target
+ * @param {string[]} [accounts] @param {number} [priority]
+ * @returns {Goal}
+ */
 const goal = (name, target, accounts, priority = 0) =>
-  ({ id: name, name, target, accounts, priority })
+  /** @type {any} */ ({ id: name, name, target, accounts, priority })
 
 describe('allocateGoals', () => {
   it('funds a goal from its linked account', () => {

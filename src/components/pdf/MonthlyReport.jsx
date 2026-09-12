@@ -2,25 +2,72 @@ import { Document, Page, View, Text, StyleSheet, Svg, Rect } from '@react-pdf/re
 
 // ── Color helpers ──────────────────────────────────────────────────────────────
 
+/**
+ * Everything a report page can be handed. One typedef for all four, because
+ * MonthlyReport destructures its own props and passes the same values down -
+ * so a page taking a narrower shape would only be describing which subset it
+ * happens to read today.
+ *
+ * @typedef {object} ReportProps
+ * @property {number} [year]
+ * @property {number} [month]
+ * @property {string} [monthName]
+ * @property {string} [userName]
+ * @property {string} [subtitle]
+ * @property {Record<string, any>} [summary]
+ * @property {Account[]} [accounts]
+ * @property {Record<string, number>} [endingBalances]
+ * @property {Record<string, Record<string, any>>} [creditDetailMap]
+ * @property {number} [totalAssets]
+ * @property {number} [totalCreditUsed]
+ * @property {number} [totalCreditLimit]
+ * @property {number} [netWorth]
+ * @property {Array<Record<string, any>>} [categoryBreakdown]
+ * @property {Transaction[]} [transactions]
+ * @property {string} [accentColor]
+ * @property {string} [generatedAt]
+ * @property {Date|string} [asOf]
+ * @property {string} [asOfLabel]
+ * @property {Record<string, string>} [colors]
+ */
+
+/**
+ * @param {string} hex
+ * @returns {[number, number, number]}
+ */
 function hexToRgb(hex) {
   const h = hex.replace('#', '')
   return [parseInt(h.slice(0,2),16), parseInt(h.slice(2,4),16), parseInt(h.slice(4,6),16)]
 }
 
+/**
+ * @param {number} r
+ * @param {number} g
+ * @param {number} b
+ */
 function rgbToHex(r, g, b) {
   return '#' + [r,g,b].map(v => Math.round(Math.max(0,Math.min(255,v))).toString(16).padStart(2,'0')).join('')
 }
 
+/**
+ * @param {string} hex
+ * @param {number} t
+ */
 function blendWithWhite(hex, t) {
   const [r,g,b] = hexToRgb(hex)
   return rgbToHex(r*t+255*(1-t), g*t+255*(1-t), b*t+255*(1-t))
 }
 
+/**
+ * @param {string} hex
+ * @param {number} t
+ */
 function darken(hex, t) {
   const [r,g,b] = hexToRgb(hex)
   return rgbToHex(r*(1-t), g*(1-t), b*(1-t))
 }
 
+/** @param {string} hex */
 function luminance(hex) {
   return hexToRgb(hex).map(v => {
     const s = v / 255
@@ -28,6 +75,7 @@ function luminance(hex) {
   }).reduce((sum, c, i) => sum + c * [0.2126, 0.7152, 0.0722][i], 0)
 }
 
+/** @param {string} hex */
 function darkenForWhiteText(hex) {
   const [r, g, b] = hexToRgb(hex)
   let factor = 1
@@ -39,6 +87,7 @@ function darkenForWhiteText(hex) {
   return rgbToHex(r * factor, g * factor, b * factor)
 }
 
+/** @param {string} accentHex */
 function computePdfColors(accentHex) {
   const primary = darkenForWhiteText(accentHex)
   return {
@@ -63,6 +112,7 @@ const DARK_TEXT      = '#1e293b'
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
 const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+/** @param {number} [v] */
 const fmt = (v) => {
   const n = v ?? 0
   return (n < 0 ? '-PHP ' : 'PHP ') + _phpFmt.format(Math.abs(n))
@@ -252,6 +302,7 @@ const styles = StyleSheet.create({
 
 // ── Footer component ───────────────────────────────────────────────────────────
 
+/** @param {ReportProps} props */
 function ReportFooter({ monthName, year }) {
   return (
     <View style={styles.footer} fixed>
@@ -263,6 +314,7 @@ function ReportFooter({ monthName, year }) {
 
 // ── Header bar component ───────────────────────────────────────────────────────
 
+/** @param {ReportProps} props */
 function HeaderBar({ subtitle, colors }) {
   return (
     <View style={[styles.headerBar, { backgroundColor: colors.primary }]}>
@@ -274,6 +326,7 @@ function HeaderBar({ subtitle, colors }) {
 
 // ── Page 1: Cover & Summary ────────────────────────────────────────────────────
 
+/** @param {ReportProps} props */
 function CoverPage({ year, month, userName, summary, accounts, endingBalances, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, generatedAt, asOfLabel, colors }) {
   const monthName = MONTH_NAMES[month - 1]
   const { totalIncome, totalExpenses, netSavings, savingsRate } = summary
@@ -445,6 +498,7 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
 
 // ── Page 2: Spending Breakdown ─────────────────────────────────────────────────
 
+/** @param {ReportProps} props */
 function SpendingPage({ year, month, summary, categoryBreakdown, colors }) {
   const monthName = MONTH_NAMES[month - 1]
   const { totalExpenses } = summary
@@ -534,6 +588,7 @@ function SpendingPage({ year, month, summary, categoryBreakdown, colors }) {
 
 // ── Page 3: Transaction List ───────────────────────────────────────────────────
 
+/** @param {number} day */
 function getWeekGroup(day) {
   if (day <= 7)  return 0
   if (day <= 14) return 1
@@ -541,6 +596,11 @@ function getWeekGroup(day) {
   return 3
 }
 
+/**
+ * @param {number} group
+ * @param {number} year
+ * @param {number} month
+ */
 function weekGroupLabel(group, year, month) {
   const monthName = MONTH_SHORT[month - 1]
   const daysInMonth = new Date(year, month, 0).getDate()
@@ -554,10 +614,12 @@ function weekGroupLabel(group, year, month) {
   return `${monthName} ${s}–${e}`
 }
 
+/** @param {ReportProps} props */
 function TransactionsPage({ year, month, transactions, colors }) {
   const monthName = MONTH_NAMES[month - 1]
 
   // Group by week
+  /** @type {Record<number, Transaction[]>} */
   const groups = {}
   for (const tx of transactions) {
     const d   = new Date(tx.date)
@@ -645,6 +707,7 @@ function TransactionsPage({ year, month, transactions, colors }) {
 
 // ── Main Document ──────────────────────────────────────────────────────────────
 
+/** @param {ReportProps} props */
 export default function MonthlyReport(props) {
   const {
     year,

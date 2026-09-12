@@ -10,6 +10,8 @@ const BACKUP_TABLES = ['transactions', 'accounts', 'categories', 'templates', 'r
 /**
  * Validate a parsed backup file and report what it holds.
  * Throws with a readable message rather than returning a partial result.
+ *
+ * @param {string|object} raw
  */
 export function inspectBackup(raw) {
   let data
@@ -27,7 +29,7 @@ export function inspectBackup(raw) {
     throw new Error('No Spendr data found in this file.')
   }
   for (const t of present) {
-    if (data[t].some(r => !r || typeof r !== 'object')) {
+    if (data[t].some((/** @type {unknown} */ r) => !r || typeof r !== 'object')) {
       throw new Error(`The "${t}" section is malformed.`)
     }
   }
@@ -61,11 +63,22 @@ export function inspectBackup(raw) {
  *
  * Row ids are preserved, because transactions reference recurring.id.
  * `meta` is left untouched, and `balances` is rebuilt from the restored accounts.
+ *
+ * @param {string|object} raw
  */
 export async function restoreBackup(raw) {
   const { data, counts } = inspectBackup(raw)
   const nowISO = new Date().toISOString()
 
+  /**
+   * Re-stamp rows of any table. Generic on purpose: this is handed six
+   * different record types and its job is to preserve every field it did not
+   * touch, which a concrete parameter type would erase.
+   *
+   * @template {Record<string, any>} T
+   * @param {T[]} [rows]
+   * @returns {T[]}
+   */
   const stamp = (rows) => (rows ?? []).map(r => ({
     ...r,
     synced:    UNSYNCED,
@@ -80,12 +93,16 @@ export async function restoreBackup(raw) {
     db.templates.toArray(),
   ])
 
-  const accounts   = stamp(data.accounts)
-  const categories = stamp(data.categories)
-  const templates  = stamp(data.templates)
-  const recurring  = stamp(data.recurring)
-  const debts      = stamp(data.debts)
-  const transactions = stamp(data.transactions)
+  /* Each call names the table it is restoring. A backup file is parsed JSON,
+     so its sections arrive untyped and the generic has nothing better to
+     infer - and naming them here is exactly the assertion the restore makes
+     anyway: that a section called "accounts" holds accounts. */
+  const accounts   = /** @type {Account[]}     */ (stamp(data.accounts))
+  const categories = /** @type {Category[]}    */ (stamp(data.categories))
+  const templates  = /** @type {Template[]}    */ (stamp(data.templates))
+  const recurring  = /** @type {Recurring[]}   */ (stamp(data.recurring))
+  const debts      = /** @type {Debt[]}        */ (stamp(data.debts))
+  const transactions = /** @type {Transaction[]} */ (stamp(data.transactions))
 
   const keptTxIds  = new Set(transactions.map(t => t.txId).filter(Boolean))
   const droppedTxIds = oldTxs.map(t => t.txId).filter(id => id && !keptTxIds.has(id))

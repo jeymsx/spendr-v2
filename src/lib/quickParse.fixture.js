@@ -36,12 +36,19 @@ export const FIXTURE_NOW = '2026-09-11T10:00:00'
 const NOW_MS = Date.parse(FIXTURE_NOW)
 
 /** An ISO date `n` days before FIXTURE_NOW. */
+/** @param {number} n */
 function daysAgo(n) {
   return new Date(NOW_MS - n * 86_400_000).toISOString().slice(0, 10)
 }
 
+/** @type {Transaction[]} */
 const rows = []
 let seq = 0
+/**
+ * @param {number} daysBack @param {string} description
+ * @param {string|null} category @param {string|null} account
+ * @param {number} amount @param {string} [type]
+ */
 function add(daysBack, description, category, account, amount, type = 'expense') {
   rows.push({
     id: ++seq,
@@ -168,6 +175,7 @@ export const TEMPLATES = [
 ]
 
 /** How many rows in the ledger name `description`, for count-based assertions. */
+/** @param {string} description @param {string|null} [category] */
 export function countOf(description, category = null) {
   return LEDGER.filter(r =>
     r.description === description && (category == null || r.category === category),

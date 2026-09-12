@@ -1,6 +1,9 @@
 /**
  * Advance a date string forward by one frequency period.
  * Returns a YYYY-MM-DD string.
+ *
+ * @param {string} dateStr
+ * @param {string} frequency
  */
 export function advanceNextDate(dateStr, frequency) {
   const step = FREQ_BY_VALUE[frequency]?.step
@@ -28,12 +31,16 @@ export function advanceNextDate(dateStr, frequency) {
 
   /* Local, not toISOString: the date is a calendar day, and in UTC+8 an
      ISO conversion of a local midnight lands on the previous day. */
+  /** @param {number} n */
   const p = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
 /**
  * Normalize an amount to its monthly equivalent.
+ *
+ * @param {number} amount
+ * @param {string} frequency
  */
 export function toMonthlyAmount(amount, frequency) {
   return (amount ?? 0) * (FREQ_BY_VALUE[frequency]?.perMonth ?? 1)
@@ -80,7 +87,11 @@ export const FREQ_ORDER = [
 
 export const FREQ_LABEL = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.label]))
 export const FREQ_SHORT = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.short]))
-/** A YYYY-MM-DD string as a local date, not a UTC one. */
+/** A YYYY-MM-DD string as a local date, not a UTC one.
+ *
+ * @param {string} [str]
+ * @returns {Date|null}
+ */
 export function parseDateLocal(str) {
   if (!str) return null
   const [y, m, d] = String(str).slice(0, 10).split('-').map(Number)
@@ -89,7 +100,11 @@ export function parseDateLocal(str) {
   return Number.isNaN(out.getTime()) ? null : out
 }
 
-/** Whole days from today to `dateStr`; negative when it has passed. */
+/** Whole days from today to `dateStr`; negative when it has passed.
+ *
+ * @param {string} [dateStr]
+ * @returns {number|null}
+ */
 export function daysUntil(dateStr) {
   const due = parseDateLocal(dateStr)
   if (!due) return null
@@ -103,6 +118,8 @@ export function daysUntil(dateStr) {
  * `tone` is a name rather than a class list so callers can render it at
  * whatever size they need - the detail page's hero and a 11px list row want
  * the same three states in very different type.
+ *
+ * @param {string} [dateStr]
  */
 export function dueStatus(dateStr) {
   const n = daysUntil(dateStr)
@@ -122,7 +139,10 @@ export const DUE_TONE = {
   calm: 'text-slate-500 dark:text-slate-400',
 }
 
-/** "Sep 14, 2026" — for a date far enough out that the year matters. */
+/** "Sep 14, 2026" — for a date far enough out that the year matters.
+ *
+ * @param {string} [str]
+ */
 export function fmtDateFull(str) {
   const d = parseDateLocal(str)
   return d ? d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
@@ -134,6 +154,8 @@ export function fmtDateFull(str) {
  * Relative wording only where it beats the date itself. Past a week out
  * "in 23 days" is arithmetic the date already answers, so it drops the
  * preamble and just says when.
+ *
+ * @param {string} [dateStr]
  */
 export function billingLine(dateStr) {
   const d = parseDateLocal(dateStr)

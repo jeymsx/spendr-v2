@@ -12,15 +12,18 @@ import { evaluateBadges, longestDayStreak, liquidTotal, BADGES } from './badges'
 
 const TODAY = new Date('2026-06-15T10:00:00')
 
+/** @param {string} date @param {string} type @param {number} [amount] @param {string} [category] */
 const tx = (date, type, amount, category) => ({ date, type, amount, category })
 
+/** @param {Record<string, any>} [over] */
 function earned(over = {}) {
   return evaluateBadges({ today: TODAY, ...over })
 }
 
 /** Day `i` after a start date, as YYYY-MM-DD. */
+/** @param {string} start */
 function dayFrom(start) {
-  return i => {
+  return (/** @type {number} */ i) => {
     const d = new Date(start + 'T00:00:00')
     d.setDate(d.getDate() + i)
     const m = String(d.getMonth() + 1).padStart(2, '0')
@@ -285,7 +288,7 @@ describe('year-one', () => {
 })
 
 describe('steady-three', () => {
-  const green = m => [tx('2026-' + m + '-02', 'inflow', 900), tx('2026-' + m + '-03', 'expense', 100)]
+  const green = (/** @type {string} */ m) => [tx('2026-' + m + '-02', 'inflow', 900), tx('2026-' + m + '-03', 'expense', 100)]
 
   it('needs adjacent months, not any three good ones', () => {
     const gappy = [...green('01'), ...green('03'), ...green('05')]
@@ -306,8 +309,8 @@ describe('budget-master', () => {
     { name: 'Food', budget: 8000, type: 'expense' },
     { name: 'Transpo', budget: 3000, type: 'expense' },
   ]
-  const good = m => [tx('2026-' + m + '-02', 'expense', 100, 'Food')]
-  const bad = m => [tx('2026-' + m + '-02', 'expense', 90000, 'Food')]
+  const good = (/** @type {string} */ m) => [tx('2026-' + m + '-02', 'expense', 100, 'Food')]
+  const bad = (/** @type {string} */ m) => [tx('2026-' + m + '-02', 'expense', 90000, 'Food')]
 
   it('needs three adjacent months inside every limit', () => {
     const broken = [...good('01'), ...bad('02'), ...good('03'), ...good('04')]

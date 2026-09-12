@@ -1,13 +1,27 @@
+/**
+ * @param {number} year
+ * @param {number} month
+ * @param {number} day
+ */
 function clampDay(year, month, day) {
   return Math.min(day, new Date(year, month + 1, 0).getDate())
 }
 
-/** How many days are in a month. Handles month < 0 and > 11 by rolling. */
+/** How many days are in a month. Handles month < 0 and > 11 by rolling.
+ *
+ * @param {number} year
+ * @param {number} month
+ */
 function daysInMonth(year, month) {
   return new Date(year, month + 1, 0).getDate()
 }
 
 // End-of-day helper so any transaction time on that date is included
+/**
+ * @param {number} year
+ * @param {number} month
+ * @param {number} day
+ */
 function eod(year, month, day) {
   return new Date(year, month, day, 23, 59, 59, 999)
 }
@@ -18,6 +32,9 @@ function eod(year, month, day) {
  *
  * cutoff=15, today=May 21  → Apr 15 00:00 – May 14 23:59  (open: May 15–Jun 14)
  * cutoff=15, today=May 10  → Mar 15 00:00 – Apr 14 23:59  (open: Apr 15–May 14)
+ *
+ * @param {number} cutoffDay
+ * @param {Date} [referenceDate]
  */
 export function getCycleRange(cutoffDay, referenceDate = new Date()) {
   const d = cutoffDay ? Math.max(1, Math.min(31, cutoffDay)) : null
@@ -65,6 +82,9 @@ export function getCycleRange(cutoffDay, referenceDate = new Date()) {
 /**
  * Returns { cycleStart, cycleEnd } for the currently-accumulating (open) cycle.
  * Starts on cutoffDay of this (or next) month, ends on (cutoffDay - 1) end-of-day of the following month.
+ *
+ * @param {number} cutoffDay
+ * @param {Date} [referenceDate]
  */
 export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
   const d = cutoffDay ? Math.max(1, Math.min(31, cutoffDay)) : null
@@ -134,6 +154,9 @@ export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
  * Today counts as passed, so a due date of "the 10th" on the 10th returns next
  * month. That is deliberate for a bill you have presumably already paid, and
  * it matches what the account cards have always shown.
+ *
+ * @param {number} dayOfMonth
+ * @param {Date} [now]
  */
 export function nextDueDate(dayOfMonth, now = new Date()) {
   if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) return null
@@ -142,6 +165,11 @@ export function nextDueDate(dayOfMonth, now = new Date()) {
   return d
 }
 
+/**
+ * @param {Account} account
+ * @param {Transaction[]} txs
+ * @param {Date} [referenceDate]
+ */
 export function getCreditStatus(account, txs, referenceDate = new Date()) {
   const { cycleStart, cycleEnd } = getCycleRange(account?.cutoffDate, referenceDate)
   // The cycle now accumulating. Its end is the boundary between "on the next
@@ -183,6 +211,7 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
     }
   }
 
+  /** @param {Transaction[]} arr */
   const sum                = (arr) => arr.reduce((s, tx) => s + (tx.amount ?? 0), 0)
   const thisTotal          = sum(thisCharges)
   const nextTotal          = sum(nextCharges)

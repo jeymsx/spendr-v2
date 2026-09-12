@@ -22,6 +22,8 @@ import { useLocation } from 'react-router-dom'
  * location.key is fresh for every navigation and stable across re-renders,
  * which is exactly the distinction needed: the same parse must not be
  * reapplied over a correction you have since typed, a new one always must.
+ *
+ * @param {{categories?: Category[], accounts?: Account[], apply: (patch: Record<string, any>) => void}} input
  */
 export function useQuickPrefill({ categories, accounts, apply }) {
   const location = useLocation()
@@ -40,6 +42,7 @@ export function useQuickPrefill({ categories, accounts, apply }) {
     if (needsAccts && !(accounts ?? []).length) return
 
     appliedKey.current = location.key
+    /** @param {Array<{name: string}>} [list] @param {string} [name] */
     const byName = (list, name) =>
       name ? (list ?? []).find(x => x.name === name) ?? null : null
 

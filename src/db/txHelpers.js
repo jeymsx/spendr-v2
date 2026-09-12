@@ -3,6 +3,7 @@ import { advanceNextDate } from '../utils/recurring'
 
 /** Thrown when a spend would take a non-credit account below zero. */
 export class OverdrawError extends Error {
+  /** @param {string} account @param {number} balance @param {number} amount */
   constructor(account, balance, amount) {
     super(`Insufficient balance in ${account}`)
     this.name    = 'OverdrawError'
@@ -16,6 +17,9 @@ export class OverdrawError extends Error {
  * Returns the account row when spending `amount` from it would overdraw it,
  * otherwise null. Credit accounts are exempt — they're bounded by their limit,
  * which getCreditStatus tracks, not by a stored balance.
+ *
+ * @param {string} accountName
+ * @param {number} amount
  */
 export async function checkOverdraw(accountName, amount) {
   if (!accountName || !(amount > 0)) return null
@@ -25,6 +29,10 @@ export async function checkOverdraw(accountName, amount) {
   return acct
 }
 
+/**
+ * @param {string} accountName
+ * @param {number} delta
+ */
 async function adjustBalance(accountName, delta) {
   if (!accountName || !delta) return
   const acct = await db.accounts.where('name').equals(accountName).first()
@@ -35,14 +43,20 @@ async function adjustBalance(accountName, delta) {
   await db.balances.put({ account: accountName, balance: newBal })
 }
 
-/** Returns true if the named account is a credit card. */
+/** Returns true if the named account is a credit card.
+ *
+ * @param {string} accountName
+ */
 async function isCredit(accountName) {
   if (!accountName) return false
   const acct = await db.accounts.where('name').equals(accountName).first()
   return acct?.type === 'credit'
 }
 
-/** Undo the balance effects of a saved transaction. */
+/** Undo the balance effects of a saved transaction.
+ *
+ * @param {Transaction} tx
+ */
 export async function reverseBalanceEffect(tx) {
   const a = tx.amount ?? 0
   if (tx.type === 'expense')  await adjustBalance(tx.account, +a)
@@ -55,7 +69,10 @@ export async function reverseBalanceEffect(tx) {
   }
 }
 
-/** Apply the balance effects of a (new or edited) transaction. */
+/** Apply the balance effects of a (new or edited) transaction.
+ *
+ * @param {Transaction} tx
+ */
 export async function applyBalanceEffect(tx) {
   const a = tx.amount ?? 0
   if (tx.type === 'expense')  await adjustBalance(tx.account, -a)
@@ -81,6 +98,9 @@ export async function applyBalanceEffect(tx) {
  * `payment` field.
  *
  * @returns the new nextDate
+ *
+ * @param {Recurring} rec
+ * @param {{allowOverdraw?: boolean}} [opts]
  */
 export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
   /* The overdraw check lives here rather than in the caller because it has to
@@ -117,7 +137,8 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
       recurringId:       rec.id,
       recurringPrevDate: rec.nextDate,
     })
-    await applyBalanceEffect({ type: 'expense', amount: rec.amount, account: rec.account })
+    await applyBalanceEffect(/** @type {Transaction} */ (
+      { type: 'expense', amount: rec.amount, account: rec.account, date: nowISO }))
     await db.recurring.update(rec.id, { nextDate: newNextDate })
   })
 
@@ -139,6 +160,8 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
  * balance.
  *
  * @returns true if this call restored it, false if it was already present.
+ *
+ * @param {Transaction} tx
  */
 export async function restoreDeletedTx(tx) {
   if (!tx) return false
@@ -181,7 +204,7 @@ export async function restoreDeletedTx(tx) {
         if (list.includes(tx.txId)) {
           await db.meta.put({
             key:   'deletedTxIds',
-            value: list.filter(id => id !== tx.txId),
+            value: list.filter((/** @type {string} */ id) => id !== tx.txId),
           })
         }
       }
@@ -199,6 +222,8 @@ export async function restoreDeletedTx(tx) {
  * Everything happens in one Dexie transaction, so a failure part-way cannot
  * leave some months deleted and others not. Tombstones are merged in the same
  * write, so the next sync removes exactly this set remotely.
+ *
+ * @param {Transaction[]} txs
  */
 export async function deleteTxGroup(txs) {
   const list = (txs ?? []).filter(Boolean)
@@ -229,6 +254,8 @@ export async function deleteTxGroup(txs) {
  * Undo a group deletion. Restores whatever is still missing and reports the
  * count, so a double-tapped Undo is harmless — rows already back are skipped
  * by restoreDeletedTx's own guard.
+ *
+ * @param {Transaction[]} txs
  */
 export async function restoreDeletedTxs(txs) {
   let restored = 0
@@ -249,6 +276,8 @@ export async function restoreDeletedTxs(txs) {
  *
  * `name` is a plain index, not a unique one, so this is a lookup and a
  * decision rather than a caught constraint error.
+ *
+ * @param {Template} row
  */
 export async function saveTemplate(row) {
   if (!row?.name) return null

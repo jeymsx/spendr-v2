@@ -5,9 +5,12 @@ import db from '../db/db'
 /**
  * Returns a map of { [accountName]: availableCredit } for all credit accounts.
  * The arithmetic lives in getCreditStatus so every screen agrees on it.
+ *
+ * @param {Account[]} [accounts]
  */
 export function useCreditAvailMap(accounts) {
   return useLiveQuery(async () => {
+    /** @type {Record<string, number>} */
     const map = {}
     const creditAccts = (accounts ?? []).filter(a => a.type === 'credit')
     if (!creditAccts.length) return map

@@ -1,8 +1,10 @@
 // Parse a display string (may contain commas) → number
+/** @param {string|number} [str] */
 export const parseMoney = (str) =>
   parseFloat(String(str ?? '').replace(/,/g, '')) || 0
 
 // Format a number → display string with commas (no forced decimals)
+/** @param {number} num */
 export function numToMoneyStr(num) {
   if (!num) return '0'
   const str = String(num)
@@ -13,8 +15,9 @@ export function numToMoneyStr(num) {
 
 // onChange handler factory for money inputs.
 // Strips commas, validates, reformats with commas, then calls setState.
+/** @param {(v: string) => void} setState */
 export function moneyChangeHandler(setState) {
-  return (e) => {
+  return (/** @type {{target: {value: string}}} */ e) => {
     let v = e.target.value.replace(/,/g, '').replace(/[^0-9.]/g, '')
     const parts = v.split('.')
     if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('')

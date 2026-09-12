@@ -7,6 +7,7 @@ import { useEffect } from 'react'
  */
 let _lockCount = 0
 
+/** @param {boolean} active */
 export function useScrollLock(active) {
   useEffect(() => {
     if (!active) return

@@ -17,6 +17,7 @@ import {
  */
 
 afterEach(() => vi.useRealTimers())
+/** @param {string} iso */
 const freeze = (iso) => { vi.useFakeTimers(); vi.setSystemTime(new Date(iso)) }
 
 describe('advanceNextDate', () => {

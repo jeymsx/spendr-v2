@@ -18,17 +18,20 @@ import { CUSTOM_PALETTE } from './phAccounts'
 // WCAG 2.1 relative luminance and contrast, in gamma space - the same maths
 // the library itself uses, restated here so a bug in one is not hidden by the
 // same bug in the other.
+/** @param {number} c */
 const srgb = (c) => {
   const x = c / 255
   return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
 }
+/** @param {number[]} channels */
 const lum = ([r, g, b]) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b)
 /** @returns {[number, number, number]} */
-const hex = (h) => {
+const hex = (/** @type {string} */ h) => {
   const s = h.replace('#', '')
   const [r, g, b] = [0, 2, 4].map(i => parseInt(s.slice(i, i + 2), 16))
   return [r, g, b]
 }
+/** @param {string} h */
 const contrastWithWhite = (h) => (1.0 + 0.05) / (lum(hex(h)) + 0.05)
 
 const AA_SMALL = 4.5

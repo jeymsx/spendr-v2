@@ -78,6 +78,7 @@ export const CARD_DESIGNS = [
  * quietly reverting to a bare gradient, which is the whole point of this map:
  * removing a design from the gallery must not silently undo somebody's choice.
  */
+/** @type {Record<string, string>} */
 const ALIASES = {
   aurora: 'bloom',
   ripple: 'orbit',
@@ -88,12 +89,16 @@ const ALIASES = {
 
 export const DEFAULT_DESIGN = 'classic'
 
-/** A stored value that is no longer a known design must not render as blank. */
+/** A stored value that is no longer a known design must not render as blank.
+ *
+ * @param {string} [key]
+ */
 export function normalizeDesign(key) {
   const resolved = ALIASES[key] ?? key
   return CARD_DESIGNS.some(d => d.key === resolved) ? resolved : DEFAULT_DESIGN
 }
 
+/** @param {string} [key] */
 export function designMeta(key) {
   return CARD_DESIGNS.find(d => d.key === normalizeDesign(key)) ?? CARD_DESIGNS[0]
 }

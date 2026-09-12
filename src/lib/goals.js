@@ -70,13 +70,19 @@ export const GOAL_ICONS = [
  * Assets only. A credit card's "balance" is a debt, so pouring it into a goal
  * would count money you owe as money you have - the sign is not merely
  * inconvenient, it is the opposite of the truth.
+ *
+ * @param {Account} [acct]
  */
 export function isFundable(acct) {
   if (!acct) return false
   return acct.type !== 'credit' && (acct.role ?? '') !== 'credit'
 }
 
-/** Rank order, with `id` as the tiebreak so the sort is total, not partial. */
+/** Rank order, with `id` as the tiebreak so the sort is total, not partial.
+ *
+ * @param {Goal} a
+ * @param {Goal} b
+ */
 function byRank(a, b) {
   const pa = a.priority ?? Number.MAX_SAFE_INTEGER
   const pb = b.priority ?? Number.MAX_SAFE_INTEGER
@@ -84,7 +90,11 @@ function byRank(a, b) {
   return (a.id ?? 0) - (b.id ?? 0)
 }
 
-/** The order accounts contribute in - the same order the Accounts tab shows. */
+/** The order accounts contribute in - the same order the Accounts tab shows.
+ *
+ * @param {Account} a
+ * @param {Account} b
+ */
 function byAccountOrder(a, b) {
   const sa = a.sort_order ?? 9999
   const sb = b.sort_order ?? 9999
@@ -92,6 +102,7 @@ function byAccountOrder(a, b) {
   return String(a.name ?? '').localeCompare(String(b.name ?? ''))
 }
 
+/** @param {Goal} [goal] */
 export function isArchived(goal) {
   return !!goal?.archivedAt
 }
@@ -130,9 +141,11 @@ export function allocateGoals({ goals = [], accounts = [] } = {}) {
     fundable.map(a => [a.name, Math.max(0, a.balance ?? 0)]),
   )
   const startBalance = new Map(remaining)
-  const takenFrom = new Map(fundable.map(a => [a.name, []]))
+  /** @type {Map<string, Array<{goalId?: number, name: string, amount: number}>>} */
+  const takenFrom = new Map(fundable.map(a => [a.name, /** @type {any[]} */ ([])]))
 
   const active = goals.filter(g => !isArchived(g)).slice().sort(byRank)
+  /** @type {AllocatedGoal[]} */
   const out = []
 
   for (const goal of active) {
@@ -197,6 +210,14 @@ export function allocateGoals({ goals = [], accounts = [] } = {}) {
   return { goals: out, active: activeOut, byAccount, totals }
 }
 
+/**
+ * @param {Goal} goal
+ * @param {number} saved
+ * @param {number} target
+ * @param {Array<{account: string, amount: number}>} sources
+ * @param {number} linkedCount
+ * @returns {AllocatedGoal}
+ */
 function decorate(goal, saved, target, sources, linkedCount) {
   return {
     ...goal,
@@ -216,7 +237,12 @@ function decorate(goal, saved, target, sources, linkedCount) {
 
 // ── Pace ─────────────────────────────────────────────────────────────────────
 
-/** Whole months from `today` to `iso`, rounded up; null when there is no date. */
+/** Whole months from `today` to `iso`, rounded up; null when there is no date.
+ *
+ * @param {string} iso
+ * @param {Date} today
+ * @returns {number|null}
+ */
 export function monthsUntil(iso, today) {
   if (!iso) return null
   const then = new Date(`${iso}T00:00:00`)
@@ -236,6 +262,9 @@ export function monthsUntil(iso, today) {
  * Returns null when there is no date or nothing left to save, and flags the
  * date as past rather than dividing by zero or a negative - "₱-4,500 a month"
  * is worse than no number at all.
+ *
+ * @param {{target?: number, saved?: number, targetDate?: string|null}} goal
+ * @param {Date} [today]
  */
 export function pace(goal, today = new Date()) {
   const left = Math.max(0, (goal.target ?? 0) - (goal.saved ?? 0))
@@ -249,7 +278,11 @@ export function pace(goal, today = new Date()) {
 
 // ── Rank helpers ─────────────────────────────────────────────────────────────
 
-/** The rank a new goal gets: last in line, so it can never displace a funded one. */
+/** The rank a new goal gets: last in line, so it can never displace a funded one.
+ *
+ * @param {Goal[]} [goals]
+ * @returns {number}
+ */
 export function nextRank(goals = []) {
   const max = goals.reduce((m, g) => Math.max(m, g.priority ?? 0), 0)
   return max + GOAL_RANK_STEP
@@ -260,9 +293,14 @@ export function nextRank(goals = []) {
  *
  * Returns only the goals whose rank actually changed, so a reorder writes two
  * or three rows instead of every row in the table.
+ *
+ * @param {number[]} orderedIds
+ * @param {Goal[]} [goals]
+ * @returns {Array<{id: number, priority: number}>}
  */
 export function reRank(orderedIds, goals = []) {
   const byId = new Map(goals.map(g => [g.id, g]))
+  /** @type {Array<{id: number, priority: number}>} */
   const out = []
   orderedIds.forEach((id, i) => {
     const goal = byId.get(id)
