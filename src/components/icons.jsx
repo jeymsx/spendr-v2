@@ -181,6 +181,8 @@ import {
   Receipt, SwitchHorizontal01,
   CalendarCheck01, CoinsHand, Grid01, Brush01, Palette, Settings01,
   Contrast01, ZapFast,
+  Trophy01, Target04, CoinsStacked01, TrendUp01, BarChart10, Calculator,
+  AlertCircle, CheckCircle,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -241,3 +243,23 @@ export const ACCOUNT_TYPE_ICON = {
   savings: IconBankUI,
   credit:  IconCardUI,
 }
+
+/* Insight watermarks.
+ *
+ * The trivia card carries one of these big and clipped off its bottom-right
+ * corner, the way an account card carries its brand mark - so they are read as
+ * texture at 30% opacity rather than as glyphs, and only need to be the right
+ * IDEA rather than legible at 18px.
+ *
+ * They replaced emoji. An OS emoji is a different colour, a different weight
+ * and a different level of detail on every platform, which is fine at 20px
+ * beside text and falls apart at 96px behind it - and there is no way to make
+ * one white. */
+export const IconTrophy    = uui(Trophy01)
+export const IconTarget    = uui(Target04)
+export const IconCoins     = uui(CoinsStacked01)
+export const IconTrendUp   = uui(TrendUp01)
+export const IconBarChart  = uui(BarChart10)
+export const IconCalc      = uui(Calculator)
+export const IconAlert     = uui(AlertCircle)
+export const IconCheckCircle = uui(CheckCircle)

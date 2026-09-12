@@ -14,6 +14,15 @@ import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import ProgressBar from '../components/ui/ProgressBar'
 import { AccountChip } from '../components/AccountPickerSheet'
+/* IconTrendUp is aliased: this file already has one, hand-drawn at a fixed
+   26px for the income stat row. That one cannot take a size, and a 104px
+   watermark needs to. Two trend glyphs in one file is not ideal, but they are
+   different jobs at a 4x size difference, and unifying them would change a
+   stat row nobody asked about. */
+import {
+  IconCalendar, IconReceipt, IconTrophy, IconCheckCircle, IconAlert,
+  IconTarget, IconCoins, IconTrendUp as IconTrendGlyph, IconBarChart, IconCalc,
+} from '../components/icons'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -331,35 +340,35 @@ function ordinal(n) {
 
 function generateTrivia({ expenses, inflows, totalSpent, totalEarned, categorySegments, topCategory, dailyData, topExpenses, budgetData, monthName }) {
   const items = []
-  const push = (emoji, text, valid = true) => { if (valid && text) items.push({ emoji, text }) }
+  const push = (icon, text, valid = true) => { if (valid && text) items.push({ icon, text }) }
   const numExpenses = expenses.length
   const hasExpenses = numExpenses > 0
 
   const zeroDays = dailyData.filter(d => d.value === 0).length
-  push('📅', `You had ${zeroDays} spending-free day${zeroDays !== 1 ? 's' : ''} in ${monthName} — ${Math.round(zeroDays / dailyData.length * 100)}% of the period.`, zeroDays > 0 && hasExpenses && dailyData.length > 0)
+  push('calendar', `You had ${zeroDays} spending-free day${zeroDays !== 1 ? 's' : ''} in ${monthName} — ${Math.round(zeroDays / dailyData.length * 100)}% of the period.`, zeroDays > 0 && hasExpenses && dailyData.length > 0)
 
   if (topExpenses.length > 0) {
     const top = topExpenses[0]
-    push('💸', `Your biggest single expense: ${fmtCompact(top.amount)} on "${top.description || top.category}".`)
+    push('receipt', `Your biggest single expense: ${fmtCompact(top.amount)} on "${top.description || top.category}".`)
   }
 
-  push('🧮', `${numExpenses} expense transaction${numExpenses !== 1 ? 's' : ''} in ${monthName} — averaging ${fmtCompact(totalSpent / numExpenses)} each.`, hasExpenses)
+  push('calc', `${numExpenses} expense transaction${numExpenses !== 1 ? 's' : ''} in ${monthName} — averaging ${fmtCompact(totalSpent / numExpenses)} each.`, hasExpenses)
 
   if (topCategory && totalSpent > 0) {
     const pct = (topCategory.value / totalSpent * 100).toFixed(0)
-    push('🏆', `${topCategory.icon} ${topCategory.name} took up ${pct}% of your spending.`)
+    push('trophy', `${topCategory.icon} ${topCategory.name} took up ${pct}% of your spending.`)
   }
 
   if (categorySegments.length >= 2 && totalSpent > 0) {
     const top2 = categorySegments[0].value + categorySegments[1].value
-    push('🎯', `${categorySegments[0].icon} ${categorySegments[0].name} and ${categorySegments[1].icon} ${categorySegments[1].name} together make up ${(top2 / totalSpent * 100).toFixed(0)}% of expenses.`)
+    push('target', `${categorySegments[0].icon} ${categorySegments[0].name} and ${categorySegments[1].icon} ${categorySegments[1].name} together make up ${(top2 / totalSpent * 100).toFixed(0)}% of expenses.`)
   }
 
   if (totalEarned > 0) {
     const net = totalEarned - totalSpent
     const rate = Math.abs((net / totalEarned) * 100).toFixed(0)
-    if (net >= 0) push('💰', `You saved ${fmtCompact(net)} in ${monthName} — a ${rate}% savings rate.`)
-    else push('⚠️', `You overspent income by ${fmtCompact(Math.abs(net))} — a ${rate}% deficit.`)
+    if (net >= 0) push('coins', `You saved ${fmtCompact(net)} in ${monthName} — a ${rate}% savings rate.`)
+    else push('alert', `You overspent income by ${fmtCompact(Math.abs(net))} — a ${rate}% deficit.`)
   }
 
   if (hasExpenses) {
@@ -367,25 +376,39 @@ function generateTrivia({ expenses, inflows, totalSpent, totalEarned, categorySe
     for (const tx of expenses) byDow[new Date(tx.date).getDay()] += tx.amount ?? 0
     const maxDow = byDow.indexOf(Math.max(...byDow))
     const days = ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays']
-    push('📆', `${days[maxDow]} are your heaviest spending day in ${monthName}.`, byDow[maxDow] > 0)
+    push('calendar', `${days[maxDow]} are your heaviest spending day in ${monthName}.`, byDow[maxDow] > 0)
   }
 
   const peak = dailyData.reduce((b, d) => d.value > b.value ? d : b, { day: 0, value: 0 })
-  push('📈', `Highest-spend day: the ${ordinal(peak.day)} — ${fmtCompact(peak.value)}.`, peak.value > 0)
+  push('trend', `Highest-spend day: the ${ordinal(peak.day)} — ${fmtCompact(peak.value)}.`, peak.value > 0)
 
   const activeDays = dailyData.filter(d => d.value > 0).length
-  push('📊', `On days you actually spent, you averaged ${fmtCompact(totalSpent / activeDays)} per day.`, activeDays > 0)
+  push('chart', `On days you actually spent, you averaged ${fmtCompact(totalSpent / activeDays)} per day.`, activeDays > 0)
 
   const overBudget = budgetData.filter(d => d.spent > d.budget)
-  if (overBudget.length > 0) push('🚨', `Over budget in ${overBudget.length} categor${overBudget.length !== 1 ? 'ies' : 'y'}: ${overBudget.map(d => d.name).join(', ')}.`)
+  if (overBudget.length > 0) push('alert', `Over budget in ${overBudget.length} categor${overBudget.length !== 1 ? 'ies' : 'y'}: ${overBudget.map(d => d.name).join(', ')}.`)
 
   const underBudget = budgetData.filter(d => d.budget > 0 && d.spent < d.budget)
   if (underBudget.length > 0) {
     const saved = underBudget.reduce((s, d) => s + (d.budget - d.spent), 0)
-    push('✅', `Stayed under budget in ${underBudget.length} categor${underBudget.length !== 1 ? 'ies' : 'y'}, saving ${fmtCompact(saved)} vs your limits.`)
+    push('check', `Stayed under budget in ${underBudget.length} categor${underBudget.length !== 1 ? 'ies' : 'y'}, saving ${fmtCompact(saved)} vs your limits.`)
   }
 
   return items
+}
+
+/** Which watermark each kind of insight wears. See the note in icons.jsx. */
+const INSIGHT_GLYPH = {
+  calendar: IconCalendar,
+  receipt:  IconReceipt,
+  trophy:   IconTrophy,
+  check:    IconCheckCircle,
+  alert:    IconAlert,
+  target:   IconTarget,
+  coins:    IconCoins,
+  trend:    IconTrendGlyph,
+  chart:    IconBarChart,
+  calc:     IconCalc,
 }
 
 function SpendingTrivia({ trivia, triviaKey }) {
@@ -416,19 +439,56 @@ function SpendingTrivia({ trivia, triviaKey }) {
     }, 150)
   }
 
+  const Glyph = INSIGHT_GLYPH[item.icon] ?? INSIGHT_GLYPH.chart
+
   return (
     <div className="px-5">
+      {/* A fixed height, not a minimum.
+
+          These strings run from about forty characters to over a hundred - one
+          carries a transaction's own description, so there is no upper bound at
+          all - and the card is a BUTTON you tap to shuffle. A height that
+          follows its contents means the page jumps under your thumb on every
+          tap, and everything below it moves too.
+
+          84px is two lines of 13px at this leading plus the padding. The text
+          is clamped to two so a long description truncates rather than
+          escaping, and left-aligned against the card's own edge rather than
+          indented past a glyph - the glyph is behind it now. */}
       <button
         onClick={next}
-        className="w-full rounded-2xl px-4 py-4 text-left active:opacity-70 transition-opacity duration-75
-          bg-gradient-to-br from-primary/[0.22] to-primary/[0.08]
-          border border-primary/[0.28] dark:border-primary/[0.20]"
+        className="insight-aurora relative w-full h-[84px] rounded-2xl px-4 flex items-center
+          text-left active:opacity-70 transition-opacity duration-75 overflow-hidden"
         style={{ outline: 'none' }}
       >
-        <div className="flex items-center gap-3" style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}>
-          <span className="text-xl leading-none shrink-0">{item.emoji}</span>
-          <p className="flex-1 text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed">{item.text}</p>
-          <span className="text-[10px] text-primary/50 font-semibold shrink-0 mt-0.5">tap</span>
+        {/* The watermark. Big, white, low, and clipped by the card's own
+            corner - the same move an account card makes with its brand mark,
+            which is where the idea came from. Sitting behind the text rather
+            than beside it is what let the copy start at the card's edge.
+
+            aria-hidden and pointer-events-none: it is texture. The sentence
+            already says everything this could. */}
+        <span
+          className="pointer-events-none absolute -bottom-5 -right-4 text-white/[0.16] dark:text-white/[0.13]"
+          aria-hidden="true"
+        >
+          <Glyph size={104} strokeWidth={1.4} />
+        </span>
+
+        <div
+          className="relative flex items-baseline gap-3 w-full"
+          style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}
+        >
+          <p className="flex-1 text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed line-clamp-2">
+            {item.text}
+          </p>
+          {/* Uppercase and tracked, which is this app's small-label voice
+              everywhere else. It was lowercase "tap" at 10px semibold - already
+              Inter, checked - and at that size a soft lowercase word reads as a
+              rounded typeface rather than as a label. */}
+          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-primary/60 shrink-0">
+            Tap
+          </span>
         </div>
       </button>
     </div>

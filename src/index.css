@@ -1900,3 +1900,40 @@ html.web.dark input[type="date"] {
   mask-repeat: no-repeat;
   border-radius: 0;
 }
+
+/* ── The insight card's aurora ────────────────────────────────────────────────
+
+   The trivia card was a flat two-stop `from-primary/22 to-primary/8`, which is
+   a tint rather than a surface: on a page of white cards and grey charts it
+   read as a highlighted paragraph.
+
+   Four overlapping radials instead, at different sizes and off-canvas centres,
+   so the light pools rather than ramps. That is the whole difference between
+   an aurora and a gradient - the peaks are somewhere specific and the falloffs
+   overlap unevenly.
+
+   Every stop is the accent. BudgetGauge settled this argument already and its
+   note says why: a hand-picked palette made the one coloured graph on the page
+   the only thing ignoring the accent preset. On Azure this is blue, on Honey
+   it is yellow, and the card is the same object either way.
+
+   The alphas run higher in dark than light. A wash at 0.30 over white is a
+   pastel panel; over #0d1117 it is barely a tint, and the card has to hold its
+   own against a page of cards that all have borders. */
+.insight-aurora {
+  background:
+    radial-gradient(120% 105% at 10% 12%, rgba(var(--color-primary-rgb), 0.26), transparent 58%),
+    radial-gradient(95% 85% at 92% 4%, rgba(var(--color-primary-rgb), 0.14), transparent 60%),
+    radial-gradient(130% 120% at 74% 112%, rgba(var(--color-primary-rgb), 0.20), transparent 64%),
+    linear-gradient(150deg, rgba(var(--color-primary-rgb), 0.10), rgba(var(--color-primary-rgb), 0.03));
+  border: 1px solid rgba(var(--color-primary-rgb), 0.24);
+}
+
+.dark .insight-aurora {
+  background:
+    radial-gradient(120% 105% at 10% 12%, rgba(var(--color-primary-rgb), 0.34), transparent 58%),
+    radial-gradient(95% 85% at 92% 4%, rgba(var(--color-primary-rgb), 0.18), transparent 60%),
+    radial-gradient(130% 120% at 74% 112%, rgba(var(--color-primary-rgb), 0.26), transparent 64%),
+    linear-gradient(150deg, rgba(var(--color-primary-rgb), 0.12), rgba(var(--color-primary-rgb), 0.04));
+  border: 1px solid rgba(var(--color-primary-rgb), 0.22);
+}
