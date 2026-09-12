@@ -52,14 +52,14 @@ export const CARD_DESIGNS = [
     hint: 'Fine metallic fleck, generated not downloaded',
   },
   {
-    key: 'onyx',
-    name: 'Onyx',
-    hint: 'Deep tonal shapes, the darkest of the set',
-  },
-  {
     key: 'mosaic',
     name: 'Mosaic',
     hint: 'A grid of frosted panes, lit from the right',
+  },
+  {
+    key: 'fluted',
+    name: 'Fluted',
+    hint: 'Light through ribbed glass, on the diagonal',
   },
 ]
 
@@ -71,12 +71,19 @@ export const CARD_DESIGNS = [
  * that survived were rebuilt bolder under new names, so the old keys map onto
  * their nearest replacement instead of falling back to classic and silently
  * losing a choice someone had already made.
+ *
+ * `onyx` joined them when it was dropped for reading too much like bloom - the
+ * same soft radial construction, only darker - so it maps onto the design it
+ * was too close to. An account already wearing it keeps a pattern rather than
+ * quietly reverting to a bare gradient, which is the whole point of this map:
+ * removing a design from the gallery must not silently undo somebody's choice.
  */
 const ALIASES = {
   aurora: 'bloom',
   ripple: 'orbit',
   wave: 'sweep',
-  weave: 'onyx',
+  onyx: 'bloom',
+  weave: 'bloom',
 }
 
 export const DEFAULT_DESIGN = 'classic'
