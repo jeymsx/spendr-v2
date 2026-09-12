@@ -24,6 +24,7 @@ const AccountEdit   = lazy(() => import('./pages/AccountEdit'))
 const Budget        = lazy(() => import('./pages/Budget'))
 const Debts        = lazy(() => import('./pages/Debts'))
 const Goals        = lazy(() => import('./pages/Goals'))
+const GoalDetail   = lazy(() => import('./pages/GoalDetail'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
 const RecurringDetail = lazy(() => import('./pages/RecurringDetail'))
 const RecurringForm   = lazy(() => import('./pages/RecurringForm'))
@@ -92,6 +93,7 @@ export default function App() {
               <Route path="/accounts/:id/edit" element={<AccountEdit />} />
               <Route path="/debts"        element={<Debts />} />
               <Route path="/goals"        element={<Goals />} />
+              <Route path="/goals/:id"    element={<GoalDetail />} />
               <Route path="/recurring"    element={<Recurring />} />
               {/* Before /recurring/:id, or "new" matches as an id. */}
               <Route path="/recurring/new" element={<RecurringForm />} />
