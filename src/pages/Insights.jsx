@@ -479,14 +479,30 @@ function SpendingTrivia({ trivia, triviaKey }) {
           className="relative flex items-baseline gap-3 w-full"
           style={{ opacity: fade ? 1 : 0, transition: 'opacity 0.15s ease' }}
         >
-          <p className="flex-1 text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed line-clamp-2">
+          {/* Capped, not sized.
+
+              The watermark is a fixed 104px box anchored to the card's right
+              edge, so the room it wants back is a fixed number of pixels at
+              any card width - a percentage would over-reserve on a wide one.
+              72px clears its ink: the glyphs draw on a 24-grid with 2-3px of
+              padding, which puts their leftmost stroke about 80px in from the
+              right, and both lines were running straight through it.
+
+              The cap costs no words. All twelve strings still wrap to two
+              lines at this width - measured, not assumed - and the one
+              carrying a transaction's own description was already clamped. */}
+          <p className="flex-1 max-w-[calc(100%-72px)] text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed line-clamp-2">
             {item.text}
           </p>
           {/* Uppercase and tracked, which is this app's small-label voice
               everywhere else. It was lowercase "tap" at 10px semibold - already
               Inter, checked - and at that size a soft lowercase word reads as a
-              rounded typeface rather than as a label. */}
-          <span className="text-[9px] font-bold uppercase tracking-[0.16em] text-primary/60 shrink-0">
+              rounded typeface rather than as a label.
+
+              ml-auto is what keeps it in the corner: capping the paragraph
+              leaves free space on the line, and without an auto margin the
+              label just follows the shorter text inward. */}
+          <span className="ml-auto text-[9px] font-bold uppercase tracking-[0.16em] text-primary/60 shrink-0">
             Tap
           </span>
         </div>
