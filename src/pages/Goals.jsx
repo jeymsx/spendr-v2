@@ -15,6 +15,7 @@ import EmptyState from '../components/ui/EmptyState'
 import Skeleton, { SkeletonHero, SkeletonStatTrio } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
 import { AccountChip } from '../components/AccountPickerSheet'
+import LimitMeter from '../components/LimitMeter'
 import GoalFormSheet from './goals/GoalFormSheet'
 import GoalSortSheet from './goals/GoalSortSheet'
 import {
@@ -306,13 +307,19 @@ export default function Goals() {
               of {fmt(alloc.totals.target)} across {alloc.totals.count} goal{alloc.totals.count === 1 ? '' : 's'}
             </p>
 
-            {/* The one bar left on the page, and it earns the exception: this
+            {/* The one bar above the fold, and it earns the exception: this
                 is the sum of every ring below it, and a ring of rings would
-                be a fifth circle competing with the four it summarises. */}
+                be a fifth circle competing with the four it summarises.
+
+                It is the credit card's meter, because it is the same object -
+                a fill, and a striped run standing for what is still to come.
+                The tone is passed rather than derived: limitTone() turns red
+                past 90%, which is right for a credit line being used up and
+                exactly wrong for a goal nearly reached. */}
             <div className="mt-5">
-              <ProgressBar
-                value={alloc.totals.pct}
-                fillClass={alloc.totals.pct >= 100 ? 'bg-emerald-500' : 'bg-primary'}
+              <LimitMeter
+                pct={alloc.totals.pct}
+                tone={alloc.totals.pct >= 100 ? 'good' : 'accent'}
               />
             </div>
 
