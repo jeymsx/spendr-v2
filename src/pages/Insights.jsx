@@ -304,30 +304,61 @@ function MonthNav({ monthOffset, onMonth }) {
 
 // ── Hero Stats ─────────────────────────────────────────────────────────────────
 
+/**
+ * The month's headline, in the shape every other headline in this app uses.
+ *
+ * It was its own thing on all three lines, and the label was the tell: a 12px
+ * BOLD caption at 0.14em tracking in slate-400/500, where Goals, Debts and an
+ * account's detail page all use SectionLabel - semibold, no tracking, and
+ * slate-500/400, which is the same two greys the other way round. Nobody
+ * decides that; it is what happens when a caption is copied from the wrong
+ * screen. This page already used SectionLabel for "Total spent" in the donut
+ * below, so the same two words appeared twice on one screen in two voices.
+ *
+ * The figure followed: 44px bold against the 38px semibold that Goals, Debts
+ * and AccountDetail share. It was the loudest number in the app for no reason
+ * anyone chose.
+ *
+ * ── The sub-line is one line now ──
+ *
+ * Two readings in a flex row became "₱18.4K income · −₱11.6K net", which is
+ * the one quiet 13px line the other heroes put there. Both facts survive, and
+ * the figures keep their semantic colours - the sign of the net is the only
+ * thing on this page that says whether the month went well.
+ */
 function HeroStats({ totalSpent, totalEarned }) {
   const net    = totalEarned - totalSpent
   const netPos = net >= 0
+  const showNet = totalEarned > 0 || totalSpent > 0
+
   return (
-    <div className="px-5 py-1 text-center">
-      <p className="text-xs font-bold tracking-[0.14em] text-slate-400 dark:text-slate-500 mb-1.5">
-        Total spent
-      </p>
-      <p className="text-[44px] font-bold tracking-tight text-slate-900 dark:text-white tabular-nums leading-none">
+    <section className="px-5">
+      <SectionLabel className="text-center">Total spent</SectionLabel>
+      <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
         {fmtCompact(totalSpent)}
       </p>
-      <div className="flex items-center justify-center gap-4 mt-2.5">
-        {totalEarned > 0 && (
-          <span className="text-[12px] font-medium text-slate-400 dark:text-slate-500">
-            <span className="text-emerald-500 dark:text-emerald-400 font-semibold">{fmtCompact(totalEarned)}</span> income
-          </span>
-        )}
-        {(totalEarned > 0 || totalSpent > 0) && (
-          <span className={`text-[12px] font-semibold ${netPos ? 'text-emerald-500 dark:text-emerald-400' : 'text-amber-500 dark:text-amber-400'}`}>
-            {netPos ? '+' : '−'}{fmtCompact(Math.abs(net))} net
-          </span>
-        )}
-      </div>
-    </div>
+
+      {(totalEarned > 0 || showNet) && (
+        <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
+          {totalEarned > 0 && (
+            <>
+              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                {fmtCompact(totalEarned)}
+              </span>
+              {' income'}
+            </>
+          )}
+          {totalEarned > 0 && showNet && ' · '}
+          {showNet && (
+            <span className={`font-semibold ${
+              netPos ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+            }`}>
+              {netPos ? '+' : '−'}{fmtCompact(Math.abs(net))} net
+            </span>
+          )}
+        </p>
+      )}
+    </section>
   )
 }
 
