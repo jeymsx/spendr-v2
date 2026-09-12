@@ -231,18 +231,45 @@ function walletPath(w, h) {
   ].join('')
 }
 
+/** Where the last measured card height is kept, so the skeleton can reserve
+ *  the right space before there is anything to measure. */
+const WALLET_H_KEY = 'walletCardHeight'
+/** Only used on a device that has never rendered the card. */
+const WALLET_H_FALLBACK = 234
+
+function rememberedWalletHeight() {
+  try {
+    const v = Number(localStorage.getItem(WALLET_H_KEY))
+    if (v > 80 && v < 800) return v
+  } catch { /* private mode */ }
+  return WALLET_H_FALLBACK
+}
+
 /**
  * The clip path for the wallet, kept in step with its rendered size.
- * Returns undefined until measured, so the first paint is the plain rounded
- * rectangle border-radius already gives - never an unclipped square.
  *
- * The observer is attached by a CALLBACK ref, not by an effect reading a ref
- * object, and that distinction is the whole bug this had first time round.
- * This page returns <DashboardSkeleton/> until its queries resolve, so on the
- * first render the card is not in the tree at all: a mount effect ran against
- * a null ref, attached nothing, and - with empty deps - never ran again once
- * the real card appeared. A callback ref fires on every attach and detach, so
- * it cannot miss a node that arrives late.
+ * ── Measured in the ref callback, not only in the observer ──
+ *
+ * It used to set the box only from the ResizeObserver, and returned undefined
+ * until that fired - so the first painted frame was the plain rounded
+ * rectangle border-radius gives, and the tab popped in a frame later. That is
+ * visible on every reload and it is what this fixes.
+ *
+ * A ResizeObserver callback runs before paint, so in principle the pop should
+ * not happen; in practice the setState it schedules is React's to time, and
+ * React lands it on the next frame. A callback ref, on the other hand, runs
+ * during the commit phase like a layout effect, so a setState there is flushed
+ * before the browser paints. Measuring in both means the first frame is
+ * already the right shape and the observer only handles later resizes.
+ *
+ * ── Why a callback ref rather than an effect ──
+ *
+ * That distinction was the whole bug this had first time round. This page
+ * returns <DashboardSkeleton/> until its queries resolve, so on the first
+ * render the card is not in the tree at all: a mount effect ran against a null
+ * ref, attached nothing, and - with empty deps - never ran again once the real
+ * card appeared. A callback ref fires on every attach and detach, so it cannot
+ * miss a node that arrives late.
  */
 function useWalletClip() {
   const [box, setBox] = useState(null)
@@ -251,21 +278,30 @@ function useWalletClip() {
   const ref = useCallback((el) => {
     roRef.current?.disconnect()
     roRef.current = null
-    if (!el || typeof ResizeObserver === 'undefined') return
+    if (!el) return
 
-    const ro = new ResizeObserver(([entry]) => {
-      // borderBoxSize, not contentRect: clip-path coordinates are relative to
-      // the border box, while contentRect excludes this card's 24px of side
-      // padding and 30px of tab reserve. Measuring the content box would put
-      // the tab 30px too high and slice 48px off the width.
-      const b = entry.borderBoxSize?.[0]
-      const w = b ? b.inlineSize : el.offsetWidth
-      const h = b ? b.blockSize : el.offsetHeight
+    const apply = (w, h) => {
       // The tab needs somewhere to hang; below that, skip the clip entirely
       // and let border-radius stand in.
-      if (w > 80 && h > TAB_H + R_TOP + R_BOT) {
-        setBox(prev => (prev && prev.w === w && prev.h === h ? prev : { w, h }))
-      }
+      if (w <= 80 || h <= TAB_H + R_TOP + R_BOT) return
+      setBox(prev => (prev && prev.w === w && prev.h === h ? prev : { w, h }))
+      try { localStorage.setItem(WALLET_H_KEY, String(Math.round(h))) }
+      catch { /* private mode */ }
+    }
+
+    // Synchronously, in the commit phase - see the note above. offsetWidth and
+    // offsetHeight are border-box measurements, which is what clip-path
+    // coordinates are relative to and what borderBoxSize reports below, so the
+    // two paths agree and this never has to be corrected a frame later.
+    apply(el.offsetWidth, el.offsetHeight)
+
+    if (typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => {
+      // borderBoxSize, not contentRect: contentRect excludes this card's 24px
+      // of side padding and 30px of tab reserve, which would put the tab 30px
+      // too high and slice 48px off the width.
+      const b = entry.borderBoxSize?.[0]
+      apply(b ? b.inlineSize : el.offsetWidth, b ? b.blockSize : el.offsetHeight)
     })
     ro.observe(el)
     roRef.current = ro
@@ -841,6 +877,16 @@ export default function Dashboard() {
 const Skel = ({ className }) => <Skeleton className={className} />
 
 function DashboardSkeleton() {
+  /* The placeholder is the same shape and the same height as the card that
+     replaces it. It was a plain `rounded-3xl h-40` block, which meant the
+     handover changed the silhouette AND moved everything below it by 74px -
+     the second half of the flash this page had on every reload.
+
+     The height is whatever the card last measured on this device rather than a
+     constant, because it depends on the viewport and on whether the breakdown
+     is folded away. A device that has never rendered it gets 234. */
+  const [walletRef, walletClip] = useWalletClip()
+
   return (
     <div className="min-h-full pb-4">
       {/* header */}
@@ -854,7 +900,12 @@ function DashboardSkeleton() {
 
       {/* net worth card */}
       <div className="px-5 mt-4">
-        <Skel className="rounded-3xl h-40" />
+        <div
+          ref={walletRef}
+          className="skeleton rounded-3xl"
+          style={{ height: rememberedWalletHeight(), clipPath: walletClip }}
+          aria-hidden="true"
+        />
       </div>
 
       {/* account cards */}
