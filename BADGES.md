@@ -444,54 +444,48 @@ and the silhouette is the thing that makes ten badges read as one set.
 
 ## 4. How the art got in, in case you redo it
 
+It is a script now, because it has been run three times and got a different
+answer each time:
+
+```bash
+python scripts/cut-badges.py "<sheet-1.png>" "<sheet-2.png>"
+```
+
 **Neither sheet came back transparent, and they failed differently** — which is
-why there is no single cutting recipe.
+why there is no single recipe.
 
-**The first sheet** arrived on a dark coloured bloom. The badge has a hard
-boundary and the bloom is smooth, so it was cut on edge magnitude: threshold
-it, then take each row's and each column's span between the first and last
-strong edge. A hexagon is convex, so those two spans intersect to give the
-outline exactly — including the real rounded tips, which a hand-built polygon
-kept clipping.
+**Sheet 1** arrived on a dark coloured bloom. The badge has a hard boundary and
+the bloom is smooth, so it cuts on edge magnitude.
 
-**The second sheet** arrived on a *painted* checkerboard: ChatGPT drew the
-transparency pattern instead of leaving the alpha empty. Every checker square
-has an edge, so the first method was useless. Saturation replaced it — measured,
-the checkerboard runs 1–2 and the badge bodies 44–132 — with the same row and
-column spans on top, because the coin stack, the target's pale rings and the
-diamond are deliberately near-white and would otherwise punch holes in their
-own badges.
+**Sheet 2** arrived on a *painted* checkerboard: the model drew the transparency
+pattern instead of leaving the alpha empty. Every checker square has an edge, so
+sheet 1's method finds nothing. It cuts on saturation instead — measured, the
+checkerboard runs 1–2 and the badge bodies 44–132.
 
-It also needed a **3px erosion** that the first did not. On a dark bloom the
-antialiased rim blends toward black and the leftover fringe is invisible on a
-dark UI; on a near-white checkerboard the same fringe is *bright*, measured at
-luminance 238 against a 151 body, and it read as a halo around every badge.
-Eroding removes the blended ring rather than trying to unmix it. 3px off a
-341px badge is under 1%.
+Both then take the span between the first and last hit in every row and every
+column and intersect the two. A hexagon is convex, so that describes it exactly,
+including the real rounded tips — and it fills back in the parts that are
+deliberately near-white and would otherwise punch holes in their own badge: the
+coin stack, the target's pale rings, the diamond.
 
-Crop windows are not square, and not the same: 296 × 348 for the first sheet,
-292 × 358 for the second. The columns are only ~300 and ~299 apart, so anything
-wider drags the neighbour into the mask. The heights differ because the badges
-do (332 vs 341), and each square is sized so the badge fills the same share of
-it — otherwise the two sets would render at different sizes in a grid that only
-knows the file is square.
+**Sheet 2 also needs a 3px erosion and sheet 1 does not.** On a dark bloom the
+antialiased rim blends toward black, so the leftover fringe is invisible on a
+dark UI. On a near-white checkerboard the same fringe is *bright* — measured at
+luminance 238 against a 151 body — and reads as a halo around every badge.
+Eroding removes the blended ring rather than trying to unmix it.
 
-Files land at 320 × 320, quantised to 255 colours: 625 KB for all twenty, no
-banding, since each badge is a single hue family.
+**And every badge is resampled to one canonical box**, 257 × 304 inside a 320px
+square. The sheets do not draw the badge at the same proportions: sheet 1 came
+out 257 × 304 and sheet 2 246 × 300, 4.6% narrower, which in a grid reads as the
+second set being stretched vertically. Measuring each silhouette and resampling
+it also irons out the 6px of variation *within* a sheet. Nothing depends on the
+sheets being consistent, which is just as well.
 
-Filenames are the badge keys, in the prompt's reading order:
+257 × 304 is an aspect of 0.845 against a regular hexagon's 0.866 — a 2.4%
+difference, below what anyone can see. It is sheet 1's own measured average,
+kept because that is the set the proportions were signed off on.
 
-```
-first-peso   seven-days   century      under-budget  green-month
-goal-funded  debt-cleared on-autopilot diversified   six-figures
-```
-
-**No code change is needed to swap any of them.** `BadgeMark` picks up whatever
-is in `src/assets/badges/` at build time through `import.meta.glob`, keyed by
-filename. A badge with a file uses it; one without falls back to its drawn
-hexagon, so a partial set is fine.
-
----
+625 KB for all twenty, quantised to 255 colours, no banding.
 
 ## 5. Where everything is
 
@@ -505,7 +499,8 @@ hexagon, so a partial set is fine.
 | `src/components/BadgeCard.jsx` | The centred card: the flip, the sway, the shine, the burst |
 | `src/components/BadgeUnlocked.jsx` | The unlock queue, feeding that card |
 | `src/components/Confetti.jsx` | Both bursts — falling, and thrown outward from a point |
-| `src/assets/badges/` | The ten rendered PNGs |
+| `src/assets/badges/` | The twenty rendered PNGs |
+| `scripts/cut-badges.py` | Cuts them out of the generated sheets |
 | `src/pages/Badges.jsx` | The page at `/badges` |
 | `src/db/db.js` (v10) | The local `badges` table |
 | `src/lib/sync.js` | `badgeToRow`, `pullBadges`, and the two `optionalSync` calls |
