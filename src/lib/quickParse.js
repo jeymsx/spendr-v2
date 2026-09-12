@@ -185,7 +185,52 @@ const ACCOUNT_MIN_ROWS = 3
  */
 const TYPE_LEAD = 3
 
-/** "1.5k" -> 1500, "1,200" -> 1200, "150.75" -> 150.75 */
+/**
+ * What the ledger taught us, keyed by learned phrase.
+ *
+ * Declared because this object is the entire contract between learnLedger and
+ * quickParse - it crosses a module boundary, gets persisted by callers, and
+ * has a documented shorthand form (merchantMap) that predates it.
+ *
+ * @typedef {object} Knowledge
+ * @property {Record<string, string>} category  phrase -> category name
+ * @property {Record<string, string>} account   phrase -> account name
+ * @property {Record<string, string>} type      phrase -> 'expense' | 'inflow'
+ * @property {Record<string, {median: number, n: number}>} amount
+ * @property {string[]} keys
+ * @property {Array<[string, string]>} [fuzzyTerms]  token -> the key it stands for
+ */
+
+/**
+ * Thresholds, all injectable. Every one of these was moved by holdout
+ * measurement rather than argued about, which is why they are options at all.
+ *
+ * @typedef {object} LearnOpts
+ * @property {string|number|Date} [now]  injectable so tests are not time-dependent
+ * @property {number} [halfLifeDays]
+ * @property {number} [minRowsForWord]
+ * @property {number} [categoryLead]
+ * @property {number} [accountLead]
+ * @property {number} [accountMinRows]
+ * @property {number} [typeLead]
+ */
+
+/**
+ * What the parser is allowed to resolve against.
+ *
+ * @typedef {object} ParseCtx
+ * @property {Array<{name: string}>} [accounts]
+ * @property {Array<{name: string, icon?: string, color?: string}>} [categories]
+ * @property {Recurring[]} [recurring]
+ * @property {Array<Record<string, any>>} [templates]
+ * @property {Record<string, string>} [merchantMap]  the category-only shorthand
+ * @property {Knowledge} [knowledge]
+ * @property {Date} [today]
+ */
+
+/** "1.5k" -> 1500, "1,200" -> 1200, "150.75" -> 150.75
+ *  @param {string} text
+ *  @returns {{amount: number, at: number, len: number, raw: string}|null} */
 function readAmount(text) {
   // The k/m suffix has to be tried first: a bare \d+ would match the 1 of 1.5k
   // and leave ".5k" behind as description.
@@ -228,6 +273,7 @@ function readAmount(text) {
 const FEE_AFTER  = /(?:^|[\s,])(?:₱\s*)?(\d[\d,]*(?:\.\d+)?)\s*(?:tf|transfer\s+fee|fee)\b/i
 const FEE_BEFORE = /(?:^|[\s,])(?:tf|transfer\s+fee|fee)\s*(?:₱\s*)?(\d[\d,]*(?:\.\d+)?)\b/i
 
+/** @param {string} text @returns {{amount: number, at: number, len: number}|null} */
 function readFee(text) {
   const numbers = text.match(/\d[\d,]*(?:\.\d+)?/g) ?? []
   if (numbers.length < 2) return null
@@ -239,9 +285,12 @@ function readFee(text) {
 }
 
 /** Normalise for matching: lowercase, collapse whitespace, drop punctuation. */
+/** @param {unknown} s */
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9\s]/g, ' ').replace(/\s+/g, ' ').trim()
 
+/** @param {string} w */
 const isNumeric = (w) => /^\d+$/.test(w)
+/** @param {string} w */
 const isNoise = (w) => !w || isNumeric(w) || STOPWORDS.has(w)
 
 /**
@@ -262,6 +311,9 @@ const isNoise = (w) => !w || isNumeric(w) || STOPWORDS.has(w)
  * was learned as "sm" and "supermarket" separately, and "sm" was then thrown
  * away for being under the length floor - so the one thing you would actually
  * type was the one thing it could not learn.
+ *
+ * @param {string} desc
+ * @returns {Array<{key: string, strong: boolean}>}
  */
 function phrasesOf(desc) {
   const words = norm(desc).split(' ').filter(Boolean)
@@ -293,7 +345,8 @@ function phrasesOf(desc) {
   return [...best.values()]
 }
 
-/** How much a transaction from `dateStr` still counts, today. */
+/** How much a transaction from `dateStr` still counts, today.
+ *  @param {string} dateStr @param {number} nowMs @param {number} [halfLife] */
 function ageWeight(dateStr, nowMs, halfLife = HALF_LIFE_DAYS) {
   if (!dateStr) return 1
   const t = Date.parse(dateStr)
@@ -309,6 +362,9 @@ function ageWeight(dateStr, nowMs, halfLife = HALF_LIFE_DAYS) {
  * Ties and near-ties return null on purpose. "load" filed half under Bills and
  * half under Transpo has no right answer, and a coin flip that fills in a
  * field is worse than an empty field you can see is empty.
+ *
+ * @param {Map<string, number>} counts @param {number} [lead]
+ * @returns {string|null}
  */
 function winner(counts, lead = CLEAR_FAVOURITE) {
   if (!counts.size) return null
@@ -319,6 +375,7 @@ function winner(counts, lead = CLEAR_FAVOURITE) {
   return top
 }
 
+/** @param {number[]} nums */
 function median(nums) {
   const s = [...nums].sort((a, b) => a - b)
   const mid = s.length >> 1
@@ -344,9 +401,10 @@ function median(nums) {
  * about how recent they were, and decaying it would let a well-established
  * old habit fall below the bar and vanish.
  *
- * @param {Array} transactions rows from db.transactions - all of them, every
- *                account and every type. Nothing here is account-scoped.
- * @param {object} opts  { now } - injectable so tests are not time-dependent.
+ * @param {Transaction[]} transactions rows from db.transactions - all of them,
+ *                every account and every type. Nothing here is account-scoped.
+ * @param {LearnOpts} [opts]
+ * @returns {Knowledge}
  */
 export function learnLedger(transactions = [], opts = {}) {
   const nowMs = opts.now != null ? new Date(opts.now).getTime() : Date.now()
@@ -360,6 +418,7 @@ export function learnLedger(transactions = [], opts = {}) {
   const acctMinRows = opts.accountMinRows ?? ACCOUNT_MIN_ROWS
   const typeLead    = opts.typeLead       ?? TYPE_LEAD
 
+  /** @type {Map<string, {rows: number, strong: boolean, cat: Map<string, number>, acct: Map<string, number>, kind: Map<string, number>, amounts: number[]}>} */
   const stats = new Map()
   for (const tx of transactions) {
     if (!tx?.description) continue
@@ -379,7 +438,10 @@ export function learnLedger(transactions = [], opts = {}) {
     }
   }
 
-  const category = {}, account = {}, type = {}, amount = {}
+  /** @type {Record<string, string>} */ const category = {}
+  /** @type {Record<string, string>} */ const account  = {}
+  /** @type {Record<string, string>} */ const type     = {}
+  /** @type {Record<string, {median: number, n: number}>} */ const amount = {}
   for (const [key, s] of stats) {
     if (!s.strong && s.rows < minRows) continue
     const c = winner(s.cat, catLead)
@@ -410,7 +472,9 @@ export function learnLedger(transactions = [], opts = {}) {
     thing that made multi-word merchants work at all - would be exactly the
     part typo tolerance could not see.
   */
+  /** @type {Array<[string, string]>} */
   const fuzzyTerms = []
+  /** @type {Set<string>} */
   const claimed = new Set()
   // Fewest words first, so the token "grab" is claimed by the key "grab"
   // rather than by "grab airport" - a token should stand for the narrowest
@@ -437,11 +501,13 @@ export function learnLedger(transactions = [], opts = {}) {
  * a question worth being able to ask on its own, and because it is what the
  * parser's `merchantMap` option takes.
  */
+/** @param {Transaction[]} transactions @param {LearnOpts} [opts] */
 export function learnMerchants(transactions = [], opts = {}) {
   return learnLedger(transactions, opts).category
 }
 
-/** Longest-first, so "sm supermarket" wins over "sm store" on the same text. */
+/** Longest-first, so "sm supermarket" wins over "sm store" on the same text.
+ *  @param {string} text @param {string[]} names */
 function matchName(text, names) {
   const hay = norm(text)
   if (!hay) return null
@@ -462,6 +528,8 @@ function matchName(text, names) {
  * The early exit is not premature optimisation: this runs against every
  * learned key on every keystroke, and a nine-month ledger can carry a few
  * thousand of them.
+ *
+ * @param {string} a @param {string} b @param {number} max
  */
 function withinEdits(a, b, max) {
   if (a === b) return true
@@ -488,6 +556,8 @@ function withinEdits(a, b, max) {
  * reaches half the vocabulary - "cash"/"gash", "food"/"ford" - and a wrong
  * confident answer is worse than no answer. Long words earn a second edit
  * because "supermrket" and "jollibbee" are the shape real typing takes.
+ *
+ * @param {string} word @returns {number}
  */
 function editBudget(word) {
   if (word.length >= 8) return 2
@@ -515,6 +585,8 @@ function editBudget(word) {
  *
  * The token length floor in editBudget is what keeps this safe. It is why the
  * measured junk - "with", "run", "team" - cannot be reached here at all.
+ *
+ * @param {string} text @param {Array<[string, string]>} pairs
  */
 function nearestMiss(text, pairs) {
   const words = norm(text).split(' ').filter(w => !isNoise(w))
@@ -535,11 +607,13 @@ function nearestMiss(text, pairs) {
   return best
 }
 
-/** "yesterday", "today", or nothing. Deliberately small - see the note. */
+/** "yesterday", "today", or nothing. Deliberately small - see the note.
+ *  @param {string} text @param {Date} today */
 function readDate(text, today) {
   const hay = norm(text)
   const base = new Date(today)
   base.setHours(0, 0, 0, 0)
+  /** @param {Date} d */
   const iso = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
 
   if (/\byesterday\b|\bkahapon\b/.test(hay)) {
@@ -564,7 +638,7 @@ function readDate(text, today) {
  * a live preview and the destination page can pre-fill what it has.
  *
  * @param {string} input
- * @param {object} ctx
+ * @param {ParseCtx} [ctx]
  *   accounts, categories  - to resolve names against, and to refuse to
  *                           suggest anything the user no longer has
  *   knowledge             - from learnLedger. `merchantMap` is still accepted
@@ -595,6 +669,24 @@ export function quickParse(input, ctx = {}) {
   }
 
   const text = String(input ?? '').trim()
+  /**
+   * Every field starts null and is filled as evidence arrives, so the literal
+   * on its own infers `null` as the type of each - which makes every later
+   * assignment an error. Declared instead.
+   *
+   * @type {{
+   *   type: string, amount: number|null, category: string|null,
+   *   account: string|null, fromAccount: string|null, toAccount: string|null,
+   *   description: string, date: string|null,
+   *   fee: number|null,
+   *   confident: boolean,
+   *   amountFlag: {median: number, n: number, phrase: string, direction: string}|null,
+   *   recurringMatch: Record<string, any>|null,
+   *   templateMatch: Record<string, any>|null,
+   *   transferIssue?: Record<string, any>,
+   *   matched: Record<string, any>,
+   * }}
+   */
   const result = {
     type: 'expense',
     amount: null,
@@ -615,7 +707,9 @@ export function quickParse(input, ctx = {}) {
 
   const acctNames = accounts.map(a => a?.name).filter(Boolean)
   const catNames = categories.map(c => c?.name).filter(Boolean)
+  /** @param {string} name */
   const hasCategory = (name) => catNames.some(c => c === name)
+  /** @param {string} name */
   const hasAccount = (name) => acctNames.some(a => a === name)
 
   // ── Fee, before anything else ──
@@ -795,8 +889,9 @@ export function quickParse(input, ctx = {}) {
       } else {
         // Seed terms carry their category key rather than a phrase key, so the
         // pair's second slot is the SEED_MERCHANTS bucket name.
+        /** @type {Array<[string, string]>} */
         const seedPairs = Object.entries(SEED_MERCHANTS)
-          .flatMap(([bucket, list]) => list.map(term => [term, bucket]))
+          .flatMap(([bucket, list]) => list.map(term => /** @type {[string, string]} */ ([term, bucket])))
         const seedHit = nearestMiss(rest, seedPairs)
         if (seedHit) {
           const real = catNames.find(c => norm(c) === seedHit.key)

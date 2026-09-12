@@ -38,6 +38,12 @@ const BRAND_GRADIENTS = {
  * Name patterns, most specific first — order is load-bearing. "gcash" has to
  * beat "cash", and "maya savings" / "maya credit" have to beat "maya", or
  * every Maya product collapses onto one colour.
+ *
+ * Annotated because a mixed array literal widens to (RegExp | string)[] on
+ * its own, which loses the position of each element - and then `pattern.test`
+ * is an error on something that is a RegExp every time.
+ *
+ * @type {Array<[RegExp, string, string]>}
  */
 const NAME_RULES = [
   [/mayasavings|mayasave/,        'maya-savings', 'wallet'],

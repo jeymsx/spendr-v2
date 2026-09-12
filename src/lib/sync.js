@@ -31,7 +31,12 @@ async function getPendingDeletes() {
   return meta?.value ?? []
 }
 
-/** True when a pulled row is one we're still trying to delete. */
+/** True when a pulled row is one we're still trying to delete.
+ *
+ * @param {Array<{table: string, match?: Record<string, any>}>} pending
+ * @param {string} table
+ * @param {Record<string, any>} row  a row as Supabase returned it
+ */
 function isPendingDelete(pending, table, row) {
   return pending.some(p =>
     p.table === table &&
@@ -42,6 +47,7 @@ function isPendingDelete(pending, table, row) {
 // Runs before the pull so a queued delete can't be undone by this very sync.
 // Entries that fail stay queued; over-deleting is safe because the push that
 // follows re-uploads every surviving local row.
+/** @param {string} userId */
 async function flushPendingDeletes(userId) {
   const list = await getPendingDeletes()
   if (!list.length) return
@@ -61,9 +67,15 @@ async function flushPendingDeletes(userId) {
 
 // ── Row mapping: Dexie → Supabase ─────────────────────────────────────────────
 
+/**
+ * @param {Transaction} r
+ * @param {string} userId
+ */
 function toSupabaseRow(r, userId) {
   const type = r.type
-  return {
+  /* local_id is always null here and filled by the caller, so the literal on
+     its own infers `null` as its type. @type instead of a value change. */
+  return /** @type {Record<string, any>} */ ({
     user_id:          userId,
     local_id:         null,
     tx_id:            r.txId ?? null,
@@ -82,9 +94,13 @@ function toSupabaseRow(r, userId) {
     amount:           r.amount,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
-  }
+  })
 }
 
+/**
+ * @param {Account} r
+ * @param {string} userId
+ */
 function accountToRow(r, userId) {
   return {
     user_id:         userId,
@@ -110,6 +126,10 @@ function accountToRow(r, userId) {
   }
 }
 
+/**
+ * @param {Category} r
+ * @param {string} userId
+ */
 function categoryToRow(r, userId) {
   return {
     user_id:    userId,
@@ -123,6 +143,10 @@ function categoryToRow(r, userId) {
   }
 }
 
+/**
+ * @param {Debt} r
+ * @param {string} userId
+ */
 function debtToRow(r, userId) {
   return {
     user_id:     userId,
@@ -139,6 +163,10 @@ function debtToRow(r, userId) {
   }
 }
 
+/**
+ * @param {Recurring} r
+ * @param {string} userId
+ */
 function recurringToRow(r, userId) {
   return {
     user_id:    userId,
@@ -154,6 +182,10 @@ function recurringToRow(r, userId) {
   }
 }
 
+/**
+ * @param {Goal} r
+ * @param {string} userId
+ */
 function goalToRow(r, userId) {
   return {
     user_id:     userId,
@@ -176,6 +208,10 @@ function goalToRow(r, userId) {
 
 /* No local_id: the key IS the identity, here and in IndexedDB. See the
    DIVERGENCE note in migrations/006_badges.sql. */
+/**
+ * @param {BadgeRow} r
+ * @param {string} userId
+ */
 function badgeToRow(r, userId) {
   return {
     user_id:    userId,
@@ -185,6 +221,10 @@ function badgeToRow(r, userId) {
   }
 }
 
+/**
+ * @param {Template} r
+ * @param {string} userId
+ */
 function templateToRow(r, userId) {
   return {
     user_id:     userId,
@@ -203,6 +243,10 @@ function templateToRow(r, userId) {
 
 // ── Row mapping: Supabase → Dexie ─────────────────────────────────────────────
 
+/**
+ * @param {Record<string, any>} row  a row as Supabase returned it
+ * @returns {Transaction}
+ */
 function toDexieRecord(row) {
   const type = row.type
   return {
@@ -222,6 +266,7 @@ function toDexieRecord(row) {
   }
 }
 
+/** @param {Record<string, any>} row  a row as Supabase returned it */
 function rowToAccount(row) {
   return {
     name:           row.name,
@@ -247,6 +292,7 @@ function rowToAccount(row) {
   }
 }
 
+/** @param {Record<string, any>} row  a row as Supabase returned it */
 function rowToCategory(row) {
   return {
     name:       row.name,
@@ -259,6 +305,7 @@ function rowToCategory(row) {
   }
 }
 
+/** @param {Record<string, any>} row  a row as Supabase returned it */
 function rowToDebt(row) {
   return {
     name:       row.name,
@@ -273,6 +320,7 @@ function rowToDebt(row) {
   }
 }
 
+/** @param {Record<string, any>} row  a row as Supabase returned it */
 function rowToRecurring(row) {
   return {
     name:      row.name,
@@ -286,6 +334,7 @@ function rowToRecurring(row) {
   }
 }
 
+/** @param {Record<string, any>} row  a row as Supabase returned it */
 function rowToTemplate(row) {
   return {
     name:        row.name,
@@ -301,6 +350,7 @@ function rowToTemplate(row) {
   }
 }
 
+/** @param {Record<string, any>} row  a row as Supabase returned it */
 function rowToGoal(row) {
   return {
     name:       row.name,
@@ -322,6 +372,7 @@ function rowToGoal(row) {
 
 // ── User preferences ─────────────────────────────────────────────────────────
 
+/** @param {string} userId */
 async function pushPreferences(userId) {
   const [nameMeta, currencyMeta, skipMeta] = await Promise.all([
     db.meta.get('displayName'),
@@ -343,6 +394,7 @@ async function pushPreferences(userId) {
   if (error) throw new Error(`user_preferences push: ${error.message}`)
 }
 
+/** @param {string} userId */
 async function pullPreferences(userId) {
   const { data, error } = await supabase
     .from('user_preferences')
@@ -384,6 +436,10 @@ async function pullPreferences(userId) {
 // not that the rest of the app stops syncing.
 const MISSING_TABLE = /relation .* does not exist|could not find the table|schema cache/i
 
+/**
+ * @param {string} label
+ * @param {() => Promise<any>} fn
+ */
 async function optionalSync(label, fn) {
   try {
     await fn()
@@ -398,6 +454,7 @@ async function optionalSync(label, fn) {
 
 // ── Push to Supabase ──────────────────────────────────────────────────────────
 
+/** @param {string} userId */
 export async function syncToSupabase(userId) {
   if (!userId) return
 
@@ -465,6 +522,8 @@ export async function syncToSupabase(userId) {
  * result is that design syncs the moment the migration is applied and simply
  * stays on-device until then, with no flag to set and nothing to remember.
  */
+/** Columns a table may not have yet, by table name.
+ *  @type {Record<string, string[]>} */
 const OPTIONAL_COLS = {
   accounts: ['design', 'custom_color'],
 }
@@ -478,6 +537,13 @@ const UNKNOWN_COLUMN = /could not find the '.*' column|does not exist|42703|PGRS
 // Accounts and categories use their name-based constraints because the
 // IndexedDB auto-increment counter does NOT reset on table.clear(), so
 // local_ids can shift after a reset while names remain stable.
+/**
+ * @param {string} tableName
+ * @param {import("dexie").Table<any, any>} dexieTable
+ * @param {(r: any, userId: string) => Record<string, any>} toRow
+ * @param {string} userId
+ * @param {string} [conflictCols]
+ */
 async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'user_id,local_id') {
   const records = await dexieTable.toArray()
   if (!records.length) return
@@ -532,6 +598,7 @@ async function ensureSystemCategories() {
   }
 }
 
+/** @param {string} userId */
 export async function syncFromSupabase(userId) {
   if (!userId) return
 
@@ -569,6 +636,7 @@ export async function syncFromSupabase(userId) {
   await ensureSystemCategories()
 }
 
+/** @param {string} userId */
 async function pullTxs(userId) {
   const { data, error } = await supabase
     .from('transactions')
@@ -588,7 +656,9 @@ async function pullTxs(userId) {
     if (t.txId) byTxId.set(t.txId, t)
   }
 
+  /** @type {Transaction[]} */
   const toAdd = []
+  /** @type {Transaction[]} */
   const toPut = []
   const seen  = new Set() // guards against duplicate tx_ids inside one payload
 
@@ -620,6 +690,15 @@ async function pullTxs(userId) {
 
 // findFn: optional async (row) => existing local record | null
 // Used when a simple single-key lookup isn't enough (e.g. categories: name+type).
+/**
+ * @param {string} tableName
+ * @param {import("dexie").Table<any, any>} dexieTable
+ * @param {(row: Record<string, any>) => Record<string, any>} fromRow
+ * @param {string} nameKey
+ * @param {string} userId
+ * @param {((row: Record<string, any>) => Promise<any>)} [findFn]  when a single-key lookup is not enough (categories match on name AND type)
+ * @param {Array<{table: string, match?: Record<string, any>}>} [pending]
+ */
 async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, findFn, pending = []) {
   const { data, error } = await supabase
     .from(tableName)
@@ -669,6 +748,8 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
  *
  * Nothing is ever deleted here. A badge missing remotely is one this device
  * earned offline and has not pushed yet, not one that was taken away.
+ *
+ * @param {string} userId
  */
 async function pullBadges(userId) {
   const { data, error } = await supabase
@@ -707,6 +788,7 @@ async function pullBadges(userId) {
 
 async function deduplicateLocalAccounts() {
   const accounts = await db.accounts.toArray()
+  /** @type {Record<string, Account>} */
   const seen = {}
   for (const acct of accounts) {
     const prev = seen[acct.name]
@@ -724,6 +806,7 @@ async function deduplicateLocalAccounts() {
 
 // ── Full sync ─────────────────────────────────────────────────────────────────
 
+/** @param {string} userId */
 export async function fullSync(userId) {
   if (!userId) throw new Error('Not authenticated')
   // Wait for the initial seed to complete so the pull doesn't race with it
@@ -743,20 +826,35 @@ export async function fullSync(userId) {
 // These queue rather than delete inline, so a deletion made offline still lands
 // on the next successful sync instead of being quietly reverted by the pull.
 
+/**
+ * @param {string} _userId
+ * @param {number} debtId
+ */
 export async function deleteDebtRemote(_userId, debtId) {
   await queueRemoteDelete('debts', { local_id: debtId })
 }
 
+/**
+ * @param {string} _userId
+ * @param {number} recurringId
+ */
 export async function deleteRecurringRemote(_userId, recurringId) {
   await queueRemoteDelete('recurring', { local_id: recurringId })
 }
 
-/** Accounts are unique on (user_id, name). */
+/** Accounts are unique on (user_id, name).
+ *
+ * @param {string} name
+ */
 export async function deleteAccountRemote(name) {
   if (name) await queueRemoteDelete('accounts', { name })
 }
 
-/** Categories are unique on (user_id, name, type). */
+/** Categories are unique on (user_id, name, type).
+ *
+ * @param {string} name
+ * @param {string} type
+ */
 export async function deleteCategoryRemote(name, type) {
   if (name) await queueRemoteDelete('categories', { name, type })
 }
@@ -765,6 +863,9 @@ export async function deleteCategoryRemote(name, type) {
  * Templates push on local_id but pull matches on name, so queue both: missing
  * the row means it resurrects, while deleting one row too many is repaired by
  * the push that re-uploads every surviving local template.
+ *
+ * @param {number} localId
+ * @param {string} name
  */
 export async function deleteTemplateRemote(localId, name) {
   if (localId != null) await queueRemoteDelete('templates', { local_id: localId })

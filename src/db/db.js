@@ -1,6 +1,30 @@
 import Dexie from 'dexie'
 
-const db = new Dexie('SpendrDB')
+/**
+ * Dexie builds its table properties at runtime from the schema strings below,
+ * so a bare `new Dexie()` has none of them as far as a checker is concerned -
+ * `db.transactions` reads as a typo for `db.transaction`. This declares what
+ * `.stores()` is about to attach.
+ *
+ * It is a JSDoc cast and nothing more: no wrapper, no subclass, no runtime
+ * cost. The record shapes come from src/types.d.ts.
+ *
+ * @typedef {Dexie & {
+ *   transactions: import('dexie').Table<Transaction, number>,
+ *   balances:     import('dexie').Table<BalanceRow, string>,
+ *   accounts:     import('dexie').Table<Account, number>,
+ *   categories:   import('dexie').Table<Category, number>,
+ *   debts:        import('dexie').Table<Debt, number>,
+ *   recurring:    import('dexie').Table<Recurring, number>,
+ *   templates:    import('dexie').Table<Template, number>,
+ *   goals:        import('dexie').Table<Goal, number>,
+ *   badges:       import('dexie').Table<BadgeRow, string>,
+ *   meta:         import('dexie').Table<MetaRow, string>,
+ * }} SpendrDB
+ */
+
+/** @type {SpendrDB} */
+const db = /** @type {SpendrDB} */ (new Dexie('SpendrDB'))
 
 db.version(1).stores({
   transactions: '++id, txId, type, date, description, category, payment, account, fromAccount, toAccount, amount, synced, updatedAt',

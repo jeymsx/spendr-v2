@@ -50,7 +50,7 @@ describe('getNextCycleRange — a cutoff day is set', () => {
       const closed = getCycleRange(15, ref)
       const open = getNextCycleRange(15, ref)
       expect(open.cycleStart.getTime()).toBeGreaterThan(closed.cycleEnd.getTime())
-      expect(open.cycleStart - closed.cycleEnd).toBeLessThan(1000) // back to back
+      expect(open.cycleStart.getTime() - closed.cycleEnd.getTime()).toBeLessThan(1000) // back to back
     }
   })
 })
@@ -90,7 +90,7 @@ describe('no cutoff day — bills by calendar month', () => {
       const ref = at(2026, m, 11)
       const closed = getCycleRange(null, ref)
       const open = getNextCycleRange(null, ref)
-      expect(open.cycleStart - closed.cycleEnd).toBeLessThan(1000)
+      expect(open.cycleStart.getTime() - closed.cycleEnd.getTime()).toBeLessThan(1000)
     }
   })
 })

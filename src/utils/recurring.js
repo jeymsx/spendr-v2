@@ -94,7 +94,7 @@ export function daysUntil(dateStr) {
   const due = parseDateLocal(dateStr)
   if (!due) return null
   const now = new Date(); now.setHours(0, 0, 0, 0)
-  return Math.round((due - now) / 86400000)
+  return Math.round((due.getTime() - now.getTime()) / 86400000)
 }
 
 /**

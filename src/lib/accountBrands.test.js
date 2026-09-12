@@ -23,9 +23,11 @@ const srgb = (c) => {
   return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4
 }
 const lum = ([r, g, b]) => 0.2126 * srgb(r) + 0.7152 * srgb(g) + 0.0722 * srgb(b)
+/** @returns {[number, number, number]} */
 const hex = (h) => {
   const s = h.replace('#', '')
-  return [0, 2, 4].map(i => parseInt(s.slice(i, i + 2), 16))
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(s.slice(i, i + 2), 16))
+  return [r, g, b]
 }
 const contrastWithWhite = (h) => (1.0 + 0.05) / (lum(hex(h)) + 0.05)
 

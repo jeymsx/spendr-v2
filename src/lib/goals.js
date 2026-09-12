@@ -101,15 +101,24 @@ export function isArchived(goal) {
  *
  * Pure: same inputs, same output, no clock and no database.
  *
- * @param {object}   input
- * @param {object[]} input.goals     Goal records. `accounts` is a list of names.
- * @param {object[]} input.accounts  Account records (the full set; filtered here).
- * @returns {{
- *   goals: object[],                  Every goal, active first, each with saved/pct/sources.
- *   active: object[],                 Just the ones being funded, in rank order.
- *   byAccount: Record<string, object> Per-account assigned/unassigned split.
- *   totals: object                    Portfolio-level roll-up.
- * }}
+ * The returned shape is GoalAllocation in src/types.d.ts:
+ *
+ *   goals      every goal, active first, each with saved/pct/sources
+ *   active     just the ones being funded, in rank order
+ *   byAccount  per-account assigned/unassigned split
+ *   totals     portfolio-level roll-up
+ *
+ * (That prose used to live inside the return-tag's own type literal, which
+ *  is not valid JSDoc - the annotation parsed as far as the first sentence
+ *  and described nothing. It reads the same and now type-checks. The tag is
+ *  named obliquely here on purpose: spelled out, a second one appears in the
+ *  block and the checker rejects the duplicate, which is how this sentence
+ *  was written the first time.)
+ *
+ * @param {object}    input
+ * @param {Goal[]}    [input.goals]     Goal records. `accounts` is a list of names.
+ * @param {Account[]} [input.accounts]  Account records (the full set; filtered here).
+ * @returns {GoalAllocation}
  */
 export function allocateGoals({ goals = [], accounts = [] } = {}) {
   const fundable = accounts.filter(isFundable).slice().sort(byAccountOrder)
@@ -158,6 +167,7 @@ export function allocateGoals({ goals = [], accounts = [] } = {}) {
     out.push({ ...decorate(goal, 0, Math.max(0, goal.target ?? 0), [], 0), archived: true })
   }
 
+  /** @type {Record<string, AccountSplit>} */
   const byAccount = {}
   for (const acct of fundable) {
     const start = startBalance.get(acct.name) ?? 0
@@ -171,7 +181,9 @@ export function allocateGoals({ goals = [], accounts = [] } = {}) {
   }
 
   const activeOut = out.filter(g => !g.archived)
+  /** @type {GoalTotals} */
   const totals = {
+    pct: 0,
     target: activeOut.reduce((s, g) => s + g.target, 0),
     saved: activeOut.reduce((s, g) => s + g.saved, 0),
     unassigned: fundable.reduce((s, a) => s + (remaining.get(a.name) ?? 0), 0),

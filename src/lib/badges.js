@@ -76,7 +76,7 @@ export function longestDayStreak(transactions) {
   for (let i = 1; i < days.length; i++) {
     const prev = new Date(days[i - 1] + 'T00:00:00')
     const cur = new Date(days[i] + 'T00:00:00')
-    const gap = Math.round((cur - prev) / 86400000)
+    const gap = Math.round((cur.getTime() - prev.getTime()) / 86400000)
     run = gap === 1 ? run + 1 : 1
     if (run > best) best = run
   }
@@ -314,7 +314,8 @@ export const BADGES = [
     test: ({ transactions }) => {
       const days = transactions.map(t => String(t.date ?? '').slice(0, 10)).filter(Boolean).sort()
       if (days.length < 2) return false
-      const span = new Date(days[days.length - 1] + 'T00:00:00') - new Date(days[0] + 'T00:00:00')
+      const span = new Date(days[days.length - 1] + 'T00:00:00').getTime()
+        - new Date(days[0] + 'T00:00:00').getTime()
       return span >= 365 * 86400000
     },
   },
@@ -355,7 +356,8 @@ export const BADGES = [
       )].sort()
       for (let i = 1; i < days.length; i++) {
         const gap = Math.round(
-          (new Date(days[i] + 'T00:00:00') - new Date(days[i - 1] + 'T00:00:00')) / 86400000,
+          (new Date(days[i] + 'T00:00:00').getTime()
+            - new Date(days[i - 1] + 'T00:00:00').getTime()) / 86400000,
         )
         if (gap >= 8) return true
       }

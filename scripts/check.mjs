@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 /**
- * Run the five AST checkers over src/**.
+ * Run the type checker and the five AST checkers over src/**.
  *
  * These exist because `vite build` succeeding proves nothing about whether the
  * app runs: esbuild transforms each module in isolation, so an identifier that
@@ -20,6 +20,13 @@
  * are fixed, so it gates now. This session alone they caught an undefined `<SegTabs>`,
  * fourteen unbound identifiers in a form, two parse failures from a mangled
  * import, and a `tplCat` that never existed.
+ *
+ * typecheck is `tsc --noEmit` over the logic layer - lib, utils, db, hooks -
+ * reading the JSDoc on those modules and the record shapes in src/types.d.ts.
+ * Nothing is emitted and no file is transformed, so it can only ever fail a
+ * build, never change one. It runs FIRST because it is the cheapest way to
+ * find the largest class of mistake, and because a type error usually
+ * explains whatever the other five are about to complain about.
  *
  *   npm run check
  *
@@ -49,6 +56,28 @@ function collect(dir, out = []) {
 const files = collect(join(ROOT, 'src'))
 let failed = 0
 
+const LF = String.fromCharCode(10)
+const TS_ERROR = /error TS[0-9]+/
+
+/* tsc first, and on its own: it takes a config rather than a file list, and
+   its output is one line per error rather than the verdict line the loop
+   below parses. */
+{
+  const r = spawnSync('npx', ['tsc'], {
+    cwd: ROOT, encoding: 'utf8', shell: true, stdio: ['ignore', 'pipe', 'pipe'],
+  })
+  const out = ((r.stdout ?? '') + (r.stderr ?? '')).trim()
+  const errors = out.split(LF).filter(l => TS_ERROR.test(l))
+  if (errors.length) {
+    failed++
+    console.log(`FAIL  ${'typecheck'.padEnd(11)} ${errors.length} type error(s)`)
+    for (const line of errors.slice(0, 25)) console.log(`        TYPE ${line}`)
+    if (errors.length > 25) console.log(`        ... and ${errors.length - 25} more`)
+  } else {
+    console.log(`ok    ${'typecheck'.padEnd(11)} OK - no type errors in the logic layer`)
+  }
+}
+
 for (const checker of CHECKERS) {
   const r = spawnSync(process.execPath, [join(HERE, checker), ...files], {
     encoding: 'utf8',
@@ -65,7 +94,7 @@ for (const checker of CHECKERS) {
     const verdict = out.split('\n').find(l => /problem\(s\)/.test(l)) ?? `exit ${r.status}`
     console.log(`FAIL  ${name.padEnd(11)} ${verdict.trim()}`)
     for (const line of out.split('\n')) {
-      if (/^(UNBOUND|TDZ|HOOK|IMPORT|DESIGN|PARSE)/.test(line)) console.log(`        ${line}`)
+      if (/^(UNBOUND|TDZ|HOOK|IMPORT|DESIGN|PARSE|TYPE)/.test(line)) console.log(`        ${line}`)
     }
   } else {
     const verdict = out.split('\n').find(l => l.startsWith('OK')) ?? 'ok'

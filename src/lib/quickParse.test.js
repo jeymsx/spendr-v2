@@ -566,6 +566,7 @@ describe('transfer fees, typed the way people say them', () => {
   // "fee" is an ordinary English word inside real merchant names. Every one of
   // these is a real description from a real ledger, and reading a fee out of
   // any of them would silently swallow the amount.
+  /** @type {Array<[string, number]>} */
   const NOT_FEES = [
     ['200 ppark entrance fee', 200],
     ['300 vliner reservation fee', 300],
@@ -642,6 +643,7 @@ describe('the corpus - what must and must not be understood', () => {
 
   // A flat table, because the value here is breadth. Each row is one thing a
   // person might actually type. `null` means "must not decide".
+  /** @type {Array<[string, string, number, string|null, string|null]>} */
   const CASES = [
     // typed                       type        amount   category      account
     ['180 grab',                   'expense',     180, 'Transpo',    'GCash'],

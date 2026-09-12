@@ -1,6 +1,6 @@
 {
   "name": "spendr",
-  "description": "Mobile-first personal finance PWA for Filipinos \u2014 offline-first, multi-account, with Supabase sync",
+  "description": "Mobile-first personal finance PWA for Filipinos — offline-first, multi-account, with Supabase sync",
   "private": true,
   "version": "0.3.0",
   "type": "module",
@@ -9,6 +9,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "node scripts/check.mjs",
+    "typecheck": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
@@ -43,6 +44,7 @@
     "globals": "^17.12.0",
     "jsdom": "^30.0.1",
     "tailwindcss": "^4.1.6",
+    "typescript": "^5.7.3",
     "vite": "^6.3.5",
     "vite-plugin-pwa": "^0.21.1",
     "vitest": "^5.0.0",
