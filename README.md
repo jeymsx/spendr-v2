@@ -55,6 +55,55 @@
 
 ---
 
+## Project layout
+
+```
+src/
+  pages/            one folder per page that outgrew a file
+    dashboard/      wallet clip-path, tiles, upcoming, quick actions
+    accounts/       form, QR sheets, card style, list card, balance trend
+    goals/          ring, form sheet, sort sheet
+    debts/          card, form sheet, payment sheet
+    insights/       charts, trivia, trend, panels, tables
+    import/         one module per wizard step, plus the CSV parser
+    onboarding/     one module per phase of the flow
+    transactions/   filter sheet, amount slider, quick chips
+    settings/       categories, budgets, templates, backup, profile
+  components/
+    ui/             the design system - Button, Field, Sheet, Card, …
+  lib/              pure domain logic: goals, badges, quickParse, sync, money
+  utils/            pure helpers: credit cycles, recurring dates, money input
+  db/               Dexie schema, migrations and the write helpers
+  web/              the desktop layer, which is its own files
+  types.d.ts        the ten record shapes, declared once
+```
+
+A page keeps its own folder only when it earned one. The rule is that a file
+holds one thing: `Debts.jsx` is the page, and the form sheet, the payment
+sheet and the card each have their own module, because they were four things
+sharing 1,111 lines.
+
+## Checks
+
+```
+npm run check      # six checkers over src/**
+npm test           # 516 tests
+npm run lint
+```
+
+`npm run check` runs, in order:
+
+| | what it catches |
+|---|---|
+| `typecheck` | `tsc --noEmit` over the logic layer, reading JSDoc. Nothing is emitted, so it can fail a build but never change one. |
+| `scopecheck` | identifiers that are never bound — five ReferenceErrors have shipped past a green `vite build` |
+| `tdzcheck` | use before declaration |
+| `hookcheck` | a hook after an early return |
+| `importcheck` | an import naming an export that does not exist. Invisible to eslint and to scopecheck, because the import statement binds the identifier either way. |
+| `designcheck` | hand-rolled UI where a primitive already exists |
+
+---
+
 ## License
 
 © 2024–2025 James Sablay. All rights reserved.
