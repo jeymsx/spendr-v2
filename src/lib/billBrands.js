@@ -125,10 +125,8 @@ const squash = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]+/g, '')
 /**
  * The brand slug for a bill name, or null.
  *
- * @param {string} name  Whatever the bill is called.
+ * @param {string} [name]  Whatever the bill is called.
  * @returns {string|null}
- *
- * @param {string} [name]
  */
 export function billBrandKey(name) {
   const flat = squash(name)

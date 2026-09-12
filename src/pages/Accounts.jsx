@@ -52,13 +52,6 @@ export { StatCard, CreditTxSection, DetailTxRow }
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
-export function fmtCompact(v) {
-  const abs = Math.abs(v ?? 0)
-  const sign = (v ?? 0) < 0 ? '−₱' : '₱'
-  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
-  if (abs >= 1_000)     return sign + (abs / 1_000).toFixed(1) + 'K'
-  return fmt(v)
-}
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 

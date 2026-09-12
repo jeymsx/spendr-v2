@@ -11,9 +11,6 @@ import { scheduledCutoff } from './scheduled'
  * Returns structured data for the PDF from Dexie.
  * @param {number} year
  * @param {number} month  1-indexed (1 = January)
- *
- * @param {number} year
- * @param {number} month
  */
 export async function fetchReportData(year, month) {
   const start = new Date(year, month - 1, 1)
@@ -205,9 +202,6 @@ export async function fetchReportData(year, month) {
  * Fetches data then downloads the PDF.
  * @param {number} year
  * @param {number} month  1-indexed
- *
- * @param {number} year
- * @param {number} month
  * @param {string} [accentColor]
  */
 export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF') {
