@@ -3,21 +3,21 @@ import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
-import { accountBrand, GRADIENT_PRESETS } from '../lib/accountBrands'
+import { GRADIENT_PRESETS } from '../lib/accountBrands'
 import { CARD_DESIGNS } from '../lib/cardDesigns'
 import { PH_ACCOUNTS } from '../lib/phAccounts'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
-import BrandWatermark from '../components/BrandWatermark'
 import {
-  PreviewCard, CardDesignGallery, ColorRail, SchemeRail,
+  PreviewCard,
+  SchemeRail,
 } from '../components/CardStyle'
-import Confetti from '../components/Confetti'
 import {
   TYPE_OPTIONS, defaultRole, buildAccountRow, createAccount,
 } from './Accounts'
-import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
+import { Segmented, BrandTile, StepProgress, inputCls } from './accounts/NewFields'
+import { StyleStep, CreatedStep } from './accounts/NewCardStyleStep'
 
 /**
  * Creating an account, as a guided page rather than one long sheet.
@@ -76,14 +76,6 @@ function IconSearch() {
   )
 }
 
-function IconCheck() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 6L9 17l-5-5" />
-    </svg>
-  )
-}
 
 // ── The live preview ───────────────────────────────────────────────────────────
 
@@ -92,254 +84,6 @@ function IconCheck() {
  * material to the Accounts list, because the point is that this IS the card
  * you are about to get, not an illustration of one.
  */
-// ── Field furniture ────────────────────────────────────────────────────────────
-
-/* The section header used to be defined here - a 13px semibold in slate-700,
-   which is the size and weight of the content it labels. It is
-   components/ui/SectionLabel now, along with the other 64 captions in the app.
-
-   Its `hint` prop did not come along: SectionLabel has no hint, so the three
-   labels that carry one spell out the line beneath them. */
-
-const inputCls = (bad = false) =>
-  `w-full px-4 py-3.5 rounded-2xl text-[15px] tabular-nums
-   bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
-   border ${bad ? 'border-red-400 dark:border-red-500/60' : 'border-slate-200 dark:border-white/[0.09]'}
-   placeholder:text-slate-400 dark:placeholder:text-slate-500
-   focus:outline-none focus:border-primary/60`
-
-/**
- * A segmented control: one track, equal segments, the selection sliding
- * between them. The platform control for a small mutually-exclusive choice,
- * and it cannot produce an orphan the way wrapping chips do.
- *
- * Only for two or three options - past that the labels get too narrow to
- * read, which is what OptionGrid is for.
- */
-function Segmented({ options, value, onChange }) {
-  const index = Math.max(0, options.findIndex(o => o.value === value))
-  return (
-    <div
-      className="relative flex p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.06]
-        border border-slate-200/70 dark:border-white/[0.06]"
-      role="radiogroup"
-    >
-      {/* The moving thumb, sized as a fraction of the track so it lands on
-          each segment exactly however many there are. */}
-      <span
-        aria-hidden="true"
-        className="absolute top-1 bottom-1 rounded-xl bg-white dark:bg-white/[0.14]
-          shadow-sm transition-transform duration-200 ease-out"
-        style={{
-          width: `calc((100% - 8px) / ${options.length})`,
-          left: 4,
-          transform: `translateX(${index * 100}%)`,
-        }}
-      />
-      {options.map(o => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={`relative z-10 flex-1 py-2 text-[13px] font-semibold rounded-xl
-            transition-colors duration-150 ${
-              value === o.value
-                ? 'text-slate-900 dark:text-white'
-                : 'text-slate-500 dark:text-slate-400'
-            }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
-
-
-/**
- * One institution in the picker.
- *
- * A tile rather than a list row, which is the answer to the list being too
- * long: forty rows is several screens of scrolling, while forty tiles in
- * three columns is fourteen rows. Recognition does the work here - you find
- * your bank by its colour and mark, not by reading its name - so the mark is
- * the tile and the name is only its caption.
- *
- * The mark is the same art as the card watermark, reused through
- * BrandWatermark with a class that renders it at full strength instead of at
- * 10% in a corner. Institutions with no logo file get their monogram from the
- * same component, so there is one code path for all three cases.
- */
-function BrandTile({ preset, selected, onPick }) {
-  const brand = accountBrand(preset)
-  return (
-    <button
-      type="button"
-      onClick={() => onPick(preset)}
-      aria-pressed={selected}
-      className="flex flex-col items-center gap-1 rounded-xl
-        active:scale-[0.94] transition-transform duration-75"
-    >
-      <span
-        className={`relative w-full aspect-square rounded-xl flex items-center justify-center
-          overflow-hidden ${
-            selected
-              ? 'ring-2 ring-primary ring-offset-1 ring-offset-white dark:ring-offset-[#0b0f14]'
-              : ''
-          }`}
-        style={{ background: `linear-gradient(135deg, ${brand.from}, ${brand.to})` }}
-      >
-        <BrandWatermark brand={brand} className="brand-glyph" />
-        {selected && (
-          <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-white text-primary
-            flex items-center justify-center shadow">
-            <IconCheck />
-          </span>
-        )}
-      </span>
-      <span className={`text-[9px] leading-[1.15] text-center line-clamp-2 ${
-        selected ? 'font-semibold text-primary' : 'text-slate-600 dark:text-slate-300'
-      }`}>
-        {preset.name}
-      </span>
-    </button>
-  )
-}
-
-
-
-
-/** The step indicator. Rendered above the card on the final step and below
- *  it on the others, so it is a component rather than two copies. */
-function StepProgress({ steps, index, className = '' }) {
-  return (
-    <div className={`px-5 flex items-center gap-1.5 ${className}`} role="presentation">
-      {steps.map((s, i) => (
-        <span
-          key={s}
-          className={`h-1 flex-1 rounded-full transition-colors duration-300 ${
-            i <= index ? 'bg-primary' : 'bg-slate-200 dark:bg-white/[0.10]'
-          }`}
-        />
-      ))}
-    </div>
-  )
-}
-
-// ── Card style step ────────────────────────────────────────────────────────────
-
-/**
- * The card, stood up on its end.
- *
- * A CSS rotation of the real landscape face rather than a second portrait
- * layout, which is what the reference does too - its wordmark reads
- * bottom-to-top because the whole card is turned, not redrawn. One layout to
- * maintain, and what you are looking at is provably the card you are about to
- * get rather than an illustration of it.
- *
- * A transform never changes the layout box, so the wrapper is sized to the
- * PORTRAIT footprint and the landscape card is centred inside it and turned.
- * Rotating a w x h box by 90 degrees gives an h x w footprint, so the card is
- * built at (portraitH x portraitW) and lands exactly filling the wrapper. Get
- * that backwards and it overflows by the difference - the same trap the tilted
- * detail card fell into when its rotation saved no vertical space.
- */
-/**
- * Choosing how the card looks.
- *
- * Everything on this step - the coverflow gallery, the dots, the colour row -
- * is in components/CardStyle.jsx, because the edit screen shows the same
- * three controls and two copies of a hand-tuned coverflow rail would not stay
- * the same for long.
- */
-function StyleStep({ draft, set, action }) {
-  return (
-    <section className="flex-1 flex flex-col justify-center min-h-0 py-2">
-      <CardDesignGallery draft={draft} set={set} />
-
-      <div className="mt-4 px-5">
-        <ColorRail draft={draft} set={set} />
-      </div>
-
-      {/* The button lives INSIDE the centred group on this step, not pinned to
-          the bottom of the screen.
-
-          Pinned, it sat a long way under the colour row with nothing between
-          them - and because the section above it was flex-1, the section ate
-          every spare pixel and left the whole group riding high with a gap
-          beneath. Part of the same group, all five pieces centre together:
-          card, name, dots, colours, button.
-
-          It is also the only step where this is possible. One and two scroll,
-          and a button that scrolls away with the content has to sit at the
-          end of it; this step fits on one screen by design, so the button can
-          be where the eye already is. */}
-      <div className="mt-6 px-5 flex justify-center">{action}</div>
-
-      {/* No error here. The name cannot be edited on this step, and step one
-          will not let a duplicate through - so the only way to arrive with a
-          bad name is another device syncing one while you stood on this
-          screen. save() already handles that by dropping back to step one,
-          where the field shows the reason next to itself. */}
-    </section>
-  )
-}
-
-/**
- * What you see the moment the account exists.
- *
- * Creating one used to end in a toast and a jump to the list, where the card
- * you had just spent three steps choosing was one tile among nine, at a
- * third of the size, with nothing marking it as new. Three steps of
- * deciding, and no moment of having decided.
- *
- * So the card gets the screen once, at full size, lying flat - the same face
- * from the gallery, now an account rather than a preview. Confetti says the
- * thing happened; the buttons say what can happen next.
- */
-function CreatedStep({ draft, onDone, onAddTransaction }) {
-  const isCredit = draft.type === 'credit'
-
-  return (
-    <section className="flex-1 flex flex-col items-center justify-center px-5 text-center">
-      <Confetti />
-
-      <div style={{ animation: 'pageFadeIn 0.45s ease both' }}>
-        <h2 className="text-[28px] font-bold tracking-tight text-slate-900 dark:text-white">
-          You&rsquo;re all set!
-        </h2>
-        <p className="mt-2 text-[14px] leading-relaxed text-slate-500 dark:text-slate-400">
-          <span className="font-semibold text-slate-700 dark:text-slate-200">{draft.name.trim()}</span>
-          {' '}has been added to your accounts.
-        </p>
-      </div>
-
-      {/* Rises a little later than the text, so the card arrives rather than
-          appearing with it. */}
-      <div className="w-full mt-7" style={{ animation: 'quickIn 0.5s 0.12s cubic-bezier(0.32, 0.72, 0, 1) both' }}>
-        <PreviewCard draft={draft} large />
-      </div>
-
-      <p className="mt-5 text-[12.5px] leading-relaxed text-slate-400 dark:text-slate-500 max-w-[300px]">
-        {isCredit
-          ? 'Charges you log to it count against the limit, and installments spread across the statements they will land on.'
-          : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}
-      </p>
-
-      <div className="w-full mt-8 flex flex-col gap-2.5" style={{ animation: 'pageFadeIn 0.5s 0.3s ease both' }}>
-        <Button block onClick={onDone}>
-          Done
-        </Button>
-        <Button variant="secondary" size="sm" block onClick={onAddTransaction}>
-          Add a transaction
-        </Button>
-      </div>
-    </section>
-  )
-}
-
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function AccountNew() {

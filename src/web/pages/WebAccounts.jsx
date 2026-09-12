@@ -9,7 +9,8 @@ import BrandMark from '../../components/BrandMark'
 import { accountBrand } from '../../lib/accountBrands'
 // Reused rather than rebuilt — AccountFormSheet alone is ~700 lines of
 // validated form logic, and QuickAddSheet carries the 48 PH presets.
-import { AccountFormSheet, QuickAddSheet } from '../../pages/Accounts'
+import { AccountFormSheet } from '../../pages/Accounts'
+import { QuickAddSheet } from '../../pages/accounts/QuickAddSheet'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
 

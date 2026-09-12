@@ -54,3 +54,21 @@ export function inputClass(error = false) {
     'outline-none',
   ].join(' ')
 }
+
+/**
+ * "Sep 15" for the next time a day-of-month comes round, or null if the day
+ * is not a real one.
+ *
+ * Moved here from Accounts.jsx when the account card did: a card importing it
+ * from the page that renders the card is a cycle, and ES modules only survive
+ * one because nothing reads the binding during evaluation.
+ *
+ * @param {number} [dayOfMonth]
+ */
+export function nextOccurrence(dayOfMonth) {
+  if (!dayOfMonth || dayOfMonth < 1 || dayOfMonth > 31) return null
+  const now = new Date()
+  let d = new Date(now.getFullYear(), now.getMonth(), dayOfMonth)
+  if (d <= now) d = new Date(now.getFullYear(), now.getMonth() + 1, dayOfMonth)
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+}
