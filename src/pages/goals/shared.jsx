@@ -11,6 +11,7 @@ import { useEffect, useRef } from 'react'
 import { AccountChip } from '../../components/AccountPickerSheet'
 import { cx } from '../../components/ui/cx'
 import { fmtCompact } from '../../lib/money'
+import Rail from '../../components/ui/Rail'
 
 // ── Money and dates ──────────────────────────────────────────────────────────
 
@@ -227,11 +228,7 @@ export function AccountPickRail({
   }, [revealOn, picked])
 
   return (
-    <div
-      ref={railRef}
-      className="flex gap-2.5 overflow-x-auto no-scrollbar -mx-5 px-5 py-1"
-      style={{ overscrollBehaviorX: 'contain' }}
-    >
+    <Rail ref={railRef} className="gap-2.5 -mx-5 px-5 py-1">
       {accounts.map(a => {
         const on = picked.includes(a.name)
         return (
@@ -276,6 +273,6 @@ export function AccountPickRail({
           </button>
         )
       })}
-    </div>
+    </Rail>
   )
 }

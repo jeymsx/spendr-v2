@@ -29,6 +29,7 @@ import MoneyField from '../../components/ui/MoneyField'
 import { inputClass } from './shared'
 import { CardStyleSheet } from './CardStyleSheet'
 import { QrCropSheet } from './QrSheets'
+import Rail from '../../components/ui/Rail'
 
 // ── Account form sheet ─────────────────────────────────────────────────────────
 
@@ -607,10 +608,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     ate the 20px of padding and left None flush against the
                     screen, 20px left of its own label. Chips are not pages;
                     there is nothing here worth snapping to. */}
-                <div
-                  className="flex items-center gap-2 overflow-x-auto no-scrollbar px-5 -mx-5 py-0.5"
-                  style={{ touchAction: 'pan-x pan-y', overscrollBehaviorX: 'contain' }}
-                >
+                <Rail className="items-center gap-2 px-5 -mx-5 py-0.5">
                   <button
                     onClick={() => setParentName(null)}
                     className={[
@@ -636,7 +634,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                       {acct.name}
                     </button>
                   ))}
-                </div>
+                </Rail>
               </div>
             )}
 

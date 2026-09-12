@@ -3,6 +3,7 @@ import { useTheme } from '../context/ThemeContext'
 import { cardGradient } from '../lib/accentTheme'
 import { ACCENT_COLORS } from './Settings'
 import SubPage from '../components/SubPage'
+import Rail from '../components/ui/Rail'
 
 /**
  * One accent, shown as a slice of the app rather than a swatch.
@@ -429,7 +430,7 @@ export default function SettingsAccent() {
             Azure and Honey are unselectable by swiping. scroll-padding
             matches, or snapping fights the padding the way it did on the
             category rail. */}
-        <div
+        <Rail
           ref={railRef}
           onScroll={onScroll}
           onClick={onRailClick}
@@ -448,7 +449,7 @@ export default function SettingsAccent() {
              nothing below it moving. The name block underneath has no
              background and paints later, so it sits over the shadow's tail
              rather than being hidden by it. */
-          className="flex gap-2 overflow-x-auto no-scrollbar snap-x snap-mandatory pt-2 pb-12 -mb-10"
+          className="gap-2 snap-x snap-mandatory pt-2 pb-12 -mb-10"
           style={{
             paddingInline: 'calc(50% - 114px)',
             scrollPaddingInline: 'calc(50% - 114px)',
@@ -459,7 +460,7 @@ export default function SettingsAccent() {
           {ACCENT_COLORS.map(({ hex, name }) => (
             <AccentPreview key={hex} hex={hex} name={name} theme={theme} />
           ))}
-        </div>
+        </Rail>
 
 
         {/* One name, for whichever preview is in the middle. min-h holds the

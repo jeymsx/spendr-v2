@@ -5,6 +5,7 @@ import Button from '../../components/ui/Button'
 import SectionLabel from '../../components/ui/SectionLabel'
 import Divider from '../../components/ui/Divider'
 import { CUSTOM_TYPES } from './shared'
+import Rail from '../../components/ui/Rail'
 
 // ── Step 3: Pick accounts ──────────────────────────────────────────────────────
 
@@ -142,8 +143,8 @@ export function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAd
             {/* Popular */}
             <div>
               <OnbSectionLabel>Popular</OnbSectionLabel>
-              <div
-                className="flex gap-2.5 overflow-x-auto pb-1 -mx-1 px-1 no-scrollbar"
+              <Rail
+                className="gap-2.5 pb-1 -mx-1 px-1"
               >
                 {POPULAR_ACCOUNTS.map(acct => {
                   const sel = selectedNames.has(acct.name)
@@ -170,7 +171,7 @@ export function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAd
                     </button>
                   )
                 })}
-              </div>
+              </Rail>
             </div>
 
             {/* PH account groups */}

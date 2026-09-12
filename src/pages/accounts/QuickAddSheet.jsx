@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
 import Divider from '../../components/ui/Divider'
 import { AccountCard, STACK_STRIP } from './ListCard'
+import Rail from '../../components/ui/Rail'
 
 // ── Quick-add sheet helpers ────────────────────────────────────────────────────
 
@@ -270,11 +271,11 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
 
           <div>
             <QASectionLabel>Popular</QASectionLabel>
-            <div
-              className="flex gap-2.5 overflow-x-auto pb-1 -mx-5 px-5 no-scrollbar"
+            <Rail
+              className="gap-2.5 pb-1 -mx-5 px-5"
             >
               {POPULAR_ACCOUNTS.map(acct => <PopularCard key={acct.name} acct={acct} onPick={pick} />)}
-            </div>
+            </Rail>
           </div>
 
           {PH_GROUPS.map(group => (

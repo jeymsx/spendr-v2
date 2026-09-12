@@ -18,6 +18,7 @@ import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import { Segmented, BrandTile, StepProgress, inputCls } from './accounts/NewFields'
 import { StyleStep, CreatedStep } from './accounts/NewCardStyleStep'
+import Rail from '../components/ui/Rail'
 
 /**
  * Creating an account, as a guided page rather than one long sheet.
@@ -473,7 +474,7 @@ export default function AccountNew() {
           {/* A filter row instead of four stacked sections. It scrolls
               sideways, so a narrow screen never wraps it into an orphan. */}
           {!draft.name && (
-            <div className="mt-3 flex gap-2 overflow-x-auto no-scrollbar px-5 pb-1">
+            <Rail className="mt-3 gap-2 px-5 pb-1">
               {FILTERS.map(f => (
                 <button
                   key={f.value}
@@ -490,7 +491,7 @@ export default function AccountNew() {
                   {f.label}
                 </button>
               ))}
-            </div>
+            </Rail>
           )}
 
           <div className="px-5 mt-4">

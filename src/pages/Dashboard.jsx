@@ -30,6 +30,7 @@ import {
 } from './dashboard/Tiles'
 import QuickActions from './dashboard/QuickActions'
 import UpcomingSection from './dashboard/Upcoming'
+import Rail from '../components/ui/Rail'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -453,9 +454,7 @@ export default function Dashboard() {
             See all
           </Link>
         </div>
-        <div
-          className="flex gap-3 overflow-x-auto mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4 no-scrollbar"
-        >
+        <Rail className="gap-3 mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4">
           {(accounts || []).length === 0 && (
             <EmptyPill label="No accounts yet" />
           )}
@@ -484,7 +483,7 @@ export default function Dashboard() {
           })()}
           {/* spacer so last card doesn't clip under scroll fade */}
           <div className="shrink-0 w-1" />
-        </div>
+        </Rail>
       </section>
 
       <QuickActions counts={actionCounts} />
@@ -503,9 +502,7 @@ export default function Dashboard() {
 {/* ── Quick templates ─────────────────────────────────────────────────── */}
       {(templates ?? []).length > 0 && (
         <section className="mt-3">
-          <div
-            className="flex gap-2 overflow-x-auto px-5 pb-1 no-scrollbar"
-          >
+          <Rail className="gap-2 px-5 pb-1">
             {(templates ?? [])
               .slice()
               .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
@@ -532,7 +529,7 @@ export default function Dashboard() {
               })
             }
             <div className="shrink-0 w-1" />
-          </div>
+          </Rail>
         </section>
       )}
 

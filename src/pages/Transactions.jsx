@@ -16,6 +16,7 @@ import {
 } from './transactions/shared'
 import { QuickTypeFilter } from './transactions/QuickFilter'
 import { FilterModal, TxRow, IconNoTransactions } from './transactions/FilterSheet'
+import Rail from '../components/ui/Rail'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -226,7 +227,7 @@ export default function Transactions() {
 
       {/* ── Active filter tags (date / account / category only) ── */}
       {activeFilterCount > 0 && (
-        <div className="flex items-center gap-2 px-5 pb-3 overflow-x-auto no-scrollbar">
+        <Rail className="items-center gap-2 px-5 pb-3">
           {dateRange !== 'all' && (
             <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
@@ -263,7 +264,7 @@ export default function Transactions() {
               <button onClick={() => { setAmountMin(null); setAmountMax(null) }} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
             </span>
           )}
-        </div>
+        </Rail>
       )}
 
       {/* ── Transaction list / Calendar view ── */}

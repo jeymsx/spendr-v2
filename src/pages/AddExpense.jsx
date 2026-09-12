@@ -21,6 +21,7 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import { fmt } from '../lib/money'
+import Rail from '../components/ui/Rail'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -358,7 +359,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
                 port to the full screen and putting the 16px back as padding
                 keeps the resting row aligned with every other field while
                 letting the chips run off both sides. */}
-            <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar -mx-4 px-4 scroll-px-4">
+            <Rail className="items-center gap-1.5 -mx-4 px-4 scroll-px-4">
               {[0, ...INSTALLMENT_TERMS].map(n => (
                 <button
                   key={n}
@@ -407,7 +408,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
                     placeholder-slate-300 dark:placeholder-slate-600"
                 />
               )}
-            </div>
+            </Rail>
             {isInstallment && (
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
                 {installMonths} × {fmt(amount)} ={' '}
