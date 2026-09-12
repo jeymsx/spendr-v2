@@ -1,71 +1,65 @@
 import { useNavigate } from 'react-router-dom'
+import IconButton from './ui/IconButton'
 import { useBadges } from '../context/BadgeContext'
 
 /**
  * The badges entry point in the dashboard header.
  *
- * ── Why it is not an IconButton ──
+ * ── A disc, like everything else up there ──
  *
- * Every other header control is a glyph inside a 36px disc, and that is right
- * for back, settings, sort and add: they are chrome, and chrome should be
- * uniform. This one is not chrome. It is the only header control that leads
- * somewhere you go for pleasure rather than to do a task, and a rosette inside
- * a circle is a picture of a badge rather than a badge.
+ * It was a hexagon for a while, on the reasoning that this is the one header
+ * control that leads somewhere you go for pleasure rather than to do a task,
+ * so it should not look like chrome. That was true and it was still wrong: two
+ * controls of different SHAPES sitting 6px apart read as a layout accident
+ * before they read as a distinction. The uniform geometry is what makes a
+ * header look deliberate.
  *
- * So the disc is gone and the SHAPE is the shield - wearing IconButton's own
- * `surface` paint (see .badge-chip-face in index.css) so it still has the
- * settings chip's weight sitting next to it, at the same 36px, on the same
- * baseline. Different silhouette, same material.
+ * So the shape goes back to IconButton's disc and the difference moves into
+ * colour and content, which is where a difference of KIND belongs.
  *
- * ── The count is inside it ──
+ * ── An emoji, on purpose ──
  *
- * A hexagon with nothing in it is decoration and gets ignored. The number is
- * the reason to tap: it says there is something here and that it has a size.
- * At zero it still shows "0" rather than hiding - a new user with no badges is
- * exactly who the invitation is for, and an icon that appears only once you
- * have already earned something can never tell you the feature exists.
+ * There is a note in Dashboard about a raw U+26A0 that used to sit under a
+ * drawn settings icon, and it is right in general: OS-font emoji beside
+ * hand-drawn glyphs is exactly how a header stops matching itself.
+ *
+ * This one earns the exception. Everything behind this button is full-colour
+ * raster artwork - ten glassy badges - so a flat monochrome line icon is the
+ * thing that would misrepresent the destination. The trophy is the only glyph
+ * in the header that is a picture rather than a symbol, and so is everything
+ * it opens.
+ *
+ * ── The count did not survive, and that is fine ──
+ *
+ * The hexagon carried "6" because a bare hexagon is a shape nobody would tap.
+ * A trophy is not: it says what it opens on its own, and the number was never
+ * information you needed at a glance, only an invitation. It is the first
+ * thing on the page one tap away, and it is still in the accessible name for
+ * anyone who cannot see the trophy.
  */
-export default function BadgeChip({ className = '' }) {
+export default function BadgeChip() {
   const navigate = useNavigate()
   const { earnedCount, total, loading } = useBadges()
 
   return (
-    <button
-      type="button"
+    <IconButton
+      label={loading ? 'Badges' : `Badges, ${earnedCount} of ${total} earned`}
       onClick={() => navigate('/badges')}
-      aria-label={loading ? 'Badges' : `Badges, ${earnedCount} of ${total} earned`}
-      className={[
-        'relative w-9 h-9 shrink-0 grid place-items-center',
-        'active:scale-90 transition-transform duration-75',
-        className,
-      ].join(' ')}
+      /* `plain` carries no fill of its own, which is the only variant that can
+         safely take one from here: cx is a plain joiner and Tailwind decides
+         between two `bg-` utilities by stylesheet order, not class order, so
+         layering amber over `surface` would win or lose at random. */
+      variant="plain"
+      /* The shadow and the inset are not decoration - they are what `surface`
+         gives the settings chip beside it. Without them this disc sat flat
+         against a lifted one, which is the same control looking like two. */
+      className="bg-amber-100/80 border border-amber-200/70 shadow-sm
+        dark:bg-amber-400/[0.14] dark:border-amber-400/[0.22]
+        dark:shadow-[inset_0_1px_0_rgba(251,191,36,0.14)]"
     >
-      {/* The same hexagon the badges themselves wear, at 36px so it sits on
-          IconButton's baseline.
-
-          Points at top and bottom with flat vertical sides, matching the
-          rendered artwork - which came back in that orientation rather than
-          the flat-top one this was first drawn in. A chip that does not match
-          the thing it opens is a chip that has to be explained. Proportions
-          follow the art too: 280 x 332 there is 30 x 36 here.
-
-          Corners are rounded by the stroke rather than by the path - see
-          HEX_OUTER in BadgeMark. The stroke does two jobs, the radius and the
-          hairline, so thinning it squares the corners off. */}
-      <svg width="36" height="36" viewBox="0 0 36 36" fill="none" aria-hidden="true" className="absolute inset-0 m-auto">
-        <polygon
-          points="18,4 30,11 30,25 18,32 6,25 6,11"
-          className="badge-chip-face"
-          strokeWidth="3.5"
-          strokeLinejoin="round"
-        />
-      </svg>
-
-      {/* A hexagon is symmetric about both axes, so unlike the shield this
-          needs no optical nudge - the box centre IS the centre. */}
-      <span className="relative text-[12px] font-bold tabular-nums leading-none text-slate-600 dark:text-white">
-        {loading ? '' : earnedCount}
-      </span>
-    </button>
+      {/* leading-none and a nudge: emoji sit on their own baseline inside the
+          line box, so a bare one lands a pixel or two low in a flex centre. */}
+      <span className="text-[17px] leading-none -mt-px" aria-hidden="true">🏆</span>
+    </IconButton>
   )
 }

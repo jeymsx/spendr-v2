@@ -336,15 +336,21 @@ hexagon, so a partial set is fine.
 
 ### UI decisions you may want to overrule
 
-- **The header chip is not a circle**, per your ask. It is the same hexagon the
-  badges wear, in `IconButton`'s exact surface paint (see `.badge-chip-face` in
-  `index.css`), at the same 36px on the same baseline as the settings gear. Same
-  material, different silhouette — which is how you can tell at a glance that it
-  does not open another list of switches.
-- **It shows the earned count inside it.** A hexagon with nothing in it is
-  decoration and gets ignored; the number is the reason to tap. It shows `0` on
-  a fresh install rather than hiding, because a new user is exactly who the
-  invitation is for.
+- **The header chip is a disc with a 🏆 in it**, the same 36px as the settings
+  gear on the same baseline, in an amber wash rather than the neutral one. It
+  was a hexagon for a while — the reasoning being that this is the one header
+  control that is not chrome — and that was true and still wrong: two controls
+  of different shapes 6px apart read as a layout accident before they read as a
+  distinction. Uniform geometry is what makes a header look deliberate, so the
+  difference moved to colour and content instead.
+- **The emoji is a deliberate exception** to the note in `Dashboard.jsx` about
+  OS emoji beside drawn glyphs. Everything behind this button is full-colour
+  raster artwork, so a flat monochrome line icon is the thing that would
+  misrepresent where it goes.
+- **The earned count is not on the chip.** A bare hexagon needed a number
+  because nobody would tap a shape; a trophy says what it opens on its own. The
+  count was an invitation rather than information, and it is one tap away — and
+  still in the accessible name.
 - **Locked badges show their real shape, greyed** — not question marks. A hidden
   badge is one nobody can work toward, and tapping a locked one says exactly how
   it is earned. Nothing here is a secret.
