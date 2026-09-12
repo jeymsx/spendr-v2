@@ -26,22 +26,10 @@ import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
+import { fmt, fmtCompact } from '../lib/money'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
-
-function fmtCompact(v) {
-  const abs = Math.abs(v ?? 0)
-  const sign = (v ?? 0) < 0 ? '−₱' : '₱'
-  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
-  if (abs >= 1_000)     return sign + (abs / 1_000).toFixed(1) + 'K'
-  return fmt(v)
-}
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 

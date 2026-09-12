@@ -22,14 +22,9 @@ import DetailRow from '../components/ui/DetailRow'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import Skeleton, { SkeletonList, SkeletonRow } from '../components/ui/Skeleton'
+import { fmt } from '../lib/money'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
-
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 

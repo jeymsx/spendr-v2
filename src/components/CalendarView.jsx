@@ -3,12 +3,7 @@ import CategoryGlyph from './CategoryGlyph'
 import Card from './ui/Card'
 import Divider from './ui/Divider'
 import EmptyState from './ui/EmptyState'
-
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
+import { fmt } from '../lib/money'
 
 function fmtTime(isoStr) {
   if (!isoStr) return ''

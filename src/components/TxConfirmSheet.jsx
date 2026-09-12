@@ -7,12 +7,7 @@ import Sheet from './ui/Sheet'
 import CategoryGlyph from './CategoryGlyph'
 import AmountHero from './ui/AmountHero'
 import AccountLine, { TransferLegs } from './AccountLine'
-
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
+import { fmt } from '../lib/money'
 
 function ToggleSwitch({ on }) {
   return (

@@ -10,6 +10,7 @@ import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import DetailRow from '../components/ui/DetailRow'
 import SectionLabel from '../components/ui/SectionLabel'
+import { fmt } from '../lib/money'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -21,12 +22,6 @@ const LEGACY_REQUIRED_COLS = ['txId', 'type', 'date', 'description', 'category',
 const VALID_TYPES = new Set(['expense', 'inflow', 'transfer'])
 
 const TRANSFER_RE = /Transfer:\s*(.+?)\s*→\s*(.+)/
-
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
 
 function fmtBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`

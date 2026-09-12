@@ -1,11 +1,6 @@
 import Button from './ui/Button'
 import Sheet from './ui/Sheet'
-
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const fmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _phpFmt.format(Math.abs(n))
-}
+import { fmt } from '../lib/money'
 
 const TYPE_LABEL = { expense: 'expense', inflow: 'inflow', transfer: 'transfer' }
 
