@@ -4,7 +4,8 @@
  * These are not "does it return a Set" tests. Each one pins a line that was
  * drawn deliberately and that a future edit could quietly move: that a month
  * still running cannot be judged, that restraint needs something to have been
- * spent, that a streak counts days rather than transactions.
+ * spent, that a streak counts days rather than transactions, that a run of
+ * months means ADJACENT months.
  */
 import { describe, it, expect } from 'vitest'
 import { evaluateBadges, longestDayStreak, liquidTotal, BADGES } from './badges'
@@ -17,14 +18,32 @@ function earned(over = {}) {
   return evaluateBadges({ today: TODAY, ...over })
 }
 
+/** Day `i` after a start date, as YYYY-MM-DD. */
+function dayFrom(start) {
+  return i => {
+    const d = new Date(start + 'T00:00:00')
+    d.setDate(d.getDate() + i)
+    const m = String(d.getMonth() + 1).padStart(2, '0')
+    const dd = String(d.getDate()).padStart(2, '0')
+    return d.getFullYear() + '-' + m + '-' + dd
+  }
+}
+
 describe('the set itself', () => {
-  it('is ten badges with unique keys', () => {
-    expect(BADGES).toHaveLength(10)
-    expect(new Set(BADGES.map(b => b.key)).size).toBe(10)
+  it('is twenty badges with unique keys', () => {
+    expect(BADGES).toHaveLength(20)
+    expect(new Set(BADGES.map(b => b.key)).size).toBe(20)
+  })
+
+  it('gives every badge a distinct glyph, so no two read as the same thing', () => {
+    // Twenty hexagons of similar colour are told apart by the mark and only by
+    // the mark. Two badges sharing one is two badges nobody can tell apart.
+    const glyphs = BADGES.map(b => b.glyph)
+    expect(new Set(glyphs).size).toBe(glyphs.length)
   })
 
   it('gives every badge both a blurb and a way to get it', () => {
-    // The detail sheet shows `how` when locked and `blurb` when earned, so a
+    // The detail card shows `how` when locked and `blurb` when earned, so a
     // badge missing either renders an empty paragraph on one of its states.
     for (const b of BADGES) {
       expect(b.blurb, b.key).toBeTruthy()
@@ -38,7 +57,32 @@ describe('the set itself', () => {
     expect(earned().size).toBe(0)
   })
 
-  it('survives a badge that throws rather than losing the other nine', () => {
+  it('never awards a tier without the step below it', () => {
+    // The pairs are meant to read as progress. A ledger that earns Thirty Days
+    // but not Seven Days would make the grid nonsense, so the harder test has
+    // to imply the easier one by construction.
+    const pairs = [
+      ['seven-days', 'thirty-days'],
+      ['century', 'five-hundred'],
+      ['green-month', 'steady-three'],
+      ['under-budget', 'budget-master'],
+      ['debt-cleared', 'debt-free'],
+      ['goal-funded', 'three-goals'],
+      ['six-figures', 'seven-figures'],
+    ]
+    const day = dayFrom('2025-01-01')
+    const out = earned({
+      transactions: Array.from({ length: 500 }, (_, i) => tx(day(i), 'expense', 10, 'Food')),
+      accounts: [{ name: 'BPI', type: 'bank', balance: 2000000 }],
+      debts: [{ amount: 10, amountPaid: 10 }, { amount: 20, amountPaid: 20 }],
+      goals: [1, 2, 3].map(id => ({ id, name: 'G' + id, target: 100, accounts: ['BPI'], priority: id })),
+    })
+    for (const [easy, hard] of pairs) {
+      if (out.has(hard)) expect(out.has(easy), hard + ' without ' + easy).toBe(true)
+    }
+  })
+
+  it('survives a badge that throws rather than losing the other nineteen', () => {
     // Every test is wrapped. A malformed row must not empty the page.
     const out = earned({ accounts: [{ get type() { throw new Error('boom') } }] })
     expect(out).toBeInstanceOf(Set)
@@ -54,7 +98,7 @@ describe('longestDayStreak', () => {
 
   it('breaks on a gap and keeps the longest run, not the last', () => {
     const days = ['06-01', '06-02', '06-03', '06-04', '06-05', '06-06', '06-07', '06-09']
-      .map(d => tx(`2026-${d}`, 'expense', 10))
+      .map(d => tx('2026-' + d, 'expense', 10))
     expect(longestDayStreak(days)).toBe(7)
   })
 
@@ -66,7 +110,7 @@ describe('longestDayStreak', () => {
 describe('seven-days', () => {
   it('needs seven in a row, not seven in a week', () => {
     const six = ['06-01', '06-02', '06-03', '06-04', '06-05', '06-06']
-      .map(d => tx(`2026-${d}`, 'expense', 10))
+      .map(d => tx('2026-' + d, 'expense', 10))
     expect(earned({ transactions: six }).has('seven-days')).toBe(false)
 
     const seven = [...six, tx('2026-06-07', 'expense', 10)]
@@ -165,10 +209,10 @@ describe('liquidTotal and six-figures', () => {
 
 describe('diversified', () => {
   it('counts kinds, not accounts', () => {
-    const four = ['cash', 'bank', 'bank', 'bank'].map((type, i) => ({ name: `A${i}`, type, balance: 0 }))
+    const four = ['cash', 'bank', 'bank', 'bank'].map((type, i) => ({ name: 'A' + i, type, balance: 0 }))
     expect(earned({ accounts: four }).has('diversified')).toBe(false)
 
-    const kinds = ['cash', 'bank', 'ewallet', 'savings'].map((type, i) => ({ name: `A${i}`, type, balance: 0 }))
+    const kinds = ['cash', 'bank', 'ewallet', 'savings'].map((type, i) => ({ name: 'A' + i, type, balance: 0 }))
     expect(earned({ accounts: kinds }).has('diversified')).toBe(true)
   })
 })
@@ -208,5 +252,158 @@ describe('first-peso and century', () => {
 
     const hundred = Array.from({ length: 100 }, () => tx('2026-06-01', 'expense', 10))
     expect(earned({ transactions: hundred }).has('century')).toBe(true)
+  })
+})
+
+// ── The second ten ───────────────────────────────────────────────────────────
+
+describe('thirty-days', () => {
+  const day = dayFrom('2026-01-01')
+
+  it('needs a run of thirty, not thirty entries', () => {
+    const spread = Array.from({ length: 30 }, (_, i) => tx(day(i * 2), 'expense', 10))
+    expect(earned({ transactions: spread }).has('thirty-days')).toBe(false)
+    const run = Array.from({ length: 30 }, (_, i) => tx(day(i), 'expense', 10))
+    expect(earned({ transactions: run }).has('thirty-days')).toBe(true)
+  })
+})
+
+describe('year-one', () => {
+  it('measures the span, not the volume', () => {
+    // A thousand entries in a fortnight is not a year of records.
+    const day = dayFrom('2026-01-01')
+    const dense = Array.from({ length: 400 }, (_, i) => tx(day(i % 14), 'expense', 10))
+    expect(earned({ transactions: dense }).has('year-one')).toBe(false)
+
+    const sparse = [tx('2025-01-01', 'expense', 10), tx('2026-01-02', 'expense', 10)]
+    expect(earned({ transactions: sparse }).has('year-one')).toBe(true)
+  })
+
+  it('needs two dated entries before there is a span at all', () => {
+    expect(earned({ transactions: [tx('2025-01-01', 'expense', 10)] }).has('year-one')).toBe(false)
+  })
+})
+
+describe('steady-three', () => {
+  const green = m => [tx('2026-' + m + '-02', 'inflow', 900), tx('2026-' + m + '-03', 'expense', 100)]
+
+  it('needs adjacent months, not any three good ones', () => {
+    const gappy = [...green('01'), ...green('03'), ...green('05')]
+    expect(earned({ transactions: gappy }).has('steady-three')).toBe(false)
+    const run = [...green('01'), ...green('02'), ...green('03')]
+    expect(earned({ transactions: run }).has('steady-three')).toBe(true)
+  })
+
+  it('finds a run that is not at the start of the data', () => {
+    const bad = [tx('2026-01-02', 'expense', 900), tx('2026-01-03', 'inflow', 100)]
+    const run = [...bad, ...green('02'), ...green('03'), ...green('04')]
+    expect(earned({ transactions: run }).has('steady-three')).toBe(true)
+  })
+})
+
+describe('budget-master', () => {
+  const limits = [
+    { name: 'Food', budget: 8000, type: 'expense' },
+    { name: 'Transpo', budget: 3000, type: 'expense' },
+  ]
+  const good = m => [tx('2026-' + m + '-02', 'expense', 100, 'Food')]
+  const bad = m => [tx('2026-' + m + '-02', 'expense', 90000, 'Food')]
+
+  it('needs three adjacent months inside every limit', () => {
+    const broken = [...good('01'), ...bad('02'), ...good('03'), ...good('04')]
+    expect(earned({ transactions: broken, categories: limits }).has('budget-master')).toBe(false)
+    const run = [...good('01'), ...good('02'), ...good('03')]
+    expect(earned({ transactions: run, categories: limits }).has('budget-master')).toBe(true)
+  })
+
+  it('still needs two limits set', () => {
+    const one = [{ name: 'Food', budget: 8000, type: 'expense' }]
+    const run = [...good('01'), ...good('02'), ...good('03')]
+    expect(earned({ transactions: run, categories: one }).has('budget-master')).toBe(false)
+  })
+})
+
+describe('no-spend-week', () => {
+  it('wants a gap BETWEEN spending, not silence at the end', () => {
+    // A week with no expenses is indistinguishable from a week you did not
+    // open the app. Only a gap bracketed by real spending is restraint.
+    const trailing = [tx('2026-01-01', 'expense', 100)]
+    expect(earned({ transactions: trailing }).has('no-spend-week')).toBe(false)
+
+    const bracketed = [tx('2026-01-01', 'expense', 100), tx('2026-01-10', 'expense', 100)]
+    expect(earned({ transactions: bracketed }).has('no-spend-week')).toBe(true)
+  })
+
+  it('needs a clear seven days, so six is not enough', () => {
+    const tight = [tx('2026-01-01', 'expense', 100), tx('2026-01-07', 'expense', 100)]
+    expect(earned({ transactions: tight }).has('no-spend-week')).toBe(false)
+  })
+
+  it('ignores inflows in the gap - only spending breaks it', () => {
+    const paid = [
+      tx('2026-01-01', 'expense', 100),
+      tx('2026-01-05', 'inflow', 5000),
+      tx('2026-01-10', 'expense', 100),
+    ]
+    expect(earned({ transactions: paid }).has('no-spend-week')).toBe(true)
+  })
+})
+
+describe('rainy-day', () => {
+  const spend = [tx('2026-01-05', 'expense', 10000), tx('2026-02-05', 'expense', 10000)]
+
+  it('measures savings against YOUR spending', () => {
+    const thin = [{ name: 'BPI', type: 'savings', balance: 20000 }]
+    expect(earned({ transactions: spend, accounts: thin }).has('rainy-day')).toBe(false)
+    const full = [{ name: 'BPI', type: 'savings', balance: 30000 }]
+    expect(earned({ transactions: spend, accounts: full }).has('rainy-day')).toBe(true)
+  })
+
+  it('ignores money that is not in savings', () => {
+    const current = [{ name: 'BPI', type: 'bank', balance: 500000 }]
+    expect(earned({ transactions: spend, accounts: current }).has('rainy-day')).toBe(false)
+  })
+
+  it('needs two months before it will average anything', () => {
+    const one = [tx('2026-01-05', 'expense', 1000)]
+    const acct = [{ name: 'BPI', type: 'savings', balance: 500000 }]
+    expect(earned({ transactions: one, accounts: acct }).has('rainy-day')).toBe(false)
+  })
+})
+
+describe('debt-free', () => {
+  it('needs two debts and all of them settled', () => {
+    // Owing nothing because you never recorded a debt is not the achievement.
+    expect(earned({ debts: [] }).has('debt-free')).toBe(false)
+    expect(earned({ debts: [{ amount: 10, amountPaid: 10 }] }).has('debt-free')).toBe(false)
+
+    const partial = [{ amount: 10, amountPaid: 10 }, { amount: 20, amountPaid: 5 }]
+    expect(earned({ debts: partial }).has('debt-free')).toBe(false)
+
+    const all = [{ amount: 10, amountPaid: 10 }, { amount: 20, amountPaid: 20 }]
+    expect(earned({ debts: all }).has('debt-free')).toBe(true)
+  })
+})
+
+describe('three-goals', () => {
+  const goals = [1, 2, 3].map(id => ({ id, name: 'G' + id, target: 100, accounts: ['BPI'], priority: id }))
+
+  it('counts funded goals, not goals', () => {
+    const accounts = [{ name: 'BPI', type: 'bank', balance: 300 }]
+    expect(earned({ accounts, goals }).has('three-goals')).toBe(true)
+
+    // 150 funds the first and part of the second - the waterfall, not a split.
+    const thin = [{ name: 'BPI', type: 'bank', balance: 150 }]
+    expect(earned({ accounts: thin, goals }).has('three-goals')).toBe(false)
+  })
+})
+
+describe('seven-figures', () => {
+  it('crosses at a million, and still ignores credit', () => {
+    expect(earned({ accounts: [{ name: 'A', type: 'bank', balance: 999999 }] }).has('seven-figures')).toBe(false)
+    expect(earned({ accounts: [{ name: 'A', type: 'bank', balance: 1000000 }] }).has('seven-figures')).toBe(true)
+
+    const card = [{ name: 'A', type: 'credit', balance: 2000000 }]
+    expect(earned({ accounts: card }).has('seven-figures')).toBe(false)
   })
 })

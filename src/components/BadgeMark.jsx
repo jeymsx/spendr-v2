@@ -61,6 +61,22 @@ const TONE = {
   indigo: ['#8199FB', '#3B5BDB'],
   cyan:   ['#4BCEDF', '#0B7285'],
   gold:   ['#FDD64B', '#E67700'],
+
+  /* The second ten. Seven of them are a harder version of one of the first,
+     and they stay in that badge's family on purpose - Seven Days is violet and
+     Thirty Days is plum, Six Figures is gold and Seven Figures is platinum. A
+     tier that changes hue entirely reads as an unrelated badge, and the point
+     of the pair is that you can see the progression in the grid. */
+  plum:     ['#C77DFF', '#7B2CBF'],
+  steel:    ['#94A9C4', '#3E4C63'],
+  sky:      ['#7DD3FC', '#0369A1'],
+  emerald:  ['#6EE7B7', '#047857'],
+  bronze:   ['#F0C48A', '#9A5B22'],
+  lime:     ['#D9F99D', '#4D7C0F'],
+  denim:    ['#93B4E8', '#24467F'],
+  crimson:  ['#FF8A94', '#B01030'],
+  orange:   ['#FFB067', '#D9480F'],
+  platinum: ['#E3F2FF', '#7BA7D4'],
 }
 
 /* The hexagon, on a 0 0 64 64 box.
@@ -68,11 +84,11 @@ const TONE = {
  * Drawn once and shared by all ten, because the thing that makes a set of
  * badges look like a set is the silhouette, not the glyph.
  *
- * Flat top and bottom with points left and right, which is the orientation
- * that tiles and the one that reads as a badge rather than as a warning sign.
- * Slightly taller than a true hexagon (half-width 26 against half-height 28) -
- * a mathematically correct flat-top hex is 15% wider than tall and reads as
- * squashed beside square tiles.
+ * Points at top and bottom with flat vertical sides, matching the rendered
+ * artwork - which came back in that orientation, and the fallback has to be
+ * the same object as the thing it stands in for. Proportions follow it too:
+ * 280 x 332 there is 48 x 56 here, and the shoulders sit at 0.485 of the
+ * half-height, which is where the art's vertical sides begin.
  *
  * ── The corners are rounded by the stroke, not by the path ──
  *
@@ -84,8 +100,8 @@ const TONE = {
  *
  * The stroke grows the shape by half its width on every side, which is why
  * these numbers stop short of the box. */
-const HEX_OUTER = '19,4 45,4 58,32 45,60 19,60 6,32'
-const HEX_FACE  = '21.5,10 42.5,10 52.5,32 42.5,54 21.5,54 11.5,32'
+const HEX_OUTER = '32,4 56,18.4 56,45.6 32,60 8,45.6 8,18.4'
+const HEX_FACE  = '32,10 50.5,21 50.5,43 32,54 13.5,43 13.5,21'
 
 /* How far the inner face rides above centre. This is the whole depth cue:
    the rim it leaves is 5 units at the top and 8 at the bottom, so the badge
@@ -188,6 +204,75 @@ const GLYPH = {
     </>
   ),
   crown: <path d="M2.6 7 7 13.4l5-8.4 5 8.4L21.4 7v10.6a1.6 1.6 0 0 1-1.6 1.6H4.2a1.6 1.6 0 0 1-1.6-1.6z" />,
+
+  /* ── The second ten ──
+     Each one has to be tellable from the other nineteen at 56px, which is what
+     rules out the near-misses: a plain circle for a coin stack, a plain tick
+     for Debt Free, a second flag for Three Goals. */
+  calendar: (
+    <>
+      <rect x="3.2" y="5.4" width="17.6" height="15.4" rx="2.6" />
+      <path d="M3.2 10.2h17.6" />
+      <path d="M8 3.2v4M16 3.2v4" />
+      <path d="M8.8 15.2l2.2 2.2 4-4.4" />
+    </>
+  ),
+  coins: (
+    <>
+      <ellipse cx="12" cy="7" rx="7.6" ry="3.2" />
+      <path d="M4.4 7v4.4c0 1.8 3.4 3.2 7.6 3.2s7.6-1.4 7.6-3.2V7" />
+      <path d="M4.4 12.2v4.4c0 1.8 3.4 3.2 7.6 3.2s7.6-1.4 7.6-3.2v-4.4" />
+    </>
+  ),
+  hourglass: (
+    <>
+      <path d="M6 3h12M6 21h12" />
+      <path d="M7.6 3v3.2c0 2.2 4.4 4 4.4 5.8 0 1.8-4.4 3.6-4.4 5.8V21" />
+      <path d="M16.4 3v3.2c0 2.2-4.4 4-4.4 5.8 0 1.8 4.4 3.6 4.4 5.8V21" />
+    </>
+  ),
+  /* Three ascending strokes. Not a chart with an arrow - Green Month already
+     owns the rising arrow, and its harder tier must not look like it twice. */
+  bars: <path d="M4.6 19.5v-5.2M12 19.5V9.4M19.4 19.5V4.5" />,
+  target: (
+    <>
+      <circle cx="12" cy="12" r="9.3" />
+      <circle cx="12" cy="12" r="4.6" />
+      <circle cx="12" cy="12" r="0.9" />
+    </>
+  ),
+  nospend: (
+    <>
+      <circle cx="12" cy="12" r="9.3" />
+      <path d="M5.4 5.4 18.6 18.6" />
+    </>
+  ),
+  umbrella: (
+    <>
+      <path d="M2.8 12.4a9.2 9.2 0 0 1 18.4 0z" />
+      <path d="M12 12.4v6.2a2.7 2.7 0 0 0 5.4 0" />
+    </>
+  ),
+  chain: (
+    <>
+      <path d="M9.8 7.2H6.6a4.8 4.8 0 1 0 0 9.6h3.2" />
+      <path d="M14.2 7.2h3.2a4.8 4.8 0 1 1 0 9.6h-3.2" />
+      <path d="M11.2 9.6 12.8 8M11.2 14.4 12.8 16" />
+    </>
+  ),
+  summit: (
+    <>
+      <path d="M2.6 20h18.8L13.8 7.8l-3.2 5-2.4-2.8z" />
+      <path d="M13.8 7.8V3.6l4 1.6-4 1.6" />
+    </>
+  ),
+  gem: (
+    <>
+      <path d="M4.4 9.4h15.2L12 20.4z" />
+      <path d="M4.4 9.4 7.8 4.2h8.4l3.4 5.2" />
+      <path d="M9 9.4 12 20.4l3-11" />
+    </>
+  ),
 }
 
 export default function BadgeMark({

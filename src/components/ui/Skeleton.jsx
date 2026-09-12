@@ -98,6 +98,26 @@ export function SkeletonHero({ className = '' }) {
   )
 }
 
+/**
+ * A badge, before its data arrives.
+ *
+ * The hexagon comes from a CSS mask on the shimmer rather than a rounded box -
+ * see .skeleton-hex in index.css. A rounded rectangle standing in for a
+ * hexagon is the kind of placeholder that makes the real thing jump when it
+ * lands, and the badges grid is twenty of them jumping at once.
+ *
+ * The caption block underneath is sized to the real label so the row pitch
+ * does not change either.
+ */
+export function SkeletonBadge({ size = 72, className = '' }) {
+  return (
+    <div className={cx('flex flex-col items-center gap-2', className)}>
+      <Skeleton className="skeleton-hex" style={{ width: size, height: size }} />
+      <Skeleton className="h-[10px] w-12 rounded-md" />
+    </div>
+  )
+}
+
 /** The three-across figure row under a hero. */
 export function SkeletonStatTrio({ className = '' }) {
   return (

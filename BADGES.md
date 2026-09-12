@@ -1,23 +1,26 @@
 # Badges — what shipped, and what you need to do
 
-Built, tested, running, **and the artwork is in.** All ten rendered badges are
-cropped, masked to their own outline and living in `src/assets/badges/`.
+Built, tested, running, the SQL is applied, and **the first ten badges have
+their artwork** — cropped, masked to their own outline, living in
+`src/assets/badges/`.
 
-**One thing still needs you: run the SQL in §2.** That is it. Until you do,
-badges work exactly as they do now — they just stay on this device instead of
-syncing.
+**One thing needs you: generate the art for badges 11–20.** The prompt is in
+§3c. Until you do, those ten wear the drawn hexagon fallback, which is the same
+silhouette in the same hue — the grid still reads as one set.
 
-§3 keeps the prompt that produced the art, and §3b regenerates any single badge
-at full size if you ever want to redo one.
+§3 keeps the prompt that produced the first ten, §3b regenerates any single
+badge at full size, and §3c is the one you want now.
 
 ---
 
-## 1. The ten badges
+## 1. The twenty badges
 
 I picked these against one rule: **a badge has to be about your money, not
 about the app.** No points for opening Spendr, no streak for tapping around.
 Every one is provable from what is already in the ledger, which also means they
 all work offline.
+
+### The first ten
 
 | # | Badge | Earned by | Why it made the list |
 |---|-------|-----------|----------------------|
@@ -32,6 +35,28 @@ all work offline.
 | 9 | **Diversified** | Accounts of four different kinds | Counts *kinds*, not accounts — four banks is still one kind. |
 | 10 | **Six Figures** | ₱100,000 across your accounts | Credit is excluded: a credit line is not money you hold. |
 
+### The second ten
+
+Seven of these are a harder version of one above, on purpose. A collection where
+every badge is its own unrelated stunt has no shape; one where Seven Days leads
+to Thirty Days and Six Figures leads to Seven Figures tells you what the app
+thinks progress looks like, and the grid reads as a path rather than a
+checklist. Their colours stay in the same family as their predecessor for the
+same reason.
+
+| # | Badge | Earned by | Why it made the list |
+|---|-------|-----------|----------------------|
+| 11 | **Thirty Days** | Logging on 30 consecutive days | The habit, past the point where it is still an effort. |
+| 12 | **Five Hundred** | 500 transactions | Volume, tier two. |
+| 13 | **Year One** | A year between your first entry and your last | Longevity, not volume — a thousand entries in a fortnight does not earn it. |
+| 14 | **Steady Three** | Three months *in a row* with inflow above expenses | Adjacent months. Three good months scattered across a year is not a streak. |
+| 15 | **Budget Master** | Three months *in a row* inside every limit | The hardest one in the set. |
+| 16 | **No-Spend Week** | Seven days with no expenses, *bracketed by* real spending | See below — the bracketing is the whole difficulty. |
+| 17 | **Rainy Day** | Savings ≥ 3× your average monthly spending | The emergency fund, measured against your own life rather than a round number. |
+| 18 | **Debt Free** | Every debt settled, having carried at least two | Owing nothing because you never recorded a debt is not the achievement. |
+| 19 | **Three Goals** | Three savings goals funded at once | Reads the same waterfall allocator the Goals page draws. |
+| 20 | **Seven Figures** | ₱1,000,000 across your accounts | Credit still excluded. |
+
 Three judgement calls worth knowing about, because they are the ones you might
 disagree with:
 
@@ -43,10 +68,21 @@ disagree with:
 - **Once earned, always earned.** Edit a goal upward after funding it, re-open a
   debt, spend the ₱100K — the badge stays. It records that you did the thing on
   the day you did it.
+- **No-Spend Week needs spending on both sides of the gap.** A week with no
+  expenses is indistinguishable from a week you did not open the app, and the
+  second must not earn anything. Only a quiet week *between* two days you
+  actually recorded spending counts as restraint.
 
 ---
 
-## 2. The SQL — run this first
+## 2. The SQL — done
+
+You have run this. Kept for reference; it is also at
+`src/supabase/migrations/006_badges.sql`.
+
+<details>
+<summary>The migration</summary>
+
 
 Supabase → SQL Editor → new query → paste → Run.
 
@@ -105,6 +141,8 @@ begin
   end if;
 end $$;
 ```
+
+</details>
 
 **How to check it worked:** sign in, pull to sync, then `select key, earned_at
 from badges;` in the SQL editor. You should see one row per earned badge.
@@ -267,6 +305,129 @@ OBJECT: <the object description from the list>
 
 Fill in the two hexes and the object line from the list in §3 above.
 
+### 3c. The second ten
+
+The collection is twenty now. These are badges 11–20 and they have to look like
+they came out of the same box as the first ten — same hexagon, same glass, same
+diagonal reflection, same kind of faceted object in the middle.
+
+> **Attach the first sheet to the chat before you send this.** Say "match the
+> style of this image exactly." That one step does more for consistency than
+> any amount of prompt wording, because the model can see the silhouette, the
+> rim thickness and the reflection angle rather than reconstructing them from a
+> description. Everything below is written to work without it, but do it if you
+> can.
+
+Same output rules as before: **one image, transparent, 5 × 2, no text.**
+
+```
+Create ONE image containing 10 achievement badge icons for a mobile personal
+finance app, laid out on a strict grid so I can crop them apart. These are the
+second half of an existing set, so consistency with the description below
+matters more than invention.
+
+=== OUTPUT SPEC (follow exactly — this matters more than the art) ===
+
+- ONE image, landscape, 1536 x 1024 pixels.
+- TRANSPARENT background. No backdrop, no panel, no card, no scene. No shadow
+  cast onto the background. Every glow and reflection must sit INSIDE the badge
+  silhouette.
+- A 5 x 2 grid: 5 badges across, 2 rows down, cells of 307 x 512 px.
+- Each badge centred in its own cell, all 10 exactly the SAME size (about 290 px
+  wide), even margins. No badge touches, overlaps, or bleeds out of its cell.
+- NO text, NO labels, NO numbers, NO captions. The app draws the names itself.
+- No frame, no border, no grid lines, no watermark.
+
+=== THE STYLE ===
+
+Modern 3D glassmorphism achievement badges — glossy, translucent, gem-like.
+Think mobile game reward badges and Duolingo/Poe achievement art: soft, candy,
+premium. Vector-smooth, NOT photorealistic, NOT clay, NOT metal, NOT pixel art.
+
+Every badge is built the same way, and this structure must not vary:
+
+1. SHAPE: a hexagon with a POINT at the top and bottom and flat vertical sides
+   left and right, with softly rounded corners. Slightly taller than wide.
+2. OUTER FRAME: a wide translucent border of the badge's colour, lighter and
+   more transparent than the middle — like frosted glass. It reads as a thick
+   rim around the badge.
+3. INNER FRAME: a thin bright hairline hexagon just inside the outer frame,
+   following the same shape, like the bevelled edge of a piece of glass.
+4. FACE: the recessed centre panel, a smooth gradient of the badge's colour —
+   lighter at the top-left, deeper and more saturated at the bottom-right.
+5. GLASS REFLECTION: one large hard-edged diagonal running from the upper-left
+   down to the lower-right across the WHOLE badge. Everything above-left of that
+   line is brighter and glassier; everything below-right is slightly deeper in
+   tone. This single diagonal is the most important thing in the style — it is
+   what makes the badge look like glass instead of a coloured sticker.
+6. SPARKLES: two or three tiny white four-point sparkles (different sizes)
+   scattered inside the face, near the object. Small and sparse.
+
+=== THE OBJECT IN THE MIDDLE — READ THIS TWICE ===
+
+It is NOT a flat white line icon and NOT an outline. It is a small
+three-dimensional OBJECT that appears to be carved from the same glassy
+material as the badge, sitting on the face and catching the same light.
+
+- It is in the SAME COLOUR FAMILY as the badge, several shades LIGHTER — a
+  cream or pale tint of that hue, so it reads as the same material lit from
+  above. Not white, not grey, not a contrasting colour.
+- It has FACETS and internal shading: a bright top-left surface, a mid tone, and
+  a deeper shadow side, like a cut gem or a smooth 3D render.
+- It is SOLID and filled, with soft rounded edges. No outlines, no stroke, no
+  drop shadow.
+- It occupies roughly 45% of the badge's width, centred on the face.
+
+=== THE 10 BADGES, IN READING ORDER (left to right, top row first) ===
+
+Row 1:
+1. PLUM (#C77DFF light → #7B2CBF deep). Object: a 3D calendar page — a rounded
+   square with a thicker band across its top, two small tabs above it, and a
+   check mark raised on its face. Pale lilac on plum.
+2. STEEL GREY (#94A9C4 → #3E4C63). Object: a stack of three thick 3D coins,
+   seen slightly from above so the top face of the highest coin is an ellipse.
+   Pale silver on steel.
+3. SKY BLUE (#7DD3FC → #0369A1). Object: a 3D hourglass — two rounded cones
+   meeting at a narrow waist, with a flat cap at the top and bottom. Pale ice
+   blue on sky.
+4. EMERALD (#6EE7B7 → #047857). Object: three thick 3D bars standing side by
+   side, each taller than the one to its left, with rounded tops. Pale mint on
+   emerald.
+5. BRONZE (#F0C48A → #9A5B22). Object: a 3D archery target — concentric raised
+   rings — with a short arrow standing in the exact centre, seen head on. Pale
+   sand on bronze.
+
+Row 2:
+6. LIME (#D9F99D → #4D7C0F). Object: a thick 3D coin seen face-on with a bold
+   raised diagonal bar across it, like a "no" symbol over money. Pale
+   yellow-green on lime.
+7. DENIM BLUE (#93B4E8 → #24467F). Object: an open 3D umbrella seen from the
+   side — a smooth domed canopy with a curved handle below it. Pale powder blue
+   on denim.
+8. CRIMSON (#FF8A94 → #B01030). Object: two thick 3D chain links pulling apart,
+   with a clear gap between them and a small break at the facing ends. Pale
+   blush on crimson.
+9. ORANGE (#FFB067 → #D9480F). Object: a faceted 3D mountain peak with a small
+   pennant flag planted on its summit. Pale apricot on orange.
+10. PLATINUM (#E3F2FF → #7BA7D4). Object: a brilliant-cut 3D diamond seen
+    face-on — a flat table on top, angled facets running down to a point below.
+    Near-white with pale blue facets, on icy platinum.
+
+Render all 10 in one image on the 5x2 grid described above. Transparent
+background. No text anywhere.
+```
+
+**Filenames when you send it back**, in that reading order:
+
+```
+thirty-days   five-hundred  year-one   steady-three  budget-master
+no-spend-week rainy-day     debt-free  three-goals   seven-figures
+```
+
+Until they land, these ten wear the drawn hexagon fallback — the same
+silhouette in the same hue with a line glyph, so the grid still reads as one
+set while it waits.
+
 ### If the result is not quite right
 
 Regenerate rather than asking for an edit — edits tend to drift the silhouette,
@@ -283,10 +444,13 @@ and the silhouette is the thing that makes ten badges read as one set.
 
 ---
 
-## 4. What to do when you wake up
+## 4. What is left
 
-**Run the SQL in §2.** Two minutes in the Supabase SQL editor. Nothing else is
-outstanding.
+**Generate the art for badges 11–20** with the prompt in §3c, and send me the
+image. I crop it the same way as the first sheet and it drops straight in.
+
+Nothing else is outstanding. The SQL is applied and the first ten have their
+artwork.
 
 ### How the art got in, in case you redo it
 

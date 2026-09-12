@@ -1786,3 +1786,25 @@ html.web.dark input[type="date"] {
   .badge-shine    { animation: none; opacity: 0; }
   .confetti-burst { animation: none; opacity: 0; }
 }
+
+/* ── A badge-shaped skeleton ──────────────────────────────────────────────────
+
+   A rounded rectangle standing in for a hexagon is the kind of placeholder that
+   makes the real thing jump when it arrives. This masks `.skeleton` to the
+   badge silhouette instead, so the shimmer is already the shape of what is
+   coming.
+
+   The mask is an inline SVG rather than a clip-path polygon because a polygon
+   cannot round its corners, and the tips are the most recognisable part of the
+   shape - a hexagon with sharp points reads as a warning sign. Same geometry as
+   HEX_OUTER in BadgeMark, rounded the same way: fill and stroke in one paint
+   with a round linejoin. */
+.skeleton-hex {
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,4 56,18.4 56,45.6 32,60 8,45.6 8,18.4' fill='%23000' stroke='%23000' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,4 56,18.4 56,45.6 32,60 8,45.6 8,18.4' fill='%23000' stroke='%23000' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E");
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  border-radius: 0;
+}
