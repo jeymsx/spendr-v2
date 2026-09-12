@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react'
+import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -11,6 +11,13 @@ import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark from '../components/SchemeMark'
 import TxDetailSheet from '../components/TxDetailSheet'
 import LimitMeter from '../components/LimitMeter'
+import { statementDueDate, daysToDue } from '../lib/creditBills'
+import {
+  estimateFinanceCharge, financeChargeRow, financeChargeLogged,
+} from '../lib/financeCharge'
+import { applyBalanceEffect } from '../db/txHelpers'
+import { UNSYNCED } from '../db/db'
+import { useToast } from '../context/ToastContext'
 import { IconChevronRight, IconTick, IconWarning} from '../components/icons'
 import {
   AccountFormSheet,
@@ -140,6 +147,72 @@ export default function AccountDetail() {
       return { ...tx, balAfter }
     })
   }, [acctTxs, account])
+
+  /**
+   * How late this statement is, and what the bank is likely to add for it.
+   *
+   * Kept out of creditData because it is a different question: creditData
+   * says what the card holds, this says what happens if you leave it. Both
+   * derive from the same status, and neither writes anything - the charge is
+   * only written when you press the button, because a finance charge is the
+   * bank's to decide and this is an estimate of it.
+   */
+  const lateInfo = useMemo(() => {
+    if (!account || account.type !== 'credit') return null
+    const status = getCreditStatus(account, txsWithRunning)
+    const due    = statementDueDate(status.cycleEnd, account.dueDate)
+    const days   = daysToDue(due, new Date())
+    const late   = days == null ? null : -days
+    return {
+      ...estimateFinanceCharge({
+        account,
+        outstanding: status.stmtOutstanding,
+        minimumDue:  status.minimumDue,
+        daysLate:    late,
+      }),
+      daysLate: late,
+      /* Once one is logged the offer has to go. Logging raises the balance,
+         which keeps the statement late and makes the next estimate bigger -
+         so the button would sit there compounding itself on every tap. */
+      alreadyLogged: financeChargeLogged({
+        transactions: txsWithRunning, accountName: account.name, since: due,
+      }),
+    }
+  }, [account, txsWithRunning])
+
+  const { showToast } = useToast()
+  const [loggingCharge, setLoggingCharge] = useState(false)
+  /* A ref as well as the state, because the state guard only takes effect on
+     the next render - two taps inside one frame, or a re-render landing
+     mid-write, would both get past it. This is a button that writes money;
+     the guard has to be synchronous. */
+  const chargeInFlight = useRef(false)
+
+  /* Writes the estimate as an ordinary expense on the card - which is exactly
+     what the bank does - so the balance, the available credit and Insights all
+     pick it up with no special handling anywhere. Editable afterwards like any
+     other transaction, which is the point of writing a row rather than
+     inventing a derived figure. */
+  const logFinanceCharge = useCallback(async () => {
+    if (!account || !lateInfo?.canEstimate || lateInfo.total <= 0) return
+    if (chargeInFlight.current) return
+    chargeInFlight.current = true
+    setLoggingCharge(true)
+    try {
+      const row = financeChargeRow({ accountName: account.name, amount: lateInfo.total })
+      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+        await db.transactions.add({ ...row, txId: crypto.randomUUID(), synced: UNSYNCED })
+        await applyBalanceEffect(row)
+      })
+      showToast(`Logged ${fmt(lateInfo.total)} finance charge`)
+    } catch (e) {
+      console.error('[AccountDetail] finance charge failed:', e)
+      showToast('Could not log the charge', 'error')
+    } finally {
+      chargeInFlight.current = false
+      setLoggingCharge(false)
+    }
+  }, [account, lateInfo, showToast])
 
   const creditData = useMemo(() => {
     if (!account || account.type !== 'credit') return null
@@ -288,6 +361,46 @@ export default function AccountDetail() {
           </div>
         )}
       </section>
+
+      {/* ── Late, and what that is about to cost ── */}
+      {isCredit && lateInfo?.isLate && (
+        <section className="px-5 mt-5">
+          <Card padding="md" className="border border-red-200 dark:border-red-500/30">
+            {/* Three lines became one and a button. The first draft explained
+                the estimate in a paragraph, and a paragraph about a caveat is
+                longer than the fact it qualifies - "Estimated" on the button
+                says the same thing in one word. */}
+            <p className="text-[13px] font-semibold text-red-500 dark:text-red-400">
+              {lateInfo.daysLate} day{lateInfo.daysLate === 1 ? '' : 's'} overdue
+              {' · '}{fmt(creditData.stmtOutstanding)} unpaid
+            </p>
+            {lateInfo.alreadyLogged ? (
+              <p className="mt-1.5 text-[12.5px] text-slate-500 dark:text-slate-400">
+                Finance charge logged. Edit it in the list below if your statement differs.
+              </p>
+            ) : lateInfo.canEstimate ? (
+              <>
+                <p className="mt-1.5 text-[12.5px] text-slate-600 dark:text-slate-300 tabular-nums">
+                  {fmt(lateInfo.interest)} interest + {fmt(lateInfo.lateFee)} late fee
+                </p>
+                <Button
+                  variant="tint"
+                  size="sm"
+                  className="mt-3 px-4"
+                  onClick={logFinanceCharge}
+                  disabled={loggingCharge}
+                >
+                  {loggingCharge ? 'Logging…' : `Log ${fmt(lateInfo.total)} (estimated)`}
+                </Button>
+              </>
+            ) : (
+              <p className="mt-1.5 text-[12.5px] text-slate-500 dark:text-slate-400">
+                Add an interest rate to this card to estimate what that costs.
+              </p>
+            )}
+          </Card>
+        </section>
+      )}
 
       {/* ── The card, laid back so it costs less height ── */}
       <section className="px-5 card-tilt">

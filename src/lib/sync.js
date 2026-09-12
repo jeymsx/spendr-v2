@@ -123,6 +123,8 @@ export function accountToRow(r, userId) {
     due_date:        r.dueDate        ?? null,
     cutoff_date:     r.cutoffDate     ?? null,
     minimum_payment: r.minimumPayment ?? null,
+    interest_rate:   r.interestRate ?? null,
+    late_fee:        r.lateFee ?? null,
     color:           r.color,
     qr_image:        r.qrImage        ?? null,
     parent_name:     r.parentName     ?? null,
@@ -295,6 +297,10 @@ export function rowToAccount(row) {
     dueDate:        row.due_date,
     cutoffDate:     row.cutoff_date,
     minimumPayment: row.minimum_payment,
+    /* Undefined when 007 has not run, which normalises to "no estimate"
+       rather than an error - same shape as design/custom_color above. */
+    interestRate:   row.interest_rate ?? null,
+    lateFee:        row.late_fee ?? null,
     color:          row.color,
     qrImage:        row.qr_image    ?? null,
     parentName:     row.parent_name ?? null,
@@ -572,7 +578,7 @@ export async function syncToSupabase(userId) {
 /** Columns a table may not have yet, by table name.
  *  @type {Record<string, string[]>} */
 const OPTIONAL_COLS = {
-  accounts: ['design', 'custom_color'],
+  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee'],
   /* created_at is declared in 003_schema.sql, so it should be there - but a
      live table can have drifted from the migrations, and this is the existing
      net for exactly that. If it is missing the push drops the column and

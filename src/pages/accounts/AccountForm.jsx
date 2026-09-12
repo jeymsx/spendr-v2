@@ -25,6 +25,7 @@ import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
 import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
+import Field from '../../components/ui/Field'
 import MoneyField from '../../components/ui/MoneyField'
 import { inputClass } from './shared'
 import { CardStyleSheet } from './CardStyleSheet'
@@ -44,7 +45,7 @@ import Rail from '../../components/ui/Rail'
  */
 export function buildAccountRow({
   name, type, role, color, creditLimit,
-  statementDay, dueDay, cutoffDay, minPayment,
+  statementDay, dueDay, cutoffDay, minPayment, interestRate, lateFee,
   qrImage = null, parentName = null, scheme = '',
   design, customColor,
 }) {
@@ -60,6 +61,12 @@ export function buildAccountRow({
     dueDate:        isCredit ? (parseInt(dueDay)       || null) : null,
     cutoffDate:     isCredit ? (parseInt(cutoffDay)    || null) : null,
     minimumPayment: isCredit ? (parseMoney(minPayment) || 0)    : null,
+    /* What the bank charges for paying late. Both optional: a card carrying
+       neither cannot be estimated for, and financeCharge.js says so rather
+       than showing a confident zero. Null on an asset account, like every
+       other credit-only column. */
+    interestRate:   isCredit ? (parseFloat(interestRate) || null)  : null,
+    lateFee:        isCredit ? (parseMoney(lateFee) || 0)          : null,
     qrImage:        qrImage ?? null,
     updatedAt:      new Date().toISOString(),
     parentName:     parentName ?? null,
@@ -129,6 +136,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const [dueDay,         setDueDay]         = useState('')
   const [cutoffDay,      setCutoffDay]      = useState('')
   const [minPayment,     setMinPayment]     = useState('0')
+  const [interestRate,   setInterestRate]   = useState('')
+  const [lateFee,        setLateFee]        = useState('0')
   const [nameError,      setNameError]      = useState(false)
   const [qrImage,        setQrImage]        = useState(null)
   const [qrCropOpen,     setQrCropOpen]     = useState(false)
@@ -196,6 +205,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setDueDay(account.dueDate != null ? String(account.dueDate) : '')
       setCutoffDay(account.cutoffDate != null ? String(account.cutoffDate) : '')
       setMinPayment(numToMoneyStr(account.minimumPayment ?? 0))
+      setInterestRate(account.interestRate != null ? String(account.interestRate) : '')
+      setLateFee(numToMoneyStr(account.lateFee ?? 0))
       setQrImage(account.qrImage ?? null)
       setParentName(account.parentName ?? null)
       setScheme(account.scheme ?? '')
@@ -260,7 +271,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       const cleanName = name.trim()
       const data = buildAccountRow({
         name: cleanName, type, role, color, creditLimit,
-        statementDay, dueDay, cutoffDay, minPayment,
+        statementDay, dueDay, cutoffDay, minPayment, interestRate, lateFee,
         qrImage, parentName, scheme, design, customColor,
       })
 
@@ -697,6 +708,28 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     value={minPayment === '0' ? '' : minPayment}
                     onChange={moneyChangeHandler(setMinPayment)}
                   />
+                </div>
+
+                {/* What paying late costs. Both optional - leave them blank
+                    and the card simply never offers an estimate. */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <SectionLabel>Interest / mo</SectionLabel>
+                    <Field
+                      value={interestRate}
+                      onChange={e => setInterestRate(e.target.value.replace(/[^0-9.]/g, ''))}
+                      inputMode="decimal"
+                      placeholder="3.0"
+                      right={<span className="text-sm">%</span>}
+                    />
+                  </div>
+                  <div>
+                    <SectionLabel>Late fee</SectionLabel>
+                    <MoneyField
+                      value={lateFee === '0' ? '' : lateFee}
+                      onChange={moneyChangeHandler(setLateFee)}
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-3 gap-3">

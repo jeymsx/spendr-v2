@@ -167,7 +167,7 @@ export function nextDueDate(dayOfMonth, now = new Date()) {
 
 /**
  * @param {Account} account
- * @param {Transaction[]} txs
+ * @param {Array<Partial<Transaction>>} txs
  * @param {Date} [referenceDate]
  */
 export function getCreditStatus(account, txs, referenceDate = new Date()) {
@@ -221,7 +221,7 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
     }
   }
 
-  /** @param {Transaction[]} arr */
+  /** @param {Array<Partial<Transaction>>} arr */
   const sum                = (arr) => arr.reduce((s, tx) => s + (tx.amount ?? 0), 0)
   const thisTotal          = sum(thisCharges)
   const nextTotal          = sum(nextCharges)

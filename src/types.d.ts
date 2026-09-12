@@ -75,6 +75,11 @@ interface Account {
   dueDate?: number | null
   cutoffDate?: number | null
   minimumPayment?: number | null
+  /** Monthly interest rate as a percentage; 3 means 3%/month. Optional -
+   *  a card without one is never offered a finance-charge estimate. */
+  interestRate?: number | null
+  /** Flat late fee in pesos, capped at the minimum due when applied. */
+  lateFee?: number | null
   qrImage?: string | null
   /** Names a parent account, so sub-accounts roll up. By NAME, like the rest
    *  of the schema - see the note in db.js. */

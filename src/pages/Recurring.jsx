@@ -27,6 +27,10 @@ import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
 import { fmt, fmtCompact } from '../lib/money'
+import { creditCardBills } from '../lib/creditBills'
+import { accountBrand } from '../lib/accountBrands'
+import { normalizeDesign } from '../lib/cardDesigns'
+import BrandMark from '../components/BrandMark'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -144,6 +148,77 @@ function BillRow({ rec, onOpen, isLast }) {
       {/* Inset to the tile, not to the card: the row is led by a 40px mark,
           so a full-width rule would cut the card rather than separate two
           bills inside it. */}
+      {!isLast && <Divider inset="glyph" />}
+    </>
+  )
+}
+
+/**
+ * A credit card's statement, sitting in the list beside the real bills.
+ *
+ * It looks like a BillRow on purpose - this is the screen you check to answer
+ * "what do I owe this month", and for most people a card statement is the
+ * biggest thing on that list. What it is NOT is a recurring record: nothing
+ * is stored, and the row disappears the moment the statement is settled.
+ *
+ * The action is Pay rather than a tap-through, and it opens the transfer form
+ * with the card and the amount already in it. A statement is paid by moving
+ * money, not by posting an expense - lib/creditBills has why that distinction
+ * is the whole reason this is not a real bill.
+ */
+function CardBillRow({ bill, onPay, isLast }) {
+  const brand = accountBrand(bill.account)
+  const late  = bill.overdue
+  const label = bill.daysUntil == null ? 'No due date'
+    : late                             ? `${Math.abs(bill.daysUntil)}d overdue`
+    : bill.daysUntil === 0             ? 'Due today'
+    : bill.daysUntil === 1             ? 'Due tomorrow'
+    : `Due in ${bill.daysUntil} days`
+
+  return (
+    <>
+      <div className="w-full flex items-center gap-3 px-4 py-4">
+        {/* The card's own face, in the 40px box BillMark uses, so the row
+            lines up with the bills either side of it. */}
+        <span
+          className="acct-card shrink-0 w-10 h-10 rounded-2xl flex items-center justify-center text-white"
+          style={{ '--card-from': brand.from, '--card-to': brand.to }}
+          data-design={normalizeDesign(bill.account.design)}
+          aria-hidden="true"
+        >
+          <BrandMark mark={brand.mark} size={16} className="opacity-95" />
+        </span>
+
+        <span className="flex-1 min-w-0">
+          <span className="block text-[14px] font-semibold truncate text-slate-800 dark:text-white">
+            {bill.name}
+          </span>
+          <span className="block text-[11.5px] truncate">
+            <span className={late
+              ? 'text-red-500 dark:text-red-400 font-semibold'
+              : 'text-slate-500 dark:text-slate-400'}>
+              {label}
+            </span>
+          </span>
+        </span>
+
+        {/* The minimum sits under the amount rather than beside the due date.
+            Next to "8d overdue" it was the second half of a line that had to
+            fit a Pay button too, and it truncated to "min ₱5…" - which is the
+            one figure on this row you cannot half-read. */}
+        <span className="shrink-0 text-right">
+          <span className="block text-[14px] font-semibold tabular-nums text-slate-800 dark:text-white">
+            {fmt(bill.amount)}
+          </span>
+          <span className="block text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
+            {bill.minimumDue > 0 ? `min ${fmtCompact(bill.minimumDue)}` : 'statement'}
+          </span>
+        </span>
+
+        <Button size="xs" variant="tint" className="shrink-0 px-3" onClick={() => onPay(bill)}>
+          Pay
+        </Button>
+      </div>
       {!isLast && <Divider inset="glyph" />}
     </>
   )
@@ -503,6 +578,11 @@ export default function Recurring() {
 
   const allRec     = useLiveQuery(() => db.recurring.toArray(),  [], undefined)
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
+  /* For the card statements below. Unfiltered on purpose: the credit
+     arithmetic has to see every future charge, which is the one thing
+     scheduledCutoff hides from the spending screens. */
+  const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
+  const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
 
   // Enrich with the category's icon and colour, which is all the row needs
   // from it.
@@ -518,6 +598,29 @@ export default function Recurring() {
   }, [allRec, categories])
 
   const active = useMemo(() => enriched.filter(r => r.active), [enriched])
+
+  /**
+   * Credit card statements, as bills.
+   *
+   * Derived on read rather than stored - see lib/creditBills. They are kept
+   * apart from `upcoming` rather than merged into it because everything below
+   * that counts, totals or groups bills is about RECURRING records: a card
+   * statement has no frequency to group by and no monthly figure to add to
+   * the total, and folding it in would quietly corrupt all three.
+   */
+  const cardBills = useMemo(
+    () => creditCardBills({ accounts: accounts ?? [], transactions: transactions ?? [] }),
+    [accounts, transactions],
+  )
+
+  /* Paying a statement is a transfer, so this hands the form the card and the
+     amount and lets the existing flow do the rest - including the overdraw
+     check and the confirm sheet. */
+  const payCard = useCallback((bill) => {
+    navigate('/transfer', {
+      state: { prefill: { amount: bill.amount, toAccount: bill.name } },
+    })
+  }, [navigate])
 
   /** Active bills falling due in the next 30 days, soonest first. */
   const upcoming = useMemo(() => {
@@ -667,6 +770,25 @@ export default function Recurring() {
 
           {tab === 'upcoming' ? (
             <section className="mt-5">
+              {/* Statements first. A card bill is usually the largest single
+                  thing owed in a month, and it is the one with a late fee
+                  attached to missing it. */}
+              {cardBills.length > 0 && (
+                <div className="px-5 mb-5">
+                  <SectionLabel inset="none" gap="normal">Card statements</SectionLabel>
+                  <Card clip>
+                    {cardBills.map((b, i) => (
+                      <CardBillRow
+                        key={b.id}
+                        bill={b}
+                        onPay={payCard}
+                        isLast={i === cardBills.length - 1}
+                      />
+                    ))}
+                  </Card>
+                </div>
+              )}
+
               <SectionHeading right="Next 30 days">Coming up</SectionHeading>
               <div className="px-5">
                 <Card clip>
