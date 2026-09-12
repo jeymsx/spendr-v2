@@ -5,8 +5,6 @@ import { scheduledCutoff } from './scheduled'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-
 // ── fetchReportData ────────────────────────────────────────────────────────────
 
 /**

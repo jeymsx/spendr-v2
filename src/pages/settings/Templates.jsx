@@ -29,6 +29,7 @@ import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
 import IconButton from '../../components/ui/IconButton'
 import { fieldFrame } from '../../components/ui/Field'
+import { fmt } from '../../lib/money'
 
 // ── Template row ───────────────────────────────────────────────────────────────
 
@@ -36,12 +37,6 @@ export const TMPL_TYPE_STYLE = {
   expense:  { bg: 'bg-red-50 dark:bg-red-500/10',      text: 'text-red-500 dark:text-red-400',      label: 'Expense'  },
   inflow:   { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', label: 'Inflow' },
   transfer: { bg: 'bg-blue-50 dark:bg-blue-500/10',    text: 'text-blue-600 dark:text-blue-400',    label: 'Transfer' },
-}
-
-const _tFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-export const tfmt = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _tFmt.format(Math.abs(n))
 }
 
 export function TemplateRow({ tpl, cat, onTap, onLongPressDelete }) {
@@ -77,7 +72,7 @@ export function TemplateRow({ tpl, cat, onTap, onLongPressDelete }) {
           {tpl.type === 'transfer' ? `${tpl.fromAccount} → ${tpl.toAccount}` : (tpl.account ?? '')}
         </p>
       </div>
-      <p className={`text-sm font-bold tabular-nums shrink-0 ${ts.text}`}>{tfmt(tpl.amount)}</p>
+      <p className={`text-sm font-bold tabular-nums shrink-0 ${ts.text}`}>{fmt(tpl.amount)}</p>
       <span className="text-slate-300 dark:text-slate-600 shrink-0"><IconChevronRight size={14} strokeWidth="2" /></span>
     </div>
   )

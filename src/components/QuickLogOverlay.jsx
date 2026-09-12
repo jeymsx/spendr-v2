@@ -5,9 +5,11 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { quickParse, learnLedger } from '../lib/quickParse'
 import CategoryGlyph from './CategoryGlyph'
 import { IconTick, IconWarning, IconBell } from './icons'
+import { fmt } from '../lib/money'
 
-const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-const money = (v) => '₱' + _php.format(Math.abs(v ?? 0))
+/* Always a magnitude - this row never shows a sign - so it is fmt() of an
+   absolute value, which produces the identical string. */
+const money = (v) => fmt(Math.abs(v ?? 0))
 
 /** Breathing room between the text and the top of the keyboard. */
 const KEYBOARD_GAP = 16

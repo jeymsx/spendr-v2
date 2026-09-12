@@ -7,22 +7,30 @@ import { Link } from 'react-router-dom'
  * Styling reuses the existing `.card` class and `--color-primary`, so the
  * accent picker and dark mode keep working with no extra wiring.
  */
+import { fmt } from '../../lib/money'
 
-const _php = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
 /**
- * The sign goes before the currency symbol, not between it and the digits.
- * Intl formats -6000 as "-6,000.00", so prefixing the peso sign gave
- * "PHP-6,000.00"; everywhere else in the app an amount reads as sign then
- * symbol, via amountTone. Negatives reach here on the net tiles - Debts net,
- * Insights net, and net worth when credit exceeds assets - and the minus is
- * U+2212, matching amountTone rather than a hyphen.
+ * The desktop's name for lib/money's fmt - the same function, kept under the
+ * name six web pages already import.
+ *
+ * The note that used to live here explained why the sign goes before the
+ * currency symbol rather than between it and the digits: Intl formats -6000
+ * as "-6,000.00", and everywhere else in this app an amount reads as sign
+ * then symbol. That reasoning now sits in lib/money, where the one
+ * implementation is.
  */
-export const money = (v) => {
-  const n = v ?? 0
-  return (n < 0 ? '−₱' : '₱') + _php.format(Math.abs(n))
-}
+export const money = fmt
 
+/**
+ * NOT fmtCompact, and the difference is deliberate: this abbreviates from ten
+ * thousand where the phone abbreviates from one. A desktop tile is wide
+ * enough to print ₱4,250.00 in full, and the exact figure is worth more there
+ * than a shorter one - it is the phone that cannot afford the width.
+ *
+ * Left local for that reason. It was very nearly unified on the strength of
+ * looking almost identical.
+ */
 export function moneyCompact(v) {
   const n = v ?? 0
   const abs = Math.abs(n)
