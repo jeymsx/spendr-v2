@@ -54,7 +54,12 @@ export const CARD_DESIGNS = [
   {
     key: 'onyx',
     name: 'Onyx',
-    hint: 'Deep tonal shapes, the darkest of the six',
+    hint: 'Deep tonal shapes, the darkest of the set',
+  },
+  {
+    key: 'mosaic',
+    name: 'Mosaic',
+    hint: 'A grid of frosted panes, lit from the right',
   },
 ]
 
