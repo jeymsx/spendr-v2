@@ -1,13 +1,18 @@
 #!/usr/bin/env node
 /**
- * Run the three AST checkers over src/**.
+ * Run the four AST checkers over src/**.
  *
  * These exist because `vite build` succeeding proves nothing about whether the
  * app runs: esbuild transforms each module in isolation, so an identifier that
  * is never bound is legal JS until it executes. Real crashes that shipped past
  * a green build include three `showToast` ReferenceErrors, a `<Backdrop>` used
  * but never defined, and an `<OverdrawWarningSheet>` reading state from a
- * sibling component. This session alone they caught an undefined `<SegTabs>`,
+ * sibling component.
+ *
+ * importcheck is the mirror image: it catches what a green `npm run check` and
+ * a clean eslint BOTH miss, because an import statement binds its identifiers
+ * and every scope-based analysis therefore sees a valid binding. Only reading
+ * the target module's real exports finds it. This session alone they caught an undefined `<SegTabs>`,
  * fourteen unbound identifiers in a form, two parse failures from a mangled
  * import, and a `tplCat` that never existed.
  *
@@ -24,7 +29,7 @@ import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
-const CHECKERS = ['scopecheck.mjs', 'tdzcheck.mjs', 'hookcheck.mjs']
+const CHECKERS = ['scopecheck.mjs', 'tdzcheck.mjs', 'hookcheck.mjs', 'importcheck.mjs']
 
 function collect(dir, out = []) {
   for (const name of readdirSync(dir)) {
@@ -54,7 +59,7 @@ for (const checker of CHECKERS) {
     const verdict = out.split('\n').find(l => /problem\(s\)/.test(l)) ?? `exit ${r.status}`
     console.log(`FAIL  ${name.padEnd(11)} ${verdict.trim()}`)
     for (const line of out.split('\n')) {
-      if (/^(UNBOUND|TDZ|HOOK|PARSE)/.test(line)) console.log(`        ${line}`)
+      if (/^(UNBOUND|TDZ|HOOK|IMPORT|PARSE)/.test(line)) console.log(`        ${line}`)
     }
   } else {
     const verdict = out.split('\n').find(l => l.startsWith('OK')) ?? 'ok'
