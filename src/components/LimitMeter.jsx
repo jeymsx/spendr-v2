@@ -37,13 +37,16 @@
  */
 
 const TONES = {
-  accent: { fill: 'var(--color-primary)', stripe: 'rgba(var(--color-primary-rgb), 0.5)' },
-  warn:   { fill: '#f59e0b',              stripe: 'rgba(245, 158, 11, 0.55)' },
-  bad:    { fill: '#ef4444',              stripe: 'rgba(239, 68, 68, 0.55)' },
+  /* Alphas went up with the pitch. A 1.25px stroke covers little more than
+     half the ink a 2px one did, so holding the old values would have faded
+     the hatching as it got finer. */
+  accent: { fill: 'var(--color-primary)', stripe: 'rgba(var(--color-primary-rgb), 0.62)' },
+  warn:   { fill: '#f59e0b',              stripe: 'rgba(245, 158, 11, 0.66)' },
+  bad:    { fill: '#ef4444',              stripe: 'rgba(239, 68, 68, 0.66)' },
   /* Arriving, rather than running out. A funded goal, which the bar it
      replaced already drew in this green for the reason its own note gives:
      scanning, "done" has to be legible without reading the number. */
-  good:   { fill: '#10b981',              stripe: 'rgba(16, 185, 129, 0.55)' },
+  good:   { fill: '#10b981',              stripe: 'rgba(16, 185, 129, 0.66)' },
 }
 
 export function limitTone(pct) {
@@ -63,18 +66,27 @@ export default function LimitMeter({
   const clamped = Math.max(0, Math.min(100, Number(pct) || 0))
   const t = TONES[tone] ?? TONES.accent
 
-  /* The handle is 18px across and centred on the boundary, so at 0% and 100%
-     half of it would hang outside the track. Its position is pulled in by
-     its own radius at each end - the fill still runs to the true percentage,
-     only the handle is inset, which is the half nobody measures off. */
-  const HANDLE = 18
+  /* 20 against an 18px track, so it stands a pixel proud at top and bottom.
+     Flush, it read as a hole punched in the rail rather than a grip resting
+     on it - and it left the shadow no room to fall.
+
+     Centred on the boundary, so at 0% and 100% half of it would hang off the
+     end. Its position is pulled in by its own radius at each end - the fill
+     still runs to the true percentage, only the handle is inset, which is
+     the half nobody measures off. */
+  const HANDLE = 20
   const knobPct = `calc(${clamped}% + ${((50 - clamped) / 50) * (HANDLE / 2)}px)`
 
   return (
     <div className={className}>
       <div
+        /* No overflow-hidden. It was clipping the handle flat at the top and
+           bottom - an 18px circle centred in an 18px box that clips has
+           nowhere to put its own edge, let alone its shadow. Nothing else
+           here needs the clip: the fill and the hatch are both inset from
+           the track and rounded themselves, so neither can reach a corner. */
         className="relative h-[18px] rounded-full bg-slate-100 dark:bg-white/[0.05]
-          border border-slate-200/70 dark:border-white/[0.07] overflow-hidden"
+          border border-slate-200/70 dark:border-white/[0.07]"
         role="progressbar"
         aria-valuenow={Math.round(clamped)}
         aria-valuemin={0}
@@ -96,7 +108,7 @@ export default function LimitMeter({
           style={{
             left: `calc(${clamped}% + 4px)`,
             backgroundImage:
-              `repeating-linear-gradient(-45deg, ${t.stripe} 0 2px, transparent 2px 4.5px)`,
+              `repeating-linear-gradient(-45deg, ${t.stripe} 0 1.25px, transparent 1.25px 3px)`,
           }}
         />
 
