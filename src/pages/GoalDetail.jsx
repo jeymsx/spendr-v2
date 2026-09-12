@@ -258,12 +258,6 @@ export default function GoalDetail() {
         </div>
       </section>
 
-      <div className="px-5 mt-7">
-        <Button block variant="outline" onClick={() => setEditOpen(true)}>
-          Edit goal
-        </Button>
-      </div>
-
       <GoalFormSheet
         open={editOpen}
         goal={goal}

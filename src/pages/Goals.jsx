@@ -49,14 +49,27 @@ import {
 
 // ── One goal, as a tile ──────────────────────────────────────────────────────
 
+/* Named because the skeleton has to be the same grid, exactly - a loading
+   state one gap-value out from the real one is a page that shifts as it
+   arrives, which is the single thing a skeleton exists to prevent. */
+const GRID = 'px-5 grid grid-cols-2 gap-3 items-stretch'
+
 /**
- * ── Why the tile is bare and not a card ──
+ * ── One card per goal ──
  *
- * The badges page put every badge in its own card, and that was right there:
- * a badge is an irregular shape floating in space and the card gives it an
- * edge to sit on. A ring already has an edge - its own - so a rounded
- * rectangle behind it is a second frame around the first, and twelve of them
- * turn a grid of circles into a grid of boxes with circles in.
+ * The first version was bare: rings on the page's own ground, on the theory
+ * that a ring already has an edge and a rounded rectangle behind it is a
+ * second frame around the first. That reasoning is fine and the result was
+ * not - a circle encloses its own middle but leaves its corners empty, so
+ * four of them on an open page read as a section that had not finished
+ * loading. The card gives the grid a body, and it is what the badges page
+ * settled on for the same reason.
+ *
+ * Still a grid rather than a rail. A carousel is right on the home page,
+ * where the goals are a glance on the way to something else; this page IS
+ * the goals, and the order they are in is load-bearing - scrolling half of
+ * a ranked list off the side of the screen hides the half you most need to
+ * see to judge the ranking.
  *
  * ── One line for the name, one for the money ──
  *
@@ -84,12 +97,17 @@ function GoalTile({ goal, onOpen, today }) {
       }
 
   return (
-    <button
+    <Card
+      as="button"
+      interactive
+      padding="md"
       onClick={() => onOpen(goal)}
-      className="flex flex-col items-center min-w-0 active:scale-[0.97] transition-transform duration-100"
+      className="flex flex-col items-center min-w-0"
     >
-      <GoalRing pct={goal.pct} complete={goal.complete} size={116} stroke={8}>
-        <span className="text-[26px] leading-none" aria-hidden="true">{goal.icon ?? '🎯'}</span>
+      {/* 104, down from the 116 it was bare. The card's own padding is the
+          breathing room the ring used to have to find on an empty page. */}
+      <GoalRing pct={goal.pct} complete={goal.complete} size={104} stroke={7}>
+        <span className="text-[24px] leading-none" aria-hidden="true">{goal.icon ?? '🎯'}</span>
         <span className={`mt-1.5 text-[11px] font-bold tabular-nums ${
           goal.complete ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
         }`}>
@@ -103,20 +121,24 @@ function GoalTile({ goal, onOpen, today }) {
       <span className={`mt-0.5 w-full truncate text-center text-[11px] tabular-nums ${sub.tone}`}>
         {sub.text}
       </span>
-    </button>
+    </Card>
   )
 }
 
 /** The grid's own shape while it loads, so nothing moves when it arrives. */
 function SkeletonGrid({ count = 4 }) {
   return (
-    <div className="px-5 grid grid-cols-2 gap-x-3 gap-y-7">
+    <div className={GRID}>
       {Array.from({ length: count }, (_, i) => (
-        <div key={i} className="flex flex-col items-center">
-          <Skeleton className="w-[116px] h-[116px] rounded-full" />
-          <Skeleton className="mt-3 h-3.5 w-24 rounded" />
-          <Skeleton className="mt-1.5 h-3 w-16 rounded" />
-        </div>
+        <Card key={i} padding="md" className="flex flex-col items-center">
+          {/* The two text heights are the real ones, measured: 13px and 11px
+              at the browser's normal leading come out at 19.5 and 16.5, and
+              a skeleton 7px short of its own card is a page that settles
+              downward as it loads. */}
+          <Skeleton className="w-[104px] h-[104px] rounded-full" />
+          <Skeleton className="mt-3 h-[19.5px] w-24 rounded" />
+          <Skeleton className="mt-0.5 h-[16.5px] w-16 rounded" />
+        </Card>
       ))}
     </div>
   )
@@ -320,7 +342,12 @@ export default function Goals() {
               <SectionLabel
                 inset="gutter"
                 gap="loose"
-                hint="Filled in this order — left to right, top row first."
+                /* No hint. "In funding order" is already the sentence, and a
+                   line under it narrating how a grid is read tells you
+                   something you have known since you learned to read. The
+                   mechanic that is genuinely not obvious - that a shared
+                   balance fills the first goal before the next - is behind
+                   the (i), where someone who wants it can go and get it. */
                 action={
                   <span className="flex items-center gap-1 shrink-0">
                     {active.length > 1 && (
@@ -351,7 +378,7 @@ export default function Goals() {
                 In funding order
               </SectionLabel>
 
-              <div className="px-5 grid grid-cols-2 gap-x-3 gap-y-7">
+              <div className={GRID}>
                 {active.map(g => (
                   <GoalTile key={g.id} goal={g} today={today} onOpen={openGoal} />
                 ))}
