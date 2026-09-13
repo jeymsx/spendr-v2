@@ -61,10 +61,30 @@ export function fmtRelTime(isoStr) {
 
 // ── CSV export ─────────────────────────────────────────────────────────────────
 
+/**
+ * The ledger as a spreadsheet.
+ *
+ * ── The totals were always right ──
+ *
+ * A refund is stored as an expense with a NEGATIVE amount and a split is N
+ * ordinary expenses, so SUM over `amount` and a pivot by category both come
+ * out correct with no column here knowing either concept exists. That is the
+ * whole payoff of the sign carrying the arithmetic.
+ *
+ * ── What was missing was the relationships ──
+ *
+ * Correct totals, unreadable rows. Two lines for one purchase looked like two
+ * purchases, and a negative row looked like a typo rather than money that
+ * came back from the line above it. The last three columns are the links that
+ * were already in the data and had nowhere to go: which purchase a refund
+ * came from, which legs are one purchase, which charges are one plan. Empty
+ * on the ordinary rows, which is most of them.
+ */
 export function buildAndDownloadCSV(transactions) {
   const headers = [
     'txId', 'type', 'date', 'description', 'category',
     'payment', 'account', 'fromAccount', 'toAccount', 'amount',
+    'refundOf', 'splitId', 'installmentId',
   ]
   const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`
   const lines = [
@@ -73,6 +93,7 @@ export function buildAndDownloadCSV(transactions) {
       esc(t.txId), esc(t.type), esc(t.date), esc(t.description),
       esc(t.category), esc(t.payment), esc(t.account),
       esc(t.fromAccount), esc(t.toAccount), Number(t.amount ?? 0),
+      esc(t.refundOf), esc(t.splitId), esc(t.installmentId),
     ].join(',')),
   ]
   const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' })

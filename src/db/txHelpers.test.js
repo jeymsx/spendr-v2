@@ -661,6 +661,7 @@ describe('settleWithPerson, and reversing it', () => {
     return row
   }
 
+  /** @param {Row[]} rows @param {number} amount */
   const settle = (rows, amount) => settleWithPerson(/** @type {any} */ ({
     person: 'Gelo', rows, amount, account: 'Maya Savings', direction: 'owed_to_me',
   }))

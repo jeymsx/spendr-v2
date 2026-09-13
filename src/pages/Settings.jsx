@@ -332,9 +332,7 @@ export default function Settings() {
             }
             label="Desktop layout"
             sublabel={
-              getViewPreference() === 'mobile'
-                ? 'Forced to mobile on this device. Tap to allow desktop'
-                : 'Wide screens use the desktop layout automatically'
+              getViewPreference() === 'mobile' ? 'Always mobile' : 'Automatic on wide screens'
             }
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setViewMode(getViewPreference() === 'mobile' ? 'auto' : 'desktop')}
@@ -349,7 +347,7 @@ export default function Settings() {
           <SettingsRow
             iconEl={<RowIcon color="amber"><IconTag /></RowIcon>}
             label="Categories"
-            /* No sublabel: "Categories" is the whole of it. */
+            sublabel="Add, rename, reorder and set icons"
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => navigate('/settings/categories')}
           />

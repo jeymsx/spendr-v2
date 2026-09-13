@@ -15,6 +15,20 @@ import { queueRemoteDelete } from './sync'
  * or an old device survived a wipe-and-replace. That is the bug this list is
  * the fix for. A table that syncs belongs in this array; there is no third
  * category. */
+/**
+ * What this app writes, and the highest it will read.
+ *
+ * 1 was the eight tables. 2 adds `meta` (a whitelist of settings) and
+ * `prefs` (theme and accent, which live in localStorage). Both are optional
+ * on the way in, so a version 1 file still restores - it just leaves the
+ * current settings alone instead of blanking them.
+ *
+ * The guard reads `> BACKUP_VERSION` rather than `> 1`, which it used to:
+ * bumping the writer without bumping the reader would have made this app
+ * refuse its own backups.
+ */
+export const BACKUP_VERSION = 2
+
 const BACKUP_TABLES = [
   'transactions', 'accounts', 'categories', 'templates', 'recurring', 'debts',
   'goals', 'badges',
@@ -55,7 +69,7 @@ export function inspectBackup(raw) {
       throw new Error(`The "${t}" section is malformed.`)
     }
   }
-  if (data.version != null && Number(data.version) > 1) {
+  if (data.version != null && Number(data.version) > BACKUP_VERSION) {
     throw new Error(`This backup is version ${data.version}, newer than this app understands.`)
   }
 
@@ -162,6 +176,22 @@ export async function restoreBackup(raw) {
     // locally keeps its row rather than colliding on the `key` primary key.
     if (Array.isArray(data.badges) && badges.length) await db.badges.bulkPut(badges)
 
+    /* The settings, from version 2 on. Written one key at a time rather than
+       by clearing meta, because meta also holds this device's sync
+       bookkeeping and a restore has no business touching that.
+
+       `onboarded` is forced rather than copied: whatever the file says, a
+       database with your accounts in it is not a first run, and landing on
+       the setup wizard after a restore would offer to seed over the top of
+       what was just restored. */
+    if (Array.isArray(data.meta)) {
+      for (const row of data.meta) {
+        if (!row?.key || !BACKUP_META_KEYS.includes(row.key)) continue
+        await db.meta.put({ key: row.key, value: row.value, updatedAt: nowISO })
+      }
+    }
+    if (accounts.length) await db.meta.put({ key: 'onboarded', value: true })
+
     // balances mirrors accounts; rebuild rather than trust a stale copy.
     await db.balances.clear()
     if (accounts.length) {
@@ -200,6 +230,10 @@ export async function restoreBackup(raw) {
     }
   }
 
+  /* Outside the Dexie transaction, because localStorage is not part of it
+     and a throw here must not roll back a restore that has already landed. */
+  writeLocalPrefs(data.prefs)
+
   return {
     counts,
     droppedTransactions: droppedTxIds.length,
@@ -216,6 +250,49 @@ export async function restoreBackup(raw) {
  * inline — kept here so the desktop page doesn't grow a second copy of the
  * table list, which is the part that would drift if a table were added.
  */
+/**
+ * The settings a backup carries, and deliberately not the rest of `meta`.
+ *
+ * A whitelist rather than the whole table, because meta is two things wearing
+ * one hat: what you CHOSE, and what this device happens to know. Restoring
+ * the second kind would be actively harmful - deletedTxIds and pendingDeletes
+ * are queued deletions belonging to another device, and replaying them here
+ * would delete rows you still have. lastSync, seeded and syncedNormalized are
+ * this install's own bookkeeping; onboarded is set true by the restore itself,
+ * since a database full of your money is not a first run.
+ */
+const BACKUP_META_KEYS = [
+  'displayName', 'userName', 'currency', 'skipConfirm', 'budgetRollover',
+]
+
+/**
+ * Preferences that never reached Dexie.
+ *
+ * Theme and accent are localStorage, because they have to be readable before
+ * the database opens or the first paint is the wrong colour. That put them
+ * outside every backup ever taken - so restoring onto a new phone gave you
+ * your money back in somebody else's colours.
+ */
+function readLocalPrefs() {
+  try {
+    return {
+      theme: localStorage.getItem('theme'),
+      accentColor: localStorage.getItem('accentColor'),
+    }
+  } catch {
+    return {}   // private mode, blocked storage: a backup without them is fine
+  }
+}
+
+/** @param {Record<string, any>} [prefs] */
+function writeLocalPrefs(prefs) {
+  if (!prefs) return
+  try {
+    if (prefs.theme) localStorage.setItem('theme', prefs.theme)
+    if (prefs.accentColor) localStorage.setItem('accentColor', prefs.accentColor)
+  } catch { /* nothing to do about it, and not worth failing a restore over */ }
+}
+
 export async function buildBackupPayload() {
   const [transactions, accounts, categories, templates, recurring, debts, goals, badges] =
     await Promise.all([
@@ -228,10 +305,19 @@ export async function buildBackupPayload() {
       db.goals.toArray(),
       db.badges.toArray(),
     ])
+
+  const meta = (await db.meta.toArray())
+    .filter(m => BACKUP_META_KEYS.includes(m.key))
+    .map(m => ({ key: m.key, value: m.value }))
+
   return {
-    version: 1,
+    version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     transactions, accounts, categories, templates, recurring, debts, goals, badges,
+    /* Added in version 2. A version 1 file simply has neither, and the
+       restore leaves the current settings alone rather than blanking them. */
+    meta,
+    prefs: readLocalPrefs(),
   }
 }
 

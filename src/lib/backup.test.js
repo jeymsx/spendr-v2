@@ -19,7 +19,7 @@ vi.mock('../db/db', () => ({
 }))
 vi.mock('./sync', () => ({ queueRemoteDelete: vi.fn() }))
 
-const { inspectBackup } = await import('./backup')
+const { inspectBackup, BACKUP_VERSION } = await import('./backup')
 
 /** @type {Record<string, any>} */
 const good = {
@@ -72,8 +72,12 @@ describe('inspectBackup', () => {
     expect(() => inspectBackup({ transactions: [1, 2] })).toThrow(/"transactions" section is malformed/)
   })
 
+  /* Written against BACKUP_VERSION rather than a literal. It used to say 2,
+     which meant the day the writer moved to 2 this test was asserting that
+     the app refuses its own backups. */
   it('refuses a backup from a newer version of the app', () => {
-    expect(() => inspectBackup({ ...good, version: 2 })).toThrow(/newer than this app understands/)
+    expect(() => inspectBackup({ ...good, version: BACKUP_VERSION + 1 }))
+      .toThrow(/newer than this app understands/)
   })
 
   it('accepts a file with no version at all, which older exports had', () => {
@@ -133,5 +137,49 @@ describe('goals and badges', () => {
   it('still rejects a malformed section', () => {
     expect(() => inspectBackup({ ...good, goals: [null] }))
       .toThrow(/"goals" section is malformed/)
+  })
+})
+
+/**
+ * Version 2: the settings a backup used to leave behind.
+ *
+ * Restoring onto a clean phone gave you your money back and none of the
+ * things that make it look like yours - your name, your currency, the theme,
+ * the accent, whether budgets carry over. Theme and accent were never even in
+ * Dexie; they are localStorage, because they have to be readable before the
+ * database opens or the first paint is the wrong colour.
+ */
+describe('backup version 2', () => {
+  it('writes 2, and accepts its own files', () => {
+    expect(BACKUP_VERSION).toBe(2)
+    expect(() => inspectBackup({ ...good, version: BACKUP_VERSION })).not.toThrow()
+  })
+
+  /* The bug this nearly shipped as: the writer moved to 2 while the reader
+     still refused anything above 1, so the app rejected its own backup. */
+  it('does not refuse the version it writes', () => {
+    const out = inspectBackup({ ...good, version: 2, meta: [], prefs: {} })
+    expect(out.data.version).toBe(2)
+  })
+
+  it('still reads a version 1 file, which has neither section', () => {
+    const out = inspectBackup({ ...good, version: 1 })
+    expect(out.data.meta).toBeUndefined()
+    expect(out.data.prefs).toBeUndefined()
+  })
+
+  it('still refuses a file from a future version', () => {
+    expect(() => inspectBackup({ ...good, version: BACKUP_VERSION + 1 }))
+      .toThrow(/newer than this app understands/)
+  })
+
+  /* meta and prefs are not tables, so they must not be counted as one or
+     reported as missing - inspectBackup drives the "what is in this file"
+     summary the restore screen shows. */
+  it('does not treat the new sections as tables', () => {
+    const out = inspectBackup({ ...good, version: 2, meta: [{ key: 'currency', value: 'PHP' }] })
+    expect(out.counts.meta).toBeUndefined()
+    expect(out.missing).not.toContain('meta')
+    expect(out.missing).not.toContain('prefs')
   })
 })
