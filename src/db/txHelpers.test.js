@@ -43,6 +43,9 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  * @property {Row[]} transactions
  * @property {Row[]} accounts
  * @property {Row[]} balances
+ * @property {Row[]} debts
+ * @property {Row[]} recurring
+ * @property {Row[]} meta
  */
 
 /** @type {Store} */
@@ -74,6 +77,12 @@ function table(rows, key) {
       Object.assign(row, patch)
       return 1
     },
+    /** @param {number|string} id */
+    async delete(id) {
+      const all = rows()
+      const i = all.findIndex(r => r.id === id || r[key] === id)
+      if (i !== -1) all.splice(i, 1)
+    },
     /** @param {Row} row */
     async put(row) {
       const all = rows()
@@ -103,6 +112,9 @@ const db = {
   transactions: table(() => store.transactions, 'id'),
   accounts:     table(() => store.accounts, 'id'),
   balances:     table(() => store.balances, 'account'),
+  debts:        table(() => store.debts, 'id'),
+  recurring:    table(() => store.recurring, 'id'),
+  meta:         table(() => store.meta, 'key'),
   /**
    * Dexie runs the body and rolls back if it throws. The rollback is the part
    * a fake cannot fake cheaply, so this snapshots the tables first and
@@ -118,6 +130,7 @@ const db = {
       transactions: store.transactions,
       accounts:     store.accounts,
       balances:     store.balances,
+      debts:        store.debts,
     }))
     try {
       return await fn()
@@ -130,7 +143,9 @@ const db = {
 
 vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1 }))
 
-const { postCardPayment, postRefund, postSplitExpense, OverdrawError } = await import('./txHelpers')
+const {
+  postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
+} = await import('./txHelpers')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
 beforeEach(() => {
@@ -146,6 +161,9 @@ beforeEach(() => {
       { account: 'ZZ Test Card', balance: -3200 },
       { account: 'Maya Savings', balance: 10000 },
     ],
+    debts: [],
+    recurring: [],
+    meta: [],
   }
 })
 
@@ -415,3 +433,85 @@ describe('postSplitExpense', () => {
     expect(acct('Maya Savings').balance).toBe(-2000)
   })
 })
+
+/**
+ * What has to go with a deleted row, found by trying to break the app rather
+ * than by using it.
+ *
+ * Two shapes here are meaningless alone, and both were being stranded. The
+ * split one is the dangerous half because it looks fine: nothing is red and
+ * no total on that row is wrong, the account is just quietly short.
+ */
+describe('deleteTxGroup takes the rows that cannot stand alone', () => {
+  const purchase = () => ({
+    id: 90, txId: 'buy-1', type: 'expense', amount: 1000,
+    category: 'Groceries', account: 'Maya Savings', date: '2026-09-02T08:00:00+08:00',
+  })
+
+  it('deletes a refund along with the purchase it refunded', async () => {
+    store.transactions.push(purchase())
+    await postRefund({ originalTxId: 'buy-1', amount: 300 })
+    expect(store.transactions).toHaveLength(2)
+
+    await deleteTxGroup([store.transactions.find(t => t.txId === 'buy-1')])
+
+    expect(store.transactions).toHaveLength(0)
+  })
+
+  /**
+   * A refund left behind is a negative expense nothing explains. It keeps
+   * moving the balance and keeps reducing a category, with no screen that
+   * will ever say why.
+   */
+  it('leaves the balance where it started, with nothing stranded', async () => {
+    store.transactions.push(purchase())
+    await applyStartingSpend(1000)
+    await postRefund({ originalTxId: 'buy-1', amount: 300 })
+
+    await deleteTxGroup([store.transactions.find(t => t.txId === 'buy-1')])
+
+    expect(acct('Maya Savings').balance).toBe(10000)
+  })
+
+  /**
+   * The one that hides. Delete one leg of a 1,000 purchase split 600/400 and
+   * the ledger says 400 while 1,000 genuinely left the account.
+   */
+  it('deletes every leg of a split, not just the one tapped', async () => {
+    const { ids } = await postSplitExpense({
+      account: 'Maya Savings',
+      legs: [{ category: 'Groceries', amount: 600 }, { category: 'Household', amount: 400 }],
+    })
+    expect(store.transactions).toHaveLength(2)
+
+    await deleteTxGroup([store.transactions.find(t => t.id === ids[0])])
+
+    expect(store.transactions).toHaveLength(0)
+    expect(acct('Maya Savings').balance).toBe(10000)
+  })
+
+  /**
+   * A receivable is NOT deleted with its purchase - they still owe you
+   * whether or not the row survives. It is unhooked, because a debt pointing
+   * at a deleted purchase can never be settled: settling routes through
+   * postRefund, which refuses a purchase that is gone.
+   */
+  it('keeps a debt but unhooks it from the deleted purchase', async () => {
+    store.transactions.push(purchase())
+    store.debts.push({
+      id: 5, name: 'Gelo', contact: 'Gelo', amount: 300, amountPaid: 0,
+      type: 'owed_to_me', sourceTxId: 'buy-1', sourceCategory: 'Groceries',
+    })
+
+    await deleteTxGroup([store.transactions.find(t => t.txId === 'buy-1')])
+
+    expect(store.debts).toHaveLength(1)
+    expect(store.debts[0].sourceTxId).toBeNull()
+  })
+})
+
+/** The balance effect a seeded purchase would have had. */
+async function applyStartingSpend(amount) {
+  const a = acct('Maya Savings')
+  a.balance = Math.round((a.balance - amount) * 100) / 100
+}

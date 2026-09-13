@@ -319,11 +319,11 @@ export async function restoreDeletedTx(tx) {
  * @param {Transaction[]} txs
  */
 export async function deleteTxGroup(txs) {
-  const list = (txs ?? []).filter(Boolean)
+  const list = await expandDeletion((txs ?? []).filter(Boolean))
   if (!list.length) return 0
 
   await db.transaction('rw',
-    [db.transactions, db.accounts, db.balances, db.recurring, db.meta],
+    [db.transactions, db.accounts, db.balances, db.recurring, db.meta, db.debts],
     async () => {
       const meta = await db.meta.get('deletedTxIds')
       const tombstones = new Set(meta?.value ?? [])
@@ -337,10 +337,77 @@ export async function deleteTxGroup(txs) {
         }
       }
 
+      /* A receivable outlives the purchase that opened it - Gelo still owes
+         you whether or not the row is still here - so it is kept and simply
+         unhooked. Left pointing at a deleted purchase it becomes unsettleable:
+         settleWithPerson routes through postRefund, which refuses to refund a
+         purchase that is gone, so the debt could never be closed. */
+      /* Filtered in JS, not with where(): sourceTxId is a plain property with
+         no Dexie index, and where() on an unindexed key throws. A first
+         version caught that and carried on, which is the worst outcome - the
+         unhooking silently never happened and nothing said so. */
+      const gone = new Set(list.map(t => t.txId).filter(Boolean))
+      if (gone.size) {
+        const stamp = new Date().toISOString()
+        for (const d of await db.debts.toArray()) {
+          if (d.sourceTxId && gone.has(d.sourceTxId)) {
+            await db.debts.update(d.id, { sourceTxId: null, updatedAt: stamp })
+          }
+        }
+      }
+
       await db.meta.put({ key: 'deletedTxIds', value: [...tombstones] })
     })
 
   return list.length
+}
+
+/**
+ * Everything that has to go with what you asked to delete.
+ *
+ * ── Why this is not the caller's job ──
+ *
+ * Two rows in this app are meaningless on their own, and both were being left
+ * behind. Found by trying to break it rather than by using it:
+ *
+ *   A REFUND of a purchase that no longer exists is not a transaction, it is
+ *   a negative expense nothing explains. It keeps moving the balance and keeps
+ *   reducing a category, and there is no screen that will ever show you why.
+ *
+ *   A LEG of a split is worse, because it looks fine. Delete one leg of a
+ *   1,000 purchase split 600/400 and the ledger says 400 while 1,000 genuinely
+ *   left the account. Nothing is red, no total looks wrong on that row, and
+ *   the account is quietly out by 600.
+ *
+ * Installments already solved this at the CALL SITE - TxDetailSheet expands
+ * the plan before handing it over. That works and it is the wrong place: it
+ * has to be repeated by every caller, and the two new shapes were added
+ * without anybody repeating it. Doing it here means there is one answer.
+ *
+ * Ids are de-duplicated, so passing a whole group in is harmless.
+ *
+ * @param {Transaction[]} list
+ * @returns {Promise<Transaction[]>}
+ */
+async function expandDeletion(list) {
+  if (!list.length) return list
+  const byId = new Map(list.map(t => [t.id, t]))
+  const all = await db.transactions.toArray()
+
+  for (const tx of list) {
+    if (tx.txId) {
+      for (const r of all) {
+        if (r.refundOf === tx.txId && !byId.has(r.id)) byId.set(r.id, r)
+      }
+    }
+    if (tx.splitId) {
+      for (const leg of all) {
+        if (leg.splitId === tx.splitId && !byId.has(leg.id)) byId.set(leg.id, leg)
+      }
+    }
+  }
+
+  return [...byId.values()]
 }
 
 /**
