@@ -14,6 +14,8 @@ import EmptyState from '../components/ui/EmptyState'
 import Skeleton, { SkeletonList } from '../components/ui/Skeleton'
 import { AccountChip } from '../components/AccountPickerSheet'
 import GoalFormSheet from './goals/GoalFormSheet'
+import DeleteConfirmSheet from '../components/DeleteConfirmSheet'
+import { useToast } from '../context/ToastContext'
 import { GoalRing, fmtTargetDate, fmtDateFull } from './goals/shared'
 import { fmt, fmtCompact } from '../lib/money'
 
@@ -37,6 +39,45 @@ export default function GoalDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const [editOpen, setEditOpen] = useState(false)
+  const [confirmDel, setConfirmDel] = useState(false)
+  const [working, setWorking] = useState(false)
+  const { showToast } = useToast()
+
+  /* Both moved here from GoalFormSheet, unchanged apart from where they
+     live. Archiving is reversible and says what it frees up, because the
+     other goals' figures are about to move. */
+  async function handleArchive() {
+    setWorking(true)
+    try {
+      const on = !goal.archivedAt
+      await db.goals.update(goal.id, {
+        archivedAt: on ? new Date().toISOString() : null,
+        updatedAt: new Date().toISOString(),
+        synced: 0,
+      })
+      showToast(on ? 'Archived, its funding is freed up' : 'Goal restored')
+    } catch (e) {
+      console.error('[GoalDetail] archive failed:', e)
+      showToast('Could not archive that', 'error')
+    } finally {
+      setWorking(false)
+    }
+  }
+
+  async function handleDelete() {
+    setWorking(true)
+    try {
+      await db.goals.delete(goal.id)
+      showToast('Goal deleted')
+      /* Leaving the page it was about, with replace so Back does not walk
+         into a dead route. */
+      navigate('/goals', { replace: true })
+    } catch (e) {
+      console.error('[GoalDetail] delete failed:', e)
+      showToast('Could not delete that', 'error')
+      setWorking(false)
+    }
+  }
 
   const goalRows = useLiveQuery(() => db.goals.toArray(), [], undefined)
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
@@ -260,6 +301,45 @@ export default function GoalDetail() {
           )}
         </div>
       </section>
+
+      {/* ── Archiving and deleting ──
+
+          On the goal rather than in the form that edits it. Editing is
+          changing what the goal SAYS; these change whether it exists at all,
+          and burying them under a Save button meant opening a form you did
+          not want in order to reach them. Same place a person's page keeps
+          them, and the same order: the reversible one first. */}
+      <section className="px-5 mt-7 flex flex-col gap-2.5">
+        <Button
+          block
+          variant={goal.archived ? 'secondary' : 'outline'}
+          disabled={working}
+          onClick={handleArchive}
+        >
+          {goal.archived ? 'Restore this goal' : 'Archive'}
+        </Button>
+        <Button block variant="dangerTint" disabled={working} onClick={() => setConfirmDel(true)}>
+          Delete this goal
+        </Button>
+        <p className="text-center text-11 text-slate-400 dark:text-slate-500">
+          {goal.archived
+            ? 'Archived, so it is not claiming any of your balance.'
+            : 'Archiving frees the money it is holding for the goals below it.'}
+        </p>
+      </section>
+
+      <DeleteConfirmSheet
+        open={confirmDel}
+        onClose={() => setConfirmDel(false)}
+        onConfirm={handleDelete}
+        busy={working}
+        title={`Delete ${goal.name}?`}
+        body="Your money stays exactly where it is. A goal only ever watches your balance, it never moves it."
+        amount={fmt(goal.target ?? 0)}
+      >
+        <DetailRow label="Saved" value={fmt(goal.saved ?? 0)} padded={false} isLast />
+        <DetailRow label="Balance" value="Untouched" padded={false} isLast />
+      </DeleteConfirmSheet>
 
       <GoalFormSheet
         open={editOpen}

@@ -43,6 +43,12 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
   const asPage = variant === 'page'
   const { showToast } = useToast()
   const [localBudgets, setLocalBudgets] = useState({})
+  /* Pending too, and that is the fix. The carry toggle used to write straight
+     to the database while every other control on this page waited for Save -
+     so it looked broken: you tapped it, it lit up, and the button underneath
+     stayed grey as though nothing had happened. One page, one moment of
+     saving. */
+  const [localRollover, setLocalRollover] = useState(/** @type {Record<string, boolean>} */ ({}))
   const [saving,       setSaving]       = useState(false)
   /* No `closing` flag and no scroll lock any more: the sheet variant is a
      <Sheet>, and it owns the overlay, the panel, the grab handle, the scroll
@@ -67,19 +73,33 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
     [categories],
   )
 
-  const hasPendingChanges = useMemo(() =>
-    Object.entries(localBudgets).some(([id, str]) => {
+  /* What the carry flag reads as right now: the pending value if one was
+     tapped, otherwise whatever the category resolves to against the global
+     default. One place, so the button and the save agree. */
+  const carriesOver = (cat) => (
+    Object.prototype.hasOwnProperty.call(localRollover, cat.id)
+      ? localRollover[cat.id]
+      : rollsOver(cat, globalRollover)
+  )
+
+  const hasPendingChanges = useMemo(() => {
+    const budgetsMoved = Object.entries(localBudgets).some(([id, str]) => {
       const cat = (categories ?? []).find(c => String(c.id) === String(id))
       return cat && parseMoney(str) !== (cat.budget ?? 0)
-    }),
-    [localBudgets, categories],
-  )
+    })
+    const carryMoved = Object.entries(localRollover).some(([id, on]) => {
+      const cat = (categories ?? []).find(c => String(c.id) === String(id))
+      return cat && on !== rollsOver(cat, globalRollover)
+    })
+    return budgetsMoved || carryMoved
+  }, [localBudgets, localRollover, categories, globalRollover])
 
   /* Dropping the pending edits in the same breath as closing is safe on the
      sheet too: Sheet holds on to what it was showing for the length of the
      exit, so the fields do not empty themselves on the way out. */
   const close = () => {
     setLocalBudgets({})
+    setLocalRollover({})
     onClose()
   }
 
@@ -101,7 +121,22 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
           return db.categories.update(Number(id), { budget: newBudget })
         })
       )
+      /* Stamps rolloverFrom on the way ON so the carry starts here rather
+         than crediting every unspent peso back to whenever the category was
+         created. Off leaves the old date alone: turning it on again later
+         should not silently reach further back than it did before. */
+      await Promise.all(
+        Object.entries(localRollover).map(([id, on]) => {
+          const cat = (categories ?? []).find(c => String(c.id) === String(id))
+          if (!cat || on === rollsOver(cat, globalRollover)) return Promise.resolve()
+          return db.categories.update(Number(id), {
+            rollover: on,
+            rolloverFrom: on ? (cat.rolloverFrom ?? thisMonth) : cat.rolloverFrom,
+          })
+        })
+      )
       setLocalBudgets({})
+      setLocalRollover({})
       close()
     } catch (e) {
       console.error('[BudgetManager] save failed:', e)
@@ -212,20 +247,15 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
                         type="button"
                         onClick={(e) => {
                           e.preventDefault()
-                          const on = !rollsOver(cat, globalRollover)
-                          db.categories.update(cat.id, {
-                            rollover: on,
-                            rolloverFrom: on ? (cat.rolloverFrom ?? thisMonth) : cat.rolloverFrom,
-                            updatedAt: new Date().toISOString(),
-                          })
+                          setLocalRollover(prev => ({ ...prev, [cat.id]: !carriesOver(cat) }))
                         }}
-                        aria-pressed={rollsOver(cat, globalRollover)}
+                        aria-pressed={carriesOver(cat)}
                         aria-label={`Carry ${cat.name} over`}
                         title="Carry unspent, and overspending, into next month"
                         className={[
                           'shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
                           'transition-colors',
-                          rollsOver(cat, globalRollover)
+                          carriesOver(cat)
                             ? 'bg-primary/[0.12] text-primary dark:bg-primary/[0.18]'
                             : 'text-slate-300 dark:text-slate-600 active:bg-slate-100 dark:active:bg-white/[0.06]',
                         ].join(' ')}

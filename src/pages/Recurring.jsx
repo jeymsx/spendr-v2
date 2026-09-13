@@ -158,7 +158,7 @@ function BillRow({ rec, onOpen, isLast }) {
  * money, not by posting an expense - lib/creditBills has why that distinction
  * is the whole reason this is not a real bill.
  */
-function CardBillRow({ bill, onPay, isLast }) {
+function CardBillRow({ bill, onPay, onOpen, isLast }) {
   const brand = accountBrand(bill.account)
   const late  = bill.overdue
   const label = bill.daysUntil == null ? 'No due date'
@@ -169,7 +169,21 @@ function CardBillRow({ bill, onPay, isLast }) {
 
   return (
     <>
-      <div className="w-full flex items-center gap-3 px-4 py-4">
+      {/* The row opens the card, the way every other row in the app opens the
+          thing it names - a statement you cannot tap is a dead end on a page
+          made of links. Pay stays its own button and stops the press
+          bubbling, so the two do not fight over the same tap.
+
+          A div with a button inside cannot itself be a button, so the row is
+          a div and the tappable region is the part left of Pay. */}
+      <div className="w-full flex items-center gap-3 pr-4">
+        <button
+          type="button"
+          onClick={() => onOpen?.(bill)}
+          aria-label={`Open ${bill.name}`}
+          className="flex-1 min-w-0 flex items-center gap-3 px-4 py-4 text-left
+            active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+        >
         {/* The card's own face, in the 40px box BillMark uses, so the row
             lines up with the bills either side of it. */}
         <span
@@ -206,8 +220,14 @@ function CardBillRow({ bill, onPay, isLast }) {
             {bill.minimumDue > 0 ? `min ${fmtCompact(bill.minimumDue)}` : 'statement'}
           </span>
         </span>
+        </button>
 
-        <Button size="xs" variant="tint" className="shrink-0 px-3" onClick={() => onPay(bill)}>
+        <Button
+          size="xs"
+          variant="tint"
+          className="shrink-0 px-3"
+          onClick={(e) => { e.stopPropagation(); onPay(bill) }}
+        >
           Pay
         </Button>
       </div>
@@ -773,6 +793,7 @@ export default function Recurring() {
                         key={b.id}
                         bill={b}
                         onPay={payCard}
+                        onOpen={(x) => navigate(`/accounts/${x.account.id}`)}
                         isLast={i === cardBills.length - 1}
                       />
                     ))}

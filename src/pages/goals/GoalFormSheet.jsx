@@ -38,7 +38,6 @@ export default function GoalFormSheet({
   const [picked, setPicked] = useState([])
   const [targetDate, setTargetDate] = useState('')
   const [saving, setSaving] = useState(false)
-  const [confirmDelete, setConfirmDelete] = useState(false)
 
   const uid = useId()
   const isEdit = !!goal
@@ -49,7 +48,6 @@ export default function GoalFormSheet({
     // mounted through its own exit animation, so the parent can neither
     // unmount nor re-key it to reset these fields for the next record.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    setConfirmDelete(false)
     setSaving(false)
     if (goal) {
       setName(goal.name ?? '')
@@ -106,82 +104,20 @@ export default function GoalFormSheet({
     }
   }
 
-  async function handleDelete() {
-    setSaving(true)
-    try {
-      await db.goals.delete(goal.id)
-      showToast('Goal deleted')
-      onClose()
-      onDeleted?.()
-    } catch (e) {
-      console.error('[Goals] delete failed:', e)
-      showToast('Failed to delete goal', 'error')
-      setSaving(false)
-    }
-  }
-
-  async function handleArchive() {
-    setSaving(true)
-    try {
-      const on = !goal.archivedAt
-      await db.goals.update(goal.id, {
-        archivedAt: on ? new Date().toISOString() : null,
-        updatedAt: new Date().toISOString(),
-        synced: 0,
-      })
-      // Archiving frees the money it was holding, which is the whole point -
-      // say so, because the other goals' numbers are about to move.
-      showToast(on ? 'Archived, its funding is freed up' : 'Goal restored')
-      onClose()
-    } catch (e) {
-      console.error('[Goals] archive failed:', e)
-      showToast('Failed to archive goal', 'error')
-      setSaving(false)
-    }
-  }
-
   /* The actions are Sheet's `footer`, which pins them under the scrolling
      body. They used to be the last thing inside a panel that scrolled as one
      piece: on a short screen "Create goal" sat below the fold of a form long
      enough to need scrolling in the first place.
 
-     Which set shows is the mode. The delete confirmation REPLACES the form's
-     actions rather than adding to them - while it is asking, the only two
-     answers are its own. */
-  const actions = confirmDelete ? (
-    <div className="flex gap-2">
-      <Button variant="outline" size="sm" className="flex-1"
-        onClick={() => setConfirmDelete(false)}>
-        Keep it
-      </Button>
-      <Button
-        variant="danger"
-        size="sm"
-        className="flex-1"
-        onClick={handleDelete} disabled={saving}
-      >
-        Delete
-      </Button>
-    </div>
-  ) : (
-    <div className="flex flex-col gap-2.5">
-      <Button block onClick={handleSave} disabled={!canSave}>
-        {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
-      </Button>
-
-      {isEdit && (
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" className="flex-1"
-            onClick={handleArchive} disabled={saving}>
-            {goal.archivedAt ? 'Restore' : 'Archive'}
-          </Button>
-          <Button variant="dangerTint" size="sm" className="flex-1"
-            onClick={() => setConfirmDelete(true)} disabled={saving}>
-            Delete
-          </Button>
-        </div>
-      )}
-    </div>
+     One button, because this sheet does one thing. Archive and Delete moved
+     to the goal's own page: editing is changing what a goal SAYS, and those
+     two change whether it exists at all - so reaching them meant opening a
+     form you did not want, and the form's own Save sat above two actions
+     that ignored everything you had typed. */
+  const actions = (
+    <Button block onClick={handleSave} disabled={!canSave}>
+      {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Create goal'}
+    </Button>
   )
 
   return (
@@ -197,18 +133,7 @@ export default function GoalFormSheet({
     >
       <div className="py-4">
 
-        {confirmDelete ? (
-          <div className="py-2">
-            <p className="text-15 font-semibold text-slate-800 dark:text-white">
-              Delete “{goal?.name}”?
-            </p>
-            <p className="text-13 text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-              Only the goal is removed. Your money stays exactly where it is.
-              A goal only ever watches your balance, it never moves it.
-            </p>
-          </div>
-        ) : (
-          <>
+        <>
             {/* Name */}
             <Field
               id={`${uid}-name`}
@@ -318,8 +243,7 @@ export default function GoalFormSheet({
                 Adds a monthly figure to hit it on time.
               </p>
             </div>
-          </>
-        )}
+        </>
       </div>
     </Sheet>
   )
