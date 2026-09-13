@@ -10,7 +10,8 @@ import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
 import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
-import SwipeConfirm from '../../components/SwipeConfirm'
+import DeleteConfirmSheet from '../../components/DeleteConfirmSheet'
+import DetailRow from '../../components/ui/DetailRow'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { IconChevronLeft, IconChevronRight, IconTrash, IconNotFound } from '../../components/icons'
 import { getInitials, getAvatarColor, fmtDueDate } from './shared'
@@ -246,32 +247,7 @@ export default function PersonDetail() {
             })}
           </Card>
 
-          {/* Under the list rather than in the row. A 52px drag pill does not
-              fit beside an amount, and the entry it belongs to is named above
-              it - which is also the last chance to notice it is the wrong
-              one. Tapping the red bin again backs out. */}
-          {confirmDebt && (
-            <div className="mt-3">
-              <p className="mb-2 text-center text-12 text-slate-500 dark:text-slate-400">
-                Delete {confirmDebt.notes || confirmDebt.name || 'this entry'}
-                {' · '}{fmt(confirmDebt.amount ?? 0)}
-              </p>
-              <SwipeConfirm
-                tone="danger"
-                label="Swipe to delete"
-                confirmingLabel="Deleting…"
-                busy={busy}
-                onConfirm={() => handleDelete(confirmDebt)}
-              />
-              <button
-                type="button"
-                onClick={() => setConfirmId(null)}
-                className="mt-2 w-full text-center text-12 text-slate-400 dark:text-slate-500"
-              >
-                Cancel
-              </button>
-            </div>
-          )}
+
         </div>
       </section>
 
@@ -294,6 +270,27 @@ export default function PersonDetail() {
             : 'Hides them from the list. Nothing is deleted, and new activity brings them back.'}
         </p>
       </section>
+
+      <DeleteConfirmSheet
+        open={!!confirmDebt}
+        onClose={() => setConfirmId(null)}
+        onConfirm={() => handleDelete(confirmDebt)}
+        busy={busy}
+        title="Delete this entry?"
+        body="It comes off their balance. Nothing in the ledger moves."
+        amount={confirmDebt ? fmt(confirmDebt.amount ?? 0) : null}
+      >
+        <DetailRow label="Who" value={person.label} padded={false} isLast />
+        {confirmDebt?.notes && (
+          <DetailRow label="Note" value={confirmDebt.notes} padded={false} isLast />
+        )}
+        <DetailRow
+          label="Direction"
+          value={confirmDebt?.type === 'i_owe' ? 'You owe them' : 'Owes you'}
+          padded={false}
+          isLast
+        />
+      </DeleteConfirmSheet>
 
       <DebtFormSheet
         open={formOpen}

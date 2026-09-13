@@ -178,9 +178,16 @@ export default function SwipeConfirm({
       {/* The one white shape. Explicit 22px radius, never 9999 - see above. */}
       <span
         className="absolute bg-white shadow-[0_1px_4px_rgba(0,0,0,0.2)] pointer-events-none"
+        /* Centred by construction rather than by two paddings that have to
+           agree with the track's height. top/bottom: PAD only lands in the
+           middle while the track is exactly KNOB + 2*PAD tall, and the track
+           takes a className - so one caller passing a height was all it took
+           for the capsule to sit low in its own groove. An explicit height
+           with a 50% offset cannot drift. */
         style={{
-          top: PAD,
-          bottom: PAD,
+          top: '50%',
+          transform: 'translateY(-50%)',
+          height: KNOB,
           left: PAD,
           width: KNOB + x,
           borderRadius: KNOB / 2,

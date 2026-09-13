@@ -2,6 +2,7 @@ import { useMemo } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import CategoryGlyph from './CategoryGlyph'
 import Divider from './ui/Divider'
+import Button from './ui/Button'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { parseMoney } from '../utils/moneyInput'
 import { chipClass } from '../pages/accounts/shared'
@@ -392,17 +393,17 @@ export default function PeopleSplit({ total, value, onChange, legCategories = []
           ))}
 
           <Divider />
-          <button
-            type="button"
-            onClick={addPerson}
-            className="w-full py-3 text-left text-14 font-semibold text-primary"
-          >
-            + Add someone
-          </button>
 
+          {/* What is still unaccounted for, above the button rather than
+              under it. It is the reason you would press Add someone, and a
+              running total that sits below the thing it should prompt is
+              read last or not at all. */}
           {people.length > 0 && (
-            <div className="mt-2 flex items-baseline justify-between">
-              <span className="text-12 text-slate-400 dark:text-slate-500">
+            <div className="flex items-baseline justify-between py-3">
+              <span className={`text-12 ${
+                valid ? 'text-slate-400 dark:text-slate-500'
+                      : 'text-red-500 dark:text-red-400'
+              }`}>
                 {message ?? 'Coming back to you'}
               </span>
               <span className={`text-13 font-semibold tabular-nums ${
@@ -413,6 +414,10 @@ export default function PeopleSplit({ total, value, onChange, legCategories = []
               </span>
             </div>
           )}
+
+          <Button block variant="primary" className="mt-1" onClick={addPerson}>
+            Add someone
+          </Button>
     </>
   )
 }

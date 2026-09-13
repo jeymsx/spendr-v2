@@ -129,8 +129,11 @@ export function resolveSplit({ mode, total, participants }) {
     return {
       shares,
       valid: Math.abs(remaining) < 0.005,
-      message: remaining > 0 ? `${remaining.toFixed(2)} left to assign`
-             : remaining < 0 ? `${Math.abs(remaining).toFixed(2)} over`
+      /* With the mark. Every other figure in the app carries one, and a
+         bare "150.00 left to assign" beside a column of ₱ amounts reads as a
+         different kind of number. */
+      message: remaining > 0 ? `₱${remaining.toFixed(2)} left to assign`
+             : remaining < 0 ? `₱${Math.abs(remaining).toFixed(2)} over`
              : null,
       allocated: sum, remaining,
     }
@@ -160,7 +163,7 @@ export function resolveSplit({ mode, total, participants }) {
     if (base < -0.005) {
       return {
         shares: {}, valid: false,
-        message: `Extras come to more than ${total.toFixed(2)}`,
+        message: `Extras come to more than ₱${total.toFixed(2)}`,
         allocated: extraTotal, remaining: base,
       }
     }

@@ -168,7 +168,7 @@ describe('adjust', () => {
       mode: 'adjust', total: 100, participants: [P('you', 90), P('a', 90)],
     })
     expect(r.valid).toBe(false)
-    expect(r.message).toMatch(/more than 100/)
+    expect(r.message).toMatch(/more than ₱100/)
   })
 })
 

@@ -14,7 +14,7 @@ import {
 } from '../utils/recurring'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
-import SwipeConfirm from '../components/SwipeConfirm'
+import DeleteConfirmSheet from '../components/DeleteConfirmSheet'
 import { CardThumb } from '../components/AccountLine'
 import BillMark from '../components/BillMark'
 import Card from '../components/ui/Card'
@@ -535,27 +535,24 @@ export default function RecurringDetail() {
           already asks for a drag to POST a charge - asking for less to
           destroy the bill had it backwards. */}
       <section className="px-5 mt-7">
-        {confirmDel ? (
-          <>
-            <SwipeConfirm
-              tone="danger"
-              label="Swipe to delete"
-              confirmingLabel="Deleting…"
-              busy={deleting}
-              onConfirm={handleDelete}
-            />
-            {!deleting && (
-              <Button block variant="quiet" size="sm" className="mt-2" onClick={() => setConfirmDel(false)}>
-                Cancel
-              </Button>
-            )}
-          </>
-        ) : (
-          <Button block variant="dangerTint" onClick={() => setConfirmDel(true)}>
-            Delete this bill
-          </Button>
-        )}
+        <Button block variant="dangerTint" onClick={() => setConfirmDel(true)}>
+          Delete this bill
+        </Button>
       </section>
+
+      <DeleteConfirmSheet
+        open={confirmDel}
+        onClose={() => setConfirmDel(false)}
+        onConfirm={handleDelete}
+        busy={deleting}
+        title="Delete this bill?"
+        body="Charges already posted stay in the ledger. Only the reminder goes."
+        amount={fmt(rec.amount ?? 0)}
+      >
+        <DetailRow label="Bill" value={rec.name} padded={false} isLast />
+        {rec.category && <DetailRow label="Category" value={rec.category} padded={false} isLast />}
+        <DetailRow label="Billing" value={FREQ_LABEL[rec.frequency] ?? rec.frequency} padded={false} isLast />
+      </DeleteConfirmSheet>
 
 
       {/* The same sheet the expense form uses to review a transaction before

@@ -14,6 +14,7 @@ import { useToast } from '../context/ToastContext'
 import { EditRow, RowInput, RowDate, RowPicker } from './FormRows'
 import CategoryGlyph from './CategoryGlyph'
 import AmountHero from './ui/AmountHero'
+import SwipeConfirm from './SwipeConfirm'
 import { CardThumb, TransferLegs } from './AccountLine'
 import Button from './ui/Button'
 import Card from './ui/Card'
@@ -354,22 +355,24 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
         </Button>
       </div>
     ),
+    /* A drag, not a tap. This sheet already exists because a tap was too
+       cheap for the act; answering it with another tap put the whole weight
+       of the decision on reading a heading. Cancel stays a tap - backing out
+       should always be the easy one. */
     'confirm-delete': (
-      <div className="flex gap-2.5">
-        <Button
-          variant="secondary"
-          className="flex-1"
-          onClick={() => setMode('detail')} disabled={saving}
-        >
-          Cancel
-        </Button>
-        <Button
-          variant="danger"
-          className="flex-[1.6]"
-          onClick={handleDelete} disabled={saving}
-        >
-          {saving ? 'Deleting…' : planCount > 1 ? `Delete all ${planCount}` : 'Delete'}
-        </Button>
+      <div>
+        <SwipeConfirm
+          tone="danger"
+          label={planCount > 1 ? `Swipe to delete all ${planCount}` : 'Swipe to delete'}
+          confirmingLabel="Deleting…"
+          busy={saving}
+          onConfirm={handleDelete}
+        />
+        {!saving && (
+          <Button block variant="quiet" size="sm" className="mt-2" onClick={() => setMode('detail')}>
+            Cancel
+          </Button>
+        )}
       </div>
     ),
   }[mode]

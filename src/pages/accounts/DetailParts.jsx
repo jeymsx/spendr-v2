@@ -36,11 +36,16 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
       </div>
 
       {txs.length === 0 && emptyLabel ? (
-        <Card surface="recessed">
+        <Card>
           {/* A statement that billed nothing is still an empty state, and it
               was the one saying so in bare text. The receipt is the right
               glyph for it - one statement's worth, where the ledger glyph is
-              a whole history. */}
+              a whole history.
+
+              A raised card like every other one on the page. It was recessed,
+              which reads as a well sunk into the page - right for something
+              inside a card, wrong for a card that IS the section. Sitting
+              between two raised ones it just looked grey. */}
           <EmptyState size="sm" icon={<IconEmptyReceipt size={22} />} title={emptyLabel} />
         </Card>
       ) : (

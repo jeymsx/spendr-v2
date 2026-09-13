@@ -8,7 +8,9 @@ import SegTabs from '../../components/SegTabs'
 import { RowGroup, EditRow, RowInput, RowDate } from '../../components/FormRows'
 import Sheet from '../../components/ui/Sheet'
 import Button from '../../components/ui/Button'
-import SwipeConfirm from '../../components/SwipeConfirm'
+import DeleteConfirmSheet from '../../components/DeleteConfirmSheet'
+import DetailRow from '../../components/ui/DetailRow'
+import { fmt } from '../../lib/money'
 import { fmtDueDate } from './shared'
 
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
@@ -105,10 +107,11 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
   }
 
   return (
-    /* Sheet owns the overlay, the panel, the grab handle, the scroll lock,
-       Escape, the focus trap and the exit animation. Delete rides on the
-       title row as `titleAction`, and Save is pinned under the scrolling body
-       as `footer` so it cannot end up below the fold on a short screen. */
+    <>
+    {/* Sheet owns the overlay, the panel, the grab handle, the scroll lock,
+        Escape, the focus trap and the exit animation. Delete rides on the
+        title row as `titleAction`, and Save is pinned under the scrolling body
+        as `footer` so it cannot end up below the fold on a short screen. */}
     <Sheet
       open={open}
       onClose={onClose}
@@ -119,25 +122,14 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
         <Button
           size="xs"
           className="px-3"
-          variant={confirmDel ? 'secondary' : 'dangerTint'}
-          onClick={() => setConfirmDel(v => !v)}
+          variant="dangerTint"
+          onClick={() => setConfirmDel(true)}
           disabled={deleting}
         >
-          {confirmDel ? 'Cancel' : 'Delete'}
+          Delete
         </Button>
       )}
-      /* Asking again is still a tap, and a tap is the gesture you already
-         made by mistake. The drag is the one the bills use to post a charge,
-         for the same reason: the last step should need intent. */
-      footer={confirmDel ? (
-        <SwipeConfirm
-          tone="danger"
-          label="Swipe to delete"
-          confirmingLabel="Deleting…"
-          busy={deleting}
-          onConfirm={handleDelete}
-        />
-      ) : (
+      footer={(
         <Button block size="lg" onClick={handleSave} loading={saving}>
           {editDebt ? 'Save changes' : 'Add debt'}
         </Button>
@@ -246,6 +238,32 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
 
         <div className="h-4 shrink-0" />
       </div>
-    </Sheet>
+      </Sheet>
+
+      {/* The same sheet a transaction is deleted from, so a debt and a
+          purchase are confirmed the same way. */}
+      <DeleteConfirmSheet
+        open={confirmDel}
+        onClose={() => setConfirmDel(false)}
+        onConfirm={handleDelete}
+        busy={deleting}
+        title="Delete this debt?"
+        body="The entry goes. Nothing in the ledger moves."
+        amount={editDebt ? fmt(editDebt.amount ?? 0) : null}
+      >
+        {editDebt?.contact && (
+          <DetailRow label="Who" value={editDebt.contact} padded={false} isLast />
+        )}
+        {editDebt?.notes && (
+          <DetailRow label="Note" value={editDebt.notes} padded={false} isLast />
+        )}
+        <DetailRow
+          label="Direction"
+          value={editDebt?.type === 'i_owe' ? 'You owe them' : 'Owes you'}
+          padded={false}
+          isLast
+        />
+      </DeleteConfirmSheet>
+    </>
   )
 }
