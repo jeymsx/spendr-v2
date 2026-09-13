@@ -69,13 +69,22 @@ export function UpcomingRow({ item, isLast }) {
         active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
     >
       <span className="relative shrink-0">
-        <span
-          className="w-10 h-10 rounded-2xl flex items-center justify-center text-base opacity-70"
-          style={{ backgroundColor: (item.color ?? '#2D9DFF') + '18' }}
-          aria-hidden="true"
-        >
-          {item.icon}
-        </span>
+        {/* The brand's mark where the item carries one, the tinted tile
+            otherwise - both 40px, so the row does not reflow between a
+            Spotify and a "Gym". The fade lives out here rather than on
+            either one, because BillMark sets its own inline opacity and a
+            utility class underneath it would never apply. */}
+        {item.mark ? (
+          <span className="block opacity-70" aria-hidden="true">{item.mark}</span>
+        ) : (
+          <span
+            className="w-10 h-10 rounded-2xl flex items-center justify-center text-base opacity-70"
+            style={{ backgroundColor: (item.color ?? '#2D9DFF') + '18' }}
+            aria-hidden="true"
+          >
+            {item.icon}
+          </span>
+        )}
         {/* Bottom-right, overlapping the corner, ringed in the row's own
             background so it reads as punched out rather than stuck on. The
             ring colour lives in index.css next to the .card rules it is

@@ -12,6 +12,7 @@ import {
   IconEmptyLedger,
 } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
+import BillMark from '../components/BillMark'
 import { scheduledCutoff } from '../utils/scheduled'
 import { cardGradient } from '../lib/accentTheme'
 import IconButton from '../components/ui/IconButton'
@@ -179,6 +180,15 @@ export default function Dashboard() {
         // different glyphs and only the recurring one has a category to look
         // up, so resolving here keeps UpcomingRow from having to know.
         icon: <CategoryGlyph cat={cat} size={17} emoji="🔁" />,
+        /* And the brand's own logo where there is one, which is the same
+           mark the bills list and the bill's page draw. A bill was the one
+           place showing Spotify as a grey category tile on the home screen
+           and as the Spotify logo everywhere else. BillMark falls back to
+           exactly the tile above when the name is not one we have art for,
+           so nothing changes for a bill called "Gym". */
+        mark: (
+          <BillMark name={r.name} cat={cat} size={20} boxClass="w-10 h-10 rounded-2xl" />
+        ),
         color: cat?.color ?? null,
         // Straight to the bill, not to the list. Tapping "Internet, overdue"
         // and landing on a page of every bill you own makes you find the one
