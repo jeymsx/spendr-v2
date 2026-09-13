@@ -24,12 +24,12 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # 22, not 24: 24 is what this was developed on, but 22 is the active LTS,
       # and pinning CI a major behind is how you find out you have used
       # something too new before a user does.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
