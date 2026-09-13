@@ -121,6 +121,79 @@ db.version(10).stores({
   badges: 'key, earnedAt',
 })
 
+/**
+ * v11 - a stable identity for every row that syncs.
+ *
+ * ── The bug this closes, twice over ──
+ *
+ * Five tables identified themselves to Supabase by something that moves.
+ *
+ *   accounts, categories, goals   by NAME
+ *   debts, recurring, templates   by local_id
+ *
+ * A name changes when you rename. A local_id changes whenever the database is
+ * cleared and re-filled, because Dexie's auto-increment does not reset - and a
+ * JSON restore does exactly that. Both have already bitten:
+ *
+ *   renaming an account made the push an INSERT carrying a local_id the
+ *   remote row already had, which the unique constraint rejected, and every
+ *   table after it stopped syncing. Patched by 008 dropping the constraint.
+ *
+ *   editing a bill's amount made the pull stop recognising it, so the remote
+ *   copy came back as a second bill - and it could not be deleted, because
+ *   the delete was aimed at a local_id the remote row no longer had. Patched
+ *   by matching on name and deleting by both.
+ *
+ * Two patches, one cause, and a third instance waiting. `transactions` has
+ * never had either problem, and the reason is that it carries `txId`: a UUID
+ * minted once at creation that survives a rename, a restore and a round trip.
+ * This gives every other synced table the same thing.
+ *
+ * ── Why the index ──
+ *
+ * v8's note is right that an index nothing queries is a B-tree maintained for
+ * nothing. This one IS queried: the pull looks a row up by syncId before it
+ * falls back to the old heuristics, and that lookup runs per remote row on
+ * every sync.
+ *
+ * `badges` is left out. Its key IS its identity and always was.
+ */
+db.version(11).stores({
+  accounts:   '++id, name, type, role, balance, currency, creditLimit, statementDate, dueDate, cutoffDate, minimumPayment, color, parentName, sort_order, syncId',
+  categories: '++id, name, icon, color, type, budget, sort_order, syncId',
+  debts:      '++id, name, contact, amount, amountPaid, dueDate, type, notes, createdAt, syncId',
+  recurring:  '++id, name, amount, category, account, frequency, nextDate, active, syncId',
+  templates:  '++id, name, type, amount, description, category, account, fromAccount, toAccount, createdAt, syncId',
+  goals:      '++id, name, priority, *accounts, archivedAt, syncId',
+}).upgrade(async (tx) => {
+  /* Backfill, once. Every row that already exists gets an identity now rather
+     than the first time it happens to be written - a row that is never edited
+     again would otherwise never get one, and those are exactly the rows that
+     have been syncing the longest. */
+  for (const name of SYNCED_TABLES) {
+    await tx.table(name).toCollection().modify(row => {
+      if (!row.syncId) row.syncId = crypto.randomUUID()
+    })
+  }
+})
+
+/** The tables that carry a syncId. Exported so sync and backup agree. */
+export const SYNCED_TABLES = [
+  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals',
+]
+
+/* Stamped on the way IN, for every writer at once.
+ *
+ * A hook rather than a line in each of the dozen places that insert a row:
+ * the whole point is that nothing can be created without one, and a
+ * convention every writer has to remember is how five tables ended up
+ * identified by a name in the first place. */
+for (const name of SYNCED_TABLES) {
+  db.table(name).hook('creating', (_key, row) => {
+    if (row && !row.syncId) row.syncId = crypto.randomUUID()
+  })
+}
+
 // ── Seed data ─────────────────────────────────────────────────────────────────
 
 const DEFAULT_ACCOUNTS = [
