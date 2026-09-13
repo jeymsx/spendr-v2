@@ -393,3 +393,24 @@ export function IconEmptyLedger({ size = 32 }) {
     </svg>
   )
 }
+
+/**
+ * Nothing was charged: a receipt with its torn edge and two short lines.
+ *
+ * A ledger is a list of things that happened; a receipt is one statement's
+ * worth, which is the distinction between this and IconEmptyLedger. The bill
+ * page uses it for a bill that has never been charged, and the account page
+ * for a statement with nothing on it.
+ *
+ * Moved out of RecurringDetail.jsx when the second caller turned up.
+ *
+ * @param {{size?: number}} props
+ */
+export function IconEmptyReceipt({ size = 30 }) {
+  return (
+    <svg {...emptyProps({ size })}>
+      <path d="M5 3.5h14v17l-2.33-1.6-2.34 1.6-2.33-1.6-2.34 1.6L7.33 18.9 5 20.5Z" />
+      <path d="M9 8.5h6M9 12.5h4" />
+    </svg>
+  )
+}

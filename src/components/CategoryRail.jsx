@@ -1,6 +1,5 @@
 import { useRef, useEffect } from 'react'
-import CategoryGlyph from './CategoryGlyph'
-import { readableInk } from '../lib/color'
+import CategoryTile from './CategoryTile'
 
 /**
  * Pick a category by swiping a row of them.
@@ -135,39 +134,12 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
             className="shrink-0 snap-start w-[54px] flex flex-col items-center gap-1.5
               active:scale-95 transition-transform duration-75"
           >
-            {/* The wash and the selected fill live in .cat-tile in index.css,
-                which is the same tile the transaction rows use - only the
-                colours come from here, because both themes derive from them
-                and an inline style cannot answer a theme.
-
-                --cat-ink is solved per category rather than set in CSS.
-                Selected, the tile is filled with the category's own colour,
-                and whether white or a near-black reads on top of that is not
-                a question a stylesheet can answer: white clears 4.3:1 on the
-                violet and 1.8:1 on the light orange. See lib/color.js. */}
-            <span
-              data-on={on}
-              className="cat-tile w-[50px] h-[50px] rounded-[15px] flex items-center
-                justify-center text-[23px] leading-none"
-              style={{
-                '--cat-color': cat.color ?? '#64748b',
-                '--cat-ink': readableInk(cat.color ?? '#64748b'),
-              }}
-            >
-              <CategoryGlyph cat={cat} size={23} emoji="🏷️" />
-            </span>
-            <span className={[
-              'text-[10.5px] leading-tight text-center w-full',
-              // line-clamp-2 rather than truncate: "Transfer Fee" is two words
-              // and reads fine on two lines, where truncated it becomes
-              // "Transfer…" and loses the half that distinguishes it.
-              'line-clamp-2',
-              on
-                ? 'font-semibold text-slate-900 dark:text-white'
-                : 'font-medium text-slate-500 dark:text-slate-400',
-            ].join(' ')}>
-              {cat.name}
-            </span>
+            {/* The tile itself is components/CategoryTile.jsx - the sheet
+                that edits a transaction's category picks from the same one,
+                and it used to pick from a smaller tile with different label
+                colours. What is left here is the row: the width, the snap and
+                the press. */}
+            <CategoryTile cat={cat} on={on} />
           </button>
         )
       })}

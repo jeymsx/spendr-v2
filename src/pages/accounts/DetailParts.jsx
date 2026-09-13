@@ -6,6 +6,7 @@
  * while, and these stayed behind.
  */
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { IconEmptyReceipt } from '../../components/icons'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
@@ -48,7 +49,11 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
 
       {txs.length === 0 && emptyLabel ? (
         <Card surface="recessed">
-          <EmptyState size="sm" title={emptyLabel} />
+          {/* A statement that billed nothing is still an empty state, and it
+              was the one saying so in bare text. The receipt is the right
+              glyph for it - one statement's worth, where the ledger glyph is
+              a whole history. */}
+          <EmptyState size="sm" icon={<IconEmptyReceipt size={22} />} title={emptyLabel} />
         </Card>
       ) : (
         <Card clip>

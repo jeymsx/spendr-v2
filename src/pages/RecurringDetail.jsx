@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
-import { IconChevronLeft, IconNotFound } from '../components/icons'
+import { IconChevronLeft, IconNotFound, IconEmptyReceipt } from '../components/icons'
 import {
   FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
@@ -53,15 +53,8 @@ function IconBolt() {
   )
 }
 
-function IconEmptyReceipt() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M5 3.5h14v17l-2.33-1.6-2.34 1.6-2.33-1.6-2.34 1.6L7.33 18.9 5 20.5Z" />
-      <path d="M9 8.5h6M9 12.5h4" />
-    </svg>
-  )
-}
+/* IconEmptyReceipt moved to components/icons.jsx when the credit statement
+   sections wanted it too - see the empty-state family there. */
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 

@@ -7,6 +7,7 @@ import Sheet from '../../components/ui/Sheet'
 import Divider from '../../components/ui/Divider'
 import { AccountCard, STACK_STRIP } from './ListCard'
 import Rail from '../../components/ui/Rail'
+import SearchField from '../../components/ui/SearchField'
 
 // ── Quick-add sheet helpers ────────────────────────────────────────────────────
 
@@ -205,37 +206,12 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
     >
       {/* Search */}
       <div className="pt-3 pb-3">
-        <div className="relative">
-          <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-400 dark:text-slate-500"
-            width="14" height="14" viewBox="0 0 20 20" fill="none">
-            <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.8"/>
-            <path d="M14.5 14.5L18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-          </svg>
-          <input
-            value={query}
-            onChange={e => setQuery(e.target.value)}
-            placeholder="Search accounts…"
-            className="w-full h-10 pl-9 pr-8 rounded-2xl text-sm
-              bg-slate-100 dark:bg-white/[0.07]
-              text-slate-800 dark:text-slate-200
-              placeholder:text-slate-400 dark:placeholder:text-slate-600
-              border border-slate-200/60 dark:border-white/[0.08]
-              focus:outline-none focus:border-primary/40 transition-colors"
-          />
-          {query && (
-            <button
-              onClick={() => setQuery('')}
-              aria-label="Clear search"
-              className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
-                bg-slate-300/80 dark:bg-white/[0.15] flex items-center justify-center
-                text-slate-600 dark:text-slate-300 active:opacity-70"
-            >
-              <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-                <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
-              </svg>
-            </button>
-          )}
-        </div>
+        <SearchField
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onClear={() => setQuery('')}
+          placeholder="Search accounts…"
+        />
       </div>
 
       {filtered ? (

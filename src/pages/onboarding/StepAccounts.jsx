@@ -6,6 +6,7 @@ import SectionLabel from '../../components/ui/SectionLabel'
 import Divider from '../../components/ui/Divider'
 import { CUSTOM_TYPES } from './shared'
 import Rail from '../../components/ui/Rail'
+import SearchField from '../../components/ui/SearchField'
 
 // ── Step 3: Pick accounts ──────────────────────────────────────────────────────
 
@@ -64,33 +65,19 @@ export function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAd
         <p className="text-slate-500 mt-2 text-sm">Tap to select. Cash is always included.</p>
       </div>
 
-      {/* Search */}
-      <div className="relative shrink-0">
-        <svg className="absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none text-slate-500"
-          width="14" height="14" viewBox="0 0 20 20" fill="none">
-          <circle cx="9" cy="9" r="7" stroke="currentColor" strokeWidth="1.8"/>
-          <path d="M14.5 14.5L18 18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-        </svg>
-        <input
+      {/* Search.
+
+          `onDark` because this flow paints its own dark ground whatever the
+          theme is - the field's theme-answering colours would come out
+          white-on-near-white here. */}
+      <div className="shrink-0">
+        <SearchField
+          tone="onDark"
           value={query}
           onChange={e => setQuery(e.target.value)}
+          onClear={() => setQuery('')}
           placeholder="Search accounts…"
-          className="w-full h-10 pl-9 pr-8 rounded-2xl text-sm
-            bg-white/[0.07] border border-white/[0.10] text-white
-            placeholder:text-slate-600 focus:outline-none focus:border-primary/50 transition-colors"
         />
-        {query && (
-          <button
-            onClick={() => setQuery('')}
-            aria-label="Clear search"
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 w-5 h-5 rounded-full
-              bg-white/[0.15] flex items-center justify-center text-slate-300 active:opacity-70"
-          >
-            <svg width="7" height="7" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round">
-              <line x1="2" y1="2" x2="8" y2="8"/><line x1="8" y1="2" x2="2" y2="8"/>
-            </svg>
-          </button>
-        )}
       </div>
 
       <div className="flex-1 overflow-y-auto -mx-1 px-1 space-y-5 pb-2"
