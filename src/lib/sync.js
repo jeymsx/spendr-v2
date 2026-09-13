@@ -185,6 +185,8 @@ export function debtToRow(r, userId) {
        came from and which category to credit when it settles. See 009. */
     source_tx_id:    r.sourceTxId ?? null,
     source_category: r.sourceCategory ?? null,
+    /* Filed away rather than deleted. See 012. */
+    archived_at:     r.archivedAt ?? null,
     updated_at:  r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -376,6 +378,7 @@ export function rowToDebt(row) {
     createdAt:  row.created_at,
     sourceTxId:      row.source_tx_id ?? null,
     sourceCategory:  row.source_category ?? null,
+    archivedAt:      row.archived_at ?? null,
     updatedAt:  row.updated_at,
   }
 }
@@ -660,7 +663,7 @@ const OPTIONAL_COLS = {
      to what it refunded. Degraded, not wrong, which is the right trade for
      not blocking the ledger on a migration. */
   transactions: ['refund_of', 'split_id'],
-  debts: ['source_tx_id', 'source_category', 'sync_id'],
+  debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another
      device. */
@@ -1077,9 +1080,19 @@ export async function fullSync(userId) {
 /**
  * @param {string} _userId
  * @param {number} debtId
+ * @param {string|null} [syncId]  the row's stable id, when it has one
+ * @param {typeof queueRemoteDelete} [queue]
  */
-export async function deleteDebtRemote(_userId, debtId) {
-  await queueRemoteDelete('debts', { local_id: debtId })
+export async function deleteDebtRemote(_userId, debtId, syncId = null, queue = queueRemoteDelete) {
+  await queue('debts', { local_id: debtId })
+  /* And by the stable id when the row has one, for the reason spelled out
+     under deleteRecurringRemote: a local_id shifts whenever the database is
+     cleared and re-filled, and a delete aimed at an id the server no longer
+     recognises matches nothing at all - the row survives, the next pull
+     brings it back, and deleting it again does nothing either. sync_id does
+     not shift. Queueing both costs one extra no-op DELETE and covers the
+     rows that predate stamping. */
+  if (syncId) await queue('debts', { sync_id: syncId })
 }
 
 /**

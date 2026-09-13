@@ -7,11 +7,12 @@ import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/money
 import SegTabs from '../../components/SegTabs'
 import { RowGroup, EditRow, RowInput, RowDate } from '../../components/FormRows'
 import Sheet from '../../components/ui/Sheet'
+import Button from '../../components/ui/Button'
 import { fmtDueDate } from './shared'
 
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
 
-export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
+export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultContact }) {
   const { showToast } = useToast()
   const { user } = useAuth()
   const [contact,    setContact]    = useState('')
@@ -39,7 +40,9 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
         setType(editDebt.type ?? 'i_owe')
         setNotes(editDebt.notes ?? '')
       } else {
-        setContact('')
+        /* Opened from a person's own page, where who this is about is
+           already settled - so it is filled in rather than asked for again. */
+        setContact(defaultContact ?? '')
         setAmountStr('')
         setPaidStr('0')
         setDueDate('')
@@ -50,7 +53,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
       setConfirmDel(false)
       setDeleting(false)
     }
-  }, [open, editDebt, defaultTab])
+  }, [open, editDebt, defaultTab, defaultContact])
 
   async function handleSave() {
     const errs = {}
@@ -92,7 +95,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
     setDeleting(true)
     try {
       await db.debts.delete(editDebt.id)
-      await deleteDebtRemote(user?.id, editDebt.id)
+      await deleteDebtRemote(user?.id, editDebt.id, editDebt.syncId)
       onClose()
     } catch (e) {
       console.error('[DebtForm] delete failed:', e)
@@ -113,30 +116,20 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
       maxHeight="92dvh"
       title={editDebt ? 'Edit Debt' : 'Add Debt'}
       titleAction={editDebt && (
-        <button
+        <Button
+          size="xs"
+          className="px-3"
+          variant={confirmDel ? 'danger' : 'dangerTint'}
           onClick={handleDelete}
-          disabled={deleting}
-          className={[
-            'text-xs font-semibold px-3 py-1.5 rounded-xl transition-all duration-150',
-            confirmDel
-              ? 'bg-red-500 text-white'
-              : 'text-red-500 dark:text-red-400 bg-red-50 dark:bg-red-500/10',
-          ].join(' ')}
+          loading={deleting}
         >
-          {deleting ? 'Deleting…' : confirmDel ? 'Confirm delete' : 'Delete'}
-        </button>
+          {confirmDel ? 'Confirm delete' : 'Delete'}
+        </Button>
       )}
       footer={(
-        <button
-          onClick={handleSave}
-          disabled={saving}
-          className="w-full py-[15px] rounded-2xl font-semibold text-15 text-white
-            bg-primary
-            disabled:opacity-40 disabled:shadow-none
-            active:scale-[0.98] transition-all duration-100"
-        >
-          {saving ? 'Saving…' : editDebt ? 'Save changes' : 'Add debt'}
-        </button>
+        <Button block size="lg" onClick={handleSave} loading={saving}>
+          {editDebt ? 'Save changes' : 'Add debt'}
+        </Button>
       )}
     >
       <div>

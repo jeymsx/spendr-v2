@@ -161,7 +161,7 @@ describe('categories, debts, bills and templates', () => {
       name: 'Gelo', contact: '0917', amount: 5000, amountPaid: 1500,
       dueDate: '2026-10-01', type: 'i_owe', notes: 'lunch',
       createdAt: 'a', updatedAt: 'b',
-      sourceTxId: null, sourceCategory: null,
+      sourceTxId: null, sourceCategory: null, archivedAt: null,
     }
     expect(rowToDebt(debtToRow(local, UID))).toEqual(local)
   })
@@ -178,7 +178,7 @@ describe('categories, debts, bills and templates', () => {
       name: 'Gelo', contact: '0917', amount: 2250, amountPaid: 0,
       dueDate: null, type: 'owed_to_me', notes: null,
       createdAt: 'a', updatedAt: 'b',
-      sourceTxId: 'dinner-tx', sourceCategory: 'Dining',
+      sourceTxId: 'dinner-tx', sourceCategory: 'Dining', archivedAt: null,
     }
     expect(rowToDebt(debtToRow(local, UID))).toEqual(local)
   })

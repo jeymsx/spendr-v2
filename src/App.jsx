@@ -24,6 +24,7 @@ const AccountEdit   = lazy(() => import('./pages/AccountEdit'))
 const Budget        = lazy(() => import('./pages/Budget'))
 const CategoryDetail = lazy(() => import('./pages/CategoryDetail'))
 const Debts        = lazy(() => import('./pages/Debts'))
+const PersonDetail = lazy(() => import('./pages/debts/PersonDetail'))
 const Goals        = lazy(() => import('./pages/Goals'))
 const GoalDetail   = lazy(() => import('./pages/GoalDetail'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
@@ -99,6 +100,7 @@ export default function App() {
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/accounts/:id/edit" element={<AccountEdit />} />
               <Route path="/debts"        element={<Debts />} />
+              <Route path="/debts/person/:key" element={<PersonDetail />} />
               <Route path="/goals"        element={<Goals />} />
               <Route path="/goals/:id"    element={<GoalDetail />} />
               <Route path="/recurring"    element={<Recurring />} />

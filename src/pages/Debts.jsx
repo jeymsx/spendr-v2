@@ -18,7 +18,6 @@ import {
   IconNoDebts,
 } from './debts/shared'
 import PersonCard from './debts/PersonCard'
-import PersonSheet from './debts/PersonSheet'
 import { byPerson } from '../lib/people'
 import { DebtFormSheet } from './debts/DebtFormSheet'
 
@@ -95,10 +94,21 @@ export default function Debts() {
   }, [])
 
   const allDebts = useLiveQuery(() => db.debts.orderBy('createdAt').reverse().toArray(), [], undefined)
+
+  /* Archived people are filed, not deleted, so they are excluded at the
+     SOURCE rather than hidden in the list - every figure on this page is a
+     sum over these rows, and a total that counts somebody the list does not
+     show is a total nobody can reconcile. */
+  const [showArchived, setShowArchived] = useState(false)
+  const archivedCount = useMemo(
+    () => (allDebts ?? []).filter(d => d.archivedAt).length, [allDebts])
+
   /* Memoised because `allDebts ?? []` produces a NEW array on every render
      while the query is still loading, which changed the identity of the
      useCallback below it every pass and defeated the useMemo below that. */
-  const rows = useMemo(() => allDebts ?? [], [allDebts])
+  const rows = useMemo(
+    () => (allDebts ?? []).filter(d => showArchived || !d.archivedAt),
+    [allDebts, showArchived])
 
   const forView = useCallback(
     (v) => v === 'all' ? rows : rows.filter(d => d.type === v),
@@ -119,7 +129,6 @@ export default function Debts() {
      stop mattering - somebody can pay before the thing they are paying for
      exists, and it simply lands on their balance. See lib/people.js. */
   const people = useMemo(() => byPerson(visible), [visible])
-  const [openPerson, setOpenPerson] = useState(/** @type {any} */ (null))
 
   /**
    * Every figure this page shows, from one pass over what is VISIBLE.
@@ -150,7 +159,6 @@ export default function Debts() {
   }, [visible])
 
   const openAdd     = () => { setEditDebt(null); setShowForm(true) }
-  const openEdit    = (debt) => { setEditDebt(debt); setShowForm(true) }
 
   const loading   = allDebts === undefined
   const emptyCopy = EMPTY_COPY[view] ?? EMPTY_COPY.all
@@ -291,9 +299,26 @@ export default function Debts() {
                 <SectionLabel inset="gutter" gap="loose">People</SectionLabel>
                 <div className="px-5 flex flex-col gap-3">
                   {people.map(p => (
-                    <PersonCard key={p.key} person={p} onOpen={setOpenPerson} />
+                    <PersonCard
+                      key={p.key}
+                      person={p}
+                      onOpen={() => navigate(`/debts/person/${encodeURIComponent(p.key)}`)}
+                    />
                   ))}
                 </div>
+
+                {archivedCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setShowArchived(v => !v)}
+                    className="mt-3 w-full text-center text-12 text-slate-400 dark:text-slate-500
+                      active:opacity-60 transition-opacity"
+                  >
+                    {showArchived
+                      ? 'Hide archived'
+                      : `Show ${archivedCount} archived`}
+                  </button>
+                )}
               </section>
             </>
           )}
@@ -307,11 +332,6 @@ export default function Debts() {
         // A new debt lands on the side you were looking at. In All there is no
         // side to infer, so the form's own default stands.
         defaultTab={view === 'all' ? undefined : view}
-      />
-      <PersonSheet
-        person={openPerson}
-        onClose={() => setOpenPerson(null)}
-        onEditRow={(d) => { setOpenPerson(null); openEdit(d) }}
       />
     </div>
   )

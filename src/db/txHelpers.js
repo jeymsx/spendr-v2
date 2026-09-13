@@ -2,6 +2,7 @@ import db, { UNSYNCED } from './db'
 import { advanceNextDate } from '../utils/recurring'
 import { resolveBillShares } from '../lib/splitModes'
 import { applyPayment } from '../lib/people'
+import { deleteDebtRemote } from '../lib/sync'
 
 /** Thrown when a spend would take a non-credit account below zero. */
 export class OverdrawError extends Error {
@@ -337,11 +338,22 @@ export async function deleteTxGroup(txs) {
         }
       }
 
-      /* A receivable outlives the purchase that opened it - Gelo still owes
-         you whether or not the row is still here - so it is kept and simply
-         unhooked. Left pointing at a deleted purchase it becomes unsettleable:
-         settleWithPerson routes through postRefund, which refuses to refund a
-         purchase that is gone, so the debt could never be closed. */
+      /* A receivable this purchase OPENED, once the purchase is gone.
+         Whether it should go too turns on one question: has any money moved
+         against it?
+
+         NOTHING PAID - it goes. The row exists only because you split this
+         expense, so deleting the expense is saying the expense never
+         happened, and a share of something that never happened is not a
+         debt. Keeping it stranded a number on the debts page that no screen
+         explains and nothing can close, which is what this used to do.
+
+         SOMETHING PAID - it stays, unhooked. Now there is real history: they
+         handed you money, and that is true whatever became of the purchase.
+         Left pointing at a deleted row it would be unsettleable, because
+         settleWithPerson routes through postRefund and postRefund refuses to
+         refund a purchase that is gone. So the link is cut and the balance
+         survives, to be settled or deleted by hand. */
       /* Filtered in JS, not with where(): sourceTxId is a plain property with
          no Dexie index, and where() on an unindexed key throws. A first
          version caught that and carried on, which is the worst outcome - the
@@ -350,7 +362,11 @@ export async function deleteTxGroup(txs) {
       if (gone.size) {
         const stamp = new Date().toISOString()
         for (const d of await db.debts.toArray()) {
-          if (d.sourceTxId && gone.has(d.sourceTxId)) {
+          if (!d.sourceTxId || !gone.has(d.sourceTxId)) continue
+          if ((d.amountPaid ?? 0) <= 0.005) {
+            await db.debts.delete(d.id)
+            await deleteDebtRemote(null, d.id, d.syncId)
+          } else {
             await db.debts.update(d.id, { sourceTxId: null, updatedAt: stamp })
           }
         }

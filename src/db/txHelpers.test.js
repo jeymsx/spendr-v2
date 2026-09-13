@@ -491,22 +491,54 @@ describe('deleteTxGroup takes the rows that cannot stand alone', () => {
   })
 
   /**
-   * A receivable is NOT deleted with its purchase - they still owe you
-   * whether or not the row survives. It is unhooked, because a debt pointing
-   * at a deleted purchase can never be settled: settling routes through
+   * What happens to a receivable when its purchase is deleted turns on one
+   * question: has any money moved against it?
+   *
+   * These two cases used to be one. Every receivable was kept and unhooked,
+   * which left a share of a purchase that no longer exists sitting on the
+   * debts page as a number nothing explains - reported from the phone as
+   * "when i delete the transaction, the debt of that person remains".
+   */
+  const receivable = (over = {}) => ({
+    id: 5, name: 'Gelo', contact: 'Gelo', amount: 300, amountPaid: 0,
+    type: 'owed_to_me', sourceTxId: 'buy-1', sourceCategory: 'Groceries',
+    ...over,
+  })
+
+  it('deletes a receivable nothing has been paid on', async () => {
+    store.transactions.push(purchase())
+    store.debts.push(receivable())
+
+    await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.txId === 'buy-1')]))
+
+    expect(store.debts).toHaveLength(0)
+  })
+
+  /**
+   * Once they have handed you money the row stops being derived from the
+   * purchase, so it survives - unhooked, because a debt pointing at a
+   * deleted purchase can never be settled: settling routes through
    * postRefund, which refuses a purchase that is gone.
    */
-  it('keeps a debt but unhooks it from the deleted purchase', async () => {
+  it('keeps one that has been part paid, and unhooks it', async () => {
     store.transactions.push(purchase())
-    store.debts.push({
-      id: 5, name: 'Gelo', contact: 'Gelo', amount: 300, amountPaid: 0,
-      type: 'owed_to_me', sourceTxId: 'buy-1', sourceCategory: 'Groceries',
-    })
+    store.debts.push(receivable({ amountPaid: 100 }))
 
     await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.txId === 'buy-1')]))
 
     expect(store.debts).toHaveLength(1)
     expect(store.debts[0].sourceTxId).toBeNull()
+    expect(store.debts[0].amountPaid).toBe(100)
+  })
+
+  /** A debt that was never tied to this purchase is nobody's business here. */
+  it('leaves an unrelated debt alone', async () => {
+    store.transactions.push(purchase())
+    store.debts.push(receivable({ id: 6, sourceTxId: null }))
+
+    await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.txId === 'buy-1')]))
+
+    expect(store.debts).toHaveLength(1)
   })
 })
 
