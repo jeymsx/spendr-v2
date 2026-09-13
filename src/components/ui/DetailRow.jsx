@@ -55,7 +55,7 @@ export default function DetailRow({
           className,
         )}
       >
-        <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">
+        <span className="text-13 text-slate-500 dark:text-slate-400 shrink-0">
           {label}
         </span>
 
@@ -69,14 +69,14 @@ export default function DetailRow({
           <div className="text-right min-w-0">
             <p
               className={cx(
-                'text-[14px] font-medium truncate',
+                'text-14 font-medium truncate',
                 tone || 'text-slate-800 dark:text-white',
               )}
             >
               {value}
             </p>
             {sub && (
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
                 {sub}
               </p>
             )}

@@ -59,7 +59,7 @@ export default function BadgeChip() {
     >
       {/* leading-none and a nudge: emoji sit on their own baseline inside the
           line box, so a bare one lands a pixel or two low in a flex centre. */}
-      <span className="text-[17px] leading-none -mt-px" aria-hidden="true">🏆</span>
+      <span className="text-17 leading-none -mt-px" aria-hidden="true">🏆</span>
     </IconButton>
   )
 }

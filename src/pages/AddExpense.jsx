@@ -410,7 +410,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
               )}
             </Rail>
             {isInstallment && (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
+              <p className="text-11 text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
                 {installMonths} × {fmt(amount)} ={' '}
                 <span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(installTotal)}</span> total
                 {' · '}{fmtDateLabel(date)} → {fmtDateLabel(installLast)}

@@ -69,7 +69,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
       )}
     >
       <div className="pt-1 flex flex-col gap-4">
-        <p className="text-[12px] text-slate-400 dark:text-slate-500">
+        <p className="text-12 text-slate-400 dark:text-slate-500">
           Paste your Apps Script Web App URL to enable syncing.
         </p>
 
@@ -82,7 +82,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
             value={url}
             onChange={e => setUrl(e.target.value)}
             placeholder="https://script.google.com/macros/s/…/exec"
-            className="w-full h-[48px] rounded-xl px-4 text-[13px]
+            className="w-full h-[48px] rounded-xl px-4 text-13
               bg-slate-50 dark:bg-white/[0.05]
               border border-slate-200 dark:border-white/[0.10]
               text-slate-800 dark:text-white
@@ -92,14 +92,14 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
           <button
             onClick={handleSave}
             disabled={saving || !url.trim()}
-            className="mt-2 text-[12px] font-medium text-primary disabled:opacity-40"
+            className="mt-2 text-12 font-medium text-primary disabled:opacity-40"
           >
             {saving ? 'Saving…' : 'Save URL'}
           </button>
         </div>
 
         {fmtLast && (
-          <p className="text-[12px] text-slate-400 dark:text-slate-500">
+          <p className="text-12 text-slate-400 dark:text-slate-500">
             Last synced: {fmtLast}
           </p>
         )}

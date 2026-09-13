@@ -36,7 +36,7 @@ export function StepPickCategories({ type, stepNum, locked, presets, selectedNam
     <div className="flex-1 flex flex-col gap-4 min-h-0">
       <div className="shrink-0">
         <p className="text-primary text-xs font-bold mb-3">Step {stepNum} of 6</p>
-        <h2 className="text-[28px] font-semibold leading-tight text-white">
+        <h2 className="text-28 font-semibold leading-tight text-white">
           {isExpense ? <>What do you<br />spend on?</> : <>What are your<br />income sources?</>}
         </h2>
         <p className="text-slate-500 mt-2 text-sm">
@@ -163,7 +163,7 @@ export function StepPickCategories({ type, stepNum, locked, presets, selectedNam
                   <button
                     key={e}
                     onClick={() => setCustomIcon(e)}
-                    className={`h-9 rounded-xl flex items-center justify-center text-[18px]
+                    className={`h-9 rounded-xl flex items-center justify-center text-18
                       active:scale-90 transition-all duration-75 ${
                       customIcon === e
                         ? 'bg-primary/20 ring-2 ring-primary/40'
@@ -226,7 +226,7 @@ export function StepPickCategories({ type, stepNum, locked, presets, selectedNam
       <div className="shrink-0 pt-2">
         <button
           onClick={onNext}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-16
              active:scale-[0.98] transition-all duration-100"
         >
           Continue ({totalSelected} {totalSelected === 1 ? 'category' : 'categories'}) →
@@ -252,8 +252,8 @@ export function StepDone({ onFinish, saving }) {
         {/* Stars, not a party popper. Untitled UI has no confetti, and a
             gift box would have read as the Gifts category. */}
         <div className="mb-6 flex justify-center text-primary"><IconSparkle size={64} /></div>
-        <h2 className="text-[32px] font-bold text-white leading-tight">You're all set!</h2>
-        <p className="text-slate-400 mt-3 text-[15px] leading-relaxed">
+        <h2 className="text-32 font-bold text-white leading-tight">You're all set!</h2>
+        <p className="text-slate-400 mt-3 text-15 leading-relaxed">
           Welcome to Spendr.<br />Time to take control of your money.
         </p>
       </div>

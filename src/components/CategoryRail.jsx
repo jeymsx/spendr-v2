@@ -69,7 +69,7 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
 
   if (!categories.length) {
     return (
-      <p className={`text-[13px] text-slate-400 dark:text-slate-500 px-1 ${className}`}>
+      <p className={`text-13 text-slate-400 dark:text-slate-500 px-1 ${className}`}>
         No categories yet — add one in Settings.
       </p>
     )

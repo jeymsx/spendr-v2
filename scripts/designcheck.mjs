@@ -256,7 +256,25 @@ for (const file of files) {
         }
       }
 
-      // ── 5. Inline geometry on a Sheet ───────────────────────────────────
+      // ── 5. A font size invented at the call site ────────────────────────
+      // 31 distinct `text-[Npx]` values across 434 call sites, alongside 437
+      // uses of Tailwind's own scale - because whenever a size fell between
+      // two named steps, someone typed the number. The in-between steps are
+      // named in tailwind.config.js now (text-10 through text-38) and the set
+      // is closed; this is what keeps it closed.
+      //
+      // An emoji is exempt. `text-[18px]` on an aria-hidden span sizes a
+      // glyph inside a fixed box, which is not a type-scale decision and has
+      // no business in a type scale. So is the accent preview, which is a
+      // scale model of the whole app at 7px and would otherwise drag four
+      // sub-10px sizes into the scale.
+      const px = classes.match(/\btext-\[[0-9.]+px\]/)
+      if (px && !hasAttr(node, 'aria-hidden') && !/SettingsAccent/.test(file)) {
+        report(file, line, 'type-scale',
+          `${px[0]} - the scale is closed; use a named step (text-10 … text-38) or aria-hidden it if it sizes a glyph`)
+      }
+
+      // ── 6. Inline geometry on a Sheet ───────────────────────────────────
       // index.css restyles .sheet-panel into a centred desktop modal at
       // specificity (0,2,1); an inline style beats any stylesheet. This broke
       // the entire desktop UI once.

@@ -200,17 +200,17 @@ export default function BadgeCard({
         )}
 
         {eyebrow && (
-          <p className="mt-4 text-[11px] font-semibold uppercase tracking-[0.14em] text-primary">
+          <p className="mt-4 text-11 font-semibold uppercase tracking-[0.14em] text-primary">
             {eyebrow}
           </p>
         )}
         <h2
           id="badge-card-title"
-          className="mt-1.5 text-[22px] font-semibold tracking-tight text-slate-900 dark:text-white"
+          className="mt-1.5 text-22 font-semibold tracking-tight text-slate-900 dark:text-white"
         >
           {badge.name}
         </h2>
-        <p className="mt-2 text-[13px] leading-relaxed text-slate-500 dark:text-slate-400">
+        <p className="mt-2 text-13 leading-relaxed text-slate-500 dark:text-slate-400">
           {body}
         </p>
 

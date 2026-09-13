@@ -61,7 +61,7 @@ export function BrandTile({ preset, selected, onPick }) {
           </span>
         )}
       </span>
-      <span className={`text-[9px] leading-[1.15] text-center line-clamp-2 ${
+      <span className={`text-10 leading-[1.15] text-center line-clamp-2 ${
         selected ? 'font-semibold text-primary' : 'text-slate-600 dark:text-slate-300'
       }`}>
         {preset.name}

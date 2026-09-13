@@ -223,13 +223,13 @@ export default function Debts() {
           {/* ── Where you stand ── */}
           <section className="px-5">
             <SectionLabel className="text-center">{headline.label}</SectionLabel>
-            <p className={`mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums ${headline.tone}`}>
+            <p className={`mt-2 text-center text-38 leading-none font-semibold tracking-tight tabular-nums ${headline.tone}`}>
               {/* The minus is drawn rather than formatted in, so the figure
                   reads as a magnitude with a direction and fmt() does not have
                   to carry a sign it would also apply to the tiles. */}
               {view === 'all' && totals.net < 0 ? '−' : ''}{headline.value}
             </p>
-            <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400">
               {headline.sub}
             </p>
 

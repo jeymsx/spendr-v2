@@ -78,10 +78,10 @@ const SIZE = {
      items-center, the 40px one pushed the back chip 2px down: the same
      control landed at a different height depending on which page you were
      looking at. At 36 the row is exactly one chip tall everywhere. */
-  xs: 'py-2 text-[13px] leading-5',
-  sm: 'py-2.5 text-[13px] leading-5',
+  xs: 'py-2 text-13 leading-5',
+  sm: 'py-2.5 text-13 leading-5',
   md: 'py-3 text-sm',
-  lg: 'py-3.5 text-[15px] leading-5',
+  lg: 'py-3.5 text-15 leading-5',
 }
 
 export default function Button({

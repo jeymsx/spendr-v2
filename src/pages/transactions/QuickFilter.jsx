@@ -48,7 +48,7 @@ export function QuickTypeFilter({ typeFilter, setTypeFilter, onOpenFilters, acti
         Filter
         {activeFilterCount > 0 && (
           <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-white
-            text-[10px] font-bold flex items-center justify-center tabular-nums">
+            text-10 font-bold flex items-center justify-center tabular-nums">
             {activeFilterCount}
           </span>
         )}
@@ -123,9 +123,9 @@ export function DateRow({ label, value, onChange, isLast = false }) {
   return (
     <>
       <div className="relative flex items-center justify-between gap-4 px-4 h-[52px]">
-        <span className="text-[13px] text-slate-500 dark:text-slate-400">{label}</span>
+        <span className="text-13 text-slate-500 dark:text-slate-400">{label}</span>
         <span className="flex items-center gap-2 shrink-0">
-          <span className={`text-[14px] font-medium tabular-nums ${
+          <span className={`text-14 font-medium tabular-nums ${
             value ? 'text-slate-800 dark:text-white' : 'text-slate-400 dark:text-slate-500'
           }`}>
             {display}

@@ -185,7 +185,7 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
         <SectionLabel>Preview (first 10 rows)</SectionLabel>
         <Card clip>
           <div className="overflow-x-auto">
-            <table className="w-full text-[11px]">
+            <table className="w-full text-11">
               <thead>
                 <tr className="border-b border-slate-50 dark:border-white/[0.05]">
                   {previewCols.map(col => (
@@ -218,7 +218,7 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
           {rows.length > 10 && (
             <>
               <Divider />
-              <div className="px-4 py-2.5 text-center text-[11px] text-slate-400 dark:text-slate-500">
+              <div className="px-4 py-2.5 text-center text-11 text-slate-400 dark:text-slate-500">
                 +{rows.length - 10} more rows not shown
               </div>
             </>
@@ -325,9 +325,9 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
                 })()}
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-[15px] text-slate-800 dark:text-white truncate">{name}</p>
+                <p className="font-medium text-15 text-slate-800 dark:text-white truncate">{name}</p>
                 {isCredit && (
-                  <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">Credit limit</p>
+                  <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">Credit limit</p>
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
@@ -343,7 +343,7 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
                   placeholder="₱0.00"
                   className="w-28 text-right text-slate-800 dark:text-white
                     placeholder:text-slate-300 dark:placeholder:text-slate-600
-                    bg-transparent focus:outline-none text-[15px] tabular-nums"
+                    bg-transparent focus:outline-none text-15 tabular-nums"
                 />
               </div>
             </Card>

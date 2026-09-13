@@ -76,7 +76,7 @@ function Chip({ children, tone = 'plain', title }) {
     <span
       title={title}
       className={[
-        'pointer-events-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[12px] font-medium',
+        'pointer-events-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-12 font-medium',
         TONES[tone] ?? TONES.plain,
       ].join(' ')}
     >
@@ -393,7 +393,7 @@ export default function QuickLogOverlay({ onClose }) {
             be wrong for the inflows and transfers that are a quarter of this
             ledger.
           */}
-          <h2 className="text-[27px] leading-[1.25] font-medium tracking-[-0.01em]
+          <h2 className="text-28 leading-[1.25] font-medium tracking-[-0.01em]
             text-slate-900 dark:text-white">
             What do you want to log?
           </h2>
@@ -419,7 +419,7 @@ export default function QuickLogOverlay({ onClose }) {
             spellCheck={false}
             aria-label="Quick log"
             className="pointer-events-auto mt-3 w-full bg-transparent outline-none
-              text-[21px] leading-snug font-normal
+              text-22 leading-snug font-normal
               text-slate-700 dark:text-white/85
               placeholder-slate-400 dark:placeholder-white/30"
           />
@@ -429,7 +429,7 @@ export default function QuickLogOverlay({ onClose }) {
               annoying to undo. */}
           <div className="mt-6 min-h-[64px] flex flex-wrap items-start justify-start gap-2">
             {!text.trim() ? (
-              <p className="text-[13px] leading-relaxed text-slate-600 dark:text-white/40">
+              <p className="text-13 leading-relaxed text-slate-600 dark:text-white/40">
                 {(examples.expense || examples.transfer) && (
                   <>
                     Try &ldquo;{examples.expense ?? examples.transfer}&rdquo;
@@ -475,12 +475,12 @@ export default function QuickLogOverlay({ onClose }) {
           {/* The honest bit: say what is still missing rather than presenting
               a filled-looking form that is not. */}
           {text.trim() && !ready && (
-            <p className="flex items-center gap-1.5 text-[12px] text-amber-800 dark:text-amber-300/80">
+            <p className="flex items-center gap-1.5 text-12 text-amber-800 dark:text-amber-300/80">
               <IconWarning size={13} /> Needs an amount
             </p>
           )}
           {ready && !parsed.category && parsed.type === 'expense' && !parsed.transferIssue && (
-            <p className="text-[12px] text-slate-600 dark:text-white/40">
+            <p className="text-12 text-slate-600 dark:text-white/40">
               No category matched — you can pick one next
             </p>
           )}
@@ -489,7 +489,7 @@ export default function QuickLogOverlay({ onClose }) {
               silence is how money ends up moving the wrong way: the form looks
               filled in, and the single field that is wrong is the costly one. */}
           {parsed.transferIssue && (
-            <p className="flex items-start gap-1.5 text-[12px] text-amber-800 dark:text-amber-300/80">
+            <p className="flex items-start gap-1.5 text-12 text-amber-800 dark:text-amber-300/80">
               <span className="mt-[2px] shrink-0"><IconWarning size={13} /></span>
               {parsed.transferIssue.reason === 'same-account'
                 ? `Both sides read as ${parsed.transferIssue.account} — a transfer needs two different accounts`
@@ -503,7 +503,7 @@ export default function QuickLogOverlay({ onClose }) {
               for the dropped or duplicated zero, which is cheap to catch here
               and expensive to find in a statement three weeks on. */}
           {parsed.amountFlag && (
-            <p className="flex items-center gap-1.5 text-[12px] text-amber-800 dark:text-amber-300/80">
+            <p className="flex items-center gap-1.5 text-12 text-amber-800 dark:text-amber-300/80">
               <IconWarning size={13} />
               {parsed.amountFlag.direction === 'high' ? 'Much more' : 'Much less'} than
               your usual {titleCase(parsed.amountFlag.phrase)} ({money(parsed.amountFlag.median)})
@@ -525,7 +525,7 @@ export default function QuickLogOverlay({ onClose }) {
             <button
               onClick={goBill}
               className="pointer-events-auto mt-3 inline-flex items-center gap-2 px-3.5 py-2 rounded-full
-                text-[13px] font-medium
+                text-13 font-medium
                 text-slate-700 bg-slate-900/[0.05] border border-slate-900/10
                 dark:text-white/85 dark:bg-white/[0.08] dark:border-white/15
                 active:scale-[0.98] transition-all duration-100"

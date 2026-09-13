@@ -335,7 +335,7 @@ export default function AccountDetail() {
         <SectionLabel>
           {isCredit ? 'Balance used' : 'Current balance'}
         </SectionLabel>
-        <p className={`text-[38px] leading-none font-semibold tracking-tight tabular-nums ${
+        <p className={`text-38 leading-none font-semibold tracking-tight tabular-nums ${
           isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
         }`}>
           {fmt(totalUsed)}
@@ -371,17 +371,17 @@ export default function AccountDetail() {
                 the estimate in a paragraph, and a paragraph about a caveat is
                 longer than the fact it qualifies - "Estimated" on the button
                 says the same thing in one word. */}
-            <p className="text-[13px] font-semibold text-red-500 dark:text-red-400">
+            <p className="text-13 font-semibold text-red-500 dark:text-red-400">
               {lateInfo.daysLate} day{lateInfo.daysLate === 1 ? '' : 's'} overdue
               {' · '}{fmt(creditData.stmtOutstanding)} unpaid
             </p>
             {lateInfo.alreadyLogged ? (
-              <p className="mt-1.5 text-[12.5px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-13 text-slate-500 dark:text-slate-400">
                 Finance charge logged. Edit it in the list below if your statement differs.
               </p>
             ) : lateInfo.canEstimate ? (
               <>
-                <p className="mt-1.5 text-[12.5px] text-slate-600 dark:text-slate-300 tabular-nums">
+                <p className="mt-1.5 text-13 text-slate-600 dark:text-slate-300 tabular-nums">
                   {fmt(lateInfo.interest)} interest + {fmt(lateInfo.lateFee)} late fee
                 </p>
                 <Button
@@ -395,7 +395,7 @@ export default function AccountDetail() {
                 </Button>
               </>
             ) : (
-              <p className="mt-1.5 text-[12.5px] text-slate-500 dark:text-slate-400">
+              <p className="mt-1.5 text-13 text-slate-500 dark:text-slate-400">
                 Add an interest rate to this card to estimate what that costs.
               </p>
             )}
@@ -421,9 +421,9 @@ export default function AccountDetail() {
           <div className="flex items-center gap-2.5">
             <BrandMark mark={brand.mark} size={22} className="shrink-0" />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold leading-tight truncate">{account.name}</p>
+              <p className="text-13 font-semibold leading-tight truncate">{account.name}</p>
               {cardSubtitle && (
-                <p className="text-[10px] text-white/65 truncate">{cardSubtitle}</p>
+                <p className="text-10 text-white/65 truncate">{cardSubtitle}</p>
               )}
             </div>
           </div>
@@ -434,7 +434,7 @@ export default function AccountDetail() {
               holds, and printing state on a card face is not what a card does
               anyway. Currency in its place, matching the Accounts list. */}
           <div className="mt-auto flex items-end justify-between gap-3">
-            <span className="text-[9px] font-semibold text-white/50">
+            <span className="text-10 font-semibold text-white/50">
               {account.currency ?? 'PHP'}
             </span>
             <SchemeMark scheme={account.scheme} className="h-[30px]" />
@@ -479,7 +479,7 @@ export default function AccountDetail() {
             <SectionLabel>
               Funding {goalSplit.goals.length} goal{goalSplit.goals.length === 1 ? '' : 's'}
             </SectionLabel>
-            <Link to="/goals" className="text-[11px] font-medium text-primary active:opacity-70">
+            <Link to="/goals" className="text-11 font-medium text-primary active:opacity-70">
               Manage
             </Link>
           </div>
@@ -487,10 +487,10 @@ export default function AccountDetail() {
             {goalSplit.goals.map((g, i) => (
               <div key={g.goalId}>
                 <div className="flex items-baseline justify-between gap-3 px-4 py-3">
-                  <span className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
+                  <span className="text-13 font-medium text-slate-700 dark:text-slate-200 truncate min-w-0">
                     {g.name}
                   </span>
-                  <span className="text-[13px] font-bold tabular-nums text-slate-800 dark:text-slate-100 shrink-0">
+                  <span className="text-13 font-bold tabular-nums text-slate-800 dark:text-slate-100 shrink-0">
                     {fmt(g.amount)}
                   </span>
                 </div>
@@ -500,10 +500,10 @@ export default function AccountDetail() {
             <Divider />
             <div className="flex items-baseline justify-between gap-3 px-4 py-3
               bg-slate-50/60 dark:bg-white/[0.02]">
-              <span className="text-[12px] font-semibold text-slate-500 dark:text-slate-400">
+              <span className="text-12 font-semibold text-slate-500 dark:text-slate-400">
                 Unassigned
               </span>
-              <span className="text-[13px] font-bold tabular-nums text-slate-600 dark:text-slate-300 shrink-0">
+              <span className="text-13 font-bold tabular-nums text-slate-600 dark:text-slate-300 shrink-0">
                 {fmt(goalSplit.unassigned)}
               </span>
             </div>
@@ -545,7 +545,7 @@ export default function AccountDetail() {
                   <p className={`text-xl font-bold tabular-nums ${STMT_TONE[creditData.tone].value}`}>
                     {fmt(creditData.thisTotal)}
                   </p>
-                  <p className={`text-[10px] mt-0.5 ${STMT_TONE[creditData.tone].note}`}>
+                  <p className={`text-10 mt-0.5 ${STMT_TONE[creditData.tone].note}`}>
                     {creditData.tone === 'none'  ? 'Nothing billed this cycle'
                       : creditData.tone === 'paid' ? 'Paid ✓'
                       : creditData.nextDue ? `Due ${creditData.nextDue}` : 'Unpaid'}
@@ -558,11 +558,11 @@ export default function AccountDetail() {
                         nextTotal includes plan months billed later, and it
                         still drives Available credit below. */}
                     <p className="text-sm font-bold text-slate-600 dark:text-slate-300 tabular-nums">{fmt(creditData.nextStatementTotal)}</p>
-                    <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                    <p className="text-10 text-slate-500 dark:text-slate-400 mt-0.5">
                       Closes {fmtCycleDate(creditData.nextEnd)}
                     </p>
                     {creditData.laterTotal > 0 && (
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p className="text-10 text-slate-500 dark:text-slate-400 mt-0.5">
                         +{fmt(creditData.laterTotal)} on later bills
                       </p>
                     )}
@@ -649,10 +649,10 @@ export default function AccountDetail() {
                       <BrandMark mark={accountBrand(child).mark} size={16} />
                     </span>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate">{child.name}</p>
-                      <p className="text-[10px] text-slate-500 dark:text-slate-400">{TYPE_LABEL[child.type]}</p>
+                      <p className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate">{child.name}</p>
+                      <p className="text-10 text-slate-500 dark:text-slate-400">{TYPE_LABEL[child.type]}</p>
                     </div>
-                    <p className="text-[13px] font-bold tabular-nums text-slate-700 dark:text-slate-200">
+                    <p className="text-13 font-bold tabular-nums text-slate-700 dark:text-slate-200">
                       {fmt(child.balance ?? 0)}
                     </p>
                     <span className="text-slate-300 dark:text-slate-600 shrink-0">

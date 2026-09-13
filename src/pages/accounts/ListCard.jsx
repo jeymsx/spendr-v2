@@ -31,11 +31,11 @@ export function SummaryBar({ summary, hidden }) {
   return (
     <section className="px-5 mb-6">
       <SectionLabel inset="none" gap="none" className="text-center">Net worth</SectionLabel>
-      <p className="mt-0.5 text-center text-[38px] leading-none font-semibold tracking-tight
+      <p className="mt-0.5 text-center text-38 leading-none font-semibold tracking-tight
         tabular-nums text-slate-900 dark:text-white">
         {hidden ? '₱ ••••' : fmtCompact(summary.net)}
       </p>
-      <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
+      <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums">
         {hidden ? '•••• assets' : `${fmtCompact(summary.assets)} assets`}
         {summary.creditUsed > 0 && (
           hidden ? ' · •••• credit used' : ` · ${fmtCompact(summary.creditUsed)} credit used`
@@ -146,20 +146,20 @@ export const AccountCard = forwardRef(function AccountCard({
         <span className="flex items-center gap-2.5 min-w-0">
           <BrandMark mark={brand.mark} size={22} className="shrink-0" />
           <span className="min-w-0">
-            <span className="block text-[14px] font-semibold leading-tight truncate">
+            <span className="block text-14 font-semibold leading-tight truncate">
               {acct.name}
             </span>
             {subtitle && (
-              <span className="block text-[10px] text-white/65 truncate">{subtitle}</span>
+              <span className="block text-10 text-white/65 truncate">{subtitle}</span>
             )}
           </span>
         </span>
 
         <span className="text-right shrink-0">
-          <span className="block text-[16px] font-bold tabular-nums leading-tight">
+          <span className="block text-16 font-bold tabular-nums leading-tight">
             {hidden ? '₱ ••••' : fmt(isCredit ? currentBalance : acct.balance)}
           </span>
-          <span className="block text-[9px] text-white/65">
+          <span className="block text-10 text-white/65">
             {isCredit
               ? `${hidden ? '••••' : fmtCompact(available ?? 0)} left`
               : 'Balance'}
@@ -178,7 +178,7 @@ export const AccountCard = forwardRef(function AccountCard({
               />
             </div>
             <div className="flex items-end justify-between mt-1.5 gap-2">
-              <span className="text-[9px] text-white/60">
+              <span className="text-10 text-white/60">
                 {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit)} used
               </span>
               <SchemeMark scheme={acct.scheme} className="h-[34px]" />
@@ -186,7 +186,7 @@ export const AccountCard = forwardRef(function AccountCard({
           </>
         ) : (
           <div className="flex items-end justify-between gap-2">
-            <span className="text-[9px] text-white/50">
+            <span className="text-10 text-white/50">
               {acct.currency ?? 'PHP'}
             </span>
             <SchemeMark scheme={acct.scheme} className="h-[34px]" />

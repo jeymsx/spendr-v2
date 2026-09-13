@@ -71,7 +71,7 @@ export default function AmountHero({
       {/* tracking-tight at this size: the default spacing makes a long peso
           amount sprawl past the rule it is supposed to sit under. */}
       <p
-        className="text-[40px] font-bold mt-1 tabular-nums leading-none tracking-tight"
+        className="text-38 font-bold mt-1 tabular-nums leading-none tracking-tight"
         style={{ color }}
       >
         {children}

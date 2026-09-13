@@ -102,7 +102,7 @@ export function StepFilePicker({ onParsed }) {
                 or tap to browse
               </p>
             </div>
-            <span className="text-[11px] font-medium px-3 py-1 rounded-full
+            <span className="text-11 font-medium px-3 py-1 rounded-full
               bg-slate-100 dark:bg-white/[0.06] text-slate-400 dark:text-slate-500">
               .csv only
             </span>
@@ -130,10 +130,10 @@ export function StepFilePicker({ onParsed }) {
       {/* Format reference */}
       <Card padding="md" className="mt-5">
         <SectionLabel>Expected columns</SectionLabel>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-mono leading-relaxed break-all">
+        <p className="text-11 text-slate-500 dark:text-slate-400 font-mono leading-relaxed break-all">
           {NEW_REQUIRED_COLS.join(', ')}
         </p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+        <p className="text-11 text-slate-400 dark:text-slate-500 mt-2">
           Legacy format (txId, date, payment, account…) is also accepted.
         </p>
       </Card>

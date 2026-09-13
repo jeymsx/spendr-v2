@@ -109,7 +109,7 @@ export function PaymentSheet({ open, onClose, debt }) {
           <button
             onClick={onConfirmPress}
             disabled={isDisabled || saving}
-            className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
+            className="w-full py-[15px] rounded-2xl font-semibold text-15 text-white
               bg-primary
               disabled:opacity-40 disabled:shadow-none
               active:scale-[0.98] transition-all duration-100"
@@ -134,7 +134,7 @@ export function PaymentSheet({ open, onClose, debt }) {
                 <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">
                   {debt.contact ?? debt.name}
                 </p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500">
+                <p className="text-11 text-slate-400 dark:text-slate-500">
                   Remaining:{' '}
                   <span className="font-medium tabular-nums text-slate-600 dark:text-slate-300">
                     {fmt(remaining)}

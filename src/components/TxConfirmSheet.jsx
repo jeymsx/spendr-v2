@@ -167,7 +167,7 @@ export default function TxConfirmSheet({
             about to be written, is what makes this a confirmation rather than
             a receipt for something already done. */}
         <div className="text-center">
-          <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white">
+          <h3 className="text-17 font-semibold text-slate-900 dark:text-white">
             Confirm {cfg.noun}
           </h3>
           {/* The break is written, not negotiated.
@@ -183,7 +183,7 @@ export default function TxConfirmSheet({
               body copy: the line it wants is knowable, and a <br> is how you
               say so. Both halves fit well inside the box at the narrowest
               phone this runs on, so nothing re-wraps underneath it. */}
-          <p className="mt-1 mx-auto max-w-[268px] text-[12.5px] leading-snug
+          <p className="mt-1 mx-auto max-w-[268px] text-13 leading-snug
             text-slate-400 dark:text-slate-500">
             Nothing is saved to your ledger<br />until you confirm.
           </p>
@@ -268,7 +268,7 @@ export default function TxConfirmSheet({
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-amber-500 shrink-0">
                   <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
                 </svg>
-                <span className="text-[13px] text-slate-500 dark:text-slate-400">Save as template</span>
+                <span className="text-13 text-slate-500 dark:text-slate-400">Save as template</span>
               </div>
               <ToggleSwitch on={saveTemplate} />
             </button>

@@ -27,7 +27,7 @@ export function EditRow({ label, isLast, children }) {
   return (
     <>
       <div className="flex items-center justify-between gap-3 px-4 min-h-[48px] py-2">
-        <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
+        <span className="text-13 text-slate-500 dark:text-slate-400 shrink-0">{label}</span>
         <div className="flex-1 min-w-0 flex items-center justify-end gap-2">{children}</div>
       </div>
       {!isLast && <Divider inset="row" />}
@@ -44,7 +44,7 @@ export function RowInput({ value, onChange, placeholder, inputMode = 'text', ...
       placeholder={placeholder}
       inputMode={inputMode}
       className="min-w-0 flex-1 bg-transparent outline-none text-right
-        text-[15px] font-medium text-slate-800 dark:text-white
+        text-15 font-medium text-slate-800 dark:text-white
         placeholder-slate-300 dark:placeholder-slate-600"
       {...rest}
     />
@@ -68,7 +68,7 @@ export function RowInput({ value, onChange, placeholder, inputMode = 'text', ...
 export function RowDate({ value, onChange, display }) {
   return (
     <span className="relative flex-1 min-w-0 flex items-center justify-end gap-2">
-      <span className="text-[15px] font-medium text-slate-800 dark:text-white truncate">
+      <span className="text-15 font-medium text-slate-800 dark:text-white truncate">
         {display || 'Pick a date'}
       </span>
       <IconChevron />
@@ -104,8 +104,8 @@ export function RowPicker({ label, dot, icon, placeholder, onClick }) {
   return (
     <button onClick={onClick} className="flex-1 min-w-0 flex items-center justify-end gap-2 active:opacity-60">
       {dot && <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: dot }} />}
-      {icon && <span className="text-[15px] leading-none shrink-0">{icon}</span>}
-      <span className={`text-[15px] font-medium truncate ${
+      {icon && <span className="text-15 leading-none shrink-0">{icon}</span>}
+      <span className={`text-15 font-medium truncate ${
         label ? 'text-slate-800 dark:text-white' : 'text-slate-300 dark:text-slate-600'
       }`}>
         {label ?? placeholder}

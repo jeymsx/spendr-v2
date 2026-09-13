@@ -65,7 +65,7 @@ export function FilterModal({
         <span className="flex items-center gap-2">
           Filters
           {activeCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-[10px] font-bold text-white">
+            <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-10 font-bold text-white">
               {activeCount}
             </span>
           )}
@@ -200,7 +200,7 @@ export function FilterModal({
                         </svg>
                       </span>
                     </span>
-                    <span className="block text-[12px] font-semibold leading-tight truncate w-full">
+                    <span className="block text-12 font-semibold leading-tight truncate w-full">
                       {a.name}
                     </span>
                   </button>
@@ -254,10 +254,10 @@ export function TxRow({ tx, catMap, onClick }) {
       </div>
 
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
+        <p className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
           {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
         </p>
-        <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+        <p className="text-11 text-slate-500 dark:text-slate-400 truncate mt-0.5">
           {tx.type === 'transfer'
             ? `${tx.fromAccount ?? ''} → ${tx.toAccount ?? ''}`
             : (tx.account ?? '')}
@@ -268,10 +268,10 @@ export function TxRow({ tx, catMap, onClick }) {
       </div>
 
       <div className="text-right shrink-0">
-        <p className={`text-[13px] font-bold tabular-nums ${cls}`}>
+        <p className={`text-13 font-bold tabular-nums ${cls}`}>
           {sign}{fmt(tx.amount)}
         </p>
-        <p className="text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">{fmtTime(tx.date)}</p>
+        <p className="text-10 text-slate-500 dark:text-slate-400 mt-0.5">{fmtTime(tx.date)}</p>
       </div>
     </button>
   )

@@ -81,7 +81,7 @@ function RangeChips({ range, onRange }) {
         <button
           key={r.key}
           onClick={() => onRange(r.key)}
-          className={`relative z-10 w-9 py-1 text-[10px] font-bold text-center transition-colors duration-200 ${
+          className={`relative z-10 w-9 py-1 text-10 font-bold text-center transition-colors duration-200 ${
             range === r.key ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
           }`}
         >{r.label}</button>
@@ -106,9 +106,9 @@ function MonthNav({ monthOffset, onMonth }) {
         </svg>
       </button>
       <button onClick={() => !isCurrent && onMonth(0)} className="flex items-center gap-1.5">
-        <span className="text-[13px] font-semibold text-slate-600 dark:text-slate-300">{monthLabel}</span>
+        <span className="text-13 font-semibold text-slate-600 dark:text-slate-300">{monthLabel}</span>
         {!isCurrent && (
-          <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>
+          <span className="text-10 font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>
         )}
       </button>
       <button onClick={() => onMonth(monthOffset + 1)} disabled={isCurrent} aria-label="Next month"
@@ -153,12 +153,12 @@ function HeroStats({ totalSpent, totalEarned }) {
   return (
     <section className="px-5">
       <SectionLabel className="text-center">Total spent</SectionLabel>
-      <p className="mt-2 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+      <p className="mt-2 text-center text-38 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
         {fmtCompact(totalSpent)}
       </p>
 
       {(totalEarned > 0 || showNet) && (
-        <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
+        <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums">
           {totalEarned > 0 && (
             <>
               <span className="font-semibold text-emerald-600 dark:text-emerald-400">

@@ -60,7 +60,7 @@ export default class ErrorBoundary extends Component {
           Your data is safe — it's stored on this device and nothing was lost.
         </p>
 
-        <p className="mt-3 max-w-[280px] px-3 py-2 rounded-xl text-[11px] font-mono break-words
+        <p className="mt-3 max-w-[280px] px-3 py-2 rounded-xl text-11 font-mono break-words
           bg-slate-50 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400"
         >
           {error?.message ?? String(error)}

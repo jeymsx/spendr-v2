@@ -55,10 +55,10 @@ function TxRow({ tx, catMap, onClick }) {
         <CategoryGlyph cat={cat} size={16} emoji="💸" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
+        <p className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
           {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
         </p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+        <p className="text-11 text-slate-400 dark:text-slate-500 truncate mt-0.5">
           {tx.type === 'transfer'
             ? `${tx.fromAccount ?? ''} → ${tx.toAccount ?? ''}`
             : (tx.account ?? '')}
@@ -68,10 +68,10 @@ function TxRow({ tx, catMap, onClick }) {
         </p>
       </div>
       <div className="text-right shrink-0">
-        <p className={`text-[13px] font-bold tabular-nums ${cls}`}>
+        <p className={`text-13 font-bold tabular-nums ${cls}`}>
           {sign}{fmt(tx.amount)}
         </p>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{fmtTime(tx.date)}</p>
+        <p className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">{fmtTime(tx.date)}</p>
       </div>
     </button>
   )
@@ -148,11 +148,11 @@ export default function CalendarView({
             className="flex items-center gap-1.5"
             style={isCurrentMonth ? { pointerEvents: 'none' } : {}}
           >
-            <span className="text-[13px] font-semibold text-slate-600 dark:text-slate-300">
+            <span className="text-13 font-semibold text-slate-600 dark:text-slate-300">
               {monthLabel}
             </span>
             {!isCurrentMonth && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
+              <span className="text-10 font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">
                 Now
               </span>
             )}
@@ -175,7 +175,7 @@ export default function CalendarView({
           {DOW_LABELS.map(d => (
             <div
               key={d}
-              className="py-2.5 text-center text-[10px] font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500"
+              className="py-2.5 text-center text-10 font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500"
             >
               {d}
             </div>
@@ -209,7 +209,7 @@ export default function CalendarView({
                 ].join(' ')}
               >
                 <span className={[
-                  'text-[14px] leading-none',
+                  'text-14 leading-none',
                   isSelected
                     ? 'font-bold text-white'
                     : isToday
@@ -244,7 +244,7 @@ export default function CalendarView({
               {fmtGroupDate(selectedDate)}
             </span>
             <Divider className="flex-1" />
-            <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+            <span className="text-11 text-slate-400 dark:text-slate-500 tabular-nums">
               {selectedTxs.length} {selectedTxs.length === 1 ? 'txn' : 'txns'}
             </span>
           </div>

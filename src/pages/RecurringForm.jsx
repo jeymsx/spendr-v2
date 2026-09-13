@@ -320,7 +320,7 @@ export default function RecurringForm() {
                       onClick={() => setFrequency(opt.value)}
                       aria-pressed={on}
                       className={[
-                        'shrink-0 h-9 px-4 rounded-full text-[13px] font-semibold',
+                        'shrink-0 h-9 px-4 rounded-full text-13 font-semibold',
                         'border transition-colors duration-150 active:scale-95',
                         on
                           /* seg-active, not text-primary: the accent as text
@@ -381,7 +381,7 @@ export default function RecurringForm() {
                 <span className="block text-sm font-semibold text-slate-800 dark:text-white">
                   Active
                 </span>
-                <span className="block text-[12px] text-slate-500 dark:text-slate-400">
+                <span className="block text-12 text-slate-500 dark:text-slate-400">
                   Shows in upcoming and can be posted
                 </span>
               </span>

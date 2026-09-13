@@ -45,10 +45,10 @@ export default function AccountLine({ role, account }) {
     <div className="flex items-center gap-3 py-2.5">
       <CardThumb account={account} />
       <span className="flex-1 min-w-0">
-        <span className="block text-[11px] leading-tight text-slate-400 dark:text-slate-500">
+        <span className="block text-11 leading-tight text-slate-400 dark:text-slate-500">
           {role}
         </span>
-        <span className="block text-[14px] font-semibold leading-tight truncate
+        <span className="block text-14 font-semibold leading-tight truncate
           text-slate-800 dark:text-slate-100">
           {account.name}
         </span>
@@ -71,10 +71,10 @@ export function TransferLeg({ role, account }) {
     <div className="flex items-center gap-2 min-w-0">
       <CardThumb account={account} sm />
       <span className="min-w-0">
-        <span className="block text-[11px] leading-tight text-slate-400 dark:text-slate-500">
+        <span className="block text-11 leading-tight text-slate-400 dark:text-slate-500">
           {role}
         </span>
-        <span className="block text-[14px] font-semibold leading-tight truncate
+        <span className="block text-14 font-semibold leading-tight truncate
           text-slate-800 dark:text-slate-100">
           {account.name}
         </span>

@@ -81,10 +81,10 @@ export function CreatedStep({ draft, onDone, onAddTransaction }) {
       <Confetti />
 
       <div style={{ animation: 'pageFadeIn 0.45s ease both' }}>
-        <h2 className="text-[28px] font-bold tracking-tight text-slate-900 dark:text-white">
+        <h2 className="text-28 font-bold tracking-tight text-slate-900 dark:text-white">
           You&rsquo;re all set!
         </h2>
-        <p className="mt-2 text-[14px] leading-relaxed text-slate-500 dark:text-slate-400">
+        <p className="mt-2 text-14 leading-relaxed text-slate-500 dark:text-slate-400">
           <span className="font-semibold text-slate-700 dark:text-slate-200">{draft.name.trim()}</span>
           {' '}has been added to your accounts.
         </p>
@@ -96,7 +96,7 @@ export function CreatedStep({ draft, onDone, onAddTransaction }) {
         <PreviewCard draft={draft} large />
       </div>
 
-      <p className="mt-5 text-[12.5px] leading-relaxed text-slate-400 dark:text-slate-500 max-w-[300px]">
+      <p className="mt-5 text-13 leading-relaxed text-slate-400 dark:text-slate-500 max-w-[300px]">
         {isCredit
           ? 'Charges you log to it count against the limit, and installments spread across the statements they will land on.'
           : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}

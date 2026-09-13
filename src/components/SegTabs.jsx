@@ -49,7 +49,7 @@ export default function SegTabs({ tabs, value, onChange, color = 'var(--color-pr
           onClick={() => onChange(t.value)}
           aria-pressed={value === t.value}
           className={[
-            'relative z-10 flex-1 py-1.5 px-1 text-[12px] font-semibold rounded-full truncate',
+            'relative z-10 flex-1 py-1.5 px-1 text-12 font-semibold rounded-full truncate',
             'transition-colors duration-200',
             value === t.value ? 'seg-active' : 'text-slate-500 dark:text-slate-400',
           ].join(' ')}

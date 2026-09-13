@@ -199,10 +199,10 @@ export default function GoalFormSheet({
 
         {confirmDelete ? (
           <div className="py-2">
-            <p className="text-[15px] font-semibold text-slate-800 dark:text-white">
+            <p className="text-15 font-semibold text-slate-800 dark:text-white">
               Delete “{goal?.name}”?
             </p>
-            <p className="text-[13px] text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
+            <p className="text-13 text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
               The goal goes; your money does not move. Nothing was ever taken
               out of the account — a goal only ever described the balance.
             </p>
@@ -228,7 +228,7 @@ export default function GoalFormSheet({
                   <button
                     key={g}
                     onClick={() => setIcon(g)}
-                    className={`aspect-square rounded-xl flex items-center justify-center text-[18px]
+                    className={`aspect-square rounded-xl flex items-center justify-center text-18
                       border active:scale-90 transition-transform duration-75 ${
                         icon === g
                           ? 'bg-primary/[0.12] border-primary'
@@ -263,7 +263,7 @@ export default function GoalFormSheet({
                   the rest of how funding works. */}
               <SectionLabel>Funded by</SectionLabel>
               {fundable.length === 0 ? (
-                <p className="text-[13px] text-amber-600 dark:text-amber-400 mt-2">
+                <p className="text-13 text-amber-600 dark:text-amber-400 mt-2">
                   You have no cash, e-wallet, bank or savings account yet.
                 </p>
               ) : (
@@ -296,7 +296,7 @@ export default function GoalFormSheet({
                      clear affordance on iOS, and this field is optional. */
                   <button
                     onClick={() => setTargetDate('')}
-                    className="relative z-10 shrink-0 text-[12px] font-semibold text-slate-400
+                    className="relative z-10 shrink-0 text-12 font-semibold text-slate-400
                       dark:text-slate-500 active:opacity-60 px-1"
                   >
                     Clear
@@ -314,7 +314,7 @@ export default function GoalFormSheet({
               </div>
               {/* Kept: it is what the date actually does, which the field
                   cannot show. */}
-              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1.5 px-1">
+              <p className="text-12 text-slate-500 dark:text-slate-400 mt-1.5 px-1">
                 Adds a monthly figure to hit it on time.
               </p>
             </div>

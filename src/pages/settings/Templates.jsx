@@ -61,14 +61,14 @@ export function TemplateRow({ tpl, cat, onTap, onLongPressDelete }) {
       className={`flex items-center gap-3 px-4 py-3.5 select-none cursor-pointer transition-colors duration-75
         ${pressed ? 'bg-slate-50 dark:bg-white/[0.06]' : ''}`}
     >
-      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-[18px] shrink-0 ${ts.bg}`}>
+      <div className={`w-10 h-10 rounded-2xl flex items-center justify-center text-18 shrink-0 ${ts.bg}`}>
         {tpl.type === 'transfer'
                         ? <IconTransferUI size={16} />
                         : <CategoryGlyph cat={cat} size={16} emoji="⚡" />}
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{tpl.name}</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+        <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5 truncate">
           {tpl.type === 'transfer' ? `${tpl.fromAccount} → ${tpl.toAccount}` : (tpl.account ?? '')}
         </p>
       </div>
@@ -279,7 +279,7 @@ export function TemplateFormSheet({ open, onClose, template, allAccounts, allCat
                         setCategory(null); setAccount(null); setFromAcct(null); setToAcct(null)
                       }}
                       className={[
-                        'h-9 px-4 rounded-full text-[13px] font-semibold border',
+                        'h-9 px-4 rounded-full text-13 font-semibold border',
                         'transition-colors duration-150',
                         isEdit ? 'opacity-60' : 'active:scale-95',
                         on
@@ -294,7 +294,7 @@ export function TemplateFormSheet({ open, onClose, template, allAccounts, allCat
                 })}
               </div>
               {isEdit && (
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-2">
+                <p className="text-11 text-slate-400 dark:text-slate-500 mt-2">
                   Type cannot change after saving
                 </p>
               )}
@@ -477,7 +477,7 @@ export function TemplateManager({ open, onClose, variant = 'sheet' }) {
           <IconPlus size={15} strokeWidth="2.5" />
           Add Template
         </Button>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-2.5">
+        <p className="text-11 text-slate-400 dark:text-slate-500 text-center mt-2.5">
           Hold a template to quickly delete it
         </p>
       </div>

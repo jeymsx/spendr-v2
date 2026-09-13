@@ -59,7 +59,7 @@ export function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAd
     <div className="flex-1 flex flex-col gap-4 min-h-0">
       <div className="shrink-0">
         <p className="text-primary text-xs font-bold mb-3">Step 3 of 6</p>
-        <h2 className="text-[28px] font-semibold leading-tight text-white">
+        <h2 className="text-28 font-semibold leading-tight text-white">
           Which accounts<br />do you use?
         </h2>
         <p className="text-slate-500 mt-2 text-sm">Tap to select. Cash is always included.</p>
@@ -151,7 +151,7 @@ export function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAd
                         {acct.name}
                       </span>
                       {sel && (
-                        <span className="text-[10px] text-primary/70 flex items-center gap-1">
+                        <span className="text-10 text-primary/70 flex items-center gap-1">
                           <IconTick size={10} /> Selected
                         </span>
                       )}
@@ -316,7 +316,7 @@ export function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAd
       <div className="shrink-0 pt-2">
         <button
           onClick={onNext}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-16
              active:scale-[0.98] transition-all duration-100"
         >
           Continue ({totalSelected} {totalSelected === 1 ? 'account' : 'accounts'}) →

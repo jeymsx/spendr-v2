@@ -98,7 +98,7 @@ export function PolicySheet({ open, type, onClose }) {
             <div className="mb-6 px-4 py-3.5 rounded-2xl
               bg-slate-50 dark:bg-white/[0.04]
               border border-slate-200/60 dark:border-white/[0.07]">
-              <p className="text-[13px] italic leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="text-13 italic leading-relaxed text-slate-500 dark:text-slate-400">
                 {intro.b}
               </p>
             </div>
@@ -121,7 +121,7 @@ export function PolicySheet({ open, type, onClose }) {
                       className="w-[26px] h-[26px] rounded-lg flex items-center justify-center shrink-0 mt-0.5"
                       style={{ backgroundColor: 'rgba(var(--color-primary-rgb), 0.12)' }}
                     >
-                      <span className="text-[11px] font-bold tabular-nums text-primary">{i + 1}</span>
+                      <span className="text-11 font-bold tabular-nums text-primary">{i + 1}</span>
                     </div>
 
                     {/* Content */}
@@ -129,7 +129,7 @@ export function PolicySheet({ open, type, onClose }) {
                       <p className="text-sm font-bold text-slate-800 dark:text-white mb-1.5 leading-snug">
                         {s.h}
                       </p>
-                      <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed">
+                      <p className="text-13 text-slate-500 dark:text-slate-400 leading-relaxed">
                         {isContact && emailMatch ? (
                           <>
                             {beforeEmail}

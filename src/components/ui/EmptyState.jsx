@@ -68,7 +68,7 @@ export default function EmptyState({
       <p
         className={cx(
           'font-semibold text-slate-800 dark:text-white',
-          sm ? 'text-[14px]' : 'text-[15px]',
+          sm ? 'text-14' : 'text-15',
           icon && 'mt-4',
         )}
       >
@@ -79,7 +79,7 @@ export default function EmptyState({
         /* Balanced, for the same reason the confirm sheet's subtitle is: this
            is one centred sentence, and greedy wrapping strands its last word
            on a line of its own often enough to be worth asking for. */
-        <p className="mt-1.5 text-[13px] leading-relaxed text-balance text-slate-500 dark:text-slate-400">
+        <p className="mt-1.5 text-13 leading-relaxed text-balance text-slate-500 dark:text-slate-400">
           {body}
         </p>
       )}

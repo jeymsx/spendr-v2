@@ -140,12 +140,12 @@ export default function LimitMeter({
       {(label || total != null) && (
         <div className="flex items-baseline justify-between gap-3 mt-2">
           {label && (
-            <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">
+            <span className="text-12 font-medium text-slate-500 dark:text-slate-400">
               {label}
             </span>
           )}
           {total != null && (
-            <span className="text-[12px] tabular-nums text-slate-400 dark:text-slate-500">
+            <span className="text-12 tabular-nums text-slate-400 dark:text-slate-500">
               <span className="font-semibold text-slate-800 dark:text-white">{used}</span>
               {' / '}{total}
             </span>

@@ -135,7 +135,7 @@ export default function UpcomingSection({ items }) {
           /* The total covers the rows on screen, not every future bill - a
              figure that disagreed with the two rows under it would be worse
              than no figure at all. */
-          <span className="text-[13px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+          <span className="text-13 font-semibold tabular-nums text-slate-500 dark:text-slate-400">
             −{fmtCompact(total)}
           </span>
         }

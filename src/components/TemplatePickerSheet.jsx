@@ -65,7 +65,7 @@ function TemplateRow({ tpl, onTap, onLongPressDelete }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{tpl.name}</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
+        <p className="text-11 text-slate-400 dark:text-slate-500 truncate mt-0.5">
           {tpl.type === 'transfer'
             ? `${tpl.fromAccount} → ${tpl.toAccount}`
             : (tpl.account ?? '')}
@@ -141,7 +141,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
               ))}
             </Card>
           )}
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-3">
+        <p className="text-11 text-slate-400 dark:text-slate-500 text-center mt-3">
           Hold a template to delete it
         </p>
       </div>

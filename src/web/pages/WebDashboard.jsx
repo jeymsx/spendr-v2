@@ -145,18 +145,18 @@ export default function WebDashboard() {
                       </div>
                       <WebBar pct={pct} tone={pct >= 90 ? 'bad' : pct >= 70 ? 'warn' : 'accent'} />
                       <div className="flex items-center justify-between mt-1.5">
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                        <p className="text-11 text-slate-500 dark:text-slate-400">
                           {money(limit - used)} available of {moneyCompact(limit)}
                         </p>
                         {st.stmtPaid
-                          ? <p className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-400">Statement paid</p>
+                          ? <p className="text-11 font-semibold text-emerald-700 dark:text-emerald-400">Statement paid</p>
                           : st.hasStatement
-                            ? <p className="text-[11px] font-semibold text-amber-700 dark:text-amber-400">
+                            ? <p className="text-11 font-semibold text-amber-700 dark:text-amber-400">
                                 {money(st.stmtOutstanding ?? 0)} due
                               </p>
                             /* Billed nothing, so neither paid nor owing. It used
                                to read "₱0.00 due" in warning amber. */
-                            : <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">Nothing due</p>}
+                            : <p className="text-11 font-semibold text-slate-400 dark:text-slate-500">Nothing due</p>}
                       </div>
                     </Link>
                   )
@@ -195,9 +195,9 @@ export default function WebDashboard() {
                           <p className="font-medium text-slate-800 dark:text-slate-100 truncate">
                             {t.description || t.category || '—'}
                           </p>
-                          <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{acct}</p>
+                          <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{acct}</p>
                         </td>
-                        <td className="px-2 py-2.5 w-[92px] text-right whitespace-nowrap text-[11px] text-slate-500 dark:text-slate-400">
+                        <td className="px-2 py-2.5 w-[92px] text-right whitespace-nowrap text-11 text-slate-500 dark:text-slate-400">
                           {relDay(t.date)}
                         </td>
                         <td className={`px-5 py-2.5 w-[136px] text-right font-bold tabular-nums whitespace-nowrap
@@ -260,7 +260,7 @@ export default function WebDashboard() {
                     >
                       <div className="min-w-0">
                         <p className="text-xs font-medium text-slate-700 dark:text-slate-200 truncate">{r.name}</p>
-                        <p className={`text-[11px] truncate ${late
+                        <p className={`text-11 truncate ${late
                           ? 'text-red-600 dark:text-red-400 font-semibold'
                           : 'text-slate-500 dark:text-slate-400'}`}>
                           {late ? 'Overdue' : d === 0 ? 'Due today' : d === 1 ? 'Due tomorrow' : `in ${d}d`}
@@ -280,13 +280,13 @@ export default function WebDashboard() {
           <WebPanel title="Debts" to="/debts">
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl px-3.5 py-3 bg-slate-50 dark:bg-white/[0.04]">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">I owe</p>
+                <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">I owe</p>
                 <p className="text-sm font-bold tabular-nums text-red-600 dark:text-red-400 mt-1">
                   {money(s.debtTotals.iOwe)}
                 </p>
               </div>
               <div className="rounded-xl px-3.5 py-3 bg-slate-50 dark:bg-white/[0.04]">
-                <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Owed to me</p>
+                <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Owed to me</p>
                 <p className="text-sm font-bold tabular-nums text-emerald-700 dark:text-emerald-400 mt-1">
                   {money(s.debtTotals.owedToMe)}
                 </p>

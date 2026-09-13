@@ -127,14 +127,14 @@ export function QuickAction({ to, icon, label, badge = 0 }) {
           <span
             className="qa-badge absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1
               rounded-full flex items-center justify-center
-              text-[10px] font-bold tabular-nums leading-none"
+              text-10 font-bold tabular-nums leading-none"
             aria-hidden="true"
           >
             {badge > 9 ? '9+' : badge}
           </span>
         )}
       </span>
-      <span className="text-[10px] font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
+      <span className="text-10 font-medium text-slate-600 dark:text-slate-300 text-center leading-tight">
         {label}
       </span>
     </Link>

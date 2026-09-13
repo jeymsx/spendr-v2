@@ -114,7 +114,7 @@ function CategoryRow({ cat }) {
           {(over || near) && (
             <span
               className={`absolute -top-1 -right-1 w-[17px] h-[17px] rounded-full
-                flex items-center justify-center text-[11px] font-bold leading-none
+                flex items-center justify-center text-11 font-bold leading-none
                 text-white ring-2 ring-panel ${
                   over ? 'bg-red-500' : 'bg-amber-500'
                 }`}
@@ -126,18 +126,18 @@ function CategoryRow({ cat }) {
           )}
         </span>
         <div className="flex-1 min-w-0">
-          <p className="text-[14px] font-semibold text-slate-800 dark:text-slate-100 truncate">
+          <p className="text-14 font-semibold text-slate-800 dark:text-slate-100 truncate">
             {cat.name}
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
+          <p className="text-11 text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
             {fmt(cat.spent)} of {fmt(cat.budget)}
           </p>
         </div>
         <div className="text-right shrink-0">
-          <p className={`text-[14px] font-bold tabular-nums ${textClass}`}>
+          <p className={`text-14 font-bold tabular-nums ${textClass}`}>
             {Math.round(pct)}%
           </p>
-          <p className="text-[10px] tabular-nums mt-0.5 text-slate-500 dark:text-slate-400">
+          <p className="text-10 tabular-nums mt-0.5 text-slate-500 dark:text-slate-400">
             {left >= 0 ? `${fmtCompact(left)} left` : `${fmtCompact(-left)} over`}
           </p>
         </div>
@@ -185,11 +185,11 @@ function AllocationRow({ cat, maxLimit }) {
       <div className="flex items-baseline justify-between gap-3 mb-1.5">
         <span className="flex items-center gap-1.5 min-w-0">
           <span className="leading-none shrink-0"><CategoryGlyph cat={cat} size={14} emoji="💸" /></span>
-          <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200 truncate">
+          <span className="text-12 font-semibold text-slate-700 dark:text-slate-200 truncate">
             {cat.name}
           </span>
         </span>
-        <span className="text-[11px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
+        <span className="text-11 tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
           <span className={`font-semibold ${textClass}`}>{fmtCompact(cat.spent)}</span>
           {' of '}{fmtCompact(cat.budget)}
         </span>
@@ -338,7 +338,7 @@ export default function Budget() {
           {/* Kept: it is the only place the month's unbudgeted spend is
               reported while there are no limits to report against. */}
           {unbudgeted.length > 0 && (
-            <p className="-mt-6 px-8 text-center text-[12px] text-slate-500 dark:text-slate-400">
+            <p className="-mt-6 px-8 text-center text-12 text-slate-500 dark:text-slate-400">
               You have spent {fmt(totals.other)} this month across{' '}
               {unbudgeted.length} categor{unbudgeted.length === 1 ? 'y' : 'ies'}.
             </p>
@@ -455,10 +455,10 @@ export default function Budget() {
                         >
                           <CategoryGlyph cat={c} size={18} emoji="💸" />
                         </span>
-                        <p className="flex-1 min-w-0 text-[14px] font-semibold text-slate-800 dark:text-slate-100 truncate">
+                        <p className="flex-1 min-w-0 text-14 font-semibold text-slate-800 dark:text-slate-100 truncate">
                           {c.name}
                         </p>
-                        <p className="text-[14px] font-bold tabular-nums text-slate-700 dark:text-slate-200 shrink-0">
+                        <p className="text-14 font-bold tabular-nums text-slate-700 dark:text-slate-200 shrink-0">
                           {fmt(c.spent)}
                         </p>
                         <span className="text-slate-300 dark:text-slate-600 shrink-0 -mr-1" aria-hidden="true">

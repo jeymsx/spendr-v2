@@ -73,7 +73,7 @@ export function CategoryRow({ cat, onTap, onLongPressDelete }) {
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
         {(cat.budget ?? 0) > 0 && (
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
+          <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
             {fmt(cat.budget)} / mo
           </p>
         )}

@@ -372,25 +372,25 @@ export default function Dashboard() {
                         clearance px-6 gives it on the left and right. */}
                     <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-5 pb-1.5">
                   <div>
-                    <p className="text-white/50 text-[11px] mb-1">Spending</p>
+                    <p className="text-white/50 text-11 mb-1">Spending</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
                       {revealed ? fmt(spendingBalance) : '••••'}
                     </p>
-                    <p className="text-white/35 text-[10px] mt-0.5">Cash, wallets</p>
+                    <p className="text-white/35 text-10 mt-0.5">Cash, wallets</p>
                   </div>
                   <div>
-                    <p className="text-white/50 text-[11px] mb-1">Savings</p>
+                    <p className="text-white/50 text-11 mb-1">Savings</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
                       {revealed ? fmt(savingsBalance) : '••••'}
                     </p>
-                    <p className="text-white/35 text-[10px] mt-0.5">Banks, deposits</p>
+                    <p className="text-white/35 text-10 mt-0.5">Banks, deposits</p>
                   </div>
                   <div>
-                    <p className="text-white/50 text-[11px] mb-1">Credit</p>
+                    <p className="text-white/50 text-11 mb-1">Credit</p>
                     <p className="font-semibold text-sm tabular-nums text-white">
                       {revealed ? fmt(creditOutstanding) : '••••'}
                     </p>
-                    <p className="text-white/35 text-[10px] mt-0.5">
+                    <p className="text-white/35 text-10 mt-0.5">
                       {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}
                     </p>
                       </div>
@@ -511,7 +511,7 @@ export default function Dashboard() {
                   >
                     <span className="leading-none">{icon}</span>
                     <span className="text-xs font-semibold text-slate-700 dark:text-slate-200">{tpl.name}</span>
-                    <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">{compact}</span>
+                    <span className="text-11 text-slate-400 dark:text-slate-500 tabular-nums">{compact}</span>
                   </button>
                 )
               })

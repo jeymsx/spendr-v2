@@ -24,7 +24,7 @@ export default function StatTrio({ items, className = '' }) {
       {items.map(({ label, value, tone }) => (
         <div key={label}>
           <p className={cx(
-            'text-[17px] font-bold tabular-nums leading-none',
+            'text-17 font-bold tabular-nums leading-none',
             /* A tone is for a figure that means something on its own - money
                owed, a count of overdue bills. Everything else is ink. */
             tone || 'text-slate-800 dark:text-slate-100',

@@ -111,17 +111,17 @@ function GoalTile({ goal, onOpen, today }) {
           breathing room the ring used to have to find on an empty page. */}
       <GoalRing pct={goal.pct} complete={goal.complete} size={104} stroke={7}>
         <span className="text-[24px] leading-none" aria-hidden="true">{goal.icon ?? '🎯'}</span>
-        <span className={`mt-1.5 text-[11px] font-bold tabular-nums ${
+        <span className={`mt-1.5 text-11 font-bold tabular-nums ${
           goal.complete ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
         }`}>
           {Math.round(goal.pct)}%
         </span>
       </GoalRing>
 
-      <span className="mt-3 w-full truncate text-center text-[13px] font-semibold text-slate-800 dark:text-white">
+      <span className="mt-3 w-full truncate text-center text-13 font-semibold text-slate-800 dark:text-white">
         {goal.name}
       </span>
-      <span className={`mt-0.5 w-full truncate text-center text-[11px] tabular-nums ${sub.tone}`}>
+      <span className={`mt-0.5 w-full truncate text-center text-11 tabular-nums ${sub.tone}`}>
         {sub.text}
       </span>
     </Card>
@@ -175,17 +175,17 @@ function AccountSplitRow({ name, split, acct, isLast }) {
         )}
       <div className="flex-1 min-w-0">
         <div className="flex items-baseline justify-between gap-3">
-          <span className="text-[13px] font-semibold text-slate-800 dark:text-white truncate">{name}</span>
-          <span className="text-[12px] tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
+          <span className="text-13 font-semibold text-slate-800 dark:text-white truncate">{name}</span>
+          <span className="text-12 tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
             {fmtCompact(split.balance)}
           </span>
         </div>
         <ProgressBar className="mt-2" value={pct} fillClass="bg-primary" />
         <div className="flex items-baseline justify-between gap-3 mt-1.5">
-          <span className="text-[11px] text-slate-500 dark:text-slate-400 truncate min-w-0">
+          <span className="text-11 text-slate-500 dark:text-slate-400 truncate min-w-0">
             {split.goals.map(g => g.name).join(', ')}
           </span>
-          <span className="text-[11px] tabular-nums shrink-0 text-slate-400 dark:text-slate-500">
+          <span className="text-11 tabular-nums shrink-0 text-slate-400 dark:text-slate-500">
             {split.unassigned > 0 ? `${fmtCompact(split.unassigned)} free` : 'fully assigned'}
           </span>
         </div>
@@ -293,7 +293,7 @@ export default function Goals() {
           />
           {/* Kept: a constraint, and one you cannot act on from this screen. */}
           {fundable.length === 0 && (
-            <p className="-mt-8 px-8 text-center text-[12px] text-amber-600 dark:text-amber-400">
+            <p className="-mt-8 px-8 text-center text-12 text-amber-600 dark:text-amber-400">
               You will need a cash, e-wallet, bank or savings account first.
             </p>
           )}
@@ -303,10 +303,10 @@ export default function Goals() {
           {/* ── The whole plan, in one figure ── */}
           <section className="px-5">
             <SectionLabel className="text-center">Saved toward goals</SectionLabel>
-            <p className="text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            <p className="text-center text-38 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
               {fmt(alloc.totals.saved)}
             </p>
-            <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
+            <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums">
               of {fmt(alloc.totals.target)} across {alloc.totals.count} goal{alloc.totals.count === 1 ? '' : 's'}
             </p>
 
@@ -427,10 +427,10 @@ export default function Goals() {
                     <>
                       {fundingSplits.length > 0 && <Divider inset="row" />}
                       <div className="flex items-baseline justify-between gap-3 px-4 py-3">
-                        <span className="text-[13px] text-slate-500 dark:text-slate-400 truncate">
+                        <span className="text-13 text-slate-500 dark:text-slate-400 truncate">
                           {idleSplits.length} account{idleSplits.length === 1 ? '' : 's'} not funding a goal
                         </span>
-                        <span className="text-[13px] font-semibold tabular-nums shrink-0 text-slate-700 dark:text-slate-200">
+                        <span className="text-13 font-semibold tabular-nums shrink-0 text-slate-700 dark:text-slate-200">
                           {fmtCompact(idleFree)} free
                         </span>
                       </div>
@@ -447,7 +447,7 @@ export default function Goals() {
               <div className="px-5">
                 <button
                   onClick={() => setShowArchived(v => !v)}
-                  className="text-[13px] font-semibold text-slate-500 dark:text-slate-400 active:opacity-60"
+                  className="text-13 font-semibold text-slate-500 dark:text-slate-400 active:opacity-60"
                 >
                   {showArchived ? 'Hide' : 'Show'} archived ({archived.length})
                 </button>
@@ -466,10 +466,10 @@ export default function Goals() {
                           className="w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70"
                         >
                           <span className="text-[16px] leading-none opacity-50" aria-hidden="true">{g.icon ?? '🎯'}</span>
-                          <span className="flex-1 min-w-0 text-[13px] font-medium text-slate-500 dark:text-slate-400 truncate">
+                          <span className="flex-1 min-w-0 text-13 font-medium text-slate-500 dark:text-slate-400 truncate">
                             {g.name}
                           </span>
-                          <span className="text-[12px] tabular-nums text-slate-400 dark:text-slate-500 shrink-0">
+                          <span className="text-12 tabular-nums text-slate-400 dark:text-slate-500 shrink-0">
                             {g.targetDate ? `${fmtTargetDate(g.targetDate)} · ` : ''}{fmtCompact(g.target)}
                           </span>
                         </button>

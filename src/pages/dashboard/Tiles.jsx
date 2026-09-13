@@ -72,16 +72,16 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
 
       <div className="flex items-center gap-2">
         <BrandMark mark={brand.mark} size={18} className="shrink-0" />
-        <p className="text-[10px] font-medium text-white/65 truncate">{meta.label}</p>
+        <p className="text-10 font-medium text-white/65 truncate">{meta.label}</p>
       </div>
 
-      <p className="text-[13px] font-semibold truncate mt-2">{acct.name}</p>
+      <p className="text-13 font-semibold truncate mt-2">{acct.name}</p>
 
       <div className="mt-auto pt-1">
-        <p className="text-[9px] font-semibold text-white/60 mb-0.5">
+        <p className="text-10 font-semibold text-white/60 mb-0.5">
           {isCredit ? 'Available' : 'Balance'}
         </p>
-        <p className="text-[17px] font-bold tabular-nums leading-none">
+        <p className="text-17 font-bold tabular-nums leading-none">
           {hidden ? '₱ ••••' : fmt(isCredit ? available : acct.balance)}
         </p>
       </div>
@@ -112,10 +112,10 @@ export function BudgetSummaryTile({ totals, count }) {
   if (!hasBudget) {
     return (
       <Card as={Link} to="/settings" padding="md" interactive className="block">
-        <p className="text-[15px] text-slate-800 dark:text-white">
+        <p className="text-15 text-slate-800 dark:text-white">
           No <span className="font-bold">spending budget</span> set
         </p>
-        <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">
+        <p className="text-12 text-slate-500 dark:text-slate-400 mt-0.5">
           Set a monthly limit per category in <span className="font-semibold text-primary">Settings</span>
         </p>
         <BudgetMeter pct={0} className="mt-3.5" />
@@ -134,10 +134,10 @@ export function BudgetSummaryTile({ totals, count }) {
     >
       <div className="flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-[15px] text-slate-800 dark:text-white">
+          <p className="text-15 text-slate-800 dark:text-white">
             Using <span className={`font-bold ${textClass}`}>{pct}%</span> of spending budget
           </p>
-          <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
+          <p className="text-12 text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
             {fmt(totals.spent)} of {fmt(totals.budget)} across {count} categor{count === 1 ? 'y' : 'ies'}
           </p>
         </div>
@@ -197,7 +197,7 @@ export function TxRow({ tx, cat, isLast }) {
         <p className={`text-sm font-semibold tabular-nums ${amountCls}`}>
           {amountSign}{fmt(tx.amount)}
         </p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+        <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
           {fmtDate(tx.date)}
         </p>
       </div>

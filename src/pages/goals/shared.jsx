@@ -264,10 +264,10 @@ export function AccountPickRail({
               {on && <IconCheck size={10} />}
             </span>
 
-            <span className="mt-2 block truncate text-[12px] font-semibold text-slate-800 dark:text-white">
+            <span className="mt-2 block truncate text-12 font-semibold text-slate-800 dark:text-white">
               {a.name}
             </span>
-            <span className="mt-0.5 block truncate text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+            <span className="mt-0.5 block truncate text-11 tabular-nums text-slate-400 dark:text-slate-500">
               {fmtCompact(a.balance ?? 0)}
             </span>
           </button>

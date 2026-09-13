@@ -242,7 +242,7 @@ export function CategoryManager({ open, onClose, variant = 'sheet' }) {
                 >
                   Browse Presets
                 </button>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 text-center mt-1">
+                <p className="text-11 text-slate-400 dark:text-slate-500 text-center mt-1">
                   Hold a category to quickly delete it
                 </p>
               </div>

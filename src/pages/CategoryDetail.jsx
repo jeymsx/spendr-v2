@@ -172,10 +172,10 @@ export default function CategoryDetail() {
                   <CategoryGlyph cat={cat} size={24} emoji="💸" />
                 </span>
                 <div className="min-w-0">
-                  <p className="text-[11px] font-semibold text-slate-400 dark:text-slate-500">
+                  <p className="text-11 font-semibold text-slate-400 dark:text-slate-500">
                     {verb} this month
                   </p>
-                  <p className="text-[26px] font-bold tabular-nums text-slate-900 dark:text-white leading-tight">
+                  <p className="text-28 font-bold tabular-nums text-slate-900 dark:text-white leading-tight">
                     {fmt(monthTotal)}
                   </p>
                 </div>
@@ -184,7 +184,7 @@ export default function CategoryDetail() {
               {budget > 0 ? (
                 <>
                   <ProgressBar className="mt-3.5" value={pct} color={tone.color} />
-                  <p className="mt-2 text-[11.5px] tabular-nums text-slate-500 dark:text-slate-400">
+                  <p className="mt-2 text-11 tabular-nums text-slate-500 dark:text-slate-400">
                     <span className={`font-semibold ${tone.textClass}`}>
                       {Math.round(pct)}%
                     </span>
@@ -196,7 +196,7 @@ export default function CategoryDetail() {
                 /* Not an error, and not a nudge either. A category with no
                    limit is an ordinary thing - most have none - so this says
                    what is true and stops. */
-                <p className="mt-3 text-[11.5px] text-slate-400 dark:text-slate-500">
+                <p className="mt-3 text-11 text-slate-400 dark:text-slate-500">
                   No monthly limit set
                 </p>
               )}
@@ -222,7 +222,7 @@ export default function CategoryDetail() {
               <div className="flex items-start justify-between">
                 <SectionLabel inset="none" gap="none">{RANGE_TITLE[range.key]}</SectionLabel>
                 <div className="text-right shrink-0">
-                  <p className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+                  <p className="text-11 font-semibold tabular-nums text-slate-500 dark:text-slate-400">
                     {fmtCompact(rangeTotal)}
                   </p>
                   {/* The dashed line, named. An unexplained reference on a
@@ -230,7 +230,7 @@ export default function CategoryDetail() {
                       can use it, and the same slate this line is drawn in is
                       what ties the two together. */}
                   {usualTotal != null && (
-                    <p className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500 mt-0.5">
+                    <p className="text-10 tabular-nums text-slate-400 dark:text-slate-500 mt-0.5">
                       usually {fmtCompact(usualTotal)}
                     </p>
                   )}

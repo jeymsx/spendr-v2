@@ -154,7 +154,7 @@ export default function SwipeConfirm({
       {/* White on the accent, fading as the capsule comes to cover it. */}
       <span
         className="absolute inset-0 flex items-center justify-center
-          text-[14px] font-semibold text-white pointer-events-none"
+          text-14 font-semibold text-white pointer-events-none"
         style={{ opacity: 1 - progress * 0.8 }}
       >
         {showLabel}

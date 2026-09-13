@@ -197,8 +197,8 @@ export default function BudgetGauge({
           tabular figures and its truncation, none of which SVG text gives
           without restating them. */}
       <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: '49%' }}>
-        <p className="text-[12px] font-medium text-slate-400 dark:text-slate-500">{label}</p>
-        <p className="mt-0.5 text-[32px] leading-none font-semibold tracking-tight tabular-nums
+        <p className="text-12 font-medium text-slate-400 dark:text-slate-500">{label}</p>
+        <p className="mt-0.5 text-32 leading-none font-semibold tracking-tight tabular-nums
           text-slate-900 dark:text-white">
           {amount}
         </p>
@@ -210,8 +210,8 @@ export default function BudgetGauge({
            with the tips of the outermost ticks and reading as part of the
            fan rather than as a caption under it. */
         <div className="flex items-baseline justify-between gap-3 mt-3 px-1">
-          <span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400">{leftNote}</span>
-          <span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400">{rightNote}</span>
+          <span className="text-12 tabular-nums text-slate-500 dark:text-slate-400">{leftNote}</span>
+          <span className="text-12 tabular-nums text-slate-500 dark:text-slate-400">{rightNote}</span>
         </div>
       )}
     </div>

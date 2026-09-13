@@ -74,15 +74,15 @@ export function DebtCard({ debt, onEdit, onPayment }) {
 
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2">
-              <span className="font-semibold text-[15px] text-slate-800 dark:text-white truncate">
+              <span className="font-semibold text-15 text-slate-800 dark:text-white truncate">
                 {debt.contact ?? debt.name}
               </span>
-              <span className={`shrink-0 text-[10px] font-semibold px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
+              <span className={`shrink-0 text-10 font-semibold px-2 py-0.5 rounded-full ${sc.bg} ${sc.text}`}>
                 {sc.label}
               </span>
             </div>
             {dueLabel ? (
-              <p className={`text-[11.5px] mt-0.5 ${dueLabelClass}`}>
+              <p className={`text-11 mt-0.5 ${dueLabelClass}`}>
                 {/* Same vocabulary as a bill's due label - "9d overdue" -
                     so the two pages read the same. */}
                 {dueStatus === 'overdue' ? `${Math.abs(days)}d overdue · ` :
@@ -92,7 +92,7 @@ export function DebtCard({ debt, onEdit, onPayment }) {
                 {dueLabel}
               </p>
             ) : (
-              <p className="text-[11.5px] mt-0.5 text-slate-400 dark:text-slate-500">No date set</p>
+              <p className="text-11 mt-0.5 text-slate-400 dark:text-slate-500">No date set</p>
             )}
           </div>
 
@@ -112,8 +112,8 @@ export function DebtCard({ debt, onEdit, onPayment }) {
             { label: 'Remaining', value: fmt(remaining),            color: isPaid ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white' },
           ].map(({ label, value, color }) => (
             <div key={label}>
-              <p className="text-[9.5px] text-slate-500 dark:text-slate-400 font-semibold">{label}</p>
-              <p className={`text-[13px] font-bold tabular-nums mt-0.5 ${color}`}>{value}</p>
+              <p className="text-10 text-slate-500 dark:text-slate-400 font-semibold">{label}</p>
+              <p className={`text-13 font-bold tabular-nums mt-0.5 ${color}`}>{value}</p>
             </div>
           ))}
         </div>
@@ -121,7 +121,7 @@ export function DebtCard({ debt, onEdit, onPayment }) {
         <ProgressBar className="mt-3" value={pct} fillClass={barColor} />
 
         {debt.notes && (
-          <p className="mt-2.5 text-[11.5px] text-slate-500 dark:text-slate-400 line-clamp-2">{debt.notes}</p>
+          <p className="mt-2.5 text-11 text-slate-500 dark:text-slate-400 line-clamp-2">{debt.notes}</p>
         )}
       </div>
 
@@ -133,7 +133,7 @@ export function DebtCard({ debt, onEdit, onPayment }) {
             /* accent-ink, not text-primary. Measured in light mode, the raw
                accent is 2.85:1 here and 13px bold does not qualify for the
                large-text exemption, so it needed the shift. */
-            className="w-full py-3 text-[13px] font-semibold accent-ink
+            className="w-full py-3 text-13 font-semibold accent-ink
               active:bg-primary/[0.06] transition-colors"
           >
             Record a payment
@@ -165,7 +165,7 @@ export function SettledSection({ debts, onEdit }) {
           className="w-full flex items-center gap-2 text-left"
           aria-expanded={expanded}
         >
-          <span className="flex-1 text-[13px] font-semibold text-slate-700 dark:text-slate-200">
+          <span className="flex-1 text-13 font-semibold text-slate-700 dark:text-slate-200">
             Settled
             <span className="ml-1.5 text-slate-400 dark:text-slate-500 tabular-nums font-normal">
               {debts.length}
@@ -191,14 +191,14 @@ export function SettledSection({ debts, onEdit }) {
                     {getInitials(d.contact ?? d.name)}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-[14px] font-semibold text-slate-600 dark:text-slate-300 truncate">
+                    <p className="text-14 font-semibold text-slate-600 dark:text-slate-300 truncate">
                       {d.contact ?? d.name}
                     </p>
-                    <p className="text-[11.5px] text-slate-500 dark:text-slate-400">
+                    <p className="text-11 text-slate-500 dark:text-slate-400">
                       {d.type === 'i_owe' ? 'Paid off' : 'Paid back'}
                     </p>
                   </div>
-                  <p className="text-[13px] font-semibold tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                  <p className="text-13 font-semibold tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
                     {fmt(d.amount)}
                   </p>
                   <IconButton

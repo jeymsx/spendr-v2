@@ -115,11 +115,11 @@ export function WebStat({ label, value, hint, tone = 'default' }) {
 
   return (
     <div className="card rounded-2xl px-5 py-4 min-w-0">
-      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+      <p className="text-11 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
         {label}
       </p>
       <p className={`text-2xl font-bold tabular-nums mt-1.5 truncate ${toneClass}`}>{value}</p>
-      {hint && <p className="text-[11px] text-slate-500 dark:text-slate-400 mt-1 truncate">{hint}</p>}
+      {hint && <p className="text-11 text-slate-500 dark:text-slate-400 mt-1 truncate">{hint}</p>}
     </div>
   )
 }

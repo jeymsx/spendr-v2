@@ -26,14 +26,14 @@ export function TrendDelta({ data, isCredit }) {
   if (data.length < 2) return null
   const delta = data[data.length - 1].value - data[0].value
   if (Math.abs(delta) < 0.005) {
-    return <span className="text-[11px] text-slate-400 dark:text-slate-500">no change</span>
+    return <span className="text-11 text-slate-400 dark:text-slate-500">no change</span>
   }
   const bad  = isCredit ? delta > 0 : delta < 0
   const tone = bad
     ? 'text-red-500 dark:text-red-400'
     : 'text-emerald-600 dark:text-emerald-400'
   return (
-    <span className={`text-[11px] font-semibold tabular-nums ${tone}`}>
+    <span className={`text-11 font-semibold tabular-nums ${tone}`}>
       {delta > 0 ? '+' : '−'}{fmtCompact(Math.abs(delta))}
     </span>
   )

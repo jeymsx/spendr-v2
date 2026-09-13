@@ -165,7 +165,7 @@ export function SpendingTrivia({ trivia, triviaKey }) {
               The cap costs no words. All twelve strings still wrap to two
               lines at this width - measured, not assumed - and the one
               carrying a transaction's own description was already clamped. */}
-          <p className="flex-1 max-w-[calc(100%-72px)] text-[13px] font-medium text-slate-700 dark:text-slate-200 leading-relaxed line-clamp-2">
+          <p className="flex-1 max-w-[calc(100%-72px)] text-13 font-medium text-slate-700 dark:text-slate-200 leading-relaxed line-clamp-2">
             {item.text}
           </p>
           {/* Uppercase and tracked, which is this app's small-label voice
@@ -176,7 +176,7 @@ export function SpendingTrivia({ trivia, triviaKey }) {
               ml-auto is what keeps it in the corner: capping the paragraph
               leaves free space on the line, and without an auto margin the
               label just follows the shorter text inward. */}
-          <span className="ml-auto text-[9px] font-bold uppercase tracking-[0.16em] text-primary/60 shrink-0">
+          <span className="ml-auto text-10 font-bold uppercase tracking-[0.16em] text-primary/60 shrink-0">
             Tap
           </span>
         </div>

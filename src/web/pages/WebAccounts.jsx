@@ -69,12 +69,12 @@ function LedgerRow({ tx, accountName, catMap, onSelect }) {
     >
       <span className="w-6 shrink-0"><CategoryGlyph cat={catMap[tx.category]} size={16} /></span>
       <span className="flex-1 min-w-0">
-        <span className="block text-[13px] font-medium text-slate-800 dark:text-slate-100 truncate">{label}</span>
-        <span className="block text-[10px] text-slate-500 dark:text-slate-400">
+        <span className="block text-13 font-medium text-slate-800 dark:text-slate-100 truncate">{label}</span>
+        <span className="block text-10 text-slate-500 dark:text-slate-400">
           {fmtDay(tx.date)}{isInstallmentRow(tx) ? ' · installment' : ''}
         </span>
       </span>
-      <span className={`text-[13px] font-bold tabular-nums shrink-0 ${tone}`}>
+      <span className={`text-13 font-bold tabular-nums shrink-0 ${tone}`}>
         {sign}{money(tx.amount)}
       </span>
     </button>
@@ -199,7 +199,7 @@ export default function WebAccounts() {
           <WebPanel
             title="All accounts"
             bodyClass="px-2 pb-2"
-            action={<span className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+            action={<span className="text-11 font-semibold tabular-nums text-slate-500 dark:text-slate-400">
               {moneyCompact(totals.assets)} assets
             </span>}
           >
@@ -207,11 +207,11 @@ export default function WebAccounts() {
               <div key={g.key}>
                 <div className={`flex items-baseline justify-between gap-2 px-3 pb-1.5
                   ${gi === 0 ? 'pt-1' : 'pt-4'}`}>
-                  <p className="text-[10px] font-semibold uppercase tracking-wide
+                  <p className="text-10 font-semibold uppercase tracking-wide
                     text-slate-500 dark:text-slate-400">
                     {g.label}
                   </p>
-                  <p className="text-[10px] font-semibold tabular-nums
+                  <p className="text-10 font-semibold tabular-nums
                     text-slate-500 dark:text-slate-400">
                     {moneyCompact(g.key === 'credit'
                       ? g.items.reduce((s, a) => s + (creditStatus[a.name]?.currentBalance ?? 0), 0)
@@ -241,17 +241,17 @@ export default function WebAccounts() {
                         <BrandMark mark={accountBrand(a).mark} size={14} />
                       </span>
                       <span className="flex-1 min-w-0">
-                        <span className={`block text-[13px] font-medium truncate
+                        <span className={`block text-13 font-medium truncate
                           ${active ? 'text-primary' : 'text-slate-700 dark:text-slate-200'}`}>
                           {a.name}
                         </span>
                         {a.type === 'credit' && (
-                          <span className="block text-[10px] text-slate-500 dark:text-slate-400">
+                          <span className="block text-10 text-slate-500 dark:text-slate-400">
                             {money((a.creditLimit ?? 0) - (cs?.currentBalance ?? 0))} avail
                           </span>
                         )}
                       </span>
-                      <span className={`text-[13px] font-bold tabular-nums shrink-0
+                      <span className={`text-13 font-bold tabular-nums shrink-0
                         ${a.type === 'credit' ? 'text-red-600 dark:text-red-400'
                                               : 'text-slate-700 dark:text-slate-200'}`}>
                         {moneyCompact(a.type === 'credit' ? (cs?.currentBalance ?? 0) : (a.balance ?? 0))}
@@ -286,7 +286,7 @@ export default function WebAccounts() {
                   <>
                     <div className="flex items-end justify-between gap-4 mb-3">
                       <div>
-                        <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                        <p className="text-11 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                           Balance used
                         </p>
                         <p className="text-3xl font-bold tabular-nums text-red-600 dark:text-red-400">
@@ -305,41 +305,41 @@ export default function WebAccounts() {
                     />
                     <div className="grid grid-cols-4 gap-3 mt-5">
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Statement</p>
+                        <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Statement</p>
                         <p className={`text-sm font-bold tabular-nums mt-0.5 ${st.stmtPaid
                           ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
                           {st.stmtPaid ? 'Paid' : money(st.thisTotal ?? 0)}
                         </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        <p className="text-10 text-slate-500 dark:text-slate-400">
                           {cycleDay(st.cycleStart)} – {cycleDay(st.cycleEnd)}
                         </p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Next bill</p>
+                        <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Next bill</p>
                         {/* The charges landing on the next statement, not every
                             future plan month - that wider figure is nextTotal
                             and it still drives Available below. */}
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-slate-800 dark:text-white">
                           {money(st.nextStatementTotal ?? 0)}
                         </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                        <p className="text-10 text-slate-500 dark:text-slate-400">
                           {cycleDay(getNextCycleRange(selected.cutoffDate).cycleStart)} – {cycleDay(st.nextCycleEnd)}
                         </p>
                         {(st.laterTotal ?? 0) > 0 && (
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          <p className="text-10 text-slate-500 dark:text-slate-400">
                             +{money(st.laterTotal)} later
                           </p>
                         )}
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Paid</p>
+                        <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Paid</p>
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-emerald-700 dark:text-emerald-400">
                           {money(st.totalPayments ?? 0)}
                         </p>
-                        <p className="text-[10px] text-slate-500 dark:text-slate-400">since cutoff</p>
+                        <p className="text-10 text-slate-500 dark:text-slate-400">since cutoff</p>
                       </div>
                       <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Due</p>
+                        <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Due</p>
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-slate-800 dark:text-white">
                           {cycleDay(nextOccurrence(selected.dueDate))}
                         </p>
@@ -347,7 +347,7 @@ export default function WebAccounts() {
                             figure - which was printed even against a settled
                             statement. */}
                         {(st.minimumDue ?? 0) > 0 && (
-                          <p className="text-[10px] text-slate-500 dark:text-slate-400">
+                          <p className="text-10 text-slate-500 dark:text-slate-400">
                             min {moneyCompact(st.minimumDue)}
                           </p>
                         )}
@@ -357,7 +357,7 @@ export default function WebAccounts() {
                 ) : (
                   <div className="flex items-end justify-between gap-4">
                     <div>
-                      <p className="text-[11px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+                      <p className="text-11 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                         Balance
                       </p>
                       <p className="text-3xl font-bold tabular-nums text-slate-900 dark:text-white">
@@ -378,7 +378,7 @@ export default function WebAccounts() {
               <WebPanel
                 title="Ledger"
                 flush
-                action={<span className="text-[11px] text-slate-500 dark:text-slate-400">
+                action={<span className="text-11 text-slate-500 dark:text-slate-400">
                   {ledger.length} entr{ledger.length === 1 ? 'y' : 'ies'}
                 </span>}
               >

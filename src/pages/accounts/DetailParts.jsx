@@ -39,7 +39,7 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
             {title}
           </p>
           {dateRange && (
-            <p className="text-[10px] text-slate-400 dark:text-slate-600 mt-0.5">{dateRange}</p>
+            <p className="text-10 text-slate-400 dark:text-slate-600 mt-0.5">{dateRange}</p>
           )}
         </div>
         <p className={`text-sm font-bold tabular-nums ${totalColor}`}>
@@ -146,26 +146,26 @@ export function DetailTxRow({
 
       <span className="flex-1 min-w-0">
         <span className="flex items-center gap-2">
-          <span className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
+          <span className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
             {label}
           </span>
           {isTransferFee && (
-            <span className="shrink-0 text-[9px] font-semibold tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
+            <span className="shrink-0 text-10 font-semibold tracking-wide px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400">
               Fee
             </span>
           )}
         </span>
-        <span className="block text-[11px] text-slate-500 dark:text-slate-400 truncate mt-0.5">
+        <span className="block text-11 text-slate-500 dark:text-slate-400 truncate mt-0.5">
           {fmtTxDate(tx.date)}
           {meta && <span className="ml-1.5 text-slate-400 dark:text-slate-500">· {meta}</span>}
         </span>
       </span>
 
       <span className="text-right shrink-0">
-        <span className={`block text-[13px] font-bold tabular-nums ${color}`}>
+        <span className={`block text-13 font-bold tabular-nums ${color}`}>
           {sign}{fmt(tx.amount)}
         </span>
-        <span className="block text-[10px] text-slate-500 dark:text-slate-400 mt-0.5">
+        <span className="block text-10 text-slate-500 dark:text-slate-400 mt-0.5">
           {fmtTxTime(tx.date)}
         </span>
       </span>

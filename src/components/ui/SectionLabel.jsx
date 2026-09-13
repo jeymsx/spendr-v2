@@ -129,7 +129,7 @@ export default function SectionLabel({
     <div className={cx(below, className)}>
       {line}
       {hint && (
-        <p className={cx('mt-1 text-[11.5px] leading-snug text-slate-400 dark:text-slate-500', pad)}>
+        <p className={cx('mt-1 text-11 leading-snug text-slate-400 dark:text-slate-500', pad)}>
           {hint}
         </p>
       )}

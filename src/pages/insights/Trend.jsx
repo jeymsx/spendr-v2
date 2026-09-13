@@ -150,7 +150,7 @@ export function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, 
           onClick={() => setChartType(o.key)}
           aria-pressed={chartType === o.key}
           className={[
-            'relative z-10 w-[60px] py-1 text-[10px] font-semibold rounded-full',
+            'relative z-10 w-[60px] py-1 text-10 font-semibold rounded-full',
             'transition-colors duration-200',
             chartType === o.key ? 'seg-active' : 'text-slate-500 dark:text-slate-400',
           ].join(' ')}

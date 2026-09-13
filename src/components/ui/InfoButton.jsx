@@ -71,7 +71,7 @@ export default function InfoButton({
       <Sheet open={open} onClose={() => setOpen(false)} title={title}>
         {/* No padding here: Sheet's body already carries px-5 and the bottom
             inset. Adding it again indents the text past the title. */}
-        <div className="text-[13px] leading-relaxed text-slate-600 dark:text-slate-300">
+        <div className="text-13 leading-relaxed text-slate-600 dark:text-slate-300">
           {children}
         </div>
       </Sheet>

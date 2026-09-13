@@ -77,13 +77,13 @@ function SyncIndicator({ status, errMsg }) {
       style={{ top: 'max(3.5rem, calc(env(safe-area-inset-top) + 0.75rem))' }}
     >
       <div className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full
-        text-[11px] font-semibold shadow-lg ${styles.pill}`}
+        text-11 font-semibold shadow-lg ${styles.pill}`}
       >
         {styles.icon}
         <span>{styles.label}</span>
       </div>
       {status === 'error' && errMsg && (
-        <div className="max-w-[220px] px-3 py-1 rounded-full bg-red-600 text-white text-[10px] shadow-lg truncate">
+        <div className="max-w-[220px] px-3 py-1 rounded-full bg-red-600 text-white text-10 shadow-lg truncate">
           {errMsg}
         </div>
       )}

@@ -73,9 +73,9 @@ export default function Login() {
             className="w-[72px] h-[72px] rounded-[22px] bg-primary flex items-center justify-center mb-5
               shadow-[0_12px_40px_rgba(var(--color-primary-rgb),0.50)]"
           >
-            <span className="text-white text-[34px] font-semibold tracking-tighter leading-none">S</span>
+            <span className="text-white text-34 font-semibold tracking-tighter leading-none">S</span>
           </div>
-          <h1 className="text-[28px] font-semibold tracking-tight text-slate-900 dark:text-white">
+          <h1 className="text-28 font-semibold tracking-tight text-slate-900 dark:text-white">
             Spendr
           </h1>
           <p className="text-sm text-slate-400 dark:text-slate-500 mt-1.5 text-center">
@@ -112,7 +112,7 @@ export default function Login() {
           )}
         </div>
 
-        <p className="text-center text-[11px] text-slate-400 dark:text-slate-500 px-4">
+        <p className="text-center text-11 text-slate-400 dark:text-slate-500 px-4">
           By signing in you agree to sync your data securely with Supabase.
         </p>
 

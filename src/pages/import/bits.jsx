@@ -23,7 +23,7 @@ export const TYPE_STYLES = {
 
 export function TypeBadge({ type }) {
   return (
-    <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full ${TYPE_STYLES[type] ?? 'bg-slate-100 dark:bg-white/10 text-slate-500'}`}>
+    <span className={`text-10 font-semibold px-2 py-0.5 rounded-full ${TYPE_STYLES[type] ?? 'bg-slate-100 dark:bg-white/10 text-slate-500'}`}>
       {type || '?'}
     </span>
   )

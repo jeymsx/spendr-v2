@@ -130,7 +130,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab }) {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full py-[15px] rounded-2xl font-semibold text-[15px] text-white
+          className="w-full py-[15px] rounded-2xl font-semibold text-15 text-white
             bg-primary
             disabled:opacity-40 disabled:shadow-none
             active:scale-[0.98] transition-all duration-100"

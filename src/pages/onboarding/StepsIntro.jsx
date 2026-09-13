@@ -40,8 +40,8 @@ export function StepWelcome({ onNext, onSignIn, signingIn }) {
       <SpendrLogo size={72} />
 
       <div>
-        <h1 className="text-[32px] font-semibold tracking-tight text-white">Welcome to Spendr</h1>
-        <p className="text-slate-400 mt-2 text-[15px]">Your finances, beautifully tracked.</p>
+        <h1 className="text-32 font-semibold tracking-tight text-white">Welcome to Spendr</h1>
+        <p className="text-slate-400 mt-2 text-15">Your finances, beautifully tracked.</p>
       </div>
 
       <div className="flex flex-col items-center gap-2.5 text-sm text-slate-500 mt-2">
@@ -56,7 +56,7 @@ export function StepWelcome({ onNext, onSignIn, signingIn }) {
       <div className="w-full max-w-xs flex flex-col gap-3 mt-2">
         <button
           onClick={onNext}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-16
              active:scale-[0.98] transition-all duration-100"
         >
           Get started →
@@ -93,7 +93,7 @@ export function StepName({ value, onChange, onNext }) {
     <div className="flex-1 flex flex-col gap-8">
       <div>
         <p className="text-primary text-xs font-bold mb-3">Step 1 of 6</p>
-        <h2 className="text-[28px] font-semibold leading-tight text-white">
+        <h2 className="text-28 font-semibold leading-tight text-white">
           What should<br />we call you?
         </h2>
         <p className="text-slate-500 mt-2 text-sm">A first name or nickname works great.</p>
@@ -108,7 +108,7 @@ export function StepName({ value, onChange, onNext }) {
         autoFocus
         maxLength={40}
         className="w-full bg-white/[0.06] border border-white/[0.10] rounded-2xl px-5 py-4
-          text-white text-[17px] placeholder:text-slate-600
+          text-white text-17 placeholder:text-slate-600
           focus:outline-none focus:border-primary/60 focus:bg-white/[0.08]
           transition-colors"
       />
@@ -117,7 +117,7 @@ export function StepName({ value, onChange, onNext }) {
         <button
           onClick={onNext}
           disabled={!value.trim()}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-16
              active:scale-[0.98] transition-all duration-100
             disabled:opacity-40 disabled:shadow-none disabled:active:scale-100"
         >
@@ -135,7 +135,7 @@ export function StepCurrency({ value, onChange, onNext }) {
     <div className="flex-1 flex flex-col gap-8">
       <div>
         <p className="text-primary text-xs font-bold mb-3">Step 2 of 6</p>
-        <h2 className="text-[28px] font-semibold leading-tight text-white">
+        <h2 className="text-28 font-semibold leading-tight text-white">
           Your main<br />currency?
         </h2>
         <p className="text-slate-500 mt-2 text-sm">You can change this later in Settings.</p>
@@ -162,7 +162,7 @@ export function StepCurrency({ value, onChange, onNext }) {
       <div className="mt-auto">
         <button
           onClick={onNext}
-          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
+          className="w-full py-4 rounded-2xl bg-primary text-white font-bold text-16
              active:scale-[0.98] transition-all duration-100"
         >
           Continue →

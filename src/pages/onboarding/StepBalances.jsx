@@ -9,7 +9,7 @@ export function StepSetBalances({ allAccounts, balances, creditLimits, onBalance
     <div className="flex-1 flex flex-col gap-5 min-h-0">
       <div className="shrink-0">
         <p className="text-primary text-xs font-bold mb-3">Step 4 of 6</p>
-        <h2 className="text-[28px] font-semibold leading-tight text-white">
+        <h2 className="text-28 font-semibold leading-tight text-white">
           Set starting<br />balances
         </h2>
         <p className="text-slate-500 mt-2 text-sm">Enter what you currently have. You can skip for now.</p>
@@ -45,7 +45,7 @@ export function StepSetBalances({ allAccounts, balances, creditLimits, onBalance
                       <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: acct.color }} />
                     </div>
 
-                    <span className="flex-1 text-[15px] font-medium text-white truncate">{acct.name}</span>
+                    <span className="flex-1 text-15 font-medium text-white truncate">{acct.name}</span>
 
                     {!isCredit && (
                       <div className="flex items-baseline gap-0.5 shrink-0">
@@ -57,7 +57,7 @@ export function StepSetBalances({ allAccounts, balances, creditLimits, onBalance
                           onChange={e => onBalanceChange(acct.name, e.target.value)}
                           placeholder="0.00"
                           className="bg-transparent text-right text-white placeholder:text-slate-700
-                            focus:outline-none text-[15px] tabular-nums w-28"
+                            focus:outline-none text-15 tabular-nums w-28"
                         />
                       </div>
                     )}
@@ -109,13 +109,13 @@ export function StepSetBalances({ allAccounts, balances, creditLimits, onBalance
         <button
           onClick={onSkip}
           className="flex-1 py-4 rounded-full border border-white/[0.10] text-slate-400 font-semibold
-            text-[15px] active:scale-[0.98] transition-all duration-100 active:bg-white/[0.05]"
+            text-15 active:scale-[0.98] transition-all duration-100 active:bg-white/[0.05]"
         >
           Skip
         </button>
         <button
           onClick={onNext}
-          className="flex-[2] py-4 rounded-2xl bg-primary text-white font-bold text-[16px]
+          className="flex-[2] py-4 rounded-2xl bg-primary text-white font-bold text-16
              active:scale-[0.98] transition-all duration-100"
         >
           Continue →

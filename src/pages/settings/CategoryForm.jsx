@@ -243,7 +243,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
                   the real thing and the two will disagree: a preset name has
                   a drawn icon, and the emoji is what a custom name gets. */}
               {CATEGORY_ICON_BY_NAME({ name: name.trim() }) && (
-                <p className="-mt-1 mb-2 text-[11px] leading-snug text-slate-400 dark:text-slate-500">
+                <p className="-mt-1 mb-2 text-11 leading-snug text-slate-400 dark:text-slate-500">
                   “{name.trim()}” has its own icon, so it keeps that whichever
                   you pick here.
                 </p>
@@ -253,7 +253,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
                   {EMOJI_OPTIONS.map(e => (
                     <button key={e} onClick={() => setIcon(e)}
                       className={[
-                        'h-10 rounded-xl flex items-center justify-center text-[20px]',
+                        'h-10 rounded-xl flex items-center justify-center text-20',
                         'active:scale-90 transition-all duration-75',
                         icon === e
                           ? 'bg-primary/[0.12] ring-2 ring-primary/40'
@@ -297,7 +297,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               </div>
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{name || 'Category Name'}</p>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
                   {type === 'expense' ? 'Expense' : 'Inflow'}
                   {parseMoney(budget) > 0 && ` · ${fmt(parseMoney(budget))} / mo`}
                 </p>

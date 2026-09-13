@@ -102,9 +102,9 @@ function ActionTile({ icon, label, sub, onClick, disabled, tone = 'plain' }) {
         {icon}
       </span>
       <span className="min-w-0">
-        <span className="block text-[13px] font-semibold text-slate-800 dark:text-white truncate">{label}</span>
+        <span className="block text-13 font-semibold text-slate-800 dark:text-white truncate">{label}</span>
         {sub && (
-          <span className="block text-[11px] text-slate-500 dark:text-slate-400 truncate">{sub}</span>
+          <span className="block text-11 text-slate-500 dark:text-slate-400 truncate">{sub}</span>
         )}
       </span>
     </Card>
@@ -372,27 +372,27 @@ export default function RecurringDetail() {
             />
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2">
-                <p className="text-[15px] font-semibold text-slate-900 dark:text-white truncate">
+                <p className="text-15 font-semibold text-slate-900 dark:text-white truncate">
                   {rec.name}
                 </p>
                 {/* Paused still says so - it changes what every date on this
                     page means - but as a chip in a column the name already
                     occupies, so saying it costs no height. */}
                 {!rec.active && (
-                  <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-semibold
+                  <span className="shrink-0 px-2 py-0.5 rounded-full text-11 font-semibold
                     bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400">
                     Paused
                   </span>
                 )}
               </div>
 
-              <p className={`mt-0.5 text-[22px] leading-tight font-semibold tracking-tight tabular-nums ${
+              <p className={`mt-0.5 text-22 leading-tight font-semibold tracking-tight tabular-nums ${
                 rec.active
                   ? 'text-slate-900 dark:text-white'
                   : 'text-slate-400 dark:text-slate-500'
               }`}>
                 {fmt(rec.amount)}
-                <span className="text-[13px] font-medium text-slate-500 dark:text-slate-400 ml-1">
+                <span className="text-13 font-medium text-slate-500 dark:text-slate-400 ml-1">
                   /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
                 </span>
               </p>
@@ -403,7 +403,7 @@ export default function RecurringDetail() {
 
         {/* The billing line, outside the card and centred, so it reads as a
             caption on the whole bill rather than one more field in it. */}
-        <p className={`mt-3 text-center text-[13px] ${
+        <p className={`mt-3 text-center text-13 ${
           rec.active ? (DUE_TONE[due?.tone] ?? 'text-slate-500 dark:text-slate-400')
                      : 'text-slate-400 dark:text-slate-500'
         }`}>
@@ -486,7 +486,7 @@ export default function RecurringDetail() {
           inset="gutter"
           gap="tight"
           action={history?.length
-            ? <span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{fmt(paidTotal)}</span>
+            ? <span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{fmt(paidTotal)}</span>
             : null}
         >
           Billing history
@@ -519,7 +519,7 @@ export default function RecurringDetail() {
             )}
             {history && history.length > 6 && (
               <div className="px-4 py-3">
-                <p className="text-[12px] text-slate-500 dark:text-slate-400">
+                <p className="text-12 text-slate-500 dark:text-slate-400">
                   {history.length - 6} earlier
                 </p>
               </div>

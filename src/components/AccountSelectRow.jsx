@@ -91,7 +91,7 @@ export default function AccountSelectRow({
           {account?.name ?? emptyText}
         </span>
         {(sub || (error && !account)) && (
-          <span className="block text-[11px] truncate tabular-nums text-slate-400 dark:text-slate-500">
+          <span className="block text-11 truncate tabular-nums text-slate-400 dark:text-slate-500">
             {error && !account
               ? <span className="text-red-500 dark:text-red-400 font-medium tabular-nums">{errorText}</span>
               : sub}
@@ -102,7 +102,7 @@ export default function AccountSelectRow({
       {/* Not a button. The row is the target; this says so. */}
       <span
         className="shrink-0 inline-flex items-center gap-0.5 pl-2.5 pr-1.5 py-1.5 rounded-full
-          text-[11px] font-semibold
+          text-11 font-semibold
           text-slate-600 dark:text-slate-300
           bg-slate-100 dark:bg-white/[0.08]"
         aria-hidden="true"

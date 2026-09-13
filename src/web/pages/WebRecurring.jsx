@@ -102,7 +102,7 @@ export default function WebRecurring() {
                 ? 'text-slate-500 dark:text-slate-400' : 'text-slate-800 dark:text-slate-100'}`}>
                 {r.name}
               </p>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+              <p className="text-11 text-slate-500 dark:text-slate-400 truncate">
                 {r.category} · {r.account}
               </p>
             </div>
@@ -187,7 +187,7 @@ export default function WebRecurring() {
           <div className="overflow-x-auto">
           <table className="w-full table-fixed text-sm min-w-[720px]">
             <thead>
-              <tr className="text-[10px] font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
+              <tr className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">
                 <th className="text-left font-semibold px-5 py-2.5">Bill</th>
                 <th className="text-left font-semibold px-2 py-2.5 w-[110px]">Frequency</th>
                 <th className="text-left font-semibold px-2 py-2.5 w-[120px]">Next</th>

@@ -255,7 +255,7 @@ export default function WebTransactions() {
               <div className="overflow-x-auto">
               <table className="w-full table-fixed text-sm min-w-[680px]">
                 <thead>
-                  <tr className="text-[10px] font-semibold uppercase tracking-wide
+                  <tr className="text-10 font-semibold uppercase tracking-wide
                     text-slate-500 dark:text-slate-400">
                     <th className="text-left font-semibold px-5 py-2.5 w-[152px]">Date</th>
                     <th className="text-left font-semibold px-3 py-2.5">Description</th>
@@ -296,10 +296,10 @@ export default function WebTransactions() {
                         ].join(' ')}
                       >
                         <td className="px-5 py-3 whitespace-nowrap align-middle">
-                          <span className="text-[13px] font-medium text-slate-700 dark:text-slate-200">
+                          <span className="text-13 font-medium text-slate-700 dark:text-slate-200">
                             {fmtDay(t.date)}
                           </span>
-                          <span className="ml-1.5 text-[11px] text-slate-500 dark:text-slate-400">
+                          <span className="ml-1.5 text-11 text-slate-500 dark:text-slate-400">
                             {fmtTime(t.date)}
                           </span>
                         </td>
@@ -309,7 +309,7 @@ export default function WebTransactions() {
                               {t.description || (isTr ? 'Transfer' : t.category) || '—'}
                             </span>
                             {isInstallmentRow(t) && (
-                              <span className="shrink-0 text-[10px] font-semibold uppercase tracking-wide
+                              <span className="shrink-0 text-10 font-semibold uppercase tracking-wide
                                 px-1.5 py-0.5 rounded-full bg-primary/[0.12] text-primary">
                                 Installment
                               </span>
@@ -318,14 +318,14 @@ export default function WebTransactions() {
                         </td>
                         <td className="px-3 py-3 align-middle">
                           <span className="flex items-center gap-1.5 min-w-0
-                            text-[13px] text-slate-600 dark:text-slate-300">
+                            text-13 text-slate-600 dark:text-slate-300">
                             <span className="shrink-0 leading-none"><CategoryGlyph cat={cat} size={14} /></span>
                             <span className="truncate">{t.category ?? '—'}</span>
                           </span>
                         </td>
                         <td className="px-3 py-3 align-middle">
                           <span className="flex items-center gap-2 min-w-0
-                            text-[13px] text-slate-600 dark:text-slate-300">
+                            text-13 text-slate-600 dark:text-slate-300">
                             <span className="w-1.5 h-1.5 rounded-full shrink-0"
                               style={{ background: acctColor[t.account] || acctColor[t.fromAccount] || 'var(--color-primary)' }} />
                             <span className="truncate">{acct}</span>
@@ -370,7 +370,7 @@ export default function WebTransactions() {
               <p className="text-xs text-slate-500 dark:text-slate-400 py-6 text-center leading-relaxed">
                 Select a transaction to see its details.
                 <br />
-                <span className="text-[11px]">Press{' '}
+                <span className="text-11">Press{' '}
                 <kbd className="px-1 py-0.5 rounded font-mono
                   bg-slate-100 dark:bg-white/[0.08]
                   text-slate-600 dark:text-slate-300">/</kbd> to search,{' '}
@@ -410,7 +410,7 @@ export default function WebTransactions() {
                   ...(selected.synced === 1 ? [] : [['Sync', 'Pending upload']]),
                 ].map(([k, v]) => (
                   <div key={k} className="flex items-start justify-between gap-3">
-                    <dt className="text-[11px] text-slate-500 dark:text-slate-400 shrink-0">{k}</dt>
+                    <dt className="text-11 text-slate-500 dark:text-slate-400 shrink-0">{k}</dt>
                     <dd className="text-xs font-medium text-slate-700 dark:text-slate-200 text-right capitalize">{v}</dd>
                   </div>
                 ))}

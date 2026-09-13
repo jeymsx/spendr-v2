@@ -69,20 +69,20 @@ export function PreviewCard({ draft, large = false }) {
       <div className="flex items-center gap-2.5">
         <BrandMark mark={brand.mark} size={large ? 26 : 22} className="shrink-0" />
         <div className="min-w-0">
-          <p className={`font-semibold leading-tight truncate ${large ? 'text-[15px]' : 'text-[13px]'}`}>
+          <p className={`font-semibold leading-tight truncate ${large ? 'text-15' : 'text-13'}`}>
             {named || 'New account'}
           </p>
-          {subtitle && <p className="text-[10px] text-white/65 truncate">{subtitle}</p>}
+          {subtitle && <p className="text-10 text-white/65 truncate">{subtitle}</p>}
         </div>
       </div>
 
       <div className="mt-auto flex items-end justify-between gap-3">
         <div className="min-w-0">
-          <p className="text-[9px] font-semibold uppercase tracking-wider text-white/50">
+          <p className="text-10 font-semibold uppercase tracking-wider text-white/50">
             PHP
           </p>
           {isCredit && parseMoney(draft.creditLimit) > 0 && (
-            <p className="text-[11px] font-semibold tabular-nums text-white/80 mt-0.5">
+            <p className="text-11 font-semibold tabular-nums text-white/80 mt-0.5">
               {fmt(parseMoney(draft.creditLimit))} limit
             </p>
           )}
@@ -311,8 +311,8 @@ export function CardDesignGallery({ draft, set }) {
           swiping between a short name and a long one does not shift the dots
           and the CTA under it. */}
       <div className="px-6 mt-4 text-center min-h-[42px]">
-        <p className="text-[15px] font-semibold text-slate-900 dark:text-white">{meta.name}</p>
-        <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-0.5">{meta.hint}</p>
+        <p className="text-15 font-semibold text-slate-900 dark:text-white">{meta.name}</p>
+        <p className="text-12 text-slate-500 dark:text-slate-400 mt-0.5">{meta.hint}</p>
       </div>
 
       {/* Design dots. Tapping one scrolls the rail, so the gallery stays the
@@ -546,7 +546,7 @@ export function SchemeRail({ value, onChange }) {
               <SchemeMark scheme={o.value} className="scheme-ink h-[17px]
                 text-slate-800 dark:text-white" />
             ) : (
-              <span className="text-[12px] font-semibold text-slate-700 dark:text-slate-200">
+              <span className="text-12 font-semibold text-slate-700 dark:text-slate-200">
                 None
               </span>
             )}

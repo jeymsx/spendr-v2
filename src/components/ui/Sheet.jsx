@@ -401,7 +401,7 @@ export default function Sheet({
 
         {shown.title && (
           <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-3">
-            <h3 id={titleId} className="text-[17px] font-semibold text-slate-900 dark:text-white">
+            <h3 id={titleId} className="text-17 font-semibold text-slate-900 dark:text-white">
               {shown.title}
             </h3>
             {shown.titleAction}

@@ -160,7 +160,7 @@ export default function Field({
         <p
           id={msgId}
           className={cx(
-            'mt-1.5 px-1 text-[11.5px] leading-snug',
+            'mt-1.5 px-1 text-11 leading-snug',
             invalid
               ? 'text-red-500 dark:text-red-400'
               : 'text-slate-400 dark:text-slate-500',

@@ -254,7 +254,7 @@ export default function WebInsights() {
                     <span className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200 shrink-0">
                       {moneyCompact(c.value)}
                     </span>
-                    <span className="text-[10px] text-slate-500 dark:text-slate-400 w-9 text-right shrink-0">
+                    <span className="text-10 text-slate-500 dark:text-slate-400 w-9 text-right shrink-0">
                       {spent > 0 ? Math.round((c.value / spent) * 100) : 0}%
                     </span>
                   </div>
@@ -305,7 +305,7 @@ export default function WebInsights() {
                       <p className="font-medium text-slate-800 dark:text-slate-100 truncate max-w-[300px]">
                         {t.description || t.category || '—'}
                       </p>
-                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">
+                      <p className="text-11 text-slate-500 dark:text-slate-400 truncate">
                         {t.account} · {new Date(t.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                       </p>
                     </td>

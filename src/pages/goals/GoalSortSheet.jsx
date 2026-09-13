@@ -69,14 +69,14 @@ function SortableGoalRow({ goal, rank }) {
             this list is the one place the number is the point - and it is
             what the goal is called in the sentence "BPI is claimed by goals
             1 and 2". */}
-        <span className="w-5 shrink-0 text-[13px] font-bold tabular-nums text-slate-300 dark:text-slate-600">
+        <span className="w-5 shrink-0 text-13 font-bold tabular-nums text-slate-300 dark:text-slate-600">
           {rank}
         </span>
 
         {/* Small, but the same ring the grid draws - so the list you reorder
             looks like the list the ordering is for. */}
         <GoalRing pct={goal.pct} complete={goal.complete} size={34} stroke={3}>
-          <span className="text-[13px] leading-none" aria-hidden="true">{goal.icon ?? '🎯'}</span>
+          <span className="text-13 leading-none" aria-hidden="true">{goal.icon ?? '🎯'}</span>
         </GoalRing>
 
         <div className="flex-1 min-w-0">

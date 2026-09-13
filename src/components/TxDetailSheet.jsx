@@ -382,7 +382,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                   the only thing naming what you are looking at, so it sits
                   where the name goes rather than hard left. */}
               <div className="flex justify-center">
-                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.badge}`}>
+                <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-11 font-semibold ${cfg.badge}`}>
                   {cfg.label}
                 </span>
               </div>
@@ -559,10 +559,10 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               </div>
 
               <div className="text-center mt-4">
-                <h3 className="text-[17px] font-semibold text-slate-900 dark:text-white">
+                <h3 className="text-17 font-semibold text-slate-900 dark:text-white">
                   {deleteHeading}
                 </h3>
-                <p className="mt-1 mx-auto max-w-[268px] text-[12.5px] leading-snug text-balance
+                <p className="mt-1 mx-auto max-w-[268px] text-13 leading-snug text-balance
                   text-slate-400 dark:text-slate-500">
                   This cannot be undone from here, though the toast afterwards
                   offers{' '}one.
@@ -611,7 +611,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               {/* Deleting one month would strand the rest, so the whole plan
                   goes. Say so before it happens rather than after. */}
               {planCount > 1 && (
-                <p className="text-[12px] font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
+                <p className="text-12 font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
                   All {planCount} payments in this plan ({fmt(rec.amount)} × {planCount}) will be deleted.
                 </p>
               )}

@@ -94,12 +94,12 @@ function BillRow({ rec, onOpen, isLast }) {
         />
 
         <span className="flex-1 min-w-0">
-          <span className={`block text-[14px] font-semibold truncate ${
+          <span className={`block text-14 font-semibold truncate ${
             dim ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white'
           }`}>
             {rec.name}
           </span>
-          <span className="block text-[11.5px] truncate">
+          <span className="block text-11 truncate">
             {/* Paused replaces the date rather than sitting beside it. A
                 paused bill's "next" date is not going to happen, and showing
                 one anyway is the kind of detail that quietly misleads. */}
@@ -124,12 +124,12 @@ function BillRow({ rec, onOpen, isLast }) {
         </span>
 
         <span className="shrink-0 text-right">
-          <span className={`block text-[14px] font-semibold tabular-nums ${
+          <span className={`block text-14 font-semibold tabular-nums ${
             dim ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white'
           }`}>
             {fmt(rec.amount)}
           </span>
-          <span className="block text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+          <span className="block text-11 text-slate-400 dark:text-slate-500 mt-0.5">
             /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
           </span>
         </span>
@@ -183,10 +183,10 @@ function CardBillRow({ bill, onPay, isLast }) {
         </span>
 
         <span className="flex-1 min-w-0">
-          <span className="block text-[14px] font-semibold truncate text-slate-800 dark:text-white">
+          <span className="block text-14 font-semibold truncate text-slate-800 dark:text-white">
             {bill.name}
           </span>
-          <span className="block text-[11.5px] truncate">
+          <span className="block text-11 truncate">
             <span className={late
               ? 'text-red-500 dark:text-red-400 font-semibold'
               : 'text-slate-500 dark:text-slate-400'}>
@@ -200,10 +200,10 @@ function CardBillRow({ bill, onPay, isLast }) {
             fit a Pay button too, and it truncated to "min ₱5…" - which is the
             one figure on this row you cannot half-read. */}
         <span className="shrink-0 text-right">
-          <span className="block text-[14px] font-semibold tabular-nums text-slate-800 dark:text-white">
+          <span className="block text-14 font-semibold tabular-nums text-slate-800 dark:text-white">
             {fmt(bill.amount)}
           </span>
-          <span className="block text-[11px] text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
+          <span className="block text-11 text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
             {bill.minimumDue > 0 ? `min ${fmtCompact(bill.minimumDue)}` : 'statement'}
           </span>
         </span>
@@ -424,7 +424,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                   key={opt.value}
                   onClick={() => setFrequency(opt.value)}
                   className={[
-                    'h-9 px-4 rounded-full border text-[13px] font-semibold transition-all duration-150',
+                    'h-9 px-4 rounded-full border text-13 font-semibold transition-all duration-150',
                     frequency === opt.value
                       /* seg-active, not text-primary. Measured, the accent
                          as text is 2.63:1 on its own 8% tint - worse than
@@ -521,7 +521,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
             bg-white dark:bg-white/[0.05] border border-slate-200/80 dark:border-white/[0.08]">
             <div>
               <p className="text-sm font-medium text-slate-800 dark:text-white">Active</p>
-              <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+              <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
                 {active ? 'Will appear in upcoming' : 'Paused — not shown in upcoming'}
               </p>
             </div>
@@ -723,10 +723,10 @@ export default function Recurring() {
               else answered to. */}
           <section className="px-5">
             <SectionLabel className="text-center">Monthly cost</SectionLabel>
-            <p className="mt-0.5 text-center text-[38px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            <p className="mt-0.5 text-center text-38 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
               {fmt(totalMonthly)}
             </p>
-            <p className="mt-2 text-center text-[13px] text-slate-500 dark:text-slate-400">
+            <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400">
               {active.length} active {active.length === 1 ? 'bill' : 'bills'}
             </p>
 
@@ -783,7 +783,7 @@ export default function Recurring() {
               )}
 
               <SectionLabel inset="gutter" gap="tight"
-                action={<span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">Next 30 days</span>}
+                action={<span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">Next 30 days</span>}
               >Coming up</SectionLabel>
               <div className="px-5">
                 <Card clip>
@@ -815,7 +815,7 @@ export default function Recurring() {
                   <SectionLabel
                     inset="gutter"
                     gap="tight"
-                    action={<span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                    action={<span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
                       {fmtCompact(
                         items.filter(r => r.active).reduce((s, r) => s + (r.amount ?? 0), 0),
                       )}

@@ -70,7 +70,7 @@ export function TrendRangeChips({ range, onRange, ranges = TREND_RANGES }) {
             key={r.key}
             onClick={() => onRange(r.key)}
             aria-pressed={range === r.key}
-            className={`relative z-10 w-[38px] py-1.5 text-[10px] font-bold text-center
+            className={`relative z-10 w-[38px] py-1.5 text-10 font-bold text-center
               transition-colors duration-200 ${
                 range === r.key ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
               }`}
@@ -131,10 +131,10 @@ export function BalanceTrend({
       <div className={padClass}>
         <div className="h-[132px] flex flex-col items-center justify-center text-center">
           <IconFlatChart />
-          <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400 mt-3">
+          <p className="text-13 font-medium text-slate-500 dark:text-slate-400 mt-3">
             {emptyTitle ?? `Flat · ${rangeTitle.toLowerCase()}`}
           </p>
-          <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+          <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
             {emptyBody}
           </p>
         </div>
@@ -178,11 +178,11 @@ export function BalanceTrend({
                   <p className="font-medium text-slate-700 dark:text-white tabular-nums">
                     {fmt(main.value)}
                   </p>
-                  <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  <p className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">
                     {valueLabel}
                   </p>
                   {base && (
-                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 tabular-nums">
+                    <p className="text-10 text-slate-400 dark:text-slate-500 mt-1 tabular-nums">
                       {baselineLabel} {fmt(base.value)}
                     </p>
                   )}

@@ -88,7 +88,7 @@ export default function AddActionSheet({ open, onClose }) {
               <div className={`w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 ${iconBg}`}>
                 <Icon />
               </div>
-              <p className="flex-1 min-w-0 font-semibold text-[15px] text-slate-900 dark:text-white">
+              <p className="flex-1 min-w-0 font-semibold text-15 text-slate-900 dark:text-white">
                 {label}
               </p>
               <svg className="text-slate-300 dark:text-slate-600 shrink-0" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

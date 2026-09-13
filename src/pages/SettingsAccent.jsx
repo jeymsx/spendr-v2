@@ -79,7 +79,7 @@ const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
         {/* The net-worth card: the largest accent surface in the app. */}
         <div className="rounded-2xl px-3 pt-2.5 pb-3" style={{ background: cardGradient(hex, theme) }}>
           <p className="text-[6.5px] font-semibold text-white/60">Net worth</p>
-          <p className="text-[17px] font-semibold tracking-tight text-white mt-0.5">₱33,571</p>
+          <p className="text-17 font-semibold tracking-tight text-white mt-0.5">₱33,571</p>
           <div className="flex gap-2.5 mt-1.5">
             <span className="text-[6px] text-white/50">Spending</span>
             <span className="text-[6px] text-white/50">Savings</span>
@@ -467,11 +467,11 @@ export default function SettingsAccent() {
             block steady so the dots below do not jump when a two-line hint
             follows a one-line one. */}
         <div className="mt-5 px-8 text-center min-h-[46px]">
-          <p className="text-[17px] font-semibold text-slate-900 dark:text-white">
+          <p className="text-17 font-semibold text-slate-900 dark:text-white">
             {active?.name ?? 'Custom'}
           </p>
           {active?.hint && (
-            <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-1">{active.hint}</p>
+            <p className="text-12 text-slate-500 dark:text-slate-400 mt-1">{active.hint}</p>
           )}
         </div>
 

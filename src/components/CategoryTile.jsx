@@ -28,7 +28,10 @@ import { readableInk } from '../lib/color'
 export default function CategoryTile({ cat, on = false }) {
   return (
     <>
+      {/* aria-hidden: the name is the line underneath, and a screen reader
+          reading the emoji as well announces the category twice. */}
       <span
+        aria-hidden="true"
         data-on={on}
         className="cat-tile w-[50px] h-[50px] rounded-[15px] flex items-center
           justify-center text-[23px] leading-none"
@@ -50,7 +53,7 @@ export default function CategoryTile({ cat, on = false }) {
           recognise at 10px than the same name with its tail cut off. The
           glyph above it is doing most of the identifying anyway. */}
       <span className={[
-        'text-[10.5px] leading-tight text-center w-full line-clamp-2',
+        'text-10 leading-tight text-center w-full line-clamp-2',
         on
           ? 'font-semibold text-slate-900 dark:text-white'
           : 'font-medium text-slate-500 dark:text-slate-400',

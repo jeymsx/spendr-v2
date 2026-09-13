@@ -333,7 +333,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
                 placeholder-slate-400 dark:placeholder-slate-500 outline-none min-w-0 tabular-nums"
             />
             {fee > 0 && (
-              <span className="text-[11px] text-amber-600 dark:text-amber-400 shrink-0 font-medium">
+              <span className="text-11 text-amber-600 dark:text-amber-400 shrink-0 font-medium">
                 Charged as expense
               </span>
             )}

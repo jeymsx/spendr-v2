@@ -119,13 +119,13 @@ export function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, o
           report where its handles are. A box around a read-only value is a
           promise the UI does not keep. */}
       <div className="flex items-baseline justify-between mt-3">
-        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="text-13 text-slate-500 dark:text-slate-400">
           Min{' '}
           <span className="font-semibold tabular-nums text-slate-800 dark:text-slate-100">
             {amountMin == null ? 'Any' : fmtAmt(amountMin)}
           </span>
         </p>
-        <p className="text-[13px] text-slate-500 dark:text-slate-400">
+        <p className="text-13 text-slate-500 dark:text-slate-400">
           Max{' '}
           <span className="font-semibold tabular-nums text-slate-800 dark:text-slate-100">
             {amountMax == null ? 'Any' : fmtAmt(amountMax) + '+'}

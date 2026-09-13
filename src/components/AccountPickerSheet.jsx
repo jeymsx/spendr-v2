@@ -177,7 +177,7 @@ function AccountRow({ acct, selected, creditAvailMap, onPick, roundedTop = false
 
       <div className="text-right shrink-0">
         <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">{displayBal}</p>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500">{balLabel}</p>
+        <p className="text-10 text-slate-400 dark:text-slate-500">{balLabel}</p>
       </div>
 
       {isSelected && (
@@ -220,13 +220,13 @@ function ChildRow({ acct, selected, creditAvailMap, onPick, isLast }) {
       <AccountChip acct={acct} size="sm" />
 
       <div className="flex-1 min-w-0">
-        <p className="text-[13px] font-medium text-slate-700 dark:text-slate-200 truncate">{acct.name}</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500">{TYPE_LABEL[acct.type] ?? acct.type}</p>
+        <p className="text-13 font-medium text-slate-700 dark:text-slate-200 truncate">{acct.name}</p>
+        <p className="text-11 text-slate-400 dark:text-slate-500">{TYPE_LABEL[acct.type] ?? acct.type}</p>
       </div>
 
       <div className="text-right shrink-0">
-        <p className="text-[13px] font-semibold text-slate-600 dark:text-slate-300 tabular-nums">{displayBal}</p>
-        <p className="text-[10px] text-slate-400 dark:text-slate-500">{balLabel}</p>
+        <p className="text-13 font-semibold text-slate-600 dark:text-slate-300 tabular-nums">{displayBal}</p>
+        <p className="text-10 text-slate-400 dark:text-slate-500">{balLabel}</p>
       </div>
 
       {isSelected && (

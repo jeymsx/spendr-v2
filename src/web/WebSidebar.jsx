@@ -63,7 +63,7 @@ export default function WebSidebar() {
           </span>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate">{name}</p>
+            <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>
           </div>
         </div>
       </div>

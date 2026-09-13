@@ -214,7 +214,7 @@ export default function Transactions() {
       {activeFilterCount > 0 && (
         <Rail className="items-center gap-2 px-5 pb-3">
           {dateRange !== 'all' && (
-            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-11 font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
               {DATE_OPTS.find(o => o.value === dateRange)?.label}
               {dateRange === 'custom' && customFrom && ` ${customFrom}`}
@@ -223,7 +223,7 @@ export default function Transactions() {
             </span>
           )}
           {accountFilters.map(name => (
-            <span key={name} className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+            <span key={name} className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-11 font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
               {name}
               <button
@@ -234,14 +234,14 @@ export default function Transactions() {
             </span>
           ))}
           {categoryFilter && (
-            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-11 font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
               {categoryFilter}
               <button onClick={() => setCategoryFilter(null)} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
             </span>
           )}
           {(amountMin != null || amountMax != null) && (
-            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-semibold
+            <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-11 font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
               {amountMin != null ? `₱${amountMin.toLocaleString()}` : '₱0'}
               {' – '}
@@ -286,7 +286,7 @@ export default function Transactions() {
                   {fmtGroupDate(date)}
                 </span>
                 <Divider className="flex-1" />
-                <span className="text-[11px] text-slate-400 dark:text-slate-500 tabular-nums">
+                <span className="text-11 text-slate-400 dark:text-slate-500 tabular-nums">
                   {txs.length} {txs.length === 1 ? 'txn' : 'txns'}
                 </span>
               </div>

@@ -286,7 +286,7 @@ export default function AccountNew() {
       onClick={save}
       disabled={saving || !!nameProblem}
       className="w-full px-8 py-3 min-h-[44px] rounded-full
-        text-[15px] font-semibold text-white bg-primary
+        text-15 font-semibold text-white bg-primary
         shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
         disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
     >
@@ -297,7 +297,7 @@ export default function AccountNew() {
       onClick={next}
       disabled={!canAdvance}
       className="w-full px-8 py-3 min-h-[44px] rounded-full
-        text-[15px] font-semibold text-white bg-primary
+        text-15 font-semibold text-white bg-primary
         shadow-[0_6px_20px_-4px_rgba(0,0,0,0.45)]
         disabled:opacity-50 active:scale-[0.97] transition-transform duration-75"
     >
@@ -400,7 +400,7 @@ export default function AccountNew() {
           <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
             New Account
           </h1>
-          <span className="w-9 shrink-0 text-right text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+          <span className="w-9 shrink-0 text-right text-11 font-semibold tabular-nums text-slate-500 dark:text-slate-400">
             {steps.indexOf(current) + 1}/{steps.length}
           </span>
         </header>
@@ -470,7 +470,7 @@ export default function AccountNew() {
                   type="button"
                   onClick={() => setFilter(f.value)}
                   aria-pressed={filter === f.value}
-                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-[12px] font-semibold border
+                  className={`shrink-0 px-3.5 py-1.5 rounded-full text-12 font-semibold border
                     transition-colors active:scale-[0.97] ${
                       filter === f.value
                         ? 'bg-primary/[0.14] border-primary/45 text-primary'
@@ -526,7 +526,7 @@ export default function AccountNew() {
                 rather than replacing the control. The chevron is drawn beside
                 it and marked aria-hidden, since the select announces itself.
 
-                text-[16px], not the 15px the other fields use: below 16px iOS
+                text-16, not the 15px the other fields use: below 16px iOS
                 zooms the viewport when a form control takes focus, and it does
                 not zoom back out.
 
@@ -547,7 +547,7 @@ export default function AccountNew() {
                   })
                 }}
                 className="flex-1 min-w-0 bg-transparent outline-none appearance-none cursor-pointer
-                  text-[16px] font-medium text-slate-800 dark:text-white
+                  text-16 font-medium text-slate-800 dark:text-white
                   [color-scheme:light] dark:[color-scheme:dark]"
               >
                 {TYPE_OPTIONS.map(t => (
@@ -570,7 +570,7 @@ export default function AccountNew() {
             <div>
               <SectionLabel>Counts as</SectionLabel>
               <Segmented options={ROLE_OPTIONS} value={draft.role} onChange={(v) => set({ role: v })} />
-              <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-2 px-1">
+              <p className="text-12 text-slate-500 dark:text-slate-400 mt-2 px-1">
                 {ROLE_OPTIONS.find(r => r.value === draft.role)?.hint}
               </p>
             </div>
@@ -653,7 +653,7 @@ export default function AccountNew() {
             />
           </div>
 
-          <p className="text-[11px] text-slate-500 dark:text-slate-400">
+          <p className="text-11 text-slate-500 dark:text-slate-400">
             A credit card's balance comes from its charges, so it starts at zero
             and fills in as you record spending.
           </p>

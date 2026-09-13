@@ -129,40 +129,40 @@ export default function GoalDetail() {
       <div className="flex flex-col items-center px-5 mt-2">
         <GoalRing pct={goal.pct} complete={goal.complete} muted={goal.archived} size={168} stroke={11}>
           <span className="text-[46px] leading-none" aria-hidden="true">{goal.icon ?? '🎯'}</span>
-          <span className={`mt-2.5 text-[14px] font-bold tabular-nums ${
+          <span className={`mt-2.5 text-14 font-bold tabular-nums ${
             goal.complete ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 dark:text-slate-500'
           }`}>
             {Math.round(goal.pct)}%
           </span>
         </GoalRing>
 
-        <p className="mt-6 text-[34px] leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+        <p className="mt-6 text-34 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
           {fmt(goal.saved)}
         </p>
-        <p className="mt-2 text-[13px] text-slate-500 dark:text-slate-400 tabular-nums">
+        <p className="mt-2 text-13 text-slate-500 dark:text-slate-400 tabular-nums">
           of {fmt(goal.target)}
         </p>
 
         {/* The one sentence the numbers cannot say: whether this is on
             course. It is the whole reason a goal takes a date. */}
         {goal.archived ? (
-          <p className="mt-3 text-[12.5px] font-medium text-slate-400 dark:text-slate-500">
+          <p className="mt-3 text-13 font-medium text-slate-400 dark:text-slate-500">
             Archived — it is holding no money
           </p>
         ) : goal.linkedCount === 0 ? (
-          <p className="mt-3 text-[12.5px] font-medium text-amber-600 dark:text-amber-400">
+          <p className="mt-3 text-13 font-medium text-amber-600 dark:text-amber-400">
             No account attached, so this cannot move
           </p>
         ) : goal.complete ? (
-          <p className="mt-3 text-[12.5px] font-medium text-emerald-600 dark:text-emerald-400">
+          <p className="mt-3 text-13 font-medium text-emerald-600 dark:text-emerald-400">
             Fully funded{dateLabel ? ` — ahead of ${dateLabel}` : ''}
           </p>
         ) : overdue ? (
-          <p className="mt-3 text-[12.5px] font-medium text-red-500 dark:text-red-400">
+          <p className="mt-3 text-13 font-medium text-red-500 dark:text-red-400">
             {fmtCompact(goal.remaining)} short — {dateLabel} has passed
           </p>
         ) : p ? (
-          <p className="mt-3 text-[12.5px] font-medium text-slate-500 dark:text-slate-400 tabular-nums">
+          <p className="mt-3 text-13 font-medium text-slate-500 dark:text-slate-400 tabular-nums">
             {fmtCompact(p.perMonth)} a month to reach it by {dateLabel}
           </p>
         ) : null}
@@ -212,7 +212,7 @@ export default function GoalDetail() {
         <div className="px-5">
           {funding.length === 0 ? (
             <Card padding="md">
-              <p className="text-[13px] text-slate-500 dark:text-slate-400 leading-relaxed">
+              <p className="text-13 text-slate-500 dark:text-slate-400 leading-relaxed">
                 This goal is not attached to an account, so its progress can
                 never move. Attach one and it starts tracking itself.
               </p>
@@ -228,10 +228,10 @@ export default function GoalDetail() {
                     <AccountChip acct={acct} size="sm" />
                     <div className="flex-1 min-w-0">
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-[13px] font-semibold text-slate-800 dark:text-white truncate">
+                        <span className="text-13 font-semibold text-slate-800 dark:text-white truncate">
                           {acct.name}
                         </span>
-                        <span className={`text-[13px] font-semibold tabular-nums shrink-0 ${
+                        <span className={`text-13 font-semibold tabular-nums shrink-0 ${
                           amount > 0
                             ? 'text-slate-800 dark:text-white'
                             : 'text-slate-400 dark:text-slate-500'
@@ -244,7 +244,7 @@ export default function GoalDetail() {
                           so, and it is usually "a goal above took it" - which
                           is the single most confusing thing about a waterfall
                           if the app stays quiet about it. */}
-                      <p className="mt-0.5 text-[11px] text-slate-400 dark:text-slate-500 truncate tabular-nums">
+                      <p className="mt-0.5 text-11 text-slate-400 dark:text-slate-500 truncate tabular-nums">
                         {amount === 0 && ahead.length > 0
                           ? `Claimed by ${ahead.join(', ')}`
                           : amount === 0 && (split?.balance ?? 0) === 0

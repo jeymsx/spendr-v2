@@ -47,7 +47,7 @@ function RefPanel({ title, children }) {
 }
 
 const Mono = ({ children }) => (
-  <code className="px-1.5 py-0.5 rounded-md text-[11px] font-mono
+  <code className="px-1.5 py-0.5 rounded-md text-11 font-mono
     bg-slate-100 dark:bg-white/[0.07] text-slate-700 dark:text-slate-200">
     {children}
   </code>
@@ -102,14 +102,14 @@ export default function WebImport() {
               {NEW_COLS.map(([col, note]) => (
                 <div key={col}>
                   <dt className="mb-0.5"><Mono>{col}</Mono></dt>
-                  <dd className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+                  <dd className="text-11 leading-relaxed text-slate-500 dark:text-slate-400">
                     {note}
                   </dd>
                 </div>
               ))}
             </dl>
             <p className="mt-4 pt-4 border-t border-slate-100 dark:border-white/[0.06]
-              text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+              text-11 leading-relaxed text-slate-500 dark:text-slate-400">
               Older exports are detected automatically and use{' '}
               {LEGACY_COLS.map((c, i) => (
                 <span key={c}>
@@ -122,7 +122,7 @@ export default function WebImport() {
           </RefPanel>
 
           <RefPanel title="What happens on import">
-            <ul className="flex flex-col gap-2.5 text-[11px] leading-relaxed
+            <ul className="flex flex-col gap-2.5 text-11 leading-relaxed
               text-slate-500 dark:text-slate-400">
               <li>
                 Accounts and categories named in the file but missing from Spendr
@@ -144,13 +144,13 @@ export default function WebImport() {
           </RefPanel>
 
           <RefPanel title="Before a large import">
-            <p className="text-[11px] leading-relaxed text-slate-500 dark:text-slate-400">
+            <p className="text-11 leading-relaxed text-slate-500 dark:text-slate-400">
               Take a backup first. Import has no undo, and a JSON backup restores
               the whole database if a file turns out to be wrong.
             </p>
             <Link
               to="/settings"
-              className="mt-3 inline-flex items-center h-8 px-3 rounded-xl text-[11px] font-semibold
+              className="mt-3 inline-flex items-center h-8 px-3 rounded-xl text-11 font-semibold
                 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.07]
                 hover:bg-slate-200 dark:hover:bg-white/[0.12] transition-colors duration-150"
             >

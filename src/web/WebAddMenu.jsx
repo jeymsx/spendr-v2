@@ -135,10 +135,10 @@ export default function WebAddMenu() {
                 {f.sign}
               </span>
               <span className="min-w-0">
-                <span className="block text-[13px] font-semibold text-slate-800 dark:text-white leading-tight">
+                <span className="block text-13 font-semibold text-slate-800 dark:text-white leading-tight">
                   {f.label}
                 </span>
-                <span className="block text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                <span className="block text-10 text-slate-500 dark:text-slate-400 truncate">
                   {f.hint}
                 </span>
               </span>

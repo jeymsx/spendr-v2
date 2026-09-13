@@ -78,7 +78,7 @@ const SearchField = forwardRef(function SearchField({
         placeholder={placeholder}
         value={value}
         onChange={onChange}
-        className={cx('flex-1 min-w-0 bg-transparent text-[13px] outline-none', t.input)}
+        className={cx('flex-1 min-w-0 bg-transparent text-13 outline-none', t.input)}
         {...rest}
       />
       {onClear && value && (

@@ -71,7 +71,7 @@ function Tab({ path, label, Icon }) {
         <Icon active={active} />
       </span>
       <span
-        className={`text-[10px] font-medium tracking-wide ${
+        className={`text-10 font-medium tracking-wide ${
           active ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
         }`}
       >
@@ -216,7 +216,7 @@ export default function Navbar({ onAddClick, onQuickLog }) {
             <line x1="5" y1="12" x2="19" y2="12" />
           </svg>
         </button>
-        <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">Add</span>
+        <span className="text-10 font-medium text-slate-400 dark:text-slate-500 mt-0.5">Add</span>
       </div>
 
       {/* right tabs */}

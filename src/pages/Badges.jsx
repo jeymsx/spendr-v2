@@ -48,7 +48,7 @@ function BadgeTile({ badge, onOpen }) {
       className="flex flex-col items-center gap-2 px-1.5 pt-3.5 pb-3"
     >
       <BadgeMark badge={badge} earned={badge.earned} size={72} />
-      <span className={`text-[11px] font-semibold leading-[1.25] text-center ${
+      <span className={`text-11 font-semibold leading-[1.25] text-center ${
         badge.earned
           ? 'text-slate-700 dark:text-slate-200'
           : 'text-slate-400 dark:text-slate-500'

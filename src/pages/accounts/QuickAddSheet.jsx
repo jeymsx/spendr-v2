@@ -148,7 +148,7 @@ export function PopularCard({ acct, onPick }) {
     >
       <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: acct.color }} />
       <span className="text-sm font-semibold text-slate-800 dark:text-white mt-2 leading-tight">{acct.name}</span>
-      <span className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">{TYPE_LABEL_SHORT[acct.type]}</span>
+      <span className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">{TYPE_LABEL_SHORT[acct.type]}</span>
     </button>
   )
 }
@@ -197,7 +197,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
           onClick={() => { onClose(); setTimeout(onCustom, 260) }}
         >
           <span className="w-5 h-5 rounded-full bg-slate-300 dark:bg-white/[0.15]
-            flex items-center justify-center text-[11px] font-bold text-slate-600 dark:text-white">
+            flex items-center justify-center text-11 font-bold text-slate-600 dark:text-white">
             +
           </span>
           Custom account

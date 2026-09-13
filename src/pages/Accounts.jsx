@@ -378,7 +378,7 @@ export default function Accounts() {
                   {parent.name}
                 </span>
                 <Divider className="flex-1" />
-                <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+                <span className="text-11 tabular-nums text-slate-400 dark:text-slate-500">
                   {fmt(groupTotal)}
                 </span>
               </div>
@@ -417,7 +417,7 @@ export default function Accounts() {
                 {group.label}
               </span>
               <Divider className="flex-1" />
-              <span className="text-[11px] tabular-nums text-slate-400 dark:text-slate-500">
+              <span className="text-11 tabular-nums text-slate-400 dark:text-slate-500">
                 {fmt(group.accounts.reduce((s, a) => s + acctTotal(a, creditStmtMap), 0))}
               </span>
             </div>

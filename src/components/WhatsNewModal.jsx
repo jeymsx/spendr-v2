@@ -120,7 +120,7 @@ export default function WhatsNewModal({ onClose }) {
         </div>
         <div>
           <h2 className="text-base font-bold text-slate-900 dark:text-white leading-tight">What&apos;s new</h2>
-          <p className="text-[11px] font-semibold accent-ink">Version {CURRENT_VERSION}</p>
+          <p className="text-11 font-semibold accent-ink">Version {CURRENT_VERSION}</p>
         </div>
       </div>
 

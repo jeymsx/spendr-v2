@@ -572,7 +572,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     line rather than a sentence about the home screen, which
                     is what the other form already said. */}
                 <Segmented options={ROLE_OPTIONS} value={role} onChange={setRole} />
-                <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-2 px-1">
+                <p className="text-12 text-slate-500 dark:text-slate-400 mt-2 px-1">
                   {ROLE_OPTIONS.find(r => r.value === role)?.hint}
                 </p>
               </div>
@@ -651,7 +651,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   onChange={moneyChangeHandler(setStartingBal)}
                 />
                 {isEdit && adjustDiff !== 0 && (
-                  <p className={`mt-2 px-1 text-[12px] font-medium ${
+                  <p className={`mt-2 px-1 text-12 font-medium ${
                     adjustDiff > 0
                       ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-red-500 dark:text-red-400'
@@ -746,7 +746,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   </div>
                 </div>
 
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 px-1 -mt-2">
+                <p className="text-11 text-slate-400 dark:text-slate-500 px-1 -mt-2">
                   Statement day = billing closes · Due day = payment deadline · Cutoff = new cycle starts
                 </p>
               </div>
@@ -783,7 +783,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     />
                   </button>
                   <div className="flex-1 min-w-0 pt-1">
-                    <p className="text-[13px] font-medium text-slate-600 dark:text-slate-300">
+                    <p className="text-13 font-medium text-slate-600 dark:text-slate-300">
                       Shown on this account so you can be paid without opening the bank app.
                     </p>
                     <div className="flex items-center gap-2 mt-3">
@@ -855,7 +855,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               <button
                 onClick={handleDeleteCheck}
                 disabled={saving}
-                className="mt-1 mx-auto px-4 py-2.5 rounded-xl text-[13px] font-semibold
+                className="mt-1 mx-auto px-4 py-2.5 rounded-xl text-13 font-semibold
                   text-red-500 dark:text-red-400 disabled:opacity-40
                   active:bg-red-50 dark:active:bg-red-500/10 transition-colors"
               >

@@ -150,7 +150,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           screens. */}
       <div>
         <div className="flex items-center justify-center gap-2">
-          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.badge}`}>
+          <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-11 font-semibold ${cfg.badge}`}>
             {cfg.label}
           </span>
           <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 truncate">
@@ -186,7 +186,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           {template.type !== 'transfer' && (
             <div className="py-2.5">
               <div className={fieldFrame(false)}>
-                <span className="text-[13px] text-slate-500 dark:text-slate-400 shrink-0">Note</span>
+                <span className="text-13 text-slate-500 dark:text-slate-400 shrink-0">Note</span>
                 <input
                   type="text"
                   value={description}
@@ -194,7 +194,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
                   placeholder="Optional"
                   maxLength={100}
                   className="flex-1 min-w-0 bg-transparent outline-none text-right
-                    text-[14px] font-medium text-slate-800 dark:text-white
+                    text-14 font-medium text-slate-800 dark:text-white
                     placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal"
                 />
               </div>

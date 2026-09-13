@@ -236,11 +236,11 @@ export default function Settings() {
               {displayName || user?.email?.split('@')[0] || 'Your Name'}
             </p>
             <div className="flex items-center gap-2 mt-1 flex-wrap">
-              <span className="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 accent-ink">
+              <span className="text-11 font-semibold px-2 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 accent-ink">
                 {currency}
               </span>
               {user?.email && (
-                <span className="text-[11px] text-slate-400 dark:text-slate-500 truncate max-w-[160px]">
+                <span className="text-11 text-slate-400 dark:text-slate-500 truncate max-w-[160px]">
                   {user.email}
                 </span>
               )}
@@ -795,10 +795,10 @@ export default function Settings() {
           className="w-14 h-14 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
         />
         <p className="text-base font-bold text-slate-800 dark:text-white tracking-tight">Spendr</p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500 leading-relaxed max-w-[260px]">
+        <p className="text-11 text-slate-400 dark:text-slate-500 leading-relaxed max-w-[260px]">
           Spendr is an independent tool and is not affiliated with any financial institutions mentioned within the app.
         </p>
-        <p className="text-[11px] text-slate-400 dark:text-slate-500">
+        <p className="text-11 text-slate-400 dark:text-slate-500">
           © {new Date().getFullYear()} James Sablay · v{APP_VERSION}
         </p>
       </div>
