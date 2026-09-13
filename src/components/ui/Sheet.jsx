@@ -1,5 +1,6 @@
 import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { useScrollLock } from '../../hooks/useScrollLock'
+import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 import FadeScroller from '../FadeScroller'
 import { cx } from './cx'
 
@@ -182,6 +183,13 @@ export default function Sheet({
   const closing = phase === 'exiting'
   useScrollLock(open || closing)
 
+  /* Where the screen actually ends once the keyboard is over it. Hooks run
+     unconditionally, above the early return below - this one is cheap when
+     no keyboard is open, and a hook behind a condition is a changed hook
+     count and a hard React error rather than a glitch. */
+  const kb = useKeyboardInset()
+  const keyboardOpen = kb.open
+
   useEffect(() => {
     if (open) {
       /* The rule is right in general and wrong here: an enter/exit animation
@@ -340,8 +348,27 @@ export default function Sheet({
      migration - 20px quietly shaved 4px off the bottom of all of them. */
   const bottomPad = isDocked ? 'pb-[max(24px,env(safe-area-inset-bottom))]' : 'pb-5'
 
+  /* The container is sized to the VISIBLE screen while a keyboard is up, not
+     to the layout viewport - which iOS does not shrink, so `inset-0` alone
+     puts the panel's bottom edge behind the keyboard and lets iOS drag the
+     whole thing upward to compensate. See hooks/useKeyboardInset.js.
+
+     On the container, never on the panel. `html.web .sheet-panel` sets the
+     desktop modal's geometry as a class, and an inline style on the panel
+     beats any stylesheet - the note in index.css is about the two commits
+     that spent proving it. The panel is absolute inside this box, so moving
+     the box moves the panel with nothing overridden.
+
+     Nothing is written at all unless a keyboard is actually open, so desktop
+     and every browser without visualViewport render exactly the markup they
+     rendered before. */
   return (
-    <div className="fixed inset-0" style={{ zIndex: z }}>
+    <div
+      className="fixed inset-0"
+      style={keyboardOpen
+        ? { zIndex: z, top: kb.top, height: kb.height, bottom: 'auto' }
+        : { zIndex: z }}
+    >
       <div
         className="sheet-overlay absolute inset-0 backdrop-blur-sm"
         style={{ backgroundColor: `rgba(0,0,0,${scrim / 100})` }}

@@ -1,5 +1,6 @@
 import { useRef, useCallback, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
+import { useKeyboardInset } from '../hooks/useKeyboardInset'
 
 /* ── SVG icon primitives ───────────────────────────────── */
 function IconHome({ active }) {
@@ -154,6 +155,16 @@ export default function Navbar({ onAddClick, onQuickLog }) {
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
+  /* Out of the way while the keyboard is up.
+     A tab bar is pinned to the bottom of the LAYOUT viewport, which iOS does
+     not shrink for the keyboard - so it ends up dragged into the middle of
+     the screen with a strip of background under it, which is the gap you see.
+     Following the visible viewport instead would leave a tab bar hovering on
+     top of the keyboard, which is worse and is why no native app does it:
+     nothing here is reachable while you are typing anyway.
+     See hooks/useKeyboardInset.js. */
+  const { open: keyboardOpen } = useKeyboardInset()
+
   return (
     <nav
       className={[
@@ -163,7 +174,8 @@ export default function Navbar({ onAddClick, onQuickLog }) {
         'bg-white/90 border-t border-slate-200/70',
         'dark:bg-navy/90 dark:border-white/[0.06]',
         'backdrop-filter backdrop-blur-xl',
-      ].join(' ')}
+        keyboardOpen && 'hidden',
+      ].filter(Boolean).join(' ')}
       style={{ paddingTop: '8px', paddingBottom: '16px' }}
     >
       {/* left tabs */}
