@@ -42,7 +42,7 @@ import { fileURLToPath } from 'node:url'
 const HERE = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(HERE, '..')
 const CHECKERS = ['scopecheck.mjs', 'tdzcheck.mjs', 'hookcheck.mjs', 'importcheck.mjs',
-                  'designcheck.mjs']
+                  'designcheck.mjs', 'copycheck.mjs']
 
 function collect(dir, out = []) {
   for (const name of readdirSync(dir)) {
