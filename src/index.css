@@ -512,6 +512,19 @@ html.dark body {
   bottom: -3%;
 }
 
+/* A stacked lockup - MariBank's "Mari" over "Bank" - is roughly square by
+   ratio and so would be sized and bled like a compact symbol, which takes a
+   letter off the end of both lines. It is still a wordmark: the letterforms
+   are the whole of it, and any bleed removes some.
+   So it is the one variant that does not run off an edge. Sized between a
+   mark and a wordmark and set into the lower right, which is where the other
+   two end up anyway once their bleed is accounted for. */
+.acct-card > .acct-card-watermark[data-wm='stack'] {
+  width: 44%;
+  right: 5%;
+  bottom: 7%;
+}
+
 /* Flatten whatever arrived to one white silhouette. !important is deliberate:
    it has to beat any inline fill left on a downloaded file. fill-rule is left
    alone, because overriding it fills the holes in a mark. */

@@ -66,13 +66,26 @@ const SHAPE_BY_KEY = Object.fromEntries(
  * that are a shape rather than letters.
  */
 const BRAND_ART = {
-  // Mari is Sea Group's; its mark is an M built from water. The wave sits
-  // under the letter so it is not just another M.
+  /* MariBank prints its NAME on the card, not its logomark: "Mari" over
+     "Bank", stacked tight and set large across the left of the plastic, with
+     the lower word starting a shade further left than the upper one. That
+     stagger is the lockup - left-align both and it reads as two words that
+     happen to be above each other.
+     Two lines rather than one because the ratio is the point: stacked it is
+     roughly square and gets the compact treatment, where "MariBank" on one
+     line would be a 4:1 strip sized like a wordmark and read as a different
+     brand's card. */
   maribank: {
-    viewBox: '0 0 120 60',
-    text: 'M',
-    art: 'M28 46q8-7 16 0t16 0 16 0 16 0v7q-8 7-16 0t-16 0-16 0-16 0z',
-    textDy: -8,
+    viewBox: '0 0 104 96',
+    lines: [
+      { text: 'Mari', x: 9, y: 44 },
+      { text: 'Bank', x: 2, y: 88 },
+    ],
+    fontSize: 42,
+    fontWeight: 800,
+    letterSpacing: -1.5,
+    anchor: 'start',
+    wm: 'stack',
   },
 
   // Plain cash has no institution and so no logo. It used to fall through to
@@ -160,10 +173,34 @@ export default function BrandWatermark({ brand, className = 'acct-card-watermark
   const box = art.viewBox ?? '0 0 120 60'
   const [, , boxW, boxH] = box.trim().split(/[\s,]+/).map(Number)
 
+  /* Art may name its own treatment. shapeOfBox reads the ratio, which is
+     the right answer for a downloaded file and the wrong one for a STACKED
+     lockup: two lines are roughly square, so it would be sized and bled like
+     a compact symbol and lose a letter off each line. */
   return (
-    <span className={className} data-wm={shapeOfBox(box)} aria-hidden="true">
+    <span className={className} data-wm={art.wm ?? shapeOfBox(box)} aria-hidden="true">
       <svg viewBox={box} focusable="false" fill="currentColor">
         {art.art && <path d={art.art} />}
+
+        {/* A stacked lockup: each line placed outright, because the offset
+            between them is what makes it that brand's mark rather than two
+            centred words. Its own <text> per line rather than <tspan>, so a
+            line carries its own x without inheriting the previous one's. */}
+        {art.lines?.map(line => (
+          <text
+            key={line.text}
+            x={line.x}
+            y={line.y}
+            textAnchor={art.anchor ?? 'start'}
+            fontSize={art.fontSize ?? fontSizeFor(line.text)}
+            fontWeight={art.fontWeight ?? 900}
+            letterSpacing={art.letterSpacing ?? -1}
+            fontFamily="Inter, system-ui, -apple-system, sans-serif"
+          >
+            {line.text}
+          </text>
+        ))}
+
         {art.text && (
           <text
             x={boxW / 2}
