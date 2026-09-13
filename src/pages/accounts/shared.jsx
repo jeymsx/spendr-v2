@@ -56,6 +56,33 @@ export function inputClass(error = false) {
 }
 
 /**
+ * One selectable chip in a row of them: account type, and the parent picker.
+ *
+ * These were a shape of their own - `rounded-xl`, no border, a flat slate
+ * fill - and nothing else in the app wore it. Every other chip row is a
+ * bordered capsule: the installment terms on the expense form, the filter row
+ * on the create flow, the active filters on Transactions. Beside the form's
+ * own radius-16 fields, a radius-12 block with no outline read as a grey box
+ * rather than as something you could tap, which is exactly what it looked
+ * like on a dark screen.
+ *
+ * So: the capsule, 38px tall, a hairline whether or not it is chosen, and the
+ * accent filling it when it is. The height is the terms row's, not a guess -
+ * the two are the same control and should line up if they ever meet.
+ *
+ * @param {boolean} on
+ */
+export function chipClass(on) {
+  return [
+    'shrink-0 px-3.5 h-[38px] rounded-full text-xs font-semibold',
+    'border transition-colors duration-150 active:scale-95',
+    on
+      ? 'bg-primary border-primary text-white'
+      : 'bg-white dark:bg-white/[0.05] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-white/[0.09]',
+  ].join(' ')
+}
+
+/**
  * "Sep 15" for the next time a day-of-month comes round, or null if the day
  * is not a real one.
  *

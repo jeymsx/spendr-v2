@@ -13,24 +13,25 @@ import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
 import { PH_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
-import { PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole } from '../../lib/accountMeta'
+import { PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole } from '../../lib/accountMeta'
 import { fmt } from '../../lib/money'
 import SubPage from '../../components/SubPage'
 import {
   PreviewCard,
   SchemeRail,
 } from '../../components/CardStyle'
-import { IconCard, IconWalletUI, IconBankUI, IconTrash } from '../../components/icons'
+import { IconCard, IconTrash } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
 import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
 import Field from '../../components/ui/Field'
 import MoneyField from '../../components/ui/MoneyField'
-import { inputClass } from './shared'
+import { inputClass, chipClass } from './shared'
 import { CardStyleSheet } from './CardStyleSheet'
 import { QrCropSheet } from './QrSheets'
 import Rail from '../../components/ui/Rail'
+import Segmented from '../../components/ui/Segmented'
 
 // ── Account form sheet ─────────────────────────────────────────────────────────
 
@@ -535,12 +536,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     <button
                       key={o.value}
                       onClick={() => { setType(o.value); setRole(defaultRole(o.value)) }}
-                      className={[
-                        'px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
-                        type === o.value
-                          ? 'bg-primary text-white'
-                          : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
-                      ].join(' ')}
+                      className={chipClass(type === o.value)}
                     >
                       {o.shortLabel}
                     </button>
@@ -567,28 +563,17 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             {type !== 'credit' && (
               <div>
                 <SectionLabel>Counts as</SectionLabel>
-                <div className="flex gap-2">
-                  {[
-                    { value: 'spending', label: 'Spending', Icon: IconWalletUI },
-                    { value: 'savings',  label: 'Savings',  Icon: IconBankUI   },
-                  ].map(o => (
-                    <button
-                      key={o.value}
-                      onClick={() => setRole(o.value)}
-                      className={[
-                        'flex-1 flex items-center justify-center gap-2 py-2.5 rounded-xl text-sm font-semibold transition-all duration-75 active:scale-95',
-                        role === o.value
-                          ? 'bg-primary text-white'
-                          : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
-                      ].join(' ')}
-                    >
-                      <o.Icon size={15} />
-                      <span>{o.label}</span>
-                    </button>
-                  ))}
-                </div>
-                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-1.5 px-1">
-                  How this account is grouped on the home screen
+                {/* The create flow's control, not a second one.
+
+                    This was a pair of filled buttons with a wallet and a bank
+                    icon; the create flow asks the same question with a
+                    segmented track two taps earlier. Same question, same
+                    control - and the hint is now the chosen answer's own
+                    line rather than a sentence about the home screen, which
+                    is what the other form already said. */}
+                <Segmented options={ROLE_OPTIONS} value={role} onChange={setRole} />
+                <p className="text-[12px] text-slate-500 dark:text-slate-400 mt-2 px-1">
+                  {ROLE_OPTIONS.find(r => r.value === role)?.hint}
                 </p>
               </div>
             )}
@@ -622,12 +607,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 <Rail className="items-center gap-2 px-5 -mx-5 py-0.5">
                   <button
                     onClick={() => setParentName(null)}
-                    className={[
-                      'shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
-                      parentName === null
-                        ? 'bg-primary text-white'
-                        : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
-                    ].join(' ')}
+                    className={chipClass(parentName === null)}
                   >
                     None
                   </button>
@@ -635,12 +615,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     <button
                       key={acct.id}
                       onClick={() => setParentName(acct.name)}
-                      className={[
-                        'shrink-0 px-3.5 py-2 rounded-xl text-xs font-semibold transition-all duration-75 active:scale-95',
-                        parentName === acct.name
-                          ? 'bg-primary text-white'
-                          : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
-                      ].join(' ')}
+                      className={chipClass(parentName === acct.name)}
                     >
                       {acct.name}
                     </button>

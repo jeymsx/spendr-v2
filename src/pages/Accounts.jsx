@@ -22,7 +22,7 @@ import { IconPlus } from '../components/icons'
    thing - a tappable name-and-dot chip in the quick-add sheet. This one
    is the account's card face at row size. */
 import {
-  PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole,
+  PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole,
 } from '../lib/accountMeta'
 import { fmt } from '../lib/money'
 import IconButton from '../components/ui/IconButton'
@@ -40,7 +40,7 @@ import {
 /* Re-exported, not redefined. They moved to lib/accountMeta.js so that
    components/CardStyle.jsx can have them without importing a page - see the
    note there. Every `from './Accounts'` import in the app still resolves. */
-export { fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, defaultRole }
+export { fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole }
 
 /* ── The rest of the public surface ──────────────────────────────────────────
    The form, the QR viewer and the three detail pieces moved to ./accounts/,

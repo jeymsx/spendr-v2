@@ -12,11 +12,12 @@ import {
   SchemeRail,
 } from '../components/CardStyle'
 import {
-  TYPE_OPTIONS, defaultRole, buildAccountRow, createAccount,
+  TYPE_OPTIONS, ROLE_OPTIONS, defaultRole, buildAccountRow, createAccount,
 } from './Accounts'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
-import { Segmented, BrandTile, StepProgress, inputCls } from './accounts/NewFields'
+import Segmented from '../components/ui/Segmented'
+import { BrandTile, StepProgress, inputCls } from './accounts/NewFields'
 import { StyleStep, CreatedStep } from './accounts/NewCardStyleStep'
 import Rail from '../components/ui/Rail'
 
@@ -49,11 +50,6 @@ const FILTERS = [
   { value: 'E-Wallets',         label: 'Wallets' },
   { value: 'Traditional Banks', label: 'Banks' },
   { value: 'Digital Banks',     label: 'Digital' },
-]
-
-const ROLE_OPTIONS = [
-  { value: 'spending', label: 'Spending', hint: 'Day-to-day money you spend from' },
-  { value: 'savings',  label: 'Savings',  hint: 'Money you are holding, not spending' },
 ]
 
 // ── Icons ──────────────────────────────────────────────────────────────────────

@@ -29,6 +29,17 @@ export const TYPE_OPTIONS = [
 
 export const TYPE_LABEL = Object.fromEntries(TYPE_OPTIONS.map(t => [t.value, t.label]))
 
+/* What "Counts as" offers, and the line under each answer.
+
+   Here rather than in either form because both of them ask it - the create
+   flow on its details step, the edit form further down the same list of
+   fields - and a question asked twice with two different sets of words is
+   how the two screens started looking like two different apps. */
+export const ROLE_OPTIONS = [
+  { value: 'spending', label: 'Spending', hint: 'Day-to-day money you spend from' },
+  { value: 'savings',  label: 'Savings',  hint: 'Money you are holding, not spending' },
+]
+
 /** @param {string} type */
 export function defaultRole(type) {
   if (type === 'credit') return 'credit'

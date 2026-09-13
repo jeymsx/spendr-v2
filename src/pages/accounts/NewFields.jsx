@@ -18,54 +18,9 @@ export const inputCls = (bad = false) =>
    placeholder:text-slate-400 dark:placeholder:text-slate-500
    focus:outline-none focus:border-primary/60`
 
-/**
- * A segmented control: one track, equal segments, the selection sliding
- * between them. The platform control for a small mutually-exclusive choice,
- * and it cannot produce an orphan the way wrapping chips do.
- *
- * Only for two or three options - past that the labels get too narrow to
- * read, which is what OptionGrid is for.
- */
-export function Segmented({ options, value, onChange }) {
-  const index = Math.max(0, options.findIndex(o => o.value === value))
-  return (
-    <div
-      className="relative flex p-1 rounded-2xl bg-slate-100 dark:bg-white/[0.06]
-        border border-slate-200/70 dark:border-white/[0.06]"
-      role="radiogroup"
-    >
-      {/* The moving thumb, sized as a fraction of the track so it lands on
-          each segment exactly however many there are. */}
-      <span
-        aria-hidden="true"
-        className="absolute top-1 bottom-1 rounded-xl bg-white dark:bg-white/[0.14]
-          shadow-sm transition-transform duration-200 ease-out"
-        style={{
-          width: `calc((100% - 8px) / ${options.length})`,
-          left: 4,
-          transform: `translateX(${index * 100}%)`,
-        }}
-      />
-      {options.map(o => (
-        <button
-          key={o.value}
-          type="button"
-          role="radio"
-          aria-checked={value === o.value}
-          onClick={() => onChange(o.value)}
-          className={`relative z-10 flex-1 py-2 text-[13px] font-semibold rounded-xl
-            transition-colors duration-150 ${
-              value === o.value
-                ? 'text-slate-900 dark:text-white'
-                : 'text-slate-500 dark:text-slate-400'
-            }`}
-        >
-          {o.label}
-        </button>
-      ))}
-    </div>
-  )
-}
+/* Segmented used to be defined here, beside its only caller. The edit form
+   asks the same question now, so it is components/ui/Segmented.jsx - see the
+   note at the top of it. */
 
 /**
  * One institution in the picker.
