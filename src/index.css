@@ -1540,16 +1540,23 @@ input[type="date"]::-webkit-datetime-edit {
   .skeleton::after { animation: none; }
 }
 
-/* The editable figure inside AmountHero, at the hero's own 40px.
+/* The editable figure inside AmountHero, at whatever size the hero is.
 
    Both of these need !important for the same reason: the rule above sets
    every input to 16px !important so iOS does not zoom the page on focus, and
    an !important declaration can only be beaten by another one. A Tailwind
-   text-[40px] on the element loses silently - utilities live in a layer, and
+   text-38 on the element loses silently - utilities live in a layer, and
    layered rules never outrank unlayered !important - which is why the
-   template sheet's amount rendered at 16px next to a 40px peso sign. */
+   template sheet's amount rendered at 16px next to a 38px peso sign, and why
+   the card payment sheet did the same thing the day it was written.
+
+   `inherit` rather than a number, and that is the second half of the fix.
+   This said 2.5rem while AmountHero's figure is 38px, so an input using it
+   came out 2px LARGER than the peso sign beside it - the same mismatch in
+   the other direction, which is the kind of thing you see without being able
+   to name. Inheriting means the two can never disagree again. */
 .amount-hero-input {
-  font-size: 2.5rem !important;
+  font-size: inherit !important;
   line-height: 1;
 }
 

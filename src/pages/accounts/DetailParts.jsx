@@ -15,19 +15,6 @@ import { fmtTxDate, fmtTxTime } from './shared'
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
 
-// ── Stat card ──────────────────────────────────────────────────────────────────
-
-export function StatCard({ label, value }) {
-  return (
-    <Card surface="recessed" padding="sm">
-      <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 mb-0.5">
-        {label}
-      </p>
-      <p className="text-sm font-bold text-slate-700 dark:text-slate-200 tabular-nums">{value}</p>
-    </Card>
-  )
-}
-
 // ── Credit statement transaction section ────────────────────────────────────────
 
 export function CreditTxSection({ title, dateRange, txs, total, accountName, emptyLabel, totalColor, totalSign = '', onSelect, catMap = {} }) {
@@ -118,8 +105,14 @@ export function DetailTxRow({
   // carries the DATE, which the Transactions page can leave out because its
   // rows sit under date headers and these do not. Then the counterparty for a
   // transfer, or the category otherwise.
+  /* An unnamed transfer already puts the counterparty in the LABEL - "From
+     Maya Savings" - so repeating it here as "← Maya Savings" printed the same
+     account twice on one row. It earns its place only when a description took
+     the label instead. */
   const meta = metaOverride ?? (isTransfer
-    ? (tx.fromAccount === accountName ? `→ ${tx.toAccount ?? ''}` : `← ${tx.fromAccount ?? ''}`)
+    ? (tx.description
+      ? (tx.fromAccount === accountName ? `→ ${tx.toAccount ?? ''}` : `← ${tx.fromAccount ?? ''}`)
+      : '')
     : (cat?.name ?? tx.category ?? ''))
 
   // Tappable so charges reachable only from here can still be edited or

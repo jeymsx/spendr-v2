@@ -41,16 +41,26 @@ import { cx } from './cx'
  * thing wearing one of the same classes: it has no flex row, no gap, and no
  * touch semantics to get right. Six of those exist and none of them are Rails.
  */
+/**
+ * The two properties above, for a rail that cannot be a <Rail>.
+ *
+ * When a rail needs feathered ends, FadeScroller has to BE the scrolling
+ * element - the mask applies to the element it is set on - so it cannot also
+ * be one of these, and it knows nothing about back-gesture containment.
+ * Exporting the pair means a fading rail gets the same touch semantics as a
+ * plain one instead of quietly going without them.
+ */
+export const RAIL_TOUCH = {
+  touchAction: 'pan-x pan-y',
+  overscrollBehaviorX: 'contain',
+}
+
 const Rail = forwardRef(function Rail({ className = '', style, children, ...rest }, ref) {
   return (
     <div
       ref={ref}
       className={cx('flex overflow-x-auto no-scrollbar', className)}
-      style={{
-        touchAction: 'pan-x pan-y',
-        overscrollBehaviorX: 'contain',
-        ...style,
-      }}
+      style={{ ...RAIL_TOUCH, ...style }}
       {...rest}
     >
       {children}

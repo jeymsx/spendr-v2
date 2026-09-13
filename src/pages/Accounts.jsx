@@ -31,7 +31,7 @@ import EmptyState from '../components/ui/EmptyState'
 import { AccountFormSheet, buildAccountRow, createAccount } from './accounts/AccountForm'
 import { QrViewerModal } from './accounts/QrSheets'
 import { AccountSortSheet } from './accounts/SortSheet'
-import { StatCard, CreditTxSection, DetailTxRow } from './accounts/DetailParts'
+import { CreditTxSection, DetailTxRow } from './accounts/DetailParts'
 import { SummaryBar, AccountCard } from './accounts/ListCard'
 import {
   QuickAddSheet, SortableAccountCard, lockToVerticalAxis, stackSortingStrategy,
@@ -48,7 +48,7 @@ export { fmt, PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole }
    AccountNew and web/pages/WebAccounts. Re-exported rather than re-pointed -
    moving an import is a change to a file that did not need one. */
 export { AccountFormSheet, QrViewerModal, buildAccountRow, createAccount }
-export { StatCard, CreditTxSection, DetailTxRow }
+export { CreditTxSection, DetailTxRow }
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 

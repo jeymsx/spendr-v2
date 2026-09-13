@@ -43,16 +43,6 @@ async function adjustBalance(accountName, delta) {
   await db.balances.put({ account: accountName, balance: newBal })
 }
 
-/** Returns true if the named account is a credit card.
- *
- * @param {string} accountName
- */
-async function isCredit(accountName) {
-  if (!accountName) return false
-  const acct = await db.accounts.where('name').equals(accountName).first()
-  return acct?.type === 'credit'
-}
-
 /** Undo the balance effects of a saved transaction.
  *
  * @param {Transaction} tx
@@ -63,9 +53,7 @@ export async function reverseBalanceEffect(tx) {
   if (tx.type === 'inflow')   await adjustBalance(tx.account, -a)
   if (tx.type === 'transfer') {
     await adjustBalance(tx.fromAccount, +a)
-    // Credit toAccount: payment reduced balance, so reversal adds it back
-    const toCredit = await isCredit(tx.toAccount)
-    await adjustBalance(tx.toAccount, toCredit ? +a : -a)
+    await adjustBalance(tx.toAccount, -a)
   }
 }
 
@@ -78,10 +66,22 @@ export async function applyBalanceEffect(tx) {
   if (tx.type === 'expense')  await adjustBalance(tx.account, -a)
   if (tx.type === 'inflow')   await adjustBalance(tx.account, +a)
   if (tx.type === 'transfer') {
+    /* No credit-card special case, and removing it is the fix.
+       There was one: `toCredit ? -a : +a`, on the reasoning that a payment
+       "reduces the amount owed". It had the sign backwards. The convention is
+       set one line up - an expense on a card does `-a`, so a charge drives
+       the balance DOWN and a card's debt is stored negative - which means a
+       payment moves it back up toward zero, which is `+a`, which is exactly
+       what every other destination account does. A transfer adds to where it
+       lands; a card is not an exception to that.
+       Getting it backwards meant every card payment ever made through the
+       transfer form deepened the debt it was paying off. It hid because
+       nothing user-facing reads this figure for a credit account - the card
+       page and the accounts list both use getCreditStatus().currentBalance,
+       derived from the transactions and always right - so the stored number
+       drifted quietly underneath. */
     await adjustBalance(tx.fromAccount, -a)
-    // Credit toAccount: transfer is a payment — it reduces the amount owed
-    const toCredit = await isCredit(tx.toAccount)
-    await adjustBalance(tx.toAccount, toCredit ? -a : +a)
+    await adjustBalance(tx.toAccount, +a)
   }
 }
 
@@ -143,6 +143,64 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
   })
 
   return { nextDate: newNextDate, tx: addedId ? await db.transactions.get(addedId) : null }
+}
+
+/**
+ * Pay a credit card.
+ *
+ * ── A transfer, not an expense, and this is the one place it matters most ──
+ *
+ * Every peso on a card statement was already booked as an expense when you
+ * swiped. Paying the statement moves money between two accounts you own; it
+ * buys nothing. Writing it as an expense would count the month's spending a
+ * second time and charge it to whatever category the payment carried, which
+ * is the whole reason lib/creditBills.js refuses to model a statement as a
+ * recurring bill. So: one transfer row, from the funding account to the card,
+ * with no category on it.
+ *
+ * Nothing else is needed for the maths to work. getCreditStatus already reads
+ * every transfer INTO the card as a payment and nets it against what has been
+ * billed, so a row written here lands in the statement, the carried balance
+ * and the available credit at once.
+ *
+ * The overdraw check is here rather than in the caller for the same reason it
+ * is inside postRecurringCharge: it has to happen in the same decision as the
+ * write, because a balance can change between a review sheet and a commit.
+ * Callers catch OverdrawError and retry with allowOverdraw.
+ *
+ * @param {{cardName: string, fromName: string, amount: number,
+ *          allowOverdraw?: boolean}} input
+ * @returns {Promise<number|null>} the new row's id, for an undo
+ */
+export async function postCardPayment({ cardName, fromName, amount, allowOverdraw = false }) {
+  if (!cardName || !fromName) throw new Error('A payment needs an account on both ends.')
+  if (!(amount > 0)) throw new Error('A payment needs an amount.')
+  if (cardName === fromName) throw new Error('A card cannot pay itself.')
+
+  if (!allowOverdraw) {
+    const over = await checkOverdraw(fromName, amount)
+    if (over) throw new OverdrawError(over.name, over.balance ?? 0, amount)
+  }
+
+  const nowISO = new Date().toISOString()
+  let addedId = null
+
+  await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+    addedId = await db.transactions.add({
+      txId:        crypto.randomUUID(),
+      type:        'transfer',
+      amount,
+      fromAccount: fromName,
+      toAccount:   cardName,
+      date:        nowISO,
+      synced:      UNSYNCED,
+      updatedAt:   nowISO,
+    })
+    await applyBalanceEffect(/** @type {Transaction} */ (
+      { type: 'transfer', amount, fromAccount: fromName, toAccount: cardName }))
+  })
+
+  return addedId
 }
 
 /**
