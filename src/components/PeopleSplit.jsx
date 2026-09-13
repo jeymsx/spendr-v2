@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useTheme } from '../context/ThemeContext'
+import CategoryGlyph from './CategoryGlyph'
 import Divider from './ui/Divider'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { parseMoney } from '../utils/moneyInput'
@@ -39,12 +40,70 @@ import { resolveSplit, SPLIT_MODES, MODE_FIELD } from '../lib/splitModes'
  * to say about a bill, and it is the only way `equal` can mean anything other
  * than everybody.
  */
+/**
+ * A category, as the confirm sheet's chip and the platform's own dropdown at
+ * the same time.
+ *
+ * The select is laid over the chip at zero opacity rather than being styled
+ * with appearance-none. Both give a native option list; this one also gives
+ * complete control of the closed state, so the chip can carry the category's
+ * glyph and match the ones on the confirm sheet exactly - and it sidesteps
+ * every browser's own idea of what a <select> arrow looks like.
+ *
+ * The select keeps the label and the focus, so the wheel on iOS, type-ahead
+ * on a keyboard and VoiceOver all still work; the chip underneath is
+ * decoration.
+ */
+function CategoryChipSelect({ categories, value, onChange, dark, label }) {
+  const picked = categories.find(c => c.name === value) ?? null
+
+  return (
+    <span
+      className="relative inline-flex items-center gap-1 pl-2 pr-5 py-1 rounded-full
+        text-11 font-semibold bg-slate-100 dark:bg-white/[0.07]
+        text-slate-700 dark:text-slate-200 min-w-0"
+    >
+      {picked && <CategoryGlyph cat={picked} size={12} />}
+      <span className="truncate">{picked ? picked.name : 'the whole purchase'}</span>
+      <svg
+        className="absolute right-1.5 text-slate-400 dark:text-slate-500"
+        width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        aria-label={label}
+        className="absolute inset-0 w-full h-full opacity-0"
+        style={{ colorScheme: dark ? 'dark' : 'light' }}
+      >
+        <option value="">the whole purchase</option>
+        {categories.map(c => (
+          <option key={c.id ?? c.name} value={c.name}>{c.name}</option>
+        ))}
+      </select>
+    </span>
+  )
+}
+
 function PersonRow({
   avatar, avatarBg, name, included, onToggle, mode, value, onValue,
   share, onRemove, label,
 }) {
   const field = MODE_FIELD[mode] ?? MODE_FIELD.equal
   const dim = included ? '' : 'opacity-40'
+
+  /* Exact is the one mode where what you TYPE and what they OWE are the same
+     number, and the row was showing it twice - a "₱ 0.00" you could type in
+     and a "₱0.00" beside it that only ever echoed it back. So in exact the
+     resolved figure IS the field, and the peso sign lives in its value the
+     way it does in the sheet heroes.
+
+     Every other mode keeps both, because there the two are genuinely
+     different: 30% and ₱300, 2x and ₱400, +₱50 and ₱550. */
+  const typedIsTheShare = included && mode === 'exact'
 
   /* Digits only for shares, digits and one point for the rest. Written out
      rather than reusing moneyChangeHandler because a percent and a share
@@ -85,7 +144,7 @@ function PersonRow({
 
       <span className="flex-1 min-w-0">{name}</span>
 
-      {included && field.kind !== 'none' && (
+      {included && field.kind !== 'none' && !typedIsTheShare && (
         <span className="flex items-baseline gap-0.5 shrink-0">
           {field.prefix && (
             <span className="text-13 font-medium text-slate-400 dark:text-slate-500">
@@ -112,12 +171,25 @@ function PersonRow({
       )}
 
       {/* The resolved figure, always. It is the only thing on the row that is
-          money in every mode. */}
-      <span className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
-        text-slate-800 dark:text-white"
-      >
-        {included ? fmt(share ?? 0) : '—'}
-      </span>
+          money in every mode - and in exact, the thing you type into. */}
+      {typedIsTheShare ? (
+        <input
+          value={value ? `₱${value}` : ''}
+          onChange={onChange}
+          inputMode="decimal"
+          placeholder="₱0.00"
+          aria-label={`Amount for ${label}`}
+          className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
+            bg-transparent outline-none border-0 p-0 text-slate-800 dark:text-white
+            placeholder-slate-300 dark:placeholder-slate-600"
+        />
+      ) : (
+        <span className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
+          text-slate-800 dark:text-white"
+        >
+          {included ? fmt(share ?? 0) : '—'}
+        </span>
+      )}
 
       {onRemove && (
         <button
@@ -189,7 +261,7 @@ export function resolveSplitValue(split, total) {
  * @param {number} props.total
  * @param {any} props.value
  * @param {(next: any) => void} props.onChange
- * @param {string[]} [props.legCategories]  the categories this purchase is
+ * @param {any[]} [props.legCategories]  the categories this purchase is
  *   filed under, when it is split across more than one. Each person can be
  *   pinned to one of them, so repaying refunds the part their share came
  *   from rather than all of it landing on whichever leg happened to be
@@ -307,19 +379,13 @@ export default function PeopleSplit({ total, value, onChange, legCategories = []
                   <span className="text-11 text-slate-400 dark:text-slate-500 shrink-0">
                     Their share is for
                   </span>
-                  <select
+                  <CategoryChipSelect
+                    categories={legCategories}
                     value={p.category ?? ''}
-                    onChange={e => setPerson(i, { category: e.target.value })}
-                    aria-label={`Which category ${p.name || `person ${i + 1}`} is sharing`}
-                    className="min-w-0 bg-transparent outline-none text-12 font-semibold
-                      text-slate-700 dark:text-slate-200"
-                    style={{ colorScheme: dark ? 'dark' : 'light' }}
-                  >
-                    <option value="">the whole purchase</option>
-                    {legCategories.map(name => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
-                  </select>
+                    onChange={v => setPerson(i, { category: v })}
+                    dark={dark}
+                    label={`Which category ${p.name || `person ${i + 1}`} is sharing`}
+                  />
                 </div>
               )}
             </div>

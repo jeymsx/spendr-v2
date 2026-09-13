@@ -130,7 +130,7 @@ export default function DivideScreen({
      the people tab stays a name and an amount for an ordinary split. */
   const legCategories = useMemo(
     () => (rest.length > 0
-      ? [head?.name, ...rest.map(l => l.cat?.name)].filter(Boolean)
+      ? [head, ...rest.map(l => l.cat)].filter(Boolean)
       : []),
     [head, rest])
 
