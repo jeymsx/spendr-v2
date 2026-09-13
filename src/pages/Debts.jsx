@@ -17,9 +17,10 @@ import {
   owedOn,
   IconNoDebts,
 } from './debts/shared'
-import { DebtCard, SettledSection } from './debts/DebtCard'
+import PersonCard from './debts/PersonCard'
+import PersonSheet from './debts/PersonSheet'
+import { byPerson } from '../lib/people'
 import { DebtFormSheet } from './debts/DebtFormSheet'
-import { PaymentSheet } from './debts/PaymentSheet'
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 
@@ -87,8 +88,6 @@ export default function Debts() {
 
   const [showForm,    setShowForm]    = useState(false)
   const [editDebt,    setEditDebt]    = useState(null)
-  const [paymentDebt, setPaymentDebt] = useState(null)
-  const [showPayment, setShowPayment] = useState(false)
 
   useEffect(() => {
     const el = document.getElementById('app-main')
@@ -115,6 +114,12 @@ export default function Debts() {
   // the money goes.
   const openOwe  = useMemo(() => open.filter(d => d.type === 'i_owe'), [open])
   const openOwed = useMemo(() => open.filter(d => d.type !== 'i_owe'), [open])
+
+  /* One running number per person, which is what makes the ORDER of events
+     stop mattering - somebody can pay before the thing they are paying for
+     exists, and it simply lands on their balance. See lib/people.js. */
+  const people = useMemo(() => byPerson(visible), [visible])
+  const [openPerson, setOpenPerson] = useState(/** @type {any} */ (null))
 
   /**
    * Every figure this page shows, from one pass over what is VISIBLE.
@@ -146,7 +151,6 @@ export default function Debts() {
 
   const openAdd     = () => { setEditDebt(null); setShowForm(true) }
   const openEdit    = (debt) => { setEditDebt(debt); setShowForm(true) }
-  const openPayment = (debt) => { setPaymentDebt(debt); setShowPayment(true) }
 
   const loading   = allDebts === undefined
   const emptyCopy = EMPTY_COPY[view] ?? EMPTY_COPY.all
@@ -279,43 +283,18 @@ export default function Debts() {
             </div>
           ) : (
             <>
-              {view === 'all' ? (
-                <div className="mt-5 flex flex-col gap-6">
-                  {openOwe.length > 0 && (
-                    <section>
-                      <SectionLabel inset="gutter" gap="loose">I owe</SectionLabel>
-                      <div className="px-5 flex flex-col gap-3">
-                        {openOwe.map(d => (
-                          <DebtCard key={d.id} debt={d} onEdit={openEdit} onPayment={openPayment} />
-                        ))}
-                      </div>
-                    </section>
-                  )}
-                  {openOwed.length > 0 && (
-                    <section>
-                      <SectionLabel inset="gutter" gap="loose">Owed to me</SectionLabel>
-                      <div className="px-5 flex flex-col gap-3">
-                        {openOwed.map(d => (
-                          <DebtCard key={d.id} debt={d} onEdit={openEdit} onPayment={openPayment} />
-                        ))}
-                      </div>
-                    </section>
-                  )}
+              {/* People, not loans. The two sections this replaces - "I owe"
+                  and "Owed to me" - were the sign of the balance spelled as
+                  layout, and they could not show somebody who is on both
+                  sides at once. One card per person, one signed figure. */}
+              <section className="mt-5">
+                <SectionLabel inset="gutter" gap="loose">People</SectionLabel>
+                <div className="px-5 flex flex-col gap-3">
+                  {people.map(p => (
+                    <PersonCard key={p.key} person={p} onOpen={setOpenPerson} />
+                  ))}
                 </div>
-              ) : (
-                open.length > 0 && (
-                  <section className="mt-5">
-                    <SectionLabel inset="gutter" gap="loose">Open</SectionLabel>
-                    <div className="px-5 flex flex-col gap-3">
-                      {open.map(d => (
-                        <DebtCard key={d.id} debt={d} onEdit={openEdit} onPayment={openPayment} />
-                      ))}
-                    </div>
-                  </section>
-                )
-              )}
-
-              <SettledSection debts={settled} onEdit={openEdit} />
+              </section>
             </>
           )}
         </>
@@ -329,10 +308,10 @@ export default function Debts() {
         // side to infer, so the form's own default stands.
         defaultTab={view === 'all' ? undefined : view}
       />
-      <PaymentSheet
-        open={showPayment}
-        onClose={() => setShowPayment(false)}
-        debt={paymentDebt}
+      <PersonSheet
+        person={openPerson}
+        onClose={() => setOpenPerson(null)}
+        onEditRow={(d) => { setOpenPerson(null); openEdit(d) }}
       />
     </div>
   )

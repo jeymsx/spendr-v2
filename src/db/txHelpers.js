@@ -1,6 +1,7 @@
 import db, { UNSYNCED } from './db'
 import { advanceNextDate } from '../utils/recurring'
 import { resolveBillShares } from '../lib/splitModes'
+import { applyPayment } from '../lib/people'
 
 /** Thrown when a spend would take a non-credit account below zero. */
 export class OverdrawError extends Error {
@@ -514,4 +515,97 @@ export async function postSplitExpense({ account, date, description, legs, allow
   })
 
   return { splitId, ids }
+}
+
+/**
+ * Money moving between you and one person, whatever they owed at the time.
+ *
+ * ── Why it takes a PERSON and not a debt ──
+ *
+ * Paying somebody back is not an operation on a row. Gelo hands you 500 and it
+ * covers two old loans and leaves a bit over; Gelo hands you 175 for a bill
+ * that has not posted yet and it covers nothing at all. Both are the same
+ * gesture, and a form that makes you pick which debt it belongs to is asking a
+ * question the money does not have an answer to.
+ *
+ * So this takes the person and the amount, spreads it across their open rows
+ * oldest first, and turns anything left into CREDIT - a row in the other
+ * direction, because until it is used up you are holding their money. The next
+ * bill nets against it on its own. That is what makes the order of events stop
+ * mattering.
+ *
+ * ── What it writes to the ledger ──
+ *
+ * A repayment on a shared expense is a REFUND, not income - the money is
+ * coming back to the category it left from. With no category to name (a plain
+ * loan repaid), it is an ordinary inflow, because that money genuinely is
+ * arriving from outside your own ledger.
+ *
+ * @param {{person: string, rows: Array<Record<string, any>>, amount: number,
+ *          account: string, direction?: 'owed_to_me'|'i_owe',
+ *          category?: string|null, sourceTxId?: string|null,
+ *          description?: string}} input
+ * @returns {Promise<{credit: number, settled: number}>}
+ */
+export async function settleWithPerson({
+  person, rows, amount, account, direction = 'owed_to_me',
+  category = null, sourceTxId = null, description,
+}) {
+  if (!person) throw new Error('Who is this with?')
+  if (!(amount > 0)) throw new Error('A payment needs an amount.')
+  if (!account) throw new Error('A payment needs an account.')
+
+  const { updates, credit } = applyPayment(rows, amount, direction)
+  const nowISO = new Date().toISOString()
+  const receiving = direction === 'owed_to_me'
+  const note = description || (receiving ? `Repaid by ${person}` : `Paid to ${person}`)
+
+  /* The ledger side first, because it is the part that must not be lost. A
+     debt row that says "paid" with no money behind it is worse than money
+     with no debt updated - one is a wrong balance, the other is a reminder
+     that outlived its usefulness. */
+  if (receiving && sourceTxId) {
+    await postRefund({ originalTxId: sourceTxId, amount, toAccount: account, description: note })
+  } else {
+    await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+      await db.transactions.add({
+        txId:       crypto.randomUUID(),
+        type:       receiving ? 'inflow' : 'expense',
+        amount,
+        description: note,
+        category:   category ?? (receiving ? 'Debt Collection' : 'Debt Payment'),
+        account,
+        date:       nowISO,
+        synced:     UNSYNCED,
+        updatedAt:  nowISO,
+      })
+      await applyBalanceEffect(/** @type {Transaction} */ (
+        { type: receiving ? 'inflow' : 'expense', amount, account }))
+    })
+  }
+
+  for (const u of updates) {
+    await db.debts.update(u.id, { amountPaid: u.amountPaid, updatedAt: nowISO })
+  }
+
+  /* Whatever is left over becomes a row in the OTHER direction. Not an error,
+     not a warning - it is what a round number looks like, and what paying
+     early looks like when there is nothing to pay yet. */
+  if (credit > 0.005) {
+    await db.debts.add(/** @type {any} */ ({
+      name:       person,
+      contact:    person,
+      amount:     credit,
+      amountPaid: 0,
+      type:       receiving ? 'i_owe' : 'owed_to_me',
+      dueDate:    null,
+      notes:      receiving ? `Paid ahead${category ? ` · ${category}` : ''}` : 'Overpaid',
+      createdAt:  nowISO,
+      sourceCategory: category,
+      synced:     UNSYNCED,
+      updatedAt:  nowISO,
+    }))
+  }
+
+  return { credit, settled: updates.length }
 }
