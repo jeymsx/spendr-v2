@@ -10,6 +10,7 @@ import { TREND_RANGES, RANGE_TITLE } from '../../lib/trend'
 export {
   forwardDelta, DAY_MS, HOUR_MS, TREND_RANGES, RANGE_TITLE,
   trendLabeller, buildTrend, buildSpendTrend, SPEND_TREND_RANGES,
+  spendSpan, spendBaseline, BASELINE_MIN_DAYS, BASELINE_MIN_ROWS,
 } from '../../lib/trend'
 
 /**
@@ -90,6 +91,8 @@ export function TrendRangeChips({ range, onRange, ranges = TREND_RANGES }) {
  * @param {string} [props.valueLabel]  what the tooltip's figure IS
  * @param {string} [props.emptyTitle]
  * @param {string} [props.emptyBody]
+ * @param {string|null} [props.baselineKey]   a second, dashed series
+ * @param {string} [props.baselineLabel]      its name in the tooltip
  */
 export function BalanceTrend({
   data, color, isCredit, rangeKey, rangeTitle,
@@ -100,6 +103,8 @@ export function BalanceTrend({
   valueLabel = isCredit ? 'Outstanding' : 'Balance',
   emptyTitle = null,
   emptyBody = isCredit ? 'No charges or payments' : 'Nothing in or out of this account',
+  baselineKey = null,
+  baselineLabel = 'Usual',
 }) {
   const values = data.map(d => d.value)
   const min = Math.min(...values)
@@ -153,20 +158,52 @@ export function BalanceTrend({
           <Tooltip
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null
+              /* Found by key, not by index. With a baseline there are two
+                 series and recharts orders them by declaration, so reading
+                 payload[0] would have printed the dashed line's figure as
+                 the headline on every category page. */
+              const main = payload.find(p => p.dataKey === 'value') ?? payload[0]
+              const base = baselineKey
+                ? payload.find(p => p.dataKey === baselineKey)
+                : null
               return (
                 <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
                   <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
                   <p className="font-medium text-slate-700 dark:text-white tabular-nums">
-                    {fmt(payload[0].value)}
+                    {fmt(main.value)}
                   </p>
                   <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-0.5">
                     {valueLabel}
                   </p>
+                  {base && (
+                    <p className="text-[10px] text-slate-400 dark:text-slate-500 mt-1 tabular-nums">
+                      {baselineLabel} {fmt(base.value)}
+                    </p>
+                  )}
                 </div>
               )
             }}
             cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '4 2' }}
           />
+          {/* Declared FIRST so the real line paints over it where they
+              cross - the reference is the thing you read the real line
+              against, not a series in its own right. Slate rather than a
+              tint of the category's colour, so it cannot be mistaken for
+              more of the same data, and unanimated because a reference that
+              flies in draws the eye it is supposed to give away. */}
+          {baselineKey && (
+            <Line
+              type="linear"
+              dataKey={baselineKey}
+              stroke="#94a3b8"
+              strokeWidth={1.5}
+              strokeDasharray="5 4"
+              strokeOpacity={0.75}
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />
+          )}
           <Line
             type="monotone"
             dataKey="value"

@@ -15,7 +15,8 @@ import ProgressBar from '../components/ui/ProgressBar'
 import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
 import { budgetTone } from '../components/BudgetMeter'
 import {
-  RANGE_TITLE, SPEND_TREND_RANGES, buildSpendTrend,
+  RANGE_TITLE, SPEND_TREND_RANGES, DAY_MS,
+  buildSpendTrend, spendSpan, spendBaseline,
   TrendRangeChips, BalanceTrend, IconEmptyLedger,
 } from './accounts/Trend'
 import { DetailTxRow } from './accounts/DetailParts'
@@ -108,9 +109,27 @@ export default function CategoryDetail() {
     () => SPEND_TREND_RANGES.find(r => r.key === trendRange) ?? SPEND_TREND_RANGES[1],
     [trendRange],
   )
-  const trend = useMemo(
-    () => buildSpendTrend({ txs: catTxs ?? [], range, now: now.getTime() }),
+
+  /* The dashed reference: what a window this long usually costs you, taken
+     from the history BEFORE this one. Null when there is not enough of it -
+     and null on ALL always, because a window that is your whole history has
+     nothing left over to be compared against. See lib/trend.js. */
+  const span = useMemo(
+    () => spendSpan({ txs: catTxs ?? [], range, now: now.getTime() }),
     [catTxs, range, now],
+  )
+  const baseline = useMemo(
+    () => spendBaseline({ txs: catTxs ?? [], span, now: now.getTime() }),
+    [catTxs, span, now],
+  )
+  const usualTotal = baseline ? baseline.dailyRate * (span / DAY_MS) : null
+
+  const trend = useMemo(
+    () => buildSpendTrend({
+      txs: catTxs ?? [], range, now: now.getTime(),
+      usualPerDay: baseline?.dailyRate ?? null,
+    }),
+    [catTxs, range, now, baseline],
   )
   const rangeTotal = trend.length ? trend[trend.length - 1].value : 0
 
@@ -190,11 +209,22 @@ export default function CategoryDetail() {
               the reading order is "here is the shape, and here is the span
               it covers". ── */}
           <section className="mt-7">
-            <div className="flex items-baseline justify-between px-5">
+            <div className="flex items-start justify-between px-5">
               <SectionLabel>{RANGE_TITLE[range.key]}</SectionLabel>
-              <span className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-                {fmtCompact(rangeTotal)}
-              </span>
+              <div className="text-right shrink-0">
+                <p className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+                  {fmtCompact(rangeTotal)}
+                </p>
+                {/* The dashed line, named. An unexplained reference on a
+                    chart is a mystery the reader has to solve before they
+                    can use it, and the same slate this line is drawn in is
+                    what ties the two together. */}
+                {usualTotal != null && (
+                  <p className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500 mt-0.5">
+                    usually {fmtCompact(usualTotal)}
+                  </p>
+                )}
+              </div>
             </div>
             <BalanceTrend
               data={trend}
@@ -204,6 +234,8 @@ export default function CategoryDetail() {
               valueLabel={verb}
               emptyTitle={`Nothing · ${RANGE_TITLE[range.key].toLowerCase()}`}
               emptyBody={isInflow ? 'No income in this category' : 'No spending in this category'}
+              baselineKey={usualTotal != null ? 'usual' : null}
+              baselineLabel="Usually"
             />
             <div className="mt-2.5">
               <TrendRangeChips

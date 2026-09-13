@@ -198,32 +198,24 @@ export function buildTrend(txs, name, isCredit, current, range, now = Date.now()
  * counting next December's in this month's total would report money spent
  * that has not been.
  *
+ * The dashed reference line comes from `usualPerDay` - spendBaseline works
+ * out what that rate should be. It is stamped as `usual` on every point so
+ * recharts can draw it as a second series against the same axis, and it is a
+ * straight line from zero, because a constant daily rate IS a straight line
+ * on a cumulative chart. That is the whole trick: your real line sitting
+ * above the dashed one means you are spending faster than you usually do,
+ * and the gap between them is by how much.
+ *
  * @param {object} input
  * @param {Array<Record<string, any>>} [input.txs]
  * @param {{span: number|null, points: number}} input.range
  * @param {number} [input.now]
- * @returns {Array<{t: number, value: number, day: string}>}
+ * @param {number|null} [input.usualPerDay]  omit for no reference line
+ * @returns {Array<{t: number, value: number, day: string, usual?: number}>}
  */
-export function buildSpendTrend({ txs = [], range, now = Date.now() }) {
-  const moves = []
-  let oldest = Infinity
-  for (const tx of txs) {
-    const t = new Date(tx.date ?? 0).getTime()
-    if (Number.isNaN(t) || t > now) continue
-    const amt = tx.amount ?? 0
-    if (!amt) continue
-    moves.push({ t, amt })
-    if (t < oldest) oldest = t
-  }
-  moves.sort((a, b) => a.t - b.t)   // oldest first
-
-  // ALL spans back to the first charge, padded by one sample step for the
-  // same reason buildTrend pads: without it the first point sits ON the
-  // oldest movement, so the largest thing in the history is already inside
-  // the first sample and you never see it arrive.
-  const rawSpan = Number.isFinite(oldest) ? now - oldest : 30 * DAY_MS
-  const padded = rawSpan * (range.points - 1) / (range.points - 2)
-  const span = range.span ?? Math.max(7 * DAY_MS, padded)
+export function buildSpendTrend({ txs = [], range, now = Date.now(), usualPerDay = null }) {
+  const moves = collectSpend(txs, now)
+  const span = spendSpan({ txs, range, now })
   const step = span / (range.points - 1)
   const start = now - span
 
@@ -236,11 +228,119 @@ export function buildSpendTrend({ txs = [], range, now = Date.now() }) {
   for (let k = 0; k < range.points; k++) {
     const t = start + k * step
     while (i < moves.length && moves[i].t <= t) { running += moves[i].amt; i++ }
-    out.push({ t, value: running })
+    const pt = usualPerDay == null
+      ? { t, value: running }
+      : { t, value: running, usual: usualPerDay * ((t - start) / DAY_MS) }
+    out.push(pt)
   }
 
   const label = trendLabeller(span)
   return out.map(pt => ({ ...pt, day: label.format(new Date(pt.t)) }))
+}
+
+/**
+ * The spend rows worth plotting, oldest first.
+ *
+ * @param {Array<Record<string, any>>} txs
+ * @param {number} now
+ * @returns {Array<{t: number, amt: number}>}
+ */
+function collectSpend(txs, now) {
+  const moves = []
+  for (const tx of txs) {
+    const t = new Date(tx.date ?? 0).getTime()
+    if (Number.isNaN(t) || t > now) continue
+    const amt = tx.amount ?? 0
+    if (!amt) continue
+    moves.push({ t, amt })
+  }
+  return moves.sort((a, b) => a.t - b.t)
+}
+
+/**
+ * How long a window the chart actually covers.
+ *
+ * A fixed range answers itself. ALL spans back to the first charge, padded by
+ * one sample step for the same reason buildTrend pads: without it the first
+ * point sits ON the oldest movement, so the largest thing in the history is
+ * already inside the first sample and you never see it arrive.
+ *
+ * Its own function because the baseline needs the same number. The history a
+ * reference line is built from is precisely the history OUTSIDE this window,
+ * so two spans that drift apart would compare a month against a slightly
+ * different month.
+ *
+ * @param {object} input
+ * @param {Array<Record<string, any>>} [input.txs]
+ * @param {{span: number|null, points: number}} input.range
+ * @param {number} [input.now]
+ * @returns {number}
+ */
+export function spendSpan({ txs = [], range, now = Date.now() }) {
+  if (range.span) return range.span
+  let oldest = Infinity
+  for (const tx of txs) {
+    const t = new Date(tx.date ?? 0).getTime()
+    if (Number.isNaN(t) || t > now) continue
+    if (!(tx.amount ?? 0)) continue
+    if (t < oldest) oldest = t
+  }
+  const rawSpan = Number.isFinite(oldest) ? now - oldest : 30 * DAY_MS
+  return Math.max(7 * DAY_MS, rawSpan * (range.points - 1) / (range.points - 2))
+}
+
+/** A baseline needs this many days of history behind it to mean anything. */
+export const BASELINE_MIN_DAYS = 14
+/** ...and this many rows. Two purchases do not make a habit either. */
+export const BASELINE_MIN_ROWS = 3
+
+/**
+ * What this category usually costs, as a daily rate.
+ *
+ * ── Measured BEFORE the window, never across it ──
+ *
+ * The reference exists to answer "is this window unusual", and a baseline
+ * that includes the window is a baseline the window has already moved: a bad
+ * month would raise its own bar and then look normal against it. So the
+ * history considered is strictly everything older than the window's left
+ * edge.
+ *
+ * Which also means ALL never gets one. When the window is your whole history
+ * there is nothing left over to compare it against, and drawing no line says
+ * that better than drawing the same line twice.
+ *
+ * ── An average, not last week ──
+ *
+ * "How did last week look" is the obvious reading and it is the noisier one:
+ * one big grocery run in the comparison week moves the whole reference, and
+ * you end up measuring against an accident. An average over all prior history
+ * is what "usually" means - and it degrades into last week on its own when
+ * last week is all the history there is.
+ *
+ * ── Null rather than a number ──
+ *
+ * A rate off three days and two rows is noise wearing a dashed line. A
+ * reference the reader trusts and should not is worse than no reference.
+ *
+ * @param {object} input
+ * @param {Array<Record<string, any>>} [input.txs]
+ * @param {number} input.span  the charted window, from spendSpan
+ * @param {number} [input.now]
+ * @returns {{dailyRate: number, days: number, total: number}|null}
+ */
+export function spendBaseline({ txs = [], span, now = Date.now() }) {
+  const start = now - span
+  const prior = collectSpend(txs, now).filter(m => m.t < start)
+  if (prior.length < BASELINE_MIN_ROWS) return null
+
+  // Measured from the first row, not from the beginning of time: a category
+  // you started using in June should not be averaged over a January the app
+  // never saw.
+  const days = (start - prior[0].t) / DAY_MS
+  if (days < BASELINE_MIN_DAYS) return null
+
+  const total = prior.reduce((sum, m) => sum + m.amt, 0)
+  return { dailyRate: total / days, days, total }
 }
 
 /**
