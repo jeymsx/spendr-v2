@@ -886,6 +886,9 @@ export default function AccountDetail() {
       />
 
       <TxDetailSheet
+        /* Editing opens the form that created it, not five rows in a
+           panel. See components/TxDetailSheet.jsx onEdit. */
+        onEdit={(t) => navigate(`/transactions/${t.id}/edit`)}
         open={!!selectedTx}
         onClose={() => setSelectedTx(null)}
         transaction={selectedTx}

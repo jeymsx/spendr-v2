@@ -63,7 +63,19 @@ function fmtTime(isoStr) {
  */
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function TxDetailSheet({ open, onClose, transaction: tx, accounts = [], categories = [], zIndex = 100 }) {
+export default function TxDetailSheet({
+  open, onClose, transaction: tx, accounts = [], categories = [], zIndex = 100,
+  /**
+   * Hand the whole edit off instead of opening the rows below.
+   *
+   * The mobile pages pass this and it routes to the form that CREATED the
+   * transaction, where every control exists rather than the five that fit in
+   * a panel. Nothing passes it on desktop, where the sheet is an overlay
+   * inside a layout of its own and navigating away from it would leave the
+   * page behind it - so that side keeps the inline rows, unchanged.
+   */
+  onEdit = null,
+}) {
   /* The record the panel keeps showing while it slides away - see the note
      above `rec`. State rather than a ref, because a ref read during render is
      not something the component re-renders for, and the compiler is right to
@@ -184,6 +196,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
   function enterEdit() {
     if (!tx) return
+    if (onEdit) { onEdit(tx); return }
     setEditAmount(String(tx.amount ?? ''))
     setEditDescription(tx.description ?? '')
     setEditDate(toLocalDateStr(tx.date))

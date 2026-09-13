@@ -182,6 +182,36 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
 }
 
 /**
+ * Change a transaction that already exists, and move the balance by the
+ * DIFFERENCE rather than by the new figure.
+ *
+ * Reverse then apply, in that order and in one Dexie transaction. Anything
+ * else has to special-case what changed: an amount that went up, an account
+ * that moved, a transfer whose two legs swapped. Undoing the old row's whole
+ * effect and applying the new one's is the same arithmetic for every one of
+ * those, and it cannot drift because it never looks at what changed.
+ *
+ * txId is deliberately untouched. It is the identity other rows point at - a
+ * refund's refundOf, a receivable's sourceTxId - so an edit that minted a new
+ * one would orphan them silently.
+ *
+ * @param {Record<string, any>} tx     the row as it is now
+ * @param {Record<string, any>} patch  the fields to change
+ */
+export async function updateTransaction(tx, patch) {
+  if (!tx?.id) throw new Error('There is nothing to update.')
+  const next = { ...patch, updatedAt: new Date().toISOString(), synced: UNSYNCED }
+
+  await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+    await reverseBalanceEffect(/** @type {any} */ (tx))
+    await applyBalanceEffect(/** @type {any} */ ({ ...tx, ...next }))
+    await db.transactions.update(tx.id, next)
+  })
+
+  return next
+}
+
+/**
  * Pay a credit card.
  *
  * ── A transfer, not an expense, and this is the one place it matters most ──

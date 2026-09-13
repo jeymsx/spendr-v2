@@ -1,4 +1,5 @@
 import { useState, useMemo, useDeferredValue } from 'react'
+import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import TxDetailSheet from '../components/TxDetailSheet'
@@ -40,6 +41,7 @@ function fmtGroupDate(dateKey) {
 // ── Page ───────────────────────────────────────────────────────────────────────
 
 export default function Transactions() {
+  const navigate = useNavigate()
   const txAll      = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray(), [], [])
   const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
@@ -368,6 +370,9 @@ export default function Transactions() {
 
       {/* ── Detail / edit sheet ── */}
       <TxDetailSheet
+        /* Editing opens the form that created it, not five rows in a
+           panel. See components/TxDetailSheet.jsx onEdit. */
+        onEdit={(t) => navigate(`/transactions/${t.id}/edit`)}
         open={!!selectedTx}
         onClose={() => setSelectedTx(null)}
         transaction={selectedTx}

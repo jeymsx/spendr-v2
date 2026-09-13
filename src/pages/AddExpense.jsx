@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { postSplitExpense, applyBalanceEffect, checkOverdraw, saveTemplate } from '../db/txHelpers'
+import { postSplitExpense, applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -71,7 +71,8 @@ function fmtDateLabel(dateStr) {
  * Neither prop is passed by the mobile routes, so the phone behaviour is
  * unchanged by construction.
  */
-export default function AddExpense({ onCancel, onSaved } = {}) {
+export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
+  const isEdit = !!editTx
   const navigate = useNavigate()
   const { showToast } = useToast()
 
@@ -137,6 +138,26 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
     },
   })
 
+  /* Filling the form from the row being edited.
+   
+     Waits for categories and accounts, because the pickers want the OBJECTS
+     and the row only stores names - the same reason useQuickPrefill above
+     waits. Guarded by a ref rather than by "is the field still empty", so
+     clearing the note or zeroing the amount is not undone on the next render
+     by a hydration that thinks it has not run. */
+  const hydrated = useRef(false)
+  useEffect(() => {
+    if (!isEdit || hydrated.current) return
+    if (!categories.length || !accounts.length) return
+    hydrated.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAmountStr(numToMoneyStr(Math.abs(editTx.amount ?? 0)))
+    setDescription(editTx.description ?? '')
+    if (editTx.date) setDate(String(editTx.date).slice(0, 10))
+    setCategory(categories.find(c => c.name === editTx.category) ?? null)
+    setAccount(accounts.find(a => a.name === editTx.account) ?? null)
+  }, [isEdit, editTx, categories, accounts])
+
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false
 
@@ -181,17 +202,32 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
     if (!account)  { setAcctError(true); err = true }
     if (err) return
 
+    /* What this will actually take out of the account.
+   
+       On an edit the old charge is already in the balance, so checking the
+       full new amount would report an overdraw that has been paid for once
+       already - "you cannot afford 500" on a 500 expense you made last week.
+       Moving it to a DIFFERENT account is the exception: that one is charged
+       the whole thing. */
+    const draw = !isEdit ? amount
+      : (account.name === editTx.account ? amount - (editTx.amount ?? 0) : amount)
+
     // checkOverdraw exempts credit accounts, so installments — which only
     // exist on credit — pass straight through.
-    const over = await checkOverdraw(account.name, amount)
+    const over = draw > 0 ? await checkOverdraw(account.name, draw) : null
     if (over) {
-      setOverdraw({ accountName: over.name, balance: over.balance ?? 0, amount })
+      setOverdraw({ accountName: over.name, balance: over.balance ?? 0, amount: draw })
       return
     }
     return continueAfterBalanceCheck()
   }
 
   async function continueAfterBalanceCheck() {
+    /* No duplicate check and no confirm sheet on an edit. The row it would
+       flag as a duplicate is itself, and the sheet is a review of something
+       about to be created - the form in front of you IS the review of a
+       change to something that already exists. */
+    if (isEdit) { handleSave(null); return }
     const [y, m, d] = date.split('-').map(Number)
     const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
     const dayEnd   = new Date(y, m - 1, d, 23, 59, 59, 999)
@@ -209,6 +245,25 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   async function handleSave(templateData) {
     setSaving(true)
     try {
+      /* Editing changes THIS row and nothing else. It never adds one, which
+         is why it returns before any of the machinery below: that code posts
+         plans, legs and receivables, all of which are new rows.
+
+         txId is left alone on purpose - a refund and a receivable both point
+         at it. */
+      if (isEdit) {
+        await updateTransaction(editTx, {
+          amount,
+          description: description.trim(),
+          category: category.name,
+          account: account.name,
+          date: date + (String(editTx.date ?? '').slice(10) || 'T00:00:00.000Z'),
+        })
+        showToast('Expense updated')
+        if (onSaved) onSaved(); else navigate(-1)
+        return
+      }
+
       const now    = new Date()
       const updISO = now.toISOString()
       const count  = isInstallment ? installMonths : 1
@@ -392,15 +447,21 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add Expense</h1>
-        <Button
-          variant="tint"
-          size="xs"
-          className="shrink-0 px-3.5 gap-1.5"
-          onClick={() => setShowTemplates(true)}
-        >
-          <IconTemplate size={14} /> Templates
-        </Button>
+        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">
+          {isEdit ? 'Edit Expense' : 'Add Expense'}
+        </h1>
+        {/* Templates start a new entry from a saved one, which is the opposite
+            of editing a particular row. */}
+        {!isEdit && (
+          <Button
+            variant="tint"
+            size="xs"
+            className="shrink-0 px-3.5 gap-1.5"
+            onClick={() => setShowTemplates(true)}
+          >
+            <IconTemplate size={14} /> Templates
+          </Button>
+        )}
       </header>
 
       {/* ── Amount ── */}
@@ -490,7 +551,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
               both real, and both belong to a minority of expenses - so they
               get a door rather than a permanent residence on a form whose job
               is amount, category, account, done. */}
-          {amount > 0 && !isInstallment && (
+          {amount > 0 && !isInstallment && !isEdit && (
             <button
               type="button"
               onClick={() => setDivideOpen(true)}
@@ -518,8 +579,15 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
           />
         </div>
 
-        {/* Installment — credit accounts only */}
-        {isCredit && (
+        {/* Installment — credit accounts only, and never on an edit.
+
+            A term is not a property of this row, it is how many rows exist:
+            picking 6 writes six charges dated a month apart. Offering it here
+            would mean "change 6 into 3" has to delete three future charges
+            and "3 into 6" has to invent three, which is a different operation
+            from editing the one you opened. Delete the plan and re-enter it,
+            which is what deleteTxGroup already handles as a unit. */}
+        {isCredit && !isEdit && (
           <div>
             <SectionLabel>Installment</SectionLabel>
             {/* -mx-4 px-4 to cancel the form's own px-4.
@@ -612,7 +680,8 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
 
       <div className="px-4 pt-5">
         <Button size="lg" block onClick={onConfirmPress} disabled={saving || amount <= 0}>
-          {isInstallment ? 'Review installment' : 'Review expense'}
+          {isEdit ? (saving ? 'Saving…' : 'Save changes')
+            : isInstallment ? 'Review installment' : 'Review expense'}
         </Button>
       </div>
 

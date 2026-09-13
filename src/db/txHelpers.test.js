@@ -145,6 +145,7 @@ vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1 }))
 
 const {
   postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
+  updateTransaction,
 } = await import('./txHelpers')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
@@ -548,3 +549,93 @@ async function applyStartingSpend(amount) {
   const a = acct('Maya Savings')
   a.balance = Math.round((a.balance - amount) * 100) / 100
 }
+
+/**
+ * updateTransaction — editing a row that already moved money.
+ *
+ * The whole risk is the balance. An edit has to move the account by the
+ * DIFFERENCE, and the only way to get that right for every kind of change -
+ * amount up, amount down, account moved, transfer legs swapped - is to undo
+ * the old row's whole effect and apply the new one's. These assertions were
+ * checked against a broken copy that applies the new amount without reversing
+ * the old: four of them fail.
+ */
+describe('updateTransaction', () => {
+  /** @param {Row} [over] */
+  const expense = (over = {}) => {
+    const row = {
+      id: 90, txId: 'tx-90', type: 'expense', amount: 500,
+      description: 'Lunch', category: 'Food', account: 'Maya Savings',
+      date: '2026-09-01T10:00:00.000Z', ...over,
+    }
+    store.transactions.push(row)
+    return row
+  }
+
+  it('moves the balance by the difference, not by the new figure', async () => {
+    const tx = expense()
+    // The 500 is already out: the account holds 10,000 with it spent.
+    await updateTransaction(/** @type {any} */ (tx), { amount: 800 })
+    expect(acct('Maya Savings').balance).toBe(10000 - 300)
+  })
+
+  it('gives money back when the amount comes down', async () => {
+    const tx = expense()
+    await updateTransaction(/** @type {any} */ (tx), { amount: 200 })
+    expect(acct('Maya Savings').balance).toBe(10000 + 300)
+  })
+
+  it('leaves the balance alone when the amount does not change', async () => {
+    const tx = expense()
+    await updateTransaction(/** @type {any} */ (tx), { description: 'Dinner' })
+    expect(acct('Maya Savings').balance).toBe(10000)
+    expect(store.transactions[0].description).toBe('Dinner')
+  })
+
+  /** Moving an expense to another account has to credit one and charge the other. */
+  it('hands the charge over when the account changes', async () => {
+    const tx = expense()
+    await updateTransaction(/** @type {any} */ (tx), { account: 'ZZ Test Card' })
+    expect(acct('Maya Savings').balance).toBe(10500)
+    expect(acct('ZZ Test Card').balance).toBe(-3700)
+  })
+
+  /** An inflow moves the other way, and reversing it has to as well. */
+  it('reverses an inflow in the right direction', async () => {
+    const tx = expense({ type: 'inflow', amount: 1000 })
+    await updateTransaction(/** @type {any} */ (tx), { amount: 400 })
+    expect(acct('Maya Savings').balance).toBe(10000 - 600)
+  })
+
+  it('swaps both legs of a transfer', async () => {
+    const tx = expense({
+      type: 'transfer', amount: 1000, account: undefined,
+      fromAccount: 'Maya Savings', toAccount: 'ZZ Test Card',
+    })
+    await updateTransaction(/** @type {any} */ (tx), {
+      fromAccount: 'ZZ Test Card', toAccount: 'Maya Savings',
+    })
+    // Undo: savings +1000, card -1000. Apply: card -1000, savings +1000.
+    expect(acct('Maya Savings').balance).toBe(12000)
+    expect(acct('ZZ Test Card').balance).toBe(-5200)
+  })
+
+  /** The identity other rows point at. A refund's refundOf would be orphaned. */
+  it('never changes txId', async () => {
+    const tx = expense()
+    await updateTransaction(/** @type {any} */ (tx), { amount: 900 })
+    expect(store.transactions[0].txId).toBe('tx-90')
+  })
+
+  it('marks the row unsynced so the change is pushed', async () => {
+    const tx = expense()
+    await updateTransaction(/** @type {any} */ (tx), { amount: 900 })
+    expect(store.transactions[0].synced).toBe(0)
+    expect(typeof store.transactions[0].updatedAt).toBe('string')
+  })
+
+  it('refuses a row that is not stored', async () => {
+    await expect(updateTransaction(/** @type {any} */ ({}), { amount: 1 }))
+      .rejects.toThrow(/nothing to update/i)
+  })
+})

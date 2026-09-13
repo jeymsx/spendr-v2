@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect, checkOverdraw, saveTemplate } from '../db/txHelpers'
+import { applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -47,7 +47,8 @@ function localDateStr(d) {
  * Neither prop is passed by the mobile routes, so the phone behaviour is
  * unchanged by construction.
  */
-export default function Transfer({ onCancel, onSaved } = {}) {
+export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
+  const isEdit = !!editTx
   const navigate = useNavigate()
   const { showToast } = useToast()
 
@@ -123,21 +124,43 @@ export default function Transfer({ onCancel, onSaved } = {}) {
   const handleAmountChange = moneyChangeHandler(setAmountStr)
   const handleFeeChange    = moneyChangeHandler(setFeeStr)
 
+  /* Filling the form from the transfer being edited. Waits for the accounts,
+     guarded by a ref - see AddExpense for why both. */
+  const hydrated = useRef(false)
+  useEffect(() => {
+    if (!isEdit || hydrated.current) return
+    if (!accounts.length) return
+    hydrated.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAmountStr(numToMoneyStr(Math.abs(editTx.amount ?? 0)))
+    if (editTx.date) setDate(String(editTx.date).slice(0, 10))
+    setFromAccount(accounts.find(a => a.name === editTx.fromAccount) ?? null)
+    setToAccount(accounts.find(a => a.name === editTx.toAccount) ?? null)
+  }, [isEdit, editTx, accounts])
+
   async function onConfirmPress() {
     let err = false
     if (!fromAccount) { setFromError(true); err = true }
     if (!toAccount)   { setToError(true);   err = true }
     if (err) return
+    /* On an edit the old transfer is already in both balances, so only the
+       DIFFERENCE is being taken out - unless the money is now leaving a
+       different account, which is charged the whole thing. */
+    const draw = !isEdit ? amount + fee
+      : (fromAccount.name === editTx.fromAccount ? amount - (editTx.amount ?? 0) : amount)
     // The fee leaves the same account, so it counts toward the overdraw.
-    const over = await checkOverdraw(fromAccount.name, amount + fee)
+    const over = draw > 0 ? await checkOverdraw(fromAccount.name, draw) : null
     if (over) {
-      setOverdraw({ accountName: over.name, balance: over.balance ?? 0, amount: amount + fee })
+      setOverdraw({ accountName: over.name, balance: over.balance ?? 0, amount: draw })
       return
     }
     return continueAfterBalanceCheck()
   }
 
   async function continueAfterBalanceCheck() {
+    /* No duplicate check and no confirm on an edit - the row it would flag is
+       itself, and the form IS the review. */
+    if (isEdit) { handleSave(); return }
     const [y, m, d] = date.split('-').map(Number)
     const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
     const dayEnd   = new Date(y, m - 1, d, 23, 59, 59, 999)
@@ -162,6 +185,22 @@ export default function Transfer({ onCancel, onSaved } = {}) {
   async function handleSave(templateData) {
     setSaving(true)
     try {
+      /* An edit moves this transfer and nothing else. The fee is a SEPARATE
+         expense row, which is why the fee field is not offered here: changing
+         it would mean creating or deleting a second transaction, and that is
+         not editing the one you opened. */
+      if (isEdit) {
+        await updateTransaction(editTx, {
+          amount,
+          fromAccount: fromAccount.name,
+          toAccount: toAccount.name,
+          date: date + (String(editTx.date ?? '').slice(10) || 'T00:00:00.000Z'),
+        })
+        showToast('Transfer updated')
+        if (onSaved) onSaved(); else navigate(-1)
+        return
+      }
+
       const now     = new Date()
       const [y,m,d] = date.split('-').map(Number)
       const txDate  = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
@@ -229,15 +268,19 @@ export default function Transfer({ onCancel, onSaved } = {}) {
         <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Transfer</h1>
-        <Button
-          variant="tint"
-          size="xs"
-          className="shrink-0 px-3.5 gap-1.5"
-          onClick={() => setShowTemplates(true)}
-        >
-          <IconTemplate size={14} /> Templates
-        </Button>
+        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">
+          {isEdit ? 'Edit Transfer' : 'Transfer'}
+        </h1>
+        {!isEdit && (
+          <Button
+            variant="tint"
+            size="xs"
+            className="shrink-0 px-3.5 gap-1.5"
+            onClick={() => setShowTemplates(true)}
+          >
+            <IconTemplate size={14} /> Templates
+          </Button>
+        )}
       </header>
 
       {/* ── Amount ── */}
@@ -316,7 +359,13 @@ export default function Transfer({ onCancel, onSaved } = {}) {
           </div>
         )}
 
-        {/* Transfer Fee */}
+        {/* Transfer Fee — never on an edit.
+
+            The fee is its own expense row, not a field of the transfer, so
+            changing it here would mean creating or deleting a second
+            transaction. That fee row can be opened and edited on its own like
+            any other expense. */}
+        {!isEdit && (
         <div>
           <SectionLabel>
             Transfer fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
@@ -339,6 +388,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
             )}
           </div>
         </div>
+        )}
 
         {/* Date — last */}
         <div>
@@ -363,7 +413,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
           block
           onClick={onConfirmPress} disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id}
         >
-          Review transfer
+          {isEdit ? (saving ? 'Saving…' : 'Save changes') : 'Review transfer'}
         </Button>
       </div>
 

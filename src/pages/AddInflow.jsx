@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect, saveTemplate } from '../db/txHelpers'
+import { applyBalanceEffect, saveTemplate, updateTransaction } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -41,7 +41,8 @@ function localDateStr(d) {
  * Neither prop is passed by the mobile routes, so the phone behaviour is
  * unchanged by construction.
  */
-export default function AddInflow({ onCancel, onSaved } = {}) {
+export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
+  const isEdit = !!editTx
   const navigate = useNavigate()
   const { showToast } = useToast()
 
@@ -65,6 +66,21 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
       .then(cs => cs.sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name))),
     [], [],
   )
+
+  /* Filling the form from the row being edited. Waits for the lookups,
+     guarded by a ref - see AddExpense for why both. */
+  const hydrated = useRef(false)
+  useEffect(() => {
+    if (!isEdit || hydrated.current) return
+    if (!categories.length || !accounts.length) return
+    hydrated.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAmountStr(numToMoneyStr(Math.abs(editTx.amount ?? 0)))
+    setDescription(editTx.description ?? '')
+    if (editTx.date) setDate(String(editTx.date).slice(0, 10))
+    setCategory(categories.find(c => c.name === editTx.category) ?? null)
+    setAccount(accounts.find(a => a.name === editTx.account) ?? null)
+  }, [isEdit, editTx, categories, accounts])
 
   /* Quick log hands its parse over as router state; this fills the form once
      the categories and accounts have loaded, so the names it matched can be
@@ -104,6 +120,9 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
     if (!category) { setCatError(true);  err = true }
     if (!account)  { setAcctError(true); err = true }
     if (err) return
+    /* No duplicate check and no confirm on an edit: the row it would flag is
+       itself, and the form IS the review of a change. */
+    if (isEdit) { handleSave(null); return }
     const [y, m, d] = date.split('-').map(Number)
     const dayStart = new Date(y, m - 1, d, 0, 0, 0, 0)
     const dayEnd   = new Date(y, m - 1, d, 23, 59, 59, 999)
@@ -121,6 +140,21 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
   async function handleSave(templateData) {
     setSaving(true)
     try {
+      /* An edit changes this row and adds nothing, so it returns before the
+         insert below. txId is untouched - other rows point at it. */
+      if (isEdit) {
+        await updateTransaction(editTx, {
+          amount,
+          description: description.trim(),
+          category: category.name,
+          account: account.name,
+          date: date + (String(editTx.date ?? '').slice(10) || 'T00:00:00.000Z'),
+        })
+        showToast('Inflow updated')
+        if (onSaved) onSaved(); else navigate(-1)
+        return
+      }
+
       const now     = new Date()
       const [y,m,d] = date.split('-').map(Number)
       const txDate  = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
@@ -167,15 +201,21 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
         <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">Add Inflow</h1>
-        <Button
-          variant="tint"
-          size="xs"
-          className="shrink-0 px-3.5 gap-1.5"
-          onClick={() => setShowTemplates(true)}
-        >
-          <IconTemplate size={14} /> Templates
-        </Button>
+        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">
+          {isEdit ? 'Edit Inflow' : 'Add Inflow'}
+        </h1>
+        {/* Templates start a new entry from a saved one, which is the
+            opposite of editing a particular row. */}
+        {!isEdit && (
+          <Button
+            variant="tint"
+            size="xs"
+            className="shrink-0 px-3.5 gap-1.5"
+            onClick={() => setShowTemplates(true)}
+          >
+            <IconTemplate size={14} /> Templates
+          </Button>
+        )}
       </header>
 
       {/* ── Amount ── */}
@@ -266,7 +306,7 @@ export default function AddInflow({ onCancel, onSaved } = {}) {
 
       <div className="px-4 pt-5">
         <Button size="lg" block onClick={onConfirmPress} disabled={saving || amount <= 0}>
-          Review inflow
+          {isEdit ? (saving ? 'Saving…' : 'Save changes') : 'Review inflow'}
         </Button>
       </div>
 

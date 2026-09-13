@@ -24,6 +24,7 @@ const AccountEdit   = lazy(() => import('./pages/AccountEdit'))
 const Budget        = lazy(() => import('./pages/Budget'))
 const CategoryDetail = lazy(() => import('./pages/CategoryDetail'))
 const Debts        = lazy(() => import('./pages/Debts'))
+const EditTransaction = lazy(() => import('./pages/EditTransaction'))
 const PersonDetail = lazy(() => import('./pages/debts/PersonDetail'))
 const Goals        = lazy(() => import('./pages/Goals'))
 const GoalDetail   = lazy(() => import('./pages/GoalDetail'))
@@ -86,6 +87,7 @@ export default function App() {
               <Route path="/expense"      element={<AddExpense />} />
               <Route path="/inflow"       element={<AddInflow />} />
               <Route path="/transfer"     element={<Transfer />} />
+              <Route path="/transactions/:id/edit" element={<EditTransaction />} />
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/insights"     element={<Insights />} />
               <Route path="/budget"       element={<Budget />} />

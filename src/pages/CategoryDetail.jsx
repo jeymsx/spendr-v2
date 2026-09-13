@@ -1,5 +1,5 @@
 import { useState, useMemo } from 'react'
-import { useParams } from 'react-router-dom'
+import { useParams, useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -54,6 +54,7 @@ import { fmt, fmtCompact } from '../lib/money'
  * where they stay visible, because that is where what-is-owed lives.
  */
 export default function CategoryDetail() {
+  const navigate = useNavigate()
   /* Not decoded here, however much it looks like it should be. React Router
      has already run the segment through decodeURIComponent, so a second pass
      is not a no-op - it is a crash. A category called "50% off" arrives as
@@ -296,6 +297,9 @@ export default function CategoryDetail() {
       )}
 
       <TxDetailSheet
+        /* Editing opens the form that created it, not five rows in a
+           panel. See components/TxDetailSheet.jsx onEdit. */
+        onEdit={(t) => navigate(`/transactions/${t.id}/edit`)}
         open={!!selectedTx}
         onClose={() => setSelectedTx(null)}
         transaction={selectedTx}
