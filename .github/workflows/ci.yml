@@ -1,0 +1,58 @@
+# Runs the same four commands a human would before pushing.
+#
+# Order is deliberate: cheapest and most specific first, so a red run tells you
+# what broke without reading a wall of output. `check` is seven AST checkers and
+# takes seconds; `build` is the slowest and the least likely to catch anything
+# the others missed.
+#
+# What this cannot do is click. The credit-card sign bug that shipped for months
+# would pass all four of these - it took driving the flow in a browser to find.
+# CI guards what is already pinned; it does not find what was never tested.
+name: CI
+
+on:
+  push:
+  pull_request:
+
+# A second push to the same branch cancels the first. Nobody needs the results
+# of a commit that has already been replaced.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # 22, not 24: 24 is what this was developed on, but 22 is the active LTS,
+      # and pinning CI a major behind is how you find out you have used
+      # something too new before a user does.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      # `ci`, not `install`: it installs exactly what package-lock.json says and
+      # fails if the two have drifted, which is the whole point of running this
+      # somewhere other than the machine that wrote the lockfile.
+      - run: npm ci
+
+      # tsc, then scope/tdz/hooks/imports/design/copy. The scope checker is the
+      # one that earns its place: a green build proves nothing about unbound
+      # identifiers, and five ReferenceErrors have shipped past one.
+      - name: Checkers
+        run: npm run check
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Tests
+        run: npm test
+
+      # Last because it is the slowest. No secrets needed - with no Supabase
+      # keys the app builds and runs offline-only, which is a supported mode
+      # rather than a broken one.
+      - name: Build
+        run: npm run build

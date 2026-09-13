@@ -96,7 +96,7 @@ traverse(ast, {
 
     const source = code.slice(path.node.start, path.node.end)
     const multiline = source.includes(LF)
-    const indent = (source.match(new RegExp(LF + '(\\s*)')) || [, '  '])[1]
+    const indent = (source.match(new RegExp(LF + '(\\s*)')) || ['', '  '])[1]
 
     const parts = []
     if (dflt) parts.push(dflt.local.name)

@@ -20,7 +20,7 @@
 import { parse } from '@babel/parser'
 import _traverse from '@babel/traverse'
 import { existsSync, readFileSync, statSync } from 'node:fs'
-import { dirname, extname, resolve as resolvePath, join, sep } from 'node:path'
+import { dirname, extname, resolve as resolvePath, join } from 'node:path'
 
 const traverse = _traverse.default ?? _traverse
 const JS = new Set(['.js', '.jsx', '.mjs'])

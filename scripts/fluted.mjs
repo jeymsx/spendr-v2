@@ -75,7 +75,7 @@ const svg =
 
 const file = 'src/index.css'
 const css = readFileSync(file, 'utf8')
-const re = /(\[data-design='fluted'\]\s*\{\s*--card-pattern:\s*)[\s\S]*?(\n  --card-pattern-size)/
+const re = /(\[data-design='fluted'\]\s*\{\s*--card-pattern:\s*)[\s\S]*?(\n {2}--card-pattern-size)/
 if (!re.test(css)) {
   console.error(`fluted rule not found in ${file}`)
   process.exit(1)
