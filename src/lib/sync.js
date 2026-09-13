@@ -591,6 +591,37 @@ const OPTIONAL_COLS = {
 // depend on which layer rejected it.
 const UNKNOWN_COLUMN = /could not find the '.*' column|does not exist|42703|PGRST204/i
 
+/**
+ * A push rejected by a unique constraint on local_id, which is never the
+ * conflict target for the tables that hit this.
+ *
+ * Renaming an account makes the push an INSERT - no remote row carries the
+ * new name - and that INSERT repeats the local_id the renamed row already
+ * has remotely. `accounts_user_id_local_id_key` rejects it, and because the
+ * violated constraint is not the one the upsert is resolving on, no upsert
+ * can get past it. syncToSupabase awaits each push in turn, so one rename
+ * stopped every table after it from syncing at all.
+ *
+ * 008_rename_safe_sync.sql drops those two constraints, which is the actual
+ * fix and explains itself at length. This is what keeps sync working on a
+ * database where that has not been run yet - including, unavoidably, every
+ * device that syncs before its owner gets round to it.
+ */
+/**
+ * Exported for the test, because the regex is the whole risk here.
+ *
+ * A first draft alternated on the bare SQLSTATE `23505`, which is EVERY
+ * unique violation. Paired with the caller's guard - any table whose conflict
+ * target is not local_id - that would have quietly retried a genuine
+ * duplicate-name or duplicate-tx_id rejection with a column stripped out.
+ * Matching the constraint by name is the precise signal and costs nothing.
+ *
+ * @param {string} [message]
+ */
+export function isLocalIdConflict(message) {
+  return /duplicate key value.*_user_id_local_id_key/is.test(String(message ?? ''))
+}
+
 // conflictCols: the Supabase UNIQUE constraint columns to resolve on.
 // Accounts and categories use their name-based constraints because the
 // IndexedDB auto-increment counter does NOT reset on table.clear(), so
@@ -624,6 +655,23 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
   const opts = { onConflict: conflictCols, ignoreDuplicates: false }
   const { error } = await supabase.from(tableName).upsert(rows, opts)
   if (!error) return
+
+  /* Retry without local_id. It is a convenience, not an identity: the pull
+     looks a row up by local_id first and falls straight back to its name, so
+     a row that arrives with none still reconciles. Losing it costs a lookup;
+     letting the push throw costs every table after this one. */
+  if (isLocalIdConflict(error.message) && !conflictCols.includes('local_id')) {
+    const withoutLocalId = rows.map(({ local_id: _drop, ...rest }) => rest)
+    const retry = await supabase.from(tableName).upsert(withoutLocalId, opts)
+    if (!retry.error) {
+      console.warn(
+        '[sync] %s: a renamed row collided on local_id, so it was pushed without one.'
+        + ' Run 008_rename_safe_sync.sql to stop this recurring: %s',
+        tableName, error.message,
+      )
+      return
+    }
+  }
 
   const optional = OPTIONAL_COLS[tableName] ?? []
   if (optional.length && UNKNOWN_COLUMN.test(error.message ?? '')) {

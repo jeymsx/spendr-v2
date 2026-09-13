@@ -9,6 +9,7 @@ import {
   goalToRow, rowToGoal,
   badgeToRow,
   isPendingDelete,
+  isLocalIdConflict,
 } from './sync'
 import { UNSYNCED, SYNCED } from '../db/db'
 
@@ -266,5 +267,48 @@ describe('isPendingDelete', () => {
 
   it('is false on an empty queue', () => {
     expect(isPendingDelete([], 'accounts', { name: 'anything' })).toBe(false)
+  })
+})
+
+/**
+ * The one push error sync recovers from instead of throwing.
+ *
+ * Renaming an account makes its push an INSERT carrying a local_id that is
+ * already taken remotely, and the constraint it violates is not the one the
+ * upsert resolves on - so no upsert can get past it, and because the pushes
+ * run in sequence, one rename stopped every table after it. 008 drops the
+ * constraint; this is what keeps sync alive until that is run.
+ *
+ * The regex is the whole risk. Too broad and it swallows real rejections.
+ */
+describe('isLocalIdConflict', () => {
+  it('recognises the rejection a rename actually produces', () => {
+    expect(isLocalIdConflict(
+      'duplicate key value violates unique constraint "accounts_user_id_local_id_key"',
+    )).toBe(true)
+    expect(isLocalIdConflict(
+      'duplicate key value violates unique constraint "categories_user_id_local_id_key"',
+    )).toBe(true)
+  })
+
+  /**
+   * The draft this replaced alternated on the bare SQLSTATE, which is every
+   * unique violation there is. A duplicate NAME is a real rejection the user
+   * has to see - retrying it with a column stripped would hide it.
+   */
+  it('leaves every other unique violation alone', () => {
+    expect(isLocalIdConflict(
+      'duplicate key value violates unique constraint "accounts_user_id_name_key"',
+    )).toBe(false)
+    expect(isLocalIdConflict(
+      'duplicate key value violates unique constraint "transactions_user_id_tx_id_key"',
+    )).toBe(false)
+    expect(isLocalIdConflict('23505')).toBe(false)
+  })
+
+  it('is not tripped by an unrelated failure, or by nothing at all', () => {
+    expect(isLocalIdConflict(`could not find the 'interest_rate' column`)).toBe(false)
+    expect(isLocalIdConflict('')).toBe(false)
+    expect(isLocalIdConflict(undefined)).toBe(false)
   })
 })
