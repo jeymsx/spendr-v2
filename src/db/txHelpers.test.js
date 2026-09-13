@@ -453,7 +453,7 @@ describe('deleteTxGroup takes the rows that cannot stand alone', () => {
     await postRefund({ originalTxId: 'buy-1', amount: 300 })
     expect(store.transactions).toHaveLength(2)
 
-    await deleteTxGroup([store.transactions.find(t => t.txId === 'buy-1')])
+    await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.txId === 'buy-1')]))
 
     expect(store.transactions).toHaveLength(0)
   })
@@ -468,7 +468,7 @@ describe('deleteTxGroup takes the rows that cannot stand alone', () => {
     await applyStartingSpend(1000)
     await postRefund({ originalTxId: 'buy-1', amount: 300 })
 
-    await deleteTxGroup([store.transactions.find(t => t.txId === 'buy-1')])
+    await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.txId === 'buy-1')]))
 
     expect(acct('Maya Savings').balance).toBe(10000)
   })
@@ -484,7 +484,7 @@ describe('deleteTxGroup takes the rows that cannot stand alone', () => {
     })
     expect(store.transactions).toHaveLength(2)
 
-    await deleteTxGroup([store.transactions.find(t => t.id === ids[0])])
+    await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.id === ids[0])]))
 
     expect(store.transactions).toHaveLength(0)
     expect(acct('Maya Savings').balance).toBe(10000)
@@ -503,14 +503,15 @@ describe('deleteTxGroup takes the rows that cannot stand alone', () => {
       type: 'owed_to_me', sourceTxId: 'buy-1', sourceCategory: 'Groceries',
     })
 
-    await deleteTxGroup([store.transactions.find(t => t.txId === 'buy-1')])
+    await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.txId === 'buy-1')]))
 
     expect(store.debts).toHaveLength(1)
     expect(store.debts[0].sourceTxId).toBeNull()
   })
 })
 
-/** The balance effect a seeded purchase would have had. */
+/** The balance effect a seeded purchase would have had.
+ *  @param {number} amount */
 async function applyStartingSpend(amount) {
   const a = acct('Maya Savings')
   a.balance = Math.round((a.balance - amount) * 100) / 100
