@@ -100,6 +100,24 @@ third-party file licence — the trademark position below still applies.
 | `bpi.svg` | Wikimedia Commons, *Official BPI Logo.svg* | **CC BY 4.0** |
 | `spaylater.svg` | simple-icons, *Shopee* | CC0 1.0 |
 
+### Traced from a raster
+
+| File | Source | Licence |
+|---|---|---|
+| `maribank.svg` | MariBank's own CDN, `banking-aka-storage.seabank.ph/.../fac9f7d50dfb78c78ced87a3bd77ef86.png` | Trade mark, used as a label |
+
+The one file here that did not arrive as vector art. MariBank publishes its
+lockup as a 1500x512 PNG, so the wordmark was traced: the logomark cropped
+away by column (it ends at x=302 and the letters start at 374), the alpha
+channel thresholded to a binary mask, marching squares run over it for the
+outlines, and Douglas-Peucker at 0.4px to simplify. 7KB of path data, one
+`fill-rule="evenodd"` path so the counters in a, B and k punch through.
+
+It is also **restacked**: the source is one horizontal line, the card prints
+two. "Mari" over "Bank" at 1.09x line pitch, with the lower word inset 3% of
+its own width - which is the lockup on the plastic, and is what the app draws
+rotated up the side of a landscape card. See the `stack` note in index.css.
+
 ### Fetched from Commons in bulk
 
 | File | Source | Licence |

@@ -512,17 +512,36 @@ html.dark body {
   bottom: -3%;
 }
 
-/* A stacked lockup - MariBank's "Mari" over "Bank" - is roughly square by
-   ratio and so would be sized and bled like a compact symbol, which takes a
-   letter off the end of both lines. It is still a wordmark: the letterforms
-   are the whole of it, and any bleed removes some.
-   So it is the one variant that does not run off an edge. Sized between a
-   mark and a wordmark and set into the lower right, which is where the other
-   two end up anyway once their bleed is accounted for. */
+/* A stacked lockup, turned on its side.
+ *
+ * MariBank's card is PORTRAIT: the name is printed "Mari" over "Bank" and
+ * runs up the card, so on a landscape one it has to be rotated to be the same
+ * mark. The painted result is rotated rather than the art, so the file itself
+ * stays the right way up - it is drawn at chip size in the account picker
+ * too, where turning it would be wrong.
+ *
+ * Sized by width like every other variant, which makes the box 46% wide and
+ * about 29% tall; the rotation swaps those, and a tall narrow mark is exactly
+ * what fits beside a landscape card's numbers. Bleeding off the right is
+ * fine here and is the same call the other two make - the letters run off the
+ * plastic rather than stopping short of it. */
 .acct-card > .acct-card-watermark[data-wm='stack'] {
-  width: 44%;
-  right: 5%;
-  bottom: 7%;
+  /* Big, set to the right, and whole - which is how the plastic carries it:
+     the name is the card's main graphic rather than a corner mark. Sized so
+     the last letter of each word survives; the i's dot and the k are the two
+     that go first, and a wordmark missing its last letter reads as a
+     rendering fault rather than as art.
+     Anticlockwise, so "Mari" lands on the LEFT of "Bank". Turning it the
+     other way is the same rotation and puts the two words in the wrong
+     order, which is the tell that a lockup has been flipped rather than
+     rotated.
+     Measured against a card in the browser rather than worked out: this one
+     sits inside the detail page's 3D tilt, so the painted box and the layout
+     box are not the same rectangle and arithmetic here is guesswork. */
+  width: 56%;
+  right: -7%;
+  bottom: 25%;
+  transform: rotate(-90deg);
 }
 
 /* Flatten whatever arrived to one white silhouette. !important is deliberate:

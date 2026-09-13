@@ -56,8 +56,25 @@ function shapeOf(svg) {
   return found ? shapeOfBox(found[1]) : 'mark'
 }
 
+/**
+ * Where the ratio is not the whole story.
+ *
+ * shapeOfBox reads proportions, which is the right answer for every file that
+ * arrives as one horizontal lockup. MariBank's does not: its card is PORTRAIT
+ * and prints the name stacked, "Mari" over "Bank", so the file is two lines
+ * and comes out at 1.58:1. Squarish - which the sizer calls a compact symbol
+ * and bleeds 9% off the right, taking a letter off the end of both lines.
+ *
+ * It is still a wordmark, and it also has to be turned: on a landscape card
+ * the stacked lockup runs up the side, the way it does on the plastic. Both
+ * of those are `stack` - see index.css.
+ */
+const SHAPE_OVERRIDE = {
+  maribank: 'stack',
+}
+
 const SHAPE_BY_KEY = Object.fromEntries(
-  Object.entries(BY_KEY).map(([key, svg]) => [key, shapeOf(svg)]),
+  Object.entries(BY_KEY).map(([key, svg]) => [key, SHAPE_OVERRIDE[key] ?? shapeOf(svg)]),
 )
 
 /**
@@ -66,28 +83,6 @@ const SHAPE_BY_KEY = Object.fromEntries(
  * that are a shape rather than letters.
  */
 const BRAND_ART = {
-  /* MariBank prints its NAME on the card, not its logomark: "Mari" over
-     "Bank", stacked tight and set large across the left of the plastic, with
-     the lower word starting a shade further left than the upper one. That
-     stagger is the lockup - left-align both and it reads as two words that
-     happen to be above each other.
-     Two lines rather than one because the ratio is the point: stacked it is
-     roughly square and gets the compact treatment, where "MariBank" on one
-     line would be a 4:1 strip sized like a wordmark and read as a different
-     brand's card. */
-  maribank: {
-    viewBox: '0 0 104 96',
-    lines: [
-      { text: 'Mari', x: 9, y: 44 },
-      { text: 'Bank', x: 2, y: 88 },
-    ],
-    fontSize: 42,
-    fontWeight: 800,
-    letterSpacing: -1.5,
-    anchor: 'start',
-    wm: 'stack',
-  },
-
   // Plain cash has no institution and so no logo. It used to fall through to
   // the category glyph, which is a banknote - and a banknote outline blown up
   // to a third of a card reads as an empty placeholder box, because at that
@@ -173,34 +168,10 @@ export default function BrandWatermark({ brand, className = 'acct-card-watermark
   const box = art.viewBox ?? '0 0 120 60'
   const [, , boxW, boxH] = box.trim().split(/[\s,]+/).map(Number)
 
-  /* Art may name its own treatment. shapeOfBox reads the ratio, which is
-     the right answer for a downloaded file and the wrong one for a STACKED
-     lockup: two lines are roughly square, so it would be sized and bled like
-     a compact symbol and lose a letter off each line. */
   return (
-    <span className={className} data-wm={art.wm ?? shapeOfBox(box)} aria-hidden="true">
+    <span className={className} data-wm={shapeOfBox(box)} aria-hidden="true">
       <svg viewBox={box} focusable="false" fill="currentColor">
         {art.art && <path d={art.art} />}
-
-        {/* A stacked lockup: each line placed outright, because the offset
-            between them is what makes it that brand's mark rather than two
-            centred words. Its own <text> per line rather than <tspan>, so a
-            line carries its own x without inheriting the previous one's. */}
-        {art.lines?.map(line => (
-          <text
-            key={line.text}
-            x={line.x}
-            y={line.y}
-            textAnchor={art.anchor ?? 'start'}
-            fontSize={art.fontSize ?? fontSizeFor(line.text)}
-            fontWeight={art.fontWeight ?? 900}
-            letterSpacing={art.letterSpacing ?? -1}
-            fontFamily="Inter, system-ui, -apple-system, sans-serif"
-          >
-            {line.text}
-          </text>
-        ))}
-
         {art.text && (
           <text
             x={boxW / 2}
