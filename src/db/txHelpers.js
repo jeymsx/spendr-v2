@@ -351,3 +351,133 @@ export async function saveTemplate(row) {
   }
   return db.templates.add(payload)
 }
+
+/**
+ * Money coming back on a purchase.
+ *
+ * ── Not a delete, and not an edit ──
+ *
+ * A refund is two events at two times. The money genuinely left on the 2nd
+ * and genuinely came back on the 20th, and both of those are true of your
+ * balance on every day in between. Deleting the original erases the seven
+ * weeks you were actually out of pocket; editing its amount down rewrites a
+ * statement your bank has already billed you for, which is the one thing
+ * getCreditStatus cannot survive - a charge has to stay in the cycle it
+ * happened in.
+ *
+ * Editing is for "I typed 240 instead of 2,400", where the event was always
+ * 2,400. This is for "it came back".
+ *
+ * ── The shape ──
+ *
+ * An ordinary expense with a NEGATIVE amount, carrying `refundOf`. See
+ * lib/txMoney.js for why that beats a fourth transaction type: every existing
+ * sum-by-category is already right about it, because they all add.
+ *
+ * It inherits the original's category on purpose - a refund that landed
+ * somewhere else would leave the category it came from overstated forever.
+ * The ACCOUNT can differ, because a card refund sometimes arrives as cash or
+ * as store credit against a different card.
+ *
+ * @param {{originalTxId: string, amount: number, toAccount?: string,
+ *          description?: string, date?: string}} input
+ * @returns {Promise<number|null>} the new row's id, for an undo
+ */
+export async function postRefund({ originalTxId, amount, toAccount, description, date }) {
+  if (!originalTxId) throw new Error('A refund needs the purchase it came from.')
+  if (!(amount > 0)) throw new Error('A refund needs an amount.')
+
+  const original = await db.transactions.where('txId').equals(originalTxId).first()
+  if (!original) throw new Error('That purchase is no longer here.')
+  if (original.type !== 'expense') throw new Error('Only a purchase can be refunded.')
+
+  const account = toAccount || original.account
+  if (!account) throw new Error('A refund needs an account to land in.')
+
+  const nowISO = date ?? new Date().toISOString()
+  let addedId = null
+
+  await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+    addedId = await db.transactions.add({
+      txId:        crypto.randomUUID(),
+      type:        'expense',
+      // Negative: this is the whole mechanism. See lib/txMoney.js.
+      amount:      -Math.abs(amount),
+      description: description || `Refund · ${original.description || original.category || 'purchase'}`,
+      category:    original.category,
+      account,
+      date:        nowISO,
+      refundOf:    originalTxId,
+      synced:      UNSYNCED,
+      updatedAt:   nowISO,
+    })
+    /* An expense applies `-a`, and `a` is negative here, so the balance goes
+       UP by the refund. No special case, which is the point. */
+    await applyBalanceEffect(/** @type {Transaction} */ (
+      { type: 'expense', amount: -Math.abs(amount), account }))
+  })
+
+  return addedId
+}
+
+/**
+ * One purchase, filed under more than one category.
+ *
+ * Written as N ordinary expenses sharing a `splitId` rather than one row with
+ * an array on it. Every sum-by-category in the app is then already correct
+ * about a split without knowing splits exist, because each leg is simply an
+ * expense - the same reason installments are N rows sharing an installmentId.
+ *
+ * The id exists so the UI can present them as one purchase and delete them as
+ * a unit. Nothing derives a total from it.
+ *
+ * The legs share a date and a description so they read as one thing in the
+ * ledger, and the balance moves once for the total rather than once per leg.
+ *
+ * @param {{account: string, date?: string, description?: string,
+ *          legs: Array<{category: string, amount: number}>,
+ *          allowOverdraw?: boolean}} input
+ * @returns {Promise<{splitId: string, ids: number[]}>}
+ */
+export async function postSplitExpense({ account, date, description, legs, allowOverdraw = false }) {
+  if (!account) throw new Error('A purchase needs an account.')
+  const clean = (legs ?? []).filter(l => l?.category && l.amount > 0)
+  if (clean.length < 2) throw new Error('A split needs at least two categories.')
+
+  const total = Math.round(clean.reduce((s, l) => s + l.amount, 0) * 100) / 100
+  if (!(total > 0)) throw new Error('A purchase needs an amount.')
+
+  if (!allowOverdraw) {
+    const over = await checkOverdraw(account, total)
+    if (over) throw new OverdrawError(over.name, over.balance ?? 0, total)
+  }
+
+  const nowISO = date ?? new Date().toISOString()
+  const splitId = crypto.randomUUID()
+  /** @type {number[]} */
+  const ids = []
+
+  await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+    for (const leg of clean) {
+      const id = await db.transactions.add({
+        txId:        crypto.randomUUID(),
+        type:        'expense',
+        amount:      Math.round(leg.amount * 100) / 100,
+        description: description || leg.category,
+        category:    leg.category,
+        account,
+        date:        nowISO,
+        splitId,
+        synced:      UNSYNCED,
+        updatedAt:   nowISO,
+      })
+      ids.push(/** @type {number} */ (id))
+    }
+    /* One adjustment for the whole purchase. Same net effect as applying each
+       leg, without re-reading the account once per category. */
+    await applyBalanceEffect(/** @type {Transaction} */ (
+      { type: 'expense', amount: total, account }))
+  })
+
+  return { splitId, ids }
+}

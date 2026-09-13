@@ -101,6 +101,14 @@ export function toSupabaseRow(r, userId) {
                     : type === 'transfer' ? (r.toAccount ?? null)
                     : null,
     amount:           r.amount,
+    /* Both are plain properties with no Dexie index, the same shape
+       installmentId uses. They DO cross to Supabase, unlike installmentId,
+       because losing them costs more than a lookup: a refund with no
+       refundOf still nets correctly - it is a negative amount and every sum
+       adds - but the "Refunded 500 of 2,400" line and the refundable cap
+       both go, and split legs stop reading as one purchase. */
+    refund_of:        r.refundOf ?? null,
+    split_id:         r.splitId ?? null,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
   })
@@ -170,6 +178,10 @@ export function debtToRow(r, userId) {
     type:        r.type,
     notes:       r.notes     ?? null,
     created_at:  r.createdAt ?? null,
+    /* A receivable opened by a shared expense remembers which purchase it
+       came from and which category to credit when it settles. See 009. */
+    source_tx_id:    r.sourceTxId ?? null,
+    source_category: r.sourceCategory ?? null,
     updated_at:  r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -279,6 +291,8 @@ export function toDexieRecord(row) {
     fromAccount: type === 'transfer' ? row.from_account : null,
     toAccount:   type === 'transfer' ? row.to_account   : null,
     amount:      row.amount,
+    refundOf:    row.refund_of ?? null,
+    splitId:     row.split_id ?? null,
     synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
@@ -338,6 +352,8 @@ export function rowToDebt(row) {
     type:       row.type,
     notes:      row.notes,
     createdAt:  row.created_at,
+    sourceTxId:      row.source_tx_id ?? null,
+    sourceCategory:  row.source_category ?? null,
     updatedAt:  row.updated_at,
   }
 }
@@ -533,10 +549,33 @@ export async function syncToSupabase(userId) {
     const rows = unsyncedTxs.filter(r => r.txId).map(r => toSupabaseRow(r, userId))
 
     if (rows.length > 0) {
-      const { error } = await supabase
-        .from('transactions')
-        .upsert(rows, { onConflict: 'user_id,tx_id', ignoreDuplicates: false })
-      if (error) throw new Error(`transactions push: ${error.message}`)
+      const opts = { onConflict: 'user_id,tx_id', ignoreDuplicates: false }
+      const { error } = await supabase.from('transactions').upsert(rows, opts)
+      if (error) {
+        /* Transactions do not go through pushTable, so they never had its
+           unknown-column net - which meant 009 was the first migration that
+           could break transaction sync outright rather than degrade it.
+           Same retry, same reasoning: drop what the table does not know
+           about and push the rows, so the ledger still syncs on a database
+           that is a migration behind. */
+        const optional = OPTIONAL_COLS.transactions ?? []
+        if (optional.length && UNKNOWN_COLUMN.test(error.message ?? '')) {
+          const trimmed = rows.map(row => {
+            const copy = { ...row }
+            for (const col of optional) delete copy[col]
+            return copy
+          })
+          const retry = await supabase.from('transactions').upsert(trimmed, opts)
+          if (retry.error) throw new Error(`transactions push: ${retry.error.message}`)
+          console.warn(
+            '[sync] transactions: dropping %s and retrying.'
+            + ' Run 009_refunds_splits_shared.sql to sync them: %s',
+            optional.join(', '), error.message,
+          )
+        } else {
+          throw new Error(`transactions push: ${error.message}`)
+        }
+      }
     }
 
     // Mark as synced locally
@@ -584,6 +623,12 @@ const OPTIONAL_COLS = {
      net for exactly that. If it is missing the push drops the column and
      retries instead of failing template sync outright. */
   templates: ['created_at'],
+  /* 009. Until it is run, a refund still nets correctly on another device -
+     the amount is negative and every sum adds - it just loses the link back
+     to what it refunded. Degraded, not wrong, which is the right trade for
+     not blocking the ledger on a migration. */
+  transactions: ['refund_of', 'split_id'],
+  debts: ['source_tx_id', 'source_category'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,

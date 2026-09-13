@@ -130,7 +130,7 @@ const db = {
 
 vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1 }))
 
-const { postCardPayment, OverdrawError } = await import('./txHelpers')
+const { postCardPayment, postRefund, postSplitExpense, OverdrawError } = await import('./txHelpers')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
 beforeEach(() => {
@@ -304,5 +304,114 @@ describe('postCardPayment', () => {
     expect(store.transactions).toHaveLength(0)
     expect(acct('ZZ Test Card').balance).toBe(-3200)
     expect(acct('Maya Savings').balance).toBe(10000)
+  })
+})
+
+describe('postRefund', () => {
+  /** A 2,400 purchase on the card, already stored with its balance applied. */
+  beforeEach(() => {
+    store.transactions.push({
+      id: 90, txId: 'buy-1', type: 'expense', amount: 2400,
+      category: 'Groceries', account: 'ZZ Test Card', date: '2026-09-02T08:00:00+08:00',
+    })
+  })
+
+  const refund = (over = {}) => postRefund({ originalTxId: 'buy-1', amount: 500, ...over })
+
+  it('writes a NEGATIVE expense carrying the link back', async () => {
+    await refund()
+
+    const r = store.transactions.find(t => t.refundOf === 'buy-1')
+    expect(r.type).toBe('expense')
+    /* The whole mechanism: negative, so every sum-by-category in the app is
+       right about it without being told refunds exist. */
+    expect(r.amount).toBe(-500)
+  })
+
+  it('inherits the category, so the one it came from stops being overstated', async () => {
+    await refund()
+    expect(store.transactions.find(t => t.refundOf === 'buy-1').category).toBe('Groceries')
+  })
+
+  it('puts the money back, with no special case to get wrong', async () => {
+    await refund()
+    // The card was at -3200 owing; 500 back moves it toward zero.
+    expect(acct('ZZ Test Card').balance).toBe(-2700)
+  })
+
+  /** A card refund can arrive as cash, or against a different card. */
+  it('can land somewhere other than where the money left', async () => {
+    await refund({ toAccount: 'Maya Savings' })
+
+    expect(store.transactions.find(t => t.refundOf === 'buy-1').account).toBe('Maya Savings')
+    expect(acct('Maya Savings').balance).toBe(10500)
+    expect(acct('ZZ Test Card').balance).toBe(-3200)
+  })
+
+  it('refuses what cannot mean anything, and writes nothing', async () => {
+    await expect(refund({ amount: 0 })).rejects.toThrow(/needs an amount/i)
+    await expect(refund({ originalTxId: 'nope' })).rejects.toThrow(/no longer here/i)
+    await expect(refund({ originalTxId: '' })).rejects.toThrow(/came from/i)
+    expect(store.transactions.filter(t => t.refundOf)).toHaveLength(0)
+  })
+
+  /** Refunding a transfer or an inflow is not a thing. */
+  it('refuses to refund anything that is not a purchase', async () => {
+    store.transactions.push({ id: 91, txId: 'in-1', type: 'inflow', amount: 100, account: 'Maya Savings' })
+    await expect(postRefund({ originalTxId: 'in-1', amount: 50 })).rejects.toThrow(/purchase/i)
+  })
+})
+
+describe('postSplitExpense', () => {
+  const legs = [
+    { category: 'Groceries', amount: 2400 },
+    { category: 'Household', amount: 800 },
+  ]
+  const split = (over = {}) => postSplitExpense({ account: 'Maya Savings', legs, ...over })
+
+  it('writes one ordinary expense per category, sharing an id', async () => {
+    const { splitId } = await split()
+
+    const rows = store.transactions.filter(t => t.splitId === splitId)
+    expect(rows).toHaveLength(2)
+    expect(rows.map(r => r.category).sort()).toEqual(['Groceries', 'Household'])
+    /* Ordinary expenses, so every existing sum-by-category is already right
+       about them without knowing splits exist. */
+    expect(rows.every(r => r.type === 'expense')).toBe(true)
+  })
+
+  it('moves the balance once, by the total', async () => {
+    await split()
+    expect(acct('Maya Savings').balance).toBe(6800)
+  })
+
+  it('needs two categories to be a split at all', async () => {
+    await expect(split({ legs: [legs[0]] })).rejects.toThrow(/at least two/i)
+    // A leg with no amount is not a leg, so this is still a split of one.
+    await expect(split({ legs: [legs[0], { category: 'X', amount: 0 }] }))
+      .rejects.toThrow(/at least two/i)
+    expect(store.transactions).toHaveLength(0)
+  })
+
+  it('checks the total against the balance, not each leg', async () => {
+    const err = await split({ legs: [
+      { category: 'Groceries', amount: 6000 },
+      { category: 'Household', amount: 6000 },
+    ] }).catch((/** @type {any} */ e) => e)
+
+    // Neither leg overdraws 10,000 on its own; together they do.
+    expect(err).toBeInstanceOf(OverdrawError)
+    expect(err.amount).toBe(12000)
+    expect(store.transactions).toHaveLength(0)
+  })
+
+  it('goes through on a retry with allowOverdraw', async () => {
+    await split({ legs: [
+      { category: 'Groceries', amount: 6000 },
+      { category: 'Household', amount: 6000 },
+    ], allowOverdraw: true })
+
+    expect(store.transactions).toHaveLength(2)
+    expect(acct('Maya Savings').balance).toBe(-2000)
   })
 })
