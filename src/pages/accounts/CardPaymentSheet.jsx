@@ -138,7 +138,12 @@ export default function CardPaymentSheet({
               <span aria-hidden="true">₱</span>
               <input
                 ref={amountRef}
-                size={1}
+                /* Sized to the text, not to the box. `size={1}` plus w-full
+                   made the input as wide as the sheet allowed, so a short
+                   figure centred itself away from the peso sign and rendered
+                   as "P    650". Tracking the length keeps them adjacent at
+                   every amount. */
+                size={Math.max(1, amount.length)}
                 value={amount}
                 onChange={onAmount}
                 inputMode="decimal"
@@ -148,7 +153,7 @@ export default function CardPaymentSheet({
                    every input to 16px !important so iOS does not zoom on
                    focus, and a utility cannot beat that. See the note there -
                    this sheet is the second thing to be caught by it. */
-                className="amount-hero-input w-full min-w-0 max-w-[220px] bg-transparent
+                className="amount-hero-input min-w-0 max-w-[220px] bg-transparent
                   outline-none text-center tabular-nums tracking-tight
                   placeholder:text-slate-300 dark:placeholder:text-slate-600"
                 style={{ color: PAY_COLOR }}

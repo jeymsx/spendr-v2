@@ -1,8 +1,11 @@
 import { cloneElement, useEffect, useState, useMemo } from 'react'
 import db, { UNSYNCED } from '../db/db'
+import { postRefund } from '../db/txHelpers'
 import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx,
          deleteTxGroup, restoreDeletedTxs } from '../db/txHelpers'
 import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
+import { isRefund, refundedAmount, refundableAmount } from '../lib/txMoney'
+import RefundSheet from './RefundSheet'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import CategoryPickerSheet from './CategoryPickerSheet'
 import AccountPickerSheet from './AccountPickerSheet'
@@ -77,6 +80,33 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
 
   const planCount = planRows?.length ?? 0
   const planTotal = (planRows ?? []).reduce((s, t) => s + (t.amount ?? 0), 0)
+
+  /* Every transaction, for the refund maths. Only fetched for a purchase that
+     could have one - a transfer, an inflow or a refund itself never can, and
+     the sheet opens on every row in the app. */
+  const canRefund = tx?.type === 'expense' && !!tx?.txId && !isRefund(tx)
+  const allTxs = useLiveQuery(
+    async () => (canRefund ? db.transactions.toArray() : []),
+    [canRefund, tx?.txId], [])
+
+  const backAlready = refundedAmount(tx, allTxs)
+  const stillOut    = refundableAmount(tx, allTxs)
+  const [refundOpen, setRefundOpen] = useState(false)
+  const [refunding,  setRefunding]  = useState(false)
+
+  async function handleRefund({ amount, toAccount }) {
+    setRefunding(true)
+    try {
+      await postRefund({ originalTxId: tx.txId, amount, toAccount })
+      showToast(`Refund of ${fmt(amount)} logged`)
+      setRefundOpen(false)
+    } catch (e) {
+      console.error('[TxDetailSheet] refund failed:', e)
+      showToast(/** @type {any} */ (e)?.message ?? 'Could not log that refund', 'error')
+    } finally {
+      setRefunding(false)
+    }
+  }
 
   /* No `closing` flag and no scroll lock here: Sheet owns the overlay, the
      panel, the grab handle, the scroll lock, Escape, the focus trap and the
@@ -268,6 +298,11 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
         >
           Delete
         </Button>
+        {canRefund && stillOut > 0 && (
+          <Button variant="secondary" className="flex-1" onClick={() => setRefundOpen(true)}>
+            Refund
+          </Button>
+        )}
         <Button className="flex-[2]" onClick={enterEdit}>
           Edit
         </Button>
@@ -390,6 +425,21 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
               <AmountHero color={cfg.color} className="mt-5 mb-6">
                 {cfg.sign}{fmt(rec.amount)}
               </AmountHero>
+
+              {/* What the purchase actually cost, once money came back.
+
+                  Under the hero rather than replacing it, because the hero is
+                  what you paid and that stays true - editing it down would
+                  rewrite a statement the bank already billed. This is the
+                  second fact, not a correction of the first. */}
+              {backAlready > 0 && (
+                <p className="-mt-4 mb-6 text-center text-13 text-emerald-600 dark:text-emerald-400">
+                  Refunded {fmt(backAlready)}
+                  <span className="text-slate-400 dark:text-slate-500">
+                    {' · '}{fmt(Math.max(0, stillOut))} net
+                  </span>
+                </p>
+              )}
 
               {/* One list, not a card of rows.
 
@@ -666,6 +716,16 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
           exclude={editFrom ? [editFrom.id] : []}
         />
       </div>
+
+      <RefundSheet
+        open={refundOpen}
+        onClose={() => setRefundOpen(false)}
+        tx={tx}
+        allTxs={allTxs}
+        accounts={accounts}
+        onRefund={handleRefund}
+        saving={refunding}
+      />
     </>
   )
 }
