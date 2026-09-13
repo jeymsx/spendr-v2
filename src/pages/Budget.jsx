@@ -424,38 +424,6 @@ export default function Budget() {
         </div>
       ) : (
         <>
-          {/* Only when there is something to move, and only once a month.
-              A rolling category is deliberately absent from `leftovers` -
-              its leftover has already been kept, and sweeping it too would
-              move the same money twice. See lib/rollover.js. */}
-          {leftovers.total > 0 && !alreadySwept && (
-            <div className="px-5 mb-5">
-              <Card padding="md">
-                <p className="text-14 font-semibold text-slate-800 dark:text-white">
-                  You did not spend {fmt(leftovers.total)} last month
-                </p>
-                <p className="mt-1 text-12 leading-snug text-slate-500 dark:text-slate-400">
-                  Move it into a goal and it stops being this month&apos;s spending.
-                </p>
-                <div className="mt-3 flex gap-2.5">
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    className="flex-1"
-                    onClick={() => db.meta.put({
-                      key: sweptKey, value: true, updatedAt: new Date().toISOString(),
-                    })}
-                  >
-                    Dismiss
-                  </Button>
-                  <Button size="sm" className="flex-[1.6]" onClick={() => setSweepOpen(true)}>
-                    Keep it
-                  </Button>
-                </div>
-              </Card>
-            </div>
-          )}
-
           {/* ── The month at a glance ── */}
           <section className="px-5">
             {/* The amount, the share and the limit were three stacked lines
@@ -507,6 +475,70 @@ export default function Budget() {
               category's own tile. Nothing is lost, because the list is
               already sorted closest-to-limit first, so what is breaking is
               still what you see first. */}
+
+          {/* Below the gauge, never above it.
+ 
+              The gauge is what the page is FOR - this month, at a glance -
+              and an offer about last month standing in front of it makes the
+              first thing you see a question rather than an answer. It reads
+              correctly here: this is the month, and here is a loose end from
+              the one before. */}
+          {/* Dismissing QUIETENS this, it does not delete it.
+ 
+              The first version stamped the month and the offer was gone for
+              good - which is wrong twice over: the money is still sitting
+              there whether or not you wanted to be asked today, and a control
+              with no way back is a trap. So a dismissed month collapses to one
+              line that still opens the sheet.
+ 
+              A rolling category is deliberately absent from `leftovers` - its
+              leftover has already been kept, and sweeping it would move the
+              same money twice. See lib/rollover.js. */}
+          {leftovers.total > 0 && alreadySwept && (
+            <div className="px-5 mt-6">
+              <button
+                type="button"
+                onClick={() => setSweepOpen(true)}
+                className="w-full flex items-baseline justify-between gap-3 py-1 text-left
+                  active:opacity-70 transition-opacity"
+              >
+                <span className="text-12 text-slate-400 dark:text-slate-500">
+                  {fmt(leftovers.total)} unspent last month
+                </span>
+                <span className="text-12 font-semibold text-primary shrink-0">
+                  Keep it
+                </span>
+              </button>
+            </div>
+          )}
+
+          {leftovers.total > 0 && !alreadySwept && (
+            <div className="px-5 mt-6">
+              <Card padding="md">
+                <p className="text-14 font-semibold text-slate-800 dark:text-white">
+                  You did not spend {fmt(leftovers.total)} last month
+                </p>
+                <p className="mt-1 text-12 leading-snug text-slate-500 dark:text-slate-400">
+                  Move it into a goal and it stops being this month&apos;s spending.
+                </p>
+                <div className="mt-3 flex gap-2.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => db.meta.put({
+                      key: sweptKey, value: true, updatedAt: new Date().toISOString(),
+                    })}
+                  >
+                    Dismiss
+                  </Button>
+                  <Button size="sm" className="flex-[1.6]" onClick={() => setSweepOpen(true)}>
+                    Keep it
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
 
           {/* ── Spent against each limit ── */}
           <section className="mt-7">

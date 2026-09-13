@@ -299,7 +299,7 @@ export default function Settings() {
               Turning it off here does not turn off a category you switched on
               deliberately - see lib/rollover.js. */}
           <SettingsRow
-            icon={
+            iconEl={
               <RowIcon color="violet">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="17 1 21 5 17 9" />
@@ -310,7 +310,7 @@ export default function Settings() {
               </RowIcon>
             }
             label="Carry budgets over"
-            sublabel="Unspent rolls into next month, overspending too"
+            sublabel="Unspent rolls into next month"
             right={<ToggleSwitch on={budgetRollover} />}
             onTap={() => db.meta.put({
               key: 'budgetRollover', value: !budgetRollover, updatedAt: new Date().toISOString(),

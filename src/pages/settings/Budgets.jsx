@@ -243,6 +243,28 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
                 )
               })}
             </div>
+
+            {/* The ⟲ toggle's full meaning, said once where the decision is
+                made. Settings carries the same switch as a global default, but
+                its sublabel truncates at 200px, so the half that can REDUCE a
+                limit would never have been readable there. */}
+            {expenseCats.some(c => (c.budget ?? 0) > 0) && (
+              <p className="mx-4 -mt-4 mb-6 text-11 leading-snug text-slate-400 dark:text-slate-500">
+                {/* The button's own glyph, not a lookalike character. "⟲"
+                    renders as a different arrow in most faces, so the note
+                    would be pointing at a control the reader cannot find. */}
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                  strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"
+                  className="inline-block -mt-px mr-1" aria-hidden="true">
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
+                carries a category over: what you did not spend is added to next
+                month, and what you went over by is taken off it.
+              </p>
+            )}
     </>
   )
 
