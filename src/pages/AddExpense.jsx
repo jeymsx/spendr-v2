@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
 import { postSplitExpense, applyBalanceEffect, checkOverdraw, saveTemplate } from '../db/txHelpers'
@@ -21,8 +21,7 @@ import { useQuickPrefill } from '../hooks/useQuickPrefill'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
-import SharedExpenseRow from '../components/SharedExpenseRow'
-import SplitSheet from '../components/SplitSheet'
+import DivideScreen from '../components/DivideScreen'
 import { fmt } from '../lib/money'
 import Rail from '../components/ui/Rail'
 
@@ -91,10 +90,18 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   const [installMonths,  setInstallMonths]  = useState(0) // 0 = not an installment
   const [overdraw,       setOverdraw]       = useState(null)
   const [customTerm,     setCustomTerm]     = useState(false)
-  const [owedStr,        setOwedStr]        = useState('')
-  const [owedContact,    setOwedContact]    = useState('')
-  const [splitOpen,      setSplitOpen]      = useState(false)
+  const [divideOpen,     setDivideOpen]     = useState(false)
   const [splitLegs,      setSplitLegs]      = useState(/** @type {any[]|null} */ (null))
+  /** [{ name, amount }] owed back to you on this expense. */
+  const [people,         setPeople]         = useState(/** @type {any[]|null} */ (null))
+
+  /* What the one row says once something has been divided. */
+  const divideSummary = useMemo(() => {
+    const parts = []
+    if (splitLegs?.length) parts.push(`Split ${splitLegs.length} ways`)
+    if (people?.length) parts.push(`${people.length} owe you ${fmt(people.reduce((s, p) => s + p.amount, 0))}`)
+    return parts.length ? parts.join(' · ') : null
+  }, [splitLegs, people])
 
   const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
@@ -235,12 +242,32 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         dueOn = advanceNextDate(dueOn, 'monthly')
       }
 
-      const owedBack = parseMoney(owedStr)
-      const sharing = count === 1 && owedBack > 0
+      /* One receivable per person, each pointing at this purchase so that
+         settling it refunds the category rather than counting as income. */
+      const shares = (count === 1 ? (people ?? []) : []).filter(p => p.name && p.amount > 0)
+
+      /** @param {string|null} txId @param {string} categoryName */
+      const openReceivables = async (txId, categoryName) => {
+        for (const p of shares) {
+          await db.debts.add({
+            name:           p.name,
+            contact:        p.name,
+            amount:         p.amount,
+            amountPaid:     0,
+            type:           'owed_to_me',
+            dueDate:        null,
+            notes:          note || categoryName,
+            createdAt:      updISO,
+            sourceTxId:     txId,
+            sourceCategory: categoryName,
+            synced:         UNSYNCED,
+            updatedAt:      updISO,
+          })
+        }
+      }
 
       /* A split is N rows and one balance move, so it does not go through the
-         loop above - postSplitExpense owns both. Everything after this point
-         (the receivable, the template, the toast) still applies. */
+         loop above - postSplitExpense owns both. */
       if (splitLegs && count === 1) {
         const { ids } = await postSplitExpense({
           account: account.name,
@@ -249,25 +276,12 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
           legs: splitLegs,
           allowOverdraw: true,
         })
-        if (sharing) {
-          const first = await db.transactions.get(ids[0])
-          await db.debts.add({
-            name:           owedContact.trim() || 'Shared expense',
-            contact:        owedContact.trim() || null,
-            amount:         owedBack,
-            amountPaid:     0,
-            type:           'owed_to_me',
-            dueDate:        null,
-            notes:          note || splitLegs[0].category,
-            createdAt:      updISO,
-            sourceTxId:     first?.txId ?? null,
-            sourceCategory: splitLegs[0].category,
-            synced:         UNSYNCED,
-            updatedAt:      updISO,
-          })
-        }
+        const first = await db.transactions.get(ids[0])
+        await openReceivables(first?.txId ?? null, splitLegs[0].category)
         if (templateData) await saveTemplate(templateData)
-        showToast(`Split across ${splitLegs.length} categories`)
+        showToast(shares.length
+          ? `Split ${splitLegs.length} ways · ${shares.length} owe you`
+          : `Split across ${splitLegs.length} categories`)
         if (onSaved) onSaved(); else navigate('/')
         return
       }
@@ -284,28 +298,12 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
       })
       /* Outside the transaction above, and deliberately: it writes to a table
          that block does not name, and widening the scope to include `debts`
-         would make the expense itself fail if the receivable did. The expense
-         is the fact; the receivable is a note to chase someone. */
-      if (sharing) {
-        await db.debts.add({
-          name:           owedContact.trim() || 'Shared expense',
-          contact:        owedContact.trim() || null,
-          amount:         owedBack,
-          amountPaid:     0,
-          type:           'owed_to_me',
-          dueDate:        null,
-          notes:          note || category.name,
-          createdAt:      updISO,
-          /* What makes settling this a refund rather than income. */
-          sourceTxId:     rows[0].txId,
-          sourceCategory: category.name,
-          synced:         UNSYNCED,
-          updatedAt:      updISO,
-        })
-      }
+         would make the expense itself fail if a receivable did. The expense is
+         the fact; the receivable is a note to chase someone. */
+      await openReceivables(rows[0].txId, category.name)
 
       if (templateData) await saveTemplate(templateData)
-      showToast(sharing ? `Expense saved · ${owedContact.trim() || 'someone'} owes you`
+      showToast(shares.length ? `Expense saved · ${shares.length} owe you`
               : count > 1 ? `${count} payments scheduled`
               : 'Expense saved')
       if (onSaved) onSaved(); else navigate('/')
@@ -323,6 +321,45 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
     const acct = (accounts ?? []).find(a => a.name === tpl.account)
     if (cat)  { setCategory(cat);  setCatError(false) }
     if (acct) chooseAccount(acct)
+  }
+
+  /* Rendered INSTEAD of the form, not over it. A full-screen overlay has to
+     paint its own background, and in dark mode the app's is a gradient on
+     <html> with a transparent body - so any slab of flat colour reads as the
+     wrong background rather than as a new screen. Swapping the tree keeps
+     every draft field alive in this component's state while letting the real
+     background show. */
+  if (divideOpen) {
+    return (
+        <DivideScreen
+        open={divideOpen}
+        onClose={() => setDivideOpen(false)}
+        total={amount}
+        categories={categories ?? []}
+        initialCategory={category}
+        initialLegs={splitLegs
+          ? splitLegs.slice(1).map(l => ({
+              cat: (categories ?? []).find(c => c.name === l.category),
+              amountStr: String(l.amount),
+            }))
+          : null}
+        initialPeople={people
+          ? people.map(p => ({ name: p.name, amountStr: String(p.amount) }))
+          : null}
+        onApply={({ legs, people: shares }) => {
+          setSplitLegs(legs)
+          setPeople(shares)
+          /* A split supplies its own categories; the rail's single pick no
+             longer means anything, but the first leg is still what a
+             non-split save would file under. */
+          if (legs?.length) {
+            const first = (categories ?? []).find(c => c.name === legs[0].category)
+            if (first) setCategory(first)
+          }
+          setDivideOpen(false)
+        }}
+      />
+    )
   }
 
   return (
@@ -401,7 +438,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
                the rail would be lying. The legs replace it. */
             <button
               type="button"
-              onClick={() => setSplitOpen(true)}
+              onClick={() => setDivideOpen(true)}
               className={`${fieldFrame()} w-full text-left`}
             >
               <span className="flex-1 min-w-0">
@@ -424,25 +461,25 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
             />
           )}
 
-          {/* Only once there is something to divide. Splitting nothing is
-              not a thing, and an installment plan splits per month, which is
-              a different feature. */}
+          {/* ONE row, not five controls.
+ 
+              Splitting across categories and owing part of it to somebody are
+              both real, and both belong to a minority of expenses - so they
+              get a door rather than a permanent residence on a form whose job
+              is amount, category, account, done. */}
           {amount > 0 && !isInstallment && (
             <button
               type="button"
-              onClick={() => setSplitOpen(true)}
-              className="mt-2 px-1 text-xs font-semibold text-primary active:opacity-70"
+              onClick={() => setDivideOpen(true)}
+              className="mt-2 w-full flex items-center gap-2 py-2 px-1 rounded-2xl text-left
+                active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
             >
-              {splitLegs ? 'Edit split' : 'Split across categories'}
-            </button>
-          )}
-          {splitLegs && (
-            <button
-              type="button"
-              onClick={() => setSplitLegs(null)}
-              className="mt-2 ml-3 px-1 text-xs font-semibold text-slate-400 dark:text-slate-500 active:opacity-70"
-            >
-              Remove split
+              <span className="flex-1 min-w-0 text-xs font-semibold text-primary">
+                {divideSummary ?? 'Split it, or share it with someone'}
+              </span>
+              <span className="shrink-0 text-slate-300 dark:text-slate-600" aria-hidden="true">
+                <IconChevronRight />
+              </span>
             </button>
           )}
         </div>
@@ -457,20 +494,6 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
             onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
           />
         </div>
-
-        {/* Shared: the full amount still leaves, a receivable opens for their
-            share, and settling it refunds this purchase. Not offered on an
-            installment - a plan you are splitting with someone needs a
-            receivable per month, which is a different feature. */}
-        {!isInstallment && amount > 0 && (
-          <SharedExpenseRow
-            total={amount}
-            owedStr={owedStr}
-            onOwedChange={setOwedStr}
-            contact={owedContact}
-            onContactChange={setOwedContact}
-          />
-        )}
 
         {/* Installment — credit accounts only */}
         {isCredit && (
@@ -610,14 +633,6 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         accountName={overdraw?.accountName}
         balance={overdraw?.balance}
         amount={overdraw?.amount}
-      />
-      <SplitSheet
-        open={splitOpen}
-        onClose={() => setSplitOpen(false)}
-        total={amount}
-        categories={categories ?? []}
-        initialCategory={category}
-        onConfirm={(legs) => { setSplitLegs(legs); setSplitOpen(false) }}
       />
       <DupWarningSheet
         open={dupWarning}

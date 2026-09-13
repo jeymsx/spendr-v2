@@ -43,17 +43,20 @@ export default function CategoryTile({ cat, on = false }) {
         <CategoryGlyph cat={cat} size={23} emoji="🏷️" />
       </span>
 
-      {/* line-clamp-2 rather than truncate: "Transfer Fee" is two words and
-          reads fine on two lines, where truncated it becomes "Transfer…" and
-          loses the half that distinguishes it.
+      {/* One line, clipped.
 
-          A single long word - "Entertainment" - has nowhere to wrap and gets
-          clipped at the tile's edge. Deliberately: break-words splits it
-          across two lines mid-word, and a name broken in half is harder to
-          recognise at 10px than the same name with its tail cut off. The
-          glyph above it is doing most of the identifying anyway. */}
+          This was line-clamp-2, on the reasoning that "Transfer Fee" reads
+          better over two lines than as "Transfer…". True of the label on its
+          own, and wrong for the row: every tile reserves the height of the
+          tallest, so ONE two-word category made the whole rail taller and
+          left an awkward gap under it on any screen that puts something
+          directly below.
+
+          A rail of tiles is scanned by glyph and colour - the word is
+          confirmation, not identification - so a clipped tail costs less than
+          a row that changes height depending on which categories exist. */}
       <span className={[
-        'text-10 leading-tight text-center w-full line-clamp-2',
+        'text-10 leading-tight text-center w-full truncate',
         on
           ? 'font-semibold text-slate-900 dark:text-white'
           : 'font-medium text-slate-500 dark:text-slate-400',

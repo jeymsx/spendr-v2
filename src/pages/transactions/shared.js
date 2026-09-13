@@ -74,18 +74,6 @@ export const DATE_OPTS = [
 ]
 
 /**
- * Kept for anything that only has a TYPE to go on. Prefer txRowTone below,
- * which sees the whole row - a refund is an expense whose amount is negative,
- * and a table keyed on type alone cannot know that, so it prints the minus
- * twice.
- */
-export const AMOUNT_COLOR = {
-  expense:  { cls: 'text-red-500 dark:text-red-400',         sign: '−' },
-  inflow:   { cls: 'text-emerald-600 dark:text-emerald-400', sign: '+' },
-  transfer: { cls: 'text-blue-500 dark:text-blue-400',       sign: ''  },
-}
-
-/**
  * Sign, colour and the figure to print, for one row.
  *
  * The magnitude matters: a refund is stored at -500 so every sum-by-category
