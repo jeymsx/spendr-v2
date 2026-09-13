@@ -44,6 +44,7 @@ import { BudgetManagerSheet, BudgetsPage } from './settings/Budgets'
 import { RestoreBackupSheet, ResetConfirmModal } from './settings/Backup'
 import { SheetsConfigSheet, ProfileSheet } from './settings/Profile'
 import { PolicySheet } from './settings/Policy'
+import { downloadBackupJson } from '../lib/backup'
 
 // ── Toggle switch ──────────────────────────────────────────────────────────────
 
@@ -176,28 +177,12 @@ export default function Settings() {
     if (backingUp) return
     setBackingUp(true)
     try {
-      const [transactions, accounts, categories, templates, recurring, debts] = await Promise.all([
-        db.transactions.toArray(),
-        db.accounts.toArray(),
-        db.categories.toArray(),
-        db.templates.toArray(),
-        db.recurring.toArray(),
-        db.debts.toArray(),
-      ])
-      const backup = {
-        version: 1,
-        exportedAt: new Date().toISOString(),
-        transactions, accounts, categories, templates, recurring, debts,
-      }
-      const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' })
-      const url  = URL.createObjectURL(blob)
-      const a    = document.createElement('a')
-      a.href     = url
-      a.download = `spendr-backup-${new Date().toISOString().slice(0, 10)}.json`
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(url)
+      /* lib/backup.js, not a second copy of the table list here.
+         There WAS a second copy, and it is how goals and badges went missing
+         from every backup this app has ever written: they were added to the
+         schema, added to sync, and never added to either list. One list now,
+         and the restore reads the same one. */
+      await downloadBackupJson()
       showToast('Full backup downloaded')
     } catch (e) {
       console.error('[Settings] backup failed:', e)

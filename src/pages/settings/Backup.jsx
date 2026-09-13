@@ -85,7 +85,16 @@ export function RestoreBackupSheet({ open, onClose }) {
     [c.transactions, 'transactions'], [c.accounts, 'accounts'],
     [c.categories, 'categories'], [c.recurring, 'recurring'],
     [c.debts, 'debts'], [c.templates, 'templates'],
+    [c.goals, 'goals'], [c.badges, 'badges'],
   ].filter(([n]) => n > 0)
+
+  /* What the file has no opinion about.
+     Every table is restored on its own, so a section a file does not carry is
+     left exactly as it is on the device - which is right, and was silent. It
+     is the whole of the "I restored a backup and my old goals are still here"
+     report: backups written before goals existed say nothing about them, so
+     the restore could not clear them. Now the sheet says so before you tap. */
+  const untouched = (info?.missing ?? []).join(' and ')
 
   return (
     /* Was a hand-rolled centred card. It stays centred on desktop - that is
@@ -167,6 +176,12 @@ export function RestoreBackupSheet({ open, onClose }) {
                 </p>
               )}
             </div>
+
+            {untouched && (
+              <p className="text-11 leading-snug text-amber-600 dark:text-amber-400 text-center px-2">
+                This file has no {untouched}. Whatever is on this device stays as it is.
+              </p>
+            )}
 
             <div className="rounded-2xl bg-slate-50 dark:bg-white/[0.04] px-4 py-3 flex flex-col gap-1.5">
               {summary.map(([n, label]) => (

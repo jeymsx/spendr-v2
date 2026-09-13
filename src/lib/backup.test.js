@@ -31,6 +31,8 @@ const good = {
   templates: [],
   recurring: [],
   debts: [],
+  goals: [],
+  badges: [],
 }
 
 describe('inspectBackup', () => {
@@ -96,5 +98,40 @@ describe('inspectBackup', () => {
   it('does not count balances or meta as Spendr data', () => {
     expect(() => inspectBackup({ balances: [{ account: 'Cash' }], meta: [{ key: 'x' }] }))
       .toThrow(/No Spendr data/i)
+  })
+})
+
+/**
+ * The two tables that were missing from this list for two schema versions.
+ *
+ * goals arrived in v9 and badges in v10, both sync to Supabase, and neither
+ * was ever written to a backup file or cleared by a restore. The visible
+ * symptom was a full restore that left seeded goals behind - it had nothing
+ * to replace them with, so it left them alone.
+ */
+describe('goals and badges', () => {
+  it('counts them like any other table', () => {
+    const out = inspectBackup({ ...good, goals: [{ id: 1, name: 'Japan trip' }], badges: [{ key: 'first-peso' }] })
+    expect(out.counts.goals).toBe(1)
+    expect(out.counts.badges).toBe(1)
+    expect(out.missing).toEqual([])
+  })
+
+  /**
+   * An older file is still restorable - every table is guarded on its own -
+   * and reporting what it does NOT carry is the whole point of `missing`.
+   * A restore from one of these leaves goals exactly where they were, which
+   * is correct and needs saying out loud.
+   */
+  it('reports them missing from a file written before they existed', () => {
+    const { goals, badges, ...old } = good
+    const out = inspectBackup(old)
+    expect(out.missing).toEqual(['goals', 'badges'])
+    expect(out.counts.goals).toBe(0)
+  })
+
+  it('still rejects a malformed section', () => {
+    expect(() => inspectBackup({ ...good, goals: [null] }))
+      .toThrow(/"goals" section is malformed/)
   })
 })
