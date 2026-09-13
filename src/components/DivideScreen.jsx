@@ -8,6 +8,10 @@ import { IconChevronLeft } from './icons'
 import { moneyChangeHandler, parseMoney } from '../utils/moneyInput'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { fmt } from '../lib/money'
+import FadeScroller from './FadeScroller'
+import { RAIL_TOUCH } from './ui/Rail'
+import { chipClass } from '../pages/accounts/shared'
+import { resolveSplit, SPLIT_MODES, MODE_FIELD } from '../lib/splitModes'
 import { useTheme } from '../context/ThemeContext'
 
 /**
@@ -84,6 +88,118 @@ function CategorySelect({ categories, value, onChange, label }) {
   )
 }
 
+/**
+ * One participant, in whatever shape the current mode needs.
+ *
+ * The row is the same in every mode; only the middle field changes, and the
+ * resolved peso amount is always on the right. That last part matters: in
+ * percent, shares and adjustment you are typing something that is NOT money,
+ * and without the resolved figure beside it you would be dividing a bill
+ * blind until you pressed Done.
+ *
+ * Tapping the avatar includes or excludes. "I did not eat" is a normal thing
+ * to say about a bill, and it is the only way `equal` can mean anything other
+ * than everybody.
+ */
+function PersonRow({
+  avatar, avatarBg, name, included, onToggle, mode, value, onValue,
+  share, onRemove, label,
+}) {
+  const field = MODE_FIELD[mode] ?? MODE_FIELD.equal
+  const dim = included ? '' : 'opacity-40'
+
+  /* Digits only for shares, digits and one point for the rest. Written out
+     rather than reusing moneyChangeHandler because a percent and a share
+     count are not money and must not be grouped with separators. */
+  const onChange = (e) => {
+    const raw = String(e.target.value)
+    if (field.kind === 'integer') return onValue(raw.replace(/[^0-9]/g, ''))
+    const neg = mode === 'adjust' && raw.trim().startsWith('-')
+    const body = raw.replace(/[^0-9.]/g, '')
+    const parts = body.split('.')
+    const clean = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : body
+    onValue((neg ? '-' : '') + clean)
+  }
+
+  return (
+    <div className={`flex items-center gap-3 py-3 ${dim}`}>
+      <button
+        type="button"
+        onClick={onToggle}
+        aria-pressed={included}
+        aria-label={included ? `Leave ${label} out` : `Include ${label}`}
+        className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center
+          text-11 font-bold text-white relative"
+        style={{ background: avatarBg }}
+      >
+        {avatar}
+        {!included && (
+          <span className="absolute inset-0 rounded-full flex items-center justify-center
+            bg-slate-900/60 dark:bg-black/60"
+          >
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+              strokeWidth="3" strokeLinecap="round" aria-hidden="true">
+              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </span>
+        )}
+      </button>
+
+      <span className="flex-1 min-w-0">{name}</span>
+
+      {included && field.kind !== 'none' && (
+        <span className="flex items-baseline gap-0.5 shrink-0">
+          {field.prefix && (
+            <span className="text-13 font-medium text-slate-400 dark:text-slate-500">
+              {field.prefix}
+            </span>
+          )}
+          <input
+            value={value}
+            onChange={onChange}
+            inputMode={field.kind === 'integer' ? 'numeric' : 'decimal'}
+            placeholder={field.placeholder}
+            aria-label={`${mode} value for ${label}`}
+            style={{ width: value ? `${value.length + 0.5}ch` : '3.5ch' }}
+            className="shrink-0 text-right text-13 font-semibold tabular-nums
+              bg-transparent outline-none text-slate-800 dark:text-white
+              placeholder-slate-300 dark:placeholder-slate-600"
+          />
+          {field.suffix && (
+            <span className="text-13 font-medium text-slate-400 dark:text-slate-500">
+              {field.suffix}
+            </span>
+          )}
+        </span>
+      )}
+
+      {/* The resolved figure, always. It is the only thing on the row that is
+          money in every mode. */}
+      <span className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
+        text-slate-800 dark:text-white"
+      >
+        {included ? fmt(share ?? 0) : '—'}
+      </span>
+
+      {onRemove && (
+        <button
+          type="button"
+          onClick={onRemove}
+          aria-label={`Remove ${label}`}
+          className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center
+            text-slate-400 dark:text-slate-500
+            active:bg-slate-100 dark:active:bg-white/[0.06]"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+            strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
+            <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+      )}
+    </div>
+  )
+}
+
 export default function DivideScreen({
   open = true, onClose, total = 0, categories = [], initialCategory = null,
   initialLegs = null, initialPeople = null, onApply,
@@ -92,6 +208,10 @@ export default function DivideScreen({
   const [head, setHead] = useState(/** @type {any} */ (null))
   const [rest, setRest] = useState(/** @type {any[]} */ ([]))
   const [people, setPeople] = useState(/** @type {any[]} */ ([]))
+  const [mode, setMode] = useState('equal')
+  /** You are a participant, not the remainder - every mode needs the head. */
+  const [youIn, setYouIn] = useState(true)
+  const [youValue, setYouValue] = useState('')
 
   useEffect(() => {
     if (!open) return
@@ -99,6 +219,9 @@ export default function DivideScreen({
     setHead(initialCategory ?? categories[0] ?? null)
     setRest(initialLegs ?? [])
     setPeople(initialPeople ?? [])
+    setMode('equal')
+    setYouIn(true)
+    setYouValue('')
   }, [open, initialCategory, categories, initialLegs, initialPeople])
 
   // ── By category ──────────────────────────────────────────────────────────
@@ -111,20 +234,38 @@ export default function DivideScreen({
   const freeCats = categories.filter(c => !usedCats.has(c.name))
 
   // ── With people ──────────────────────────────────────────────────────────
-  const owed = useMemo(
-    () => people.reduce((s, p) => s + parseMoney(p.amountStr), 0), [people])
-  const mine = Math.round((total - owed) * 100) / 100
-  const overPeople = mine < -0.005
+  /* One shape for all five modes: `value` means pesos, a percent, a count of
+     shares or a plus-or-minus, and lib/splitModes decides which. */
+  const participants = useMemo(() => [
+    { id: 'you', included: youIn, value: parseMoney(youValue) },
+    ...people.map((p, i) => ({
+      id: `p${i}`, included: p.included !== false, value: parseMoney(p.valueStr),
+    })),
+  ], [youIn, youValue, people])
 
-  /** Everyone including you, so "split evenly" means what it says. */
-  const splitEvenly = () => {
-    const heads = people.length + 1
-    if (heads < 2) return
-    const each = Math.floor((total / heads) * 100) / 100
-    setPeople(ps => ps.map(p => ({ ...p, amountStr: String(each) })))
+  const split = useMemo(
+    () => resolveSplit({ mode, total, participants }), [mode, total, participants])
+
+  const owed = useMemo(() => people.reduce(
+    (s, _, i) => s + (split.shares[`p${i}`] ?? 0), 0), [people, split])
+  const addPerson = () => setPeople(ps => [...ps, { name: '', valueStr: '', included: true }])
+
+  /* Switching mode CLEARS the figures, and that is not tidiness.
+ 
+     One `value` field serves all five modes, and it means something different
+     in each - so leaving "30" in place when percent becomes +/− turns a 30%
+     share into a 30 peso surcharge. Silently: the arithmetic is valid, the
+     total still adds up, and the bill is simply wrong. Caught by driving the
+     modes in order and reading the result.
+ 
+     Inclusion survives, because "Mika did not eat" is true whichever way the
+     rest is divided. */
+  const pickMode = (next) => {
+    if (next === mode) return
+    setMode(next)
+    setYouValue('')
+    setPeople(ps => ps.map(p => ({ ...p, valueStr: '' })))
   }
-
-  const addPerson = () => setPeople(ps => [...ps, { name: '', amountStr: '' }])
   const setPerson = (i, patch) =>
     setPeople(ps => ps.map((p, n) => (n === i ? { ...p, ...patch } : p)))
   const removePerson = (i) => setPeople(ps => ps.filter((_, n) => n !== i))
@@ -138,7 +279,7 @@ export default function DivideScreen({
   const legsValid = rest.length === 0
     || (headAmount > 0.005 && rest.every(l => l.cat && parseMoney(l.amountStr) > 0))
   const peopleValid = people.length === 0
-    || (mine >= -0.005 && people.every(p => p.name.trim() && parseMoney(p.amountStr) > 0))
+    || (split.valid && people.every(p => p.name.trim()))
   const ready = legsValid && peopleValid && (rest.length > 0 || people.length > 0)
 
   const apply = () => onApply({
@@ -146,8 +287,12 @@ export default function DivideScreen({
       ? [{ category: head.name, amount: headAmount },
          ...rest.map(l => ({ category: l.cat.name, amount: parseMoney(l.amountStr) }))]
       : null,
+    /* Resolved to exact pesos here, so nothing downstream has to know a mode
+       existed. A person owing nothing is not a debt. */
     people: people.length > 0
-      ? people.map(p => ({ name: p.name.trim(), amount: parseMoney(p.amountStr) }))
+      ? people
+          .map((p, i) => ({ name: p.name.trim(), amount: split.shares[`p${i}`] ?? 0 }))
+          .filter(p => p.amount > 0)
       : null,
   })
 
@@ -202,9 +347,8 @@ export default function DivideScreen({
       <div className="px-4 pb-6">
         {tab === 'categories' ? (
           <>
-            <p className="text-12 leading-snug text-slate-400 dark:text-slate-500 mb-3">
-              One purchase, filed under more than one category. The first row takes
-              whatever is left, so the parts always add up.
+            <p className="text-12 text-slate-400 dark:text-slate-500 mb-3">
+              The first row takes whatever is left.
             </p>
 
             <div className="flex items-center gap-3 py-3">
@@ -301,112 +445,93 @@ export default function DivideScreen({
           </>
         ) : (
           <>
-            <p className="text-12 leading-snug text-slate-400 dark:text-slate-500 mb-3">
-              You paid all of it, so the expense stays at {fmt(total)}. Each share
-              below becomes something they owe you, and settling it refunds this
-              purchase.
+            <p className="text-12 text-slate-400 dark:text-slate-500 mb-3">
+              You paid. Their shares become debts they owe you.
             </p>
 
-            {/* You are a row too, so the arithmetic is visible rather than
-                implied. Not editable: your share is whatever is left, the same
-                rule the category side uses. */}
-            <div className="flex items-center gap-3 py-3">
-              <span className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center
-                text-11 font-bold text-white bg-primary"
-              >
-                You
-              </span>
-              <span className="flex-1 min-w-0 text-14 font-semibold text-slate-800 dark:text-white">
-                Your share
-              </span>
-              <span className={`text-14 font-semibold tabular-nums ${
-                overPeople ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
-              }`}>
-                {fmt(mine)}
-              </span>
-            </div>
+            {/* Five modes, because they are five things people say out loud at
+                a table, not variations on one. See lib/splitModes.js. */}
+            <FadeScroller
+              axis="x"
+              style={RAIL_TOUCH}
+              className="flex items-center gap-1.5 mb-1 -mx-4 px-4 pb-0.5"
+            >
+              {SPLIT_MODES.map(m => (
+                <button
+                  key={m.value}
+                  type="button"
+                  onClick={() => pickMode(m.value)}
+                  className={chipClass(mode === m.value)}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </FadeScroller>
+            <p className="text-11 text-slate-400 dark:text-slate-500 mb-3">
+              {SPLIT_MODES.find(m => m.value === mode)?.hint}
+            </p>
+
+            <PersonRow
+              avatar={<span className="text-11 font-bold text-white">You</span>}
+              avatarBg="var(--color-primary)"
+              name={<span className="text-14 font-semibold text-slate-800 dark:text-white">You</span>}
+              included={youIn}
+              onToggle={() => setYouIn(v => !v)}
+              mode={mode}
+              value={youValue}
+              onValue={setYouValue}
+              share={split.shares.you}
+              label="you"
+            />
 
             {people.map((p, i) => (
               <div key={i}>
                 <Divider />
-                <div className="flex items-center gap-3 py-3">
-                  <span
-                    className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center
-                      text-11 font-bold text-white"
-                    style={{ background: getAvatarColor(p.name || String(i)) }}
-                    aria-hidden="true"
-                  >
-                    {getInitials(p.name || '?')}
-                  </span>
-                  <input
-                    value={p.name}
-                    onChange={e => setPerson(i, { name: e.target.value })}
-                    placeholder="Name"
-                    aria-label={`Name of person ${i + 1}`}
-                    className="flex-1 min-w-0 bg-transparent outline-none
-                      text-14 font-semibold text-slate-800 dark:text-white
-                      placeholder-slate-300 dark:placeholder-slate-600"
-                  />
-                  <span className="flex items-baseline gap-0.5 shrink-0">
-                    <span className="text-14 font-medium text-slate-400 dark:text-slate-500">₱</span>
+                <PersonRow
+                  avatar={getInitials(p.name || '?')}
+                  avatarBg={getAvatarColor(p.name || String(i))}
+                  name={(
                     <input
-                      value={p.amountStr}
-                      onChange={moneyChangeHandler(v => setPerson(i, { amountStr: v }))}
-                      inputMode="decimal"
-                      placeholder="0.00"
-                      aria-label={`Amount owed by ${p.name || `person ${i + 1}`}`}
-                      style={amountWidth(p.amountStr)}
-                      className={amountInput}
+                      value={p.name}
+                      onChange={e => setPerson(i, { name: e.target.value })}
+                      placeholder="Name"
+                      aria-label={`Name of person ${i + 1}`}
+                      className="w-full min-w-0 bg-transparent outline-none
+                        text-14 font-semibold text-slate-800 dark:text-white
+                        placeholder-slate-300 dark:placeholder-slate-600"
                     />
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => removePerson(i)}
-                    aria-label={`Remove ${p.name || `person ${i + 1}`}`}
-                    className="shrink-0 w-7 h-7 rounded-full flex items-center justify-center
-                      text-slate-400 dark:text-slate-500
-                      active:bg-slate-100 dark:active:bg-white/[0.06]"
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                      strokeWidth="2.5" strokeLinecap="round" aria-hidden="true">
-                      <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                    </svg>
-                  </button>
-                </div>
+                  )}
+                  included={p.included !== false}
+                  onToggle={() => setPerson(i, { included: p.included === false })}
+                  mode={mode}
+                  value={p.valueStr}
+                  onValue={v => setPerson(i, { valueStr: v })}
+                  share={split.shares[`p${i}`]}
+                  onRemove={() => removePerson(i)}
+                  label={p.name || `person ${i + 1}`}
+                />
               </div>
             ))}
 
             <Divider />
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={addPerson}
-                className="flex-1 py-3 text-left text-14 font-semibold text-primary"
-              >
-                + Add someone
-              </button>
-              {people.length > 0 && (
-                <button
-                  type="button"
-                  onClick={splitEvenly}
-                  className="shrink-0 py-2 px-3 text-13 font-semibold text-slate-500
-                    dark:text-slate-400 active:opacity-70"
-                >
-                  Split evenly
-                </button>
-              )}
-            </div>
+            <button
+              type="button"
+              onClick={addPerson}
+              className="w-full py-3 text-left text-14 font-semibold text-primary"
+            >
+              + Add someone
+            </button>
 
             {people.length > 0 && (
               <div className="mt-2 flex items-baseline justify-between">
                 <span className="text-12 text-slate-400 dark:text-slate-500">
-                  {overPeople ? 'They owe more than it cost' : 'Coming back to you'}
+                  {split.message ?? 'Coming back to you'}
                 </span>
                 <span className={`text-13 font-semibold tabular-nums ${
-                  overPeople ? 'text-red-500 dark:text-red-400'
-                             : 'text-emerald-600 dark:text-emerald-400'
+                  split.valid ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-red-500 dark:text-red-400'
                 }`}>
-                  {fmt(owed)}
+                  {split.valid ? fmt(owed) : ''}
                 </span>
               </div>
             )}
