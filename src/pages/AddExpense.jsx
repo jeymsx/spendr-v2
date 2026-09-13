@@ -610,6 +610,9 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         amount={amount}
         description={description}
         category={category}
+        splitLegs={splitLegs}
+        people={people}
+        catByName={Object.fromEntries((categories ?? []).map(c => [c.name, c]))}
         account={account}
         onSaveTemplate={() => {}}
         installment={isInstallment ? {

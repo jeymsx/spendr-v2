@@ -42,6 +42,13 @@ export default function TxConfirmSheet({
   toAccount,
   onSaveTemplate = null,  // if provided, shows save-as-template toggle
   installment    = null,  // { months, monthly, total, firstLabel, lastLabel }
+  /* A split purchase has no single category, so `category` alone would show
+     the first leg and quietly hide the rest. [{ category, amount }]. */
+  splitLegs      = null,
+  /** name -> category, so a split chip can still show its glyph. */
+  catByName      = null,
+  /* [{ name, amount }] owed back on a shared expense. */
+  people         = null,
   /* The confirm button's words. "Save transaction" is right when a form is
      being saved and wrong when a bill is being posted - the sheet is the
      same review either way, but the verb is the caller's. */
@@ -211,9 +218,64 @@ export default function TxConfirmSheet({
           {description && description.trim() && (
             <DetailRow label="Note" value={description} padded={false} isLast />
           )}
-          {category && (
+          {/* One category is a value; several are a set, and a set wants
+              chips rather than a comma-separated run-on. The review sheet was
+              showing only the first leg of a split, which is the one place
+              that must not summarise - nothing is saved until you confirm,
+              and confirming something you were not shown is the failure this
+              sheet exists to prevent. */}
+          {splitLegs?.length ? (
+            <DetailRow
+              label={`${splitLegs.length} categories`}
+              value={(
+                <span className="flex flex-wrap items-center justify-end gap-1.5">
+                  {splitLegs.map(l => (
+                    <span
+                      key={l.category}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full
+                        text-11 font-semibold bg-slate-100 dark:bg-white/[0.07]
+                        text-slate-700 dark:text-slate-200"
+                    >
+                      <CategoryGlyph cat={catByName?.[l.category]} size={12} />
+                      {l.category}
+                      <span className="tabular-nums text-slate-400 dark:text-slate-500">
+                        {fmt(l.amount)}
+                      </span>
+                    </span>
+                  ))}
+                </span>
+              )}
+              padded={false}
+              isLast
+            />
+          ) : category ? (
             <DetailRow label="Category" value={<><CategoryGlyph cat={category} size={14} className="inline-block mr-1.5 -mt-px" />{category.name}</>} padded={false} isLast />
-          )}
+          ) : null}
+
+          {/* Who is paying you back, and how much stays yours. Shown for the
+              same reason: it is part of what confirming commits to. */}
+          {people?.length ? (
+            <DetailRow
+              label={people.length === 1 ? 'Owes you' : `${people.length} owe you`}
+              value={(
+                <span className="flex flex-wrap items-center justify-end gap-1.5">
+                  {people.map(p => (
+                    <span
+                      key={p.name}
+                      className="inline-flex items-center gap-1 px-2 py-1 rounded-full
+                        text-11 font-semibold bg-emerald-50 dark:bg-emerald-500/[0.12]
+                        text-emerald-700 dark:text-emerald-300"
+                    >
+                      {p.name}
+                      <span className="tabular-nums opacity-70">{fmt(p.amount)}</span>
+                    </span>
+                  ))}
+                </span>
+              )}
+              padded={false}
+              isLast
+            />
+          ) : null}
           {hasFee && (
             <DetailRow label="Transfer fee" value={fmt(fee)} tone="text-amber-600 dark:text-amber-400" padded={false} isLast />
           )}
