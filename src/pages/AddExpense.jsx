@@ -94,6 +94,8 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   const [splitLegs,      setSplitLegs]      = useState(/** @type {any[]|null} */ (null))
   /** [{ name, amount }] owed back to you on this expense. */
   const [people,         setPeople]         = useState(/** @type {any[]|null} */ (null))
+  /** The division as it was ENTERED, so reopening the screen restores it. */
+  const [peopleSplit,    setPeopleSplit]    = useState(/** @type {any} */ (null))
 
   /* What the one row says once something has been divided. */
   const divideSummary = useMemo(() => {
@@ -343,12 +345,11 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
               amountStr: String(l.amount),
             }))
           : null}
-        initialPeople={people
-          ? people.map(p => ({ name: p.name, amountStr: String(p.amount) }))
-          : null}
-        onApply={({ legs, people: shares }) => {
+        initialSplit={peopleSplit}
+        onApply={({ legs, people: shares, split }) => {
           setSplitLegs(legs)
           setPeople(shares)
+          setPeopleSplit(split)
           /* A split supplies its own categories; the rail's single pick no
              longer means anything, but the first leg is still what a
              non-split save would file under. */
