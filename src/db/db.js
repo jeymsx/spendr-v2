@@ -182,6 +182,10 @@ export const SYNCED_TABLES = [
   'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals',
 ]
 
+/** How a row is FILED, as opposed to what it says. Changing only these is not
+ *  an edit, so it must not move updatedAt. See the updating hook below. */
+const BOOKKEEPING = new Set(['syncId', 'synced'])
+
 /* Stamped on the way IN, for every writer at once.
  *
  * A hook rather than a line in each of the dozen places that insert a row:
@@ -191,6 +195,39 @@ export const SYNCED_TABLES = [
 for (const name of SYNCED_TABLES) {
   db.table(name).hook('creating', (_key, row) => {
     if (row && !row.syncId) row.syncId = crypto.randomUUID()
+  })
+
+  /* And stamped on the way OUT, for the same reason and a worse bug.
+   *
+   * A pull only takes the remote row when it is strictly NEWER than the local
+   * one, so an edit that changes the data without moving updatedAt is an edit
+   * that can never travel. It pushes fine - the server stores the new value -
+   * and then every other device compares two equal timestamps, declines, and
+   * keeps the old number forever. Nothing errors. The two devices simply
+   * disagree, and the one you are not looking at is wrong.
+   *
+   * That is not hypothetical either: 18 of the 31 write sites across these
+   * tables did not stamp, including the budget editor and the recurring
+   * editor - which is exactly why a bill edited from 599 to 699 on the phone
+   * still reads 2026-05-21 on the server and never reached the laptop.
+   *
+   * Two things are deliberately NOT edits:
+   *
+   *   an explicit updatedAt - the caller means it, and the sync pull passes
+   *   the REMOTE timestamp; stamping now() over that would make every pulled
+   *   row instantly look newer than the source it just came from.
+   *
+   *   a change to nothing but bookkeeping - syncId and synced are how the row
+   *   is filed, not what it says. The v11 backfill and the pull's id adoption
+   *   both write syncId across rows they are not otherwise touching, and
+   *   stamping those would silently mark the entire table as newer than the
+   *   server and block real data from ever arriving again. */
+  db.table(name).hook('updating', (mods) => {
+    if (!mods || typeof mods !== 'object') return
+    if ('updatedAt' in mods) return
+    const keys = Object.keys(mods)
+    if (!keys.length || keys.every(k => BOOKKEEPING.has(k))) return
+    return { updatedAt: new Date().toISOString() }
   })
 }
 

@@ -121,6 +121,7 @@ export function toSupabaseRow(r, userId) {
 export function accountToRow(r, userId) {
   return {
     user_id:         userId,
+    sync_id:         r.syncId ?? null,
     name:            r.name,
     type:            r.type,
     role:            r.role            ?? null,
@@ -152,6 +153,7 @@ export function accountToRow(r, userId) {
 export function categoryToRow(r, userId) {
   return {
     user_id:    userId,
+    sync_id:    r.syncId ?? null,
     name:       r.name,
     icon:       r.icon,
     color:      r.color,
@@ -169,6 +171,7 @@ export function categoryToRow(r, userId) {
 export function debtToRow(r, userId) {
   return {
     user_id:     userId,
+    sync_id:     r.syncId ?? null,
     local_id:    r.id,
     name:        r.name,
     contact:     r.contact   ?? null,
@@ -193,6 +196,7 @@ export function debtToRow(r, userId) {
 export function recurringToRow(r, userId) {
   return {
     user_id:    userId,
+    sync_id:    r.syncId ?? null,
     local_id:   r.id,
     name:       r.name,
     amount:     r.amount,
@@ -213,6 +217,7 @@ export function recurringToRow(r, userId) {
 export function goalToRow(r, userId) {
   return {
     user_id:     userId,
+    sync_id:     r.syncId ?? null,
     local_id:    r.id,
     name:        r.name,
     icon:        r.icon        ?? null,
@@ -252,6 +257,7 @@ export function badgeToRow(r, userId) {
 export function templateToRow(r, userId) {
   return {
     user_id:     userId,
+    sync_id:     r.syncId ?? null,
     local_id:    r.id,
     name:        r.name,
     type:        r.type,
@@ -299,9 +305,22 @@ export function toDexieRecord(row) {
   }
 }
 
+/**
+ * The stable id, folded in ONLY when the remote actually has one.
+ *
+ * Spread rather than `syncId: row.sync_id ?? null`, for the same reason
+ * templateToRow spreads created_at: an explicit null would be WRITTEN, and
+ * writing null here erases the local identity every time a device pulls from
+ * a database that has not been stamped yet. Absent has to stay absent.
+ *
+ * @param {Record<string, any>} row
+ */
+const syncIdOf = (row) => (row.sync_id ? { syncId: row.sync_id } : {})
+
 /** @param {Record<string, any>} row  a row as Supabase returned it */
 export function rowToAccount(row) {
   return {
+    ...syncIdOf(row),
     name:           row.name,
     type:           row.type,
     role:           row.role,
@@ -332,6 +351,7 @@ export function rowToAccount(row) {
 /** @param {Record<string, any>} row  a row as Supabase returned it */
 export function rowToCategory(row) {
   return {
+    ...syncIdOf(row),
     name:       row.name,
     icon:       row.icon,
     color:      row.color,
@@ -345,6 +365,7 @@ export function rowToCategory(row) {
 /** @param {Record<string, any>} row  a row as Supabase returned it */
 export function rowToDebt(row) {
   return {
+    ...syncIdOf(row),
     name:       row.name,
     contact:    row.contact,
     amount:     row.amount,
@@ -362,6 +383,7 @@ export function rowToDebt(row) {
 /** @param {Record<string, any>} row  a row as Supabase returned it */
 export function rowToRecurring(row) {
   return {
+    ...syncIdOf(row),
     name:      row.name,
     amount:    row.amount,
     category:  row.category,
@@ -377,6 +399,7 @@ export function rowToRecurring(row) {
 /** @param {Record<string, any>} row  a row as Supabase returned it */
 export function rowToTemplate(row) {
   return {
+    ...syncIdOf(row),
     name:        row.name,
     type:        row.type,
     amount:      row.amount,
@@ -393,6 +416,7 @@ export function rowToTemplate(row) {
 /** @param {Record<string, any>} row  a row as Supabase returned it */
 export function rowToGoal(row) {
   return {
+    ...syncIdOf(row),
     name:       row.name,
     icon:       row.icon,
     target:     row.target ?? 0,
@@ -618,23 +642,29 @@ export async function syncToSupabase(userId) {
  */
 /** Columns a table may not have yet, by table name.
  *  @type {Record<string, string[]>} */
+/* 011 adds sync_id to all six of these. It is listed as optional on every one
+   because a phone running this build can meet a database that has not had 011
+   applied, and losing the stable id must cost nothing more than staying on
+   local_id for another sync - which is exactly where we already are. */
 const OPTIONAL_COLS = {
-  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee'],
+  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id'],
+  categories: ['sync_id'],
+  goals: ['sync_id'],
   /* created_at is declared in 003_schema.sql, so it should be there - but a
      live table can have drifted from the migrations, and this is the existing
      net for exactly that. If it is missing the push drops the column and
      retries instead of failing template sync outright. */
-  templates: ['created_at'],
+  templates: ['created_at', 'sync_id'],
   /* 009. Until it is run, a refund still nets correctly on another device -
      the amount is negative and every sum adds - it just loses the link back
      to what it refunded. Degraded, not wrong, which is the right trade for
      not blocking the ledger on a migration. */
   transactions: ['refund_of', 'split_id'],
-  debts: ['source_tx_id', 'source_category'],
+  debts: ['source_tx_id', 'source_category', 'sync_id'],
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another
      device. */
-  recurring: ['split'],
+  recurring: ['split', 'sync_id'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,
@@ -879,26 +909,72 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
   if (error) throw new Error(`${tableName} pull: ${error.message}`)
   if (!data?.length) return
 
+  // Every stable id the server knows about, for the collision test below.
+  const remoteSyncIds = new Set(data.map(r => r.sync_id).filter(Boolean))
+
   for (const row of data) {
     if (isPendingDelete(pending, tableName, row)) continue
 
+    /* Identity first. A stamped row is found by its stamp and nothing else,
+       because being findable is the entire job of having one. */
+    const bySync = row.sync_id
+      ? await dexieTable.where('syncId').equals(row.sync_id).first()
+      : null
+
     const localId = row.local_id
-    const existing = localId ? await dexieTable.get(localId) : null
+    const existing = bySync ? null : localId ? await dexieTable.get(localId) : null
 
     // Prefer a custom finder (compound key), fall back to single nameKey
-    const byName = existing ? null
+    const byName = (bySync || existing) ? null
       : findFn ? await findFn(row)
       : nameKey && row[nameKey]
         ? await dexieTable.where(nameKey).equals(row[nameKey]).first()
         : null
 
-    const target   = existing ?? byName
+    /* A weaker key matched a row that already carries a DIFFERENT stable id.
+       Whether that is a collision turns on one question: is the local row's
+       own id present on the server?
+
+         it is      - this local row is already represented remotely, so the
+                      row we are holding is a second one and local_id agreeing
+                      is the coincidence. Refuse, and let it arrive as itself.
+
+         it is not  - nobody has ever seen this local row's id, which is what
+                      the v11 upgrade looks like from the other side: both
+                      devices minted an id for a row that predates stamping
+                      and neither knows about the other's. Adopt, and the two
+                      converge on the server's.
+
+       Refusing in that second case is what would turn every pre-existing row
+       into a duplicate the first time a second device syncs - the exact
+       failure this whole change exists to prevent. */
+    const weak = existing ?? byName
+    const collides = !!(
+      row.sync_id && weak?.syncId && weak.syncId !== row.sync_id
+      && remoteSyncIds.has(weak.syncId)
+    )
+
+    const target   = bySync ?? (collides ? null : weak)
     const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0
     const localts  = target?.updatedAt ? new Date(target.updatedAt).getTime() : 0
 
     if (!target) {
       await dexieTable.add(fromRow(row))
     } else {
+      /* Adopt the remote identity even when the remote CONTENT is older.
+         Identity is not content. Both devices minted their own syncId in the
+         v11 upgrade, so for any row that predates this they hold two ids for
+         one thing and have to converge on one - and the one already on the
+         server is the one every other device will meet. Gate this behind the
+         timestamp and the device holding the newer copy never yields, so the
+         two never agree and every sync re-inserts. */
+      if (row.sync_id && target.syncId !== row.sync_id) {
+        /* syncId alone, and that matters: db/db.js treats a bookkeeping-only
+           change as not an edit and leaves updatedAt where it is. Bumping it
+           here would leave the row permanently newer than the copy it just
+           synced from, so the real content could never arrive. */
+        await dexieTable.update(target.id, { syncId: row.sync_id })
+      }
       if (remotets > localts) {
         await dexieTable.update(target.id, fromRow(row))
       }

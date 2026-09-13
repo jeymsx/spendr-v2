@@ -398,3 +398,75 @@ describe('deleteRecurringRemote', () => {
     expect(queued).toEqual([])
   })
 })
+
+/**
+ * The stable id (011 + db v11).
+ *
+ * The assertion that matters is the NEGATIVE one. A row pulled from a database
+ * that has not been stamped yet must leave the local syncId alone, and the way
+ * that is done is by omitting the key entirely rather than mapping it to null -
+ * because `dexieTable.update(id, {syncId: null})` writes the null, and writing
+ * the null erases the identity the device just minted. Nothing throws when that
+ * regresses; the ids simply stop being stable again, which is the bug.
+ */
+describe('syncId: the stable identity', () => {
+  const withSync = { syncId: 'stable-uuid' }
+
+  const acct = { name: 'BPI', type: 'bank' }
+  const cat = { name: 'Food', type: 'expense' }
+  const debt = { id: 1, name: 'd', amount: 10, type: 'owed_to_me' }
+  const rec = { id: 1, name: 'r', amount: 10, frequency: 'monthly', nextDate: '2026-09-01' }
+  const tpl = { id: 1, name: 't', type: 'expense' }
+  const goal = { id: 1, name: 'g', target: 100 }
+
+  it('goes out on every table that has one', () => {
+    expect(accountToRow({ ...acct, ...withSync }, UID).sync_id).toBe('stable-uuid')
+    expect(categoryToRow({ ...cat, ...withSync }, UID).sync_id).toBe('stable-uuid')
+    expect(debtToRow({ ...debt, ...withSync }, UID).sync_id).toBe('stable-uuid')
+    expect(recurringToRow({ ...rec, ...withSync }, UID).sync_id).toBe('stable-uuid')
+    expect(templateToRow({ ...tpl, ...withSync }, UID).sync_id).toBe('stable-uuid')
+    expect(goalToRow({ ...goal, ...withSync }, UID).sync_id).toBe('stable-uuid')
+  })
+
+  it('sends null rather than undefined for a row minted before v11', () => {
+    /* undefined would be dropped from the JSON body and the column left at
+       whatever it already held; null is an explicit "this row has no id yet". */
+    expect(accountToRow(acct, UID).sync_id).toBeNull()
+    expect(debtToRow(debt, UID).sync_id).toBeNull()
+  })
+
+  it('comes back in, when the server has one', () => {
+    expect(rowToAccount({ name: 'BPI', sync_id: 'x' }).syncId).toBe('x')
+    expect(rowToCategory({ name: 'Food', sync_id: 'x' }).syncId).toBe('x')
+    expect(rowToDebt({ name: 'd', sync_id: 'x' }).syncId).toBe('x')
+    expect(rowToRecurring({ name: 'r', sync_id: 'x' }).syncId).toBe('x')
+    expect(rowToTemplate({ name: 't', sync_id: 'x' }).syncId).toBe('x')
+    expect(rowToGoal({ name: 'g', sync_id: 'x' }).syncId).toBe('x')
+  })
+
+  /** The one that protects the identity. */
+  it('leaves the key out entirely when the server has none', () => {
+    for (const mapped of [
+      rowToAccount({ name: 'BPI' }),
+      rowToCategory({ name: 'Food' }),
+      rowToDebt({ name: 'd' }),
+      rowToRecurring({ name: 'r' }),
+      rowToTemplate({ name: 't' }),
+      rowToGoal({ name: 'g' }),
+    ]) {
+      expect('syncId' in mapped).toBe(false)
+    }
+  })
+
+  it('leaves it out for an explicit null too, not just a missing column', () => {
+    expect('syncId' in rowToDebt({ name: 'd', sync_id: null })).toBe(false)
+  })
+
+  /* Spreading a pulled row over a local one is how pullSimpleTable writes an
+     update. This is that, and it is the regression the rule above prevents. */
+  it('survives being spread over a stamped local row', () => {
+    const local = { id: 3, name: 'BPI', syncId: 'mine' }
+    expect({ ...local, ...rowToAccount({ name: 'BPI' }) }.syncId).toBe('mine')
+    expect({ ...local, ...rowToAccount({ name: 'BPI', sync_id: 'theirs' }) }.syncId).toBe('theirs')
+  })
+})
