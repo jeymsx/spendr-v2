@@ -200,7 +200,7 @@ export default function BadgeCard({
         )}
 
         {eyebrow && (
-          <p className="mt-4 text-11 font-semibold uppercase tracking-[0.14em] text-primary">
+          <p className="mt-4 text-11 font-semibold text-primary">
             {eyebrow}
           </p>
         )}

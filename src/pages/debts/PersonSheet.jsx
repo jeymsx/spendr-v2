@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import db from '../../db/db'
-import { settleWithPerson } from '../../db/txHelpers'
+import { settleWithPerson, deleteTxGroup } from '../../db/txHelpers'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import Sheet from '../../components/ui/Sheet'
@@ -90,7 +90,7 @@ export default function PersonSheet({ person, onClose, onEditRow }) {
   async function handleSettle() {
     setSaving(true)
     try {
-      const { credit } = await settleWithPerson({
+      const { credit, tx } = await settleWithPerson({
         person: person.label,
         rows: person.rows,
         amount,
@@ -102,9 +102,28 @@ export default function PersonSheet({ person, onClose, onEditRow }) {
         category: onlyCategory(person.rows),
         sourceTxId: onlySource(person.rows),
       })
-      showToast(credit > 0.005
-        ? `${fmt(amount)} recorded · ${fmt(credit)} ahead`
-        : `${fmt(amount)} recorded`)
+      /* Undo is deleteTxGroup on the row it just wrote - the same reversal
+         a swipe-delete runs, not a second implementation of it. The
+         transaction carries what it settled, so removing it puts every
+         amountPaid back and takes the credit row with it. */
+      showToast(
+        credit > 0.005
+          ? `${fmt(amount)} recorded · ${fmt(credit)} ahead`
+          : `${fmt(amount)} recorded`,
+        'success',
+        tx ? {
+          actionLabel: 'Undo',
+          onAction: async () => {
+            try {
+              await deleteTxGroup(/** @type {any} */ ([tx]))
+              showToast('Payment undone')
+            } catch (err) {
+              console.error('[PersonSheet] undo failed:', err)
+              showToast('Could not undo that', 'error')
+            }
+          },
+        } : {},
+      )
       onClose()
     } catch (e) {
       console.error('[PersonSheet] settle failed:', e)

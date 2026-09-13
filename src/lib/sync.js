@@ -109,6 +109,10 @@ export function toSupabaseRow(r, userId) {
        both go, and split legs stop reading as one purchase. */
     refund_of:        r.refundOf ?? null,
     split_id:         r.splitId ?? null,
+    /* What this row settled, so deleting it anywhere puts the debt back.
+       See 013 - keyed on the debts' stable ids, never on local_id. */
+    settles:          r.settles ?? null,
+    credit_sync_id:   r.creditSyncId ?? null,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
   })
@@ -302,6 +306,8 @@ export function toDexieRecord(row) {
     amount:      row.amount,
     refundOf:    row.refund_of ?? null,
     splitId:     row.split_id ?? null,
+    settles:     row.settles ?? null,
+    creditSyncId: row.credit_sync_id ?? null,
     synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
@@ -662,7 +668,7 @@ const OPTIONAL_COLS = {
      the amount is negative and every sum adds - it just loses the link back
      to what it refunded. Degraded, not wrong, which is the right trade for
      not blocking the ledger on a migration. */
-  transactions: ['refund_of', 'split_id'],
+  transactions: ['refund_of', 'split_id', 'settles', 'credit_sync_id'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another

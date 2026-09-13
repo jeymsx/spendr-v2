@@ -176,7 +176,7 @@ export function SpendingTrivia({ trivia, triviaKey }) {
               ml-auto is what keeps it in the corner: capping the paragraph
               leaves free space on the line, and without an auto margin the
               label just follows the shorter text inward. */}
-          <span className="ml-auto text-10 font-bold uppercase tracking-[0.16em] text-primary/60 shrink-0">
+          <span className="ml-auto text-11 font-semibold text-primary/60 shrink-0">
             Tap
           </span>
         </div>

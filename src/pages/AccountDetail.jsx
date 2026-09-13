@@ -633,24 +633,33 @@ export default function AccountDetail() {
                     </span>
                   </div>
 
-                  {/* How much of the bill is behind you. The label pair under
-                      it is the reference's, and it is doing real work: a bar
-                      with no ends named could be read as time remaining. */}
-                  <ProgressBar
-                    className="mt-3"
-                    value={creditData.thisTotal > 0
-                      ? ((creditData.thisTotal - creditData.stmtOutstanding) / creditData.thisTotal) * 100
-                      : 100}
-                    fillClass={creditData.stmtPaid ? 'bg-emerald-500' : 'bg-primary'}
-                  />
-                  <div className="mt-1.5 flex items-baseline justify-between">
-                    <span className="text-10 font-semibold tracking-wide text-slate-400 dark:text-slate-500">
-                      PAID {fmt(Math.max(0, creditData.thisTotal - creditData.stmtOutstanding))}
-                    </span>
-                    <span className="text-10 font-semibold tracking-wide text-slate-400 dark:text-slate-500">
-                      TOTAL {fmt(creditData.thisTotal)}
-                    </span>
-                  </div>
+                  {/* How much of the bill is behind you - while any of it is
+                      still ahead of you.
+
+                      A settled statement drops the bar and the pair under it.
+                      Full, green, over a ₱0.00 remaining and above the word
+                      "Settled", it was the same fact told three times, and a
+                      meter is for a quantity you are watching move. Once it
+                      cannot move there is nothing to watch. */}
+                  {!creditData.stmtPaid && (
+                    <>
+                      <ProgressBar
+                        className="mt-3"
+                        value={creditData.thisTotal > 0
+                          ? ((creditData.thisTotal - creditData.stmtOutstanding) / creditData.thisTotal) * 100
+                          : 100}
+                        fillClass="bg-primary"
+                      />
+                      <div className="mt-1.5 flex items-baseline justify-between">
+                        <span className="text-11 text-slate-400 dark:text-slate-500">
+                          {fmt(Math.max(0, creditData.thisTotal - creditData.stmtOutstanding))} paid
+                        </span>
+                        <span className="text-11 text-slate-400 dark:text-slate-500">
+                          {fmt(creditData.thisTotal)} total
+                        </span>
+                      </div>
+                    </>
+                  )}
 
                   {creditData.stmtPaid ? (
                     <p className="mt-3 text-center text-12 font-semibold text-emerald-600 dark:text-emerald-400">

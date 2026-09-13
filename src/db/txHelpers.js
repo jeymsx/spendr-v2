@@ -336,6 +336,38 @@ export async function deleteTxGroup(txs) {
         if (tx.recurringId && tx.recurringPrevDate) {
           await db.recurring.update(tx.recurringId, { nextDate: tx.recurringPrevDate })
         }
+
+        /* A settlement puts money back and marks rows paid. Deleting it has
+           to do both in reverse, or the money returns and the debt stays
+           settled - somebody owes you again and nothing on the debts page
+           says so. `settles` is written by settleWithPerson precisely so
+           this is possible; before it existed the two writes had nothing
+           joining them. */
+        for (const part of tx.settles ?? []) {
+          /* syncId first, because it is the one that survives a restore and a
+             second device; the local id is the fast path for the row this
+             very device wrote. */
+          const d = (part.syncId
+            ? await db.debts.where('syncId').equals(part.syncId).first()
+            : null) ?? (part.id ? await db.debts.get(part.id) : null)
+          if (!d) continue
+          await db.debts.update(d.id, {
+            amountPaid: Math.max(0, Math.round(((d.amountPaid ?? 0) - (part.delta ?? 0)) * 100) / 100),
+          })
+        }
+
+        /* And the credit row it opened, if paying more than was owed left
+           one. That row is not history - it is the leftover of this exact
+           payment, so it goes with it. */
+        if (tx.creditSyncId || tx.creditDebtId) {
+          const credit = (tx.creditSyncId
+            ? await db.debts.where('syncId').equals(tx.creditSyncId).first()
+            : null) ?? (tx.creditDebtId ? await db.debts.get(tx.creditDebtId) : null)
+          if (credit) {
+            await db.debts.delete(credit.id)
+            await deleteDebtRemote(null, credit.id, credit.syncId)
+          }
+        }
       }
 
       /* A receivable this purchase OPENED, once the purchase is gone.
@@ -643,15 +675,38 @@ export async function settleWithPerson({
   const receiving = direction === 'owed_to_me'
   const note = description || (receiving ? `Repaid by ${person}` : `Paid to ${person}`)
 
+  /* What this payment MOVES on each row, kept so it can be moved back.
+
+     The debt update and the ledger row were two writes with nothing joining
+     them, so deleting the transaction left every row it had settled still
+     marked paid - the money came back and the debt did not. Recording the
+     deltas on the transaction is what lets deleteTxGroup undo the whole
+     gesture, and it is also what the Undo on the toast runs: one reversal,
+     two ways in. */
+  const before = new Map((rows ?? []).map(r => [r.id, r.amountPaid ?? 0]))
+  const syncOf = new Map((rows ?? []).map(r => [r.id, r.syncId ?? null]))
+  /* Keyed on syncId, with the local id only as a fast path. A local id is a
+     Dexie counter and means nothing on another device - see migration 011 -
+     so a settlement recorded on the phone and deleted on the laptop would
+     reverse nothing at all if this were the id alone. */
+  const settles = updates.map(u => ({
+    syncId: syncOf.get(u.id) ?? null,
+    id: u.id,
+    delta: Math.round((u.amountPaid - (before.get(u.id) ?? 0)) * 100) / 100,
+  })).filter(x => x.delta > 0.005)
+
   /* The ledger side first, because it is the part that must not be lost. A
      debt row that says "paid" with no money behind it is worse than money
      with no debt updated - one is a wrong balance, the other is a reminder
      that outlived its usefulness. */
+  /** @type {number|null} */
+  let txLocalId = null
   if (receiving && sourceTxId) {
-    await postRefund({ originalTxId: sourceTxId, amount, toAccount: account, description: note })
+    txLocalId = /** @type {any} */ (
+      await postRefund({ originalTxId: sourceTxId, amount, toAccount: account, description: note }))
   } else {
     await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
-      await db.transactions.add({
+      txLocalId = /** @type {any} */ (await db.transactions.add({
         txId:       crypto.randomUUID(),
         type:       receiving ? 'inflow' : 'expense',
         amount,
@@ -661,7 +716,7 @@ export async function settleWithPerson({
         date:       nowISO,
         synced:     UNSYNCED,
         updatedAt:  nowISO,
-      })
+      }))
       await applyBalanceEffect(/** @type {Transaction} */ (
         { type: receiving ? 'inflow' : 'expense', amount, account }))
     })
@@ -674,8 +729,10 @@ export async function settleWithPerson({
   /* Whatever is left over becomes a row in the OTHER direction. Not an error,
      not a warning - it is what a round number looks like, and what paying
      early looks like when there is nothing to pay yet. */
+  /** @type {number|null} */
+  let creditDebtId = null
   if (credit > 0.005) {
-    await db.debts.add(/** @type {any} */ ({
+    creditDebtId = /** @type {any} */ (await db.debts.add(/** @type {any} */ ({
       name:       person,
       contact:    person,
       amount:     credit,
@@ -687,8 +744,22 @@ export async function settleWithPerson({
       sourceCategory: category,
       synced:     UNSYNCED,
       updatedAt:  nowISO,
-    }))
+    })))
   }
 
-  return { credit, settled: updates.length }
+  /* Stamped after the fact rather than passed in, because the credit row does
+     not exist until the payment has been spread and postRefund owns the
+     shape of the row it writes. */
+  if (txLocalId && (settles.length || creditDebtId)) {
+    const creditRow = creditDebtId ? await db.debts.get(creditDebtId) : null
+    await db.transactions.update(txLocalId, {
+      settles,
+      ...(creditDebtId ? { creditDebtId } : {}),
+      ...(creditRow?.syncId ? { creditSyncId: creditRow.syncId } : {}),
+      updatedAt: nowISO,
+    })
+  }
+
+  const txRow = txLocalId ? await db.transactions.get(txLocalId) : null
+  return { credit, settled: updates.length, tx: txRow }
 }
