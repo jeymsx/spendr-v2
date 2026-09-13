@@ -330,22 +330,24 @@ export default function RecurringForm() {
                 A subscription split between friends is the case this exists
                 for: the division is entered once and re-resolved every time
                 the bill posts, so a price rise needs nothing re-entered. */}
+            {/* A link, not a field. The expense form's version is the same
+                thing and looks like this: most bills are not shared, and a
+                bordered field with a label above it makes an exception look
+                like one more thing to fill in. */}
             {amount > 0 && (
-              <div>
-                <SectionLabel>Shared with</SectionLabel>
-                <button
-                  type="button"
-                  onClick={() => setDividing(true)}
-                  className={`${fieldFrame()} w-full text-left`}
-                >
-                  <span className="flex-1 min-w-0 text-sm font-medium text-slate-800 dark:text-white truncate">
-                    {shareSummary ?? 'Nobody, it is all yours'}
-                  </span>
-                  <span className="shrink-0 text-slate-300 dark:text-slate-600" aria-hidden="true">
-                    <IconChevronRight />
-                  </span>
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setDividing(true)}
+                className="-mt-2 w-full flex items-center gap-2 py-2 px-1 rounded-2xl text-left
+                  active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+              >
+                <span className="flex-1 min-w-0 text-xs font-semibold text-primary truncate">
+                  {shareSummary ?? 'Share it with someone'}
+                </span>
+                <span className="shrink-0 text-slate-300 dark:text-slate-600" aria-hidden="true">
+                  <IconChevronRight />
+                </span>
+              </button>
             )}
 
             {/* ── Account ── */}
