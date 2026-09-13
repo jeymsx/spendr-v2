@@ -10,7 +10,7 @@ import { scheduledCutoff } from '../utils/scheduled'
 import { budgetTone } from '../components/BudgetMeter'
 import BudgetGauge from '../components/BudgetGauge'
 import CategoryGlyph from '../components/CategoryGlyph'
-import { IconChevronRight } from '../components/icons'
+import { IconChevronRight, IconNoBudget } from '../components/icons'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
 import StatTrio from '../components/ui/StatTrio'
@@ -322,6 +322,7 @@ export default function Budget() {
               button cannot be long-pressed, copied or opened in a new tab.
               Button has no `as` escape hatch the way Card does. */}
           <EmptyState
+            icon={<IconNoBudget />}
             title="No budgets set"
             body="Give a category a monthly limit and this page starts tracking it against what you actually spend."
             action={(

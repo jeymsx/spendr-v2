@@ -9,6 +9,7 @@ import {
   IconCardUI,
   IconReceipt,
   IconTransferUI,
+  IconEmptyLedger,
 } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
 import { scheduledCutoff } from '../utils/scheduled'
@@ -528,6 +529,7 @@ export default function Dashboard() {
           {recentTx.length === 0 ? (
             <EmptyState
               size="sm"
+              icon={<IconEmptyLedger size={24} />}
               title="No transactions yet"
               body={<>Tap <span className="font-semibold">+</span> to add your first entry</>}
             />

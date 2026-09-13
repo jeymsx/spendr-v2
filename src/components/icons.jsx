@@ -263,3 +263,133 @@ export const IconBarChart  = uui(BarChart10)
 export const IconCalc      = uui(Calculator)
 export const IconAlert     = uui(AlertCircle)
 export const IconCheckCircle = uui(CheckCircle)
+
+/* ── Empty-state glyphs ──────────────────────────────────────────────────────
+ *
+ * The one that goes in <EmptyState>'s 56px disc. A separate family from the
+ * icons above and drawn to its own contract, which is worth writing down
+ * because five of these already existed and were being drawn from memory:
+ *
+ *     viewBox 0 0 24 24, fill none, stroke currentColor
+ *     strokeWidth 1.6, round caps and joins
+ *     rendered at 28-34px, aria-hidden
+ *
+ * 1.6 is a fractional weight, which is normally a mistake - no coordinate
+ * puts both edges of a 1.6px stroke on a pixel boundary, so every edge is
+ * antialiased. It is right HERE because these never render at icon size:
+ * inside a 56px disc at 32px the softness is invisible, and the five that
+ * already exist are all 1.6. Matching eight icons beats matching a rule.
+ *
+ * Sub-shapes that want to be solid take fill="currentColor" stroke="none",
+ * which is what IconQr already does.
+ *
+ * They live here only when more than one screen uses them. A glyph with one
+ * caller stays beside its caller - see IconNoDebts in pages/debts/shared.jsx.
+ */
+
+/** @param {{size?: number}} props */
+function emptyProps({ size }) {
+  return {
+    width: size, height: size, viewBox: '0 0 24 24',
+    fill: 'none', stroke: 'currentColor', strokeWidth: '1.6',
+    strokeLinecap: /** @type {const} */ ('round'),
+    strokeLinejoin: /** @type {const} */ ('round'),
+    'aria-hidden': true, focusable: 'false',
+  }
+}
+
+/**
+ * No goals yet: a target with its bullseye, at empty-state weight.
+ *
+ * The app has already decided that a goal is a target - it is the glyph on
+ * the home screen's Goals tile - and inventing a second metaphor for the same
+ * noun is how two screens stop looking like one app. Concentric at r=9.5/5.2,
+ * overshooting the 18x18 box the square-ish glyphs here use, because a circle
+ * drawn to the same box reads smaller than one.
+ *
+ * @param {{size?: number}} props
+ */
+export function IconNoGoals({ size = 32 }) {
+  return (
+    <svg {...emptyProps({ size })}>
+      <circle cx="12" cy="12" r="9.5" />
+      <circle cx="12" cy="12" r="5.2" />
+      <circle cx="12" cy="12" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/**
+ * No budgets set: a dial with its needle at the start of the scale.
+ *
+ * The budget page headlines with an arc of ticks, so a dial is what the empty
+ * state should promise. The needle resting at the low end is the whole point -
+ * the instrument is there and nothing is being measured on it yet.
+ *
+ * 270 degrees rather than a semicircle, which was the first attempt and was
+ * the wrong shape for the box: a half arc is 9 units tall in a 24-unit
+ * square, so it floated in the middle with dead space above and below and
+ * read as an arch rather than an instrument. Opening it only at the bottom
+ * fills the frame the way the other glyphs here do.
+ *
+ * @param {{size?: number}} props
+ */
+export function IconNoBudget({ size = 32 }) {
+  return (
+    <svg {...emptyProps({ size })}>
+      <path d="M5.3 19.2A9.5 9.5 0 1 1 18.7 19.2" />
+      <path d="M12 12.5 7.4 17.1" />
+      <circle cx="12" cy="12.5" r="1.5" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
+/**
+ * The thing you followed a link to is not here.
+ *
+ * Not an empty list - a dead reference, which happens more in a PWA than in a
+ * normal app: a deep link, a notification, or a reload after the account or
+ * goal it named was deleted. Three screens answer it (account, goal, bill) and
+ * all three should answer it the same way.
+ *
+ * An empty dashed frame - the outline of the thing that should be here, with
+ * nothing in it. Dashed-for-absent is already this app's idiom: it is
+ * IconEmptyLedger's third line, IconFlatChart's level series, and the dashed
+ * placeholder the Goals page draws where an account would be.
+ *
+ * It was a magnifying glass with a rule in it first, on the reasoning that
+ * "looked, found nothing" is milder than an error. Drawn and looked at beside
+ * the rest of the set, a minus inside a lens is the universal zoom-out
+ * control and read as exactly that. Worth the detour to find out.
+ *
+ * @param {{size?: number}} props
+ */
+export function IconNotFound({ size = 32 }) {
+  return (
+    <svg {...emptyProps({ size })}>
+      <rect x="3" y="5.5" width="18" height="13" rx="3" strokeDasharray="3.2 2.8" />
+      <path d="M9.5 12h5" />
+    </svg>
+  )
+}
+
+/**
+ * Empty-ledger glyph: a page with two ruled lines and a third left blank.
+ *
+ * The missing third line is the whole idea - the rows that would be here.
+ *
+ * Moved from pages/accounts/Trend.jsx when the dashboard wanted it too.
+ * Importing it from there would have pulled recharts into the home screen's
+ * bundle, and the home screen is the one route that is not lazy-loaded.
+ *
+ * @param {{size?: number}} props
+ */
+export function IconEmptyLedger({ size = 32 }) {
+  return (
+    <svg {...emptyProps({ size })} strokeWidth="2">
+      <rect x="4" y="3" width="16" height="18" rx="3" />
+      <path d="M8 9h8M8 13h5" />
+      <path d="M8 17h3" strokeDasharray="2 2" />
+    </svg>
+  )
+}

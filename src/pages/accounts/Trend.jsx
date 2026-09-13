@@ -228,15 +228,6 @@ export function BalanceTrend({
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
 /**
- * Empty-ledger glyph: a page with two ruled lines and a third left blank.
- *
- * 24x24 grid, 2px stroke on integer coordinates so the edges land on pixel
- * boundaries at 1x, currentColor so it takes the tone of the EmptyState disc
- * it sits in, and aria-hidden because the sentence under it already says
- * this. The missing third line is the whole idea - the rows that would be
- * here. 32px to match the glyph every other empty state puts in that disc.
- */
-/**
  * Flat-chart glyph: an axis corner with a dashed, level series.
  *
  * Same family as IconEmptyLedger - 24x24, 2px stroke on integer coordinates
@@ -258,19 +249,11 @@ export function IconFlatChart() {
   )
 }
 
-export function IconEmptyLedger() {
-  return (
-    <svg
-      width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      aria-hidden="true" focusable="false"
-    >
-      <rect x="4" y="3" width="16" height="18" rx="3" />
-      <path d="M8 9h8M8 13h5" />
-      <path d="M8 17h3" strokeDasharray="2 2" />
-    </svg>
-  )
-}
+/* IconEmptyLedger moved to components/icons.jsx when the dashboard wanted it:
+   importing it from here would have pulled recharts into the one route that
+   is not lazy-loaded. Re-exported so the two pages that already had it from
+   this module keep working. */
+export { IconEmptyLedger } from '../../components/icons'
 
 export function IconChevronLeft() {
   return (

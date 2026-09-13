@@ -18,7 +18,7 @@ import {
 import { applyBalanceEffect } from '../db/txHelpers'
 import { UNSYNCED } from '../db/db'
 import { useToast } from '../context/ToastContext'
-import { IconChevronRight, IconTick, IconWarning} from '../components/icons'
+import { IconChevronRight, IconTick, IconWarning, IconNotFound } from '../components/icons'
 import {
   AccountFormSheet,
   QrViewerModal,
@@ -269,6 +269,7 @@ export default function AccountDetail() {
           <IconChevronLeft />
         </IconButton>
         <EmptyState
+          icon={<IconNotFound />}
           title="Account not found"
           body="It may have been deleted."
           action={

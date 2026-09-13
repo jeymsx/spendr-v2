@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
-import { IconChevronLeft } from '../components/icons'
+import { IconChevronLeft, IconNotFound } from '../components/icons'
 import {
   FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
@@ -310,6 +310,7 @@ export default function RecurringDetail() {
         </IconButton>
         <EmptyState
           className="mt-8"
+          icon={<IconNotFound />}
           title="Bill not found"
           body="It may have been deleted."
           action={
