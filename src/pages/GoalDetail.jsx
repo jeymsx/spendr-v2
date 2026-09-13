@@ -147,7 +147,7 @@ export default function GoalDetail() {
             course. It is the whole reason a goal takes a date. */}
         {goal.archived ? (
           <p className="mt-3 text-13 font-medium text-slate-400 dark:text-slate-500">
-            Archived — it is holding no money
+            Archived, holding no money
           </p>
         ) : goal.linkedCount === 0 ? (
           <p className="mt-3 text-13 font-medium text-amber-600 dark:text-amber-400">
@@ -155,11 +155,11 @@ export default function GoalDetail() {
           </p>
         ) : goal.complete ? (
           <p className="mt-3 text-13 font-medium text-emerald-600 dark:text-emerald-400">
-            Fully funded{dateLabel ? ` — ahead of ${dateLabel}` : ''}
+            Fully funded{dateLabel ? `, ahead of ${dateLabel}` : ''}
           </p>
         ) : overdue ? (
           <p className="mt-3 text-13 font-medium text-red-500 dark:text-red-400">
-            {fmtCompact(goal.remaining)} short — {dateLabel} has passed
+            {fmtCompact(goal.remaining)} short. {dateLabel} has passed
           </p>
         ) : p ? (
           <p className="mt-3 text-13 font-medium text-slate-500 dark:text-slate-400 tabular-nums">

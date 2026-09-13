@@ -89,9 +89,10 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
             bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
             <span className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5"><IconWarning /></span>
             <div>
-              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">Legacy format detected</p>
+              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">From an older version</p>
               <p className="text-xs text-amber-600/80 dark:text-amber-500 mt-0.5">
-                This file uses the old column names (txId, date, payment, account). It will import correctly — consider exporting a fresh CSV from the new app format in future.
+                This file was exported by an older version of Spendr. It will import
+                just fine. There is nothing you need to change.
               </p>
             </div>
           </div>
@@ -303,7 +304,7 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
         How much was in each account <span className="font-semibold text-slate-700 dark:text-slate-200">before your first transaction</span> in this file? Leave at 0 if you started from nothing.
       </p>
       <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">
-        Pre-filled from your current account balances — adjust as needed.
+        Pre-filled from your current account balances. Adjust as needed.
       </p>
 
       <div className="flex flex-col gap-2.5 mb-6">

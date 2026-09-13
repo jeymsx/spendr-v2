@@ -306,7 +306,7 @@ const styles = StyleSheet.create({
 function ReportFooter({ monthName, year }) {
   return (
     <View style={styles.footer} fixed>
-      <Text style={styles.footerText}>Spendr Monthly Report — {monthName} {year}</Text>
+      <Text style={styles.footerText}>Spendr Monthly Report · {monthName} {year}</Text>
       <Text style={styles.footerText} render={({ pageNumber, totalPages }) => `Page ${pageNumber} of ${totalPages}`} />
     </View>
   )
@@ -509,7 +509,7 @@ function SpendingPage({ year, month, summary, categoryBreakdown, colors }) {
       <HeaderBar subtitle="SPENDING BREAKDOWN" colors={colors} />
 
       <View style={[styles.sectionHeader, { backgroundColor: colors.lightBg }]}>
-        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>Spending by Category — {monthName} {year}</Text>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>Spending by Category · {monthName} {year}</Text>
       </View>
 
       {categoryBreakdown.length === 0 ? (
@@ -638,7 +638,7 @@ function TransactionsPage({ year, month, transactions, colors }) {
       <HeaderBar subtitle="TRANSACTION LIST" colors={colors} />
 
       <View style={[styles.sectionHeader, { backgroundColor: colors.lightBg }]}>
-        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>All Transactions — {monthName} {year}</Text>
+        <Text style={[styles.sectionHeaderText, { color: colors.primaryDark }]}>All Transactions · {monthName} {year}</Text>
       </View>
 
       {transactions.length === 0 ? (
@@ -732,7 +732,7 @@ export default function MonthlyReport(props) {
 
   return (
     <Document
-      title={`Spendr Report — ${MONTH_NAMES[month - 1]} ${year}`}
+      title={`Spendr Report · ${MONTH_NAMES[month - 1]} ${year}`}
       author="Spendr"
       subject="Monthly Financial Report"
     >

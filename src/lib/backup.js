@@ -40,7 +40,7 @@ export function inspectBackup(raw) {
   try {
     data = typeof raw === 'string' ? JSON.parse(raw) : raw
   } catch {
-    throw new Error('Not valid JSON — is this a Spendr backup file?')
+    throw new Error('Not valid JSON. Is this a Spendr backup file?')
   }
   if (!data || typeof data !== 'object' || Array.isArray(data)) {
     throw new Error('Not a Spendr backup file.')

@@ -139,7 +139,7 @@ export function CategoryPresetsSheet({ open, onClose, activeTab, existingCategor
     >
       <div className="pt-0.5">
         <p className="text-xs text-slate-400 dark:text-slate-500">
-          {activeTab === 'expense' ? 'Expense' : 'Inflow'} suggestions — tap to add
+          {activeTab === 'expense' ? 'Expense' : 'Inflow'} suggestions · tap to add
         </p>
 
         <div className="flex flex-wrap gap-2 pt-4">

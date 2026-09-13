@@ -57,7 +57,7 @@ export default class ErrorBoundary extends Component {
           Something went wrong
         </p>
         <p className="text-xs text-slate-500 dark:text-slate-400 mt-1.5 max-w-[280px]">
-          Your data is safe — it's stored on this device and nothing was lost.
+          Your data is safe. It's stored on this device and nothing was lost.
         </p>
 
         <p className="mt-3 max-w-[280px] px-3 py-2 rounded-xl text-11 font-mono break-words

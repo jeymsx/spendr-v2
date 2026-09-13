@@ -22,7 +22,7 @@ function StepSuccess({ imported, skipped, onImportAnother }) {
 
       <h2 className="text-2xl font-bold text-slate-900 dark:text-white mb-1.5">Import complete</h2>
       <p className="text-sm text-slate-500 dark:text-slate-400 max-w-xs mb-8">
-        Your transactions have been imported and account balances recalculated.
+        Everything is in, and your balances are already up to date.
       </p>
 
       {/* Result cards */}

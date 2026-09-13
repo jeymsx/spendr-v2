@@ -163,8 +163,8 @@ export function billingLine(dateStr) {
   const n = daysUntil(dateStr)
   const when = fmtDateFull(dateStr)
   if (n < 0)   return `Overdue since ${when}`
-  if (n === 0) return `Billing today — ${when}`
-  if (n === 1) return `Next billing tomorrow — ${when}`
-  if (n <= 7)  return `Next billing in ${n} days — ${when}`
+  if (n === 0) return `Billing today · ${when}`
+  if (n === 1) return `Next billing tomorrow · ${when}`
+  if (n <= 7)  return `Next billing in ${n} days · ${when}`
   return `Next billing ${when}`
 }

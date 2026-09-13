@@ -175,7 +175,7 @@ export default function WebTransactions() {
           `${money(totals.out)} out`,
           `${money(totals.inn)} in`,
           ...(scheduledCount > 0
-            ? [`${scheduledCount} scheduled ahead — see the account's ledger`]
+            ? [`${scheduledCount} scheduled ahead, see the account's ledger`]
             : []),
         ].join(' · ')}
         actions={activeFilters > 0 ? (

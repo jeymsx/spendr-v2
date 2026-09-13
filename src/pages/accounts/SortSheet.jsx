@@ -148,7 +148,7 @@ export function AccountSortSheet({ open, onClose, accounts }) {
       maxHeight="80dvh"
     >
       <p className="text-xs text-slate-400 dark:text-slate-500">
-        Drag to reorder — affects picker order
+        Drag to reorder · affects picker order
       </p>
 
       <div className="pt-4">

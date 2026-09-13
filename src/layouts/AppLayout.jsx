@@ -147,7 +147,7 @@ export default function AppLayout() {
           pullState !== 'idle' ? 'h-9' : 'h-0'
         }`}>
           {!canSync
-            ? (pullState === 'ready' ? '↑ Release — sign in to sync' : '↓ Sync needs an account')
+            ? (pullState === 'ready' ? '↑ Release to sign in and sync' : '↓ Sync needs an account')
             : (pullState === 'ready' ? '↑ Release to sync' : '↓ Pull to sync')}
         </div>
 

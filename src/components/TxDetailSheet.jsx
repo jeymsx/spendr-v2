@@ -564,8 +564,7 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 </h3>
                 <p className="mt-1 mx-auto max-w-[268px] text-13 leading-snug text-balance
                   text-slate-400 dark:text-slate-500">
-                  This cannot be undone from here, though the toast afterwards
-                  offers{' '}one.
+                  You&apos;ll get a quick chance to undo this straight after.
                 </p>
               </div>
 

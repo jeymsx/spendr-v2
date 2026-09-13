@@ -134,7 +134,7 @@ export default function WebImport() {
               </li>
               <li>
                 Step 3 asks for each new account's opening balance and credit
-                limit — imported transactions don't imply a starting balance.
+                limit. Imported transactions don't imply a starting balance.
               </li>
               <li>
                 Rows with an unrecognised type or an unparseable date are flagged

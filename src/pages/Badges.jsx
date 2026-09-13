@@ -133,11 +133,9 @@ export default function Badges() {
                 gap="loose"
                 action={
                   <InfoButton title="How badges work">
-                    Badges come from what is already in your ledger, so they
-                    arrive on their own - there is nothing to claim. They are
-                    worked out on this device, which means they keep counting
-                    with no signal, and once one is earned it stays earned even
-                    if the numbers behind it change later.
+                    Badges unlock on their own as you track your spending.
+                    Nothing to claim, and nothing to lose. Once you&apos;ve earned
+                    one, it&apos;s yours for good.
                   </InfoButton>
                 }
               >

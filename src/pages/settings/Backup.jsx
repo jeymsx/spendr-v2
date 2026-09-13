@@ -150,7 +150,7 @@ export function RestoreBackupSheet({ open, onClose }) {
               <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Restore backup</h3>
               <p className="text-sm text-slate-500 dark:text-slate-400">
                 Pick a <span className="font-semibold">.json</span> backup. Its contents replace
-                what's on this device — anything not in the file is removed.
+                what's on this device. Anything not in the file is removed.
               </p>
             </div>
             {error && (
@@ -193,8 +193,8 @@ export function RestoreBackupSheet({ open, onClose }) {
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 text-center px-1">
-              Your name, currency and theme are kept. If you're signed in, the next
-              sync pushes this state to the cloud.
+              Your name, currency and theme stay as they are. If you&apos;re signed
+              in, your cloud copy will match this next time it syncs.
             </p>
 
             <div>

@@ -16,7 +16,7 @@ export function StepFilePicker({ onParsed }) {
   const processFile = useCallback((file) => {
     if (!file) return
     if (!file.name.endsWith('.csv')) {
-      setError('Invalid file type — only .csv files are accepted.')
+      setError('Invalid file type. Only .csv files are accepted.')
       return
     }
     setError(null)
@@ -26,7 +26,7 @@ export function StepFilePicker({ onParsed }) {
       try {
         const { rows, isLegacy } = parseCSV(e.target.result)
         if (rows.length === 0) {
-          setError('The CSV file is empty — no data rows found.')
+          setError('The CSV file is empty. No data rows were found.')
           setLoading(false)
           return
         }

@@ -342,7 +342,7 @@ export default function WebInsights() {
 
           <WebPanel title="Budgets">
             {!budgetsApply ? (
-              <WebEmpty>Budgets are monthly — switch to This month to see them</WebEmpty>
+              <WebEmpty>Budgets are monthly. Switch to This month to see them</WebEmpty>
             ) : budgets.length === 0 ? <WebEmpty>No budgets set</WebEmpty> : (
               <div className="flex flex-col gap-3">
                 {budgets.map(c => {

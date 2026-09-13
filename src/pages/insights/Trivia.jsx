@@ -26,7 +26,7 @@ export function generateTrivia({ expenses, inflows, totalSpent, totalEarned, cat
     push('receipt', `Your biggest single expense: ${fmtCompact(top.amount)} on "${top.description || top.category}".`)
   }
 
-  push('calc', `${numExpenses} expense transaction${numExpenses !== 1 ? 's' : ''} in ${monthName} — averaging ${fmtCompact(totalSpent / numExpenses)} each.`, hasExpenses)
+  push('calc', `${numExpenses} expense transaction${numExpenses !== 1 ? 's' : ''} in ${monthName}, averaging ${fmtCompact(totalSpent / numExpenses)} each.`, hasExpenses)
 
   if (topCategory && totalSpent > 0) {
     const pct = (topCategory.value / totalSpent * 100).toFixed(0)
@@ -41,8 +41,8 @@ export function generateTrivia({ expenses, inflows, totalSpent, totalEarned, cat
   if (totalEarned > 0) {
     const net = totalEarned - totalSpent
     const rate = Math.abs((net / totalEarned) * 100).toFixed(0)
-    if (net >= 0) push('coins', `You saved ${fmtCompact(net)} in ${monthName} — a ${rate}% savings rate.`)
-    else push('alert', `You overspent income by ${fmtCompact(Math.abs(net))} — a ${rate}% deficit.`)
+    if (net >= 0) push('coins', `You saved ${fmtCompact(net)} in ${monthName}, a ${rate}% savings rate.`)
+    else push('alert', `You overspent income by ${fmtCompact(Math.abs(net))}, a ${rate}% deficit.`)
   }
 
   if (hasExpenses) {

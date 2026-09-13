@@ -12,7 +12,7 @@ import Divider from '../../components/ui/Divider'
 
 export const PRIVACY_SECTIONS = [
   { h: null,                  b: 'Last updated: May 2026' },
-  { h: 'What We Store',       b: 'Your financial data — transactions, accounts, categories, and budgets — is stored locally on your device using IndexedDB. Nothing leaves your device unless you explicitly enable cloud sync.' },
+  { h: 'What We Store',       b: 'Your financial data (transactions, accounts, categories and budgets) is stored locally on your device. Nothing leaves it unless you turn on cloud sync.' },
   { h: 'Cloud sync',          b: 'If you sign in with Google and enable Supabase sync, your data is stored in Supabase under your own credentials. The developer has no access to your cloud data.' },
   { h: 'What We Don\'t Collect', b: 'We collect no analytics, usage telemetry, advertising identifiers, or personal information beyond what you voluntarily enter in the app.' },
   { h: 'How Data Is Used',    b: 'All data exists solely to provide the app\'s budgeting and tracking functionality. Your data is never sold, shared, or transmitted to any third party.' },

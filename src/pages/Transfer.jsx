@@ -193,7 +193,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
             txId:        crypto.randomUUID(),
             type:        'expense',
             amount:      fee,
-            description: `Transfer fee — ${fromAccount.name} → ${toAccount.name}`,
+            description: `Transfer fee · ${fromAccount.name} → ${toAccount.name}`,
             category:    'Transfer Fee',
             account:     fromAccount.name,
             date:        dateISO,
@@ -311,7 +311,7 @@ export default function Transfer({ onCancel, onSaved } = {}) {
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
               {fmt(creditOutstanding)} is currently owed on {toAccount.name}.
-              {' '}Paying {fmt(amount)} will overpay by {fmt(amount - creditOutstanding)} — excess won't increase available credit beyond the card limit.
+              {' '}Paying {fmt(amount)} will overpay by {fmt(amount - creditOutstanding)}. The excess won't increase available credit beyond the card limit.
             </p>
           </div>
         )}

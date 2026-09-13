@@ -522,7 +522,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
             <div>
               <p className="text-sm font-medium text-slate-800 dark:text-white">Active</p>
               <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
-                {active ? 'Will appear in upcoming' : 'Paused — not shown in upcoming'}
+                {active ? 'Will appear in upcoming' : 'Paused, not shown in upcoming'}
               </p>
             </div>
             <button
@@ -706,7 +706,7 @@ export default function Recurring() {
         <EmptyState
           icon={<IconNoBills />}
           title="No bills yet"
-          body="Subscriptions, rent, utilities — anything that repeats."
+          body="Subscriptions, rent, utilities: anything that repeats."
           action={
             <Button onClick={() => navigate('/recurring/new')} className="px-5">
               Add your first bill

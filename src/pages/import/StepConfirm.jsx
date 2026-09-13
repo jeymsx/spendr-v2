@@ -162,7 +162,7 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
                   {missingAccounts.size} account{missingAccounts.size > 1 ? 's' : ''} will be created
                 </p>
                 <p className="text-xs text-amber-600/80 dark:text-amber-500 mt-0.5">
-                  {[...missingAccounts].join(', ')} — as Cash, ₱0 balance
+                  {[...missingAccounts].join(', ')} · as Cash, ₱0 balance
                 </p>
               </div>
             </div>
@@ -179,7 +179,7 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
                   {missingCategories.size} categor{missingCategories.size > 1 ? 'ies' : 'y'} will be created
                 </p>
                 <p className="text-xs text-amber-600/80 dark:text-amber-500 mt-0.5">
-                  {[...missingCategories].join(', ')} — as Expense, 📦
+                  {[...missingCategories].join(', ')} · as Expense, 📦
                 </p>
               </div>
             </div>
@@ -192,10 +192,11 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
             <span className="shrink-0 text-slate-500 dark:text-slate-400"><IconBalance size={20} /></span>
             <div>
               <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">
-                Balances recalculated from opening balances
+                Your balances are worked out for you
               </p>
               <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-0.5">
-                Transactions replayed on top of the opening balances you set.
+                Every transaction in the file is added to the opening balances
+                you entered.
               </p>
             </div>
           </div>

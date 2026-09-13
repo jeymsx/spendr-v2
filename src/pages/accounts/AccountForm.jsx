@@ -747,7 +747,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </div>
 
                 <p className="text-11 text-slate-400 dark:text-slate-500 px-1 -mt-2">
-                  Statement day = billing closes · Due day = payment deadline · Cutoff = new cycle starts
+                  Statement day closes your bill · Due day is the deadline to pay · Cutoff starts the next cycle
                 </p>
               </div>
             )}

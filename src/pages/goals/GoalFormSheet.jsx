@@ -131,7 +131,7 @@ export default function GoalFormSheet({
       })
       // Archiving frees the money it was holding, which is the whole point -
       // say so, because the other goals' numbers are about to move.
-      showToast(on ? 'Archived — its funding is freed up' : 'Goal restored')
+      showToast(on ? 'Archived, its funding is freed up' : 'Goal restored')
       onClose()
     } catch (e) {
       console.error('[Goals] archive failed:', e)
@@ -203,8 +203,8 @@ export default function GoalFormSheet({
               Delete “{goal?.name}”?
             </p>
             <p className="text-13 text-slate-500 dark:text-slate-400 mt-1.5 leading-relaxed">
-              The goal goes; your money does not move. Nothing was ever taken
-              out of the account — a goal only ever described the balance.
+              Only the goal is removed. Your money stays exactly where it is.
+              A goal only ever watches your balance, it never moves it.
             </p>
           </div>
         ) : (
@@ -283,7 +283,7 @@ export default function GoalFormSheet({
             {/* Target date */}
             <div className="mt-4">
               <SectionLabel htmlFor={`${uid}-date`}>
-                Target date <span className="font-normal text-slate-400 dark:text-slate-500">— optional</span>
+                Target date <span className="font-normal text-slate-400 dark:text-slate-500">(optional)</span>
               </SectionLabel>
               <div className={`relative ${fieldFrame()}`}>
                 <span className={`flex-1 text-sm font-medium tabular-nums truncate ${

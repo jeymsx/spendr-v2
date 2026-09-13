@@ -376,11 +376,12 @@ export default function Goals() {
                       </IconButton>
                     )}
                     <InfoButton title="How goals are funded">
-                      Goals read your real balances. When several goals share an
-                      account, the one earliest in the order fills first and the
-                      rest take what is left, so the totals always match the
-                      money you actually have. Credit cards cannot fund a goal —
-                      a card holds debt, not savings.
+                      Goals follow your real balances, so there is never anything
+                      to top up. When goals share an account, the one higher in
+                      the list fills first and the rest share what is left, so
+                      the totals always match the money you actually have. Credit
+                      cards can&apos;t fund a goal, since a card holds debt rather
+                      than savings.
                     </InfoButton>
                   </span>
                 }

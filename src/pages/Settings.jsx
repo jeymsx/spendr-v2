@@ -300,7 +300,7 @@ export default function Settings() {
             label="Desktop layout"
             sublabel={
               getViewPreference() === 'mobile'
-                ? 'Forced to mobile on this device — tap to allow desktop'
+                ? 'Forced to mobile on this device. Tap to allow desktop'
                 : 'Wide screens use the desktop layout automatically'
             }
             right={<IconChevronRight size={14} strokeWidth="2" />}
@@ -699,7 +699,8 @@ export default function Settings() {
           <div className="text-center">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Download full backup?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Exports all accounts, categories, transactions, templates, recurring, and debts as a JSON file.
+              Saves everything you have: accounts, transactions, categories,
+              templates, bills and debts, in one file you can keep somewhere safe.
             </p>
           </div>
         </div>

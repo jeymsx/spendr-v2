@@ -315,7 +315,7 @@ export default function WebSettings() {
                   {busy === 'csv' ? 'Preparing…' : 'Download CSV'}
                 </Btn>
               </Row>
-              <Row label="Full backup (JSON)" hint="Accounts, categories, transactions, debts, recurring, templates">
+              <Row label="Full backup (JSON)" hint="Everything: accounts, transactions, categories, bills, debts and templates">
                 <Btn onClick={exportJson} disabled={busy === 'json'}>
                   {busy === 'json' ? 'Preparing…' : 'Download backup'}
                 </Btn>
@@ -350,10 +350,13 @@ export default function WebSettings() {
             <div className="flex flex-col gap-6">
               <WebPanel title="Cloud sync">
                 {!isSupabaseConfigured ? (
+                  /* The two env vars this is really about - VITE_SUPABASE_URL and
+                     VITE_SUPABASE_ANON_KEY - belong in a comment, not on screen.
+                     Whoever needs them is reading the source; whoever is reading
+                     the screen just wants to know if their money is safe. */
                   <p className="text-xs text-amber-700 dark:text-amber-400 py-2">
-                    Not configured on this device — VITE_SUPABASE_URL and
-                    VITE_SUPABASE_ANON_KEY are unset, so Spendr is running offline-only
-                    against local storage. Everything else works.
+                    Cloud sync isn&apos;t set up on this device, so everything stays
+                    right here. The rest of Spendr works exactly as it should.
                   </p>
                 ) : (
                   <>
@@ -400,12 +403,12 @@ export default function WebSettings() {
           {section === 'danger' && (
             <WebPanel title="Danger zone">
               <Row label="Reset app" danger
-                hint="Permanently deletes every transaction, account, category, debt and recurring payment on this device">
+                hint="Permanently deletes every transaction, account, category, bill and debt on this device">
                 <Btn tone="danger" onClick={() => setSheet('reset')}>Reset…</Btn>
               </Row>
               <p className="text-xs text-slate-500 dark:text-slate-400 pt-3">
-                If you're signed in, your cloud copy is separate — resetting here does not
-                delete it, and signing back in re-downloads it. Export a backup first if
+                If you're signed in, your cloud copy is separate. Resetting here does not
+                delete it, and signing back in brings it all back. Export a backup first if
                 you want a local copy.
               </p>
             </WebPanel>

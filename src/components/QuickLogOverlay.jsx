@@ -481,7 +481,7 @@ export default function QuickLogOverlay({ onClose }) {
           )}
           {ready && !parsed.category && parsed.type === 'expense' && !parsed.transferIssue && (
             <p className="text-12 text-slate-600 dark:text-white/40">
-              No category matched — you can pick one next
+              No category matched. You can pick one next
             </p>
           )}
 
@@ -492,8 +492,8 @@ export default function QuickLogOverlay({ onClose }) {
             <p className="flex items-start gap-1.5 text-12 text-amber-800 dark:text-amber-300/80">
               <span className="mt-[2px] shrink-0"><IconWarning size={13} /></span>
               {parsed.transferIssue.reason === 'same-account'
-                ? `Both sides read as ${parsed.transferIssue.account} — a transfer needs two different accounts`
-                : `No account called “${parsed.transferIssue.typed}” — logging this as an expense`}
+                ? `Both sides read as ${parsed.transferIssue.account}. A transfer needs two different accounts`
+                : `No account called “${parsed.transferIssue.typed}”. Logging this as an expense`}
             </p>
           )}
 
