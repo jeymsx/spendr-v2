@@ -8,8 +8,6 @@ import { IconChevronLeft } from './icons'
 import { moneyChangeHandler, parseMoney } from '../utils/moneyInput'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { fmt } from '../lib/money'
-import FadeScroller from './FadeScroller'
-import { RAIL_TOUCH } from './ui/Rail'
 import { chipClass } from '../pages/accounts/shared'
 import { resolveSplit, SPLIT_MODES, MODE_FIELD } from '../lib/splitModes'
 import { useTheme } from '../context/ThemeContext'
@@ -451,22 +449,23 @@ export default function DivideScreen({
 
             {/* Five modes, because they are five things people say out loud at
                 a table, not variations on one. See lib/splitModes.js. */}
-            <FadeScroller
-              axis="x"
-              style={RAIL_TOUCH}
-              className="flex items-center gap-1.5 mb-1 -mx-4 px-4 pb-0.5"
-            >
+            {/* A grid, not a rail. The set is five fixed labels and they fit
+                the width, so a scroller would leave dead space on the right
+                and ask people to swipe for something already on screen. Equal
+                columns also make the chips read as one control - which they
+                are, since picking one un-picks the rest. */}
+            <div className="grid grid-cols-5 gap-1.5 mb-1">
               {SPLIT_MODES.map(m => (
                 <button
                   key={m.value}
                   type="button"
                   onClick={() => pickMode(m.value)}
-                  className={chipClass(mode === m.value)}
+                  className={`${chipClass(mode === m.value)} w-full px-0`}
                 >
                   {m.label}
                 </button>
               ))}
-            </FadeScroller>
+            </div>
             <p className="text-11 text-slate-400 dark:text-slate-500 mb-3">
               {SPLIT_MODES.find(m => m.value === mode)?.hint}
             </p>
