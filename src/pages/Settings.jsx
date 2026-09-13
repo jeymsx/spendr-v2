@@ -121,11 +121,21 @@ export default function Settings() {
     setGeneratingReport(true)
     try {
       const { downloadMonthlyReport } = await import('../utils/reportData.js')
-      await downloadMonthlyReport(reportMonth.year, reportMonth.month, accentColor)
-      showToast('Report downloaded')
+      const how = await downloadMonthlyReport(reportMonth.year, reportMonth.month, accentColor)
+      /* Three outcomes, because on a phone the file goes to the share sheet
+         rather than a downloads folder, and dismissing that sheet is a
+         decision rather than a failure. Saying "downloaded" for all three
+         is how a report that never arrived still looked like a success. */
+      if (how === 'shared') showToast('Report ready to save')
+      else if (how === 'downloaded') showToast('Report downloaded')
     } catch (e) {
       console.error(e)
-      showToast('Failed to generate report', 'error')
+      /* The reason, not just the fact. A report can fail for the month you
+         picked, for memory on an older phone, or because the renderer could
+         not be fetched offline - and "Failed to generate report" is the same
+         sentence for all three. */
+      const why = /** @type {any} */ (e)?.message
+      showToast(why ? `Report failed: ${why}` : 'Failed to generate report', 'error')
     } finally {
       setGeneratingReport(false)
     }

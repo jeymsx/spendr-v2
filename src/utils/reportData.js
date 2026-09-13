@@ -157,10 +157,13 @@ export async function fetchReportData(year, month) {
       } else if (tx.type === 'transfer') {
         const from = tx.fromAccount || tx.account
         if (from === acct.name) bal += a  // reverse: transfer out reduced balance
-        if (tx.toAccount === acct.name) {
-          // For credit accounts, transfer-in is a payment (applied as -a), so reversal adds back
-          bal += acct.type === 'credit' ? a : -a
-        }
+        /* -a for every destination, credit included. applyBalanceEffect used
+           to special-case a transfer landing on a card as -a, and this line
+           was written to undo that. The special case is gone: it had the sign
+           backwards, so every card payment deepened the debt it was paying
+           off. A card is not an exception to "a transfer adds to where it
+           lands", which makes reversing one an ordinary subtraction. */
+        if (tx.toAccount === acct.name) bal -= a
       }
     }
     endingBalances[acct.name] = bal
@@ -199,10 +202,11 @@ export async function fetchReportData(year, month) {
 // ── downloadMonthlyReport ──────────────────────────────────────────────────────
 
 /**
- * Fetches data then downloads the PDF.
+ * Fetches data, renders the PDF, and hands it over.
  * @param {number} year
  * @param {number} month  1-indexed
  * @param {string} [accentColor]
+ * @returns {Promise<'shared'|'downloaded'|'cancelled'>}
  */
 export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF') {
   const data = await fetchReportData(year, month)
@@ -219,13 +223,66 @@ export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF'
   const blob = await pdfAny(
     createElement(MonthlyReport, { ...data, accentColor, generatedAt })).toBlob()
 
-  const mm  = String(month).padStart(2, '0')
+  const mm = String(month).padStart(2, '0')
+  return deliverPdf(blob, `spendr-report-${year}-${mm}.pdf`)
+}
+
+/**
+ * Get the finished PDF to the person who asked for it.
+ *
+ * ── Why this is not just an <a download> ──
+ *
+ * It was, and on an iPhone that does nothing at all. iOS Safari gives the
+ * `download` attribute no useful meaning, and inside an installed PWA there
+ * is no browser chrome to fall back to - the anchor is clicked, no file
+ * appears, and the app cheerfully reports success. Nothing throws, so the
+ * caller's try/catch never fires either.
+ *
+ * The same code also revoked the object URL on the very next line. That is a
+ * race everywhere and a reliable failure on Safari: revoking tears down the
+ * blob before the navigation it was created for has begun. Desktop Chrome
+ * survives it because the click is dispatched synchronously enough, which is
+ * exactly the kind of accident that makes a bug look platform-specific.
+ *
+ * So: Web Share first. It is the native way to keep a file on iOS - the share
+ * sheet offers Files, Mail, anything - and it is the only route that reliably
+ * produces a saved PDF from a standalone PWA. Desktop and Android fall
+ * through to the anchor, which is right for them.
+ *
+ * @param {Blob} blob
+ * @param {string} filename
+ * @returns {Promise<'shared'|'downloaded'|'cancelled'>}
+ */
+async function deliverPdf(blob, filename) {
+  const file = typeof File === 'function'
+    ? new File([blob], filename, { type: 'application/pdf' })
+    : null
+
+  /* canShare({files}) rather than a UA sniff: it answers the only question
+     that matters, which is whether THIS browser will take THIS file. */
+  if (file && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: filename })
+      return 'shared'
+    } catch (e) {
+      // Dismissing the share sheet is a decision, not a failure. Falling
+      // through to a download here would hand them the file they just
+      // declined.
+      if (/** @type {any} */ (e)?.name === 'AbortError') return 'cancelled'
+      // Anything else - share unsupported for this type, a transient
+      // failure - is worth trying the anchor for.
+    }
+  }
+
   const url = URL.createObjectURL(blob)
-  const a   = document.createElement('a')
-  a.href     = url
-  a.download = `spendr-report-${year}-${mm}.pdf`
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)
-  URL.revokeObjectURL(url)
+  /* Long after the click, not on the next line. The browser needs the URL to
+     still resolve while it starts the download. */
+  setTimeout(() => URL.revokeObjectURL(url), 60_000)
+  return 'downloaded'
 }
