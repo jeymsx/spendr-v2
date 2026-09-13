@@ -1,3 +1,5 @@
+import { amountDisplay, TONE_CLASS } from '../../lib/txMoney'
+
 /** "12:30 PM". The time under a transaction's description. */
 export function fmtTime(isoStr) {
   if (!isoStr) return ''
@@ -71,8 +73,30 @@ export const DATE_OPTS = [
   { value: 'custom',     label: 'Custom…'    },
 ]
 
+/**
+ * Kept for anything that only has a TYPE to go on. Prefer txRowTone below,
+ * which sees the whole row - a refund is an expense whose amount is negative,
+ * and a table keyed on type alone cannot know that, so it prints the minus
+ * twice.
+ */
 export const AMOUNT_COLOR = {
   expense:  { cls: 'text-red-500 dark:text-red-400',         sign: '−' },
   inflow:   { cls: 'text-emerald-600 dark:text-emerald-400', sign: '+' },
   transfer: { cls: 'text-blue-500 dark:text-blue-400',       sign: ''  },
+}
+
+/**
+ * Sign, colour and the figure to print, for one row.
+ *
+ * The magnitude matters: a refund is stored at -500 so every sum-by-category
+ * in the app stays right about it without being told refunds exist (see
+ * lib/txMoney.js). Printing sign + amount straight would give a double
+ * negative, so callers get an already-absolute number to format.
+ *
+ * @param {Record<string, any>} tx
+ * @param {{account?: string|null}} [ctx]
+ */
+export function txRowTone(tx, ctx) {
+  const { sign, magnitude, tone } = amountDisplay(tx, ctx)
+  return { sign, magnitude, cls: TONE_CLASS[tone] }
 }

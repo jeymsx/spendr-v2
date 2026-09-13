@@ -125,6 +125,11 @@ interface Debt {
   notes?: string | null
   createdAt?: string
   settledAt?: string | null
+  /** The purchase that opened this receivable, when it came from a shared
+   *  expense - and the category to credit when it settles, so the repayment
+   *  lands back where the money left instead of counting as income. */
+  sourceTxId?: string | null
+  sourceCategory?: string | null
   [key: string]: any
 }
 

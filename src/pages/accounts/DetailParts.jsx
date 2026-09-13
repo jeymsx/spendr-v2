@@ -11,6 +11,7 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
 import { fmt } from '../../lib/money'
+import { amountDisplay, TONE_CLASS, isRefund } from '../../lib/txMoney'
 import { fmtTxDate, fmtTxTime } from './shared'
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
@@ -84,18 +85,17 @@ export function DetailTxRow({
   // single event between two accounts. Here you are looking at one side of
   // it, so what matters is whether the money left or arrived: a transfer out
   // reads red and negative, a transfer in green and positive.
-  let sign = ''
-  let color = 'text-slate-600 dark:text-slate-300'
-  if (tx.type === 'expense' && tx.account === accountName) {
-    sign = '−'; color = 'text-red-500 dark:text-red-400'
-  } else if (tx.type === 'inflow' && tx.account === accountName) {
-    sign = '+'; color = 'text-emerald-600 dark:text-emerald-400'
-  } else if (isTransfer) {
-    if (tx.fromAccount === accountName) { sign = '−'; color = 'text-red-500 dark:text-red-400' }
-    if (tx.toAccount   === accountName) { sign = '+'; color = 'text-emerald-600 dark:text-emerald-400' }
-  }
+  /* amountDisplay knows about refunds, which this block could not: a refund
+     is an expense stored at a NEGATIVE amount, so the branch below used to
+     render "−₱-500.00" and colour money coming back as money going out. It
+     takes the account so a transfer is still signed by the side being
+     looked at. */
+  const { sign, magnitude, tone } = amountDisplay(tx, { account: accountName })
+  const isOneSided = tx.type !== 'transfer' && tx.account !== accountName
+  const color = isOneSided ? 'text-slate-600 dark:text-slate-300' : TONE_CLASS[tone]
 
   const isTransferFee = tx.type === 'expense' && tx.category === 'Transfer Fee'
+  const refunded = isRefund(tx)
 
   const label = labelOverride ?? (tx.description || (isTransfer
     ? (tx.fromAccount === accountName ? `To ${tx.toAccount ?? ''}` : `From ${tx.fromAccount ?? ''}`)
@@ -147,6 +147,13 @@ export function DetailTxRow({
               Fee
             </span>
           )}
+          {/* Money arriving on a card reads as a payment unless it says
+              otherwise, and a refund is not one. */}
+          {refunded && (
+            <span className="shrink-0 text-10 font-semibold tracking-wide px-1.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-500/20 text-emerald-700 dark:text-emerald-400">
+              Refund
+            </span>
+          )}
         </span>
         <span className="block text-11 text-slate-500 dark:text-slate-400 truncate mt-0.5">
           {fmtTxDate(tx.date)}
@@ -156,7 +163,7 @@ export function DetailTxRow({
 
       <span className="text-right shrink-0">
         <span className={`block text-13 font-bold tabular-nums ${color}`}>
-          {sign}{fmt(tx.amount)}
+          {sign}{fmt(magnitude)}
         </span>
         <span className="block text-10 text-slate-500 dark:text-slate-400 mt-0.5">
           {fmtTxTime(tx.date)}

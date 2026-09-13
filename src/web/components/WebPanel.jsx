@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { amountDisplay } from '../../lib/txMoney'
 
 /**
  * Shared desktop building blocks. Every web page composes these so the whole
@@ -103,6 +104,24 @@ export const AMOUNT_TONE = {
 
 export const amountTone = (type) =>
   AMOUNT_TONE[type] ?? { cls: 'text-slate-800 dark:text-slate-100', sign: '' }
+
+/**
+ * The same thing for a whole row rather than a type.
+ *
+ * A refund is an expense stored at a negative amount (lib/txMoney.js), so
+ * amountTone('expense') signs it minus and the row prints a double negative.
+ * This returns the magnitude to format alongside the sign.
+ *
+ * @param {Record<string, any>} tx
+ */
+export function rowTone(tx) {
+  const { sign, magnitude, tone } = amountDisplay(tx)
+  const cls = tone === 'refund' ? AMOUNT_TONE.inflow.cls
+            : tone === 'in'     ? AMOUNT_TONE.inflow.cls
+            : tone === 'transfer' ? AMOUNT_TONE.transfer.cls
+            : AMOUNT_TONE.expense.cls
+  return { sign, magnitude, cls }
+}
 
 /** Big number tile for the top row of an overview. */
 export function WebStat({ label, value, hint, tone = 'default' }) {

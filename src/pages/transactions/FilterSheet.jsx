@@ -9,7 +9,7 @@ import BrandWatermark from '../../components/BrandWatermark'
 import { accountBrand } from '../../lib/accountBrands'
 import { normalizeDesign } from '../../lib/cardDesigns'
 import { fmt } from '../../lib/money'
-import { DATE_OPTS, AMOUNT_COLOR, fmtTime } from './shared'
+import { DATE_OPTS, txRowTone, fmtTime } from './shared'
 import { AmountRangeFilter } from './AmountRange'
 import { DateRow } from './QuickFilter'
 
@@ -238,7 +238,7 @@ export function FilterModal({
 
 export function TxRow({ tx, catMap, onClick }) {
   const cat = catMap[tx.category]
-  const { cls, sign } = AMOUNT_COLOR[tx.type] ?? AMOUNT_COLOR.expense
+  const { cls, sign, magnitude } = txRowTone(tx)
 
   return (
     <button
@@ -269,7 +269,7 @@ export function TxRow({ tx, catMap, onClick }) {
 
       <div className="text-right shrink-0">
         <p className={`text-13 font-bold tabular-nums ${cls}`}>
-          {sign}{fmt(tx.amount)}
+          {sign}{fmt(magnitude)}
         </p>
         <p className="text-10 text-slate-500 dark:text-slate-400 mt-0.5">{fmtTime(tx.date)}</p>
       </div>

@@ -5,7 +5,7 @@ import TxDetailSheet from '../../components/TxDetailSheet'
 import BrandMark from '../../components/BrandMark'
 import { accountBrand } from '../../lib/accountBrands'
 import { normalizeDesign } from '../../lib/cardDesigns'
-import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact, amountTone } from '../components/WebPanel'
+import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact, rowTone } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
 
 /**
@@ -201,8 +201,8 @@ export default function WebDashboard() {
                           {relDay(t.date)}
                         </td>
                         <td className={`px-5 py-2.5 w-[136px] text-right font-bold tabular-nums whitespace-nowrap
-                          ${amountTone(t.type).cls}`}>
-                          {amountTone(t.type).sign}{money(t.amount)}
+                          ${rowTone(t).cls}`}>
+                          {rowTone(t).sign}{money(rowTone(t).magnitude)}
                         </td>
                       </tr>
                     )

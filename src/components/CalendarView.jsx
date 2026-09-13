@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import CategoryGlyph from './CategoryGlyph'
+import { amountDisplay, TONE_CLASS } from '../lib/txMoney'
 import Card from './ui/Card'
 import Divider from './ui/Divider'
 import EmptyState from './ui/EmptyState'
@@ -24,11 +25,9 @@ function fmtGroupDate(dateKey) {
   })
 }
 
-const AMOUNT_COLOR = {
-  expense:  { cls: 'text-red-500 dark:text-red-400',         sign: '−' },
-  inflow:   { cls: 'text-emerald-600 dark:text-emerald-400', sign: '+' },
-  transfer: { cls: 'text-blue-500 dark:text-blue-400',       sign: ''  },
-}
+/* Sign and colour come from lib/txMoney, which sees the row rather than just
+   its type: a refund is an expense stored at a negative amount, and a table
+   keyed on type alone prints the minus twice. */
 
 const DOT_COLOR = {
   expense:  'bg-red-400',
@@ -41,7 +40,8 @@ const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su']
 
 function TxRow({ tx, catMap, onClick }) {
   const cat = catMap[tx.category]
-  const { cls, sign } = AMOUNT_COLOR[tx.type] ?? AMOUNT_COLOR.expense
+  const { sign, magnitude, tone } = amountDisplay(tx)
+  const cls = TONE_CLASS[tone]
   return (
     <button
       onClick={() => onClick(tx)}
@@ -69,7 +69,7 @@ function TxRow({ tx, catMap, onClick }) {
       </div>
       <div className="text-right shrink-0">
         <p className={`text-13 font-bold tabular-nums ${cls}`}>
-          {sign}{fmt(tx.amount)}
+          {sign}{fmt(magnitude)}
         </p>
         <p className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">{fmtTime(tx.date)}</p>
       </div>

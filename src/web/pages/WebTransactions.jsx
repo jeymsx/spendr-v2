@@ -4,7 +4,7 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { isInstallmentRow } from '../../utils/installments'
 import TxDetailSheet from '../../components/TxDetailSheet'
-import { WebPageHeader, WebPanel, WebEmpty, money, amountTone } from '../components/WebPanel'
+import { WebPageHeader, WebPanel, WebEmpty, money, rowTone } from '../components/WebPanel'
 import WebSelect from '../components/WebSelect'
 import CategoryGlyph from '../../components/CategoryGlyph'
 
@@ -333,9 +333,9 @@ export default function WebTransactions() {
                         </td>
                         <td className={[
                           'px-5 py-3 text-right text-sm font-bold tabular-nums whitespace-nowrap align-middle',
-                          amountTone(t.type).cls,
+                          rowTone(t).cls,
                         ].join(' ')}>
-                          {amountTone(t.type).sign}{money(t.amount)}
+                          {rowTone(t).sign}{money(rowTone(t).magnitude)}
                         </td>
                       </tr>
                     )
@@ -392,8 +392,8 @@ export default function WebTransactions() {
                 </button>
               }
             >
-              <p className={`text-2xl font-bold tabular-nums mb-1 ${amountTone(selected.type).cls}`}>
-                {amountTone(selected.type).sign}{money(selected.amount)}
+              <p className={`text-2xl font-bold tabular-nums mb-1 ${rowTone(selected).cls}`}>
+                {rowTone(selected).sign}{money(rowTone(selected).magnitude)}
               </p>
               {selected.description && (
                 <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{selected.description}</p>
