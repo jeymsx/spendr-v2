@@ -10,6 +10,7 @@ import { scheduledCutoff } from '../utils/scheduled'
 import { budgetTone } from '../components/BudgetMeter'
 import BudgetGauge from '../components/BudgetGauge'
 import CategoryGlyph from '../components/CategoryGlyph'
+import { IconChevronRight } from '../components/icons'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
 import StatTrio from '../components/ui/StatTrio'
@@ -88,8 +89,16 @@ function CategoryRow({ cat }) {
   const over = cat.spent > cat.budget
   const near = !over && cat.budget > 0 && pct >= 75
 
+  /* A link, not a div.
+     "108%" is the end of a sentence whose beginning is the list of things you
+     actually bought, and this row could only ever show the number. The
+     chevron is the same one the account page's sub-rows carry, because it is
+     the same promise: there is a screen behind this. */
   return (
-    <div className="px-4 py-3.5">
+    <Link
+      to={`/categories/${encodeURIComponent(cat.name)}`}
+      className="block px-4 py-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+    >
       <div className="flex items-center gap-3">
         {/* relative, so the badge can hang off the tile's corner. The tile
             keeps aria-hidden; the badge carries its own label, because "!"
@@ -132,11 +141,14 @@ function CategoryRow({ cat }) {
             {left >= 0 ? `${fmtCompact(left)} left` : `${fmtCompact(-left)} over`}
           </p>
         </div>
+        <span className="text-slate-300 dark:text-slate-600 shrink-0 -mr-1" aria-hidden="true">
+          <IconChevronRight />
+        </span>
       </div>
 
       {/* Each category against its own limit, so the track is full width. */}
       <ProgressBar className="mt-2.5" value={pct} color={color} />
-    </div>
+    </Link>
   )
 }
 
@@ -426,7 +438,15 @@ export default function Budget() {
                 <Card clip>
                   {unbudgeted.slice(0, 8).map((c, i) => (
                     <div key={c.name}>
-                      <div className="flex items-center gap-3 px-4 py-3">
+                      {/* Tappable for the same reason the budgeted rows are:
+                          a category with no limit still has a history, and
+                          this is often where you go to find out whether it
+                          needs one. */}
+                      <Link
+                        to={`/categories/${encodeURIComponent(c.name)}`}
+                        className="flex items-center gap-3 px-4 py-3
+                          active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+                      >
                         <span
                           className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                           style={{ '--cat-color': c?.color ?? '#64748b' }}
@@ -440,7 +460,10 @@ export default function Budget() {
                         <p className="text-[14px] font-bold tabular-nums text-slate-700 dark:text-slate-200 shrink-0">
                           {fmt(c.spent)}
                         </p>
-                      </div>
+                        <span className="text-slate-300 dark:text-slate-600 shrink-0 -mr-1" aria-hidden="true">
+                          <IconChevronRight />
+                        </span>
+                      </Link>
                       {i < Math.min(unbudgeted.length, 8) - 1 && <Divider inset="row" />}
                     </div>
                   ))}

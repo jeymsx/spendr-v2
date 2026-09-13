@@ -68,7 +68,21 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
 
 // ── Detail transaction row ─────────────────────────────────────────────────────
 
-export function DetailTxRow({ tx, accountName, onSelect, catMap = {} }) {
+/**
+ * @param {object} props
+ * @param {Record<string, any>} props.tx
+ * @param {string} [props.accountName]  whose side of the row you are on
+ * @param {(tx: any) => void} [props.onSelect]
+ * @param {Record<string, any>} [props.catMap]
+ * @param {string} [props.label]  overrides the headline, for a page whose
+ *   subject is not an account - see CategoryDetail
+ * @param {string} [props.meta]   overrides the second line's tail
+ */
+export function DetailTxRow({
+  tx, accountName, onSelect, catMap = {},
+  label: labelOverride = null,
+  meta: metaOverride = null,
+}) {
   const cat = catMap[tx.category]
   const isTransfer = tx.type === 'transfer'
 
@@ -91,17 +105,17 @@ export function DetailTxRow({ tx, accountName, onSelect, catMap = {} }) {
 
   const isTransferFee = tx.type === 'expense' && tx.category === 'Transfer Fee'
 
-  const label = tx.description || (isTransfer
+  const label = labelOverride ?? (tx.description || (isTransfer
     ? (tx.fromAccount === accountName ? `To ${tx.toAccount ?? ''}` : `From ${tx.fromAccount ?? ''}`)
-    : (tx.category ?? '—'))
+    : (tx.category ?? '—')))
 
   // The second line does not repeat the account - you are on its page - so it
   // carries the DATE, which the Transactions page can leave out because its
   // rows sit under date headers and these do not. Then the counterparty for a
   // transfer, or the category otherwise.
-  const meta = isTransfer
+  const meta = metaOverride ?? (isTransfer
     ? (tx.fromAccount === accountName ? `→ ${tx.toAccount ?? ''}` : `← ${tx.fromAccount ?? ''}`)
-    : (cat?.name ?? tx.category ?? '')
+    : (cat?.name ?? tx.category ?? ''))
 
   // Tappable so charges reachable only from here can still be edited or
   // deleted — scheduled installments are filtered out of the Transactions

@@ -22,6 +22,7 @@ const AccountDetail = lazy(() => import('./pages/AccountDetail'))
 const AccountNew    = lazy(() => import('./pages/AccountNew'))
 const AccountEdit   = lazy(() => import('./pages/AccountEdit'))
 const Budget        = lazy(() => import('./pages/Budget'))
+const CategoryDetail = lazy(() => import('./pages/CategoryDetail'))
 const Debts        = lazy(() => import('./pages/Debts'))
 const Goals        = lazy(() => import('./pages/Goals'))
 const GoalDetail   = lazy(() => import('./pages/GoalDetail'))
@@ -87,6 +88,12 @@ export default function App() {
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/insights"     element={<Insights />} />
               <Route path="/budget"       element={<Budget />} />
+              {/* The name, not an id. A transaction stores its category as a
+                  string, so the name is the key the whole app already joins
+                  on - and it means a deleted category's history is still
+                  reachable by its own URL. Encoded at the call site, because
+                  a category may be called "Food & Drink". */}
+              <Route path="/categories/:name" element={<CategoryDetail />} />
               <Route path="/accounts"     element={<Accounts />} />
               <Route path="/accounts/new" element={<AccountNew />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
