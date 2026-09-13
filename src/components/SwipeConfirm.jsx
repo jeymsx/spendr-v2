@@ -51,14 +51,29 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 /** How far along the travel counts as committed. */
 const THRESHOLD = 0.82
 
+/* The track's colour, and the arrow's to match.
+ *
+ * A delete wants red for the same reason it wants a drag: the gesture says
+ * "this costs something" and the colour says which kind of something. The
+ * arrow is a CSS variable rather than a class because it is an SVG stroke,
+ * and the spinner borrows the same value so a delete in flight does not
+ * suddenly spin in the accent colour. */
+const TONE = {
+  primary: { track: 'bg-primary', ink: 'var(--color-primary)' },
+  danger:  { track: 'bg-red-500', ink: '#ef4444' },
+}
+
 export default function SwipeConfirm({
   onConfirm,
   label = 'Swipe to confirm',
   confirmingLabel = 'Working…',
   busy = false,
   disabled = false,
+  /** 'primary' to commit something, 'danger' to destroy it. */
+  tone = 'primary',
   className = '',
 }) {
+  const skin = TONE[tone] ?? TONE.primary
   const trackRef = useRef(null)
   const [x, setX] = useState(0)          // knob offset in px
   const [dragging, setDragging] = useState(false)
@@ -144,7 +159,7 @@ export default function SwipeConfirm({
         if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); done.current = true; onConfirm?.() }
       }}
       className={`relative h-[52px] rounded-full overflow-hidden select-none
-        bg-primary ${disabled ? 'opacity-40' : ''} ${className}`}
+        ${skin.track} ${disabled ? 'opacity-40' : ''} ${className}`}
       style={{
         // The gesture owns the axis, or the sheet scrolls under the finger.
         touchAction: 'none',
@@ -185,10 +200,13 @@ export default function SwipeConfirm({
         }}
       >
         {busy ? (
-          <span className="w-4 h-4 rounded-full border-2 border-primary/30 border-t-primary animate-spin" />
+          <span
+            className="w-4 h-4 rounded-full border-2 animate-spin"
+            style={{ borderColor: `${skin.ink}4d`, borderTopColor: skin.ink }}
+          />
         ) : (
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none"
-            stroke="var(--color-primary)" strokeWidth="2.4"
+            stroke={skin.ink} strokeWidth="2.4"
             strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
             <path d="M5 12h13M13 6l6 6-6 6" />
           </svg>

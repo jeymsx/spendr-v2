@@ -8,6 +8,7 @@ import SegTabs from '../../components/SegTabs'
 import { RowGroup, EditRow, RowInput, RowDate } from '../../components/FormRows'
 import Sheet from '../../components/ui/Sheet'
 import Button from '../../components/ui/Button'
+import SwipeConfirm from '../../components/SwipeConfirm'
 import { fmtDueDate } from './shared'
 
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
@@ -91,7 +92,6 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
   }
 
   async function handleDelete() {
-    if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
     try {
       await db.debts.delete(editDebt.id)
@@ -119,14 +119,25 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
         <Button
           size="xs"
           className="px-3"
-          variant={confirmDel ? 'danger' : 'dangerTint'}
-          onClick={handleDelete}
-          loading={deleting}
+          variant={confirmDel ? 'secondary' : 'dangerTint'}
+          onClick={() => setConfirmDel(v => !v)}
+          disabled={deleting}
         >
-          {confirmDel ? 'Confirm delete' : 'Delete'}
+          {confirmDel ? 'Cancel' : 'Delete'}
         </Button>
       )}
-      footer={(
+      /* Asking again is still a tap, and a tap is the gesture you already
+         made by mistake. The drag is the one the bills use to post a charge,
+         for the same reason: the last step should need intent. */
+      footer={confirmDel ? (
+        <SwipeConfirm
+          tone="danger"
+          label="Swipe to delete"
+          confirmingLabel="Deleting…"
+          busy={deleting}
+          onConfirm={handleDelete}
+        />
+      ) : (
         <Button block size="lg" onClick={handleSave} loading={saving}>
           {editDebt ? 'Save changes' : 'Add debt'}
         </Button>

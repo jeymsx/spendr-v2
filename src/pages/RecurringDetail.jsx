@@ -14,6 +14,7 @@ import {
 } from '../utils/recurring'
 import IconButton from '../components/ui/IconButton'
 import Button from '../components/ui/Button'
+import SwipeConfirm from '../components/SwipeConfirm'
 import { CardThumb } from '../components/AccountLine'
 import BillMark from '../components/BillMark'
 import Card from '../components/ui/Card'
@@ -258,7 +259,6 @@ export default function RecurringDetail() {
   }
 
   async function handleDelete() {
-    if (!confirmDel) { setConfirmDel(true); return }
     setDeleting(true)
     try {
       await db.recurring.delete(recId)
@@ -527,20 +527,32 @@ export default function RecurringDetail() {
       </section>
 
       {/* ── Delete ──
-          Bottom of the page, two taps, and never a tile beside the other
-          actions: it is not a peer of Pause. */}
+          Bottom of the page, and never a tile beside the other actions: it is
+          not a peer of Pause.
+
+          The second step is a drag, not a second tap. Tapping again is the
+          same gesture as the one you may have made by accident, and this page
+          already asks for a drag to POST a charge - asking for less to
+          destroy the bill had it backwards. */}
       <section className="px-5 mt-7">
-        <Button
-          block
-          variant={confirmDel ? 'danger' : 'dangerTint'}
-          onClick={handleDelete}
-          disabled={deleting}
-        >
-          {deleting ? 'Deleting…' : confirmDel ? 'Tap again to delete' : 'Delete this bill'}
-        </Button>
-        {confirmDel && !deleting && (
-          <Button block variant="quiet" size="sm" className="mt-2" onClick={() => setConfirmDel(false)}>
-            Cancel
+        {confirmDel ? (
+          <>
+            <SwipeConfirm
+              tone="danger"
+              label="Swipe to delete"
+              confirmingLabel="Deleting…"
+              busy={deleting}
+              onConfirm={handleDelete}
+            />
+            {!deleting && (
+              <Button block variant="quiet" size="sm" className="mt-2" onClick={() => setConfirmDel(false)}>
+                Cancel
+              </Button>
+            )}
+          </>
+        ) : (
+          <Button block variant="dangerTint" onClick={() => setConfirmDel(true)}>
+            Delete this bill
           </Button>
         )}
       </section>

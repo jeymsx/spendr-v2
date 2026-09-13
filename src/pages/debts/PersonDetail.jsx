@@ -10,6 +10,7 @@ import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
 import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
+import SwipeConfirm from '../../components/SwipeConfirm'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { IconChevronLeft, IconChevronRight, IconTrash, IconNotFound } from '../../components/icons'
 import { getInitials, getAvatarColor, fmtDueDate } from './shared'
@@ -68,6 +69,7 @@ export default function PersonDetail() {
     (a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''))), [person])
 
   const archived = rows.length > 0 && rows.every(d => d.archivedAt)
+  const confirmDebt = rows.find(d => d.id === confirmId) ?? null
   const net = person?.net ?? 0
   const theyOwe = net > 0.005
   const youOwe = net < -0.005
@@ -76,10 +78,6 @@ export default function PersonDetail() {
   const back = () => navigate('/debts')
 
   async function handleDelete(debt) {
-    /* Two taps, and the second one is on a button that has changed colour and
-       words. A single-tap delete on a row you may have meant to open is how
-       history disappears without anybody deciding it should. */
-    if (confirmId !== debt.id) { setConfirmId(debt.id); return }
     setBusy(true)
     try {
       await db.debts.delete(debt.id)
@@ -228,41 +226,51 @@ export default function PersonDetail() {
                       </span>
                     </button>
 
-                    {confirming ? (
-                      <Button
-                        size="xs"
-                        variant="danger"
-                        className="shrink-0 mr-3 px-3"
-                        loading={busy}
-                        onClick={() => handleDelete(d)}
+                    <IconButton
+                      label={confirming
+                        ? 'Cancel deleting this entry'
+                        : `Delete ${d.notes || d.name || 'entry'}`}
+                      className="shrink-0 mr-2"
+                      onClick={() => setConfirmId(confirming ? null : d.id)}
+                    >
+                      <span className={confirming
+                        ? 'text-red-500 dark:text-red-400'
+                        : 'text-slate-400 dark:text-slate-500'}
                       >
-                        Delete
-                      </Button>
-                    ) : (
-                      <IconButton
-                        label={`Delete ${d.notes || d.name || 'entry'}`}
-                        className="shrink-0 mr-2"
-                        onClick={() => handleDelete(d)}
-                      >
-                        <span className="text-slate-400 dark:text-slate-500">
-                          <IconTrash size={17} />
-                        </span>
-                      </IconButton>
-                    )}
+                        <IconTrash size={17} />
+                      </span>
+                    </IconButton>
                   </div>
                 </div>
               )
             })}
           </Card>
 
-          {confirmId && (
-            <button
-              type="button"
-              onClick={() => setConfirmId(null)}
-              className="mt-2 w-full text-center text-12 text-slate-400 dark:text-slate-500"
-            >
-              Cancel
-            </button>
+          {/* Under the list rather than in the row. A 52px drag pill does not
+              fit beside an amount, and the entry it belongs to is named above
+              it - which is also the last chance to notice it is the wrong
+              one. Tapping the red bin again backs out. */}
+          {confirmDebt && (
+            <div className="mt-3">
+              <p className="mb-2 text-center text-12 text-slate-500 dark:text-slate-400">
+                Delete {confirmDebt.notes || confirmDebt.name || 'this entry'}
+                {' · '}{fmt(confirmDebt.amount ?? 0)}
+              </p>
+              <SwipeConfirm
+                tone="danger"
+                label="Swipe to delete"
+                confirmingLabel="Deleting…"
+                busy={busy}
+                onConfirm={() => handleDelete(confirmDebt)}
+              />
+              <button
+                type="button"
+                onClick={() => setConfirmId(null)}
+                className="mt-2 w-full text-center text-12 text-slate-400 dark:text-slate-500"
+              >
+                Cancel
+              </button>
+            </div>
           )}
         </div>
       </section>
