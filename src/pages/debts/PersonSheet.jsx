@@ -9,7 +9,7 @@ import Divider from '../../components/ui/Divider'
 import AmountHero from '../../components/ui/AmountHero'
 import AccountPickerSheet, { AccountChip } from '../../components/AccountPickerSheet'
 import { IconChevronRight } from '../../components/icons'
-import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
+import { parseMoney, numToMoneyStr, moneyChangeHandler } from '../../utils/moneyInput'
 import { getInitials, getAvatarColor } from './shared'
 import { outstanding, isSettled } from '../../lib/people'
 import { fmt } from '../../lib/money'
@@ -56,13 +56,29 @@ export default function PersonSheet({ person, onClose, onEditRow }) {
   const usable = useMemo(
     () => accounts.filter(a => a.type !== 'credit'), [accounts])
 
+  /* Opened at the full balance - and reset on OPEN, not whenever a dependency
+     moves. This used to depend on `usable`, which is derived from a live
+     query, so it changed identity every time anything touched the accounts
+     table. Harmless while the figure was rendered text; the moment it became
+     a field, a sync landing mid-edit put the full balance back under the
+     cursor and the part payment you were typing was gone. */
   useEffect(() => {
     if (!open) return
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAmountStr(Math.abs(net) > 0.005 ? numToMoneyStr(Math.abs(net)) : '')
-    setAccount([...usable].sort((a, b) => (b.balance ?? 0) - (a.balance ?? 0))[0] ?? null)
     setPickerOpen(false)
-  }, [open, net, usable])
+    // Deliberately not [net]: reopening for the same person should not
+    // rewrite a figure they are part-way through changing.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, person?.key])
+
+  /* The account is chosen separately, because it arrives asynchronously and
+     may well be an empty list at the moment the sheet opens. */
+  useEffect(() => {
+    if (!open || account) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setAccount([...usable].sort((a, b) => (b.balance ?? 0) - (a.balance ?? 0))[0] ?? null)
+  }, [open, account, usable])
 
   const amount = parseMoney(amountStr)
   const ready = amount > 0 && !!account && !saving && !square
@@ -125,13 +141,48 @@ export default function PersonSheet({ person, onClose, onEditRow }) {
             </p>
           </div>
 
+          {/* ── How much, and it is a field ──
+              Opened at the whole balance, because settling in full is what
+              most of these are. But part payments are the reason a balance
+              exists at all - 100 off a 250 - and for a while this was a
+              rendered figure rather than an input, which quietly made every
+              settlement all-or-nothing. */}
           {!square && (
             <AmountHero
               color={theyOwe ? '#10b981' : '#f59e0b'}
               className="mt-4 mb-5"
             >
-              {fmt(Math.abs(net))}
+              <span className="inline-flex items-baseline justify-center gap-0.5">
+                <span aria-hidden="true">₱</span>
+                <input
+                  /* Sized to the text so the figure stays beside the peso
+                     sign at every length, the same as RefundSheet. */
+                  size={Math.max(1, amountStr.length)}
+                  value={amountStr}
+                  onChange={moneyChangeHandler(setAmountStr)}
+                  inputMode="decimal"
+                  placeholder="0"
+                  aria-label={theyOwe ? 'Amount received' : 'Amount paid'}
+                  /* amount-hero-input, not a Tailwind size: index.css forces
+                     every input to 16px !important so iOS does not zoom on
+                     focus, and a utility cannot beat that. */
+                  className="amount-hero-input min-w-0 max-w-[220px] bg-transparent
+                    outline-none text-center tabular-nums tracking-tight
+                    placeholder:text-slate-300 dark:placeholder:text-slate-600"
+                  style={{ color: theyOwe ? '#10b981' : '#f59e0b' }}
+                />
+              </span>
             </AmountHero>
+          )}
+
+          {/* The balance is no longer on screen once the figure above became
+              editable, so it is said here - and said as what is LEFT, which
+              is the number you actually want after typing a part payment. */}
+          {!square && amount > 0.005 && amount < Math.abs(net) - 0.005 && (
+            <p className="-mt-3 mb-4 text-center text-12 text-slate-400 dark:text-slate-500">
+              {fmt(Math.abs(net) - amount)} of {fmt(Math.abs(net))} still
+              {' '}{theyOwe ? 'owed to you' : 'owed by you'} after this.
+            </p>
           )}
 
           {/* What the number is made of. A balance you cannot see the parts
