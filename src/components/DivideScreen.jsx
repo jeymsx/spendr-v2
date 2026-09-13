@@ -3,12 +3,12 @@ import Segmented from './ui/Segmented'
 import Button from './ui/Button'
 import Divider from './ui/Divider'
 import CategoryGlyph from './CategoryGlyph'
-import CategoryPickerSheet from './CategoryPickerSheet'
 import IconButton from './ui/IconButton'
-import { IconChevronLeft, IconChevronRight } from './icons'
+import { IconChevronLeft } from './icons'
 import { moneyChangeHandler, parseMoney } from '../utils/moneyInput'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { fmt } from '../lib/money'
+import { useTheme } from '../context/ThemeContext'
 
 /**
  * Dividing one expense, on a screen of its own.
@@ -49,6 +49,41 @@ import { fmt } from '../lib/money'
  * They compose: a dinner can be split across two categories AND owed by three
  * people. The receivables attach to the first leg.
  */
+/**
+ * A category, as the platform's own dropdown.
+ *
+ * A picker sheet is right when choosing the category IS the task - the add
+ * form's rail is a grid of glyphs you swipe, and it earns its screen. Here it
+ * is one field in a row, repeated per row, and opening a full sheet for each
+ * one is a lot of ceremony to change a word. The native control also brings
+ * the wheel on iOS, type-ahead on a keyboard, and VoiceOver for free.
+ *
+ * The glyph stays beside it, because a bare <select> cannot show one and the
+ * colour is most of how a category is recognised.
+ *
+ * colorScheme is not decoration: without it the OPTION LIST renders in the
+ * system theme rather than the app's, so a dark app opens a white dropdown.
+ * Same fix the report month selector uses.
+ */
+function CategorySelect({ categories, value, onChange, label }) {
+  const { theme } = useTheme()
+  return (
+    <select
+      value={value ?? ''}
+      onChange={e => onChange(categories.find(c => c.name === e.target.value))}
+      aria-label={label}
+      className="flex-1 min-w-0 bg-transparent outline-none text-14 font-semibold
+        text-slate-800 dark:text-white"
+      style={{ colorScheme: theme === 'dark' ? 'dark' : 'light' }}
+    >
+      {!value && <option value="">Choose a category</option>}
+      {categories.map(c => (
+        <option key={c.id ?? c.name} value={c.name}>{c.name}</option>
+      ))}
+    </select>
+  )
+}
+
 export default function DivideScreen({
   open = true, onClose, total = 0, categories = [], initialCategory = null,
   initialLegs = null, initialPeople = null, onApply,
@@ -57,7 +92,6 @@ export default function DivideScreen({
   const [head, setHead] = useState(/** @type {any} */ (null))
   const [rest, setRest] = useState(/** @type {any[]} */ ([]))
   const [people, setPeople] = useState(/** @type {any[]} */ ([]))
-  const [picking, setPicking] = useState(/** @type {number|'head'|null} */ (null))
 
   useEffect(() => {
     if (!open) return
@@ -65,7 +99,6 @@ export default function DivideScreen({
     setHead(initialCategory ?? categories[0] ?? null)
     setRest(initialLegs ?? [])
     setPeople(initialPeople ?? [])
-    setPicking(null)
   }, [open, initialCategory, categories, initialLegs, initialPeople])
 
   // ── By category ──────────────────────────────────────────────────────────
@@ -174,49 +207,44 @@ export default function DivideScreen({
               whatever is left, so the parts always add up.
             </p>
 
-            <button
-              type="button"
-              onClick={() => setPicking('head')}
-              className="w-full flex items-center gap-3 py-3 text-left"
-            >
+            <div className="flex items-center gap-3 py-3">
               <span
                 className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
                 style={{ '--cat-color': head?.color ?? '#64748b' }}
+                aria-hidden="true"
               >
                 <CategoryGlyph cat={head} size={16} emoji="🏷️" />
               </span>
-              <span className="flex-1 min-w-0 text-14 font-semibold text-slate-800 dark:text-white truncate">
-                {head?.name ?? 'Choose a category'}
-              </span>
-              <span className={`text-14 font-semibold tabular-nums ${
+              <CategorySelect
+                categories={categories}
+                value={head?.name}
+                onChange={setHead}
+                label="Category for the first row"
+              />
+              <span className={`text-14 font-semibold tabular-nums shrink-0 ${
                 overCat ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
               }`}>
                 {fmt(headAmount)}
               </span>
-              <span className="text-slate-300 dark:text-slate-600 shrink-0" aria-hidden="true">
-                <IconChevronRight />
-              </span>
-            </button>
+            </div>
 
             {rest.map((leg, i) => (
               <div key={i}>
                 <Divider />
                 <div className="flex items-center gap-3 py-3">
-                  <button
-                    type="button"
-                    onClick={() => setPicking(i)}
-                    className="flex items-center gap-3 flex-1 min-w-0 text-left"
+                  <span
+                    className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
+                    style={{ '--cat-color': leg.cat?.color ?? '#64748b' }}
+                    aria-hidden="true"
                   >
-                    <span
-                      className="cat-tile w-9 h-9 rounded-xl flex items-center justify-center shrink-0"
-                      style={{ '--cat-color': leg.cat?.color ?? '#64748b' }}
-                    >
-                      <CategoryGlyph cat={leg.cat} size={16} emoji="🏷️" />
-                    </span>
-                    <span className="flex-1 min-w-0 text-14 font-semibold text-slate-800 dark:text-white truncate">
-                      {leg.cat?.name ?? 'Choose'}
-                    </span>
-                  </button>
+                    <CategoryGlyph cat={leg.cat} size={16} emoji="🏷️" />
+                  </span>
+                  <CategorySelect
+                    categories={categories}
+                    value={leg.cat?.name}
+                    onChange={cat => setLeg(i, { cat })}
+                    label={`Category for row ${i + 2}`}
+                  />
                   {/* The peso sign belongs on an editable figure as much as on
                       a rendered one - without it the typed rows read as bare
                       numbers next to the formatted first row. */}
@@ -394,17 +422,6 @@ export default function DivideScreen({
           Done
         </Button>
       </div>
-
-      <CategoryPickerSheet
-        open={picking !== null}
-        onClose={() => setPicking(null)}
-        categories={categories}
-        selected={picking === 'head' ? head : rest[/** @type {number} */ (picking)]?.cat}
-        onSelect={(cat) => {
-          if (picking === 'head') setHead(cat)
-          else setLeg(/** @type {number} */ (picking), { cat })
-        }}
-      />
     </div>
   )
 }
