@@ -26,8 +26,7 @@ import {
 import { useWalletClip } from './dashboard/wallet'
 import DashboardSkeleton from './dashboard/Skeleton'
 import {
-  AccountCard, BudgetSummaryTile, EmptyPill, IconEye, IconEyeOff, IconSettings,
-  SectionHeader, TxRow,
+  AccountCard, BudgetSummaryTile, EmptyPill, IconEye, IconEyeOff, IconSettings, TxRow,
 } from './dashboard/Tiles'
 import QuickActions from './dashboard/QuickActions'
 import UpcomingSection from './dashboard/Upcoming'

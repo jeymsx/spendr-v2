@@ -2,7 +2,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { fmt } from '../../lib/money'
-import { TREND_RANGES, RANGE_TITLE } from '../../lib/trend'
+import { TREND_RANGES } from '../../lib/trend'
 
 /* The arithmetic moved to lib/trend.js when the category page needed
    `buildSpendTrend` beside `buildTrend`. Re-exported, not redefined, so every
@@ -12,35 +12,6 @@ export {
   trendLabeller, buildTrend, buildSpendTrend, SPEND_TREND_RANGES,
   spendSpan, spendBaseline, BASELINE_MIN_DAYS, BASELINE_MIN_ROWS,
 } from '../../lib/trend'
-
-/**
- * How the statement-balance card is coloured, by what the statement is.
- *
- * Three states rather than two. Red carries a claim - you owe this - and so
- * does green: you were billed and you settled it. A cycle that billed nothing
- * supports neither, and it used to get green plus a tick regardless, because
- * "payments >= charges" is also true of zero against zero.
- */
-export const STMT_TONE = {
-  none: {
-    box:   'bg-slate-50 dark:bg-white/[0.04] border border-slate-200/70 dark:border-white/10',
-    label: 'text-slate-400 dark:text-slate-500',
-    value: 'text-slate-500 dark:text-slate-400',
-    note:  'text-slate-400 dark:text-slate-500',
-  },
-  paid: {
-    box:   'bg-emerald-50 dark:bg-emerald-500/[0.08] border border-emerald-100 dark:border-emerald-500/20',
-    label: 'text-emerald-500 dark:text-emerald-400',
-    value: 'text-emerald-600 dark:text-emerald-400',
-    note:  'text-emerald-500 dark:text-emerald-400',
-  },
-  owing: {
-    box:   'bg-red-50 dark:bg-red-500/[0.08] border border-red-100 dark:border-red-500/20',
-    label: 'text-red-400 dark:text-red-500',
-    value: 'text-red-500 dark:text-red-400',
-    note:  'text-red-400 dark:text-red-500',
-  },
-}
 
 /**
  * The Insights page's chip row, at eight options instead of five.

@@ -10,32 +10,6 @@ import Divider from '../../components/ui/Divider'
 import { fmt } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 
-// ── Section header ─────────────────────────────────────────────────────────────
-
-export function SectionHeader({ title, subtitle, actionLabel, actionTo, right = null, px = false }) {
-  return (
-    <div className={`flex items-baseline justify-between ${px ? 'px-5' : ''}`}>
-      <div className="flex items-baseline gap-2">
-        <h2 className="text-base font-semibold text-slate-800 dark:text-white">{title}</h2>
-        {subtitle && (
-          <span className="text-xs text-slate-400 dark:text-slate-500">{subtitle}</span>
-        )}
-      </div>
-      {/* A value rather than a link. Upcoming puts its total here, where
-          every other section on this screen puts its "See all". */}
-      {right}
-      {actionLabel && actionTo && (
-        <Link
-          to={actionTo}
-          className="text-xs font-medium text-primary dark:text-primary active:opacity-70"
-        >
-          {actionLabel}
-        </Link>
-      )}
-    </div>
-  )
-}
-
 // ── Account card ───────────────────────────────────────────────────────────────
 
 /**
