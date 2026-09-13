@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect, checkOverdraw, saveTemplate } from '../db/txHelpers'
+import { postSplitExpense, applyBalanceEffect, checkOverdraw, saveTemplate } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -12,6 +12,7 @@ import AccountPickerSheet from '../components/AccountPickerSheet'
 import AccountSelectRow from '../components/AccountSelectRow'
 import TxConfirmSheet from '../components/TxConfirmSheet'
 import { fieldFrame } from '../components/ui/Field'
+import { IconChevronRight } from '../components/icons'
 import TemplatePickerSheet from '../components/TemplatePickerSheet'
 import DupWarningSheet from '../components/DupWarningSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
@@ -21,6 +22,7 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import SharedExpenseRow from '../components/SharedExpenseRow'
+import SplitSheet from '../components/SplitSheet'
 import { fmt } from '../lib/money'
 import Rail from '../components/ui/Rail'
 
@@ -91,6 +93,8 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   const [customTerm,     setCustomTerm]     = useState(false)
   const [owedStr,        setOwedStr]        = useState('')
   const [owedContact,    setOwedContact]    = useState('')
+  const [splitOpen,      setSplitOpen]      = useState(false)
+  const [splitLegs,      setSplitLegs]      = useState(/** @type {any[]|null} */ (null))
 
   const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
@@ -164,7 +168,7 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
 
   async function onConfirmPress() {
     let err = false
-    if (!category) { setCatError(true);  err = true }
+    if (!category && !splitLegs) { setCatError(true);  err = true }
     if (!account)  { setAcctError(true); err = true }
     if (err) return
 
@@ -233,6 +237,40 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
 
       const owedBack = parseMoney(owedStr)
       const sharing = count === 1 && owedBack > 0
+
+      /* A split is N rows and one balance move, so it does not go through the
+         loop above - postSplitExpense owns both. Everything after this point
+         (the receivable, the template, the toast) still applies. */
+      if (splitLegs && count === 1) {
+        const { ids } = await postSplitExpense({
+          account: account.name,
+          date: rows[0].date,
+          description: note || undefined,
+          legs: splitLegs,
+          allowOverdraw: true,
+        })
+        if (sharing) {
+          const first = await db.transactions.get(ids[0])
+          await db.debts.add({
+            name:           owedContact.trim() || 'Shared expense',
+            contact:        owedContact.trim() || null,
+            amount:         owedBack,
+            amountPaid:     0,
+            type:           'owed_to_me',
+            dueDate:        null,
+            notes:          note || splitLegs[0].category,
+            createdAt:      updISO,
+            sourceTxId:     first?.txId ?? null,
+            sourceCategory: splitLegs[0].category,
+            synced:         UNSYNCED,
+            updatedAt:      updISO,
+          })
+        }
+        if (templateData) await saveTemplate(templateData)
+        showToast(`Split across ${splitLegs.length} categories`)
+        if (onSaved) onSaved(); else navigate('/')
+        return
+      }
 
       await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
         await db.transactions.bulkAdd(rows)
@@ -358,11 +396,55 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
               <p className="text-xs font-medium text-red-500 dark:text-red-400 mb-1.5">Pick one</p>
             )}
           </div>
-          <CategoryRail
-            categories={categories ?? []}
-            selected={category}
-            onSelect={cat => { setCategory(cat); setCatError(false) }}
-          />
+          {splitLegs ? (
+            /* Once it is split there is no single category to highlight, so
+               the rail would be lying. The legs replace it. */
+            <button
+              type="button"
+              onClick={() => setSplitOpen(true)}
+              className={`${fieldFrame()} w-full text-left`}
+            >
+              <span className="flex-1 min-w-0">
+                <span className="block text-11 text-slate-400 dark:text-slate-500">
+                  Split {splitLegs.length} ways
+                </span>
+                <span className="block text-sm font-medium text-slate-800 dark:text-white truncate">
+                  {splitLegs.map(l => l.category).join(' · ')}
+                </span>
+              </span>
+              <span className="shrink-0 text-slate-300 dark:text-slate-600" aria-hidden="true">
+                <IconChevronRight />
+              </span>
+            </button>
+          ) : (
+            <CategoryRail
+              categories={categories ?? []}
+              selected={category}
+              onSelect={cat => { setCategory(cat); setCatError(false) }}
+            />
+          )}
+
+          {/* Only once there is something to divide. Splitting nothing is
+              not a thing, and an installment plan splits per month, which is
+              a different feature. */}
+          {amount > 0 && !isInstallment && (
+            <button
+              type="button"
+              onClick={() => setSplitOpen(true)}
+              className="mt-2 px-1 text-xs font-semibold text-primary active:opacity-70"
+            >
+              {splitLegs ? 'Edit split' : 'Split across categories'}
+            </button>
+          )}
+          {splitLegs && (
+            <button
+              type="button"
+              onClick={() => setSplitLegs(null)}
+              className="mt-2 ml-3 px-1 text-xs font-semibold text-slate-400 dark:text-slate-500 active:opacity-70"
+            >
+              Remove split
+            </button>
+          )}
         </div>
 
         {/* Account */}
@@ -528,6 +610,14 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         accountName={overdraw?.accountName}
         balance={overdraw?.balance}
         amount={overdraw?.amount}
+      />
+      <SplitSheet
+        open={splitOpen}
+        onClose={() => setSplitOpen(false)}
+        total={amount}
+        categories={categories ?? []}
+        initialCategory={category}
+        onConfirm={(legs) => { setSplitLegs(legs); setSplitOpen(false) }}
       />
       <DupWarningSheet
         open={dupWarning}
