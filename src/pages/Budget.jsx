@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import db from '../db/db'
+import { useToast } from '../context/ToastContext'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useTheme } from '../context/ThemeContext'
 import { scheduledCutoff } from '../utils/scheduled'
@@ -21,6 +22,9 @@ import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
 import { fmt } from '../lib/money'
+import { effectiveLimit, monthKey, prevMonth, sweepable } from '../lib/rollover'
+import SweepSheet from './budget/SweepSheet'
+import { postCardPayment } from '../db/txHelpers'
 
 /**
  * The month's budget, in full.
@@ -78,7 +82,12 @@ function IconChevronLeft() {
 
 /** One budgeted category: how much of its limit is gone, and what is left. */
 function CategoryRow({ cat }) {
-  const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0
+  /* A carried overspend can wipe the limit out entirely, and then the old
+     `budget > 0 ? … : 0` reported 0% for a category flagged as over. Nothing
+     left and money still spent is 100% used and then some. */
+  const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100
+            : cat.spent > 0 ? 100
+            : 0
   const { color, textClass } = budgetTone(pct)
   const left = cat.budget - cat.spent
 
@@ -131,6 +140,17 @@ function CategoryRow({ cat }) {
           </p>
           <p className="text-11 text-slate-500 dark:text-slate-400 tabular-nums mt-0.5">
             {fmt(cat.spent)} of {fmt(cat.budget)}
+            {/* Where the extra came from, or went. A limit that silently
+                differs from the number you typed is the fastest way to make
+                a budget feel broken. */}
+            {!!cat.carry && (
+              <span className={cat.carry > 0
+                ? 'text-emerald-600 dark:text-emerald-400'
+                : 'text-amber-600 dark:text-amber-400'}
+              >
+                {' · '}{cat.carry > 0 ? '+' : '−'}{fmtCompact(Math.abs(cat.carry))} carried
+              </span>
+            )}
           </p>
         </div>
         <div className="text-right shrink-0">
@@ -170,7 +190,12 @@ function CategoryRow({ cat }) {
  * library, and let the numbers sit inline instead of behind a hover.
  */
 function AllocationRow({ cat, maxLimit }) {
-  const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100 : 0
+  /* A carried overspend can wipe the limit out entirely, and then the old
+     `budget > 0 ? … : 0` reported 0% for a category flagged as over. Nothing
+     left and money still spent is 100% used and then some. */
+  const pct = cat.budget > 0 ? (cat.spent / cat.budget) * 100
+            : cat.spent > 0 ? 100
+            : 0
   const { color, textClass } = budgetTone(pct)
   const over = cat.spent > cat.budget
 
@@ -220,6 +245,50 @@ export default function Budget() {
      the filter cutoff can no longer straddle midnight. */
   const now = useMemo(() => new Date(), [])
   const monthName = `${MONTHS[now.getMonth()]} ${now.getFullYear()}`
+  const { showToast } = useToast()
+  const thisMonth = monthKey(now)
+  const lastMonth = prevMonth(thisMonth)
+  /* "2026-08" is a key, not a sentence. */
+  const lastMonthLabel = (() => {
+    const [y, m] = lastMonth.split('-').map(Number)
+    return y === now.getFullYear() ? MONTHS[m - 1] : `${MONTHS[m - 1]} ${y}`
+  })()
+  const meta = useLiveQuery(() => db.meta.toArray(), [], [])
+  const globalRollover = useMemo(
+    () => (meta ?? []).find(m => m.key === 'budgetRollover')?.value ?? false, [meta])
+
+  /* Last month's leftovers, and whether they have already been dealt with.
+     The stamp is per month, so dismissing September does not silence October. */
+  const sweptKey = `swept-${lastMonth}`
+  const alreadySwept = useMemo(
+    () => !!(meta ?? []).find(m => m.key === sweptKey)?.value, [meta, sweptKey])
+  const goals = useLiveQuery(() => db.goals.toArray(), [], [])
+  const accountRows = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const leftovers = useMemo(() => sweepable({
+    categories: categories ?? [], txs: transactions ?? [],
+    month: lastMonth, globalDefault: globalRollover,
+  }), [categories, transactions, lastMonth, globalRollover])
+  const [sweepOpen, setSweepOpen] = useState(false)
+  const [sweeping, setSweeping] = useState(false)
+
+  async function handleSweep({ amount, from, to, goal }) {
+    setSweeping(true)
+    try {
+      /* postCardPayment is the app's one "move money between two accounts I
+         own" writer - one categoryless transfer plus the balance effect, with
+         the overdraw check inside the same decision as the write. A sweep is
+         exactly that, so it uses it rather than growing a second copy. */
+      await postCardPayment({ cardName: to.name, fromName: from.name, amount })
+      await db.meta.put({ key: sweptKey, value: true, updatedAt: new Date().toISOString() })
+      showToast(`${fmt(amount)} moved to ${goal.name}`)
+      setSweepOpen(false)
+    } catch (e) {
+      console.error('[Budget] sweep failed:', e)
+      showToast(/** @type {any} */ (e)?.message ?? 'Could not move that', 'error')
+    } finally {
+      setSweeping(false)
+    }
+  }
 
   // Same rule as every other spend surface: this month, up to end of today.
   const monthExpenses = useMemo(() => {
@@ -235,13 +304,22 @@ export default function Budget() {
     return m
   }, [monthExpenses])
 
-  // Most at-risk first: what is about to break matters more than what is fine.
+  /* Every row's `budget` is the EFFECTIVE limit - what was set, plus whatever
+     the category carried in from previous months. The rest of this page and
+     both row components read `budget` and know nothing about rollover, which
+     is the point: a carried limit is still just a limit. `carry` rides along
+     for the one line that explains where it came from. */
   const budgeted = useMemo(() =>
     (categories ?? [])
       .filter(c => (c.budget ?? 0) > 0)
-      .map(c => ({ ...c, spent: spentByCat[c.name] ?? 0 }))
-      .sort((a, b) => (b.spent / b.budget) - (a.spent / a.budget)),
-    [categories, spentByCat],
+      .map(c => {
+        const { carry, effective } = effectiveLimit({
+          cat: c, txs: transactions ?? [], month: thisMonth, globalDefault: globalRollover,
+        })
+        return { ...c, budget: effective, baseBudget: c.budget, carry, spent: spentByCat[c.name] ?? 0 }
+      })
+      .sort((a, b) => (b.spent / (b.budget || 1)) - (a.spent / (a.budget || 1))),
+    [categories, spentByCat, transactions, thisMonth, globalRollover],
   )
 
   // Money going somewhere no limit was ever set. Easy to miss, and it is
@@ -346,6 +424,38 @@ export default function Budget() {
         </div>
       ) : (
         <>
+          {/* Only when there is something to move, and only once a month.
+              A rolling category is deliberately absent from `leftovers` -
+              its leftover has already been kept, and sweeping it too would
+              move the same money twice. See lib/rollover.js. */}
+          {leftovers.total > 0 && !alreadySwept && (
+            <div className="px-5 mb-5">
+              <Card padding="md">
+                <p className="text-14 font-semibold text-slate-800 dark:text-white">
+                  You did not spend {fmt(leftovers.total)} last month
+                </p>
+                <p className="mt-1 text-12 leading-snug text-slate-500 dark:text-slate-400">
+                  Move it into a goal and it stops being this month&apos;s spending.
+                </p>
+                <div className="mt-3 flex gap-2.5">
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => db.meta.put({
+                      key: sweptKey, value: true, updatedAt: new Date().toISOString(),
+                    })}
+                  >
+                    Dismiss
+                  </Button>
+                  <Button size="sm" className="flex-[1.6]" onClick={() => setSweepOpen(true)}>
+                    Keep it
+                  </Button>
+                </div>
+              </Card>
+            </div>
+          )}
+
           {/* ── The month at a glance ── */}
           <section className="px-5">
             {/* The amount, the share and the limit were three stacked lines
@@ -478,6 +588,17 @@ export default function Budget() {
           )}
         </>
       )}
+      <SweepSheet
+        open={sweepOpen}
+        onClose={() => setSweepOpen(false)}
+        rows={leftovers.rows}
+        total={leftovers.total}
+        monthLabel={lastMonthLabel}
+        goals={goals}
+        accounts={accountRows}
+        onSweep={handleSweep}
+        saving={sweeping}
+      />
     </div>
   )
 }

@@ -9,6 +9,7 @@ import { useBack } from '../../hooks/useBack'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
+import { rollsOver, monthKey } from '../../lib/rollover'
 import SubPage from '../../components/SubPage'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import Button from '../../components/ui/Button'
@@ -53,6 +54,11 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
      row - both of which the Budget page shows already, and this screen now
      hangs off that page. Setting a limit is the one job here. */
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
+  /* The default a category with no opinion of its own falls back to. */
+  const meta = useLiveQuery(() => db.meta.toArray(), [], [])
+  const globalRollover = useMemo(
+    () => (meta ?? []).find(m => m.key === 'budgetRollover')?.value ?? false, [meta])
+  const thisMonth = monthKey(new Date())
 
   const expenseCats = useMemo(() =>
     (categories ?? [])
@@ -193,6 +199,46 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
                         placeholder:font-normal placeholder:text-slate-400 dark:placeholder:text-slate-600"
                       />
                     </span>
+
+                    {/* Outside the <label>, so tapping it toggles rather than
+                        putting the caret in the amount. Only offered once
+                        there is a limit: carrying nothing forward is nothing.
+
+                        Stamps rolloverFrom on the way ON so the carry starts
+                        here rather than crediting every unspent peso back to
+                        whenever the category was created. */}
+                    {saved > 0 && (
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault()
+                          const on = !rollsOver(cat, globalRollover)
+                          db.categories.update(cat.id, {
+                            rollover: on,
+                            rolloverFrom: on ? (cat.rolloverFrom ?? thisMonth) : cat.rolloverFrom,
+                            updatedAt: new Date().toISOString(),
+                          })
+                        }}
+                        aria-pressed={rollsOver(cat, globalRollover)}
+                        aria-label={`Carry ${cat.name} over`}
+                        title="Carry unspent, and overspending, into next month"
+                        className={[
+                          'shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
+                          'transition-colors',
+                          rollsOver(cat, globalRollover)
+                            ? 'bg-primary/[0.12] text-primary dark:bg-primary/[0.18]'
+                            : 'text-slate-300 dark:text-slate-600 active:bg-slate-100 dark:active:bg-white/[0.06]',
+                        ].join(' ')}
+                      >
+                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                          strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <polyline points="17 1 21 5 17 9" />
+                          <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                          <polyline points="7 23 3 19 7 15" />
+                          <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                        </svg>
+                      </button>
+                    )}
                   </label>
                 )
               })}

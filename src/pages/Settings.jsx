@@ -84,6 +84,7 @@ export default function Settings() {
   const currency    = useMemo(() => (meta ?? []).find(m => m.key === 'currency')?.value ?? 'PHP',  [meta])
   const lastSync       = useMemo(() => (meta ?? []).find(m => m.key === 'lastSync')?.value       ?? null,  [meta])
   const skipConfirm    = useMemo(() => (meta ?? []).find(m => m.key === 'skipConfirm')?.value    ?? false, [meta])
+  const budgetRollover = useMemo(() => (meta ?? []).find(m => m.key === 'budgetRollover')?.value ?? false, [meta])
   const sheetsUrl      = useMemo(() => (meta ?? []).find(m => m.key === 'sheetsUrl')?.value      ?? null,  [meta])
   const sheetsLastSync = useMemo(() => (meta ?? []).find(m => m.key === 'sheetsLastSynced')?.value ?? null, [meta])
 
@@ -291,6 +292,28 @@ export default function Settings() {
             right={<ToggleSwitch on={skipConfirm} />}
             onTap={() => db.meta.put({
               key: 'skipConfirm', value: !skipConfirm, updatedAt: new Date().toISOString(),
+            })}
+          />
+          <RowDivider />
+          {/* The default for a category that has not been decided on its own.
+              Turning it off here does not turn off a category you switched on
+              deliberately - see lib/rollover.js. */}
+          <SettingsRow
+            icon={
+              <RowIcon color="violet">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="17 1 21 5 17 9" />
+                  <path d="M3 11V9a4 4 0 0 1 4-4h14" />
+                  <polyline points="7 23 3 19 7 15" />
+                  <path d="M21 13v2a4 4 0 0 1-4 4H3" />
+                </svg>
+              </RowIcon>
+            }
+            label="Carry budgets over"
+            sublabel="Unspent rolls into next month, overspending too"
+            right={<ToggleSwitch on={budgetRollover} />}
+            onTap={() => db.meta.put({
+              key: 'budgetRollover', value: !budgetRollover, updatedAt: new Date().toISOString(),
             })}
           />
           <RowDivider />
