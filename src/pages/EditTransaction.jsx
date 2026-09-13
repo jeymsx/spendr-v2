@@ -54,8 +54,12 @@ export default function EditTransaction() {
   const { id } = useParams()
   const navigate = useNavigate()
 
+  /* `?? null` matters: Dexie resolves a MISS to undefined, and undefined is
+     also what this starts as while the read is in flight. Without it a
+     deleted row and a row still loading are the same value, so the page sits
+     blank for ever instead of saying it is gone. */
   const tx = useLiveQuery(
-    () => (id ? db.transactions.get(Number(id)) : Promise.resolve(null)),
+    async () => (id ? (await db.transactions.get(Number(id))) ?? null : null),
     [id],
     undefined,
   )

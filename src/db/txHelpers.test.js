@@ -145,7 +145,7 @@ vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1 }))
 
 const {
   postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
-  updateTransaction,
+  updateTransaction, settleWithPerson,
 } = await import('./txHelpers')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
@@ -637,5 +637,98 @@ describe('updateTransaction', () => {
   it('refuses a row that is not stored', async () => {
     await expect(updateTransaction(/** @type {any} */ ({}), { amount: 1 }))
       .rejects.toThrow(/nothing to update/i)
+  })
+})
+
+/**
+ * Settling, and then undoing it.
+ *
+ * The two halves of a settlement - money in the ledger, amountPaid on the
+ * debts - were written with nothing joining them, so deleting the
+ * transaction gave the money back and left the rows marked paid. These
+ * exercise the round trip, because that is the only place the join is
+ * observable.
+ */
+describe('settleWithPerson, and reversing it', () => {
+  /** @param {Row} [over] */
+  const owed = (over = {}) => {
+    const row = {
+      id: 70, syncId: 'debt-70', contact: 'Gelo', name: 'Gelo',
+      type: 'owed_to_me', amount: 250, amountPaid: 0,
+      createdAt: '2026-08-01', ...over,
+    }
+    store.debts.push(row)
+    return row
+  }
+
+  const settle = (rows, amount) => settleWithPerson(/** @type {any} */ ({
+    person: 'Gelo', rows, amount, account: 'Maya Savings', direction: 'owed_to_me',
+  }))
+
+  it('takes a part payment and leaves the rest owing', async () => {
+    const d = owed()
+    await settle([d], 100)
+    expect(store.debts[0].amountPaid).toBe(100)
+    expect(acct('Maya Savings').balance).toBe(10100)
+  })
+
+  it('records what it moved, keyed on the stable id', async () => {
+    const d = owed()
+    const { tx } = await settle([d], 100)
+    expect(tx.settles).toEqual([{ syncId: 'debt-70', id: 70, delta: 100 }])
+  })
+
+  /** The bug this exists to prevent. */
+  it('puts the debt back when the payment is deleted', async () => {
+    const d = owed()
+    const { tx } = await settle([d], 100)
+    await deleteTxGroup(/** @type {any} */ ([tx]))
+
+    expect(store.debts.find(x => x.id === 70).amountPaid).toBe(0)
+    expect(acct('Maya Savings').balance).toBe(10000)
+  })
+
+  it('puts back only what that payment moved, not the whole row', async () => {
+    const d = owed({ amountPaid: 50 })
+    const { tx } = await settle([d], 100)
+    expect(store.debts[0].amountPaid).toBe(150)
+    await deleteTxGroup(/** @type {any} */ ([tx]))
+    expect(store.debts[0].amountPaid).toBe(50)
+  })
+
+  /** Paying over the balance opens a credit row, which is part of the payment. */
+  it('opens a credit row for the overpayment, and takes it back on delete', async () => {
+    const d = owed()
+    const { tx, credit } = await settle([d], 400)
+    expect(credit).toBe(150)
+    expect(store.debts).toHaveLength(2)
+    expect(store.debts[1].type).toBe('i_owe')
+    expect(store.debts[1].amount).toBe(150)
+
+    await deleteTxGroup(/** @type {any} */ ([tx]))
+    expect(store.debts).toHaveLength(1)
+    expect(store.debts[0].amountPaid).toBe(0)
+  })
+
+  it('spreads across two rows oldest first, and reverses both', async () => {
+    const a = owed({ id: 70, syncId: 'd-a', amount: 100, createdAt: '2026-07-01' })
+    const b = owed({ id: 71, syncId: 'd-b', amount: 200, createdAt: '2026-08-01' })
+    const { tx } = await settle([a, b], 250)
+    expect(store.debts.find(x => x.id === 70).amountPaid).toBe(100)
+    expect(store.debts.find(x => x.id === 71).amountPaid).toBe(150)
+
+    await deleteTxGroup(/** @type {any} */ ([tx]))
+    expect(store.debts.find(x => x.id === 70).amountPaid).toBe(0)
+    expect(store.debts.find(x => x.id === 71).amountPaid).toBe(0)
+  })
+
+  /** A local id means nothing on another device; the stable one is the key. */
+  it('reverses by syncId even when the local id has shifted', async () => {
+    const d = owed()
+    const { tx } = await settle([d], 100)
+    // What a JSON restore does: same row, new counter.
+    store.debts[0].id = 900
+    await deleteTxGroup(/** @type {any} */ ([tx]))
+    expect(store.debts[0].amountPaid).toBe(0)
   })
 })
