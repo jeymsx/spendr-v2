@@ -1,5 +1,6 @@
 import { useRef, useEffect } from 'react'
 import CategoryGlyph from './CategoryGlyph'
+import { readableInk } from '../lib/color'
 
 /**
  * Pick a category by swiping a row of them.
@@ -134,15 +135,24 @@ export default function CategoryRail({ categories = [], selected, onSelect, clas
             className="shrink-0 snap-start w-[54px] flex flex-col items-center gap-1.5
               active:scale-95 transition-transform duration-75"
           >
-            {/* The wash and the selected ring live in .cat-tile in index.css,
+            {/* The wash and the selected fill live in .cat-tile in index.css,
                 which is the same tile the transaction rows use - only the
-                colour comes from here, because both themes derive from it and
-                an inline style cannot answer a theme. */}
+                colours come from here, because both themes derive from them
+                and an inline style cannot answer a theme.
+
+                --cat-ink is solved per category rather than set in CSS.
+                Selected, the tile is filled with the category's own colour,
+                and whether white or a near-black reads on top of that is not
+                a question a stylesheet can answer: white clears 4.3:1 on the
+                violet and 1.8:1 on the light orange. See lib/color.js. */}
             <span
               data-on={on}
               className="cat-tile w-[50px] h-[50px] rounded-[15px] flex items-center
                 justify-center text-[23px] leading-none"
-              style={{ '--cat-color': cat.color ?? '#64748b' }}
+              style={{
+                '--cat-color': cat.color ?? '#64748b',
+                '--cat-ink': readableInk(cat.color ?? '#64748b'),
+              }}
             >
               <CategoryGlyph cat={cat} size={23} emoji="🏷️" />
             </span>

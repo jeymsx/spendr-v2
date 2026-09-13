@@ -1093,41 +1093,44 @@ html.dark body {
     rgba(40, 60, 95, 0.22);
 }
 
-/* Selected, in the picker rails. No ring.
+/* Selected, in the picker rails. No ring, and no wash either.
 
-   It was `inset 0 0 0 2px var(--color-primary)`, so every selection was
-   painted the app accent - in a row where each tile already carries its own
-   category colour, "which one is on?" was answered in a colour belonging to
-   none of them. Food selected went blue.
+   The ring came first: `inset 0 0 0 2px var(--color-primary)`, so every
+   selection was painted the app accent - in a row where each tile already
+   carries its own category colour, "which one is on?" was answered in a
+   colour belonging to none of them. Food selected went blue.
 
-   The tile deepens its OWN wash instead, 14% -> 30%. On its own that is a
-   weak signal: worst case, dark-mode grey, the two states are 1.22:1 apart.
-   So the glyph moves at the same time, and away from the ground rather than
-   with it - darker in light, lighter in dark. Two cues, one gesture, and the
-   colour stays the category's.
+   Then the tile deepened its OWN wash, 14% -> 30%, with the glyph moving the
+   other way to keep it legible. Right about the colour, too quiet to read:
+   a 30% wash of a colour against a 14% wash of the same colour is a shade,
+   and in a row of six tiles that are all shades of something, the difference
+   did not survive a glance. The selected category was easy to miss, which on
+   this form means saving an expense against the wrong one.
 
-   Both glyph values are measured, not picked. A deeper wash of a colour
-   moves the background TOWARD a glyph painted in that same colour, which is
-   why the dark glyph cannot simply stay raw: at 30% it falls to 2.56:1,
-   under the 3:1 a meaningful graphic needs. Across all thirteen category
-   colours the worst cases here are
+   So the tile is now FILLED with the category's colour and the glyph is
+   inked against it. Nothing subtle about it - which is the point, because
+   one of these is the answer to the only required question on the page.
 
-       light   55% colour / 45% black  ->  4.27:1  (#FCC419)
-       dark    75% colour / 25% white  ->  4.13:1  (#6b7280)
+   --cat-ink is solved in JS, per colour, and this is why: white clears
+   4.26:1 on the violet and 1.78:1 on the light orange. There is no single
+   ink for a palette that spans both, and no CSS function that picks one
+   (contrast-color() is Safari-only). lib/color.js takes whichever of white
+   or a near-black tint of the hue reads better, worst case 4.0:1 across the
+   thirteen category colours.
 
-   against 3.47 and 3.12 for the unselected tile, so selecting one makes its
-   glyph MORE legible, not less. Rows never set data-on, so they are
-   untouched by any of this. */
-.cat-tile[data-on='true'] {
-  --cat-wash: color-mix(in srgb, var(--cat-color, #64748b) 30%, transparent);
+   The wash stays the unselected state, and transaction rows never set
+   data-on, so they are untouched by any of this. */
+.cat-tile[data-on='true'],
+.dark .cat-tile[data-on='true'] {
+  background: var(--cat-color, #64748b);
+  /* The colour's own light, so the tile lifts off the form rather than
+     sitting flat on it. Short and tight - a category tile is 50px. */
+  box-shadow: 0 4px 12px -4px color-mix(in srgb, var(--cat-color, #64748b) 55%, transparent);
 }
 
-.cat-tile[data-on='true'] .cat-glyph {
-  color: color-mix(in srgb, var(--cat-color, #64748b) 55%, black);
-}
-
+.cat-tile[data-on='true'] .cat-glyph,
 .dark .cat-tile[data-on='true'] .cat-glyph {
-  color: color-mix(in srgb, var(--cat-color, #94a3b8) 75%, white);
+  color: var(--cat-ink, #ffffff);
 }
 
 /* ── Budget gauge ──────────────────────────────────────────────────

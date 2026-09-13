@@ -19,6 +19,11 @@
  * assets/ATTRIBUTION.md. Settings still states the app is unaffiliated with
  * these banks and uses their names as labels only.
  */
+/* parseHex, toHex and relativeLuminance were defined here. They are
+   lib/color.js now - the category rail needed the same three to answer a
+   different question, and two copies of the sRGB luminance curve is one too
+   many. */
+import { parseHex, toHex, relativeLuminance } from './color'
 
 // from = top-left (lighter), to = bottom-right (deeper). Both AA-safe.
 /** @type {Record<string, {from: string, to: string}>} */
@@ -72,30 +77,6 @@ const TYPE_MARK = {
 /** @param {unknown} s */
 const norm = (s) => String(s ?? '').toLowerCase().replace(/[^a-z0-9]/g, '')
 
-/**
- * Mix a hex toward black, so an unknown account's own stored colour can still
- * be made dark enough for white text instead of being shown as-is.
- *
- * @param {string} hex
- * @returns {[number, number, number]|null}
- */
-function parseHex(hex) {
-  const m = /^#?([0-9a-f]{6})$/i.exec(String(hex ?? ''))
-  if (!m) return null
-  const n = parseInt(m[1], 16)
-  return [(n >> 16) & 255, (n >> 8) & 255, n & 255]
-}
-
-/**
- * @param {number[]} rgb
- * @returns {string}
- */
-function toHex(rgb) {
-  return '#' + rgb
-    .map(v => Math.max(0, Math.min(255, Math.round(v))).toString(16).padStart(2, '0'))
-    .join('')
-}
-
 /* The card's own overlays, mirrored from `.acct-card` in index.css. They sit
    between the gradient and the text, so a stop that passes on its own can
    still fail once they are composited over it - which is exactly the bug this
@@ -120,19 +101,6 @@ function composite(rgb) {
     ],
     rgb,
   )
-}
-
-/**
- * @param {number[]} channels
- * @returns {number}
- */
-function relativeLuminance([r, g, b]) {
-  /** @param {number} c */
-  const lin = (c) => {
-    const v = c / 255
-    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4
-  }
-  return 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
 }
 
 /** Contrast of white text over `rgb` once the card overlays are on top of it.
