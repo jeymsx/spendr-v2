@@ -660,7 +660,7 @@ export async function postSplitExpense({ account, date, description, legs, allow
  *          account: string, direction?: 'owed_to_me'|'i_owe',
  *          category?: string|null, sourceTxId?: string|null,
  *          description?: string}} input
- * @returns {Promise<{credit: number, settled: number}>}
+ * @returns {Promise<{credit: number, settled: number, tx: any}>}
  */
 export async function settleWithPerson({
   person, rows, amount, account, direction = 'owed_to_me',

@@ -47,7 +47,10 @@ import { useTheme } from '../context/ThemeContext'
  * that refunds this purchase when they settle.
  *
  * They compose: a dinner can be split across two categories AND owed by three
- * people. The receivables attach to the first leg.
+ * people. When it is, each person can be pinned to the category their share
+ * is for - so repaying refunds the part it came from rather than all of it
+ * landing on whichever leg happened to be written first. Unpinned means the
+ * whole purchase, which is the default and needs no extra field.
  */
 /**
  * A category, as the platform's own dropdown.
@@ -121,6 +124,15 @@ export default function DivideScreen({
     const next = freeCats[0]
     if (next) setRest(r => [...r, { cat: next, amountStr: '' }])
   }
+
+  /* The categories this purchase is actually filed under, for pinning a
+     person's share to one of them. Empty until there is more than one, so
+     the people tab stays a name and an amount for an ordinary split. */
+  const legCategories = useMemo(
+    () => (rest.length > 0
+      ? [head?.name, ...rest.map(l => l.cat?.name)].filter(Boolean)
+      : []),
+    [head, rest])
 
   const resolved = useMemo(() => resolveSplitValue(split, total), [split, total])
 
@@ -292,7 +304,12 @@ export default function DivideScreen({
             <p className="text-12 text-slate-400 dark:text-slate-500 mb-3">
               You paid. Their shares become debts they owe you.
             </p>
-            <PeopleSplit total={total} value={split} onChange={setSplit} />
+            <PeopleSplit
+              total={total}
+              value={split}
+              onChange={setSplit}
+              legCategories={legCategories}
+            />
           </>
         )}
       </div>

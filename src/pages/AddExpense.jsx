@@ -248,9 +248,23 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
          settling it refunds the category rather than counting as income. */
       const shares = (count === 1 ? (people ?? []) : []).filter(p => p.name && p.amount > 0)
 
-      /** @param {string|null} txId @param {string} categoryName */
-      const openReceivables = async (txId, categoryName) => {
+      /**
+       * One receivable per person, each pointing at the leg its share is for.
+       *
+       * `byCategory` maps a category name to the leg written for it. A person
+       * pinned to Groceries settles against the Groceries row, so repaying
+       * refunds Groceries - not whichever leg happened to be written first,
+       * which is what every share used to do regardless of what it was for.
+       * Unpinned falls back to that first leg, which is both the old
+       * behaviour and the right one when there is only one leg to point at.
+       *
+       * @param {string|null} txId  the fallback leg
+       * @param {string} categoryName  the fallback category
+       * @param {Record<string, {txId: string|null, category: string}>} [byCategory]
+       */
+      const openReceivables = async (txId, categoryName, byCategory = {}) => {
         for (const p of shares) {
+          const pinned = p.category ? byCategory[p.category] : null
           await db.debts.add({
             name:           p.name,
             contact:        p.name,
@@ -258,10 +272,10 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
             amountPaid:     0,
             type:           'owed_to_me',
             dueDate:        null,
-            notes:          note || categoryName,
+            notes:          note || pinned?.category || categoryName,
             createdAt:      updISO,
-            sourceTxId:     txId,
-            sourceCategory: categoryName,
+            sourceTxId:     pinned?.txId ?? txId,
+            sourceCategory: pinned?.category ?? categoryName,
             synced:         UNSYNCED,
             updatedAt:      updISO,
           })
@@ -278,8 +292,16 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
           legs: splitLegs,
           allowOverdraw: true,
         })
-        const first = await db.transactions.get(ids[0])
-        await openReceivables(first?.txId ?? null, splitLegs[0].category)
+        const legRows = await Promise.all(ids.map(id => db.transactions.get(id)))
+        /** @type {Record<string, {txId: string|null, category: string}>} */
+        const byCategory = {}
+        legRows.forEach((row, i) => {
+          const name = splitLegs[i]?.category
+          if (name && !byCategory[name]) {
+            byCategory[name] = { txId: row?.txId ?? null, category: name }
+          }
+        })
+        await openReceivables(legRows[0]?.txId ?? null, splitLegs[0].category, byCategory)
         if (templateData) await saveTemplate(templateData)
         showToast(shares.length
           ? `Split ${splitLegs.length} ways · ${shares.length} owe you`

@@ -1,4 +1,5 @@
 import { useMemo } from 'react'
+import { useTheme } from '../context/ThemeContext'
 import Divider from './ui/Divider'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { parseMoney } from '../utils/moneyInput'
@@ -170,7 +171,14 @@ export function resolveSplitValue(split, total) {
     ...r,
     /* Only people who actually owe something. A zero share is not a debt. */
     owed: people
-      .map((p, i) => ({ name: String(p.name ?? '').trim(), amount: r.shares[`p${i}`] ?? 0 }))
+      .map((p, i) => ({
+        name: String(p.name ?? '').trim(),
+        amount: r.shares[`p${i}`] ?? 0,
+        /* Which part of the purchase their share is against, when the
+           purchase was filed under more than one category. Empty means the
+           whole thing, which is the default and the common case. */
+        category: p.category || null,
+      }))
       .filter(p => p.name && p.amount > 0),
     yours: r.shares.you ?? 0,
   }
@@ -181,8 +189,15 @@ export function resolveSplitValue(split, total) {
  * @param {number} props.total
  * @param {any} props.value
  * @param {(next: any) => void} props.onChange
+ * @param {string[]} [props.legCategories]  the categories this purchase is
+ *   filed under, when it is split across more than one. Each person can be
+ *   pinned to one of them, so repaying refunds the part their share came
+ *   from rather than all of it landing on whichever leg happened to be
+ *   written first.
  */
-export default function PeopleSplit({ total, value, onChange }) {
+export default function PeopleSplit({ total, value, onChange, legCategories = [] }) {
+  const { theme } = useTheme()
+  const dark = theme === 'dark'
   const split = value ?? EMPTY_SPLIT
   const { mode, you, people } = split
 
@@ -281,6 +296,32 @@ export default function PeopleSplit({ total, value, onChange }) {
                 onRemove={() => removePerson(i)}
                 label={p.name || `person ${i + 1}`}
               />
+
+              {/* Only when there is a choice to make. One category is not a
+                  question, and a row of dropdowns all reading the same word
+                  is the kind of thing that makes a simple screen feel like
+                  paperwork. Defaults to the whole purchase, so the common
+                  case stays one field: a name and an amount. */}
+              {legCategories.length > 1 && p.included !== false && (
+                <div className="flex items-center gap-2 pb-3 pl-11">
+                  <span className="text-11 text-slate-400 dark:text-slate-500 shrink-0">
+                    Their share is for
+                  </span>
+                  <select
+                    value={p.category ?? ''}
+                    onChange={e => setPerson(i, { category: e.target.value })}
+                    aria-label={`Which category ${p.name || `person ${i + 1}`} is sharing`}
+                    className="min-w-0 bg-transparent outline-none text-12 font-semibold
+                      text-slate-700 dark:text-slate-200"
+                    style={{ colorScheme: dark ? 'dark' : 'light' }}
+                  >
+                    <option value="">the whole purchase</option>
+                    {legCategories.map(name => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
           ))}
 
