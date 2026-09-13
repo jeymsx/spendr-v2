@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import Sheet from './ui/Sheet'
 import AmountHero from './ui/AmountHero'
+import AmountInput from './ui/AmountInput'
 import DetailRow from './ui/DetailRow'
 import Button from './ui/Button'
 import AccountPickerSheet, { AccountChip } from './AccountPickerSheet'
@@ -110,29 +111,12 @@ export default function RefundSheet({
           </div>
 
           <AmountHero color={BACK_COLOR} className="mt-5 mb-6">
-            <span className="inline-flex items-baseline justify-center gap-0.5">
-              <span aria-hidden="true">₱</span>
-              <input
-                /* Sized to the text, not to the box. `size={1}` plus w-full
-                   made the input as wide as the sheet allowed, so a short
-                   figure centred itself away from the peso sign and rendered
-                   as "P    650". Tracking the length keeps them adjacent at
-                   every amount. */
-                size={Math.max(1, amount.length)}
-                value={amount}
-                onChange={onAmount}
-                inputMode="decimal"
-                placeholder="0"
-                aria-label="Refund amount"
-                /* amount-hero-input, not a Tailwind size: index.css forces
-                   every input to 16px !important so iOS does not zoom on
-                   focus, and a utility cannot beat that. */
-                className="amount-hero-input min-w-0 max-w-[220px] bg-transparent
-                  outline-none text-center tabular-nums tracking-tight
-                  placeholder:text-slate-300 dark:placeholder:text-slate-600"
-                style={{ color: BACK_COLOR }}
-              />
-            </span>
+            <AmountInput
+              value={amount}
+              onChange={onAmount}
+              label="Refund amount"
+              color={BACK_COLOR}
+            />
           </AmountHero>
 
           {presets.length > 1 && (

@@ -7,6 +7,7 @@ import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInp
 import { IconTemplate } from './icons'
 import CategoryGlyph from './CategoryGlyph'
 import AmountHero from './ui/AmountHero'
+import AmountInput from './ui/AmountInput'
 import { CardThumb, TransferLegs } from './AccountLine'
 import Button from './ui/Button'
 import DetailRow from './ui/DetailRow'
@@ -160,23 +161,15 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
         </div>
 
         {/* The amount, large and still editable - a template's figure is the
-            one thing you change on the way past. The input sizes itself to
-            its digits so the row stays optically centred as you type; `ch`
-            works because the figure is tabular-nums. */}
+            one thing you change on the way past. */}
         <AmountHero color={cfg.color} className="mt-5 mb-6">
-          <span className="inline-flex items-baseline justify-center">
-            <span>{cfg.sign}₱</span>
-            <input
-              type="text"
-              inputMode="decimal"
-              value={amountStr}
-              onChange={moneyChangeHandler(setAmountStr)}
-              aria-label="Amount"
-              style={{ width: `${Math.max(amountStr.length, 1) + 0.5}ch` }}
-              className="amount-hero-input bg-transparent outline-none text-inherit
-                font-bold tracking-tight tabular-nums"
-            />
-          </span>
+          <AmountInput
+            value={amountStr}
+            onChange={moneyChangeHandler(setAmountStr)}
+            label="Amount"
+            sign={cfg.sign}
+            color={cfg.color}
+          />
         </AmountHero>
 
         {/* One list, not a card of rows - matching the confirm sheet, where

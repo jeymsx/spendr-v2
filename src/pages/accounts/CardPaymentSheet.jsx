@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import Sheet from '../../components/ui/Sheet'
 import SwipeConfirm from '../../components/SwipeConfirm'
 import AmountHero from '../../components/ui/AmountHero'
+import AmountInput from '../../components/ui/AmountInput'
 import DetailRow from '../../components/ui/DetailRow'
 import AccountPickerSheet, { AccountChip } from '../../components/AccountPickerSheet'
 import FadeScroller from '../../components/FadeScroller'
@@ -130,35 +131,15 @@ export default function CardPaymentSheet({
             </p>
           </div>
 
-          {/* The hero IS the input. `size={1}` with w-full lets it shrink to
-              the sheet rather than to an input's default 20-character width,
-              which would overflow a narrow phone. */}
+          {/* The hero IS the input. */}
           <AmountHero color={PAY_COLOR} className="mt-5 mb-6">
-            <span className="inline-flex items-baseline justify-center gap-0.5">
-              <span aria-hidden="true">₱</span>
-              <input
-                ref={amountRef}
-                /* Sized to the text, not to the box. `size={1}` plus w-full
-                   made the input as wide as the sheet allowed, so a short
-                   figure centred itself away from the peso sign and rendered
-                   as "P    650". Tracking the length keeps them adjacent at
-                   every amount. */
-                size={Math.max(1, amount.length)}
-                value={amount}
-                onChange={onAmount}
-                inputMode="decimal"
-                placeholder="0"
-                aria-label="Payment amount"
-                /* amount-hero-input, not a Tailwind size: index.css forces
-                   every input to 16px !important so iOS does not zoom on
-                   focus, and a utility cannot beat that. See the note there -
-                   this sheet is the second thing to be caught by it. */
-                className="amount-hero-input min-w-0 max-w-[220px] bg-transparent
-                  outline-none text-center tabular-nums tracking-tight
-                  placeholder:text-slate-300 dark:placeholder:text-slate-600"
-                style={{ color: PAY_COLOR }}
-              />
-            </span>
+            <AmountInput
+              ref={amountRef}
+              value={amount}
+              onChange={onAmount}
+              label="Payment amount"
+              color={PAY_COLOR}
+            />
           </AmountHero>
 
           {presets.length > 1 && (

@@ -7,6 +7,7 @@ import Sheet from '../../components/ui/Sheet'
 import Button from '../../components/ui/Button'
 import Divider from '../../components/ui/Divider'
 import AmountHero from '../../components/ui/AmountHero'
+import AmountInput from '../../components/ui/AmountInput'
 import AccountPickerSheet, { AccountChip } from '../../components/AccountPickerSheet'
 import { IconChevronRight } from '../../components/icons'
 import { parseMoney, numToMoneyStr, moneyChangeHandler } from '../../utils/moneyInput'
@@ -152,26 +153,12 @@ export default function PersonSheet({ person, onClose, onEditRow }) {
               color={theyOwe ? '#10b981' : '#f59e0b'}
               className="mt-4 mb-5"
             >
-              <span className="inline-flex items-baseline justify-center gap-0.5">
-                <span aria-hidden="true">₱</span>
-                <input
-                  /* Sized to the text so the figure stays beside the peso
-                     sign at every length, the same as RefundSheet. */
-                  size={Math.max(1, amountStr.length)}
-                  value={amountStr}
-                  onChange={moneyChangeHandler(setAmountStr)}
-                  inputMode="decimal"
-                  placeholder="0"
-                  aria-label={theyOwe ? 'Amount received' : 'Amount paid'}
-                  /* amount-hero-input, not a Tailwind size: index.css forces
-                     every input to 16px !important so iOS does not zoom on
-                     focus, and a utility cannot beat that. */
-                  className="amount-hero-input min-w-0 max-w-[220px] bg-transparent
-                    outline-none text-center tabular-nums tracking-tight
-                    placeholder:text-slate-300 dark:placeholder:text-slate-600"
-                  style={{ color: theyOwe ? '#10b981' : '#f59e0b' }}
-                />
-              </span>
+              <AmountInput
+                value={amountStr}
+                onChange={moneyChangeHandler(setAmountStr)}
+                label={theyOwe ? 'Amount received' : 'Amount paid'}
+                color={theyOwe ? '#10b981' : '#f59e0b'}
+              />
             </AmountHero>
           )}
 
