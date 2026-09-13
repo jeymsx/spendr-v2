@@ -17,7 +17,11 @@ import {
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import Segmented from '../components/ui/Segmented'
-import { BrandTile, StepProgress, inputCls } from './accounts/NewFields'
+import MoneyField from '../components/ui/MoneyField'
+import SearchField from '../components/ui/SearchField'
+import { fieldFrame } from '../components/ui/Field'
+import { inputClass } from './accounts/shared'
+import { BrandTile, StepProgress } from './accounts/NewFields'
 import { StyleStep, CreatedStep } from './accounts/NewCardStyleStep'
 import Rail from '../components/ui/Rail'
 
@@ -62,17 +66,6 @@ function IconChevronLeft() {
     </svg>
   )
 }
-
-function IconSearch() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="11" cy="11" r="7" />
-      <path d="M20 20l-3.5-3.5" />
-    </svg>
-  )
-}
-
 
 // ── The live preview ───────────────────────────────────────────────────────────
 
@@ -435,11 +428,11 @@ export default function AccountNew() {
 
       {current === 'institution' && (
         <div className="mt-4">
-          <div className="px-5 relative">
-            <span className="absolute left-8 top-1/2 -translate-y-1/2 text-slate-400 dark:text-slate-500">
-              <IconSearch />
-            </span>
-            <input
+          <div className="px-5">
+            {/* The app's search bar, not a form field with a magnifier laid
+                over it. It was the latter, which is why this screen read as
+                something to fill in rather than something to search. */}
+            <SearchField
               value={draft.name}
               /* Typing IS naming. The grid filters on the same value, so a
                  name that matches an institution surfaces its logo to tap, and
@@ -453,7 +446,7 @@ export default function AccountNew() {
               onChange={e => { set({ name: e.target.value }); setTouchedName(true) }}
               placeholder="Search, or type any name"
               ref={nameRef}
-              className={inputCls(touchedName && !!nameProblem) + ' pl-10'}
+              invalid={touchedName && !!nameProblem}
             />
           </div>
 
@@ -537,10 +530,11 @@ export default function AccountNew() {
                 zooms the viewport when a form control takes focus, and it does
                 not zoom back out.
 
-                pr-11 keeps the value clear of the chevron - a select does not
-                know the chevron is there and would happily print "E-Wallet"
-                straight through it. */}
-            <div className="relative">
+                The chevron is a flex sibling inside the frame rather than an
+                absolute overlay, which is what fieldFrame's row is for - so
+                the select simply ends where the chevron begins instead of
+                needing a right padding sized to clear it by hand. */}
+            <div className={fieldFrame()}>
               <select
                 value={draft.type}
                 onChange={e => {
@@ -552,16 +546,16 @@ export default function AccountNew() {
                     scheme: v === 'cash' ? '' : draft.scheme,
                   })
                 }}
-                className={inputCls() + ' appearance-none pr-11 text-[16px] cursor-pointer'
-                  + ' [color-scheme:light] dark:[color-scheme:dark]'}
+                className="flex-1 min-w-0 bg-transparent outline-none appearance-none cursor-pointer
+                  text-[16px] font-medium text-slate-800 dark:text-white
+                  [color-scheme:light] dark:[color-scheme:dark]"
               >
                 {TYPE_OPTIONS.map(t => (
                   <option key={t.value} value={t.value}>{t.label}</option>
                 ))}
               </select>
               <span
-                className="absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none
-                  text-slate-400 dark:text-slate-500"
+                className="shrink-0 pointer-events-none text-slate-400 dark:text-slate-500"
                 aria-hidden="true"
               >
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -585,15 +579,14 @@ export default function AccountNew() {
           {!isCredit && (
             <div>
               <SectionLabel hint="What is in it right now.">Opening balance</SectionLabel>
-              <div className="relative">
-                <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">₱</span>
-                <input
-                  inputMode="decimal"
-                  value={draft.startingBal}
-                  onChange={moneyChangeHandler(v => set({ startingBal: v }))}
-                  className={inputCls() + ' pl-9'}
-                />
-              </div>
+              {/* The edit page's field, peso mark and all. This was the frame
+                  with a ₱ absolutely positioned over its left padding - the
+                  same control, built twice, looking different on the two
+                  screens that ask for a balance. */}
+              <MoneyField
+                value={draft.startingBal}
+                onChange={moneyChangeHandler(v => set({ startingBal: v }))}
+              />
             </div>
           )}
 
@@ -623,15 +616,10 @@ export default function AccountNew() {
         <div className="px-5 mt-4 space-y-6">
           <div>
             <SectionLabel>Credit limit</SectionLabel>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">₱</span>
-              <input
-                inputMode="decimal"
-                value={draft.creditLimit}
-                onChange={moneyChangeHandler(v => set({ creditLimit: v }))}
-                className={inputCls() + ' pl-9'}
-              />
-            </div>
+            <MoneyField
+              value={draft.creditLimit}
+              onChange={moneyChangeHandler(v => set({ creditLimit: v }))}
+            />
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -642,7 +630,7 @@ export default function AccountNew() {
                 value={draft.cutoffDay}
                 onChange={e => set({ cutoffDay: e.target.value.replace(/\D/g, '').slice(0, 2) })}
                 placeholder="e.g. 26"
-                className={inputCls()}
+                className={inputClass()}
               />
             </div>
             <div>
@@ -652,22 +640,17 @@ export default function AccountNew() {
                 value={draft.dueDay}
                 onChange={e => set({ dueDay: e.target.value.replace(/\D/g, '').slice(0, 2) })}
                 placeholder="e.g. 5"
-                className={inputCls()}
+                className={inputClass()}
               />
             </div>
           </div>
 
           <div>
             <SectionLabel>Minimum payment</SectionLabel>
-            <div className="relative">
-              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-500 dark:text-slate-400">₱</span>
-              <input
-                inputMode="decimal"
-                value={draft.minPayment}
-                onChange={moneyChangeHandler(v => set({ minPayment: v }))}
-                className={inputCls() + ' pl-9'}
-              />
-            </div>
+            <MoneyField
+              value={draft.minPayment}
+              onChange={moneyChangeHandler(v => set({ minPayment: v }))}
+            />
           </div>
 
           <p className="text-[11px] text-slate-500 dark:text-slate-400">

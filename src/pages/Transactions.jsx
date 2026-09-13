@@ -17,6 +17,7 @@ import {
 import { QuickTypeFilter } from './transactions/QuickFilter'
 import { FilterModal, TxRow, IconNoTransactions } from './transactions/FilterSheet'
 import Rail from '../components/ui/Rail'
+import SearchField from '../components/ui/SearchField'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -190,31 +191,15 @@ export default function Transactions() {
       {/* ── Search bar (always visible) ── */}
       <div className="px-5 mb-3">
         {/* Fully round, like every other field and button in the app - it
-            was the last rounded-xl control on the page. */}
-        <div className="flex items-center gap-2.5 px-4 h-[38px] rounded-full
-          bg-white dark:bg-primary/[0.07]
-          border border-slate-200/80 dark:border-primary/[0.14]
-          shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]"
-        >
-          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-slate-400 shrink-0">
-            <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search"
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-            className="flex-1 bg-transparent text-[13px] text-slate-800 dark:text-white
-              placeholder-slate-400 dark:placeholder-slate-500 outline-none"
-          />
-          {search && (
-            <button onClick={() => setSearch('')} aria-label="Clear search" className="text-slate-400 dark:text-slate-500 active:scale-90 transition-transform">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
-          )}
-        </div>
+            was the last rounded-xl control on the page. The markup that used
+            to be spelled out here is components/ui/SearchField.jsx now; the
+            account creation flow needed the same bar and had grown a
+            different one. */}
+        <SearchField
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          onClear={() => setSearch('')}
+        />
       </div>
 
       {/* ── Type filter (always visible) ── */}

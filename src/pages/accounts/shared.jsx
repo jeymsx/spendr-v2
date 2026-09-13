@@ -9,7 +9,7 @@
  *
  * Nothing here changed in the move.
  */
-import { fieldFrame } from '../../components/ui/Field'
+import { fieldInputClass } from '../../components/ui/Field'
 
 export function fmtTxDate(isoStr) {
   if (!isoStr) return ''
@@ -40,20 +40,13 @@ export function fmtTxTime(isoStr) {
  * This was a private recipe: 48px tall at radius 16, a white/6% dark fill, a
  * white/9% hairline and a focus ring - none of which matched the capsule
  * every other form in the app uses, and all of which had to be kept in step
- * with it by hand. It is fieldFrame now, which owns the height, the fill, the
- * hairline and the invalid state in one place.
+ * with it by hand. Then it was fieldFrame with the flex row swapped out, here
+ * - still private, and the create flow had grown a THIRD recipe of its own.
  *
- * `block` replaces the frame's flex, because these are bare inputs rather
- * than a row with a glyph in it; everything else comes through untouched.
+ * So the recipe is ui/Field.jsx now and this is the name the account modules
+ * already import it by. Both forms take it from there.
  */
-export function inputClass(error = false) {
-  return [
-    fieldFrame(error).replace('flex items-center gap-3', 'block w-full'),
-    'text-sm font-medium text-slate-800 dark:text-white',
-    'placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal',
-    'outline-none',
-  ].join(' ')
-}
+export const inputClass = fieldInputClass
 
 /**
  * One selectable chip in a row of them: account type, and the parent picker.

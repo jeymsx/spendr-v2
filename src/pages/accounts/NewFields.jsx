@@ -11,12 +11,10 @@ import { IconCheck } from '../../components/icons'
    Its `hint` prop did not come along: SectionLabel has no hint, so the three
    labels that carry one spell out the line beneath them. */
 
-export const inputCls = (bad = false) =>
-  `w-full px-4 py-3.5 rounded-2xl text-[15px] tabular-nums
-   bg-white dark:bg-white/[0.05] text-slate-800 dark:text-white
-   border ${bad ? 'border-red-400 dark:border-red-500/60' : 'border-slate-200 dark:border-white/[0.09]'}
-   placeholder:text-slate-400 dark:placeholder:text-slate-500
-   focus:outline-none focus:border-primary/60`
+/* inputCls was here: a third field recipe, 50px at radius 16 on a white/5%
+   fill, which is why the create flow's fields did not match the edit page's
+   capsules. Gone - both screens take fieldInputClass from ui/Field.jsx, and
+   the money fields take MoneyField. */
 
 /* Segmented used to be defined here, beside its only caller. The edit form
    asks the same question now, so it is components/ui/Segmented.jsx - see the

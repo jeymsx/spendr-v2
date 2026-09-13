@@ -44,14 +44,50 @@ import SectionLabel from './SectionLabel'
  * category row is a button. They take the frame and skip the rest.
  */
 export function fieldFrame(invalid = false) {
+  return cx('flex items-center gap-3 px-5 h-[52px] rounded-full', fieldSurface(invalid))
+}
+
+/**
+ * The fill, hairline and lift, without the size.
+ *
+ * Split out of fieldFrame for the one control that is a field but not 52px
+ * tall: a search bar is a 38px capsule, and `cx` deliberately does not
+ * resolve conflicts, so a caller cannot shrink a frame that names its own
+ * height. Rather than let SearchField copy three colour strings and drift,
+ * both take the surface from here and name their own box.
+ *
+ * The order of what this emits is load-bearing only in that fieldFrame's
+ * output has to stay exactly what it always was - the visual snapshot
+ * records class strings verbatim.
+ */
+export function fieldSurface(invalid = false) {
   return cx(
-    'flex items-center gap-3 px-5 h-[52px] rounded-full',
     'bg-white dark:bg-primary/[0.07]',
     'shadow-[0_1px_3px_rgba(0,0,0,0.06)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.08)]',
     'border transition-colors duration-150',
     invalid
       ? 'border-red-300 dark:border-red-500/45'
       : 'border-slate-200/80 dark:border-primary/[0.14]',
+  )
+}
+
+/**
+ * The same frame, for a bare `<input>` that brings its own layout.
+ *
+ * `block w-full` replaces the frame's flex row: there is no glyph beside the
+ * text, so there is nothing to lay out. Was `inputClass` in
+ * pages/accounts/shared.jsx, private to the account form, until the create
+ * flow needed the same thing - which is the whole reason the two screens
+ * looked different.
+ *
+ * @param {boolean} [invalid]
+ */
+export function fieldInputClass(invalid = false) {
+  return cx(
+    fieldFrame(invalid).replace('flex items-center gap-3', 'block w-full'),
+    'text-sm font-medium text-slate-800 dark:text-white',
+    'placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal',
+    'outline-none',
   )
 }
 
