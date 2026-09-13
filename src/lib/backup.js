@@ -20,14 +20,14 @@ const BACKUP_TABLES = [
   'goals', 'badges',
 ]
 
-/* Badges are the one table a restore MERGES rather than replaces.
+/* Badges are the one table a restore MERGES rather than replaces - look for
+ * the bulkPut with no clear() beside it in restoreBackup.
  *
  * Everywhere else "restore means restore" and an absent row goes away. A badge
  * is not a row of data, it is a thing that happened - and sync already treats
  * it that way: pullBadges keeps the EARLIEST earnedAt and has no delete path
  * at all. Clearing badges here would un-earn achievements that the very next
  * sync puts straight back, which is a worse outcome than not clearing them. */
-const MERGE_TABLES = new Set(['badges'])
 
 /**
  * Validate a parsed backup file and report what it holds.
@@ -110,6 +110,11 @@ export async function restoreBackup(raw) {
   /* Badges carry `key` and `earnedAt` and nothing else - no updatedAt, because
      there is no last-write-wins for them. Stamping one would add a column the
      table does not have and the mapper does not send. */
+  /**
+   * @template {Record<string, any>} T
+   * @param {T[]} [rows]
+   * @returns {T[]}
+   */
   const stampBadge = (rows) => (rows ?? []).map(r => ({ ...r, synced: UNSYNCED }))
 
   // Captured before the wipe so we know what the backup drops.
@@ -153,7 +158,7 @@ export async function restoreBackup(raw) {
     if (Array.isArray(data.recurring))    { await db.recurring.clear();    await db.recurring.bulkAdd(recurring) }
     if (Array.isArray(data.debts))        { await db.debts.clear();        await db.debts.bulkAdd(debts) }
     if (Array.isArray(data.goals))        { await db.goals.clear();        await db.goals.bulkAdd(goals) }
-    // Merged, not replaced - see MERGE_TABLES. bulkPut so a badge already held
+    // Merged, not replaced - see the note by BACKUP_TABLES. bulkPut so a badge already held
     // locally keeps its row rather than colliding on the `key` primary key.
     if (Array.isArray(data.badges) && badges.length) await db.badges.bulkPut(badges)
 
