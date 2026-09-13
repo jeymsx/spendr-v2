@@ -12,6 +12,7 @@
  */
 import Divider from '../../components/ui/Divider'
 import { fieldFrame } from '../../components/ui/Field'
+import SectionLabel from '../../components/ui/SectionLabel'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -195,12 +196,12 @@ export function IconTarget() {
 
 // ── UI primitives ──────────────────────────────────────────────────────────────
 
+/* A 12px semibold caption at the page gutter - which is SectionLabel, a
+   shade off. It was slate-400/slate-500 where SectionLabel is
+   slate-500/slate-400, and mb-2 where the named gaps are 1.5 and 3. Three
+   differences, none of them a decision. The 7 call sites keep the name. */
 export function SectionHeader({ children }) {
-  return (
-    <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 px-5 mb-2">
-      {children}
-    </p>
-  )
+  return <SectionLabel inset="gutter" gap="normal">{children}</SectionLabel>
 }
 
 /* Was a local hairline at slate-50 / white-4%, one of the sixteen recipes

@@ -32,6 +32,7 @@ import {
 import QuickActions from './dashboard/QuickActions'
 import UpcomingSection from './dashboard/Upcoming'
 import Rail from '../components/ui/Rail'
+import SectionHeading from '../components/ui/SectionHeading'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -480,7 +481,7 @@ export default function Dashboard() {
           was a grid of eight per-category chips, which is a lot of screen
           for a question you usually only want a yes-or-no answer to. ── */}
       <section className="px-5 mt-8">
-        <SectionHeader title="Budget" subtitle="This month" />
+        <SectionHeading inset="none" gap="none" subtitle="This month">Budget</SectionHeading>
         <div className="mt-3">
           <BudgetSummaryTile totals={budgetTotals} count={budgetCategories.length} />
         </div>
@@ -524,7 +525,7 @@ export default function Dashboard() {
       <UpcomingSection items={upcomingItems} />
 
       <section className="px-5 mt-8 pb-nav">
-        <SectionHeader title="Recent" actionLabel="See all" actionTo="/transactions" />
+        <SectionHeading inset="none" gap="none" actionLabel="See all" actionTo="/transactions">Recent</SectionHeading>
         <Card radius="3xl" clip className="mt-3">
           {recentTx.length === 0 ? (
             <EmptyState

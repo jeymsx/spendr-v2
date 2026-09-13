@@ -67,16 +67,9 @@ function IconBolt() {
  * 20px line, and the 10px under the heading is split between SectionLabel's
  * own 6px and the 4px here rather than fighting it with an mb-0.
  */
-function SectionHeading({ children, right = null }) {
-  return (
-    <div className="px-4 mb-1 flex items-baseline justify-between gap-3">
-      <SectionLabel>{children}</SectionLabel>
-      {right && (
-        <p className="pr-1 text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
-      )}
-    </div>
-  )
-}
+/* SectionHeading was defined here and byte-identically in the other bills
+   file: a SectionLabel with a figure beside it, which is what SectionLabel's
+   own `action` slot is for. Both are gone; the call sites say it directly. */
 
 /**
  * One of the two verbs, as a glass tile.
@@ -445,7 +438,7 @@ export default function RecurringDetail() {
           and five rows that all opened the same sheet would look like five
           different destinations. */}
       <section className="mt-7">
-        <SectionHeading>Details</SectionHeading>
+        <SectionLabel inset="gutter" gap="tight">Details</SectionLabel>
         <div className="px-5">
           <Card clip>
             {/* The account as its card, the same way the transaction
@@ -489,9 +482,15 @@ export default function RecurringDetail() {
 
       {/* ── What it has actually cost ── */}
       <section className="mt-7">
-        <SectionHeading right={history?.length ? fmt(paidTotal) : undefined}>
+        <SectionLabel
+          inset="gutter"
+          gap="tight"
+          action={history?.length
+            ? <span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{fmt(paidTotal)}</span>
+            : null}
+        >
           Billing history
-        </SectionHeading>
+        </SectionLabel>
         <div className="px-5">
           <Card clip>
             {history === null ? (

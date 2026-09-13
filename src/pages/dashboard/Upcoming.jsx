@@ -3,6 +3,7 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import { fmt, fmtCompact } from '../../lib/money'
 import { SectionHeader } from './Tiles'
+import SectionHeading from '../../components/ui/SectionHeading'
 
 // ── Upcoming ───────────────────────────────────────────────────────────────────
 
@@ -127,9 +128,10 @@ export default function UpcomingSection({ items }) {
           typography for a standalone card borrowed the wrong hierarchy, and
           sitting directly under the Budget block it read as a sub-part of
           it rather than a section in its own right. */}
-      <SectionHeader
-        title="Upcoming"
-        right={
+      <SectionHeading
+        inset="none"
+        gap="none"
+        action={
           /* The total covers the rows on screen, not every future bill - a
              figure that disagreed with the two rows under it would be worse
              than no figure at all. */
@@ -137,7 +139,7 @@ export default function UpcomingSection({ items }) {
             −{fmtCompact(total)}
           </span>
         }
-      />
+      >Upcoming</SectionHeading>
       <Card clip className="mt-3">
         {items.map((item, i) => (
           <UpcomingRow key={item.key} item={item} isLast={i === items.length - 1} />

@@ -162,7 +162,7 @@ export function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, 
 
   return (
     <div>
-      <SectionHeading action={typeFilter}>{label}</SectionHeading>
+      <SectionHeading align="center" action={typeFilter}>{label}</SectionHeading>
       {!hasData ? (
         <TrendEmpty
           kind={isArea ? chartType : 'bars'}

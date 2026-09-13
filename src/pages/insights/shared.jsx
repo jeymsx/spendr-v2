@@ -5,11 +5,8 @@
    carries a control on the right (the chart's Expenses/Income/Net flow
    switch). The shared SectionLabel is the 12px slate-500 caption; using it
    here would mute a page heading down to a caption and drop the action slot. */
-export function SectionHeading({ children, action }) {
-  return (
-    <div className="px-5 flex items-center justify-between mb-3">
-      <h2 className="text-base font-semibold text-slate-800 dark:text-white">{children}</h2>
-      {action}
-    </div>
-  )
-}
+/* Was a local 16px h2 with px-5 and mb-3 baked in. It is
+   components/ui/SectionHeading.jsx now - Dashboard had the same heading with
+   a different prop list and a different row alignment. Re-exported under the
+   name this module's three callers already import. */
+export { default as SectionHeading } from '../../components/ui/SectionHeading'

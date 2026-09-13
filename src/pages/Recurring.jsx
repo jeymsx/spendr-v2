@@ -52,16 +52,9 @@ import BrandMark from '../components/BrandMark'
  * 20px line, and the 10px under the heading is split between SectionLabel's
  * own 6px and the 4px here rather than fighting it with an mb-0.
  */
-function SectionHeading({ children, right = null }) {
-  return (
-    <div className="px-4 mb-1 flex items-baseline justify-between gap-3">
-      <SectionLabel>{children}</SectionLabel>
-      {right && (
-        <p className="pr-1 text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{right}</p>
-      )}
-    </div>
-  )
-}
+/* SectionHeading was defined here and byte-identically in the other bills
+   file: a SectionLabel with a figure beside it, which is what SectionLabel's
+   own `action` slot is for. Both are gone; the call sites say it directly. */
 
 /**
  * One bill, as a row.
@@ -789,7 +782,9 @@ export default function Recurring() {
                 </div>
               )}
 
-              <SectionHeading right="Next 30 days">Coming up</SectionHeading>
+              <SectionLabel inset="gutter" gap="tight"
+                action={<span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">Next 30 days</span>}
+              >Coming up</SectionLabel>
               <div className="px-5">
                 <Card clip>
                   {upcoming.length === 0 ? (
@@ -817,13 +812,17 @@ export default function Recurring() {
             <div className="mt-5 flex flex-col gap-6">
               {groups.map(({ freq, label, items }) => (
                 <section key={freq}>
-                  <SectionHeading
-                    right={fmtCompact(
-                      items.filter(r => r.active).reduce((s, r) => s + (r.amount ?? 0), 0),
-                    )}
+                  <SectionLabel
+                    inset="gutter"
+                    gap="tight"
+                    action={<span className="text-[12px] tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
+                      {fmtCompact(
+                        items.filter(r => r.active).reduce((s, r) => s + (r.amount ?? 0), 0),
+                      )}
+                    </span>}
                   >
                     {label}
-                  </SectionHeading>
+                  </SectionLabel>
                   <div className="px-5">
                     <Card clip>
                       {items.map((r, i) => (
