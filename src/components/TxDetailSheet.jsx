@@ -4,7 +4,8 @@ import { postRefund } from '../db/txHelpers'
 import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx,
          deleteTxGroup, restoreDeletedTxs } from '../db/txHelpers'
 import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
-import { isRefund, refundedAmount, refundableAmount } from '../lib/txMoney'
+import { isRefund, refundedAmount, refundableAmount, splitGroup, splitTotal } from '../lib/txMoney'
+import { outstanding, isSettled } from '../lib/people'
 import RefundSheet from './RefundSheet'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import CategoryPickerSheet from './CategoryPickerSheet'
@@ -85,9 +86,37 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
      could have one - a transfer, an inflow or a refund itself never can, and
      the sheet opens on every row in the app. */
   const canRefund = tx?.type === 'expense' && !!tx?.txId && !isRefund(tx)
+  /* Also when this is a leg of a split, which needs its siblings to say what
+     the whole purchase came to. */
+  const needsAll = canRefund || !!tx?.splitId
   const allTxs = useLiveQuery(
-    async () => (canRefund ? db.transactions.toArray() : []),
-    [canRefund, tx?.txId], [])
+    async () => (needsAll ? db.transactions.toArray() : []),
+    [needsAll, tx?.txId, tx?.splitId], [])
+
+  const legs = tx?.splitId ? splitGroup(tx, allTxs) : []
+  const wholePurchase = tx?.splitId ? splitTotal(tx, allTxs) : 0
+
+  /* Who owes you a piece of this.
+
+     Matched against every leg of the purchase, not just the row you tapped.
+     A share is opened against ONE leg - whichever came first - so keying
+     this on tx.txId alone would show the people on the Groceries leg and
+     nothing at all on the Household one, which is the same purchase and the
+     same debt.
+
+     Filtered in JS: sourceTxId is a plain property with no Dexie index, and
+     where() on an unindexed key throws - the same trap deleteTxGroup fell
+     into. */
+  const groupTxIds = (legs.length ? legs : tx ? [tx] : [])
+    .map(t => t.txId).filter(Boolean)
+  const shares = useLiveQuery(
+    async () => (groupTxIds.length
+      ? (await db.debts.toArray()).filter(d => d.sourceTxId && groupTxIds.includes(d.sourceTxId))
+      : []),
+    [groupTxIds.join(',')], [])
+
+  const sharedTotal = shares.reduce((s, d) => s + (d.amount ?? 0), 0)
+  const sharedLeft  = shares.reduce((s, d) => s + outstanding(d), 0)
 
   const backAlready = refundedAmount(tx, allTxs)
   const stillOut    = refundableAmount(tx, allTxs)
@@ -441,6 +470,34 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                 </p>
               )}
 
+              {/* The hero is what LEFT the account, and that stays true. But
+                  when part of it is owed back, a figure with nothing beside
+                  it reads as money you spent - so the share is said here,
+                  the same way a refund is. Without this there was no sign
+                  anywhere on the sheet that a purchase was shared at all. */}
+              {sharedTotal > 0 && (
+                <p className="-mt-4 mb-6 text-center text-13">
+                  <span className="text-emerald-600 dark:text-emerald-400">
+                    {fmt(sharedTotal)} shared
+                  </span>
+                  <span className="text-slate-400 dark:text-slate-500">
+                    {sharedLeft > 0.005
+                      ? ` · ${fmt(sharedLeft)} still owed to you`
+                      : ' · all settled'}
+                  </span>
+                </p>
+              )}
+
+              {/* One leg of a purchase filed under several categories. The
+                  hero shows THIS leg, because that is the row you tapped and
+                  the amount that hit this category - so the whole is said
+                  here rather than by inflating the figure above. */}
+              {legs.length > 1 && (
+                <p className="-mt-4 mb-6 text-center text-13 text-slate-400 dark:text-slate-500">
+                  Part of {fmt(wholePurchase)} across {legs.length} categories
+                </p>
+              )}
+
               {/* One list, not a card of rows.
 
                   This is the confirm sheet's stack, and deliberately: the two
@@ -480,6 +537,26 @@ export default function TxDetailSheet({ open, onClose, transaction: tx, accounts
                         {acct.name}
                       </span>
                     )}
+                    padded={false}
+                    isLast
+                  />
+                )}
+                {legs.length > 1 && (
+                  <DetailRow
+                    label="Split"
+                    value={legs.map(l => l.category).filter(Boolean).join(', ')}
+                    sub={`${fmt(wholePurchase)} in total`}
+                    padded={false}
+                    isLast
+                  />
+                )}
+                {shares.length > 0 && (
+                  <DetailRow
+                    label={shares.length === 1 ? 'Shared with' : `Shared with ${shares.length}`}
+                    value={shares.map(d => d.contact || d.name).filter(Boolean).join(', ')}
+                    sub={shares.every(isSettled)
+                      ? 'Settled up'
+                      : shares.map(d => `${d.contact || d.name} ${fmt(outstanding(d))}`).join(' · ')}
                     padded={false}
                     isLast
                   />
