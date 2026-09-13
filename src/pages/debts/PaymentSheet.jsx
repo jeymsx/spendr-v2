@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import db, { UNSYNCED } from '../../db/db'
-import { applyBalanceEffect } from '../../db/txHelpers'
+import { applyBalanceEffect, postRefund } from '../../db/txHelpers'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useCreditAvailMap } from '../../hooks/useCreditAvailMap'
 import { useToast } from '../../context/ToastContext'
@@ -48,6 +48,30 @@ export function PaymentSheet({ open, onClose, debt }) {
     if (!debt || paymentAmount <= 0 || !account) return
     setSaving(true)
     try {
+      /* Being repaid on a shared expense is a REFUND, not income.
+ 
+         You covered a 3,000 dinner and 2,250 of it was never yours. Booking
+         the repayment as an inflow left Dining overstated at 3,000 and
+         counted the money as earnings - both untrue, and both live in this
+         sheet before now. A refund against the purchase puts the category
+         back where it belongs and leaves income alone.
+ 
+         Only for a receivable that KNOWS its purchase. A debt someone typed
+         in by hand has no category to credit, so it stays an inflow. */
+      if (!isIOwe && debt.sourceTxId) {
+        await postRefund({
+          originalTxId: debt.sourceTxId,
+          amount:       paymentAmount,
+          toAccount:    account.name,
+          description:  `Repaid by ${debt.contact ?? debt.name}`,
+        })
+        const paid = Math.min((debt.amountPaid ?? 0) + paymentAmount, debt.amount ?? 0)
+        await db.debts.update(debt.id, { amountPaid: paid })
+        showToast('Payment recorded')
+        onClose()
+        return
+      }
+
       const now    = new Date()
       const txType = isIOwe ? 'expense' : 'inflow'
       const category = isIOwe ? 'Debt Payment' : 'Debt Collection'

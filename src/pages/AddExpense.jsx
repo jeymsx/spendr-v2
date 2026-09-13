@@ -20,6 +20,7 @@ import { useQuickPrefill } from '../hooks/useQuickPrefill'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
+import SharedExpenseRow from '../components/SharedExpenseRow'
 import { fmt } from '../lib/money'
 import Rail from '../components/ui/Rail'
 
@@ -88,6 +89,8 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
   const [installMonths,  setInstallMonths]  = useState(0) // 0 = not an installment
   const [overdraw,       setOverdraw]       = useState(null)
   const [customTerm,     setCustomTerm]     = useState(false)
+  const [owedStr,        setOwedStr]        = useState('')
+  const [owedContact,    setOwedContact]    = useState('')
 
   const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
@@ -228,6 +231,9 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
         dueOn = advanceNextDate(dueOn, 'monthly')
       }
 
+      const owedBack = parseMoney(owedStr)
+      const sharing = count === 1 && owedBack > 0
+
       await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
         await db.transactions.bulkAdd(rows)
         // One adjustment for the whole plan -- same net effect as applying each
@@ -238,8 +244,32 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
           account: account.name,
         })
       })
+      /* Outside the transaction above, and deliberately: it writes to a table
+         that block does not name, and widening the scope to include `debts`
+         would make the expense itself fail if the receivable did. The expense
+         is the fact; the receivable is a note to chase someone. */
+      if (sharing) {
+        await db.debts.add({
+          name:           owedContact.trim() || 'Shared expense',
+          contact:        owedContact.trim() || null,
+          amount:         owedBack,
+          amountPaid:     0,
+          type:           'owed_to_me',
+          dueDate:        null,
+          notes:          note || category.name,
+          createdAt:      updISO,
+          /* What makes settling this a refund rather than income. */
+          sourceTxId:     rows[0].txId,
+          sourceCategory: category.name,
+          synced:         UNSYNCED,
+          updatedAt:      updISO,
+        })
+      }
+
       if (templateData) await saveTemplate(templateData)
-      showToast(count > 1 ? `${count} payments scheduled` : 'Expense saved')
+      showToast(sharing ? `Expense saved · ${owedContact.trim() || 'someone'} owes you`
+              : count > 1 ? `${count} payments scheduled`
+              : 'Expense saved')
       if (onSaved) onSaved(); else navigate('/')
     } catch (e) {
       console.error('[AddExpense] save failed:', e)
@@ -345,6 +375,20 @@ export default function AddExpense({ onCancel, onSaved } = {}) {
             onClick={() => { setAcctError(false); setShowAcctSheet(true) }}
           />
         </div>
+
+        {/* Shared: the full amount still leaves, a receivable opens for their
+            share, and settling it refunds this purchase. Not offered on an
+            installment - a plan you are splitting with someone needs a
+            receivable per month, which is a different feature. */}
+        {!isInstallment && amount > 0 && (
+          <SharedExpenseRow
+            total={amount}
+            owedStr={owedStr}
+            onOwedChange={setOwedStr}
+            contact={owedContact}
+            onContactChange={setOwedContact}
+          />
+        )}
 
         {/* Installment — credit accounts only */}
         {isCredit && (
