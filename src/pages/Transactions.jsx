@@ -18,6 +18,8 @@ import { QuickTypeFilter } from './transactions/QuickFilter'
 import { FilterModal, TxRow, IconNoTransactions } from './transactions/FilterSheet'
 import Rail from '../components/ui/Rail'
 import SearchField from '../components/ui/SearchField'
+import SearchResults from './transactions/SearchResults'
+import { searchEverything, txMatches } from '../lib/search'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -87,7 +89,26 @@ export default function Transactions() {
   // The filter re-scans the whole history, so let React keep the input
   // responsive and apply results a tick behind rather than blocking every
   // keystroke on a full pass.
+  /* Only fetched once the query is long enough to search with, so the page
+     does not read four extra tables on every visit for a feature most visits
+     never use. */
+  const wantsWide = search.trim().length >= 2
+  const wideData = useLiveQuery(async () => (wantsWide ? {
+    recurring: await db.recurring.toArray(),
+    goals:     await db.goals.toArray(),
+    debts:     await db.debts.toArray(),
+  } : null), [wantsWide], null)
+
   const deferredSearch = useDeferredValue(search)
+
+  /* Everything that is not a transaction. The ledger below answers the same
+     query on its own. */
+  const wideHits = useMemo(() => searchEverything(deferredSearch, {
+    accounts, categories,
+    recurring: wideData?.recurring,
+    goals:     wideData?.goals,
+    debts:     wideData?.debts,
+  }), [deferredSearch, accounts, categories, wideData])
 
   const filteredTx = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase()
@@ -96,8 +117,10 @@ export default function Transactions() {
     const cutoff = scheduledCutoff()
     return (txAll ?? []).filter(tx => {
       if ((tx.date ?? '') > cutoff) return false
-      if (q && !(tx.description ?? '').toLowerCase().includes(q) &&
-               !(tx.category   ?? '').toLowerCase().includes(q)) return false
+      /* Was description-and-category only. An account name and the amount
+         are both things people search by, and neither used to work - see
+         lib/search.js. */
+      if (q && !txMatches(tx, q)) return false
       if (typeFilter !== 'all' && tx.type !== typeFilter) return false
       // Any of the picked accounts, on any of the three sides a transaction
       // can name one.
@@ -201,6 +224,8 @@ export default function Transactions() {
           onClear={() => setSearch('')}
         />
       </div>
+
+      <SearchResults groups={wideHits} />
 
       {/* ── Type filter (always visible) ── */}
       <QuickTypeFilter
