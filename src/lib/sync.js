@@ -201,6 +201,7 @@ export function recurringToRow(r, userId) {
     frequency:  r.frequency,
     next_date:  r.nextDate,
     active:     r.active,
+    split:      r.split ?? null,
     updated_at: r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -368,6 +369,7 @@ export function rowToRecurring(row) {
     frequency: row.frequency,
     nextDate:  row.next_date,
     active:    row.active,
+    split:     row.split ?? null,
     updatedAt: row.updated_at,
   }
 }
@@ -629,6 +631,10 @@ const OPTIONAL_COLS = {
      not blocking the ledger on a migration. */
   transactions: ['refund_of', 'split_id'],
   debts: ['source_tx_id', 'source_category'],
+  /* 010. Until it runs, a shared bill still posts and still charges the
+     right amount - it just stops opening the receivables on another
+     device. */
+  recurring: ['split'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,

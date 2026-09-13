@@ -9,7 +9,7 @@ import { deleteRecurringRemote } from '../lib/sync'
 import { moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { validateRecurring, saveRecurring } from '../lib/recurringWrite'
 import { FREQ_OPTIONS } from '../utils/recurring'
-import { IconChevronLeft } from '../components/icons'
+import { IconChevronLeft, IconChevronRight } from '../components/icons'
 import CategoryRail from '../components/CategoryRail'
 import AccountSelectRow from '../components/AccountSelectRow'
 import AccountPickerSheet from '../components/AccountPickerSheet'
@@ -19,7 +19,11 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import Card from '../components/ui/Card'
+import { parseMoney } from '../utils/moneyInput'
+import { fmt } from '../lib/money'
 import { fieldFrame } from '../components/ui/Field'
+import PeopleSplit, { EMPTY_SPLIT, resolveSplitValue } from '../components/PeopleSplit'
+import SubPage from '../components/SubPage'
 
 /**
  * Adding a bill, as a page rather than a sheet.
@@ -89,8 +93,17 @@ export default function RecurringForm() {
   const [frequency, setFrequency] = useState(DRAFT_DEFAULTS.frequency)
   const [nextDate, setNextDate] = useState(todayStr)
   const [active, setActive] = useState(DRAFT_DEFAULTS.active)
+  const [split, setSplit] = useState(/** @type {any} */ (null))
+  const [dividing, setDividing] = useState(false)
   const [errors, setErrors] = useState({})
   const [saving, setSaving] = useState(false)
+
+  const amount = parseMoney(amountStr)
+  const shared = useMemo(() => resolveSplitValue(split, amount), [split, amount])
+  const shareSummary = shared?.owed.length
+    ? `${shared.owed.length} ${shared.owed.length === 1 ? 'person' : 'people'}`
+      + ` · ${fmt(shared.owed.reduce((s, p) => s + p.amount, 0))} back`
+    : null
   const [deleting, setDeleting] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const [showAcctPick, setShowAcctPick] = useState(false)
@@ -108,6 +121,7 @@ export default function RecurringForm() {
     setFrequency(editRec.frequency ?? 'monthly')
     setNextDate(editRec.nextDate ? editRec.nextDate.slice(0, 10) : todayStr())
     setActive(editRec.active !== false)
+    setSplit(editRec.split ?? null)
   }, [isEdit, editRec])
 
   /* The category and account are objects, so they can only be resolved once
@@ -133,7 +147,7 @@ export default function RecurringForm() {
   const back = () => navigate(-1)
 
   async function handleSave() {
-    const draft = { name, amountStr, category, account, frequency, nextDate, active }
+    const draft = { name, amountStr, category, account, frequency, nextDate, active, split }
     const errs = validateRecurring(draft)
     if (Object.keys(errs).length) { setErrors(errs); return }
 
@@ -169,6 +183,30 @@ export default function RecurringForm() {
   /* Still loading the record we are supposed to be editing. The header is
      drawn anyway so Back works while the row arrives. */
   const waiting = isEdit && recs !== null && !editRec
+
+  /* Rendered INSTEAD of the form, not over it - the same reason the expense
+     form does it. A full-screen overlay has to paint its own background, and
+     in dark mode the app's is a gradient on <html> with a transparent body,
+     so a slab of flat colour reads as the wrong background rather than as a
+     new screen. Swapping the tree keeps every draft field alive in this
+     component's state. */
+  if (dividing) {
+    return (
+      <SubPage title="Shared with" onBack={() => setDividing(false)}>
+        <div className="px-4">
+          <p className="text-12 text-slate-400 dark:text-slate-500 mb-3">
+            Entered once. Every time this bill posts, their shares become debts
+            they owe you.
+          </p>
+          <PeopleSplit
+            total={amount}
+            value={split ?? EMPTY_SPLIT}
+            onChange={setSplit}
+          />
+        </div>
+      </SubPage>
+    )
+  }
 
   return (
     <div className="flex flex-col bg-transparent pb-6">
@@ -286,6 +324,29 @@ export default function RecurringForm() {
                 onSelect={cat => { setCategory(cat); setErrors(p => ({ ...p, category: null })) }}
               />
             </div>
+
+            {/* One row, and only once there is an amount to divide.
+ 
+                A subscription split between friends is the case this exists
+                for: the division is entered once and re-resolved every time
+                the bill posts, so a price rise needs nothing re-entered. */}
+            {amount > 0 && (
+              <div>
+                <SectionLabel>Shared with</SectionLabel>
+                <button
+                  type="button"
+                  onClick={() => setDividing(true)}
+                  className={`${fieldFrame()} w-full text-left`}
+                >
+                  <span className="flex-1 min-w-0 text-sm font-medium text-slate-800 dark:text-white truncate">
+                    {shareSummary ?? 'Nobody, it is all yours'}
+                  </span>
+                  <span className="shrink-0 text-slate-300 dark:text-slate-600" aria-hidden="true">
+                    <IconChevronRight />
+                  </span>
+                </button>
+              </div>
+            )}
 
             {/* ── Account ── */}
             <div>

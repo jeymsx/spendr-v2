@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { distribute, resolveSplit, SPLIT_MODES, MODE_FIELD } from './splitModes'
+import { distribute, resolveSplit, resolveBillShares, SPLIT_MODES, MODE_FIELD } from './splitModes'
 
 /**
  * The arithmetic behind the five split modes.
@@ -194,5 +194,55 @@ describe('the mode table', () => {
     const fields = /** @type {Record<string, any>} */ (MODE_FIELD)
     for (const m of SPLIT_MODES) expect(fields[m.value]).toBeTruthy()
     expect(Object.keys(MODE_FIELD).sort()).toEqual(SPLIT_MODES.map(m => m.value).sort())
+  })
+})
+
+describe('resolveBillShares', () => {
+  /**
+   * The iCloud case: one charge a month, three people, different shares.
+   * Stored as what was typed, so it divides THIS month's amount.
+   */
+  const bill = {
+    name: 'iCloud', amount: 699, category: 'Bills',
+    split: {
+      mode: 'shares',
+      you: { included: true, value: '2' },
+      people: [{ name: 'Gelo', value: '1' }, { name: 'Mika', value: '1' }],
+    },
+  }
+
+  it('divides the amount it is charging now, not the one it was set up with', () => {
+    const at699 = resolveBillShares(bill, 699)
+    expect(at699).toEqual([{ name: 'Gelo', amount: 174.75 }, { name: 'Mika', amount: 174.75 }])
+
+    // Apple raises the price; nothing about the bill is re-entered.
+    const at799 = resolveBillShares(bill, 799)
+    expect(at799[0].amount).toBe(199.75)
+  })
+
+  it('is empty for a bill nobody shares, so the caller needs no branch', () => {
+    expect(resolveBillShares({ name: 'Netflix', amount: 549 }, 549)).toEqual([])
+    expect(resolveBillShares({ split: { mode: 'equal', people: [] } }, 549)).toEqual([])
+  })
+
+  it('leaves out anyone who ends up owing nothing', () => {
+    const r = resolveBillShares({
+      split: {
+        mode: 'shares', you: { included: true, value: '1' },
+        people: [{ name: 'Gelo', value: '1' }, { name: 'Nobody', value: '0' }],
+      },
+    }, 600)
+    expect(r.map(p => p.name)).toEqual(['Gelo'])
+  })
+
+  it('leaves out a person with no name, rather than opening a nameless debt', () => {
+    const r = resolveBillShares({
+      split: { mode: 'equal', you: { included: true }, people: [{ name: '  ' }] },
+    }, 600)
+    expect(r).toEqual([])
+  })
+
+  it('refuses to divide nothing', () => {
+    expect(resolveBillShares(bill, 0)).toEqual([])
   })
 })

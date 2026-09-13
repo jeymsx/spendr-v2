@@ -1,5 +1,6 @@
 import db, { UNSYNCED } from './db'
 import { advanceNextDate } from '../utils/recurring'
+import { resolveBillShares } from '../lib/splitModes'
 
 /** Thrown when a spend would take a non-credit account below zero. */
 export class OverdrawError extends Error {
@@ -142,7 +143,40 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
     await db.recurring.update(rec.id, { nextDate: newNextDate })
   })
 
-  return { nextDate: newNextDate, tx: addedId ? await db.transactions.get(addedId) : null }
+  const tx = addedId ? await db.transactions.get(addedId) : null
+
+  /* A bill that is shared opens its receivables the moment it posts.
+ 
+     This is the case that made bills need splits at all: a subscription is
+     the same division every month, and re-entering it twelve times a year is
+     a chore with a UI on it. The split is stored as what was TYPED - a mode
+     and some values - so it re-resolves against this month's amount rather
+     than against whatever the price was when it was set up.
+ 
+     Outside the transaction above for the same reason AddExpense does it:
+     that block does not name `debts`, and widening its scope would make the
+     charge itself fail if a receivable did. The charge is the fact. */
+  if (tx?.txId) {
+    const owed = resolveBillShares(rec, rec.amount)
+    for (const person of owed) {
+      await db.debts.add(/** @type {any} */ ({
+        name:           person.name,
+        contact:        person.name,
+        amount:         person.amount,
+        amountPaid:     0,
+        type:           'owed_to_me',
+        dueDate:        null,
+        notes:          rec.name,
+        createdAt:      nowISO,
+        sourceTxId:     tx.txId,
+        sourceCategory: rec.category,
+        synced:         UNSYNCED,
+        updatedAt:      nowISO,
+      }))
+    }
+  }
+
+  return { nextDate: newNextDate, tx }
 }
 
 /**

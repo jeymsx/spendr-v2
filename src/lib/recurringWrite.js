@@ -39,7 +39,7 @@ export function validateRecurring({ name, amountStr, category, account, nextDate
  *
  * @param {Record<string, any>} input
  */
-export function toRecurringRow({ name, amountStr, category, account, frequency, nextDate, active }) {
+export function toRecurringRow({ name, amountStr, category, account, frequency, nextDate, active, split }) {
   return {
     name: name.trim(),
     amount: parseMoney(amountStr),
@@ -48,6 +48,11 @@ export function toRecurringRow({ name, amountStr, category, account, frequency, 
     frequency,
     nextDate,
     active,
+    /* A standing division, stored as TYPED rather than resolved, so it
+       re-divides whatever the bill charges this month. null rather than an
+       empty object for a bill nobody shares - the write path checks
+       `people.length` and an empty shape would be a lie about intent. */
+    split: split?.people?.length ? split : null,
   }
 }
 

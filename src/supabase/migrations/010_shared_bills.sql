@@ -1,0 +1,36 @@
+-- 010 — A bill that several people share.
+--
+-- One nullable jsonb column. No table is created, no row is rewritten, and
+-- a database that has not run this still syncs - the client drops the column
+-- and retries (OPTIONAL_COLS in src/lib/sync.js).
+--
+-- ── What it holds, and why it is not the answer ─────────────────────────
+--
+-- The division as it was TYPED, not as it worked out:
+--
+--   { "mode": "shares",
+--     "you":    { "included": true, "value": "2" },
+--     "people": [ { "name": "Gelo", "value": "1" },
+--                 { "name": "Mika", "value": "1" } ] }
+--
+-- Storing the resolved pesos instead would be simpler and wrong. A
+-- subscription is the case this exists for, and subscriptions change price:
+-- Apple moves iCloud from 699 to 799 and a stored "174.75 each" is now a lie
+-- that nobody will think to correct. Stored as a mode and some values, the
+-- same bill re-divides the new amount on its own.
+--
+-- jsonb rather than a join table, for the reason 004_goals.sql gives about a
+-- goal's accounts: nothing queries a share on its own, there are two or three
+-- of them, and a table would bring orphan rows, a second thing to sync, and
+-- cascades to keep in step on every rename.
+--
+-- ── What it does when the bill posts ────────────────────────────────────
+--
+-- postRecurringCharge resolves it against that month's amount and opens one
+-- receivable per person, each carrying `source_tx_id` and `source_category`
+-- from 009. Settling one is then a refund against the category the money left
+-- from, not an inflow - so a 699 bill shared three ways costs you 349.50 in
+-- Bills once everyone has paid, and none of it is counted as income.
+
+alter table public.recurring
+  add column if not exists split jsonb;

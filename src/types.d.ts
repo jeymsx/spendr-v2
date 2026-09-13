@@ -143,6 +143,10 @@ interface Recurring {
   frequency: string
   nextDate: string
   active?: boolean
+  /** A standing division between people, as TYPED rather than resolved -
+   *  { mode, you, people } - so it re-resolves against whatever the bill
+   *  charges this month. See lib/splitModes.resolveBillShares. */
+  split?: Record<string, any> | null
   [key: string]: any
 }
 

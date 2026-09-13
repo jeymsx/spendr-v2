@@ -188,3 +188,46 @@ export const MODE_FIELD = {
   shares:  { kind: 'integer', suffix: '×', placeholder: '1' },
   adjust:  { kind: 'money',   prefix: '+₱', placeholder: '0.00' },
 }
+
+/**
+ * Who owes what on a shared bill, this month.
+ *
+ * Lives here rather than in the component so the write path does not have to
+ * import a React file. Takes the stored split - a mode and some typed values -
+ * and resolves it against the amount the bill is charging NOW, which is the
+ * whole reason the split is stored that way: a subscription whose price goes
+ * up must not keep dividing last year's figure.
+ *
+ * Returns [] for a bill that is not shared, so the caller needs no branch.
+ *
+ * @param {Record<string, any>} rec
+ * @param {number} total
+ * @returns {Array<{name: string, amount: number}>}
+ */
+export function resolveBillShares(rec, total) {
+  const split = rec?.split
+  const people = split?.people ?? []
+  if (!people.length || !(total > 0)) return []
+
+  /** @param {any} v */
+  const num = (v) => {
+    const n = parseFloat(String(v ?? '').replace(/[^0-9.-]/g, ''))
+    return Number.isFinite(n) ? n : 0
+  }
+
+  const { shares } = resolveSplit({
+    mode: split.mode ?? 'equal',
+    total,
+    participants: [
+      { id: 'you', included: split.you?.included !== false, value: num(split.you?.value) },
+      ...people.map((/** @type {any} */ p, /** @type {number} */ i) => ({
+        id: `p${i}`, included: p.included !== false, value: num(p.value),
+      })),
+    ],
+  })
+
+  return people
+    .map((/** @type {any} */ p, /** @type {number} */ i) =>
+      ({ name: String(p.name ?? '').trim(), amount: shares[`p${i}`] ?? 0 }))
+    .filter((/** @type {{name: string, amount: number}} */ p) => p.name && p.amount > 0)
+}

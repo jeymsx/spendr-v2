@@ -182,10 +182,31 @@ describe('categories, debts, bills and templates', () => {
     expect(rowToDebt(debtToRow(local, UID))).toEqual(local)
   })
 
+  /**
+   * A shared subscription. The split crosses as what was TYPED - a mode and
+   * some values - because a bill that changes price has to re-divide the new
+   * amount rather than keep last year's pesos. See 010.
+   */
+  it('round-trips a bill that several people share', () => {
+    /** @type {Recurring} */
+    const local = {
+      name: 'iCloud', amount: 699, category: 'Bills', account: 'GCash',
+      frequency: 'monthly', nextDate: '2026-10-05', active: true, updatedAt: 'b',
+      split: {
+        mode: 'shares',
+        you: { included: true, value: '2' },
+        people: [{ name: 'Gelo', value: '1' }],
+      },
+    }
+    expect(rowToRecurring(recurringToRow(local, UID))).toEqual(local)
+  })
+
   it('round-trips a bill', () => {
+    /** @type {Recurring} */
     const local = {
       name: 'Netflix', amount: 549, category: 'Bills', account: 'GCash',
       frequency: 'monthly', nextDate: '2026-10-05', active: true, updatedAt: 'b',
+      split: null,
     }
     expect(rowToRecurring(recurringToRow(local, UID))).toEqual(local)
   })
