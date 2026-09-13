@@ -4,7 +4,6 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { postRecurringCharge, deleteTxGroup } from '../db/txHelpers'
 import { useToast } from '../context/ToastContext'
-import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
@@ -117,7 +116,6 @@ export default function RecurringDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const { user } = useAuth()
 
   const recId = Number(id)
 
@@ -264,7 +262,7 @@ export default function RecurringDetail() {
     setDeleting(true)
     try {
       await db.recurring.delete(recId)
-      await deleteRecurringRemote(user?.id, recId)
+      await deleteRecurringRemote(recId, rec?.name)
       showToast('Bill deleted')
       back()
     } catch (e) {

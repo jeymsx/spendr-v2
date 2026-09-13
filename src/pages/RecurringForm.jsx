@@ -3,7 +3,6 @@ import { useNavigate, useParams } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
-import { useAuth } from '../context/AuthContext'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import { deleteRecurringRemote } from '../lib/sync'
 import { moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -73,7 +72,6 @@ export default function RecurringForm() {
   const navigate = useNavigate()
   const { id } = useParams()
   const { showToast } = useToast()
-  const { user } = useAuth()
 
   const isEdit = id != null
   const recs = useLiveQuery(() => db.recurring.toArray(), [], null)
@@ -168,7 +166,7 @@ export default function RecurringForm() {
     setDeleting(true)
     try {
       await db.recurring.delete(editRec.id)
-      await deleteRecurringRemote(user?.id, editRec.id)
+      await deleteRecurringRemote(editRec.id, editRec.name)
       showToast('Bill deleted')
       /* Back twice: the detail page for a bill that no longer exists is
          behind this one, and returning to it would land on an empty record. */

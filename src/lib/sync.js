@@ -780,10 +780,25 @@ export async function syncFromSupabase(userId) {
       }
       return null
     }, pending)
+  /* Matched on NAME alone. It used to require the amount to match too, and
+     that is what duplicated a bill every time one was edited:
+
+       remote iCloud 599, local iCloud edited to 699
+       -> local_id does not resolve (ids shift after a JSON restore)
+       -> falls back here, 599 !== 699, no match
+       -> the remote row is added as a SECOND bill
+
+     and the copy could not be deleted, because the remote delete is queued by
+     local_id and the remote row's id is the stale one. Every refresh brought
+     it back.
+
+     Amount is the field most likely to change on a bill and the worst
+     possible thing to identify one by. Two bills sharing a name is far rarer,
+     and merging those is recoverable in a way that a resurrecting duplicate
+     is not. */
   await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
-    row => row.name
-      ? db.recurring.where('name').equals(row.name).and(r => r.amount === row.amount).first()
-      : null, pending)
+    row => (row.name ? db.recurring.where('name').equals(row.name).first() : null),
+    pending)
   await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending)
   await optionalSync('goals pull', () =>
     pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending))
@@ -992,11 +1007,28 @@ export async function deleteDebtRemote(_userId, debtId) {
 }
 
 /**
- * @param {string} _userId
- * @param {number} recurringId
+ * Bills push on local_id but pull matches on NAME, so queue both - the same
+ * shape deleteTemplateRemote uses, and for the same reason.
+ *
+ * By id alone was not enough: a local_id shifts whenever the database is
+ * cleared and re-filled (a JSON restore does exactly that, since Dexie's
+ * auto-increment does not reset), and a delete aimed at an id the remote row
+ * no longer has matches nothing. The row survives, the next pull re-adds it,
+ * and deleting it again does nothing either.
+ *
+ * Deleting one row too many is repaired by the push that follows, which
+ * re-uploads every surviving local bill.
+ *
+ * `queue` is injectable so this can be tested without a database - the two
+ * calls it makes ARE the behaviour, and they are what went wrong.
+ *
+ * @param {number|null} localId
+ * @param {string} [name]
+ * @param {(table: string, match: Record<string, any>) => any} [queue]
  */
-export async function deleteRecurringRemote(_userId, recurringId) {
-  await queueRemoteDelete('recurring', { local_id: recurringId })
+export async function deleteRecurringRemote(localId, name, queue = queueRemoteDelete) {
+  if (localId != null) await queue('recurring', { local_id: localId })
+  if (name)            await queue('recurring', { name })
 }
 
 /** Accounts are unique on (user_id, name).

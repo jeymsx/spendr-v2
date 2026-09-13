@@ -10,6 +10,7 @@ import {
   badgeToRow,
   isPendingDelete,
   isLocalIdConflict,
+  deleteRecurringRemote,
 } from './sync'
 import { UNSYNCED, SYNCED } from '../db/db'
 
@@ -350,5 +351,50 @@ describe('isLocalIdConflict', () => {
     expect(isLocalIdConflict(`could not find the 'interest_rate' column`)).toBe(false)
     expect(isLocalIdConflict('')).toBe(false)
     expect(isLocalIdConflict(undefined)).toBe(false)
+  })
+})
+
+/**
+ * The bill that came back from the dead.
+ *
+ * Reported from a phone: two iCloud bills, one at the old 599 and one at the
+ * edited 699, and deleting the 599 brought it straight back on refresh.
+ *
+ * Two faults, and it needed both to happen:
+ *
+ *   The pull matched a remote bill to a local one on NAME AND AMOUNT. Edit
+ *   the amount and the match breaks, so the remote row is added as a second
+ *   bill rather than recognised as the same one.
+ *
+ *   The remote delete was queued by local_id alone. Local ids shift whenever
+ *   the database is cleared and re-filled - a JSON restore does exactly that,
+ *   since Dexie's auto-increment does not reset - so the delete was aimed at
+ *   an id the remote row no longer had. It matched nothing, the row survived,
+ *   and the next pull put it back.
+ */
+describe('deleteRecurringRemote', () => {
+  it('queues a delete by id AND by name', async () => {
+    /** @type {any[]} */
+    const queued = []
+    await deleteRecurringRemote(11, 'iCloud Subscription', (t, m) => queued.push({ t, m }))
+    expect(queued).toEqual([
+      { t: 'recurring', m: { local_id: 11 } },
+      { t: 'recurring', m: { name: 'iCloud Subscription' } },
+    ])
+  })
+
+  /** A stale id must not stop the name delete from going out. */
+  it('still queues the name when there is no id', async () => {
+    /** @type {any[]} */
+    const queued = []
+    await deleteRecurringRemote(null, 'iCloud Subscription', (t, m) => queued.push({ t, m }))
+    expect(queued).toEqual([{ t: 'recurring', m: { name: 'iCloud Subscription' } }])
+  })
+
+  it('queues nothing it cannot identify', async () => {
+    /** @type {any[]} */
+    const queued = []
+    await deleteRecurringRemote(null, '', (t, m) => queued.push({ t, m }))
+    expect(queued).toEqual([])
   })
 })

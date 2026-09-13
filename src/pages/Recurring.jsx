@@ -6,7 +6,6 @@ import { useToast } from '../context/ToastContext'
 import { moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
-import { useAuth } from '../context/AuthContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import { IconChevronRight, IconChevronLeft, IconPlus } from '../components/icons'
 import SegTabs from '../components/SegTabs'
@@ -253,7 +252,6 @@ function IconAllClear() {
  */
 export function RecurringFormSheet({ open, onClose, editRec, categories, accounts, showDelete = true }) {
   const { showToast } = useToast()
-  const { user } = useAuth()
   const [name,         setName]         = useState('')
   const [amountStr,    setAmountStr]    = useState('')
   const [category,     setCategory]     = useState(null)
@@ -323,7 +321,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     setDeleting(true)
     try {
       await db.recurring.delete(editRec.id)
-      await deleteRecurringRemote(user?.id, editRec.id)
+      await deleteRecurringRemote(editRec.id, editRec.name)
       onClose()
     } catch (e) {
       console.error('[RecurringForm] delete failed:', e)
