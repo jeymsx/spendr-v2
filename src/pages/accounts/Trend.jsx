@@ -93,6 +93,7 @@ export function TrendRangeChips({ range, onRange, ranges = TREND_RANGES }) {
  * @param {string} [props.emptyBody]
  * @param {string|null} [props.baselineKey]   a second, dashed series
  * @param {string} [props.baselineLabel]      its name in the tooltip
+ * @param {string} [props.padClass]  the chart's own side padding
  */
 export function BalanceTrend({
   data, color, isCredit, rangeKey, rangeTitle,
@@ -105,6 +106,11 @@ export function BalanceTrend({
   emptyBody = isCredit ? 'No charges or payments' : 'Nothing in or out of this account',
   baselineKey = null,
   baselineLabel = 'Usual',
+  /* Replaced, not appended - `cx` resolves no conflicts, so a caller that
+     could only ADD a class could never take this one off. The account page
+     sits the chart straight on the page and wants the page gutter; the
+     category page sits it inside a card that has already paid for one. */
+  padClass = 'px-5',
 }) {
   const values = data.map(d => d.value)
   const min = Math.min(...values)
@@ -122,7 +128,7 @@ export function BalanceTrend({
     // shifts the page. Same margins too, so the dashed line starts and ends
     // exactly where a real line would.
     return (
-      <div className="px-5">
+      <div className={padClass}>
         <div className="h-[132px] flex flex-col items-center justify-center text-center">
           <IconFlatChart />
           <p className="text-[13px] font-medium text-slate-500 dark:text-slate-400 mt-3">
@@ -144,7 +150,7 @@ export function BalanceTrend({
   // carries the domain. `hide` renders nothing and reserves no space, which
   // is also what lets the line sit centred in the full width.
   return (
-    <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
+    <div className={`[&_*]:outline-none [&_*]:focus:outline-none ${padClass}`}>
       <ResponsiveContainer width="100%" height={132}>
         <LineChart key={rangeKey} data={data} margin={{ top: 10, right: 6, left: 6, bottom: 10 }}>
           <XAxis dataKey="day" hide />

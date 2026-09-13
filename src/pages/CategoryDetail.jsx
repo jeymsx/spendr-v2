@@ -208,42 +208,54 @@ export default function CategoryDetail() {
               The account page's chart, chips below it for the same reason:
               the reading order is "here is the shape, and here is the span
               it covers". ── */}
-          <section className="mt-7">
-            <div className="flex items-start justify-between px-5">
-              <SectionLabel>{RANGE_TITLE[range.key]}</SectionLabel>
-              <div className="text-right shrink-0">
-                <p className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-                  {fmtCompact(rangeTotal)}
-                </p>
-                {/* The dashed line, named. An unexplained reference on a
-                    chart is a mystery the reader has to solve before they
-                    can use it, and the same slate this line is drawn in is
-                    what ties the two together. */}
-                {usualTotal != null && (
-                  <p className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500 mt-0.5">
-                    usually {fmtCompact(usualTotal)}
+          <section className="px-5 mt-7">
+            {/* In a card, where the account page leaves its chart on the
+                page. Both readings are defensible there and only one is here:
+                that page opens on a card face, so the chart below it is
+                clearly part of the same object, while this one opens on a
+                card of its own - and a chart floating under a card reads as
+                having come loose from it.
+
+                The card owns the side padding, so the chart is told not to
+                add the page gutter it would otherwise assume. */}
+            <Card padding="md">
+              <div className="flex items-start justify-between">
+                <SectionLabel inset="none" gap="none">{RANGE_TITLE[range.key]}</SectionLabel>
+                <div className="text-right shrink-0">
+                  <p className="text-[11px] font-semibold tabular-nums text-slate-500 dark:text-slate-400">
+                    {fmtCompact(rangeTotal)}
                   </p>
-                )}
+                  {/* The dashed line, named. An unexplained reference on a
+                      chart is a mystery the reader has to solve before they
+                      can use it, and the same slate this line is drawn in is
+                      what ties the two together. */}
+                  {usualTotal != null && (
+                    <p className="text-[10px] tabular-nums text-slate-400 dark:text-slate-500 mt-0.5">
+                      usually {fmtCompact(usualTotal)}
+                    </p>
+                  )}
+                </div>
               </div>
-            </div>
-            <BalanceTrend
-              data={trend}
-              color={cat?.color ?? '#64748b'}
-              rangeKey={range.key}
-              rangeTitle={RANGE_TITLE[range.key]}
-              valueLabel={verb}
-              emptyTitle={`Nothing · ${RANGE_TITLE[range.key].toLowerCase()}`}
-              emptyBody={isInflow ? 'No income in this category' : 'No spending in this category'}
-              baselineKey={usualTotal != null ? 'usual' : null}
-              baselineLabel="Usually"
-            />
-            <div className="mt-2.5">
-              <TrendRangeChips
-                range={range.key}
-                onRange={setTrendRange}
-                ranges={SPEND_TREND_RANGES}
+              <BalanceTrend
+                data={trend}
+                color={cat?.color ?? '#64748b'}
+                rangeKey={range.key}
+                rangeTitle={RANGE_TITLE[range.key]}
+                valueLabel={verb}
+                emptyTitle={`Nothing · ${RANGE_TITLE[range.key].toLowerCase()}`}
+                emptyBody={isInflow ? 'No income in this category' : 'No spending in this category'}
+                baselineKey={usualTotal != null ? 'usual' : null}
+                baselineLabel="Usually"
+                padClass=""
               />
-            </div>
+              <div className="mt-2.5">
+                <TrendRangeChips
+                  range={range.key}
+                  onRange={setTrendRange}
+                  ranges={SPEND_TREND_RANGES}
+                />
+              </div>
+            </Card>
           </section>
 
           {/* ── The rows themselves ─────────────────────────────────────── */}
