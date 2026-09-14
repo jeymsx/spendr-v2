@@ -5,6 +5,7 @@ import Card from './ui/Card'
 import Divider from './ui/Divider'
 import EmptyState from './ui/EmptyState'
 import { fmt } from '../lib/money'
+import { isoToDateInput } from '../utils/txDate'
 
 function fmtTime(isoStr) {
   if (!isoStr) return ''
@@ -88,7 +89,8 @@ export default function CalendarView({
   const dayMap = useMemo(() => {
     const map = {}
     transactions.forEach(tx => {
-      const key = tx.date?.slice(0, 10)
+      // Local, not UTC - see groupByDate in pages/transactions/shared.js.
+      const key = isoToDateInput(tx.date)
       if (!key) return
       if (!map[key]) map[key] = []
       map[key].push(tx)

@@ -1,4 +1,5 @@
 import { amountDisplay, TONE_CLASS } from '../../lib/txMoney'
+import { isoToDateInput } from '../../utils/txDate'
 
 /** "12:30 PM". The time under a transaction's description. */
 export function fmtTime(isoStr) {
@@ -42,10 +43,24 @@ export function inDateRange(tx, range, customFrom, customTo) {
 
 // ── Grouping ───────────────────────────────────────────────────────────────────
 
+/**
+ * One bucket per calendar day, in the reader's own timezone.
+ *
+ * The key was `tx.date.slice(0, 10)`, which is the UTC date. A transaction at
+ * 07:55 in Manila is 23:55 the previous day in UTC, so it grouped under
+ * yesterday and the heading said so - while a transaction logged an hour
+ * later, whose UTC date happens to agree, sat correctly under Today. Two rows
+ * from the same morning, filed a day apart.
+ *
+ * fmtGroupDate already reads the key as local midnight, so it was only ever
+ * the key that was on the wrong clock.
+ *
+ * @param {Array<Record<string, any>>} txs
+ */
 export function groupByDate(txs) {
   const map = new Map()
   txs.forEach(tx => {
-    const key = tx.date?.slice(0, 10) ?? 'unknown'
+    const key = isoToDateInput(tx.date) || 'unknown'
     if (!map.has(key)) map.set(key, [])
     map.get(key).push(tx)
   })
@@ -86,5 +101,5 @@ export const DATE_OPTS = [
  */
 export function txRowTone(tx, ctx) {
   const { sign, magnitude, tone } = amountDisplay(tx, ctx)
-  return { sign, magnitude, cls: TONE_CLASS[tone] }
+  return { sign, magnitude, cls: TONE_CLASS[/** @type {keyof typeof TONE_CLASS} */ (tone)] }
 }
