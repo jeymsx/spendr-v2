@@ -1,4 +1,5 @@
 import { allocateGoals } from './goals'
+import { isoToDateInput } from '../utils/txDate'
 
 /**
  * What the app is willing to call an achievement.
@@ -85,12 +86,20 @@ function ymd(d) {
   return `${y}-${m}-${day}`
 }
 
-/** The 'YYYY-MM' a stored date string belongs to.
+/** The 'YYYY-MM' a stored date belongs to, in the reader's timezone.
  *
- * @param {string} iso  an ISO date; the month is its first seven characters
+ * Was `iso.slice(0, 7)`, which is the UTC month. A transaction at 07:55 on
+ * the 1st in Manila is 23:55 on the LAST of the previous month in UTC, so it
+ * counted toward the wrong month - which for a badge that asks "was every
+ * month green" is a silent wrong answer rather than a visible one.
+ *
+ * Same mistake as the day grouping on the transactions list; see
+ * utils/txDate.js.
+ *
+ * @param {string} iso
  */
 function monthKey(iso) {
-  return String(iso ?? '').slice(0, 7)
+  return isoToDateInput(iso).slice(0, 7)
 }
 
 /** Months strictly before the one `today` falls in. A month still running has

@@ -7,6 +7,7 @@ import TxDetailSheet from '../../components/TxDetailSheet'
 import { WebPageHeader, WebPanel, WebEmpty, money, rowTone } from '../components/WebPanel'
 import WebSelect from '../components/WebSelect'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { isoToDateInput } from '../../utils/txDate'
 
 const PAGE = 100
 
@@ -106,7 +107,8 @@ export default function WebTransactions() {
   // you mostly want "show me August".
   const months = useMemo(() => {
     const set = new Set()
-    posted.forEach(t => { if (t.date) set.add(t.date.slice(0, 7)) })
+    // Local month, not UTC - see monthKey in lib/badges.js.
+    posted.forEach(t => { if (t.date) set.add(isoToDateInput(t.date).slice(0, 7)) })
     return [...set].sort().reverse()
   }, [posted])
 

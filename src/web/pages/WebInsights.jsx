@@ -8,6 +8,7 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { isoToDateInput } from '../../utils/txDate'
 
 const RANGES = [
   { key: '1m',  label: 'This month' },
@@ -117,7 +118,8 @@ export default function WebInsights() {
   const monthly = useMemo(() => {
     const m = {}
     inWindow.forEach(t => {
-      const key = (t.date ?? '').slice(0, 7)
+      // Local month, not UTC - see monthKey in lib/badges.js.
+      const key = isoToDateInput(t.date).slice(0, 7)
       if (!key) return
       if (!m[key]) m[key] = { key, expense: 0, income: 0 }
       if (t.type === 'expense') m[key].expense += t.amount ?? 0
