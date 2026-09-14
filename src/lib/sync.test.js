@@ -11,6 +11,7 @@ import {
   isPendingDelete,
   isLocalIdConflict,
   deleteRecurringRemote,
+  fetchAllRows,
 } from './sync'
 import { UNSYNCED, SYNCED } from '../db/db'
 
@@ -468,5 +469,106 @@ describe('syncId: the stable identity', () => {
     const local = { id: 3, name: 'BPI', syncId: 'mine' }
     expect({ ...local, ...rowToAccount({ name: 'BPI' }) }.syncId).toBe('mine')
     expect({ ...local, ...rowToAccount({ name: 'BPI', sync_id: 'theirs' }) }.syncId).toBe('theirs')
+  })
+})
+
+/**
+ * fetchAllRows — the cap nobody sees.
+ *
+ * PostgREST limits how many rows one response may contain (Supabase ships
+ * that at 1,000) and does NOT fail when it truncates: it returns the first
+ * page and a 200. So `.select('*').eq('user_id', …)` reads as "all of them",
+ * is not, and behaves perfectly until the table crosses the cap.
+ *
+ * It did. A ledger of 1,036 transactions synced the first 1,000, and the 36
+ * left behind were the newest - signing in on a clean device restored
+ * everything up to early September and silently dropped the rest.
+ *
+ * The loop is the whole fix, so this is where it gets pinned. Every case is
+ * checked against a fake server with a configurable cap, because the one
+ * thing a real Supabase cannot do in a unit test is be small.
+ */
+describe('fetchAllRows', () => {
+  /**
+   * A server holding `total` rows that will never return more than `cap` of
+   * them at once - which is exactly what PostgREST does.
+   *
+   * @param {number} total @param {number} cap
+   */
+  function fakeServer(total, cap = 1000) {
+    /** @type {number[][]} */
+    const calls = []
+    const rows = Array.from({ length: total }, (_, i) => ({ id: i + 1 }))
+    const client = {
+      from: () => ({
+        select: () => ({
+          eq: () => ({
+            order: () => ({
+              /** @param {number} a @param {number} b */
+              range: async (a, b) => {
+                calls.push([a, b])
+                const want = Math.min(b - a + 1, cap)
+                return { data: rows.slice(a, a + want), error: /** @type {any} */ (null) }
+              },
+            }),
+          }),
+        }),
+      }),
+    }
+    return { client, calls }
+  }
+
+  it('brings back a table that fits in one page', async () => {
+    const { client, calls } = fakeServer(120)
+    const out = await fetchAllRows('transactions', 'u1', client)
+    expect(out).toHaveLength(120)
+    expect(calls).toHaveLength(2)   // the page, then the empty one that ends it
+  })
+
+  /** The exact shape of the bug: 1,036 rows behind a 1,000 cap. */
+  it('brings back every row past the cap', async () => {
+    const { client } = fakeServer(1036)
+    const out = await fetchAllRows('transactions', 'u1', client)
+    expect(out).toHaveLength(1036)
+    expect(out[1035].id).toBe(1036)
+  })
+
+  it('asks for the next window from where the last one ended', async () => {
+    const { client, calls } = fakeServer(1036)
+    await fetchAllRows('transactions', 'u1', client)
+    expect(calls[0]).toEqual([0, 999])
+    expect(calls[1]).toEqual([1000, 1999])
+  })
+
+  /**
+   * A project configured below the page size. Stepping by PAGE would stop
+   * after one short page and call 100 rows the whole table.
+   */
+  it('survives a server whose cap is smaller than the page it was asked for', async () => {
+    const { client } = fakeServer(450, 100)
+    const out = await fetchAllRows('transactions', 'u1', client)
+    expect(out).toHaveLength(450)
+  })
+
+  it('lands exactly on a multiple of the cap without losing or repeating', async () => {
+    const { client } = fakeServer(2000)
+    const out = await fetchAllRows('transactions', 'u1', client)
+    expect(out).toHaveLength(2000)
+    expect(new Set(out.map(r => r.id)).size).toBe(2000)
+  })
+
+  it('is empty for a table with nothing in it', async () => {
+    const { client } = fakeServer(0)
+    expect(await fetchAllRows('transactions', 'u1', client)).toEqual([])
+  })
+
+  it('throws with the table named, rather than returning a short list', async () => {
+    const client = {
+      from: () => ({ select: () => ({ eq: () => ({ order: () => ({
+        range: async () => ({ data: /** @type {any} */ (null), error: { message: 'boom' } }),
+      }) }) }) }),
+    }
+    await expect(fetchAllRows('transactions', 'u1', client))
+      .rejects.toThrow(/transactions pull: boom/)
   })
 })

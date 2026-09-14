@@ -784,6 +784,73 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
 
 // ── Pull from Supabase ────────────────────────────────────────────────────────
 
+/** How many rows to ask for at a time. */
+const PAGE = 1000
+
+/**
+ * Every row of a table, however many there are.
+ *
+ * ── The bug this is the fix for ──
+ *
+ * The pulls used to be a bare `.select('*').eq('user_id', …)`, which reads as
+ * "all of them" and is not. PostgREST caps what one response may contain -
+ * Supabase ships that cap at 1,000 - and it does not fail when it truncates.
+ * It returns 1,000 rows and a 200.
+ *
+ * So the pull worked perfectly for a year and then quietly stopped bringing
+ * back the newest transactions, on the day the table reached 1,001. Signing
+ * in on a fresh device restored everything up to early September and silently
+ * dropped the 36 rows past the cap. Nothing errored, nothing was logged, and
+ * the only symptom was recent history missing.
+ *
+ * ── Why it advances by what arrived ──
+ *
+ * Not by PAGE. If the server's cap is lower than PAGE - a project can be
+ * configured to 100 - then every page comes back short, and a loop that
+ * stopped on `length < PAGE` would stop after the first one and call it
+ * complete. Stepping by the number of rows actually received is correct
+ * whatever the cap turns out to be, and the loop ends on an empty page.
+ *
+ * ── Why it orders ──
+ *
+ * A range over an unordered query is not a stable window: Postgres may return
+ * rows in a different order between requests, so pages could overlap and miss.
+ * `id` is the primary key, so it is unique and total.
+ *
+ * Exported, and `client` injectable, because the loop is the whole risk and
+ * it cannot be exercised against a real Supabase in a unit test - the same
+ * reason deleteRecurringRemote takes its queue.
+ *
+ * @param {string} tableName
+ * @param {string} userId
+ * @param {any} [client]
+ */
+export async function fetchAllRows(tableName, userId, client = supabase) {
+  /** @type {any[]} */
+  const out = []
+  let from = 0
+
+  /* A page counter, not a row counter: the exit is the empty page, and this
+     only exists so a server that somehow always returns rows cannot spin
+     forever. 1,000 pages is a million rows. */
+  for (let guard = 0; guard < 1000; guard++) {
+    const { data, error } = await client
+      .from(tableName)
+      .select('*')
+      .eq('user_id', userId)
+      .order('id', { ascending: true })
+      .range(from, from + PAGE - 1)
+
+    if (error) throw new Error(`${tableName} pull: ${error.message}`)
+    if (!data?.length) break
+
+    out.push(...data)
+    from += data.length
+  }
+
+  return out
+}
+
 async function ensureSystemCategories() {
   for (const cat of SYSTEM_CATS) {
     const exists = await db.categories
@@ -849,12 +916,8 @@ export async function syncFromSupabase(userId) {
 
 /** @param {string} userId */
 async function pullTxs(userId) {
-  const { data, error } = await supabase
-    .from('transactions')
-    .select('*')
-    .eq('user_id', userId)
-  if (error) throw new Error(`transactions pull: ${error.message}`)
-  if (!data?.length) return
+  const data = await fetchAllRows('transactions', userId)
+  if (!data.length) return
 
   const deletedMeta = await db.meta.get('deletedTxIds')
   const deletedSet = new Set(deletedMeta?.value ?? [])
@@ -911,12 +974,8 @@ async function pullTxs(userId) {
  * @param {Array<{table: string, match?: Record<string, any>}>} [pending]
  */
 async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, findFn, pending = []) {
-  const { data, error } = await supabase
-    .from(tableName)
-    .select('*')
-    .eq('user_id', userId)
-  if (error) throw new Error(`${tableName} pull: ${error.message}`)
-  if (!data?.length) return
+  const data = await fetchAllRows(tableName, userId)
+  if (!data.length) return
 
   // Every stable id the server knows about, for the collision test below.
   const remoteSyncIds = new Set(data.map(r => r.sync_id).filter(Boolean))
@@ -1009,12 +1068,8 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
  * @param {string} userId
  */
 async function pullBadges(userId) {
-  const { data, error } = await supabase
-    .from('badges')
-    .select('*')
-    .eq('user_id', userId)
-  if (error) throw new Error(`badges pull: ${error.message}`)
-  if (!data?.length) return
+  const data = await fetchAllRows('badges', userId)
+  if (!data.length) return
 
   for (const row of data) {
     if (!row.key) continue
