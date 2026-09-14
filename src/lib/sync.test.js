@@ -11,7 +11,7 @@ import {
   isPendingDelete,
   isLocalIdConflict,
   deleteRecurringRemote,
-  fetchAllRows,
+  fetchAllRows, newest,
 } from './sync'
 import { UNSYNCED, SYNCED } from '../db/db'
 
@@ -570,5 +570,91 @@ describe('fetchAllRows', () => {
     }
     await expect(fetchAllRows('transactions', 'u1', client))
       .rejects.toThrow(/transactions pull: boom/)
+  })
+})
+
+/**
+ * The delta pull's high-water mark.
+ *
+ * The mark is the largest updated_at actually RECEIVED, not the clock when
+ * the sync finished. Two reasons, and both are failures that would be silent:
+ * a wall-clock mark loses any row written between the query returning and the
+ * clock being read, and it is wrong by however far this phone sits from the
+ * server - which on a phone is a real quantity. A value the server produced
+ * has neither problem.
+ */
+describe('newest', () => {
+  it('finds the largest timestamp in a batch', () => {
+    const rows = [
+      { updated_at: '2026-09-01T00:00:00.000Z' },
+      { updated_at: '2026-12-05T02:01:16.000Z' },
+      { updated_at: '2026-09-14T00:00:00.000Z' },
+    ]
+    expect(newest(rows, 'updated_at')).toBe('2026-12-05T02:01:16.000Z')
+  })
+
+  /** No rows means no news, and the mark must stay where it was. */
+  it('is null for an empty batch, so the mark does not move', () => {
+    expect(newest([], 'updated_at')).toBeNull()
+  })
+
+  it('ignores rows with nothing in that column', () => {
+    const rows = [{ updated_at: null }, { updated_at: '2026-05-01T00:00:00.000Z' }, {}]
+    expect(newest(rows, 'updated_at')).toBe('2026-05-01T00:00:00.000Z')
+  })
+
+  it('reads whichever column it is given', () => {
+    expect(newest([{ deleted_at: '2026-02-02T00:00:00.000Z' }], 'deleted_at'))
+      .toBe('2026-02-02T00:00:00.000Z')
+  })
+})
+
+describe('fetchAllRows, asking only for what changed', () => {
+  /** Records the filters applied, so the query can be asserted. */
+  /** @param {any[]} [rows] */
+  function spyServer(rows = []) {
+    /** @type {string[][]} */
+    const filters = []
+    const client = {
+      from: () => ({
+        select: () => ({
+          eq: () => {
+            const q = {
+              /** @param {string} col @param {string} val */
+              gt: (col, val) => { filters.push([col, val]); return q },
+              order: () => ({ range: async (/** @type {number} */ a) => ({ data: a === 0 ? rows : [], error: /** @type {any} */ (null) }) }),
+            }
+            return q
+          },
+        }),
+      }),
+    }
+    return { client, filters }
+  }
+
+  it('applies no filter when there is no watermark, which is a first sync', async () => {
+    const { client, filters } = spyServer([{ id: 1 }])
+    await fetchAllRows('transactions', 'u1', client, null)
+    expect(filters).toEqual([])
+  })
+
+  it('asks only for rows after the mark when there is one', async () => {
+    const { client, filters } = spyServer([{ id: 1 }])
+    await fetchAllRows('transactions', 'u1', client,
+      { column: 'updated_at', after: '2026-09-01T00:00:00.000Z' })
+    /* Once per page, not once per call - every request in the loop carries
+       the same filter, which is what keeps the window consistent across
+       pages. */
+    expect(filters.length).toBeGreaterThan(0)
+    for (const f of filters) {
+      expect(f).toEqual(['updated_at', '2026-09-01T00:00:00.000Z'])
+    }
+  })
+
+  it('still pages a filtered read, so a big catch-up is not truncated either', async () => {
+    const { client } = spyServer(Array.from({ length: 1000 }, (_, i) => ({ id: i })))
+    const out = await fetchAllRows('transactions', 'u1', client,
+      { column: 'updated_at', after: '2026-01-01T00:00:00.000Z' })
+    expect(out).toHaveLength(1000)
   })
 })

@@ -1,4 +1,5 @@
-import db, { dbReady, getUnsyncedTxs, SYNCED } from '../db/db'
+import db, { dbReady, getUnsyncedTxs, SYNCED, SYNCED_TABLES } from '../db/db'
+import { reverseBalanceEffect } from '../db/balances'
 import { supabase } from './supabase'
 // Single definition, shared with onboarding — the two lists used to be
 // separate copies, so a system category added to one was missing from the
@@ -788,6 +789,110 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
 const PAGE = 1000
 
 /**
+ * How far the last sync got, per stream, as an ISO timestamp.
+ *
+ * ── Why the high-water mark is the MAX ROW SEEN, not "now" ──
+ *
+ * The obvious version stamps the clock when a sync finishes. That loses a row
+ * written between the query returning and the clock being read, and it is
+ * wrong by however far the phone's clock is from the server's - which on a
+ * phone is a real quantity, not a rounding error.
+ *
+ * Taking the largest updated_at actually received has neither problem. It is
+ * a value the SERVER produced, so it is in the server's own time; and
+ * anything newer than the newest row seen is, by definition, still to come.
+ * The worst case is re-reading a row, which is idempotent.
+ *
+ * ── Which streams may use one ──
+ *
+ * transactions and deletions, and nothing else. Both have their timestamp
+ * written by Postgres - transactions by the set_updated_at trigger, deletions
+ * by the tombstone's own default. The other six tables carry whatever the
+ * client wrote, so a watermark over them would skip every row written by a
+ * device whose clock runs slow. They are a few dozen rows; they get pulled in
+ * full, for ever, and that is the right trade.
+ */
+const WATERMARK_KEY = 'syncWatermark'
+
+async function getWatermarks() {
+  const row = await db.meta.get(WATERMARK_KEY)
+  return row?.value ?? {}
+}
+
+/** Only ever forward. An out-of-order write must not rewind the stream.
+ *  @param {string} name @param {string|null} iso */
+async function advanceWatermark(name, iso) {
+  if (!iso) return
+  const marks = await getWatermarks()
+  if (marks[name] && marks[name] >= iso) return
+  await db.meta.put({ key: WATERMARK_KEY, value: { ...marks, [name]: iso } })
+}
+
+/** Back to a full pull next time. Anything that rewrites the local database
+ *  behind sync's back has to call this, or the delta will step over rows the
+ *  new copy never had. */
+export async function resetWatermarks() {
+  await db.meta.delete(WATERMARK_KEY)
+}
+
+/** The newest timestamp in a batch, for the watermark. Exported for the test:
+ *  it is what decides how far the stream advances, so it is worth pinning.
+ *  @param {any[]} rows @param {string} column */
+export function newest(rows, column) {
+  let max = null
+  for (const r of rows) {
+    const v = r?.[column]
+    if (v && (!max || v > max)) max = v
+  }
+  return max
+}
+
+/**
+ * Rows deleted elsewhere, removed from here.
+ *
+ * A pull cannot tell "deleted" from "you already have it" by absence, so a
+ * deletion has to arrive as its own row. Migration 014 writes one from an
+ * AFTER DELETE trigger, which is why nothing in the client has to remember to
+ * record them.
+ *
+ * Balances are reversed on the way out. The device that did the deleting
+ * reversed its own; this one has to reverse ITS copy or every account it
+ * touched drifts by the amount of the row. Nothing is cascaded here - each
+ * row the other device removed produced a tombstone of its own, so the same
+ * set arrives, and cascading would double up.
+ *
+ * @param {string} userId
+ */
+async function pullDeletions(userId) {
+  const marks = await getWatermarks()
+  const rows = await fetchAllRows('deletions', userId, supabase,
+    marks.deletions ? { column: 'deleted_at', after: marks.deletions } : null)
+  if (!rows.length) return
+
+  for (const t of rows) {
+    const key = t.row_key
+    if (!key) continue
+
+    if (t.table_name === 'transactions') {
+      const tx = await db.transactions.where('txId').equals(key).first()
+      if (!tx) continue
+      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+        await reverseBalanceEffect(/** @type {any} */ (tx))
+        await db.transactions.delete(tx.id)
+      })
+      continue
+    }
+
+    if (!SYNCED_TABLES.includes(t.table_name)) continue
+    const table = db.table(t.table_name)
+    const row = await table.where('syncId').equals(key).first()
+    if (row) await table.delete(row.id)
+  }
+
+  await advanceWatermark('deletions', newest(rows, 'deleted_at'))
+}
+
+/**
  * Every row of a table, however many there are.
  *
  * ── The bug this is the fix for ──
@@ -824,8 +929,10 @@ const PAGE = 1000
  * @param {string} tableName
  * @param {string} userId
  * @param {any} [client]
+ * @param {{column: string, after: string}|null} [since]  only rows changed
+ *   after this timestamp - see the watermark note on pullTxs
  */
-export async function fetchAllRows(tableName, userId, client = supabase) {
+export async function fetchAllRows(tableName, userId, client = supabase, since = null) {
   /** @type {any[]} */
   const out = []
   let from = 0
@@ -834,10 +941,13 @@ export async function fetchAllRows(tableName, userId, client = supabase) {
      only exists so a server that somehow always returns rows cannot spin
      forever. 1,000 pages is a million rows. */
   for (let guard = 0; guard < 1000; guard++) {
-    const { data, error } = await client
+    let q = client
       .from(tableName)
       .select('*')
       .eq('user_id', userId)
+    if (since) q = q.gt(since.column, since.after)
+
+    const { data, error } = await q
       .order('id', { ascending: true })
       .range(from, from + PAGE - 1)
 
@@ -916,7 +1026,19 @@ export async function syncFromSupabase(userId) {
 
 /** @param {string} userId */
 async function pullTxs(userId) {
-  const data = await fetchAllRows('transactions', userId)
+  /* Only what has changed since last time.
+   *
+   * The ledger is the one table that grows without limit, and the only one
+   * whose updated_at is written by Postgres rather than by whichever phone
+   * happened to save the row - see the note on WATERMARK_KEY for why that
+   * distinction decides which streams may use a watermark at all.
+   *
+   * With no watermark this is a full pull, paged. That is the first sync on a
+   * device, and it is also what a restore falls back to, because
+   * restoreBackup clears the mark. */
+  const marks = await getWatermarks()
+  const data = await fetchAllRows('transactions', userId, supabase,
+    marks.transactions ? { column: 'updated_at', after: marks.transactions } : null)
   if (!data.length) return
 
   const deletedMeta = await db.meta.get('deletedTxIds')
@@ -960,6 +1082,10 @@ async function pullTxs(userId) {
   // every transactions query once per synced row.
   if (toAdd.length) await db.transactions.bulkAdd(toAdd)
   if (toPut.length) await db.transactions.bulkPut(toPut)
+
+  /* After the write, never before. A watermark moved ahead of rows that were
+     not stored is a gap nothing will ever go back for. */
+  await advanceWatermark('transactions', newest(data, 'updated_at'))
 }
 
 // findFn: optional async (row) => existing local record | null
@@ -1126,6 +1252,11 @@ export async function fullSync(userId) {
   await dbReady
   // Land queued deletions first, so the pull below can't resurrect them.
   await flushPendingDeletes(userId)
+  /* And the ones somebody else made. Before the content pull rather than
+     after: a row deleted remotely is not in the content pull anyway, and
+     doing it first means a device coming back from a long absence sheds what
+     is gone before it starts merging what is not. */
+  await optionalSync('deletions pull', () => pullDeletions(userId))
   // Pull so a fresh device gets correct remote state before pushing.
   await syncFromSupabase(userId)
   // Clean up any duplicates that seed vs. pull races may have left behind.

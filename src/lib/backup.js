@@ -1,5 +1,5 @@
 import db, { UNSYNCED } from '../db/db'
-import { queueRemoteDelete } from './sync'
+import { queueRemoteDelete, resetWatermarks } from './sync'
 
 /* Tables the JSON export writes.
  *
@@ -233,6 +233,15 @@ export async function restoreBackup(raw) {
   /* Outside the Dexie transaction, because localStorage is not part of it
      and a throw here must not roll back a restore that has already landed. */
   writeLocalPrefs(data.prefs)
+
+  /* Back to a full pull on the next sync.
+   *
+   * The delta pull asks for rows changed since a high-water mark, and a
+   * restore has just replaced the local database with an older copy that
+   * knows nothing about that mark. Left in place it would step straight over
+   * every row between the backup and now - a restore would silently lose
+   * exactly the recent history it was meant to protect. */
+  await resetWatermarks()
 
   return {
     counts,
