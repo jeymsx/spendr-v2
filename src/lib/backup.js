@@ -284,8 +284,11 @@ const BACKUP_META_KEYS = [
  */
 function readLocalPrefs() {
   try {
+    /* 'spendr-theme', not 'theme'. ThemeContext namespaces its key and the
+       first version of this did not, so it read a slot nothing ever writes
+       and every backup carried a null theme. */
     return {
-      theme: localStorage.getItem('theme'),
+      theme: localStorage.getItem('spendr-theme'),
       accentColor: localStorage.getItem('accentColor'),
     }
   } catch {
@@ -297,7 +300,7 @@ function readLocalPrefs() {
 function writeLocalPrefs(prefs) {
   if (!prefs) return
   try {
-    if (prefs.theme) localStorage.setItem('theme', prefs.theme)
+    if (prefs.theme) localStorage.setItem('spendr-theme', prefs.theme)
     if (prefs.accentColor) localStorage.setItem('accentColor', prefs.accentColor)
   } catch { /* nothing to do about it, and not worth failing a restore over */ }
 }

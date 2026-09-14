@@ -448,19 +448,24 @@ export function rowToGoal(row) {
 
 /** @param {string} userId */
 async function pushPreferences(userId) {
-  const [nameMeta, currencyMeta, skipMeta] = await Promise.all([
+  const [nameMeta, currencyMeta, skipMeta, rolloverMeta] = await Promise.all([
     db.meta.get('displayName'),
     db.meta.get('currency'),
     db.meta.get('skipConfirm'),
+    db.meta.get('budgetRollover'),
   ])
   const accentColor = localStorage.getItem('accentColor') ?? '#2D9DFF'
+  /* 'spendr-theme' - ThemeContext namespaces its key. Theme and accent both
+     live in localStorage rather than Dexie because they have to be readable
+     before the database opens, or the first paint is the wrong colour. */
+  const theme = localStorage.getItem('spendr-theme')
   /* The newest of the three local stamps, not `now`.
      
      Sending `now` would make every push look newer than every pull, which
      defeats the comparison on the other side the moment two devices are in
      play - the second device's pull would always lose to whichever one
      synced last, regardless of who actually changed a setting. */
-  const localTs = [nameMeta, currencyMeta, skipMeta]
+  const localTs = [nameMeta, currencyMeta, skipMeta, rolloverMeta]
     .map(m => (m?.updatedAt ? new Date(m.updatedAt).getTime() : 0))
     .reduce((a, b) => Math.max(a, b), 0)
   const row = {
@@ -469,12 +474,39 @@ async function pushPreferences(userId) {
     currency:     currencyMeta?.value ?? 'PHP',
     accent_color: accentColor,
     skip_confirm: skipMeta?.value ?? false,
+    /* Both were the settings that reset themselves on a new device: theme
+       never crossed at all, and budget_rollover had nowhere to go until 015.
+       The second matters more than it sounds - it decides whether every
+       category carries its unspent budget forward, so a fresh install
+       quietly changed what the budget page reported. */
+    theme:           theme ?? null,
+    budget_rollover: rolloverMeta?.value ?? null,
     updated_at:   new Date(localTs || Date.now()).toISOString(),
   }
   const { error } = await supabase
     .from('user_preferences')
     .upsert(row, { onConflict: 'user_id' })
-  if (error) throw new Error(`user_preferences push: ${error.message}`)
+  if (!error) return
+
+  /* Drop the columns 015 adds and try once more, the same net every other
+     push has. A database that has not had the migration would otherwise
+     fail the whole preferences push - and take the display name, the
+     currency and the accent down with the two new fields. Degraded means
+     theme and the carry-over switch stay on this device. */
+  if (UNKNOWN_COLUMN.test(error.message ?? '')) {
+    const retry = /** @type {Record<string, any>} */ ({ ...row })
+    for (const col of OPTIONAL_COLS.user_preferences ?? []) delete retry[col]
+    const { error: again } = await supabase
+      .from('user_preferences')
+      .upsert(retry, { onConflict: 'user_id' })
+    if (!again) {
+      console.warn('[sync] user_preferences: run migration 015 for theme and carry-over')
+      return
+    }
+    throw new Error(`user_preferences push: ${again.message}`)
+  }
+
+  throw new Error(`user_preferences push: ${error.message}`)
 }
 
 /** @param {string} userId */
@@ -520,6 +552,17 @@ export async function pullPreferences(userId) {
   }
   if (data.accent_color) {
     localStorage.setItem('accentColor', data.accent_color)
+  }
+  /* Applied on the next boot rather than this one, the same as the accent:
+     both are read once when ThemeContext initialises. A pull that arrives
+     mid-session leaves the colours alone until the app is next opened, which
+     is the case this exists for - a reinstall, where it is opened next
+     anyway. */
+  if (data.theme) {
+    localStorage.setItem('spendr-theme', data.theme)
+  }
+  if (data.budget_rollover != null && !(await localIsNewer('budgetRollover'))) {
+    await db.meta.put({ key: 'budgetRollover', value: data.budget_rollover, updatedAt: data.updated_at })
   }
   if (data.skip_confirm != null && !(await localIsNewer('skipConfirm'))) {
     await db.meta.put({ key: 'skipConfirm', value: data.skip_confirm, updatedAt: data.updated_at })
@@ -670,6 +713,7 @@ const OPTIONAL_COLS = {
      to what it refunded. Degraded, not wrong, which is the right trade for
      not blocking the ledger on a migration. */
   transactions: ['refund_of', 'split_id', 'settles', 'credit_sync_id'],
+  user_preferences: ['theme', 'budget_rollover'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another
