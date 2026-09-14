@@ -524,7 +524,18 @@ export async function saveTemplate(row) {
     .filter(t => t.type === row.type)
     .first()
 
-  const payload = { ...row, createdAt: new Date().toISOString() }
+  /* updatedAt, not just createdAt. The pull takes a remote row only when it
+     is strictly newer, so a template saved without one read as infinitely old
+     and was overwritten on the next sync by whatever remote row shared its
+     local_id - you saved an expense as a template, it appeared, and a reload
+     replaced it with a stranger.
+
+     The creating hook in db/db.js stamps this too, and belt-and-braces is the
+     right call for the one function that shipped the bug: it makes this
+     correct on its own rather than correct because of something two files
+     away. */
+  const nowISO = new Date().toISOString()
+  const payload = { ...row, createdAt: nowISO, updatedAt: nowISO, synced: UNSYNCED }
   if (existing) {
     await db.templates.update(existing.id, payload)
     return existing.id

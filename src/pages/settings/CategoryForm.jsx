@@ -69,6 +69,24 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, category?.id, startAtDelete])
 
+  /**
+   * Shut the sheet, and put the button back.
+   *
+   * This existed in every sheet once - a local helper that ran an exit
+   * animation before telling the parent - and was deleted from all of them
+   * when Sheet took that job over. The three CALLS here were left behind, and
+   * `close` is a window global, so nothing complained: the calls resolved to
+   * window.close(), which on a page a script did not open is a silent no-op.
+   *
+   * The category saved, the sheet stayed put, and the button said "Saving…"
+   * for ever - because `saving` is only reset when the sheet OPENS, and it
+   * never got the chance to close and reopen.
+   */
+  function close() {
+    setSaving(false)
+    onClose()
+  }
+
   async function runDeleteCheck() {
     const count = await db.transactions.where('category').equals(category.name).count()
     setTxCount(count)

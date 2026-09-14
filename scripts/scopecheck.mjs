@@ -36,6 +36,23 @@ const GLOBALS = new Set([
   'close', 'focus', 'blur', 'scroll', 'scrollTo', 'scrollBy', 'print',
 ])
 
+/**
+ * Real globals that are almost never what a component meant to call.
+ *
+ * `close()` shipped as a bug: every sheet used to keep a local close() helper
+ * that ran an exit animation before telling its parent, and when Sheet took
+ * that job over the helpers were deleted. One file kept the CALLS. Nothing
+ * complained, because window.close IS defined - and on a page a script did
+ * not open it is a silent no-op, so the sheet simply stayed put with its
+ * button reading "Saving..." for ever.
+ *
+ * That is the whole class: an identifier that reads as a local, resolves to a
+ * window method, and does nothing. Only flagged when CALLED - `open` as a
+ * prop name or a variable is everywhere and fine - and `window.close()`
+ * spelled out is left alone, since that one is deliberate.
+ */
+const SUSPECT_CALLS = new Set(['close', 'open', 'print', 'stop', 'focus', 'blur'])
+
 const files = process.argv.slice(2)
 let problems = 0
 
@@ -56,6 +73,19 @@ for (const file of files) {
   traverse(ast, {
     ReferencedIdentifier(path) {
       const name = path.node.name
+
+      /* A bare call to one of these, with nothing local by that name. See
+         SUSPECT_CALLS - this is the one bug class the globals list hides. */
+      if (SUSPECT_CALLS.has(name)
+        && path.parent.type === 'CallExpression'
+        && path.parent.callee === path.node
+        && !path.scope.hasBinding(name, true)) {
+        const line = path.node.loc?.start.line
+        console.log(`SUSPECT  ${file}:${line}  ${name}() resolves to window.${name}`)
+        problems++
+        return
+      }
+
       if (GLOBALS.has(name)) return
       // JSX element names that start uppercase are components; lowercase ones
       // are HTML tags and are not identifier references at all.

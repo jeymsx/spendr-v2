@@ -194,7 +194,22 @@ const BOOKKEEPING = new Set(['syncId', 'synced'])
  * identified by a name in the first place. */
 for (const name of SYNCED_TABLES) {
   db.table(name).hook('creating', (_key, row) => {
-    if (row && !row.syncId) row.syncId = crypto.randomUUID()
+    if (!row) return
+    if (!row.syncId) row.syncId = crypto.randomUUID()
+
+    /* And a timestamp, for the same reason and a bug that shipped.
+     *
+     * The pull takes a remote row only when it is strictly NEWER, and a row
+     * created without an updatedAt reads as infinitely old - so the next sync
+     * overwrote it with whatever remote row happened to share its local_id.
+     * saveTemplate never set one: you saved an expense as a template, it
+     * appeared, and after a reload it had been replaced by a stranger with
+     * the same id.
+     *
+     * A row being written NOW is not older than anything. Explicit wins, so
+     * the restore keeps the backup's timestamps and the pull keeps the
+     * remote's. */
+    if (!row.updatedAt) row.updatedAt = new Date().toISOString()
   })
 
   /* And stamped on the way OUT, for the same reason and a worse bug.

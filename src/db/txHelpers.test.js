@@ -45,6 +45,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  * @property {Row[]} balances
  * @property {Row[]} debts
  * @property {Row[]} recurring
+ * @property {Row[]} templates
  * @property {Row[]} meta
  */
 
@@ -97,10 +98,19 @@ function table(rows, key) {
         /** @param {any} value */
         equals(value) {
           const hits = () => rows().filter(r => r[field] === value)
-          return {
-            async first() { return hits()[0] ?? undefined },
-            async toArray() { return hits() },
-          }
+          /* .filter() narrows a Collection and returns one, so it has to be
+             chainable rather than an array method - saveTemplate reads
+             .where().equals().filter().first() to tell an expense template
+             from an inflow one of the same name. */
+          /** @param {() => Row[]} get */
+          const collection = (get) => ({
+            async first() { return get()[0] ?? undefined },
+            async toArray() { return get() },
+            async count() { return get().length },
+            /** @param {(r: Row) => boolean} fn */
+            filter(fn) { return collection(() => get().filter(fn)) },
+          })
+          return collection(hits)
         },
       }
     },
@@ -114,6 +124,7 @@ const db = {
   balances:     table(() => store.balances, 'account'),
   debts:        table(() => store.debts, 'id'),
   recurring:    table(() => store.recurring, 'id'),
+  templates:    table(() => store.templates, 'id'),
   meta:         table(() => store.meta, 'key'),
   /**
    * Dexie runs the body and rolls back if it throws. The rollback is the part
@@ -145,7 +156,7 @@ vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1 }))
 
 const {
   postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
-  updateTransaction, settleWithPerson,
+  updateTransaction, settleWithPerson, saveTemplate,
 } = await import('./txHelpers')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
@@ -164,6 +175,7 @@ beforeEach(() => {
     ],
     debts: [],
     recurring: [],
+    templates: [],
     meta: [],
   }
 })
@@ -731,5 +743,61 @@ describe('settleWithPerson, and reversing it', () => {
     store.debts[0].id = 900
     await deleteTxGroup(/** @type {any} */ ([tx]))
     expect(store.debts[0].amountPaid).toBe(0)
+  })
+})
+
+/**
+ * saveTemplate, and the timestamp it did not set.
+ *
+ * Saving an expense as a template worked and then undid itself: the row
+ * appeared, and after a reload it had been replaced by a stranger. The pull
+ * takes a remote row only when it is strictly NEWER, and a row created
+ * without an updatedAt reads as infinitely old - so the next sync overwrote
+ * it with whatever remote row happened to share its local_id, of which there
+ * were nine.
+ *
+ * The stamp lives in the creating hook in db/db.js now, which this fake db
+ * does not run - so these assert the shape saveTemplate itself must produce
+ * for the row to survive, whichever layer ends up putting it there.
+ */
+describe('saveTemplate', () => {
+  const tpl = { name: 'Grab to work', type: 'expense', amount: 180, category: 'Transpo' }
+
+  it('stores what it was given', async () => {
+    await saveTemplate(/** @type {any} */ (tpl))
+    expect(store.templates).toHaveLength(1)
+    expect(store.templates[0].name).toBe('Grab to work')
+    expect(store.templates[0].amount).toBe(180)
+  })
+
+  /**
+   * The regression. Without a timestamp the row loses every last-write-wins
+   * it is ever part of, which is not "it might get overwritten" but "it will
+   * be, on the next sync".
+   */
+  it('gives the row a timestamp, so a sync cannot treat it as ancient', async () => {
+    await saveTemplate(/** @type {any} */ (tpl))
+    const saved = store.templates[0]
+    expect(typeof saved.updatedAt).toBe('string')
+    expect(Number.isNaN(Date.parse(saved.updatedAt))).toBe(false)
+  })
+
+  it('updates the one already there rather than adding a second', async () => {
+    await saveTemplate(/** @type {any} */ (tpl))
+    await saveTemplate(/** @type {any} */ ({ ...tpl, amount: 200 }))
+    expect(store.templates).toHaveLength(1)
+    expect(store.templates[0].amount).toBe(200)
+  })
+
+  /** Same name, different type, is a different template. */
+  it('keeps an expense and an inflow of the same name apart', async () => {
+    await saveTemplate(/** @type {any} */ (tpl))
+    await saveTemplate(/** @type {any} */ ({ ...tpl, type: 'inflow' }))
+    expect(store.templates).toHaveLength(2)
+  })
+
+  it('refuses a template with no name rather than storing a blank one', async () => {
+    expect(await saveTemplate(/** @type {any} */ ({ type: 'expense', amount: 1 }))).toBeNull()
+    expect(store.templates).toHaveLength(0)
   })
 })
