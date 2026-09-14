@@ -114,6 +114,9 @@ export function toSupabaseRow(r, userId) {
        See 013 - keyed on the debts' stable ids, never on local_id. */
     settles:          r.settles ?? null,
     credit_sync_id:   r.creditSyncId ?? null,
+    /* Which bill wrote this charge. 017 - and unlike recurringId beside it,
+       this one is portable, so a bill's history survives a new device. */
+    recurring_sync_id: r.recurringSyncId ?? null,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
   })
@@ -309,6 +312,7 @@ export function toDexieRecord(row) {
     splitId:     row.split_id ?? null,
     settles:     row.settles ?? null,
     creditSyncId: row.credit_sync_id ?? null,
+    recurringSyncId: row.recurring_sync_id ?? null,
     synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
@@ -724,7 +728,7 @@ const OPTIONAL_COLS = {
      the amount is negative and every sum adds - it just loses the link back
      to what it refunded. Degraded, not wrong, which is the right trade for
      not blocking the ledger on a migration. */
-  transactions: ['refund_of', 'split_id', 'settles', 'credit_sync_id'],
+  transactions: ['refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id'],
   user_preferences: ['theme', 'budget_rollover'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the

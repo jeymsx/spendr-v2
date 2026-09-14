@@ -87,6 +87,11 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
       synced:            UNSYNCED,
       updatedAt:         nowISO,
       recurringId:       rec.id,
+      /* And the bill's STABLE id, which is the one that survives.
+         recurringId is a local Dexie key: it changes if the bill is deleted
+         and re-made, and it is never sent to Supabase - so on any device that
+         got its transactions from a pull, it is simply absent. See 017. */
+      recurringSyncId:   rec.syncId ?? null,
       recurringPrevDate: rec.nextDate,
     })
     await applyBalanceEffect(/** @type {Transaction} */ (

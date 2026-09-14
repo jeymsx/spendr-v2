@@ -151,20 +151,44 @@ export default function RecurringDetail() {
   /**
    * Every charge this bill has actually posted.
    *
-   * Real history, not a reconstruction: postRecurringCharge stamps each
-   * transaction it writes with `recurringId`, so the ledger already knows
-   * which charges came from here.
+   * Three ways of asking, because a charge can be linked three ways and the
+   * strongest one is the newest.
    *
-   * `recurringId` is not indexed, so this is a cursor scan of the
-   * transactions table. That is fine HERE and would not be on a list - it is
-   * one query, on one screen, for one bill, and adding an index would mean a
-   * db.version bump for a single detail page.
+   *   recurringSyncId  the bill's STABLE id. Survives a re-creation, a
+   *                    restore and a second device. See 017.
+   *
+   *   recurringId      the bill's local Dexie id. Correct on the device that
+   *                    posted the charge and meaningless anywhere else - it
+   *                    is never sent to Supabase, so on a phone that received
+   *                    its ledger from a pull it is simply absent.
+   *
+   *   the description  for the year of charges written before any of this.
+   *                    postRecurringCharge sets it to the bill's name, so the
+   *                    match is exact rather than fuzzy; the cost is that an
+   *                    expense typed by hand with the same name and category
+   *                    joins the list, which is a better failure than a
+   *                    history that is permanently empty.
+   *
+   * A union, deduplicated by id: a bill can easily have charges of more than
+   * one vintage.
+   *
+   * None of the three is indexed, so this is a cursor scan. That is fine HERE
+   * and would not be on a list - one query, one screen, one bill.
    */
   const charges = useLiveQuery(
-    () => (Number.isFinite(recId)
-      ? db.transactions.filter(t => t.recurringId === recId).toArray()
-      : Promise.resolve([])),
-    [recId], undefined,
+    async () => {
+      if (!rec) return []
+      const all = await db.transactions.toArray()
+      const syncId = rec.syncId
+      return all.filter(t =>
+        (syncId && t.recurringSyncId === syncId)
+        || (Number.isFinite(recId) && t.recurringId === recId)
+        || (!t.recurringSyncId && !t.recurringId
+            && t.type === 'expense'
+            && t.description === rec.name
+            && t.category === rec.category))
+    },
+    [recId, rec?.syncId, rec?.name, rec?.category], undefined,
   )
 
   const history = useMemo(() => {
