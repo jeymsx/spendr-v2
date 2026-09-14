@@ -35,7 +35,7 @@ export default defineConfig({
     VitePWA({
       registerType: 'autoUpdate',
       injectRegister: 'auto',
-      includeAssets: ['icons/icon-512.png'],
+      includeAssets: ['icons/icon-512.png', 'apple-touch-icon.png', 'favicon.png'],
       devOptions: { enabled: true },
       manifest: {
         name: 'Spendr',
@@ -47,15 +47,30 @@ export default defineConfig({
         orientation: 'portrait',
         scope: '/',
         start_url: '/',
+        /* Three entries, and the third is the point.
+         *
+         * `any` and `maskable` were the SAME file, which cannot be right for
+         * both: a maskable icon is cropped to whatever shape the launcher
+         * uses - circle, squircle, rounded square - and only the middle ~80%
+         * survives. Declaring a full-bleed transparent icon as maskable gets
+         * the logo's edges shaved and the gaps filled with whatever the
+         * system picks. The maskable one is inset to 72% on white so any crop
+         * lands on background. */
         icons: [
           {
-            src: 'icons/icon-512.png',
+            src: 'icons/icon-192.png',
             sizes: '192x192',
             type: 'image/png',
             purpose: 'any',
           },
           {
             src: 'icons/icon-512.png',
+            sizes: '512x512',
+            type: 'image/png',
+            purpose: 'any',
+          },
+          {
+            src: 'icons/icon-maskable-512.png',
             sizes: '512x512',
             type: 'image/png',
             purpose: 'maskable',

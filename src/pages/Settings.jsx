@@ -838,10 +838,16 @@ export default function Settings() {
 
       {/* ══ Spendr footer (no card) ══ */}
       <div className="px-5 pb-8 flex flex-col items-center gap-3 text-center">
+        {/* The radius and the drop shadow went with the old icon, which was a
+            solid tile. The mark is transparent: a radius rounds nothing, and
+            the shadow fell from its bounding box rather than from the shape,
+            which read as a grey smudge under a floating logo. */}
         <img
-          src="/icons/icon-512.png"
+          src="/icons/icon-192.png"
           alt="Spendr"
-          className="w-14 h-14 rounded-[20px] shadow-[0_4px_20px_rgba(0,0,0,0.15)] dark:shadow-[0_4px_20px_rgba(0,0,0,0.4)]"
+          width={56}
+          height={56}
+          className="w-14 h-14"
         />
         <p className="text-base font-bold text-slate-800 dark:text-white tracking-tight">Spendr</p>
         <p className="text-11 text-slate-400 dark:text-slate-500 leading-relaxed max-w-[260px]">

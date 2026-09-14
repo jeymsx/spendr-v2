@@ -22,11 +22,26 @@ export function StepDots({ current, total }) {
   )
 }
 
-export function SpendrLogo({ size = 64 }) {
+/**
+ * The brand mark.
+ *
+ * 192 rather than 512: this renders somewhere between 56 and 72px, and the
+ * large one belongs to the manifest - downloaded for an install rather than
+ * for a screen.
+ *
+ * No corner radius and no shadow anywhere it is used. Both were right for the
+ * old icon, which was a solid tile; the mark is transparent, so a radius
+ * rounds nothing and a shadow falls from the bounding box rather than from
+ * the shape.
+ */
+export function SpendrLogo({ size = 64, className = '' }) {
   return (
     <img
-      src="/icons/icon-512.png"
+      src="/icons/icon-192.png"
       alt="Spendr"
+      width={size}
+      height={size}
+      className={className}
       style={{ width: size, height: size }}
     />
   )

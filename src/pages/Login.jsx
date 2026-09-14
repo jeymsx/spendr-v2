@@ -69,12 +69,18 @@ export default function Login() {
 
         {/* Logo */}
         <div className="flex flex-col items-center mb-10">
-          <div
-            className="w-[72px] h-[72px] rounded-[22px] bg-primary flex items-center justify-center mb-5
-              shadow-[0_12px_40px_rgba(var(--color-primary-rgb),0.50)]"
-          >
-            <span className="text-white text-34 font-semibold tracking-tighter leading-none">S</span>
-          </div>
+          {/* The mark, not a letter in a tile.
+              The tile was a stand-in from before there was a logo, and it was
+              the last place in the app still introducing Spendr as an "S" -
+              the sign-in screen being, of all of them, the one where a first
+              impression is the entire job. */}
+          <img
+            src="/icons/icon-192.png"
+            alt="Spendr"
+            width={80}
+            height={80}
+            className="w-20 h-20 mb-5"
+          />
           <h1 className="text-28 font-semibold tracking-tight text-slate-900 dark:text-white">
             Spendr
           </h1>
