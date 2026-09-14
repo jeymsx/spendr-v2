@@ -118,7 +118,19 @@ export default function Transactions() {
     // today is committed, not spent, so it stays out of the history until then.
     const cutoff = scheduledCutoff()
     return (txAll ?? []).filter(tx => {
-      if ((tx.date ?? '') > cutoff) return false
+      /* Unless you are searching for it.
+       *
+       * A charge dated beyond today is committed rather than spent, so it
+       * stays out of the history - right for an installment plan, and a trap
+       * for anything that lands there by accident. A date typed wrongly, or
+       * corrected across a timezone boundary, put a row past the cutoff and
+       * there was then no way to reach it at all: not in the list, and not by
+       * searching, because this test ran BEFORE the query did.
+       *
+       * Typing a query is asking to be shown something. Hiding a match
+       * because of when it is dated answers a question nobody asked, and the
+       * day heading above the row says plainly that it is ahead. */
+      if (!q && (tx.date ?? '') > cutoff) return false
       /* Was description-and-category only. An account name and the amount
          are both things people search by, and neither used to work - see
          lib/search.js. */
