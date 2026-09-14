@@ -1244,10 +1244,8 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
          way to recognise its own copy, so the next push would insert a
          second. Hand our id straight back. */
       const newId = await dexieTable.add(fromRow(row))
-      if (!row.sync_id && row.id) {
-        const created = await dexieTable.get(newId)
-        if (created?.syncId) toStamp.push({ id: row.id, sync_id: created.syncId })
-      }
+      const stamp = needsStamping(row, await dexieTable.get(newId))
+      if (stamp) toStamp.push(stamp)
     } else {
       /* Adopt the remote identity even when the remote CONTENT is older.
          Identity is not content. Both devices minted their own syncId in the
@@ -1271,9 +1269,8 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
        *
        * Cheap, because it only ever fires for rows that have not been
        * stamped yet, and after the first successful sync there are none. */
-      if (!row.sync_id && target.syncId && row.id) {
-        toStamp.push({ id: row.id, sync_id: target.syncId })
-      }
+      const stamp = needsStamping(row, target)
+      if (stamp) toStamp.push(stamp)
 
       if (row.sync_id && target.syncId !== row.sync_id) {
         /* syncId alone, and that matters: db/db.js treats a bookkeeping-only
@@ -1289,6 +1286,34 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
   }
 
   await stampRemote(tableName, toStamp)
+}
+
+/**
+ * Does this remote row need our stable id written onto it?
+ *
+ * One rule, reached from two directions - a remote row we recognised as one
+ * we already hold, and one we had never seen and just added. Both come down
+ * to the same three conditions, so it is one function rather than two
+ * conditions that have to be kept in step:
+ *
+ *   the remote row has NO stable id, so a push resolving on sync_id can
+ *   never address it and would insert a duplicate instead
+ *
+ *   the local row HAS one, so there is something to give
+ *
+ *   the remote row has a primary key to update by, which is how it is
+ *   addressed - not by the id we are in the middle of giving it
+ *
+ * Exported for the test. It runs once per device per table and then never
+ * again, which is exactly the kind of code nobody gets to observe twice.
+ *
+ * @param {Record<string, any>} remote  a row as Supabase returned it
+ * @param {Record<string, any>} [local]  the local row it turned out to be
+ */
+export function needsStamping(remote, local) {
+  if (!remote || remote.sync_id) return null
+  if (!remote.id || !local?.syncId) return null
+  return { id: remote.id, sync_id: local.syncId }
 }
 
 /**

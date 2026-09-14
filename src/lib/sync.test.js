@@ -11,7 +11,7 @@ import {
   isPendingDelete,
   isLocalIdConflict,
   deleteRecurringRemote,
-  fetchAllRows, newest,
+  fetchAllRows, newest, needsStamping,
 } from './sync'
 import { UNSYNCED, SYNCED } from '../db/db'
 
@@ -672,5 +672,54 @@ describe('fetchAllRows, asking only for what changed', () => {
     const out = await fetchAllRows('transactions', 'u1', client,
       { column: 'updated_at', after: '2026-01-01T00:00:00.000Z' })
     expect(out).toHaveLength(1000)
+  })
+})
+
+/**
+ * needsStamping - the decision that stops a first sync duplicating a table.
+ *
+ * The push resolves conflicts on sync_id for debts, recurring and templates.
+ * A remote row with a NULL sync_id cannot satisfy that target, so it can
+ * never be updated: the push inserts, and the table doubles.
+ *
+ * Every device passes through exactly that state once - the first time it
+ * runs after 011, with its own rows stamped and the server's copies not. This
+ * is the rule that gets it across, and it runs once and then never again,
+ * which is precisely the code nobody gets to observe twice.
+ */
+describe('needsStamping', () => {
+  /** @type {Record<string, any>} */
+  const remote = { id: 'uuid-1', sync_id: null, name: 'Spotify' }
+  const local = { id: 2, syncId: 'stable-abc', name: 'Spotify' }
+
+  it('hands our id over when the server has none', () => {
+    expect(needsStamping(remote, local)).toEqual({ id: 'uuid-1', sync_id: 'stable-abc' })
+  })
+
+  /** Already stamped: leave it alone. Overwriting would steal a row another
+   *  device is addressing by that id. */
+  it('leaves a row that already has one', () => {
+    expect(needsStamping({ ...remote, sync_id: 'theirs' }, local)).toBeNull()
+  })
+
+  it('does nothing when the local row has no id to give', () => {
+    expect(needsStamping(remote, { id: 2, syncId: null })).toBeNull()
+    expect(needsStamping(remote, undefined)).toBeNull()
+  })
+
+  /** The update is addressed by the remote primary key - not by the sync_id,
+   *  which is the thing being given. No key, no update. */
+  it('does nothing without a primary key to address', () => {
+    expect(needsStamping({ sync_id: null, name: 'Spotify' }, local)).toBeNull()
+  })
+
+  it('survives being handed nothing', () => {
+    expect(needsStamping(/** @type {any} */ (null), local)).toBeNull()
+  })
+
+  /* An empty string is not an id. It would satisfy a truthiness check on the
+     local side and then write a value no row can ever be found by. */
+  it('treats an empty local id as no id', () => {
+    expect(needsStamping(remote, { id: 2, syncId: '' })).toBeNull()
   })
 })
