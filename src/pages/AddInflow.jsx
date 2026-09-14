@@ -5,6 +5,7 @@ import { applyBalanceEffect, saveTemplate, updateTransaction } from '../db/txHel
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { isoToDateInput, dateInputToIso } from '../utils/txDate'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import CategoryRail from '../components/CategoryRail'
 import AccountPickerSheet from '../components/AccountPickerSheet'
@@ -77,7 +78,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAmountStr(numToMoneyStr(Math.abs(editTx.amount ?? 0)))
     setDescription(editTx.description ?? '')
-    if (editTx.date) setDate(String(editTx.date).slice(0, 10))
+    if (editTx.date) setDate(isoToDateInput(editTx.date))
     setCategory(categories.find(c => c.name === editTx.category) ?? null)
     setAccount(accounts.find(a => a.name === editTx.account) ?? null)
   }, [isEdit, editTx, categories, accounts])
@@ -148,7 +149,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           description: description.trim(),
           category: category.name,
           account: account.name,
-          date: date + (String(editTx.date ?? '').slice(10) || 'T00:00:00.000Z'),
+          date: dateInputToIso(date, editTx.date),
         })
         showToast('Inflow updated')
         if (onSaved) onSaved(); else navigate(-1)

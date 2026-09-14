@@ -5,6 +5,7 @@ import { applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } fr
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
+import { isoToDateInput, dateInputToIso } from '../utils/txDate'
 import { getCreditStatus } from '../utils/creditCycle'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import AccountSelectRow from '../components/AccountSelectRow'
@@ -133,7 +134,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     hydrated.current = true
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setAmountStr(numToMoneyStr(Math.abs(editTx.amount ?? 0)))
-    if (editTx.date) setDate(String(editTx.date).slice(0, 10))
+    if (editTx.date) setDate(isoToDateInput(editTx.date))
     setFromAccount(accounts.find(a => a.name === editTx.fromAccount) ?? null)
     setToAccount(accounts.find(a => a.name === editTx.toAccount) ?? null)
   }, [isEdit, editTx, accounts])
@@ -194,7 +195,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           amount,
           fromAccount: fromAccount.name,
           toAccount: toAccount.name,
-          date: date + (String(editTx.date ?? '').slice(10) || 'T00:00:00.000Z'),
+          date: dateInputToIso(date, editTx.date),
         })
         showToast('Transfer updated')
         if (onSaved) onSaved(); else navigate(-1)

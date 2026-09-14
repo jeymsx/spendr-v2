@@ -4,6 +4,7 @@ import { postRefund } from '../db/txHelpers'
 import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx,
          deleteTxGroup, restoreDeletedTxs } from '../db/txHelpers'
 import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
+import { isoToDateInput, dateInputToIso } from '../utils/txDate'
 import { isRefund, refundedAmount, refundableAmount, splitGroup, splitTotal } from '../lib/txMoney'
 import { outstanding, isSettled } from '../lib/people'
 import RefundSheet from './RefundSheet'
@@ -29,10 +30,11 @@ const TYPE_CFG = {
   transfer: { label: 'Transfer', color: 'var(--color-primary)', badge: 'bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400',   sign: '' },
 }
 
-function toLocalDateStr(isoStr) {
-  if (!isoStr) return ''
-  return isoStr.slice(0, 10)
-}
+/* Was `isoStr.slice(0, 10)`, which is the UTC date. The row two lines down
+   renders with toLocaleDateString, so the sheet SHOWED one day and offered a
+   different one to edit for anybody east of Greenwich in the evening. See
+   utils/txDate.js. */
+const toLocalDateStr = isoToDateInput
 
 function fmtDisplayDate(isoStr) {
   if (!isoStr) return ''
@@ -212,9 +214,9 @@ export default function TxDetailSheet({
     try {
       const newAmount = parseFloat(editAmount) || 0
       const now = new Date().toISOString()
-      const newDateISO = editDate
-        ? editDate + (tx.date?.slice(10) ?? 'T00:00:00.000Z')
-        : tx.date
+      /* Same two-clock problem as the field above: the old form pasted a
+         local date onto a UTC time. */
+      const newDateISO = editDate ? dateInputToIso(editDate, tx.date) : tx.date
 
       const patch = { amount: newAmount, description: editDescription.trim(), date: newDateISO, updatedAt: now, synced: UNSYNCED }
 
