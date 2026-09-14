@@ -60,7 +60,7 @@ export async function applyDedupe() {
   for (const g of plan.recurring.groups) {
     for (const row of g.drop) {
       await db.recurring.delete(row.id)
-      await deleteRecurringRemote(row.id, row.name)
+      await deleteRecurringRemote(row.id, row.name, row.syncId)
       removed++
     }
   }
@@ -68,7 +68,7 @@ export async function applyDedupe() {
   for (const g of plan.templates.groups) {
     for (const row of g.drop) {
       await db.templates.delete(row.id)
-      await deleteTemplateRemote(row.id, row.name)
+      await deleteTemplateRemote(row.id, row.name, row.syncId)
       removed++
     }
   }

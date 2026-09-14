@@ -341,7 +341,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     setDeleting(true)
     try {
       await db.recurring.delete(editRec.id)
-      await deleteRecurringRemote(editRec.id, editRec.name)
+      await deleteRecurringRemote(editRec.id, editRec.name, editRec.syncId)
       onClose()
     } catch (e) {
       console.error('[RecurringForm] delete failed:', e)

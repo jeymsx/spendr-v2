@@ -166,7 +166,7 @@ export default function RecurringForm() {
     setDeleting(true)
     try {
       await db.recurring.delete(editRec.id)
-      await deleteRecurringRemote(editRec.id, editRec.name)
+      await deleteRecurringRemote(editRec.id, editRec.name, editRec.syncId)
       showToast('Bill deleted')
       /* Back twice: the detail page for a bill that no longer exists is
          behind this one, and returning to it would land on an empty record. */

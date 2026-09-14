@@ -169,7 +169,7 @@ export function TemplateFormSheet({ open, onClose, template, allAccounts, allCat
     setSaving(true)
     try {
       await db.templates.delete(template.id)
-      await deleteTemplateRemote(template.id, template.name)
+      await deleteTemplateRemote(template.id, template.name, template.syncId)
       onClose()
     }
     catch (e) {
@@ -436,7 +436,7 @@ export function TemplateManager({ open, onClose, variant = 'sheet' }) {
   async function deleteTpl(tpl) {
     try {
       await db.templates.delete(tpl.id)
-      await deleteTemplateRemote(tpl.id, tpl.name)
+      await deleteTemplateRemote(tpl.id, tpl.name, tpl.syncId)
     } catch (e) {
       console.error('[TemplateManager] delete failed:', e)
       showToast('Failed to delete template', 'error')

@@ -1364,28 +1364,37 @@ export async function deleteDebtRemote(_userId, debtId, syncId = null, queue = q
 }
 
 /**
- * Bills push on local_id but pull matches on NAME, so queue both - the same
- * shape deleteTemplateRemote uses, and for the same reason.
+ * A bill, deleted remotely by the id that identifies it.
  *
- * By id alone was not enough: a local_id shifts whenever the database is
- * cleared and re-filled (a JSON restore does exactly that, since Dexie's
- * auto-increment does not reset), and a delete aimed at an id the remote row
- * no longer has matches nothing. The row survives, the next pull re-adds it,
- * and deleting it again does nothing either.
+ * ── The name is gone, and it cost a bill to learn why ──
  *
- * Deleting one row too many is repaired by the push that follows, which
- * re-uploads every surviving local bill.
+ * This used to queue a delete by NAME as well as by local_id, because
+ * local_id shifts whenever the database is cleared and re-filled and a delete
+ * aimed at a stale one matched nothing. The name always matched.
  *
- * `queue` is injectable so this can be tested without a database - the two
- * calls it makes ARE the behaviour, and they are what went wrong.
+ * It matched too much. A delete by name removes EVERY row with that name, and
+ * the justification for that - "deleting one row too many is repaired by the
+ * push that follows, which re-uploads every surviving local bill" - holds
+ * only while a survivor exists locally. Delete the last local copy of a bill
+ * that has duplicates on the server, and the name sweeps all of them: three
+ * Spotify rows for one gesture, with nothing left to re-upload.
+ *
+ * sync_id is why the name is no longer needed. It is minted once, survives a
+ * restore, and names exactly one row - which is the whole reason 011 exists.
+ * local_id stays as a fallback for a row that predates stamping, and it can
+ * only ever be wrong about ONE row.
+ *
+ * `queue` is injectable so this can be tested without a database - the calls
+ * it makes ARE the behaviour, and they are what went wrong.
  *
  * @param {number|null} localId
- * @param {string} [name]
+ * @param {string} [_name]  no longer used; kept so call sites read unchanged
+ * @param {string|null} [syncId]
  * @param {(table: string, match: Record<string, any>) => any} [queue]
  */
-export async function deleteRecurringRemote(localId, name, queue = queueRemoteDelete) {
+export async function deleteRecurringRemote(localId, _name, syncId = null, queue = queueRemoteDelete) {
+  if (syncId) { await queue('recurring', { sync_id: syncId }); return }
   if (localId != null) await queue('recurring', { local_id: localId })
-  if (name)            await queue('recurring', { name })
 }
 
 /** Accounts are unique on (user_id, name).
@@ -1406,14 +1415,17 @@ export async function deleteCategoryRemote(name, type) {
 }
 
 /**
- * Templates push on local_id but pull matches on name, so queue both: missing
- * the row means it resurrects, while deleting one row too many is repaired by
- * the push that re-uploads every surviving local template.
+ * A template, by its own id. Same change and same reason as
+ * deleteRecurringRemote above: a delete by name removes every row that shares
+ * one, and "the push re-uploads the survivors" is only true while a survivor
+ * is left to re-upload.
  *
  * @param {number} localId
- * @param {string} name
+ * @param {string} [_name]  no longer used; kept so call sites read unchanged
+ * @param {string|null} [syncId]
+ * @param {(table: string, match: Record<string, any>) => any} [queue]
  */
-export async function deleteTemplateRemote(localId, name) {
-  if (localId != null) await queueRemoteDelete('templates', { local_id: localId })
-  if (name)            await queueRemoteDelete('templates', { name })
+export async function deleteTemplateRemote(localId, _name, syncId = null, queue = queueRemoteDelete) {
+  if (syncId) { await queue('templates', { sync_id: syncId }); return }
+  if (localId != null) await queue('templates', { local_id: localId })
 }

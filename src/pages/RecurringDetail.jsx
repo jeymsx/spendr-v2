@@ -262,7 +262,7 @@ export default function RecurringDetail() {
     setDeleting(true)
     try {
       await db.recurring.delete(recId)
-      await deleteRecurringRemote(recId, rec?.name)
+      await deleteRecurringRemote(recId, rec?.name, rec?.syncId)
       showToast('Bill deleted')
       back()
     } catch (e) {

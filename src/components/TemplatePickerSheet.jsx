@@ -96,7 +96,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
   async function confirmDelete(tpl) {
     setDeleting(tpl.id)
     await db.templates.delete(tpl.id)
-    await deleteTemplateRemote(tpl.id, tpl.name)
+    await deleteTemplateRemote(tpl.id, tpl.name, tpl.syncId)
     setDeleting(null)
   }
 

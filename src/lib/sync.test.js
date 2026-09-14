@@ -374,28 +374,44 @@ describe('isLocalIdConflict', () => {
  *   and the next pull put it back.
  */
 describe('deleteRecurringRemote', () => {
-  it('queues a delete by id AND by name', async () => {
+  /**
+   * The name is gone, and this is the test that says so.
+   *
+   * Queueing a delete by name matched every row that shared one. The excuse
+   * was that over-deleting is repaired by the push that re-uploads the
+   * survivors - true only while a survivor exists. Deleting the last local
+   * copy of a bill that had duplicates on the server swept all three Spotify
+   * rows in one gesture, with nothing left to put them back.
+   */
+  it('queues the stable id, and only that', async () => {
     /** @type {any[]} */
     const queued = []
-    await deleteRecurringRemote(11, 'iCloud Subscription', (t, m) => queued.push({ t, m }))
-    expect(queued).toEqual([
-      { t: 'recurring', m: { local_id: 11 } },
-      { t: 'recurring', m: { name: 'iCloud Subscription' } },
-    ])
+    await deleteRecurringRemote(11, 'iCloud Subscription', 'sync-abc', (t, m) => queued.push({ t, m }))
+    expect(queued).toEqual([{ t: 'recurring', m: { sync_id: 'sync-abc' } }])
   })
 
-  /** A stale id must not stop the name delete from going out. */
-  it('still queues the name when there is no id', async () => {
+  it('never queues a delete by name, whatever it is given', async () => {
     /** @type {any[]} */
     const queued = []
-    await deleteRecurringRemote(null, 'iCloud Subscription', (t, m) => queued.push({ t, m }))
-    expect(queued).toEqual([{ t: 'recurring', m: { name: 'iCloud Subscription' } }])
+    await deleteRecurringRemote(11, 'iCloud Subscription', 'sync-abc', (t, m) => queued.push({ t, m }))
+    await deleteRecurringRemote(11, 'iCloud Subscription', null, (t, m) => queued.push({ t, m }))
+    await deleteRecurringRemote(null, 'iCloud Subscription', null, (t, m) => queued.push({ t, m }))
+    expect(queued.some(q => 'name' in q.m)).toBe(false)
+  })
+
+  /** A row from before stamping still has to be deletable, and local_id can
+   *  only ever be wrong about one row. */
+  it('falls back to the local id when the row has no stable one', async () => {
+    /** @type {any[]} */
+    const queued = []
+    await deleteRecurringRemote(11, 'iCloud Subscription', null, (t, m) => queued.push({ t, m }))
+    expect(queued).toEqual([{ t: 'recurring', m: { local_id: 11 } }])
   })
 
   it('queues nothing it cannot identify', async () => {
     /** @type {any[]} */
     const queued = []
-    await deleteRecurringRemote(null, '', (t, m) => queued.push({ t, m }))
+    await deleteRecurringRemote(null, '', null, (t, m) => queued.push({ t, m }))
     expect(queued).toEqual([])
   })
 })
