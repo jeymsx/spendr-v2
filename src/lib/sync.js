@@ -1186,6 +1186,12 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
   // Every stable id the server knows about, for the collision test below.
   const remoteSyncIds = new Set(data.map(r => r.sync_id).filter(Boolean))
 
+  /* Remote rows that have no stable id, paired with the local row that turns
+     out to be them. See the note by the push below: this is what stops the
+     first sync after an upgrade duplicating the entire table. */
+  /** @type {Array<{id: any, sync_id: string}>} */
+  const toStamp = []
+
   for (const row of data) {
     if (isPendingDelete(pending, tableName, row)) continue
 
@@ -1233,7 +1239,15 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
     const localts  = target?.updatedAt ? new Date(target.updatedAt).getTime() : 0
 
     if (!target) {
-      await dexieTable.add(fromRow(row))
+      /* New to this device. If the remote row carries no stable id, the row
+         we are about to create mints one - and the server would then have no
+         way to recognise its own copy, so the next push would insert a
+         second. Hand our id straight back. */
+      const newId = await dexieTable.add(fromRow(row))
+      if (!row.sync_id && row.id) {
+        const created = await dexieTable.get(newId)
+        if (created?.syncId) toStamp.push({ id: row.id, sync_id: created.syncId })
+      }
     } else {
       /* Adopt the remote identity even when the remote CONTENT is older.
          Identity is not content. Both devices minted their own syncId in the
@@ -1242,6 +1256,25 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
          server is the one every other device will meet. Gate this behind the
          timestamp and the device holding the newer copy never yields, so the
          two never agree and every sync re-inserts. */
+      /* The other direction, and the one that matters on a first sync.
+       *
+       * The push resolves conflicts on sync_id for the tables that moved to
+       * it. A remote row with NO sync_id cannot satisfy that target, so it
+       * can never be updated - the push inserts instead, and every row in the
+       * table duplicates itself.
+       *
+       * That is the state every device is in the first time it runs after
+       * 011: its rows are stamped locally and the server's copies are not.
+       * So when this pull recognises an unstamped remote row as one we
+       * already hold, it writes our id onto it - and the push a moment later
+       * finds its twin exactly where it expects.
+       *
+       * Cheap, because it only ever fires for rows that have not been
+       * stamped yet, and after the first successful sync there are none. */
+      if (!row.sync_id && target.syncId && row.id) {
+        toStamp.push({ id: row.id, sync_id: target.syncId })
+      }
+
       if (row.sync_id && target.syncId !== row.sync_id) {
         /* syncId alone, and that matters: db/db.js treats a bookkeeping-only
            change as not an edit and leaves updatedAt where it is. Bumping it
@@ -1254,6 +1287,40 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
       }
     }
   }
+
+  await stampRemote(tableName, toStamp)
+}
+
+/**
+ * Write our stable ids onto remote rows that have none.
+ *
+ * An UPDATE by primary key, one row at a time - not an upsert. An upsert here
+ * would be circular: the whole reason these rows need stamping is that they
+ * cannot be addressed by the id we are trying to give them.
+ *
+ * Failures are logged and swallowed. This is a repair, not the sync: if it
+ * does not land, the push behaves exactly as it did before it existed, and
+ * the next pull tries again.
+ *
+ * @param {string} tableName
+ * @param {Array<{id: any, sync_id: string}>} rows
+ */
+async function stampRemote(tableName, rows) {
+  if (!rows.length) return
+  let done = 0
+  for (const r of rows) {
+    const { error } = await supabase
+      .from(tableName)
+      .update({ sync_id: r.sync_id })
+      .eq('id', r.id)
+      .is('sync_id', null)      // never overwrite an id somebody else set
+    if (error) {
+      console.warn('[sync] %s: could not stamp a row:', tableName, error.message)
+      return
+    }
+    done++
+  }
+  console.info('[sync] %s: stamped %d row(s) that predated syncId', tableName, done)
 }
 
 /**
