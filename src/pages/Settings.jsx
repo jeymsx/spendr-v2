@@ -13,7 +13,7 @@ import { useToast } from '../context/ToastContext'
 import { syncToSheets } from '../lib/sheetsSync'
 import {
   IconChevronRight, IconUpload, IconTemplate, 
-  IconInfo, IconAward,
+  IconInfo, IconAward, IconWarning,
 } from '../components/icons'
 
 import { BADGES as BADGE_LIST } from '../lib/badges'
@@ -42,6 +42,8 @@ import { TemplateManagerSheet, TemplatesPage } from './settings/Templates'
 import { CategoryManagerSheet, CategoriesPage } from './settings/Categories'
 import { BudgetManagerSheet, BudgetsPage } from './settings/Budgets'
 import { RestoreBackupSheet, ResetConfirmModal } from './settings/Backup'
+import { DedupeSheet } from './settings/Dedupe'
+import { planDedupe } from '../lib/dedupe'
 import { SheetsConfigSheet, ProfileSheet } from './settings/Profile'
 import { PolicySheet } from './settings/Policy'
 import { downloadBackupJson } from '../lib/backup'
@@ -68,6 +70,7 @@ export default function Settings() {
 
   const [profileOpen,  setProfileOpen]  = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
+  const [dedupeOpen,   setDedupeOpen]   = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
   const [legalOpen,    setLegalOpen]    = useState(false)
   const [exporting,          setExporting]          = useState(false)
@@ -96,6 +99,20 @@ export default function Settings() {
      for that. The dashboard mounts BadgeChip on every launch, so the table is
      current by the time anyone reaches this row. */
   const badgeCount = useLiveQuery(() => db.badges.count(), [], null)
+
+  /* How many rows are stored more than once. Live, because merging them
+     should make the row that offers it disappear rather than sit there
+     claiming work that is done.
+
+     planDedupe is pure and runs over three small tables, so this costs a pass
+     over a few dozen rows whenever one of them changes. */
+  const dupPlan = useLiveQuery(async () => {
+    const [debts, recurring, templates] = await Promise.all([
+      db.debts.toArray(), db.recurring.toArray(), db.templates.toArray(),
+    ])
+    return planDedupe({ debts, recurring, templates })
+  }, [], null)
+  const dupCount = dupPlan?.total ?? 0
   const badgeSub = badgeCount === null ? undefined : `${badgeCount} of ${BADGE_LIST.length} earned`
 
   const [reportMonth, setReportMonth] = useState(() => {
@@ -395,6 +412,21 @@ export default function Settings() {
       <div className="mb-8">
         <SectionHeader>Data & Reports</SectionHeader>
         <SectionCard>
+          {/* Only when there is something to do. A permanent "Merge
+              duplicates" row on a database with none is a standing
+              accusation that something is wrong. */}
+          {dupCount > 0 && (
+            <>
+              <SettingsRow
+                iconEl={<RowIcon color="amber"><IconWarning size={16} /></RowIcon>}
+                label="Merge duplicates"
+                sublabel={`${dupCount} row${dupCount === 1 ? '' : 's'} stored more than once`}
+                right={<IconChevronRight size={14} strokeWidth="2" />}
+                onTap={() => setDedupeOpen(true)}
+              />
+              <RowDivider />
+            </>
+          )}
           <SettingsRow
             iconEl={<RowIcon color="green"><IconDownload /></RowIcon>}
             label="Export transactions (CSV)"
@@ -833,6 +865,8 @@ export default function Settings() {
         displayName={displayName}
         currency={currency}
       />
+      <DedupeSheet open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
+
       <RestoreBackupSheet open={restoreOpen} onClose={() => setRestoreOpen(false)} />
       <ResetConfirmModal
         open={resetOpen}

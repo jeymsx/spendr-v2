@@ -37,11 +37,33 @@ vi.mock('../context/ThemeContext', () => ({
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast: () => {}, dismiss: () => {} }),
 }))
+/* The dedupe sheet surveys on open. Stubbed rather than given a fake Dexie:
+   what is being checked is that it renders what the planner hands it. */
+vi.mock('../lib/dedupeWrite', () => ({
+  surveyDuplicates: async () => ({
+    total: 3,
+    debts: {
+      rows: 4, real: 2, removes: 2,
+      groups: [{
+        key: 'k1',
+        keep: { id: 5, contact: 'Robina', amount: 527 },
+        drop: [{ id: 6 }, { id: 21 }],
+      }],
+    },
+    recurring: {
+      rows: 2, real: 1, removes: 1,
+      groups: [{ key: 'k2', keep: { id: 2, name: 'Spotify', amount: 229 }, drop: [{ id: 5 }] }],
+    },
+    templates: { rows: 1, real: 1, removes: 0, groups: [] },
+  }),
+  applyDedupe: async () => ({ removed: 3 }),
+}))
 
 const { default: SwipeConfirm } = await import('./SwipeConfirm')
 const { default: AmountInput } = await import('./ui/AmountInput')
 const { default: DeleteConfirmSheet } = await import('./DeleteConfirmSheet')
 const { default: PeopleSplit, EMPTY_SPLIT } = await import('./PeopleSplit')
+const { DedupeSheet } = await import('../pages/settings/Dedupe')
 
 afterEach(cleanup)
 
@@ -171,5 +193,24 @@ describe('PeopleSplit', () => {
     )
     expect(screen.getByLabelText('percent value for Gelo').value).toBe('30')
     expect(screen.queryByLabelText('Amount for Gelo')).toBeNull()
+  })
+})
+
+describe('DedupeSheet', () => {
+  /* It deletes financial records, so it has to name them before it does.
+     findBy, because the survey is async. */
+  it('names every group and offers the drag once it has counted', async () => {
+    render(<DedupeSheet open onClose={() => {}} />)
+
+    expect(await screen.findByText(/Robina/)).toBeTruthy()
+    expect(screen.getByText(/Spotify/)).toBeTruthy()
+    expect(screen.getByText('4 rows → 2')).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Swipe to merge 3' })).toBeTruthy()
+  })
+
+  it('says how many copies of each there are', async () => {
+    render(<DedupeSheet open onClose={() => {}} />)
+    expect(await screen.findByText('stored 3 times')).toBeTruthy()
+    expect(screen.getByText('stored 2 times')).toBeTruthy()
   })
 })
