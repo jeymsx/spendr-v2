@@ -667,9 +667,21 @@ export async function syncToSupabase(userId) {
   // Other tables: always push all (small datasets, no per-record tracking needed)
   await pushTable('accounts',   db.accounts,   accountToRow,  userId, 'user_id,name')
   await pushTable('categories', db.categories, categoryToRow, userId, 'user_id,name,type')
-  await pushTable('debts',      db.debts,      debtToRow,     userId)
-  await pushTable('recurring',  db.recurring,  recurringToRow, userId)
-  await pushTable('templates',  db.templates,  templateToRow,  userId)
+  /* Resolved on the STABLE id, not on local_id. See 011 - and the failure
+     that finally forced it, which was not the slow duplication the migration
+     was written for but a hard stop:
+
+       local debt at id 5 carries syncId X
+       the remote row carrying X sits at local_id 21, because the ids moved
+       upsert on (user_id, local_id=5) matches nothing, so it INSERTs
+       the insert carries syncId X, which the partial unique index rejects
+
+     and the push throws, taking every table after it down with it. Once the
+     ids on the two sides stop lining up, local_id is not merely a weak key,
+     it is one that cannot succeed. */
+  await pushTable('debts',      db.debts,      debtToRow,     userId, 'user_id,sync_id')
+  await pushTable('recurring',  db.recurring,  recurringToRow, userId, 'user_id,sync_id')
+  await pushTable('templates',  db.templates,  templateToRow,  userId, 'user_id,sync_id')
   // Last, and fault-isolated: see optionalSync above.
   await optionalSync('goals push', () =>
     pushTable('goals', db.goals, goalToRow, userId, 'user_id,name'))
@@ -773,6 +785,26 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
   if (!records.length) return
 
   let rows = records.map(r => toRow(r, userId))
+
+  /* A row with no stable id cannot be upserted on one.
+   *
+   * The index behind `user_id,sync_id` is PARTIAL - `where sync_id is not
+   * null` - so a null simply does not participate: it can never conflict,
+   * and every push would insert another copy. One unstamped row would
+   * duplicate itself on every sync, for ever.
+   *
+   * db.js v11 backfills every row and its creating hook stamps every new
+   * one, so this should find nothing. It is here because the failure mode is
+   * unbounded growth rather than an error. */
+  if (conflictCols.includes('sync_id')) {
+    const before = rows.length
+    rows = rows.filter(r => r.sync_id)
+    if (rows.length < before) {
+      console.warn('[sync] %s: %d row(s) have no syncId and were not pushed',
+        tableName, before - rows.length)
+    }
+    if (!rows.length) return
+  }
 
   // Deduplicate rows by conflict key so Postgres never sees two rows with the
   // same conflict target in one batch ("cannot affect row a second time").
