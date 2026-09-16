@@ -84,14 +84,13 @@ function Tab({ path, label, Icon }) {
 /* How long the + must be held before it becomes quick log. Long enough not to
    fire on a firm tap, short enough that you do not wonder whether it worked. */
 const HOLD_MS = 420
-/* How far the finger may wander and still count as a press. 12px is roughly
-   the slop a browser itself allows before it stops calling a touch a tap. */
+/* How far the finger may wander before the HOLD is abandoned. It does not
+   decide whether the tap counts - see the note on the click handler. */
 const SLOP_PX = 12
 
 export default function Navbar({ onAddClick, onQuickLog }) {
   const timer   = useRef(null)
-  const heldRef = useRef(false)   // the hold fired: quick log is open
-  const offRef  = useRef(false)   // the finger left: do nothing on release
+  const heldRef = useRef(false)   // the hold fired: quick log is open already
   const downAt  = useRef({ x: 0, y: 0 })
 
   const clearTimer = useCallback(() => {
@@ -101,7 +100,6 @@ export default function Navbar({ onAddClick, onQuickLog }) {
 
   const startPress = useCallback((e) => {
     heldRef.current = false
-    offRef.current = false
     downAt.current = { x: e.clientX, y: e.clientY }
     timer.current = setTimeout(() => {
       heldRef.current = true
@@ -115,7 +113,7 @@ export default function Navbar({ onAddClick, onQuickLog }) {
   }, [onQuickLog])
 
   /*
-    Slide off to cancel - the behaviour every button has.
+    Slide off and the hold is off.
 
     This has to be measured from pointermove, not onPointerLeave, and that is
     not a stylistic preference. A touch pointer is IMPLICITLY CAPTURED to the
@@ -132,26 +130,47 @@ export default function Navbar({ onAddClick, onQuickLog }) {
     if (!timer.current) return
     const dx = e.clientX - downAt.current.x
     const dy = e.clientY - downAt.current.y
-    if (dx * dx + dy * dy > SLOP_PX * SLOP_PX) {
-      offRef.current = true
-      clearTimer()
+    if (dx * dx + dy * dy > SLOP_PX * SLOP_PX) clearTimer()
+  }, [clearTimer])
+
+  /*
+    Releasing only ever STOPS the hold. It does not open the sheet.
+
+    ── Why the tap is a click and not a pointerup ──
+
+    It used to be. pointerdown armed the timer, pointermove past 12px latched
+    a cancel flag, and pointerup opened the add sheet unless that flag was
+    set. On an iPhone that worked. On Android it did not, and the report was
+    that tapping + did nothing at all.
+
+    Every step of a tap is a place that reasoning can be wrong, and all of the
+    ways it can be wrong are platform-specific: how much a fat-thumb contact
+    centroid drifts between down and up while the finger flattens (Android
+    reports that drift, and 12px is inside it), whether the browser hands the
+    gesture back as a pointercancel, whether pointerup lands on the element at
+    all after a touch adjustment. Get any of them wrong and the button is
+    simply dead, with no fallback, because pointerup was the only path in.
+
+    The browser already answers all of it - that is what `click` IS on a touch
+    screen, computed with the platform's own slop and its own idea of what a
+    tap is. So the tap is a click now, and the pointer handlers are left with
+    the one job the browser cannot do for us: run a timer while the finger is
+    down. A hold suppresses the click that follows it, since the hold has
+    already acted.
+
+    It also means the + is finally operable from a keyboard, which a control
+    wired to pointer events alone never was.
+  */
+  const endPress = useCallback(() => { clearTimer() }, [clearTimer])
+
+  const onAdd = useCallback(() => {
+    if (heldRef.current) {
+      // The hold opened quick log; this is the click that trails it.
+      heldRef.current = false
+      return
     }
-  }, [clearTimer])
-
-  const abortPress = useCallback(() => {
-    offRef.current = true
-    clearTimer()
-  }, [clearTimer])
-
-  const endPress = useCallback(() => {
-    clearTimer()
-    // Neither gesture on release if the finger wandered off. Without the
-    // offRef check a cancelled hold would fall through to the add sheet,
-    // which is the one thing the user just said they did not want.
-    if (!heldRef.current && !offRef.current) onAddClick?.()
-    heldRef.current = false
-    offRef.current = false
-  }, [clearTimer, onAddClick])
+    onAddClick?.()
+  }, [onAddClick])
 
   useEffect(() => () => clearTimeout(timer.current), [])
 
@@ -190,16 +209,17 @@ export default function Navbar({ onAddClick, onQuickLog }) {
             Pointer events rather than onClick, because the two gestures share
             one target: a timer starts on down and whichever fires first wins.
 
-            onPointerMove is the one that does the cancelling - see the note on
-            implicit pointer capture above. Leave and cancel are kept as well;
-            they are the ones that fire for a mouse, and for the case where the
-            browser takes the gesture away. */}
+            The TAP is onClick, not onPointerUp - see the note on endPress for
+            the Android bug that cost. The pointer handlers only run the hold
+            timer: down arms it, move past the slop drops it, and up, leave or
+            cancel stop it. */}
         <button
           onPointerDown={startPress}
           onPointerMove={onMove}
           onPointerUp={endPress}
-          onPointerLeave={abortPress}
-          onPointerCancel={abortPress}
+          onPointerLeave={endPress}
+          onPointerCancel={endPress}
+          onClick={onAdd}
           onContextMenu={e => e.preventDefault()}
           aria-label="Add transaction. Hold to quick log."
           className={[
