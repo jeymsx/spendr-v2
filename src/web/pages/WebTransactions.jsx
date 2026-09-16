@@ -8,6 +8,7 @@ import { WebPageHeader, WebPanel, WebEmpty, money, rowTone } from '../components
 import WebSelect from '../components/WebSelect'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import { isoToDateInput } from '../../utils/txDate'
+import { currencyOfTx } from '../../lib/fxContext'
 
 const PAGE = 100
 
@@ -281,7 +282,7 @@ export default function WebTransactions() {
                         tabIndex={0}
                         role="button"
                         aria-pressed={active}
-                        aria-label={`${t.description || t.category || 'Transaction'}, ${money(t.amount)}`}
+                        aria-label={`${t.description || t.category || 'Transaction'}, ${money(t.amount, currencyOfTx(t))}`}
                         onClick={() => setSelected(t)}
                         onKeyDown={e => {
                           if (e.key === 'Enter' || e.key === ' ') {

@@ -63,6 +63,14 @@ export default function TxConfirmSheet({
 }) {
   const [saveTemplate, setSaveTemplate] = useState(false)
 
+  /* What this transaction is being written IN. An expense or inflow has an
+     `account`; a transfer has `fromAccount`, and the amount is what LEAVES,
+     so the source is the one that decides.
+
+     These props are account RECORDS rather than names - see the row further
+     down, which draws the card - so the currency is read straight off them
+     and there is no lookup to do. */
+  const cur    = (account ?? fromAccount ?? toAccount)?.currency
   const cfg    = TYPE_CONFIG[type] ?? TYPE_CONFIG.expense
   const hasFee = type === 'transfer' && fee > 0
 
@@ -200,10 +208,10 @@ export default function TxConfirmSheet({
           color={cfg.color}
           className="mt-5 mb-6"
           sub={installment
-            ? `per month · ${installment.months} months · ${fmt(installment.total)} total`
+            ? `per month · ${installment.months} months · ${fmt(installment.total, cur)} total`
             : null}
         >
-          {cfg.sign}{fmt(amount)}
+          {cfg.sign}{fmt(amount, cur)}
         </AmountHero>
 
         {/* One list, not a stack of cards.
@@ -239,7 +247,7 @@ export default function TxConfirmSheet({
                       <CategoryGlyph cat={catByName?.[l.category]} size={12} />
                       {l.category}
                       <span className="tabular-nums text-slate-400 dark:text-slate-500">
-                        {fmt(l.amount)}
+                        {fmt(l.amount, cur)}
                       </span>
                     </span>
                   ))}
@@ -267,7 +275,7 @@ export default function TxConfirmSheet({
                         text-emerald-700 dark:text-emerald-300"
                     >
                       {p.name}
-                      <span className="tabular-nums opacity-70">{fmt(p.amount)}</span>
+                      <span className="tabular-nums opacity-70">{fmt(p.amount, cur)}</span>
                     </span>
                   ))}
                 </span>
@@ -277,7 +285,7 @@ export default function TxConfirmSheet({
             />
           ) : null}
           {hasFee && (
-            <DetailRow label="Transfer fee" value={fmt(fee)} tone="text-amber-600 dark:text-amber-400" padded={false} isLast />
+            <DetailRow label="Transfer fee" value={fmt(fee, cur)} tone="text-amber-600 dark:text-amber-400" padded={false} isLast />
           )}
           {account && (
             <AccountLine
@@ -307,9 +315,9 @@ export default function TxConfirmSheet({
           {installment && (
             <>
               <div className="h-4" />
-              <DetailRow label="Per month"      value={fmt(installment.monthly)} padded={false} isLast />
+              <DetailRow label="Per month"      value={fmt(installment.monthly, cur)} padded={false} isLast />
               <DetailRow label="Months"         value={`${installment.months}`} padded={false} isLast />
-              <DetailRow label="Total"          value={fmt(installment.total)} tone="text-amber-600 dark:text-amber-400" padded={false} isLast />
+              <DetailRow label="Total"          value={fmt(installment.total, cur)} tone="text-amber-600 dark:text-amber-400" padded={false} isLast />
               <DetailRow label="First payment"  value={installment.firstLabel} padded={false} isLast />
               <DetailRow label="Last payment"   value={installment.lastLabel} padded={false} isLast />
             </>

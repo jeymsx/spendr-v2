@@ -13,6 +13,10 @@ import { AccountFormSheet } from '../../pages/Accounts'
 import { QuickAddSheet } from '../../pages/accounts/QuickAddSheet'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { sumInBase } from '../../lib/fx'
+import { currencyOfTx } from '../../lib/fxContext'
+import { useBaseCurrency } from '../../context/CurrencyContext'
+import useRates from '../../hooks/useRates'
 
 const GROUPS = [
   { key: 'cash',    label: 'Cash',          types: ['cash'] },
@@ -75,7 +79,7 @@ function LedgerRow({ tx, accountName, catMap, onSelect }) {
         </span>
       </span>
       <span className={`text-13 font-bold tabular-nums shrink-0 ${tone}`}>
-        {sign}{money(tx.amount)}
+        {sign}{money(tx.amount, currencyOfTx(tx))}
       </span>
     </button>
   )
@@ -131,6 +135,9 @@ export default function WebAccounts() {
   const selected = useMemo(() =>
     (accounts ?? []).find(a => a.id === effectiveId) ?? null, [accounts, effectiveId])
 
+  const baseCurrency = useBaseCurrency()
+  const { table: rates } = useRates()
+
   // Unfiltered on purpose — available credit must see future installments,
   // which is exactly what the history hides.
   const creditStatus = useMemo(() => {
@@ -142,11 +149,16 @@ export default function WebAccounts() {
   }, [accounts, transactions])
 
   const totals = useMemo(() => {
-    const assets = (accounts ?? []).filter(a => a.type !== 'credit')
-      .reduce((s, a) => s + (a.balance ?? 0), 0)
-    const credit = Object.values(creditStatus).reduce((s, st) => s + (st.currentBalance ?? 0), 0)
+    /* In the ledger's currency, because these three add accounts together.
+        Everything further down this page is one account at a time and stays
+        in that account's own. */
+    const assets = sumInBase(
+      (accounts ?? []).filter(a => a.type !== 'credit'), baseCurrency, rates).total
+    const credit = sumInBase(
+      (accounts ?? []).filter(a => a.type === 'credit'), baseCurrency, rates,
+      a => creditStatus[a.name]?.currentBalance ?? 0).total
     return { assets, credit, net: assets - credit }
-  }, [accounts, creditStatus])
+  }, [accounts, creditStatus, baseCurrency, rates])
 
   const grouped = useMemo(() => GROUPS.map(g => ({
     ...g,
@@ -247,7 +259,7 @@ export default function WebAccounts() {
                         </span>
                         {a.type === 'credit' && (
                           <span className="block text-10 text-slate-500 dark:text-slate-400">
-                            {money((a.creditLimit ?? 0) - (cs?.currentBalance ?? 0))} avail
+                            {money((a.creditLimit ?? 0) - (cs?.currentBalance ?? 0), a.currency)} avail
                           </span>
                         )}
                       </span>
@@ -290,12 +302,12 @@ export default function WebAccounts() {
                           Balance used
                         </p>
                         <p className="text-3xl font-bold tabular-nums text-red-600 dark:text-red-400">
-                          {money(st.currentBalance ?? 0)}
+                          {money(st.currentBalance ?? 0, selected.currency)}
                         </p>
                       </div>
                       <p className="text-xs text-slate-500 dark:text-slate-400 text-right">
-                        {money((selected.creditLimit ?? 0) - (st.currentBalance ?? 0))} available
-                        <br />of {money(selected.creditLimit)} limit
+                        {money((selected.creditLimit ?? 0) - (st.currentBalance ?? 0), selected.currency)} available
+                        <br />of {money(selected.creditLimit, selected.currency)} limit
                       </p>
                     </div>
                     <WebBar
@@ -308,7 +320,7 @@ export default function WebAccounts() {
                         <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Statement</p>
                         <p className={`text-sm font-bold tabular-nums mt-0.5 ${st.stmtPaid
                           ? 'text-emerald-700 dark:text-emerald-400' : 'text-slate-800 dark:text-white'}`}>
-                          {st.stmtPaid ? 'Paid' : money(st.thisTotal ?? 0)}
+                          {st.stmtPaid ? 'Paid' : money(st.thisTotal ?? 0, selected.currency)}
                         </p>
                         <p className="text-10 text-slate-500 dark:text-slate-400">
                           {cycleDay(st.cycleStart)} – {cycleDay(st.cycleEnd)}
@@ -320,21 +332,21 @@ export default function WebAccounts() {
                             future plan month - that wider figure is nextTotal
                             and it still drives Available below. */}
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-slate-800 dark:text-white">
-                          {money(st.nextStatementTotal ?? 0)}
+                          {money(st.nextStatementTotal ?? 0, selected.currency)}
                         </p>
                         <p className="text-10 text-slate-500 dark:text-slate-400">
                           {cycleDay(getNextCycleRange(selected.cutoffDate).cycleStart)} – {cycleDay(st.nextCycleEnd)}
                         </p>
                         {(st.laterTotal ?? 0) > 0 && (
                           <p className="text-10 text-slate-500 dark:text-slate-400">
-                            +{money(st.laterTotal)} later
+                            +{money(st.laterTotal, selected.currency)} later
                           </p>
                         )}
                       </div>
                       <div>
                         <p className="text-10 font-semibold uppercase tracking-wide text-slate-500 dark:text-slate-400">Paid</p>
                         <p className="text-sm font-bold tabular-nums mt-0.5 text-emerald-700 dark:text-emerald-400">
-                          {money(st.totalPayments ?? 0)}
+                          {money(st.totalPayments ?? 0, selected.currency)}
                         </p>
                         <p className="text-10 text-slate-500 dark:text-slate-400">since cutoff</p>
                       </div>
@@ -361,7 +373,7 @@ export default function WebAccounts() {
                         Balance
                       </p>
                       <p className="text-3xl font-bold tabular-nums text-slate-900 dark:text-white">
-                        {money(selected.balance)}
+                        {money(selected.balance, selected.currency)}
                       </p>
                     </div>
                     <p className="text-xs text-slate-500 dark:text-slate-400 text-right">

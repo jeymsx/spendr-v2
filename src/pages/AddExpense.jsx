@@ -103,9 +103,9 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
   const divideSummary = useMemo(() => {
     const parts = []
     if (splitLegs?.length) parts.push(`Split ${splitLegs.length} ways`)
-    if (people?.length) parts.push(`${people.length} owe you ${fmt(people.reduce((s, p) => s + p.amount, 0))}`)
+    if (people?.length) parts.push(`${people.length} owe you ${fmt(people.reduce((s, p) => s + p.amount, 0), account?.currency)}`)
     return parts.length ? parts.join(' · ') : null
-  }, [splitLegs, people])
+  }, [splitLegs, people, account?.currency])
 
   const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
@@ -415,6 +415,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         open={divideOpen}
         onClose={() => setDivideOpen(false)}
         total={amount}
+        currency={account?.currency}
         categories={categories ?? []}
         initialCategory={category}
         initialLegs={splitLegs
@@ -471,7 +472,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           ref={amountInputRef}
           type="text"
           inputMode="decimal"
-          placeholder={`${baseSymbol()}0.00`}
+          placeholder={`${baseSymbol(account?.currency)}0.00`}
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
@@ -652,8 +653,8 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
             </Rail>
             {isInstallment && (
               <p className="text-11 text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
-                {installMonths} × {fmt(amount)} ={' '}
-                <span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(installTotal)}</span> total
+                {installMonths} × {fmt(amount, account?.currency)} ={' '}
+                <span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(installTotal, account?.currency)}</span> total
                 {' · '}{fmtDateLabel(date)} → {fmtDateLabel(installLast)}
               </p>
             )}
@@ -735,6 +736,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         onClose={() => setDupWarning(false)}
         onSaveAnyway={() => { if (skipConfirm) { handleSave(null) } else { setShowConfirm(true) } }}
         amount={amount}
+        account={account}
         type="expense"
       />
     </div>

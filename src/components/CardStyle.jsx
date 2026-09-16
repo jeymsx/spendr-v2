@@ -8,6 +8,7 @@ import BrandMark from './BrandMark'
 import BrandWatermark from './BrandWatermark'
 import FadeScroller from './FadeScroller'
 import SchemeMark, { SCHEME_OPTIONS } from './SchemeMark'
+import { getBaseCurrency } from '../lib/money'
 
 /**
  * The pieces that make an account look like a card.
@@ -78,12 +79,14 @@ export function PreviewCard({ draft, large = false }) {
 
       <div className="mt-auto flex items-end justify-between gap-3">
         <div className="min-w-0">
+          {/* The draft's currency, not the literal PHP this printed under
+              every account face in the app for its whole life. */}
           <p className="text-10 font-semibold uppercase tracking-wider text-white/50">
-            PHP
+            {draft.currency || getBaseCurrency()}
           </p>
           {isCredit && parseMoney(draft.creditLimit) > 0 && (
             <p className="text-11 font-semibold tabular-nums text-white/80 mt-0.5">
-              {fmt(parseMoney(draft.creditLimit))} limit
+              {fmt(parseMoney(draft.creditLimit), draft.currency)} limit
             </p>
           )}
         </div>

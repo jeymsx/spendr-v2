@@ -23,7 +23,7 @@ import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import Skeleton, { SkeletonList, SkeletonRow } from '../components/ui/Skeleton'
 import { fmt } from '../lib/money'
-import { currencyOfTx } from '../lib/fxContext'
+import { currencyOfAccountName, currencyOfTx } from '../lib/fxContext'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -146,6 +146,9 @@ export default function RecurringDetail() {
       : Promise.resolve(null)),
     [recId], undefined,
   )
+  /* A bill is charged to an account, so its figure is in that account's
+     currency - the whole page is about this one bill. */
+  const billCur = currencyOfAccountName(rec?.account)
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
 
@@ -414,7 +417,7 @@ export default function RecurringDetail() {
                   ? 'text-slate-900 dark:text-white'
                   : 'text-slate-400 dark:text-slate-500'
               }`}>
-                {fmt(rec.amount)}
+                {fmt(rec.amount, billCur)}
                 <span className="text-13 font-medium text-slate-500 dark:text-slate-400 ml-1">
                   /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
                 </span>
@@ -488,7 +491,7 @@ export default function RecurringDetail() {
             {/* Only where it says something the amount above does not. On a
                 monthly bill this row would repeat the hero verbatim. */}
             {rec.frequency !== 'monthly' && (
-              <DetailRow label="Monthly cost" value={`${fmt(monthly)} /mo`} />
+              <DetailRow label="Monthly cost" value={`${fmt(monthly, billCur)} /mo`} />
             )}
             <DetailRow
               label="Status"
@@ -509,7 +512,7 @@ export default function RecurringDetail() {
           inset="gutter"
           gap="tight"
           action={history?.length
-            ? <span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{fmt(paidTotal)}</span>
+            ? <span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{fmt(paidTotal, billCur)}</span>
             : null}
         >
           Billing history
@@ -572,7 +575,7 @@ export default function RecurringDetail() {
         busy={deleting}
         title="Delete this bill?"
         body="Charges already posted stay in the ledger. Only the reminder goes."
-        amount={fmt(rec.amount ?? 0)}
+        amount={fmt(rec.amount ?? 0, billCur)}
       >
         <DetailRow label="Bill" value={rec.name} padded={false} isLast />
         {rec.category && <DetailRow label="Category" value={rec.category} padded={false} isLast />}

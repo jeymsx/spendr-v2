@@ -91,6 +91,8 @@ function CategorySelect({ categories, value, onChange, label }) {
 export default function DivideScreen({
   open = true, onClose, total = 0, categories = [], initialCategory = null,
   initialLegs = null, initialSplit = null, onApply,
+  /* The expense being divided, so every slice of it carries the same mark. */
+  currency,
 }) {
   const [tab, setTab] = useState('categories')
   const [head, setHead] = useState(/** @type {any} */ (null))
@@ -184,7 +186,7 @@ export default function DivideScreen({
             Divide this expense
           </h1>
           <p className="text-11 text-slate-400 dark:text-slate-500 tabular-nums">
-            {fmt(total)} total
+            {fmt(total, currency)} total
           </p>
         </div>
       </header>
@@ -224,7 +226,7 @@ export default function DivideScreen({
               <span className={`text-14 font-semibold tabular-nums shrink-0 ${
                 overCat ? 'text-red-500 dark:text-red-400' : 'text-slate-800 dark:text-white'
               }`}>
-                {fmt(headAmount)}
+                {fmt(headAmount, currency)}
               </span>
             </div>
 
@@ -249,7 +251,7 @@ export default function DivideScreen({
                       a rendered one - without it the typed rows read as bare
                       numbers next to the formatted first row. */}
                   <span className="flex items-baseline gap-0.5 shrink-0">
-                    <span className="text-14 font-medium text-slate-400 dark:text-slate-500">{baseSymbol()}</span>
+                    <span className="text-14 font-medium text-slate-400 dark:text-slate-500">{baseSymbol(currency)}</span>
                     <input
                       value={leg.amountStr}
                       onChange={moneyChangeHandler(v => setLeg(i, { amountStr: v }))}
@@ -309,6 +311,7 @@ export default function DivideScreen({
               value={split}
               onChange={setSplit}
               legCategories={legCategories}
+              currency={currency}
             />
           </>
         )}

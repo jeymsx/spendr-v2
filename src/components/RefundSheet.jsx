@@ -12,6 +12,7 @@ import { parseMoney, numToMoneyStr } from '../utils/moneyInput'
 import { chipClass } from '../pages/accounts/shared'
 import { fmt } from '../lib/money'
 import { refundableAmount, refundedAmount } from '../lib/txMoney'
+import { currencyOfTx } from '../lib/fxContext'
 
 /** The accent for money coming back. */
 const BACK_COLOR = '#10b981'
@@ -48,6 +49,10 @@ export default function RefundSheet({
   const [amount, setAmount] = useState('')
   const [to, setTo] = useState(/** @type {any} */ (null))
   const [pickerOpen, setPickerOpen] = useState(false)
+
+  /* The purchase's own currency: a refund of a $40 charge is in dollars,
+     and every figure on this sheet is a slice of that same charge. */
+  const cur = currencyOfTx(tx)
 
   const remaining = useMemo(() => refundableAmount(tx, allTxs), [tx, allTxs])
   const already = useMemo(() => refundedAmount(tx, allTxs), [tx, allTxs])
@@ -116,6 +121,7 @@ export default function RefundSheet({
               onChange={onAmount}
               label="Refund amount"
               color={BACK_COLOR}
+              currency={cur}
             />
           </AmountHero>
 
@@ -132,7 +138,7 @@ export default function RefundSheet({
                   onClick={() => setAmount(numToMoneyStr(p.value))}
                   className={chipClass(Math.abs(value - p.value) < 0.005)}
                 >
-                  {p.label} · {fmt(p.value)}
+                  {p.label} · {fmt(p.value, cur)}
                 </button>
               ))}
             </FadeScroller>
@@ -140,9 +146,9 @@ export default function RefundSheet({
 
           <div className="flex flex-col mb-2">
             <DetailRow label="Purchase" value={tx?.description || tx?.category || 'Purchase'} padded={false} isLast />
-            <DetailRow label="Paid" value={fmt(tx?.amount ?? 0)} padded={false} isLast />
+            <DetailRow label="Paid" value={fmt(tx?.amount ?? 0, cur)} padded={false} isLast />
             {already > 0 && (
-              <DetailRow label="Already back" value={fmt(already)} padded={false} isLast />
+              <DetailRow label="Already back" value={fmt(already, cur)} padded={false} isLast />
             )}
           </div>
 
@@ -171,7 +177,7 @@ export default function RefundSheet({
               app warns rather than refusing everywhere else money moves. */}
           {over && (
             <p className="mb-2 text-11 text-amber-600 dark:text-amber-400">
-              That is more than the {fmt(remaining)} still outstanding on this purchase.
+              That is more than the {fmt(remaining, cur)} still outstanding on this purchase.
             </p>
           )}
 

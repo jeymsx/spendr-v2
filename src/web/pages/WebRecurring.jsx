@@ -9,6 +9,7 @@ import OverdrawWarningSheet from '../../components/OverdrawWarningSheet'
 import { RecurringFormSheet } from '../../pages/Recurring'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, money, moneyCompact } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { currencyOfAccountName } from '../../lib/fxContext'
 
 const FREQ_LABEL = { daily: 'Daily', weekly: 'Weekly', monthly: 'Monthly', yearly: 'Yearly' }
 
@@ -121,7 +122,7 @@ export default function WebRecurring() {
         </td>
         <td className="px-2 py-3 w-[130px] text-right font-bold tabular-nums whitespace-nowrap
           text-slate-800 dark:text-slate-100">
-          {money(r.amount)}
+          {money(r.amount, currencyOfAccountName(r.account))}
         </td>
         <td className="px-5 py-3 w-[240px] text-right whitespace-nowrap">
           <div className="flex items-center justify-end gap-2">

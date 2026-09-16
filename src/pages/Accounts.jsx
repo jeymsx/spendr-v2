@@ -36,6 +36,9 @@ import { SummaryBar, AccountCard } from './accounts/ListCard'
 import {
   QuickAddSheet, SortableAccountCard, lockToVerticalAxis, stackSortingStrategy,
 } from './accounts/QuickAddSheet'
+import { sumInBase } from '../lib/fx'
+import { useBaseCurrency } from '../context/CurrencyContext'
+import useRates from '../hooks/useRates'
 
 /* Re-exported, not redefined. They moved to lib/accountMeta.js so that
    components/CardStyle.jsx can have them without importing a page - see the
@@ -80,6 +83,24 @@ function acctTotal(a, creditStmtMap) {
   return a.type === 'credit'
     ? (creditStmtMap[a.name]?.currentBalance ?? 0)
     : (a.balance ?? 0)
+}
+
+/**
+ * The same figure, in the ledger's currency, for a group header.
+ *
+ * A parent account and its children need not share a currency - a dollar
+ * sub-account under a peso bank is the ordinary case this exists for - and
+ * adding $500 to P1,000 to get 1,500 is the bug that made all of this
+ * necessary. Each CARD still shows its own account in its own currency;
+ * only the roll-up converts.
+ *
+ * @param {any[]} accounts
+ * @param {Record<string, any>} creditStmtMap
+ * @param {string} base
+ * @param {any} rates
+ */
+function groupTotalInBase(accounts, creditStmtMap, base, rates) {
+  return sumInBase(accounts, base, rates, a => acctTotal(a, creditStmtMap)).total
 }
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
@@ -132,6 +153,8 @@ export default function Accounts() {
   const [sortOpen,        setSortOpen]        = useState(false)
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
+  const baseCurrency = useBaseCurrency()
+  const { table: rates } = useRates()
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
 
   const creditStmtMap = useMemo(() => {
@@ -369,8 +392,8 @@ export default function Accounts() {
         if (section.kind === 'parent') {
           const { parent } = section
           const children = (accounts ?? []).filter(a => a.parentName === parent.name)
-          const groupTotal = acctTotal(parent, creditStmtMap)
-            + children.reduce((s, a) => s + acctTotal(a, creditStmtMap), 0)
+          const groupTotal = groupTotalInBase(
+            [parent, ...children], creditStmtMap, baseCurrency, rates)
           return (
             <section key={parent.id} className="mb-3">
               <div className="flex items-center gap-3 px-5 py-2">
@@ -418,7 +441,7 @@ export default function Accounts() {
               </span>
               <Divider className="flex-1" />
               <span className="text-11 tabular-nums text-slate-400 dark:text-slate-500">
-                {fmt(group.accounts.reduce((s, a) => s + acctTotal(a, creditStmtMap), 0))}
+                {fmt(groupTotalInBase(group.accounts, creditStmtMap, baseCurrency, rates))}
               </span>
             </div>
             {/* One DndContext per group: reordering is within a group, since

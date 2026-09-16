@@ -22,7 +22,7 @@ export function TxList({ txs, accountName, onSelect, catMap }) {
  * Net change across the window, which is the question the chart's shape
  * prompts. For a credit card a rise is money owed, so the colours invert.
  */
-export function TrendDelta({ data, isCredit }) {
+export function TrendDelta({ data, isCredit, currency }) {
   if (data.length < 2) return null
   const delta = data[data.length - 1].value - data[0].value
   if (Math.abs(delta) < 0.005) {
@@ -34,7 +34,7 @@ export function TrendDelta({ data, isCredit }) {
     : 'text-emerald-600 dark:text-emerald-400'
   return (
     <span className={`text-11 font-semibold tabular-nums ${tone}`}>
-      {delta > 0 ? '+' : '−'}{fmtCompact(Math.abs(delta))}
+      {delta > 0 ? '+' : '−'}{fmtCompact(Math.abs(delta), currency)}
     </span>
   )
 }

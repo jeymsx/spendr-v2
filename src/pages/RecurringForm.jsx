@@ -250,7 +250,7 @@ export default function RecurringForm() {
             <input
               type="text"
               inputMode="decimal"
-              placeholder={`${baseSymbol()}0.00`}
+              placeholder={`${baseSymbol(account?.currency)}0.00`}
               value={amountStr === '0' ? '' : amountStr}
               onChange={e => {
                 moneyChangeHandler(setAmountStr)(e)

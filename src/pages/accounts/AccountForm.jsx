@@ -14,8 +14,7 @@ import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/money
 import { PH_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
 import { PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole } from '../../lib/accountMeta'
-import { fmt } from '../../lib/money'
-import { getBaseCurrency } from '../../lib/money'
+import { fmt, getBaseCurrency } from '../../lib/money'
 import { currencyOf, symbolOf } from '../../lib/currency'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
 import SubPage from '../../components/SubPage'
@@ -188,7 +187,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
    * and there is exactly one copy of the truth - these fields - rather than
    * a draft that could drift from them.
    */
-  const draft = { name, type, color, customColor, design, scheme, creditLimit, presetColor }
+  const draft = { name, type, color, customColor, design, scheme, creditLimit, presetColor, currency }
   const setDraft = useCallback((patch) => {
     if ('color'       in patch) setColor(patch.color)
     if ('customColor' in patch) setCustomColor(patch.customColor)
@@ -362,7 +361,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       }
       showToast(
         !isEdit ? 'Account created'
-        : adjustDiff !== 0 ? `Balance corrected to ${fmt(parseMoney(startingBal))}`
+        : adjustDiff !== 0 ? `Balance corrected to ${fmt(parseMoney(startingBal), currency)}`
         : 'Account updated',
       )
       close()

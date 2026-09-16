@@ -161,7 +161,7 @@ export const AccountCard = forwardRef(function AccountCard({
           </span>
           <span className="block text-10 text-white/65">
             {isCredit
-              ? `${hidden ? '••••' : fmtCompact(available ?? 0)} left`
+              ? `${hidden ? '••••' : fmtCompact(available ?? 0, acct.currency)} left`
               : 'Balance'}
           </span>
         </span>
@@ -179,7 +179,7 @@ export const AccountCard = forwardRef(function AccountCard({
             </div>
             <div className="flex items-end justify-between mt-1.5 gap-2">
               <span className="text-10 text-white/60">
-                {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit)} used
+                {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit, acct.currency)} used
               </span>
               <SchemeMark scheme={acct.scheme} className="h-[34px]" />
             </div>

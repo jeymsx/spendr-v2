@@ -30,6 +30,7 @@ import { creditCardBills } from '../lib/creditBills'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
+import { currencyOfAccountName } from '../lib/fxContext'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -126,7 +127,7 @@ function BillRow({ rec, onOpen, isLast }) {
           <span className={`block text-14 font-semibold tabular-nums ${
             dim ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white'
           }`}>
-            {fmt(rec.amount)}
+            {fmt(rec.amount, currencyOfAccountName(rec.account))}
           </span>
           <span className="block text-11 text-slate-400 dark:text-slate-500 mt-0.5">
             /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
@@ -214,7 +215,7 @@ function CardBillRow({ bill, onPay, onOpen, isLast }) {
             one figure on this row you cannot half-read. */}
         <span className="shrink-0 text-right">
           <span className="block text-14 font-semibold tabular-nums text-slate-800 dark:text-white">
-            {fmt(bill.amount)}
+            {fmt(bill.amount, currencyOfAccountName(bill.account))}
           </span>
           <span className="block text-11 text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
             {bill.minimumDue > 0 ? `min ${fmtCompact(bill.minimumDue)}` : 'statement'}

@@ -7,6 +7,7 @@ import { accountBrand } from '../../lib/accountBrands'
 import { normalizeDesign } from '../../lib/cardDesigns'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact, rowTone } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { currencyOfAccountName, currencyOfTx } from '../../lib/fxContext'
 
 /**
  * Every row on the phone dashboard is tappable - an account card deep-links to
@@ -105,7 +106,7 @@ export default function WebDashboard() {
                         <p className="text-xs font-medium text-white/70 truncate">{a.name}</p>
                       </div>
                       <p className="text-sm font-bold tabular-nums truncate">
-                        {money(a.balance)}
+                        {money(a.balance, a.currency)}
                       </p>
                     </Link>
                   )
@@ -140,19 +141,19 @@ export default function WebDashboard() {
                           {a.name}
                         </p>
                         <p className="text-sm font-bold tabular-nums text-red-600 dark:text-red-400 shrink-0">
-                          {money(used)}
+                          {money(used, a.currency)}
                         </p>
                       </div>
                       <WebBar pct={pct} tone={pct >= 90 ? 'bad' : pct >= 70 ? 'warn' : 'accent'} />
                       <div className="flex items-center justify-between mt-1.5">
                         <p className="text-11 text-slate-500 dark:text-slate-400">
-                          {money(limit - used)} available of {moneyCompact(limit)}
+                          {money(limit - used, a.currency)} available of {moneyCompact(limit, a.currency)}
                         </p>
                         {st.stmtPaid
                           ? <p className="text-11 font-semibold text-emerald-700 dark:text-emerald-400">Statement paid</p>
                           : st.hasStatement
                             ? <p className="text-11 font-semibold text-amber-700 dark:text-amber-400">
-                                {money(st.stmtOutstanding ?? 0)} due
+                                {money(st.stmtOutstanding ?? 0, a.currency)} due
                               </p>
                             /* Billed nothing, so neither paid nor owing. It used
                                to read "₱0.00 due" in warning amber. */
@@ -180,7 +181,7 @@ export default function WebDashboard() {
                         key={t.id}
                         tabIndex={0}
                         role="button"
-                        aria-label={`${t.description || t.category || 'Transaction'}, ${money(t.amount)}`}
+                        aria-label={`${t.description || t.category || 'Transaction'}, ${money(t.amount, currencyOfTx(t))}`}
                         onClick={() => setSelectedTx(t)}
                         onKeyDown={e => {
                           if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedTx(t) }
@@ -268,7 +269,7 @@ export default function WebDashboard() {
                         </p>
                       </div>
                       <p className="text-xs font-bold tabular-nums text-slate-700 dark:text-slate-200 shrink-0">
-                        {money(r.amount)}
+                        {money(r.amount, currencyOfAccountName(r.account))}
                       </p>
                     </Link>
                   )

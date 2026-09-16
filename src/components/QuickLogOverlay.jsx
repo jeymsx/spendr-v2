@@ -6,10 +6,14 @@ import { quickParse, learnLedger } from '../lib/quickParse'
 import CategoryGlyph from './CategoryGlyph'
 import { IconTick, IconWarning, IconBell } from './icons'
 import { fmt } from '../lib/money'
+import { currencyOfAccountName } from '../lib/fxContext'
 
 /* Always a magnitude - this row never shows a sign - so it is fmt() of an
-   absolute value, which produces the identical string. */
-const money = (v) => fmt(Math.abs(v ?? 0))
+   absolute value, which produces the identical string.
+
+   The currency is whichever account the parser resolved, since that is what
+   the amount would be written in: "40 domain bdo dollar" is forty dollars. */
+const money = (v, account) => fmt(Math.abs(v ?? 0), currencyOfAccountName(account))
 
 /** Breathing room between the text and the top of the keyboard. */
 const KEYBOARD_GAP = 16
@@ -442,12 +446,12 @@ export default function QuickLogOverlay({ onClose }) {
             ) : (
               <>
                 <Chip tone="accent">{dest.verb}</Chip>
-                {parsed.amount != null && <Chip>{money(parsed.amount)}</Chip>}
+                {parsed.amount != null && <Chip>{money(parsed.amount, parsed.account)}</Chip>}
                 {parsed.type === 'transfer' ? (
                   <>
                     {parsed.fromAccount && <Chip>from {parsed.fromAccount}</Chip>}
                     {parsed.toAccount && <Chip>to {parsed.toAccount}</Chip>}
-                    {parsed.fee != null && <Chip>{money(parsed.fee)} fee</Chip>}
+                    {parsed.fee != null && <Chip>{money(parsed.fee, parsed.account)} fee</Chip>}
                   </>
                 ) : (
                   <>
@@ -506,7 +510,7 @@ export default function QuickLogOverlay({ onClose }) {
             <p className="flex items-center gap-1.5 text-12 text-amber-800 dark:text-amber-300/80">
               <IconWarning size={13} />
               {parsed.amountFlag.direction === 'high' ? 'Much more' : 'Much less'} than
-              your usual {titleCase(parsed.amountFlag.phrase)} ({money(parsed.amountFlag.median)})
+              your usual {titleCase(parsed.amountFlag.phrase)} ({money(parsed.amountFlag.median, parsed.account)})
             </p>
           )}
 

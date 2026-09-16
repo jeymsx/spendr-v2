@@ -442,7 +442,7 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
               <View style={{ flexDirection: 'row', marginBottom: 3 }}>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 7, color: GRAY_TEXT }}>STATEMENT BALANCE</Text>
-                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: RED, marginTop: 1 }}>{fmt(stmtTotal)}</Text>
+                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: RED, marginTop: 1 }}>{fmt(stmtTotal, acct.currency)}</Text>
                   <Text style={{ fontSize: 7, color: GRAY_TEXT, marginTop: 1 }}>{stmtRange}</Text>
                   {dueDate !== '—' && (
                     <Text style={{ fontSize: 7, color: RED, marginTop: 1 }}>Due {dueDate}</Text>
@@ -450,17 +450,17 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 7, color: GRAY_TEXT }}>NEXT STATEMENT</Text>
-                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(nextStatementTotal)}</Text>
+                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(nextStatementTotal, acct.currency)}</Text>
                   <Text style={{ fontSize: 7, color: GRAY_TEXT, marginTop: 1 }}>{nextRange}</Text>
                 </View>
                 <View style={{ flex: 1 }}>
                   <Text style={{ fontSize: 7, color: GRAY_TEXT }}>AVAILABLE CREDIT</Text>
-                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: GREEN, marginTop: 1 }}>{fmt(available)}</Text>
+                  <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: GREEN, marginTop: 1 }}>{fmt(available, acct.currency)}</Text>
                 </View>
                 {minimumDue > 0 && (
                   <View style={{ flex: 1 }}>
                     <Text style={{ fontSize: 7, color: GRAY_TEXT }}>MIN. DUE</Text>
-                    <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(minimumDue)}</Text>
+                    <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 9, color: DARK_TEXT, marginTop: 1 }}>{fmt(minimumDue, acct.currency)}</Text>
                   </View>
                 )}
               </View>

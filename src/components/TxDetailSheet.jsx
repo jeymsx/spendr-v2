@@ -23,6 +23,7 @@ import DetailRow from './ui/DetailRow'
 import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
 import { fmt, baseSymbol } from '../lib/money'
+import { currencyOfTx } from '../lib/fxContext'
 
 const TYPE_CFG = {
   expense:  { label: 'Expense',  color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',      sign: '−' },
@@ -142,7 +143,7 @@ export default function TxDetailSheet({
     setRefunding(true)
     try {
       await postRefund({ originalTxId: tx.txId, amount, toAccount })
-      showToast(`Refund of ${fmt(amount)} logged`)
+      showToast(`Refund of ${fmt(amount, currencyOfTx(tx))} logged`)
       setRefundOpen(false)
     } catch (e) {
       console.error('[TxDetailSheet] refund failed:', e)
@@ -320,6 +321,12 @@ export default function TxDetailSheet({
   const rec = tx ?? lastTx
   if (!rec) return null
 
+  /* Every figure in this sheet is this one transaction's, or derived from
+     it - the refund that came back, the split it belongs to, the whole
+     installment plan. So they are all in ITS currency, not the ledger's: a
+     $40 charge showed as -P40.00 here, which is wrong by a factor of sixty
+     and looks entirely plausible. */
+  const txCur       = currencyOfTx(rec)
   const cfg         = TYPE_CFG[rec.type] ?? TYPE_CFG.expense
   const cat         = catMap[rec.category]
   const acct        = acctMap[rec.account]
@@ -470,7 +477,7 @@ export default function TxDetailSheet({
               </div>
 
               <AmountHero color={cfg.color} className="mt-5 mb-6">
-                {cfg.sign}{fmt(rec.amount)}
+                {cfg.sign}{fmt(rec.amount, txCur)}
               </AmountHero>
 
               {/* What the purchase actually cost, once money came back.
@@ -481,9 +488,9 @@ export default function TxDetailSheet({
                   second fact, not a correction of the first. */}
               {backAlready > 0 && (
                 <p className="-mt-4 mb-6 text-center text-13 text-emerald-600 dark:text-emerald-400">
-                  Refunded {fmt(backAlready)}
+                  Refunded {fmt(backAlready, txCur)}
                   <span className="text-slate-400 dark:text-slate-500">
-                    {' · '}{fmt(Math.max(0, stillOut))} net
+                    {' · '}{fmt(Math.max(0, stillOut), txCur)} net
                   </span>
                 </p>
               )}
@@ -496,11 +503,11 @@ export default function TxDetailSheet({
               {sharedTotal > 0 && (
                 <p className="-mt-4 mb-6 text-center text-13">
                   <span className="text-emerald-600 dark:text-emerald-400">
-                    {fmt(sharedTotal)} shared
+                    {fmt(sharedTotal, txCur)} shared
                   </span>
                   <span className="text-slate-400 dark:text-slate-500">
                     {sharedLeft > 0.005
-                      ? ` · ${fmt(sharedLeft)} still owed to you`
+                      ? ` · ${fmt(sharedLeft, txCur)} still owed to you`
                       : ' · all settled'}
                   </span>
                 </p>
@@ -512,7 +519,7 @@ export default function TxDetailSheet({
                   here rather than by inflating the figure above. */}
               {legs.length > 1 && (
                 <p className="-mt-4 mb-6 text-center text-13 text-slate-400 dark:text-slate-500">
-                  Part of {fmt(wholePurchase)} across {legs.length} categories
+                  Part of {fmt(wholePurchase, txCur)} across {legs.length} categories
                 </p>
               )}
 
@@ -563,7 +570,7 @@ export default function TxDetailSheet({
                   <DetailRow
                     label="Split"
                     value={legs.map(l => l.category).filter(Boolean).join(', ')}
-                    sub={`${fmt(wholePurchase)} in total`}
+                    sub={`${fmt(wholePurchase, txCur)} in total`}
                     padded={false}
                     isLast
                   />
@@ -574,7 +581,7 @@ export default function TxDetailSheet({
                     value={shares.map(d => d.contact || d.name).filter(Boolean).join(', ')}
                     sub={shares.every(isSettled)
                       ? 'Settled up'
-                      : shares.map(d => `${d.contact || d.name} ${fmt(outstanding(d))}`).join(' · ')}
+                      : shares.map(d => `${d.contact || d.name} ${fmt(outstanding(d), txCur)}`).join(' · ')}
                     padded={false}
                     isLast
                   />
@@ -607,9 +614,9 @@ export default function TxDetailSheet({
                         that is not a digit or a dot, so the prefix round-trips
                         harmlessly. */}
                     <RowInput
-                      value={editAmount ? `${baseSymbol()}${editAmount}` : ''}
+                      value={editAmount ? `${baseSymbol(txCur)}${editAmount}` : ''}
                       onChange={e => setEditAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                      placeholder={`${baseSymbol()}0.00`}
+                      placeholder={`${baseSymbol(txCur)}0.00`}
                       inputMode="decimal"
                       autoFocus
                     />
@@ -714,7 +721,7 @@ export default function TxDetailSheet({
               </div>
 
               <AmountHero color={cfg.color} className="mt-5 mb-6">
-                {planCount > 1 ? fmt(planTotal) : `${cfg.sign}${fmt(rec.amount)}`}
+                {planCount > 1 ? fmt(planTotal, txCur) : `${cfg.sign}${fmt(rec.amount, txCur)}`}
               </AmountHero>
 
               {/* The same flat list the detail sheet uses, including the
@@ -756,7 +763,7 @@ export default function TxDetailSheet({
                   goes. Say so before it happens rather than after. */}
               {planCount > 1 && (
                 <p className="text-12 font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
-                  All {planCount} payments in this plan ({fmt(rec.amount)} × {planCount}) will be deleted.
+                  All {planCount} payments in this plan ({fmt(rec.amount, txCur)} × {planCount}) will be deleted.
                 </p>
               )}
             </div>

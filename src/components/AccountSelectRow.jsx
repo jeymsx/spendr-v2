@@ -47,7 +47,7 @@ export default function AccountSelectRow({
      "Select account" and carries a "Choose" chip, so that was the same
      instruction three times in one row. */
   const sub = !account ? null
-    : account.type === 'credit' ? `${fmt(creditAvailable ?? 0)} available`
+    : account.type === 'credit' ? `${fmt(creditAvailable ?? 0, account.currency)} available`
     : `Balance: ${fmt(account.balance ?? 0, account.currency)}`
 
   return (

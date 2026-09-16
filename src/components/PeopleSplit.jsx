@@ -91,7 +91,7 @@ function CategoryChipSelect({ categories, value, onChange, dark, label }) {
 
 function PersonRow({
   avatar, avatarBg, name, included, onToggle, mode, value, onValue,
-  share, onRemove, label,
+  share, onRemove, label, currency,
 }) {
   const field = MODE_FIELD[mode] ?? MODE_FIELD.equal
   const dim = included ? '' : 'opacity-40'
@@ -175,10 +175,10 @@ function PersonRow({
           money in every mode - and in exact, the thing you type into. */}
       {typedIsTheShare ? (
         <input
-          value={value ? `${baseSymbol()}${value}` : ''}
+          value={value ? `${baseSymbol(currency)}${value}` : ''}
           onChange={onChange}
           inputMode="decimal"
-          placeholder={`${baseSymbol()}0.00`}
+          placeholder={`${baseSymbol(currency)}0.00`}
           aria-label={`Amount for ${label}`}
           className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
             bg-transparent outline-none border-0 p-0 text-slate-800 dark:text-white
@@ -188,7 +188,7 @@ function PersonRow({
         <span className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
           text-slate-800 dark:text-white"
         >
-          {included ? fmt(share ?? 0) : '—'}
+          {included ? fmt(share ?? 0, currency) : '—'}
         </span>
       )}
 
@@ -268,7 +268,8 @@ export function resolveSplitValue(split, total) {
  *   from rather than all of it landing on whichever leg happened to be
  *   written first.
  */
-export default function PeopleSplit({ total, value, onChange, legCategories = [] }) {
+/** `currency` is the expense's own - the shares are slices of it. */
+export default function PeopleSplit({ total, value, onChange, legCategories = [], currency }) {
   const { theme } = useTheme()
   const dark = theme === 'dark'
   const split = value ?? EMPTY_SPLIT
@@ -341,6 +342,7 @@ export default function PeopleSplit({ total, value, onChange, legCategories = []
             onValue={v => set({ you: { ...you, value: v } })}
             share={shares.you}
             label="you"
+            currency={currency}
           />
 
           {people.map((p, i) => (
@@ -368,6 +370,7 @@ export default function PeopleSplit({ total, value, onChange, legCategories = []
                 share={shares[`p${i}`]}
                 onRemove={() => removePerson(i)}
                 label={p.name || `person ${i + 1}`}
+                currency={currency}
               />
 
               {/* Only when there is a choice to make. One category is not a
@@ -410,7 +413,7 @@ export default function PeopleSplit({ total, value, onChange, legCategories = []
                 valid ? 'text-emerald-600 dark:text-emerald-400'
                       : 'text-red-500 dark:text-red-400'
               }`}>
-                {valid ? fmt(owed) : ''}
+                {valid ? fmt(owed, currency) : ''}
               </span>
             </div>
           )}

@@ -11,6 +11,7 @@ import { IconChevronRight } from '../../components/icons'
 import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
 import { chipClass } from './shared'
 import { fmt } from '../../lib/money'
+import { currencyOfAccountName } from '../../lib/fxContext'
 
 /** The accent the app paints money leaving an account. */
 const PAY_COLOR = '#10b981'
@@ -55,6 +56,11 @@ const PAY_COLOR = '#10b981'
 export default function CardPaymentSheet({
   open, onClose, card, accounts = [], status, onPay, saving = false,
 }) {
+  /* Two currencies can be in play here and they are not the same question:
+     the presets are amounts OWED on the card, and the shortfall warning is
+     about the account the money would leave. A dollar card paid from a peso
+     account is exactly the case that makes conflating them wrong. */
+
   const [amount, setAmount] = useState('')
   const [from, setFrom] = useState(/** @type {any} */ (null))
   const [pickerOpen, setPickerOpen] = useState(false)
@@ -63,6 +69,9 @@ export default function CardPaymentSheet({
   /* Anything that can send money. A card cannot pay a card - the balance
      would move the wrong way on both ends and the statement would read as
      settled by more debt. */
+  const cardCur = currencyOfAccountName(card?.name)
+  const fromCur = currencyOfAccountName(from?.name)
+
   const payable = useMemo(
     () => accounts.filter(a => a.type !== 'credit' && a.name !== card?.name),
     [accounts, card],
@@ -134,6 +143,7 @@ export default function CardPaymentSheet({
           {/* The hero IS the input. */}
           <AmountHero color={PAY_COLOR} className="mt-5 mb-6">
             <AmountInput
+              currency={cardCur}
               ref={amountRef}
               value={amount}
               onChange={onAmount}
@@ -167,7 +177,7 @@ export default function CardPaymentSheet({
                   onClick={() => setAmount(numToMoneyStr(p.value))}
                   className={chipClass(Math.abs(value - p.value) < 0.005)}
                 >
-                  {p.label} · {fmt(p.value)}
+                  {p.label} · {fmt(p.value, cardCur)}
                 </button>
               ))}
             </FadeScroller>
@@ -213,7 +223,7 @@ export default function CardPaymentSheet({
               always the balance you have. */}
           {short > 0 && (
             <p className="mb-2 text-11 text-amber-600 dark:text-amber-400">
-              This leaves {from?.name} short by {fmt(short)}.
+              This leaves {from?.name} short by {fmt(short, fromCur)}.
             </p>
           )}
 

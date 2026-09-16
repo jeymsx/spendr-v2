@@ -70,7 +70,7 @@ export function SortableAccountItem({ acct, childCount, creditAvailMap }) {
         <div className="text-right shrink-0">
           <p className="text-sm font-semibold text-slate-700 dark:text-slate-200 tabular-nums">
             {acct.type === 'credit'
-              ? fmt(creditAvailMap?.[acct.name] ?? 0)
+              ? fmt(creditAvailMap?.[acct.name] ?? 0, acct.currency)
               : fmt(acct.balance, acct.currency)}
           </p>
           <p className="text-10 text-slate-400 dark:text-slate-500">

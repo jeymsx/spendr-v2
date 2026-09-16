@@ -9,6 +9,7 @@ import { scheduledCutoff } from '../../utils/scheduled'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import { isoToDateInput } from '../../utils/txDate'
+import { currencyOfTx } from '../../lib/fxContext'
 
 const RANGES = [
   { key: '1m',  label: 'This month' },
@@ -313,7 +314,7 @@ export default function WebInsights() {
                     </td>
                     <td className="px-5 py-2.5 w-[136px] text-right font-bold tabular-nums
                       text-slate-800 dark:text-slate-100 whitespace-nowrap">
-                      {money(t.amount)}
+                      {money(t.amount, currencyOfTx(t))}
                     </td>
                   </tr>
                 ))}

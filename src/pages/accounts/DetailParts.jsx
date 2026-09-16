@@ -13,6 +13,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import { fmt } from '../../lib/money'
 import { amountDisplay, TONE_CLASS, isRefund } from '../../lib/txMoney'
 import { fmtTxDate, fmtTxTime } from './shared'
+import { currencyOfAccountName } from '../../lib/fxContext'
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
           )}
         </div>
         <p className={`text-sm font-bold tabular-nums ${totalColor}`}>
-          {totalSign}{fmt(total)}
+          {totalSign}{fmt(total, currencyOfAccountName(accountName))}
         </p>
       </div>
 

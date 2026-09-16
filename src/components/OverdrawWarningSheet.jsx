@@ -2,6 +2,7 @@ import Button from './ui/Button'
 import Divider from './ui/Divider'
 import Sheet from './ui/Sheet'
 import { fmt } from '../lib/money'
+import { currencyOfAccountName } from '../lib/fxContext'
 
 /**
  * Shown when a spend would take a non-credit account below zero.
@@ -16,6 +17,10 @@ export default function OverdrawWarningSheet({
 }) {
   /* Sheet owns the overlay, the panel, Escape, the scroll lock, the focus
      trap and the exit animation. */
+
+  /* One account's balance and what would leave it, so both are in that
+     account's currency rather than the ledger's. */
+  const cur = currencyOfAccountName(accountName)
 
   const after = (balance ?? 0) - (amount ?? 0)
 
@@ -56,7 +61,7 @@ export default function OverdrawWarningSheet({
             Not enough in {accountName}
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">
-            Short by {fmt(Math.abs(after))}. Log the missing income first, or save
+            Short by {fmt(Math.abs(after), cur)}. Log the missing income first, or save
             anyway to let the balance go negative.
           </p>
         </div>
@@ -65,16 +70,16 @@ export default function OverdrawWarningSheet({
           <div className="rounded-2xl bg-slate-50 dark:bg-white/[0.04] px-4 py-3 flex flex-col gap-2">
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 dark:text-slate-500">Available</span>
-              <span className="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">{fmt(balance)}</span>
+              <span className="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">{fmt(balance, cur)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-xs text-slate-400 dark:text-slate-500">This transaction</span>
-              <span className="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">−{fmt(amount)}</span>
+              <span className="text-sm font-medium tabular-nums text-slate-700 dark:text-slate-200">−{fmt(amount, cur)}</span>
             </div>
             <Divider />
             <div className="flex items-center justify-between">
               <span className="text-xs font-semibold text-slate-500 dark:text-slate-400">Balance after</span>
-              <span className="text-sm font-bold tabular-nums text-red-500 dark:text-red-400">{fmt(after)}</span>
+              <span className="text-sm font-bold tabular-nums text-red-500 dark:text-red-400">{fmt(after, cur)}</span>
             </div>
           </div>
         </div>

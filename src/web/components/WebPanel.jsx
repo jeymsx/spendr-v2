@@ -32,13 +32,13 @@ export const money = fmt
  * Left local for that reason. It was very nearly unified on the strength of
  * looking almost identical.
  */
-export function moneyCompact(v) {
+export function moneyCompact(v, code) {
   const n = v ?? 0
   const abs = Math.abs(n)
-  const sign = (n < 0 ? '−' : '') + baseSymbol()
+  const sign = (n < 0 ? '−' : '') + baseSymbol(code)
   if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
   if (abs >= 10_000)    return sign + (abs / 1_000).toFixed(1) + 'K'
-  return money(n)
+  return money(n, code)
 }
 
 /** Page title row with optional right-hand actions. */

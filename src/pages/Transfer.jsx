@@ -290,7 +290,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           ref={amountInputRef}
           type="text"
           inputMode="decimal"
-          placeholder={`${baseSymbol()}0.00`}
+          placeholder={`${baseSymbol(fromAccount?.currency)}0.00`}
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
@@ -372,7 +372,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
             Transfer fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
           </SectionLabel>
           <div className={fieldFrame()}>
-            <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">{baseSymbol()}</span>
+            <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">{baseSymbol(fromAccount?.currency)}</span>
             <input
               type="text"
               inputMode="decimal"
@@ -466,6 +466,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         onClose={() => setDupWarning(false)}
         onSaveAnyway={() => { if (skipConfirm) { handleSave() } else { setShowConfirm(true) } }}
         amount={amount}
+        account={fromAccount}
         type="transfer"
       />
     </div>

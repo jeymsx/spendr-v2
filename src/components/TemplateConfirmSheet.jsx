@@ -13,6 +13,7 @@ import Button from './ui/Button'
 import DetailRow from './ui/DetailRow'
 import Sheet from './ui/Sheet'
 import { fieldFrame } from './ui/Field'
+import { currencyOfAccountName } from '../lib/fxContext'
 
 const TYPE_CONFIG = {
   expense:  { label: 'Expense',  sign: '−', color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' },
@@ -169,6 +170,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
             label="Amount"
             sign={cfg.sign}
             color={cfg.color}
+            currency={currencyOfAccountName(template?.account)}
           />
         </AmountHero>
 

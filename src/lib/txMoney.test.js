@@ -1,8 +1,9 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach } from 'vitest'
 import {
   isRefund, isSplit, amountDisplay, netOf, refundedAmount,
   refundableAmount, splitGroup, splitTotal,
 } from './txMoney'
+import { resetFxContext, setFxContext } from './fxContext'
 
 /**
  * The semantics every screen reads refunds and splits through.
@@ -62,6 +63,40 @@ describe('amountDisplay', () => {
     expect(amountDisplay(t, { account: 'Wallet' }).sign).toBe('−')
     expect(amountDisplay(t, { account: 'Card' }).sign).toBe('+')
     expect(amountDisplay(t).sign).toBe('')
+  })
+})
+
+describe('amountDisplay carries the currency', () => {
+  /* The bug: a $40 charge drew through the ledger's peso sign and read
+     "P40.00" in the detail sheet - wrong by a factor of sixty, and entirely
+     plausible-looking. Every sheet takes its mark from here now. */
+  afterEach(() => resetFxContext())
+
+  it('reports the row own currency, not the ledger', () => {
+    setFxContext({ base: 'PHP', accounts: [{ name: 'BDO Dollar', currency: 'USD' }] })
+    expect(amountDisplay({ type: 'expense', amount: 40, account: 'BDO Dollar' }).currency).toBe('USD')
+    expect(amountDisplay({ type: 'inflow', amount: 40, account: 'BDO Dollar' }).currency).toBe('USD')
+  })
+
+  it('reads a transfer in its SOURCE currency, which is what leaves', () => {
+    setFxContext({ base: 'PHP', accounts: [
+      { name: 'BDO Dollar', currency: 'USD' }, { name: 'Cash', currency: 'PHP' },
+    ] })
+    const tx = { type: 'transfer', amount: 40, fromAccount: 'BDO Dollar', toAccount: 'Cash' }
+    expect(amountDisplay(tx).currency).toBe('USD')
+    expect(amountDisplay(tx, { account: 'Cash' }).currency).toBe('USD')
+  })
+
+  it('falls back to the ledger for a row with no account it knows', () => {
+    setFxContext({ base: 'PHP', accounts: [] })
+    expect(amountDisplay({ type: 'expense', amount: 40, account: 'Gone' }).currency).toBe('PHP')
+  })
+
+  it('is on every branch, including a refund', () => {
+    setFxContext({ base: 'PHP', accounts: [{ name: 'BDO Dollar', currency: 'USD' }] })
+    const r = amountDisplay({ type: 'expense', amount: -40, account: 'BDO Dollar' })
+    expect(r.tone).toBe('refund')
+    expect(r.currency).toBe('USD')
   })
 })
 

@@ -68,6 +68,10 @@ export function TrendRangeChips({ range, onRange, ranges = TREND_RANGES }) {
  */
 export function BalanceTrend({
   data, color, isCredit, rangeKey, rangeTitle,
+  /* Whose money this is. The category page draws the same chart from a
+     figure already converted to the ledger's currency and passes none,
+     which is correct for it; the account page passes the account's. */
+  currency,
   /* The three strings that were hardcoded to the account page's question.
      The category page draws the identical chart from a different number, and
      the only thing that differs is what to call it - so they are props with
@@ -147,14 +151,14 @@ export function BalanceTrend({
                 <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
                   <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
                   <p className="font-medium text-slate-700 dark:text-white tabular-nums">
-                    {fmt(main.value)}
+                    {fmt(main.value, currency)}
                   </p>
                   <p className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">
                     {valueLabel}
                   </p>
                   {base && (
                     <p className="text-10 text-slate-400 dark:text-slate-500 mt-1 tabular-nums">
-                      {baselineLabel} {fmt(base.value)}
+                      {baselineLabel} {fmt(base.value, currency)}
                     </p>
                   )}
                 </div>

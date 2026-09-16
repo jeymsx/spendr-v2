@@ -4,7 +4,8 @@ import { fmt } from '../lib/money'
 
 const TYPE_LABEL = { expense: 'expense', inflow: 'inflow', transfer: 'transfer' }
 
-export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, type }) {
+/** `account` is the account RECORD, for the currency the amount is in. */
+export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, type, account }) {
   /* Sheet owns the overlay, the panel, Escape, the scroll lock, the focus
      trap and the exit animation. */
 
@@ -46,7 +47,7 @@ export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, t
             Possible duplicate
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">
-            A {fmt(amount)} {TYPE_LABEL[type] ?? type} with the same amount and account already exists today.
+            A {fmt(amount, account?.currency)} {TYPE_LABEL[type] ?? type} with the same amount and account already exists today.
           </p>
         </div>
 

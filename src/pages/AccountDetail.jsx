@@ -545,12 +545,13 @@ export default function AccountDetail() {
       <section className="mt-7">
         <div className="flex items-baseline justify-between px-5">
           <SectionLabel>{RANGE_TITLE[range.key]}</SectionLabel>
-          <TrendDelta data={trend} isCredit={isCredit} />
+          <TrendDelta data={trend} isCredit={isCredit} currency={account?.currency} />
         </div>
         <BalanceTrend
           data={trend}
           color={trendColor}
           isCredit={isCredit}
+          currency={account?.currency}
           rangeKey={range.key}
           rangeTitle={RANGE_TITLE[range.key]}
         />

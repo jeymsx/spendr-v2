@@ -226,7 +226,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           ref={amountInputRef}
           type="text"
           inputMode="decimal"
-          placeholder={`${baseSymbol()}0.00`}
+          placeholder={`${baseSymbol(account?.currency)}0.00`}
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
@@ -343,6 +343,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
         onClose={() => setDupWarning(false)}
         onSaveAnyway={() => { if (skipConfirm) { handleSave(null) } else { setShowConfirm(true) } }}
         amount={amount}
+        account={account}
         type="inflow"
       />
     </div>

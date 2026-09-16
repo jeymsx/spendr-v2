@@ -9,6 +9,7 @@ import Divider from './ui/Divider'
 import EmptyState from './ui/EmptyState'
 import Sheet from './ui/Sheet'
 import { fmt } from '../lib/money'
+import { currencyOfAccountName } from '../lib/fxContext'
 
 const TYPE_COLOR = {
   expense:  { bg: 'bg-red-50 dark:bg-red-500/10',     text: 'text-red-500 dark:text-red-400'     },
@@ -71,7 +72,7 @@ function TemplateRow({ tpl, onTap, onLongPressDelete }) {
             : (tpl.account ?? '')}
         </p>
       </div>
-      <p className={`text-sm font-bold tabular-nums shrink-0 ${tc.text}`}>{fmt(tpl.amount)}</p>
+      <p className={`text-sm font-bold tabular-nums shrink-0 ${tc.text}`}>{fmt(tpl.amount, currencyOfAccountName(tpl.account))}</p>
     </div>
   )
 }

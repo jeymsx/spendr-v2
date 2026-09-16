@@ -94,6 +94,22 @@ export function currencyOfTx(tx, context = ctx) {
 }
 
 /**
+ * The currency of an account, by NAME.
+ *
+ * Accounts are keyed by name throughout this app - transactions reference
+ * one, goals fund from a list of them - so plenty of callers have a name and
+ * no record. Falls back to the ledger's own currency, which is right both for
+ * an account that has not said otherwise and for a name that no longer
+ * resolves to anything.
+ *
+ * @param {string|null|undefined} name
+ * @param {FxContext} [context]
+ */
+export function currencyOfAccountName(name, context = ctx) {
+  return (name && context.byAccount.get(name)) || context.base
+}
+
+/**
  * Stamp a transaction being written, in place.
  *
  * ── What it sets, and when it declines ──
