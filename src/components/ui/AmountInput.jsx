@@ -34,7 +34,32 @@ import { baseSymbol } from '../../lib/money'
  * MoneyField deliberately does NOT - see the note in that file: its frame is
  * left-aligned, so a span sits exactly where the text starts and the two can
  * never disagree. The problem here is specific to a CENTRED figure.
+ *
+ * ── The two sizes ──
+ *
+ * `hero` is this control inside an <AmountHero>, inheriting that card's font
+ * size so the two can never disagree by a pixel.
+ *
+ * `page` is the figure at the top of the add and edit forms, which stands on
+ * its own at 3rem with the word "Amount" beneath it. Those three forms had
+ * their own raw <input> doing everything this does except the mark - so a
+ * dollar expense was typed as a bare "40", the one screen in the app that
+ * did not say which money you were entering. A variant rather than a
+ * className, because the size, the weight and the placeholder colour have to
+ * move together and `cx` resolves no conflicts: passing `font-semibold`
+ * alongside a `font-bold` in the base would be decided by stylesheet order,
+ * not by the caller.
  */
+
+const SIZE = {
+  /* amount-hero-input and amount-input, not Tailwind sizes: index.css forces
+     every input to 16px !important so iOS does not zoom on focus, and a
+     utility cannot outrank that. */
+  hero: 'amount-hero-input font-bold tracking-tight ' +
+    'placeholder:text-slate-300 dark:placeholder:text-slate-600',
+  page: 'amount-input font-semibold text-slate-900 dark:text-white ' +
+    'placeholder:text-slate-200 dark:placeholder:text-slate-800',
+}
 const AmountInput = forwardRef(function AmountInput({
   /** The digits only. The mark is added for display. */
   value,
@@ -42,8 +67,16 @@ const AmountInput = forwardRef(function AmountInput({
   onChange,
   /** What the figure is for, since the mark is decoration to a screen reader. */
   label,
-  /** The figure's colour, matching the AmountHero it usually sits in. */
+  /**
+   * The figure's colour, matching the AmountHero it usually sits in.
+   *
+   * An inline style, so it beats the variant's class - which is what lets
+   * `page` name a theme-aware default that a caller can still override with
+   * one flat colour.
+   */
   color,
+  /** 'hero' inside an AmountHero, 'page' for a form's own figure. */
+  size = 'hero',
   /** Shown before the mark: the + or − on a template's amount. */
   sign = '',
   /** The amount's currency. The base currency when not given, which is what
@@ -69,12 +102,9 @@ const AmountInput = forwardRef(function AmountInput({
       placeholder={mark + placeholder}
       aria-label={label}
       className={cx(
-        /* amount-hero-input, not a Tailwind size: index.css forces every
-           input to 16px !important so iOS does not zoom on focus, and a
-           utility cannot outrank that. */
-        'amount-hero-input w-full min-w-0 bg-transparent outline-none border-0 p-0',
-        'text-center font-bold tabular-nums tracking-tight',
-        'placeholder:text-slate-300 dark:placeholder:text-slate-600',
+        'w-full min-w-0 bg-transparent outline-none border-0 p-0',
+        'text-center tabular-nums',
+        SIZE[size] ?? SIZE.hero,
         className,
       )}
       style={{ color }}

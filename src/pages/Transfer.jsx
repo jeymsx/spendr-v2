@@ -21,6 +21,7 @@ import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import Divider from '../components/ui/Divider'
 import { fmt, baseSymbol } from '../lib/money'
+import AmountInput from '../components/ui/AmountInput'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -286,16 +287,18 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
 
       {/* ── Amount ── */}
       <div className="flex flex-col items-center px-6 pt-12 pb-12 shrink-0">
-        <input
+        {/* The primitive, not a raw input, and the reason is the mark: it is
+            glued to the first digit rather than sitting beside it, so a
+            dollar expense reads "$40" while you type instead of a bare "40".
+            See components/ui/AmountInput.jsx - this is the `page` size. */}
+        <AmountInput
           ref={amountInputRef}
-          type="text"
-          inputMode="decimal"
-          placeholder={`${baseSymbol(fromAccount?.currency)}0.00`}
+          size="page"
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
-          className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
-            text-slate-900 dark:text-white outline-none
-            placeholder-slate-200 dark:placeholder-slate-800"
+          currency={fromAccount?.currency}
+          placeholder="0.00"
+          label="Amount"
         />
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">Amount</p>
       </div>

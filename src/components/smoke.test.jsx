@@ -108,6 +108,25 @@ describe('AmountInput', () => {
     render(<AmountInput value="500" sign="−" onChange={() => {}} label="Amount" />)
     expect(screen.getByLabelText('Amount').value).toBe('−₱500')
   })
+
+  it('takes the amount currency over the ledger currency', () => {
+    render(<AmountInput value="40" currency="USD" onChange={() => {}} label="Amount" />)
+    expect(screen.getByLabelText('Amount').value).toBe('$40')
+  })
+
+  /* The add and edit forms use `page`; every sheet uses `hero`. They are two
+     sizes of one control, and the size class is what the forms used to carry
+     on a raw input of their own. */
+  it('wears the form size when asked and the sheet size otherwise', () => {
+    const { rerender } = render(
+      <AmountInput value="40" size="page" onChange={() => {}} label="Amount" />)
+    const el = () => screen.getByLabelText('Amount')
+    expect(el().className).toContain('amount-input')
+    expect(el().className).not.toContain('amount-hero-input')
+
+    rerender(<AmountInput value="40" onChange={() => {}} label="Amount" />)
+    expect(el().className).toContain('amount-hero-input')
+  })
 })
 
 describe('DeleteConfirmSheet', () => {
