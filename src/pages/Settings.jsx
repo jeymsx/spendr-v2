@@ -20,6 +20,7 @@ import { BADGES as BADGE_LIST } from '../lib/badges'
 
 import { setViewMode, getViewPreference } from '../web/useViewMode'
 import Button from '../components/ui/Button'
+import Segmented from '../components/ui/Segmented'
 import Sheet from '../components/ui/Sheet'
 
 import SectionLabel from '../components/ui/SectionLabel'
@@ -108,6 +109,17 @@ export default function Settings() {
   const lastSync       = useMemo(() => (meta ?? []).find(m => m.key === 'lastSync')?.value       ?? null,  [meta])
   const skipConfirm    = useMemo(() => (meta ?? []).find(m => m.key === 'skipConfirm')?.value    ?? false, [meta])
   const budgetRollover = useMemo(() => (meta ?? []).find(m => m.key === 'budgetRollover')?.value ?? false, [meta])
+  /* 'converted' or 'separated'. Stamped like every other preference, because
+     pullPreferences takes the newer of the two sides and cannot without a
+     time. Defaults to one converted figure: that is what the wallet has
+     always shown, and it is the only reading that answers "how am I doing". */
+  const netWorthMode = useMemo(
+    () => ((meta ?? []).find(m => m.key === 'netWorthMode')?.value === 'separated' ? 'separated' : 'converted'),
+    [meta],
+  )
+  const setNetWorthMode = (mode) => db.meta.put({
+    key: 'netWorthMode', value: mode, updatedAt: new Date().toISOString(),
+  })
   const sheetsUrl      = useMemo(() => (meta ?? []).find(m => m.key === 'sheetsUrl')?.value      ?? null,  [meta])
   const sheetsLastSync = useMemo(() => (meta ?? []).find(m => m.key === 'sheetsLastSynced')?.value ?? null, [meta])
 
@@ -293,35 +305,88 @@ export default function Settings() {
             one is noise dressed as diligence. useRates decides; this only
             draws it. */}
         {fx.needed && (
+          /* The profile card's own surface, not a recessed strip. It sits
+             directly under that card and belongs to the same group - "who you
+             are and what your money is in" - and a second, greyer treatment
+             two rows down read as a notification rather than as part of the
+             settings. */
           <div className="mt-3 flex items-center gap-3 px-4 py-3 rounded-2xl
-            bg-slate-50 dark:bg-white/[0.04]
-            border border-slate-100 dark:border-white/[0.06]">
-            <div className="flex-1 min-w-0">
-              <p className="text-13 font-semibold text-slate-800 dark:text-white">
-                Exchange rates
-              </p>
-              <p className="text-11 text-slate-500 dark:text-slate-400 truncate">
-                {fx.error
-                  ? 'Could not reach the rate service'
-                  : fx.table
-                    ? `${fx.foreign.join(', ')} · updated ${fxWhen(fx.table)}`
-                    : `${fx.foreign.join(', ')} · not downloaded yet`}
-              </p>
-            </div>
+            bg-white dark:bg-primary/[0.10]
+            border border-slate-100 dark:border-primary/[0.22]
+            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.15),0_0_0_1px_rgba(var(--color-primary-rgb),0.06)]">
+            <button
+              onClick={() => navigate('/settings/rates')}
+              className="flex-1 min-w-0 flex items-center gap-1.5 text-left active:opacity-60"
+            >
+              <span className="flex-1 min-w-0">
+                <span className="block text-13 font-semibold text-slate-900 dark:text-white">
+                  Exchange rates
+                </span>
+                <span className="block text-11 text-slate-500 dark:text-slate-400 truncate">
+                  {fx.error
+                    ? 'Could not reach the rate service'
+                    : fx.table
+                      ? `${fx.foreign.join(', ')} · updated ${fxWhen(fx.table)}`
+                      : `${fx.foreign.join(', ')} · not downloaded yet`}
+                </span>
+              </span>
+              <span className="text-slate-300 dark:text-slate-600 shrink-0">
+                <IconChevronRight size={13} strokeWidth="2" />
+              </span>
+            </button>
             {fx.stale && !fx.busy && (
               <span className="shrink-0 text-11 font-semibold px-2 py-0.5 rounded-full
                 bg-amber-500/15 text-amber-600 dark:text-amber-400">
                 stale
               </span>
             )}
+            {/* px-4 and shrink-0 are not decoration. Button states its own
+                height and never its width - every caller pays for its own
+                horizontal padding - and in a flex row with a flex-1 sibling
+                an unpadded, shrinkable button collapses to a disc with the
+                word hanging out of both sides of it. */}
             <Button
               variant="secondary"
               size="sm"
+              className="px-4 shrink-0"
               onClick={() => fx.refresh()}
               disabled={fx.busy}
             >
               {fx.busy ? 'Updating…' : 'Update'}
             </Button>
+          </div>
+        )}
+
+        {/* Only for a ledger that holds more than one currency, for the same
+            reason as the row above: there is nothing to choose between when
+            every account is in pesos. */}
+        {fx.needed && (
+          <div className="mt-3 px-4 py-4 rounded-2xl
+            bg-white dark:bg-primary/[0.10]
+            border border-slate-100 dark:border-primary/[0.22]
+            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.15),0_0_0_1px_rgba(var(--color-primary-rgb),0.06)]">
+            <p className="text-13 font-semibold text-slate-900 dark:text-white">
+              Net worth
+            </p>
+            <p className="text-11 text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
+              How the wallet on your home screen adds up accounts held in
+              different currencies.
+            </p>
+            <div className="mt-3">
+              <Segmented
+                value={netWorthMode}
+                onChange={setNetWorthMode}
+                options={[
+                  { value: 'converted', label: 'One total' },
+                  { value: 'separated', label: 'Per currency' },
+                ]}
+              />
+            </div>
+            <p className="text-11 text-slate-400 dark:text-slate-500 mt-2 leading-snug">
+              {netWorthMode === 'separated'
+                ? 'One line per currency, at face value. Nothing is converted, so nothing depends on a rate.'
+                : 'A single figure, converted at today’s rate. Tap the code on the card to read it in another currency.'}
+            </p>
           </div>
         )}
       </div>

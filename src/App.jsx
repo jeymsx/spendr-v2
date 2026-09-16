@@ -38,6 +38,7 @@ const SettingsAccent = lazy(() => import('./pages/SettingsAccent'))
 // modal that lives in the same file - see CategoryManager / BudgetManager.
 const SettingsCategories = lazy(() => import('./pages/Settings').then(m => ({ default: m.CategoriesPage })))
 const SettingsBudgets    = lazy(() => import('./pages/Settings').then(m => ({ default: m.BudgetsPage })))
+const SettingsRates      = lazy(() => import('./pages/settings/Rates'))
 const SettingsTemplates  = lazy(() => import('./pages/Settings').then(m => ({ default: m.TemplatesPage })))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
 const Onboarding   = lazy(() => import('./pages/Onboarding'))
@@ -115,6 +116,7 @@ export default function App() {
               <Route path="/settings/accent" element={<SettingsAccent />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />
               <Route path="/settings/budgets"    element={<SettingsBudgets />} />
+              <Route path="/settings/rates"      element={<SettingsRates />} />
               <Route path="/settings/templates"  element={<SettingsTemplates />} />
               <Route path="/import"       element={<ImportWizard />} />
             </Route>

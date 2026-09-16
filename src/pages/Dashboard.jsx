@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useState, useCallback } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
@@ -67,6 +67,10 @@ export default function Dashboard() {
   // real account balances, so "is it funded?" cannot be read off the row - it
   // has to go through the allocator, the same one the Goals page uses.
   const goalRows   = useLiveQuery(() => db.goals.toArray(),      [], [])
+  /* 'converted' or 'separated' - set in Settings, and only offered to a
+     ledger that holds more than one currency. See the block below. */
+  const netWorthMode = useLiveQuery(
+    async () => (await db.meta.get('netWorthMode'))?.value ?? 'converted', [], 'converted')
 
   // ── Derived values ────────────────────────────────────────────────────────────
   /* Every total on the wallet is in ONE currency, not in each account's own.
@@ -91,9 +95,14 @@ export default function Dashboard() {
      but only the ones there is a rate for, since offering a reading the app
      cannot compute is worse than not offering it. */
   const viewOptions = useMemo(() => {
-    const priced = foreign.filter(c => convert(1, c, baseCurrency, rates) != null)
-    return [baseCurrency, ...priced]
-  }, [baseCurrency, foreign, rates])
+    /* Converted mode can only offer a currency it can price; separated mode
+       converts nothing, so every currency actually held is on the list even
+       with no rates downloaded at all. */
+    const usable = netWorthMode === 'separated'
+      ? foreign
+      : foreign.filter(c => convert(1, c, baseCurrency, rates) != null)
+    return [baseCurrency, ...usable]
+  }, [baseCurrency, foreign, rates, netWorthMode])
 
   const [viewCurrency, setViewCurrency] = useState(() => {
     try { return localStorage.getItem('netWorthCurrency') || '' } catch { return '' }
@@ -111,6 +120,30 @@ export default function Dashboard() {
     try { localStorage.setItem('netWorthCurrency', next) } catch { /* private mode */ }
   }
 
+  /* ── The two modes ──
+
+     CONVERTED is the default and the one that answers "how am I doing": every
+     account, at today's rate, as one figure. The chip says which currency it
+     is being read in.
+
+     SEPARATED converts nothing. The card shows the currency the chip names,
+     counting only the accounts actually held in it, with the other
+     currencies' totals listed underneath at face value. It is the right
+     answer for somebody who does not think of their dollar savings as pesos
+     they have not spent yet - and it is the only mode that keeps working
+     with no rates at all.
+
+     Both go through the same filter+sum, which is what keeps them from
+     drifting: separated is converted with the foreign accounts left out. */
+  const separated = netWorthMode === 'separated'
+
+  const inScope = useCallback(
+    (/** @type {any[]} */ accts, /** @type {string} */ code) => (separated
+      ? accts.filter(a => (a.currency || baseCurrency) === code)
+      : accts),
+    [separated, baseCurrency],
+  )
+
   const { spendingBalance, savingsBalance, unconverted } = useMemo(() => {
     const allAccts = accounts || []
     const roleOf = (a) => {
@@ -119,14 +152,14 @@ export default function Dashboard() {
       return ['cash', 'ewallet'].includes(a.type) ? 'spending' : 'savings'
     }
     // Parents have their own real balance; sum all accounts (no double-counting)
-    const spend = sumInBase(allAccts.filter(a => roleOf(a) === 'spending'), shownCurrency, rates)
-    const save  = sumInBase(allAccts.filter(a => roleOf(a) === 'savings'),  shownCurrency, rates)
+    const spend = sumInBase(inScope(allAccts.filter(a => roleOf(a) === 'spending'), shownCurrency), shownCurrency, rates)
+    const save  = sumInBase(inScope(allAccts.filter(a => roleOf(a) === 'savings'), shownCurrency),  shownCurrency, rates)
     return {
       spendingBalance: spend.total,
       savingsBalance: save.total,
       unconverted: [...new Set([...spend.missing, ...save.missing])].sort(),
     }
-  }, [accounts, shownCurrency, rates])
+  }, [accounts, shownCurrency, rates, inScope])
 
   const parentCombinedBal = useMemo(() => {
     const allAccts = accounts || []
@@ -327,15 +360,33 @@ export default function Dashboard() {
 
   const creditOutstanding = useMemo(() =>
     sumInBase(
-      (accounts || []).filter(a => a.type === 'credit'),
+      inScope((accounts || []).filter(a => a.type === 'credit'), shownCurrency),
       shownCurrency,
       rates,
       a => creditStmtMap[a.name]?.currentBalance ?? 0,
     ).total,
-    [accounts, creditStmtMap, shownCurrency, rates],
+    [accounts, creditStmtMap, shownCurrency, rates, inScope],
   )
 
   const netWorth = spendingBalance + savingsBalance - creditOutstanding
+
+  /* The OTHER currencies' net worth, at face value, for the lines under the
+     headline. Only in separated mode, and only the ones not currently on
+     display - the big figure is already saying that one. */
+  const otherTotals = useMemo(() => {
+    if (!separated) return []
+    const allAccts = accounts || []
+    return viewOptions
+      .filter(code => code !== shownCurrency)
+      .map(code => {
+        const held = allAccts.filter(a => (a.currency || baseCurrency) === code)
+        const assets = held.filter(a => a.type !== 'credit')
+          .reduce((sum, a) => sum + (a.balance ?? 0), 0)
+        const owed = held.filter(a => a.type === 'credit')
+          .reduce((sum, a) => sum + (creditStmtMap[a.name]?.currentBalance ?? 0), 0)
+        return { code, total: assets - owed }
+      })
+  }, [separated, accounts, viewOptions, shownCurrency, baseCurrency, creditStmtMap])
 
   const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
@@ -451,11 +502,25 @@ export default function Dashboard() {
                   )}
                 </div>
 
+                {/* The rest of the ledger, unconverted, when that is what was
+                    asked for. Small and under the figure rather than beside
+                    it: these are separate totals, not parts of one. */}
+                {separated && otherTotals.length > 0 && (
+                  <div className="mt-1.5 flex flex-wrap items-baseline gap-x-3 gap-y-0.5">
+                    {otherTotals.map(({ code, total }) => (
+                      <span key={code} className="text-sm font-semibold text-white/55 tabular-nums">
+                        {revealed ? fmt(total, code) : fmtHidden(code)}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
                 {/* A net worth missing an account is not a net worth. It says
                     which currency it could not price rather than quietly
                     valuing that account at nothing, which is what dropping it
                     would amount to. Only ever shown to somebody who holds a
-                    foreign account AND has no rate for it. */}
+                    foreign account AND has no rate for it - and never in
+                    separated mode, which does not need one. */}
                 {unconverted.length > 0 && (
                   <p className="mt-1.5 text-11 text-amber-200/90 leading-snug">
                     {unconverted.join(', ')} not included: no exchange rate yet.
