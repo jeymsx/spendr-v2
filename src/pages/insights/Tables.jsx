@@ -5,6 +5,7 @@ import ProgressBar from '../../components/ui/ProgressBar'
 import { AccountChip } from '../../components/AccountPickerSheet'
 import { fmt } from '../../lib/money'
 import { SectionHeading } from './shared'
+import { currencyOfTx } from '../../lib/fxContext'
 
 // ── Top expenses ───────────────────────────────────────────────────────────────
 
@@ -31,7 +32,7 @@ export function TopTransactions({ txs, catMap }) {
                 </p>
                 <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">{tx.category} · {date}</p>
               </div>
-              <p className="text-13 font-semibold text-red-500 dark:text-red-400 tabular-nums shrink-0">{fmt(tx.amount)}</p>
+              <p className="text-13 font-semibold text-red-500 dark:text-red-400 tabular-nums shrink-0">{fmt(tx.amount, currencyOfTx(tx))}</p>
             </Card>
           )
         })}

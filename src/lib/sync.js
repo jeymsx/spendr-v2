@@ -117,6 +117,14 @@ export function toSupabaseRow(r, userId) {
     /* Which bill wrote this charge. 017 - and unlike recurringId beside it,
        this one is portable, so a bill's history survives a new device. */
     recurring_sync_id: r.recurringSyncId ?? null,
+    /* 018. What the amount is IN, and what it was worth in the ledger's
+       currency on the day - priced once, at write time, because re-deriving
+       a past figure at today's rate rewrites a month you had closed. Null on
+       every row written before the column existed, which reads as "the
+       ledger's own currency, at parity" and is true of all of them. */
+    currency:         r.currency ?? null,
+    base_amount:      r.baseAmount ?? null,
+    base_currency:    r.baseCurrency ?? null,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
   })
@@ -313,6 +321,9 @@ export function toDexieRecord(row) {
     settles:     row.settles ?? null,
     creditSyncId: row.credit_sync_id ?? null,
     recurringSyncId: row.recurring_sync_id ?? null,
+    currency:     row.currency ?? null,
+    baseAmount:   row.base_amount ?? null,
+    baseCurrency: row.base_currency ?? null,
     synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
@@ -728,7 +739,14 @@ const OPTIONAL_COLS = {
      the amount is negative and every sum adds - it just loses the link back
      to what it refunded. Degraded, not wrong, which is the right trade for
      not blocking the ledger on a migration. */
-  transactions: ['refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id'],
+  /* 018's three are here for the same reason: until the migration runs, a
+     foreign-currency row still syncs and still nets correctly in its own
+     account - it just loses the figure that was priced on the day, and the
+     reader falls back to today's rate. */
+  transactions: [
+    'refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id',
+    'currency', 'base_amount', 'base_currency',
+  ],
   user_preferences: ['theme', 'budget_rollover'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the

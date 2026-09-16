@@ -115,12 +115,12 @@ export const amountTone = (type) =>
  * @param {Record<string, any>} tx
  */
 export function rowTone(tx) {
-  const { sign, magnitude, tone } = amountDisplay(tx)
+  const { sign, magnitude, tone, currency } = amountDisplay(tx)
   const cls = tone === 'refund' ? AMOUNT_TONE.inflow.cls
             : tone === 'in'     ? AMOUNT_TONE.inflow.cls
             : tone === 'transfer' ? AMOUNT_TONE.transfer.cls
             : AMOUNT_TONE.expense.cls
-  return { sign, magnitude, cls }
+  return { sign, magnitude, cls, currency }
 }
 
 /** Big number tile for the top row of an overview. */

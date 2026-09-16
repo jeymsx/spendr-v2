@@ -25,6 +25,7 @@ import { fmt, baseSymbol } from '../lib/money'
 import { effectiveLimit, monthKey, prevMonth, sweepable } from '../lib/rollover'
 import SweepSheet from './budget/SweepSheet'
 import { postCardPayment } from '../db/txHelpers'
+import { txBase } from '../lib/fxContext'
 
 /**
  * The month's budget, in full.
@@ -300,7 +301,7 @@ export default function Budget() {
 
   const spentByCat = useMemo(() => {
     const m = {}
-    for (const t of monthExpenses) m[t.category] = (m[t.category] ?? 0) + (t.amount ?? 0)
+    for (const t of monthExpenses) m[t.category] = (m[t.category] ?? 0) + txBase(t)
     return m
   }, [monthExpenses])
 

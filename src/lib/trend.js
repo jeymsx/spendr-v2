@@ -14,6 +14,8 @@
  * keeps working where it already did.
  */
 
+import { txBase } from './fxContext'
+
 // ── 30-day trend ───────────────────────────────────────────────────────────────
 
 /**
@@ -250,7 +252,10 @@ function collectSpend(txs, now) {
   for (const tx of txs) {
     const t = new Date(tx.date ?? 0).getTime()
     if (Number.isNaN(t) || t > now) continue
-    const amt = tx.amount ?? 0
+    /* In the ledger's currency. This is a chart ACROSS accounts, unlike
+       forwardDelta above, which walks one account's own balance and so stays
+       in that account's own currency. */
+    const amt = txBase(tx)
     if (!amt) continue
     moves.push({ t, amt })
   }

@@ -6,6 +6,7 @@ import { scheduledCutoff } from '../utils/scheduled'
 import { sumInBase } from '../lib/fx'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { useRates } from './useRates'
+import { txBase } from '../lib/fxContext'
 
 /**
  * The figures every overview screen needs, derived once.
@@ -88,7 +89,7 @@ export function useFinanceSummary() {
   const budgets = useMemo(() => {
     /** @type {Record<string, number>} */
     const spent = {}
-    monthExpenses.forEach(t => { spent[t.category] = (spent[t.category] ?? 0) + (t.amount ?? 0) })
+    monthExpenses.forEach(t => { spent[t.category] = (spent[t.category] ?? 0) + txBase(t) })
     return (categories ?? [])
       .filter(c => (c.budget ?? 0) > 0)
       .map(c => ({ ...c, spent: spent[c.name] ?? 0 }))
@@ -131,7 +132,7 @@ export function useFinanceSummary() {
     creditOutstanding,
     netWorth: balances.spending + balances.savings - creditOutstanding,
     monthExpenses,
-    monthSpent: monthExpenses.reduce((s, t) => s + (t.amount ?? 0), 0),
+    monthSpent: monthExpenses.reduce((s, t) => s + txBase(t), 0),
     budgets,
     recent,
     upcoming,

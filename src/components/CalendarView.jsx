@@ -41,7 +41,7 @@ const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su']
 
 function TxRow({ tx, catMap, onClick }) {
   const cat = catMap[tx.category]
-  const { sign, magnitude, tone } = amountDisplay(tx)
+  const { sign, magnitude, tone, currency } = amountDisplay(tx)
   const cls = TONE_CLASS[tone]
   return (
     <button
@@ -70,7 +70,7 @@ function TxRow({ tx, catMap, onClick }) {
       </div>
       <div className="text-right shrink-0">
         <p className={`text-13 font-bold tabular-nums ${cls}`}>
-          {sign}{fmt(magnitude)}
+          {sign}{fmt(magnitude, currency)}
         </p>
         <p className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">{fmtTime(tx.date)}</p>
       </div>

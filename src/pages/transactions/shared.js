@@ -100,6 +100,6 @@ export const DATE_OPTS = [
  * @param {{account?: string|null}} [ctx]
  */
 export function txRowTone(tx, ctx) {
-  const { sign, magnitude, tone } = amountDisplay(tx, ctx)
-  return { sign, magnitude, cls: TONE_CLASS[/** @type {keyof typeof TONE_CLASS} */ (tone)] }
+  const { sign, magnitude, tone, currency } = amountDisplay(tx, ctx)
+  return { sign, magnitude, currency, cls: TONE_CLASS[/** @type {keyof typeof TONE_CLASS} */ (tone)] }
 }

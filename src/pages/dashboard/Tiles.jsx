@@ -9,6 +9,7 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
+import { currencyOfTx } from '../../lib/fxContext'
 
 // ── Account card ───────────────────────────────────────────────────────────────
 
@@ -169,7 +170,7 @@ export function TxRow({ tx, cat, isLast }) {
       {/* amount + date */}
       <div className="text-right shrink-0">
         <p className={`text-sm font-semibold tabular-nums ${amountCls}`}>
-          {amountSign}{fmt(tx.amount)}
+          {amountSign}{fmt(tx.amount, currencyOfTx(tx))}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
           {fmtDate(tx.date)}

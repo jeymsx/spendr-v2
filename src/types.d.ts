@@ -57,6 +57,14 @@ interface Transaction {
   recurringPrevDate?: string
   /** Groups the two halves of a transfer, and a fee with its parent. */
   groupId?: string
+  /** 018. What `amount` is denominated in - the account's currency when the
+   *  row was written. Absent on every row predating the column, and absent
+   *  reads as the ledger's own currency. */
+  currency?: string | null
+  /** `amount` priced in `baseCurrency` on the day, so a closed month does not
+   *  move when the rate does. Absent means "the same as amount". */
+  baseAmount?: number | null
+  baseCurrency?: string | null
   [key: string]: any
 }
 

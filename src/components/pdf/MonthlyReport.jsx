@@ -1,4 +1,6 @@
 import { Document, Page, View, Text, StyleSheet, Svg, Rect } from '@react-pdf/renderer'
+import { getBaseCurrency } from '../../lib/money'
+import { currencyOfTx } from '../../lib/fxContext'
 
 // ── Color helpers ──────────────────────────────────────────────────────────────
 
@@ -111,11 +113,19 @@ const DARK_TEXT      = '#1e293b'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
-const _phpFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
-/** @param {number} [v] */
-const fmt = (v) => {
+/* The CODE, not the symbol, and that is not drift from lib/money.js - the
+   note there says why. This renders with Helvetica, which has no peso glyph
+   and no won, dong, baht or rupee one either, so a symbol would be a blank
+   box in every row of a document people print.
+
+   It was hardcoded to PHP until somebody had a dollar account. The code now
+   comes from the row, and defaults to the ledger's own. */
+const _numFmt = new Intl.NumberFormat('en-PH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+/** @param {number} [v] @param {string} [code] */
+const fmt = (v, code) => {
   const n = v ?? 0
-  return (n < 0 ? '-PHP ' : 'PHP ') + _phpFmt.format(Math.abs(n))
+  const c = (code || getBaseCurrency()).toUpperCase()
+  return (n < 0 ? '-' : '') + c + ' ' + _numFmt.format(Math.abs(n))
 }
 
 const MONTH_NAMES = [
@@ -389,7 +399,7 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
           <Text style={[styles.tableCell, { flex: 2, fontFamily: 'Helvetica-Bold' }]}>{acct.name}</Text>
           <Text style={[styles.tableCell, { flex: 1, color: GRAY_TEXT, textTransform: 'capitalize' }]}>{acct.type}</Text>
           <Text style={[styles.tableCell, { flex: 1.5, textAlign: 'right', color: (endingBalances?.[acct.name] ?? acct.balance ?? 0) >= 0 ? DARK_TEXT : RED }]}>
-            {fmt(endingBalances?.[acct.name] ?? acct.balance ?? 0)}
+            {fmt(endingBalances?.[acct.name] ?? acct.balance ?? 0, acct.currency)}
           </Text>
         </View>
       ))}
@@ -417,8 +427,8 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
               {/* Balance used row */}
               <Text style={{ fontSize: 7, color: GRAY_TEXT, marginBottom: 2 }}>BALANCE USED</Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 4 }}>
-                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 12, color: usedColor }}>{fmt(balanceUsed)}</Text>
-                <Text style={{ fontSize: 7, color: GRAY_TEXT }}>{usedPct.toFixed(0)}% of {fmt(limit)} limit</Text>
+                <Text style={{ fontFamily: 'Helvetica-Bold', fontSize: 12, color: usedColor }}>{fmt(balanceUsed, acct.currency)}</Text>
+                <Text style={{ fontSize: 7, color: GRAY_TEXT }}>{usedPct.toFixed(0)}% of {fmt(limit, acct.currency)} limit</Text>
               </View>
               {/* Progress bar */}
               <View style={{ marginBottom: 8 }}>
@@ -689,7 +699,7 @@ function TransactionsPage({ year, month, transactions, colors }) {
                       <Text style={[styles.tableCell, { flex: 1.2, color: GRAY_TEXT }]}>{catName}</Text>
                       <Text style={[styles.tableCell, { flex: 1, color: GRAY_TEXT }]}>{acctName}</Text>
                       <Text style={[styles.tableCell, { width: 70, textAlign: 'right', fontFamily: 'Helvetica-Bold', color: amountColor }]}>
-                        {amountPrefix}{fmt(tx.amount ?? 0)}
+                        {amountPrefix}{fmt(tx.amount ?? 0, currencyOfTx(tx))}
                       </Text>
                     </View>
                   )

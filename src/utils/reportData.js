@@ -4,6 +4,7 @@ import { getCreditStatus, getNextCycleRange } from './creditCycle'
 import { scheduledCutoff } from './scheduled'
 import { RATES_META_KEY, sumInBase } from '../lib/fx'
 import { DEFAULT_CURRENCY } from '../lib/currency'
+import { txBase } from '../lib/fxContext'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
@@ -64,8 +65,11 @@ export async function fetchReportData(year, month, base = '', rates = null) {
   /** @param {number} v */
   const r2 = (v) => Math.round(v * 100) / 100
 
-  const totalIncome   = r2(inflows.reduce((s, t)  => s + (t.amount ?? 0), 0))
-  const totalExpenses = r2(expenses.reduce((s, t) => s + (t.amount ?? 0), 0))
+  /* In the ledger's currency. The per-transaction rows further down keep
+     each amount as it was recorded, because a row in a statement should
+     say what actually left the account. */
+  const totalIncome   = r2(inflows.reduce((s, t)  => s + txBase(t), 0))
+  const totalExpenses = r2(expenses.reduce((s, t) => s + txBase(t), 0))
   const netSavings    = r2(totalIncome - totalExpenses)
   const savingsRate   = totalIncome > 0 ? (netSavings / totalIncome) * 100 : 0
 
@@ -76,7 +80,7 @@ export async function fetchReportData(year, month, base = '', rates = null) {
     if (!catTotals[tx.category]) {
       catTotals[tx.category] = { total: 0, count: 0 }
     }
-    catTotals[tx.category].total += tx.amount ?? 0
+    catTotals[tx.category].total += txBase(tx)
     catTotals[tx.category].count += 1
   }
 

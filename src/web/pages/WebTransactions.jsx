@@ -337,7 +337,7 @@ export default function WebTransactions() {
                           'px-5 py-3 text-right text-sm font-bold tabular-nums whitespace-nowrap align-middle',
                           rowTone(t).cls,
                         ].join(' ')}>
-                          {rowTone(t).sign}{money(rowTone(t).magnitude)}
+                          {rowTone(t).sign}{money(rowTone(t).magnitude, rowTone(t).currency)}
                         </td>
                       </tr>
                     )
@@ -395,7 +395,7 @@ export default function WebTransactions() {
               }
             >
               <p className={`text-2xl font-bold tabular-nums mb-1 ${rowTone(selected).cls}`}>
-                {rowTone(selected).sign}{money(rowTone(selected).magnitude)}
+                {rowTone(selected).sign}{money(rowTone(selected).magnitude, rowTone(selected).currency)}
               </p>
               {selected.description && (
                 <p className="text-sm text-slate-600 dark:text-slate-300 mb-4">{selected.description}</p>

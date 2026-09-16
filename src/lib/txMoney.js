@@ -35,6 +35,8 @@
  * or delete them as a unit.
  */
 
+import { currencyOfTx } from './fxContext'
+
 /** True when this row is money coming back on a purchase.
  *  @param {Record<string, any>} [tx] */
 export function isRefund(tx) {
@@ -54,6 +56,16 @@ export function isSplit(tx) {
  * it is shown at its magnitude so nobody reads `−₱-500`. The type table is
  * the fallback for everything else.
  *
+ * ── And which currency to render it in ──
+ *
+ * `magnitude` is the row's OWN amount, never a converted one, so it has to
+ * carry the row's own currency with it. A $40 charge rendered through the
+ * ledger's peso sign reads "₱40.00", which is not a cosmetic slip: it is
+ * wrong by a factor of sixty and it looks entirely plausible.
+ *
+ * Converted figures are a different question answered by a different
+ * function - see txBase in lib/fxContext.js, which is what the totals use.
+ *
  * @param {Record<string, any>} [tx]
  * @param {{account?: string|null}} [ctx] an account page shows one SIDE of a
  *   transfer, so it needs to know which side it is looking at
@@ -61,19 +73,20 @@ export function isSplit(tx) {
 export function amountDisplay(tx, ctx = {}) {
   const amount = tx?.amount ?? 0
   const magnitude = Math.abs(amount)
+  const currency = currencyOfTx(tx)
 
   if (isRefund(tx)) {
-    return { sign: '+', magnitude, tone: 'refund' }
+    return { sign: '+', magnitude, tone: 'refund', currency }
   }
 
   const { account } = ctx
   if (tx?.type === 'transfer') {
-    if (account && tx.fromAccount === account) return { sign: '−', magnitude, tone: 'out' }
-    if (account && tx.toAccount === account)   return { sign: '+', magnitude, tone: 'in' }
-    return { sign: '', magnitude, tone: 'transfer' }
+    if (account && tx.fromAccount === account) return { sign: '−', magnitude, tone: 'out', currency }
+    if (account && tx.toAccount === account)   return { sign: '+', magnitude, tone: 'in', currency }
+    return { sign: '', magnitude, tone: 'transfer', currency }
   }
-  if (tx?.type === 'inflow') return { sign: '+', magnitude, tone: 'in' }
-  return { sign: '−', magnitude, tone: 'out' }
+  if (tx?.type === 'inflow') return { sign: '+', magnitude, tone: 'in', currency }
+  return { sign: '−', magnitude, tone: 'out', currency }
 }
 
 /** Tailwind for each tone, in one place so the four call sites agree. */

@@ -14,6 +14,7 @@ import { SpendingByCategory } from './insights/Panels'
 import { TopTransactions, AccountBreakdown } from './insights/Tables'
 import { SpendingTrend } from './insights/Trend'
 import { generateTrivia, SpendingTrivia } from './insights/Trivia'
+import { txBase } from '../lib/fxContext'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 const pad = (n) => String(n).padStart(2, '0')
@@ -224,15 +225,15 @@ export default function Insights() {
   const expenses = useMemo(() => postedTxs.filter(t => t.type === 'expense'), [postedTxs])
   const inflows  = useMemo(() => postedTxs.filter(t => t.type === 'inflow'),  [postedTxs])
 
-  const totalSpent  = useMemo(() => expenses.reduce((s, t) => s + (t.amount ?? 0), 0), [expenses])
-  const totalEarned = useMemo(() => inflows.reduce((s, t)  => s + (t.amount ?? 0), 0), [inflows])
+  const totalSpent  = useMemo(() => expenses.reduce((s, t) => s + txBase(t), 0), [expenses])
+  const totalEarned = useMemo(() => inflows.reduce((s, t)  => s + txBase(t), 0), [inflows])
 
   const categorySegments = useMemo(() => {
     const map = {}
     for (const tx of expenses) {
       const c = catMap[tx.category]
       if (!map[tx.category]) map[tx.category] = { name: tx.category, value: 0, color: c?.color ?? '#6366f1', icon: c?.icon ?? '📦' }
-      map[tx.category].value += tx.amount ?? 0
+      map[tx.category].value += txBase(tx)
     }
     return Object.values(map).sort((a, b) => b.value - a.value)
   }, [expenses, catMap])
@@ -245,8 +246,8 @@ export default function Insights() {
       return { dailyExpense: [], dailyIncome: [], dailyNetflow: [] }
     const days     = new Date(year, month + 1, 0).getDate()
     const byExpDay = {}, byIncDay = {}
-    for (const tx of expenses) { const d = new Date(tx.date).getDate(); byExpDay[d] = (byExpDay[d] ?? 0) + (tx.amount ?? 0) }
-    for (const tx of inflows)  { const d = new Date(tx.date).getDate(); byIncDay[d] = (byIncDay[d] ?? 0) + (tx.amount ?? 0) }
+    for (const tx of expenses) { const d = new Date(tx.date).getDate(); byExpDay[d] = (byExpDay[d] ?? 0) + txBase(tx) }
+    for (const tx of inflows)  { const d = new Date(tx.date).getDate(); byIncDay[d] = (byIncDay[d] ?? 0) + txBase(tx) }
     const days_arr = Array.from({ length: days }, (_, i) => i + 1)
     return {
       dailyExpense: days_arr.map(d => ({ day: d, value: byExpDay[d] ?? 0 })),
@@ -285,8 +286,8 @@ export default function Insights() {
         const txs = postedTxs.filter(t => t.date >= start && t.date < end)
         return {
           label:   MONTHS_SHORT[d.getMonth()],
-          income:  txs.filter(t => t.type === 'inflow').reduce((s, t)  => s + (t.amount ?? 0), 0),
-          expense: txs.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0),
+          income:  txs.filter(t => t.type === 'inflow').reduce((s, t)  => s + txBase(t), 0),
+          expense: txs.filter(t => t.type === 'expense').reduce((s, t) => s + txBase(t), 0),
         }
       })
     }
@@ -307,8 +308,8 @@ export default function Insights() {
           const mo = txs.filter(t => (t.date ?? '') >= start && (t.date ?? '') < end)
           result.push({
             label:   `${MONTHS_SHORT[m]} ${y}`,
-            income:  mo.filter(t => t.type === 'inflow').reduce((s, t)  => s + (t.amount ?? 0), 0),
-            expense: mo.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0),
+            income:  mo.filter(t => t.type === 'inflow').reduce((s, t)  => s + txBase(t), 0),
+            expense: mo.filter(t => t.type === 'expense').reduce((s, t) => s + txBase(t), 0),
           })
           m++; if (m > 11) { m = 0; y++ }
         }
@@ -320,8 +321,8 @@ export default function Insights() {
           const yt = txs.filter(t => (t.date ?? '').startsWith(year))
           return {
             label:   year,
-            income:  yt.filter(t => t.type === 'inflow').reduce((s, t)  => s + (t.amount ?? 0), 0),
-            expense: yt.filter(t => t.type === 'expense').reduce((s, t) => s + (t.amount ?? 0), 0),
+            income:  yt.filter(t => t.type === 'inflow').reduce((s, t)  => s + txBase(t), 0),
+            expense: yt.filter(t => t.type === 'expense').reduce((s, t) => s + txBase(t), 0),
           }
         })
       }
@@ -340,7 +341,11 @@ export default function Insights() {
       const acct = acctMap[tx.account]
       // The account itself, not just its colour: the row draws its card.
       if (!map[tx.account]) map[tx.account] = { name: tx.account, value: 0, color: acct?.color ?? '#6366f1', acct: acct ?? null }
-      map[tx.account].value += tx.amount ?? 0
+      /* In the ledger's currency, not each account's. These are BARS, and a
+         bar is a comparison - drawing $40 longer than ₱2,000 because forty is
+         a smaller number would be the chart lying. The account's own figure
+         is on its card, where it is not being compared to anything. */
+      map[tx.account].value += txBase(tx)
     }
     return Object.values(map).sort((a, b) => b.value - a.value)
   }, [expenses, acctMap])
@@ -348,7 +353,7 @@ export default function Insights() {
   const budgetData = useMemo(() => {
     if (range !== '1m') return []
     const spentByCat = {}
-    for (const tx of expenses) spentByCat[tx.category] = (spentByCat[tx.category] ?? 0) + (tx.amount ?? 0)
+    for (const tx of expenses) spentByCat[tx.category] = (spentByCat[tx.category] ?? 0) + txBase(tx)
     return (categories ?? [])
       .filter(c => c.type === 'expense' && (c.budget ?? 0) > 0)
       .map(c => ({ name: c.name, icon: c.icon, color: c.color, budget: c.budget, spent: spentByCat[c.name] ?? 0 }))

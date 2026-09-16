@@ -1,5 +1,6 @@
 import { allocateGoals } from './goals'
 import { isoToDateInput } from '../utils/txDate'
+import { txBase } from './fxContext'
 
 /**
  * What the app is willing to call an achievement.
@@ -179,7 +180,7 @@ function monthStats(transactions, today) {
   for (const t of transactions) {
     const row = stats.get(monthKey(t.date))
     if (!row) continue
-    const amt = Math.abs(t.amount ?? 0)
+    const amt = Math.abs(txBase(t))
     if (t.type === 'inflow') row.inflow += amt
     else if (t.type === 'expense') {
       row.expense += amt

@@ -36,6 +36,7 @@ import SectionHeading from '../components/ui/SectionHeading'
 import useRates from '../hooks/useRates'
 import { convert, sumInBase } from '../lib/fx'
 import { useBaseCurrency } from '../context/CurrencyContext'
+import { txBase } from '../lib/fxContext'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -197,7 +198,7 @@ export default function Dashboard() {
   const budgetCategories = useMemo(() => {
     const spentMap = {}
     monthExpenses.forEach(t => {
-      spentMap[t.category] = (spentMap[t.category] ?? 0) + (t.amount ?? 0)
+      spentMap[t.category] = (spentMap[t.category] ?? 0) + txBase(t)
     })
     return (categories || [])
       .filter(c => c.budget > 0)

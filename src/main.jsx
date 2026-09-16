@@ -5,6 +5,7 @@ import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
 import { CurrencyProvider } from './context/CurrencyContext'
+import FxContextSync from './context/FxContextSync'
 import ErrorBoundary from './components/ErrorBoundary'
 import Shell from './Shell'
 import './index.css'
@@ -53,6 +54,7 @@ createRoot(document.getElementById('root')).render(
           <AuthProvider>
             <ToastProvider>
               <CurrencyProvider>
+                <FxContextSync />
                 <Shell />
               </CurrencyProvider>
             </ToastProvider>

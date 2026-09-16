@@ -21,6 +21,7 @@ import {
 } from './accounts/Trend'
 import { DetailTxRow } from './accounts/DetailParts'
 import { fmt, fmtCompact } from '../lib/money'
+import { txBase } from '../lib/fxContext'
 
 /**
  * One category.
@@ -103,7 +104,7 @@ export default function CategoryDetail() {
     const pfx = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     return catTxs
       .filter(t => (t.date ?? '').startsWith(pfx))
-      .reduce((sum, t) => sum + (t.amount ?? 0), 0)
+      .reduce((sum, t) => sum + txBase(t), 0)
   }, [catTxs, now])
 
   const range = useMemo(

@@ -23,6 +23,7 @@ import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import Skeleton, { SkeletonList, SkeletonRow } from '../components/ui/Skeleton'
 import { fmt } from '../lib/money'
+import { currencyOfTx } from '../lib/fxContext'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -534,7 +535,7 @@ export default function RecurringDetail() {
                   label={new Date(t.date).toLocaleDateString('en-PH', {
                     month: 'short', day: 'numeric', year: 'numeric',
                   })}
-                  value={fmt(t.amount)}
+                  value={fmt(t.amount, currencyOfTx(t))}
                   isLast={i === arr.length - 1 && history.length <= 6}
                 />
               ))

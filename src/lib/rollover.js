@@ -26,6 +26,8 @@
  * the flag goes on and the carry starts there.
  */
 
+import { txBase } from './fxContext'
+
 /** "2026-09" for a Date or a month key.
  *  @param {Date|string|number} d */
 export function monthKey(d) {
@@ -70,7 +72,7 @@ export function spendByMonth(txs, categoryName) {
   for (const tx of txs ?? []) {
     if (tx.type !== 'expense' || tx.category !== categoryName) continue
     const k = monthKey(tx.date)
-    out[k] = Math.round(((out[k] ?? 0) + (tx.amount ?? 0)) * 100) / 100
+    out[k] = Math.round(((out[k] ?? 0) + txBase(tx)) * 100) / 100
   }
   return out
 }

@@ -202,7 +202,7 @@ export default function WebDashboard() {
                         </td>
                         <td className={`px-5 py-2.5 w-[136px] text-right font-bold tabular-nums whitespace-nowrap
                           ${rowTone(t).cls}`}>
-                          {rowTone(t).sign}{money(rowTone(t).magnitude)}
+                          {rowTone(t).sign}{money(rowTone(t).magnitude, rowTone(t).currency)}
                         </td>
                       </tr>
                     )

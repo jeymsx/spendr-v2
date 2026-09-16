@@ -1,4 +1,5 @@
 import Dexie from 'dexie'
+import { stampTxCurrency } from '../lib/fxContext'
 
 /**
  * Dexie builds its table properties at runtime from the schema strings below,
@@ -245,6 +246,23 @@ for (const name of SYNCED_TABLES) {
     return { updatedAt: new Date().toISOString() }
   })
 }
+
+/* And the one hook that is NOT about the six synced tables.
+ *
+ * A transaction records what currency its amount is in and what that was
+ * worth in the ledger's currency on the day - see 018 and lib/fxContext.js
+ * for why that is stored rather than derived.
+ *
+ * A hook, for exactly the reason the two above are hooks: seventeen places in
+ * this app insert a transaction, and the last convention seventeen writers
+ * had to remember was `updatedAt`, which 18 of 31 sites forgot.
+ *
+ * Transactions are not in SYNCED_TABLES - they are identified by txId rather
+ * than syncId and have never wanted the other two stamps - so this is its own
+ * loop of one rather than a branch inside that one. */
+db.transactions.hook('creating', (_key, row) => {
+  stampTxCurrency(row)
+})
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 

@@ -238,7 +238,7 @@ export function FilterModal({
 
 export function TxRow({ tx, catMap, onClick }) {
   const cat = catMap[tx.category]
-  const { cls, sign, magnitude } = txRowTone(tx)
+  const { cls, sign, magnitude, currency } = txRowTone(tx)
 
   return (
     <button
@@ -269,7 +269,7 @@ export function TxRow({ tx, catMap, onClick }) {
 
       <div className="text-right shrink-0">
         <p className={`text-13 font-bold tabular-nums ${cls}`}>
-          {sign}{fmt(magnitude)}
+          {sign}{fmt(magnitude, currency)}
         </p>
         <p className="text-10 text-slate-500 dark:text-slate-400 mt-0.5">{fmtTime(tx.date)}</p>
       </div>

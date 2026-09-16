@@ -95,7 +95,7 @@ export function DetailTxRow({
      render "−₱-500.00" and colour money coming back as money going out. It
      takes the account so a transfer is still signed by the side being
      looked at. */
-  const { sign, magnitude, tone } = amountDisplay(tx, { account: accountName })
+  const { sign, magnitude, tone, currency } = amountDisplay(tx, { account: accountName })
   const isOneSided = tx.type !== 'transfer' && tx.account !== accountName
   const color = isOneSided ? 'text-slate-600 dark:text-slate-300' : TONE_CLASS[tone]
 
@@ -168,7 +168,7 @@ export function DetailTxRow({
 
       <span className="text-right shrink-0">
         <span className={`block text-13 font-bold tabular-nums ${color}`}>
-          {sign}{fmt(magnitude)}
+          {sign}{fmt(magnitude, currency)}
         </span>
         <span className="block text-10 text-slate-500 dark:text-slate-400 mt-0.5">
           {fmtTxTime(tx.date)}
