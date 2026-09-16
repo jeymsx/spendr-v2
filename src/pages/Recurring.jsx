@@ -25,7 +25,7 @@ import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
-import { fmt, fmtCompact } from '../lib/money'
+import { fmt, fmtCompact, baseSymbol } from '../lib/money'
 import { creditCardBills } from '../lib/creditBills'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
@@ -418,7 +418,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                 ? 'border border-red-300 dark:border-red-500/40'
                 : 'border border-slate-200/80 dark:border-white/[0.08]',
             ].join(' ')}>
-              <span className="text-slate-400 dark:text-slate-500 mr-1.5 text-sm shrink-0">₱</span>
+              <span className="text-slate-400 dark:text-slate-500 mr-1.5 text-sm shrink-0">{baseSymbol()}</span>
               <input
                 type="text" inputMode="decimal"
                 value={amountStr}

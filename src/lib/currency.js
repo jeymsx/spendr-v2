@@ -1,0 +1,182 @@
+/**
+ * Which currency, and what it looks like.
+ *
+ * ── Why this is not just a symbol lookup ──
+ *
+ * The app was written peso-only. Not as a decision - it is simply what was in
+ * front of whoever wrote the first screen, and the nineteen after it copied
+ * it. `₱` is hardcoded in about seventy places, `en-PH` in twenty-six, and
+ * `accounts.currency` has been in the Dexie schema since v1 while every row
+ * ever written set it to the literal 'PHP'.
+ *
+ * So this is the registry those places were missing. It is deliberately data
+ * and pure functions: no Dexie, no React, no fetch. What the CURRENT currency
+ * is belongs to lib/money.js (the app-wide default) and to an account's own
+ * `currency` field; what a currency IS belongs here.
+ *
+ * ── The decimals are not all two ──
+ *
+ * Yen, won and dong are quoted whole. Writing ¥1,200.00 is not more precise,
+ * it is wrong in the way that tells a reader the app has never seen a yen.
+ *
+ * ── The minus sign ──
+ *
+ * U+2212 MINUS SIGN, not a hyphen, and before the symbol: −$340.50. It is the
+ * width of a plus and sits at the digits' height, which is what keeps a column
+ * of tabular figures lining up. The peso formatter this generalises already
+ * did it; this only keeps doing it for the rest.
+ */
+
+/** The fallback everywhere, and what every existing row already says. */
+export const DEFAULT_CURRENCY = 'PHP'
+
+/**
+ * The currencies offered in the pickers.
+ *
+ * Picked for who actually uses this: the Philippines, plus the places
+ * Filipinos hold accounts and get paid from. Not an exhaustive ISO 4217 list -
+ * a hundred and eighty rows in a phone-sized select is worse than twenty.
+ *
+ * `name` is Title Case because it is a label in a picker, not prose.
+ *
+ * `symbol` is what gets rendered, so where a bare glyph would be ambiguous in
+ * a peso app the symbol is disambiguated: A$, S$, C$, HK$, NZ$, NT$, so a
+ * dollar amount always says WHICH dollar.
+ */
+/** @type {Record<string, {symbol: string, name: string, decimals: number}>} */
+export const CURRENCIES = {
+  PHP: { symbol: '₱',   name: 'Philippine Peso',      decimals: 2 },
+  USD: { symbol: '$',   name: 'US Dollar',            decimals: 2 },
+  EUR: { symbol: '€',   name: 'Euro',                 decimals: 2 },
+  GBP: { symbol: '£',   name: 'British Pound',        decimals: 2 },
+  JPY: { symbol: '¥',   name: 'Japanese Yen',         decimals: 0 },
+  AUD: { symbol: 'A$',  name: 'Australian Dollar',    decimals: 2 },
+  CAD: { symbol: 'C$',  name: 'Canadian Dollar',      decimals: 2 },
+  SGD: { symbol: 'S$',  name: 'Singapore Dollar',     decimals: 2 },
+  HKD: { symbol: 'HK$', name: 'Hong Kong Dollar',     decimals: 2 },
+  NZD: { symbol: 'NZ$', name: 'New Zealand Dollar',   decimals: 2 },
+  CHF: { symbol: 'CHF', name: 'Swiss Franc',          decimals: 2 },
+  AED: { symbol: 'AED', name: 'UAE Dirham',           decimals: 2 },
+  SAR: { symbol: 'SAR', name: 'Saudi Riyal',          decimals: 2 },
+  QAR: { symbol: 'QAR', name: 'Qatari Riyal',         decimals: 2 },
+  KRW: { symbol: '₩',   name: 'South Korean Won',     decimals: 0 },
+  CNY: { symbol: 'CN¥', name: 'Chinese Yuan',         decimals: 2 },
+  TWD: { symbol: 'NT$', name: 'New Taiwan Dollar',    decimals: 2 },
+  MYR: { symbol: 'RM',  name: 'Malaysian Ringgit',    decimals: 2 },
+  THB: { symbol: '฿',   name: 'Thai Baht',            decimals: 2 },
+  IDR: { symbol: 'Rp',  name: 'Indonesian Rupiah',    decimals: 0 },
+  VND: { symbol: '₫',   name: 'Vietnamese Dong',      decimals: 0 },
+  INR: { symbol: '₹',   name: 'Indian Rupee',         decimals: 2 },
+}
+
+/** Every code, in the order the pickers should show them. */
+export const CURRENCY_CODES = Object.keys(CURRENCIES)
+
+/**
+ * The registry entry, never undefined.
+ *
+ * An unknown code renders as its own code rather than as a blank: a balance
+ * labelled "NOK 500.00" is readable and obviously foreign, which is what
+ * somebody wants to see if a currency arrived from a sync written by a newer
+ * version of the app than theirs.
+ *
+ * @param {string|null|undefined} code
+ */
+export function currencyOf(code) {
+  if (!code) return CURRENCIES[DEFAULT_CURRENCY]
+  const c = CURRENCIES[String(code).toUpperCase()]
+  if (c) return c
+  const up = String(code).toUpperCase()
+  return { symbol: up + ' ', name: up, decimals: 2 }
+}
+
+/** @param {string|null|undefined} code */
+export const symbolOf = (code) => currencyOf(code).symbol
+
+/**
+ * Grouping, per decimal count. Built once each, because Intl.NumberFormat is
+ * expensive to construct and these render inside lists.
+ *
+ * 'en-PH' rather than a locale per currency, on purpose: the reader is the
+ * same person whatever the account, and switching 1,234.56 to 1.234,56 in the
+ * middle of their own list because one row is in euros helps nobody.
+ */
+const groupers = new Map()
+function grouper(/** @type {number} */ decimals) {
+  let g = groupers.get(decimals)
+  if (!g) {
+    g = new Intl.NumberFormat('en-PH', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    })
+    groupers.set(decimals, g)
+  }
+  return g
+}
+
+const MINUS = '−'
+
+/**
+ * The full figure, signed. "₱1,200.00", "−$340.50", "¥1,200".
+ *
+ * @param {number} [v]
+ * @param {string} [code]
+ * @returns {string}
+ */
+export function formatAmount(v, code) {
+  const n = Number.isFinite(v) ? /** @type {number} */ (v) : 0
+  const { symbol, decimals } = currencyOf(code)
+  return (n < 0 ? MINUS : '') + symbol + grouper(decimals).format(Math.abs(n))
+}
+
+/**
+ * The short one, for anywhere a column is narrower than an amount:
+ * "₱1.2K", "$3.4M", and the full figure below a thousand.
+ *
+ * @param {number} [v]
+ * @param {string} [code]
+ * @returns {string}
+ */
+export function compactAmount(v, code) {
+  const n = Number.isFinite(v) ? /** @type {number} */ (v) : 0
+  const abs = Math.abs(n)
+  const sign = (n < 0 ? MINUS : '') + symbolOf(code)
+  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
+  if (abs >= 1_000) return sign + (abs / 1_000).toFixed(1) + 'K'
+  return formatAmount(n, code)
+}
+
+/**
+ * Every single-character currency mark in the registry, as the inside of a
+ * character class: "₱$€£¥₩฿₫₹".
+ *
+ * For the two places that READ money out of text rather than writing it -
+ * quick log's parser and the transaction search - both of which had the peso
+ * hardcoded, so "$50 lunch" parsed the 50 and left a stray dollar sign in the
+ * description, and searching "$500" matched nothing.
+ *
+ * Single characters only, deliberately. The multi-letter marks (A$, CHF, RM)
+ * are prose as much as notation, and admitting them to a character class
+ * would mean "RM" in a note stopped being letters.
+ *
+ * Derived from the registry rather than typed out again, so a currency added
+ * above is understood by the parsers in the same commit.
+ */
+export const SINGLE_MARKS = [...new Set(
+  Object.values(CURRENCIES).map(c => c.symbol).filter(s => s.length === 1),
+)].join('')
+
+/**
+ * The masked figure, for when balances are hidden.
+ *
+ * It keeps the symbol, because the dots are already telling you the number is
+ * none of your business and hiding WHICH currency as well only makes the row
+ * unidentifiable. Written here rather than as '₱ ••••' in eleven files, which
+ * is what it was.
+ *
+ * @param {string} [code]
+ * @param {number} [dots]
+ */
+export function maskedAmount(code, dots = 4) {
+  return symbolOf(code) + ' ' + '•'.repeat(dots)
+}

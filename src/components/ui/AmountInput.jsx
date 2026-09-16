@@ -1,5 +1,6 @@
 import { forwardRef } from 'react'
 import { cx } from './cx'
+import { baseSymbol } from '../../lib/money'
 
 /**
  * The big figure at the top of a sheet, when you can type into it.
@@ -45,13 +46,16 @@ const AmountInput = forwardRef(function AmountInput({
   color,
   /** Shown before the mark: the + or − on a template's amount. */
   sign = '',
+  /** The amount's currency. The base currency when not given, which is what
+      every form not tied to one particular account wants. */
+  currency,
   /** Digits only, again - the mark is prepended for you. */
   placeholder = '0',
   /** Layout only. */
   className = '',
   ...rest
 }, ref) {
-  const mark = `${sign}₱`
+  const mark = `${sign}${baseSymbol(currency)}`
 
   return (
     <input

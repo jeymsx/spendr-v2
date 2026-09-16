@@ -1,4 +1,5 @@
 import BrandMark from './BrandMark'
+import { baseSymbol } from '../lib/money'
 
 /**
  * The big faint mark in a card's bottom-right corner, where a real card puts
@@ -86,12 +87,15 @@ const BRAND_ART = {
   // Plain cash has no institution and so no logo. It used to fall through to
   // the category glyph, which is a banknote - and a banknote outline blown up
   // to a third of a card reads as an empty placeholder box, because at that
-  // size all you see is its rectangle. The peso sign is the thing cash
+  // size all you see is its rectangle. The currency mark is the thing cash
   // actually is, it is a letterform so it survives being clipped, and a square
   // box gets it sized and bled like the other logomarks.
+  //
+  // A getter, because it used to be a literal peso and a cash account is not
+  // necessarily in pesos. Evaluated at render, so it follows the ledger.
   cash: {
     viewBox: '0 0 64 64',
-    text: '₱',
+    get text() { return baseSymbol() },
     fontSize: 58,
     baseline: 54,
     fontWeight: 600,

@@ -8,7 +8,7 @@ import { amountDisplay } from '../../lib/txMoney'
  * Styling reuses the existing `.card` class and `--color-primary`, so the
  * accent picker and dark mode keep working with no extra wiring.
  */
-import { fmt } from '../../lib/money'
+import { fmt, baseSymbol } from '../../lib/money'
 
 
 /**
@@ -35,7 +35,7 @@ export const money = fmt
 export function moneyCompact(v) {
   const n = v ?? 0
   const abs = Math.abs(n)
-  const sign = n < 0 ? '−₱' : '₱'
+  const sign = (n < 0 ? '−' : '') + baseSymbol()
   if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
   if (abs >= 10_000)    return sign + (abs / 1_000).toFixed(1) + 'K'
   return money(n)

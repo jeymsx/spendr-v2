@@ -14,6 +14,7 @@ import SubPage from '../../components/SubPage'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
+import { baseSymbol } from '../../lib/money'
 
 // ── Budget summary card (inside category manager) ──────────────────────────────
 
@@ -213,7 +214,7 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
                         nothing. */}
                     <span className="flex items-baseline gap-1 shrink-0">
                       {text !== '' && (
-                        <span className="text-sm font-medium text-slate-400 dark:text-slate-500">₱</span>
+                        <span className="text-sm font-medium text-slate-400 dark:text-slate-500">{baseSymbol()}</span>
                       )}
                     {/* Sized in `ch` from its own contents, so the field is
                         exactly as wide as the number and the peso sign sits

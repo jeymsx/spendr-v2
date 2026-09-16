@@ -7,7 +7,7 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
 import DetailRow from '../../components/ui/DetailRow'
-import { fmt } from '../../lib/money'
+import { fmt, baseSymbol } from '../../lib/money'
 import { IconArrowLeft, fmtBytes, VALID_TYPES, IconFile, IconWarning } from './shared'
 import { WarnBanner, TypeBadge } from './bits'
 
@@ -169,7 +169,7 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
           {missingAccounts.size > 0 && (
             <WarnBanner
               title={`${missingAccounts.size} account${missingAccounts.size > 1 ? 's' : ''} not in your wallet`}
-              body={`"${[...missingAccounts].join('", "')}" will be auto-created as Cash account${missingAccounts.size > 1 ? 's' : ''} with ₱0 balance.`}
+              body={`"${[...missingAccounts].join('", "')}" will be auto-created as Cash account${missingAccounts.size > 1 ? 's' : ''} with ${baseSymbol()}0 balance.`}
             />
           )}
           {missingCategories.size > 0 && (
@@ -332,7 +332,7 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
                 )}
               </div>
               <div className="flex items-center gap-1 shrink-0">
-                <span className="text-slate-400 dark:text-slate-500 text-sm">₱</span>
+                <span className="text-slate-400 dark:text-slate-500 text-sm">{baseSymbol()}</span>
                 <input
                   type="number"
                   inputMode="decimal"
@@ -341,7 +341,7 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
                     ? setCreditLimits(prev => ({ ...prev, [name]: e.target.value }))
                     : setBalances(prev => ({ ...prev, [name]: e.target.value }))
                   }
-                  placeholder="₱0.00"
+                  placeholder={`${baseSymbol()}0.00`}
                   className="w-28 text-right text-slate-800 dark:text-white
                     placeholder:text-slate-300 dark:placeholder:text-slate-600
                     bg-transparent focus:outline-none text-15 tabular-nums"

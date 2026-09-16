@@ -22,7 +22,7 @@ import Card from './ui/Card'
 import DetailRow from './ui/DetailRow'
 import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol } from '../lib/money'
 
 const TYPE_CFG = {
   expense:  { label: 'Expense',  color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',      sign: '−' },
@@ -607,9 +607,9 @@ export default function TxDetailSheet({
                         that is not a digit or a dot, so the prefix round-trips
                         harmlessly. */}
                     <RowInput
-                      value={editAmount ? `₱${editAmount}` : ''}
+                      value={editAmount ? `${baseSymbol()}${editAmount}` : ''}
                       onChange={e => setEditAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                      placeholder="₱0.00"
+                      placeholder={`${baseSymbol()}0.00`}
                       inputMode="decimal"
                       autoFocus
                     />

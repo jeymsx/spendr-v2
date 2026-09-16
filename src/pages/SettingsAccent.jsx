@@ -4,6 +4,10 @@ import { cardGradient } from '../lib/accentTheme'
 import { ACCENT_COLORS } from './Settings'
 import SubPage from '../components/SubPage'
 import Rail from '../components/ui/Rail'
+import { baseSymbol } from '../lib/money'
+
+/** U+2212, the same minus every figure in the app uses. */
+const MINUS = '−'
 
 /**
  * One accent, shown as a slice of the app rather than a swatch.
@@ -79,7 +83,7 @@ const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
         {/* The net-worth card: the largest accent surface in the app. */}
         <div className="rounded-2xl px-3 pt-2.5 pb-3" style={{ background: cardGradient(hex, theme) }}>
           <p className="text-[6.5px] font-semibold text-white/60">Net worth</p>
-          <p className="text-17 font-semibold tracking-tight text-white mt-0.5">₱33,571</p>
+          <p className="text-17 font-semibold tracking-tight text-white mt-0.5">{baseSymbol()}33,571</p>
           <div className="flex gap-2.5 mt-1.5">
             <span className="text-[6px] text-white/50">Spending</span>
             <span className="text-[6px] text-white/50">Savings</span>
@@ -103,8 +107,8 @@ const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
             is an inflow, which is where the accent shows on an amount. */}
         <div className="rounded-xl overflow-hidden" style={panel}>
           {[
-            { n: 'Breakfast', s: 'Cash',  a: '−₱300', accent: false },
-            { n: 'Salary',    s: 'BPI',   a: '+₱42,000', accent: true },
+            { n: 'Breakfast', s: 'Cash',  a: MINUS + baseSymbol() + '300', accent: false },
+            { n: 'Salary',    s: 'BPI',   a: '+' + baseSymbol() + '42,000', accent: true },
           ].map((t, i) => (
             <div
               key={t.n}

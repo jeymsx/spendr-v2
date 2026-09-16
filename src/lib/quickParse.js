@@ -38,6 +38,7 @@
  */
 
 import { SEED_MERCHANTS, STOPWORDS, INFLOW_WORDS } from './quickParseSeed'
+import { SINGLE_MARKS } from './currency'
 
 // ── Learning parameters ─────────────────────────────────────────────────────
 //
@@ -165,13 +166,18 @@ const TYPE_LEAD = 3
  * @property {Date} [today]
  */
 
+/* Built once, and with String.raw - see the note on FEE_AFTER below for why
+   interpolating a pattern is a trap and what makes this spelling safe. */
+const SUFFIXED = new RegExp(
+  String.raw`(?:^|[\s${SINGLE_MARKS}phpPHP])(\d[\d,]*(?:\.\d+)?)\s*([km])\b`, 'i')
+
 /** "1.5k" -> 1500, "1,200" -> 1200, "150.75" -> 150.75
  *  @param {string} text
  *  @returns {{amount: number, at: number, len: number, raw: string}|null} */
 function readAmount(text) {
   // The k/m suffix has to be tried first: a bare \d+ would match the 1 of 1.5k
   // and leave ".5k" behind as description.
-  const suffixed = /(?:^|[\s₱phpPHP])(\d[\d,]*(?:\.\d+)?)\s*([km])\b/i.exec(text)
+  const suffixed = SUFFIXED.exec(text)
   if (suffixed) {
     const n = parseFloat(suffixed[1].replace(/,/g, ''))
     const mult = suffixed[2].toLowerCase() === 'k' ? 1e3 : 1e6
@@ -204,11 +210,18 @@ function readAmount(text) {
  * Both orders are accepted - "18 tf" and "tf 18" - because the abbreviation
  * invites either.
  */
-/* Regex LITERALS, not new RegExp with a template string: inside a template
-   literal `\s` is just `s`, so building these by interpolation silently
-   produced `[s,]` and matched nothing. The duplication is the safer trade. */
-const FEE_AFTER  = /(?:^|[\s,])(?:₱\s*)?(\d[\d,]*(?:\.\d+)?)\s*(?:tf|transfer\s+fee|fee)\b/i
-const FEE_BEFORE = /(?:^|[\s,])(?:tf|transfer\s+fee|fee)\s*(?:₱\s*)?(\d[\d,]*(?:\.\d+)?)\b/i
+/* String.raw, and that is the whole reason it is there.
+
+   These were regex literals with a note explaining why: inside an ORDINARY
+   template literal `\s` is just `s`, so building them by interpolation once
+   silently produced `[s,]` and matched nothing. But the mark can no longer be
+   written into them - the ledger might be in dollars - so interpolation is
+   now required, and String.raw is what makes it safe: it hands the pattern to
+   the RegExp constructor with every backslash still in it. */
+const FEE_AFTER = new RegExp(
+  String.raw`(?:^|[\s,])(?:[${SINGLE_MARKS}]\s*)?(\d[\d,]*(?:\.\d+)?)\s*(?:tf|transfer\s+fee|fee)\b`, 'i')
+const FEE_BEFORE = new RegExp(
+  String.raw`(?:^|[\s,])(?:tf|transfer\s+fee|fee)\s*(?:[${SINGLE_MARKS}]\s*)?(\d[\d,]*(?:\.\d+)?)\b`, 'i')
 
 /** @param {string} text @returns {{amount: number, at: number, len: number}|null} */
 function readFee(text) {

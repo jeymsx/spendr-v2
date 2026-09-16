@@ -48,7 +48,7 @@ export default function AccountSelectRow({
      instruction three times in one row. */
   const sub = !account ? null
     : account.type === 'credit' ? `${fmt(creditAvailable ?? 0)} available`
-    : `Balance: ${fmt(account.balance ?? 0)}`
+    : `Balance: ${fmt(account.balance ?? 0, account.currency)}`
 
   return (
     <button

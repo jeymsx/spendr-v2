@@ -19,7 +19,7 @@ import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import Card from '../components/ui/Card'
 import { parseMoney } from '../utils/moneyInput'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol } from '../lib/money'
 import { fieldFrame } from '../components/ui/Field'
 import PeopleSplit, { EMPTY_SPLIT, resolveSplitValue } from '../components/PeopleSplit'
 import SubPage from '../components/SubPage'
@@ -250,7 +250,7 @@ export default function RecurringForm() {
             <input
               type="text"
               inputMode="decimal"
-              placeholder="₱0.00"
+              placeholder={`${baseSymbol()}0.00`}
               value={amountStr === '0' ? '' : amountStr}
               onChange={e => {
                 moneyChangeHandler(setAmountStr)(e)

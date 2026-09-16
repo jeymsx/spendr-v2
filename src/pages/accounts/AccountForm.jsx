@@ -15,6 +15,9 @@ import { PH_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
 import { PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole } from '../../lib/accountMeta'
 import { fmt } from '../../lib/money'
+import { getBaseCurrency } from '../../lib/money'
+import { currencyOf, symbolOf } from '../../lib/currency'
+import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
 import SubPage from '../../components/SubPage'
 import {
   PreviewCard,
@@ -42,13 +45,20 @@ import Segmented from '../../components/ui/Segmented'
  * /accounts/new page - and they must not drift on the details that are easy
  * to get subtly wrong: that a credit card forces role 'credit', that every
  * non-credit account nulls all five credit fields rather than storing zeroes,
- * that currency is always PHP, and that an empty network is null and not ''.
+ * and that an empty network is null and not ''.
+ *
+ * The currency is a parameter rather than the literal 'PHP' it was for the
+ * app's whole life. It falls back to the LEDGER's currency and not to the
+ * peso: somebody whose ledger is in dollars adding a plain cash account
+ * means a dollar one, and making them say so on every account would be the
+ * same hardcoding with an extra step.
  */
 export function buildAccountRow({
   name, type, role, color, creditLimit,
   statementDay, dueDay, cutoffDay, minPayment, interestRate, lateFee,
   qrImage = null, parentName = null, scheme = '',
   design, customColor,
+  currency = getBaseCurrency(),
 }) {
   const isCredit = type === 'credit'
   return {
@@ -56,7 +66,7 @@ export function buildAccountRow({
     type,
     role:           isCredit ? 'credit' : role,
     color,
-    currency:       'PHP',
+    currency,
     creditLimit:    isCredit ? (parseMoney(creditLimit) || 0)   : null,
     statementDate:  isCredit ? (parseInt(statementDay) || null) : null,
     dueDate:        isCredit ? (parseInt(dueDay)       || null) : null,
@@ -132,6 +142,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const [role,           setRole]           = useState('spending')
   const [color,          setColor]          = useState(PALETTE[0])
   const [startingBal,    setStartingBal]    = useState('0')
+  const [currency,       setCurrency]       = useState(getBaseCurrency())
+  const [currencyOpen,   setCurrencyOpen]   = useState(false)
   const [creditLimit,    setCreditLimit]    = useState('0')
   const [statementDay,   setStatementDay]   = useState('')
   const [dueDay,         setDueDay]         = useState('')
@@ -201,6 +213,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setRole(account.role ?? defaultRole(t))
       setColor(account.color ?? PALETTE[0])
       setStartingBal(numToMoneyStr(account.balance ?? 0))
+      /* Rows written before the picker existed all say PHP, which was the
+         literal, not a choice - but it is still what their figures are in,
+         so it is honoured rather than second-guessed. */
+      setCurrency(account.currency || getBaseCurrency())
       setCreditLimit(numToMoneyStr(account.creditLimit ?? 0))
       setStatementDay(account.statementDate != null ? String(account.statementDate) : '')
       setDueDay(account.dueDate != null ? String(account.dueDate) : '')
@@ -220,6 +236,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setRole(prefill?.role ?? defaultRole(t))
       setColor(prefill?.color ?? PALETTE[Math.floor(Math.random() * PALETTE.length)])
       setStartingBal('0')
+      setCurrency(prefill?.currency || getBaseCurrency())
       setCreditLimit('0')
       setStatementDay('')
       setDueDay('')
@@ -229,6 +246,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setParentName(prefill?.parentName ?? null)
       setScheme('')
       setDesign('')
+      setCurrencyOpen(false)
       // A preset hands over its house colour, which is not an override.
       setCustomColor(false)
     }
@@ -273,7 +291,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       const data = buildAccountRow({
         name: cleanName, type, role, color, creditLimit,
         statementDay, dueDay, cutoffDay, minPayment, interestRate, lateFee,
-        qrImage, parentName, scheme, design, customColor,
+        qrImage, parentName, scheme, design, customColor, currency,
       })
 
       if (isEdit) {
@@ -649,6 +667,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 <MoneyField
                   value={startingBal === '0' ? '' : startingBal}
                   onChange={moneyChangeHandler(setStartingBal)}
+                  currency={currency}
                 />
                 {isEdit && adjustDiff !== 0 && (
                   <p className={`mt-2 px-1 text-12 font-medium ${
@@ -657,10 +676,32 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                       : 'text-red-500 dark:text-red-400'
                   }`}>
                     {adjustDiff > 0
-                      ? `Records a ${fmt(adjustDiff)} inflow to correct the balance`
-                      : `Records a ${fmt(Math.abs(adjustDiff))} expense to correct the balance`}
+                      ? `Records a ${fmt(adjustDiff, currency)} inflow to correct the balance`
+                      : `Records a ${fmt(Math.abs(adjustDiff), currency)} expense to correct the balance`}
                   </p>
                 )}
+
+                {/* Under the balance, because that is the figure it labels.
+                    A dollar account in a peso ledger is the case this exists
+                    for, and the row is quiet when there is nothing unusual to
+                    say: the ledger's own currency needs no explaining. */}
+                <button
+                  type="button"
+                  onClick={() => setCurrencyOpen(true)}
+                  disabled={saving}
+                  className="mt-3 flex items-center gap-2 px-1 active:opacity-60"
+                >
+                  <span className="text-12 text-slate-400 dark:text-slate-500">Currency</span>
+                  <span className="text-12 font-semibold text-slate-700 dark:text-slate-200">
+                    {symbolOf(currency)} {currency}
+                  </span>
+                  <span className="text-12 text-slate-400 dark:text-slate-500 truncate">
+                    {currencyOf(currency).name}
+                  </span>
+                  <svg className="shrink-0 text-slate-300 dark:text-slate-600" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <polyline points="5,2 9,7 5,12" />
+                  </svg>
+                </button>
               </div>
             )}
 
@@ -1008,6 +1049,14 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       initialSrc={qrSrc}
       onClose={() => { setQrCropOpen(false); setQrSrc(null) }}
       onConfirm={base64 => setQrImage(base64)}
+    />
+
+    <CurrencyPickerSheet
+      open={currencyOpen}
+      onClose={() => setCurrencyOpen(false)}
+      selected={currency}
+      onSelect={setCurrency}
+      hint="What this account's balance and its transactions are in."
     />
     </>
   )

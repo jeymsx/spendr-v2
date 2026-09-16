@@ -19,7 +19,7 @@ import IconButton from '../components/ui/IconButton'
 import BadgeChip from '../components/BadgeChip'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol, fmtHidden } from '../lib/money'
 import {
   ContextHint, getContextHint, getGreeting, monthPrefix, useCountUp,
   quickActionCounts,
@@ -365,7 +365,7 @@ export default function Dashboard() {
                       {fmt(animatedNetWorth)}
                     </span>
                   ) : (
-                    <span className="text-4xl font-semibold tracking-tight text-white/80">₱ ••••••</span>
+                    <span className="text-4xl font-semibold tracking-tight text-white/80">{fmtHidden(undefined, 6)}</span>
                   )}
                 </div>
 
@@ -509,8 +509,8 @@ export default function Dashboard() {
             ? <IconTransferUI size={15} />
             : <CategoryGlyph cat={cat} size={15} emoji="⚡" />
                 const compact = (tpl.amount ?? 0) >= 1000
-                  ? '₱' + ((tpl.amount) / 1000).toFixed(1) + 'K'
-                  : '₱' + (tpl.amount ?? 0).toFixed(0)
+                  ? baseSymbol() + ((tpl.amount) / 1000).toFixed(1) + 'K'
+                  : baseSymbol() + (tpl.amount ?? 0).toFixed(0)
                 return (
                   <button
                     key={tpl.id}

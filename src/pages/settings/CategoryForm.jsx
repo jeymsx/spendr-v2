@@ -11,7 +11,7 @@ import SwatchRail from '../../components/ui/SwatchRail'
 import Field from '../../components/ui/Field'
 import { IconWarning, IconCheck } from '../../components/icons'
 import { CAT_COLORS, DEFAULT_CAT_NAMES, EMOJI_OPTIONS } from './shared'
-import { fmt } from '../../lib/money'
+import { fmt, baseSymbol } from '../../lib/money'
 
 // ── Category form sheet ────────────────────────────────────────────────────────
 
@@ -328,7 +328,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               inputMode="decimal"
               value={budget === '0' ? '' : budget}
               onChange={moneyChangeHandler(setBudget)}
-              left="₱"
+              left={baseSymbol()}
               placeholder="0.00"
               /* "Optional — 0 means no budget" was the placeholder, which is
                  three jobs for one line: what goes in the box, that the box is

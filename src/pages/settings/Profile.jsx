@@ -10,6 +10,9 @@ import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { inputClass } from './shared'
+import { fieldFrame } from '../../components/ui/Field'
+import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
+import { currencyOf, symbolOf } from '../../lib/currency'
 
 // ── Profile sheet ──────────────────────────────────────────────────────────────
 
@@ -113,6 +116,7 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
   const [saving,   setSaving]   = useState(false)
   const [name,     setName]     = useState('')
   const [currency, setCurrency] = useState('PHP')
+  const [pickerOpen, setPickerOpen] = useState(false)
 
   /* No `closing` flag and no scroll lock: Sheet owns the overlay, the panel,
      the grab handle, the scroll lock, Escape, the focus trap and the exit
@@ -127,6 +131,7 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
     setSaving(false)
     setName(initName || '')
     setCurrency(initCurrency || 'PHP')
+    setPickerOpen(false)
   }, [open, initName, initCurrency])
 
   async function handleSave() {
@@ -192,7 +197,56 @@ export function ProfileSheet({ open, onClose, displayName: initName, currency: i
           maxLength={40}
           className={inputClass()}
         />
+
+        {/* The preference has existed since the first sync and nothing ever
+            offered a way to set it - every ledger in the wild says PHP because
+            that is the literal the code wrote. This is that control.
+
+            A row that opens a picker rather than an input: the frame is the
+            same fieldFrame every other non-input "field" in this app wears
+            (the account row, the date row, the category row), so it reads as
+            part of the form and not as a button stuck under it. */}
+        <SectionLabel className="mt-5">Currency</SectionLabel>
+        <button
+          type="button"
+          onClick={() => setPickerOpen(true)}
+          disabled={saving}
+          className={`${fieldFrame()} w-full text-left`}
+        >
+          <span
+            className="w-7 shrink-0 text-15 font-semibold text-slate-700 dark:text-white"
+            aria-hidden="true"
+          >
+            {symbolOf(currency)}
+          </span>
+          <span className="flex-1 min-w-0 text-sm font-medium text-slate-800 dark:text-white truncate">
+            {currencyOf(currency).name}
+          </span>
+          <span className="shrink-0 text-xs font-medium text-slate-400 dark:text-slate-500">
+            {currency}
+          </span>
+          <svg className="shrink-0 text-slate-300 dark:text-slate-600" width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="5,2 9,7 5,12" />
+          </svg>
+        </button>
+
+        {/* What changing it does and does not do. Somebody switching to
+            dollars is entitled to know their 1,036 rows are not being
+            converted behind their back - the figures are the figures, and
+            this is the mark drawn in front of them. */}
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-2 leading-snug">
+          The mark shown on every figure that is not tied to a particular
+          account. It does not convert anything you have already recorded.
+        </p>
       </div>
+
+      <CurrencyPickerSheet
+        open={pickerOpen}
+        onClose={() => setPickerOpen(false)}
+        selected={currency}
+        onSelect={setCurrency}
+        hint="Your ledger's own currency. An account held in another one carries its own, set on the account."
+      />
     </Sheet>
   )
 }

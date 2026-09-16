@@ -7,7 +7,7 @@ import BudgetMeter, { budgetTone } from '../../components/BudgetMeter'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
-import { fmt } from '../../lib/money'
+import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 
 // ── Account card ───────────────────────────────────────────────────────────────
@@ -56,7 +56,7 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
           {isCredit ? 'Available' : 'Balance'}
         </p>
         <p className="text-17 font-bold tabular-nums leading-none">
-          {hidden ? '₱ ••••' : fmt(isCredit ? available : acct.balance)}
+          {hidden ? fmtHidden(acct.currency) : fmt(isCredit ? available : acct.balance, acct.currency)}
         </p>
       </div>
     </button>

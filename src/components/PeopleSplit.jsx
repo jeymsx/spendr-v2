@@ -6,7 +6,7 @@ import Button from './ui/Button'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { parseMoney } from '../utils/moneyInput'
 import { chipClass } from '../pages/accounts/shared'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol } from '../lib/money'
 import { resolveSplit, SPLIT_MODES, MODE_FIELD } from '../lib/splitModes'
 
 /**
@@ -175,10 +175,10 @@ function PersonRow({
           money in every mode - and in exact, the thing you type into. */}
       {typedIsTheShare ? (
         <input
-          value={value ? `₱${value}` : ''}
+          value={value ? `${baseSymbol()}${value}` : ''}
           onChange={onChange}
           inputMode="decimal"
-          placeholder="₱0.00"
+          placeholder={`${baseSymbol()}0.00`}
           aria-label={`Amount for ${label}`}
           className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
             bg-transparent outline-none border-0 p-0 text-slate-800 dark:text-white

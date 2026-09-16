@@ -24,6 +24,9 @@ import { inputClass } from './accounts/shared'
 import { BrandTile, StepProgress } from './accounts/NewFields'
 import { StyleStep, CreatedStep } from './accounts/NewCardStyleStep'
 import Rail from '../components/ui/Rail'
+import CurrencyPickerSheet from '../components/CurrencyPickerSheet'
+import { currencyOf, symbolOf } from '../lib/currency'
+import { getBaseCurrency } from '../lib/money'
 
 /**
  * Creating an account, as a guided page rather than one long sheet.
@@ -86,6 +89,7 @@ export default function AccountNew() {
   const [created, setCreated] = useState(false)
   const [touchedName, setTouchedName] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [currencyOpen, setCurrencyOpen] = useState(false)
 
   const [draft, setDraft] = useState({
     name: '',
@@ -104,6 +108,11 @@ export default function AccountNew() {
     presetColor: null,
     scheme: '',
     startingBal: '0',
+    /* The ledger's currency, not the peso. This is the screen the dollar
+       account is created on, and defaulting to what the rest of the ledger
+       already uses is right for the four accounts out of five that share it
+       without making the fifth impossible. */
+    currency: getBaseCurrency(),
     creditLimit: '0',
     cutoffDay: '',
     dueDay: '',
@@ -260,6 +269,7 @@ export default function AccountNew() {
         scheme: draft.scheme,
         design: draft.design,
         customColor: draft.customColor,
+        currency: draft.currency,
       })
       await createAccount(row, isCredit ? 0 : parseMoney(draft.startingBal))
       /* No toast, and no navigation. The next screen IS the confirmation,
@@ -579,14 +589,36 @@ export default function AccountNew() {
           {!isCredit && (
             <div>
               <SectionLabel hint="What is in it right now.">Opening balance</SectionLabel>
-              {/* The edit page's field, peso mark and all. This was the frame
-                  with a ₱ absolutely positioned over its left padding - the
-                  same control, built twice, looking different on the two
-                  screens that ask for a balance. */}
+              {/* The edit page's field, currency mark and all. This was the
+                  frame with a peso absolutely positioned over its left
+                  padding - the same control, built twice, looking different
+                  on the two screens that ask for a balance. */}
               <MoneyField
                 value={draft.startingBal}
                 onChange={moneyChangeHandler(v => set({ startingBal: v }))}
+                currency={draft.currency}
               />
+
+              {/* Under the figure it labels. Most accounts never touch this,
+                  which is why it is a line of text rather than a field: the
+                  ledger's own currency needs no explaining, and the one
+                  account held in another does. */}
+              <button
+                type="button"
+                onClick={() => setCurrencyOpen(true)}
+                className="mt-3 flex items-center gap-2 px-1 active:opacity-60"
+              >
+                <span className="text-12 text-slate-400 dark:text-slate-500">Currency</span>
+                <span className="text-12 font-semibold text-slate-700 dark:text-slate-200">
+                  {symbolOf(draft.currency)} {draft.currency}
+                </span>
+                <span className="text-12 text-slate-400 dark:text-slate-500 truncate">
+                  {currencyOf(draft.currency).name}
+                </span>
+                <svg className="shrink-0 text-slate-300 dark:text-slate-600" width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <polyline points="5,2 9,7 5,12" />
+                </svg>
+              </button>
             </div>
           )}
 
@@ -691,6 +723,14 @@ export default function AccountNew() {
           {actionButton}
         </div>
       )}
+
+      <CurrencyPickerSheet
+        open={currencyOpen}
+        onClose={() => setCurrencyOpen(false)}
+        selected={draft.currency}
+        onSelect={code => set({ currency: code })}
+        hint="What this account's balance and its transactions are in."
+      />
     </div>
   )
 }

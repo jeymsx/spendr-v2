@@ -29,6 +29,8 @@
  * sums to the total, exactly, in every mode.
  */
 
+import { baseSymbol } from './money'
+
 /** @param {number} n */
 const round2 = (n) => Math.round(n * 100) / 100
 /** @param {number} n */
@@ -130,10 +132,10 @@ export function resolveSplit({ mode, total, participants }) {
       shares,
       valid: Math.abs(remaining) < 0.005,
       /* With the mark. Every other figure in the app carries one, and a
-         bare "150.00 left to assign" beside a column of ₱ amounts reads as a
+         bare "150.00 left to assign" beside a column of marked amounts reads as a
          different kind of number. */
-      message: remaining > 0 ? `₱${remaining.toFixed(2)} left to assign`
-             : remaining < 0 ? `₱${Math.abs(remaining).toFixed(2)} over`
+      message: remaining > 0 ? `${baseSymbol()}${remaining.toFixed(2)} left to assign`
+             : remaining < 0 ? `${baseSymbol()}${Math.abs(remaining).toFixed(2)} over`
              : null,
       allocated: sum, remaining,
     }
@@ -163,7 +165,7 @@ export function resolveSplit({ mode, total, participants }) {
     if (base < -0.005) {
       return {
         shares: {}, valid: false,
-        message: `Extras come to more than ₱${total.toFixed(2)}`,
+        message: `Extras come to more than ${baseSymbol()}${total.toFixed(2)}`,
         allocated: extraTotal, remaining: base,
       }
     }
@@ -186,10 +188,13 @@ export function resolveSplit({ mode, total, participants }) {
  */
 export const MODE_FIELD = {
   equal:   { kind: 'none' },
-  exact:   { kind: 'money',   prefix: '₱', placeholder: '0.00' },
+  /* A getter, not a string. The mark depends on the ledger's currency, and
+     this table is a module constant that would otherwise be built once, in
+     pesos, before anybody had read the preference. */
+  exact:   { kind: 'money',   get prefix() { return baseSymbol() }, placeholder: '0.00' },
   percent: { kind: 'number',  suffix: '%', placeholder: '0' },
   shares:  { kind: 'integer', suffix: '×', placeholder: '1' },
-  adjust:  { kind: 'money',   prefix: '+₱', placeholder: '0.00' },
+  adjust:  { kind: 'money',   get prefix() { return '+' + baseSymbol() }, placeholder: '0.00' },
 }
 
 /**

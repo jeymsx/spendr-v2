@@ -110,6 +110,19 @@ export default function AccountDetail() {
     [accounts, id],
   )
 
+  /* Every figure on this page is one account's, so it is formatted in that
+     account's currency rather than the ledger's. A local wrapper rather than
+     a second argument on fifteen calls: the argument is the same every time,
+     and forgetting it on one of them is how a dollar card ends up showing one
+     peso figure among fourteen dollar ones.
+
+     The child-account row is the one exception and passes its own - a
+     sub-account can be held in a different currency from its parent. */
+  const acctFmt = useCallback(
+    (/** @type {number|undefined} */ v) => fmt(v, account?.currency),
+    [account?.currency],
+  )
+
   const back = () => navigate('/accounts')
 
   // Deleting from the edit sheet leaves this page pointing at a row that is
@@ -230,7 +243,7 @@ export default function AccountDetail() {
       })
       setPayOpen(false)
       setPayOverdraw(null)
-      showToast(`Paid ${fmt(amount)} to ${account.name}`)
+      showToast(`Paid ${fmt(amount, account.currency)} to ${account.name}`)
     } catch (e) {
       if (e?.name === 'OverdrawError') {
         setPayOverdraw({ accountName: e.accountName, balance: e.balance, amount, from })
@@ -254,7 +267,7 @@ export default function AccountDetail() {
         await db.transactions.add({ ...row, txId: crypto.randomUUID(), synced: UNSYNCED })
         await applyBalanceEffect(row)
       })
-      showToast(`Logged ${fmt(lateInfo.total)} finance charge`)
+      showToast(`Logged ${fmt(lateInfo.total, account.currency)} finance charge`)
     } catch (e) {
       console.error('[AccountDetail] finance charge failed:', e)
       showToast('Could not log the charge', 'error')
@@ -403,7 +416,7 @@ export default function AccountDetail() {
         <p className={`text-38 leading-none font-semibold tracking-tight tabular-nums ${
           isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
         }`}>
-          {fmt(totalUsed)}
+          {acctFmt(totalUsed)}
         </p>
 
         {isCredit && limit > 0 && (
@@ -420,9 +433,9 @@ export default function AccountDetail() {
           <div className="mt-5 max-w-[320px] mx-auto text-left">
             <LimitMeter
               pct={usedPct}
-              label={`${fmt(Math.max(0, limit - totalUsed))} left`}
-              used={fmt(totalUsed)}
-              total={fmt(limit)}
+              label={`${acctFmt(Math.max(0, limit - totalUsed))} left`}
+              used={acctFmt(totalUsed)}
+              total={acctFmt(limit)}
             />
           </div>
         )}
@@ -454,7 +467,7 @@ export default function AccountDetail() {
                 says the same thing in one word. */}
             <p className="text-13 font-semibold text-red-500 dark:text-red-400">
               {lateInfo.daysLate} day{lateInfo.daysLate === 1 ? '' : 's'} overdue
-              {' · '}{fmt(creditData.stmtOutstanding)} unpaid
+              {' · '}{acctFmt(creditData.stmtOutstanding)} unpaid
             </p>
             {lateInfo.alreadyLogged ? (
               <p className="mt-1.5 text-13 text-slate-500 dark:text-slate-400">
@@ -463,7 +476,7 @@ export default function AccountDetail() {
             ) : (
               <>
                 <p className="mt-1.5 text-13 text-slate-600 dark:text-slate-300 tabular-nums">
-                  {fmt(lateInfo.interest)} interest + {fmt(lateInfo.lateFee)} late fee
+                  {acctFmt(lateInfo.interest)} interest + {acctFmt(lateInfo.lateFee)} late fee
                 </p>
                 <Button
                   variant="tint"
@@ -472,7 +485,7 @@ export default function AccountDetail() {
                   onClick={logFinanceCharge}
                   disabled={loggingCharge}
                 >
-                  {loggingCharge ? 'Logging…' : `Log ${fmt(lateInfo.total)} (estimated)`}
+                  {loggingCharge ? 'Logging…' : `Log ${acctFmt(lateInfo.total)} (estimated)`}
                 </Button>
               </>
             )}
@@ -568,7 +581,7 @@ export default function AccountDetail() {
                     {g.name}
                   </span>
                   <span className="text-13 font-bold tabular-nums text-slate-800 dark:text-slate-100 shrink-0">
-                    {fmt(g.amount)}
+                    {acctFmt(g.amount)}
                   </span>
                 </div>
                 {i < goalSplit.goals.length - 1 && <Divider inset="row" />}
@@ -581,7 +594,7 @@ export default function AccountDetail() {
                 Unassigned
               </span>
               <span className="text-13 font-bold tabular-nums text-slate-600 dark:text-slate-300 shrink-0">
-                {fmt(goalSplit.unassigned)}
+                {acctFmt(goalSplit.unassigned)}
               </span>
             </div>
           </Card>
@@ -629,7 +642,7 @@ export default function AccountDetail() {
                         ? 'text-emerald-600 dark:text-emerald-400'
                         : 'text-slate-900 dark:text-white'
                     }`}>
-                      {fmt(creditData.stmtOutstanding)}
+                      {acctFmt(creditData.stmtOutstanding)}
                     </span>
                   </div>
 
@@ -652,10 +665,10 @@ export default function AccountDetail() {
                       />
                       <div className="mt-1.5 flex items-baseline justify-between">
                         <span className="text-11 text-slate-400 dark:text-slate-500">
-                          {fmt(Math.max(0, creditData.thisTotal - creditData.stmtOutstanding))} paid
+                          {acctFmt(Math.max(0, creditData.thisTotal - creditData.stmtOutstanding))} paid
                         </span>
                         <span className="text-11 text-slate-400 dark:text-slate-500">
-                          {fmt(creditData.thisTotal)} total
+                          {acctFmt(creditData.thisTotal)} total
                         </span>
                       </div>
                     </>
@@ -801,7 +814,7 @@ export default function AccountDetail() {
                       <p className="text-10 text-slate-500 dark:text-slate-400">{TYPE_LABEL[child.type]}</p>
                     </div>
                     <p className="text-13 font-bold tabular-nums text-slate-700 dark:text-slate-200">
-                      {fmt(child.balance ?? 0)}
+                      {fmt(child.balance ?? 0, child.currency)}
                     </p>
                     <span className="text-slate-300 dark:text-slate-600 shrink-0">
                       <IconChevronRight />

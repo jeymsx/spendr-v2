@@ -31,6 +31,8 @@
  * find it; the separators are stripped from both sides.
  */
 
+import { SINGLE_MARKS } from './currency'
+
 /** @param {string} [s] */
 const norm = (s) => String(s ?? '').trim().toLowerCase()
 
@@ -77,7 +79,9 @@ export function scoreAny(fields, q) {
  * @param {string} q
  */
 export function scoreAmount(amount, q) {
-  const digits = q.replace(/[,\s₱]/g, '')
+  /* Built with String.raw so the backslash survives interpolation - the
+     same trap lib/quickParse.js documents at length. */
+  const digits = q.replace(new RegExp(String.raw`[,\s${SINGLE_MARKS}]`, 'g'), '')
   if (!digits || !/^[0-9]*\.?[0-9]*$/.test(digits)) return 0
   const abs = Math.abs(amount ?? 0)
   const asText = String(abs)

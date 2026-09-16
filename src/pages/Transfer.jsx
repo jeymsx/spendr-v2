@@ -20,7 +20,7 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import Divider from '../components/ui/Divider'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol } from '../lib/money'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -290,7 +290,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           ref={amountInputRef}
           type="text"
           inputMode="decimal"
-          placeholder="₱0.00"
+          placeholder={`${baseSymbol()}0.00`}
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           className="amount-input font-semibold tabular-nums bg-transparent text-center w-full
@@ -372,7 +372,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
             Transfer fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
           </SectionLabel>
           <div className={fieldFrame()}>
-            <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">₱</span>
+            <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">{baseSymbol()}</span>
             <input
               type="text"
               inputMode="decimal"

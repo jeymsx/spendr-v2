@@ -152,7 +152,9 @@ export default function AccountPickerSheet({ open, onClose, accounts, selected, 
 function AccountRow({ acct, selected, creditAvailMap, onPick, roundedTop = false, roundedBottom = false }) {
   const isCredit   = acct.type === 'credit'
   const isSelected = selected?.id === acct.id
-  const displayBal = isCredit ? fmt(creditAvailMap?.[acct.name] ?? 0) : fmt(acct.balance)
+  const displayBal = isCredit
+    ? fmt(creditAvailMap?.[acct.name] ?? 0, acct.currency)
+    : fmt(acct.balance, acct.currency)
   const balLabel   = isCredit ? 'available' : 'balance'
 
   return (
@@ -194,7 +196,9 @@ function AccountRow({ acct, selected, creditAvailMap, onPick, roundedTop = false
 function ChildRow({ acct, selected, creditAvailMap, onPick, isLast }) {
   const isCredit   = acct.type === 'credit'
   const isSelected = selected?.id === acct.id
-  const displayBal = isCredit ? fmt(creditAvailMap?.[acct.name] ?? 0) : fmt(acct.balance)
+  const displayBal = isCredit
+    ? fmt(creditAvailMap?.[acct.name] ?? 0, acct.currency)
+    : fmt(acct.balance, acct.currency)
   const balLabel   = isCredit ? 'available' : 'balance'
 
   return (

@@ -21,6 +21,7 @@ import Rail from '../components/ui/Rail'
 import SearchField from '../components/ui/SearchField'
 import SearchResults from './transactions/SearchResults'
 import { searchEverything, txMatches } from '../lib/search'
+import { baseSymbol } from '../lib/money'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -282,7 +283,7 @@ export default function Transactions() {
           {(amountMin != null || amountMax != null) && (
             <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-11 font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
-              {amountMin != null ? `₱${amountMin.toLocaleString()}` : '₱0'}
+              {amountMin != null ? `${baseSymbol()}${amountMin.toLocaleString()}` : `${baseSymbol()}0`}
               {' – '}
               {amountMax != null ? `₱${amountMax.toLocaleString()}` : 'any'}
               <button onClick={() => { setAmountMin(null); setAmountMax(null) }} className="ml-0.5 opacity-60 hover:opacity-100">×</button>

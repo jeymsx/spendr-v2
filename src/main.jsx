@@ -4,6 +4,7 @@ import { BrowserRouter } from 'react-router-dom'
 import { ThemeProvider } from './context/ThemeContext'
 import { AuthProvider } from './context/AuthContext'
 import { ToastProvider } from './context/ToastContext'
+import { CurrencyProvider } from './context/CurrencyContext'
 import ErrorBoundary from './components/ErrorBoundary'
 import Shell from './Shell'
 import './index.css'
@@ -51,7 +52,9 @@ createRoot(document.getElementById('root')).render(
         <ThemeProvider>
           <AuthProvider>
             <ToastProvider>
-              <Shell />
+              <CurrencyProvider>
+                <Shell />
+              </CurrencyProvider>
             </ToastProvider>
           </AuthProvider>
         </ThemeProvider>

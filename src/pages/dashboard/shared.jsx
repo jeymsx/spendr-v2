@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { allocateGoals } from '../../lib/goals'
 import { IconBank, IconCard, IconPhone, IconWallet, IconWarning, IconBell } from '../../components/icons'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { baseSymbol } from '../../lib/money'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -66,8 +67,8 @@ export function getContextHint(txAll, budgetCategories, upcomingRecurring) {
     .reduce((s, t) => s + (t.amount ?? 0), 0)
   if (todayTotal > 0) {
     const compact = todayTotal >= 1000
-      ? '₱' + (todayTotal / 1000).toFixed(1) + 'K'
-      : '₱' + todayTotal.toFixed(0)
+      ? baseSymbol() + (todayTotal / 1000).toFixed(1) + 'K'
+      : baseSymbol() + todayTotal.toFixed(0)
     return { text: `${compact} spent today` }
   }
 

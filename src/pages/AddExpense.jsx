@@ -23,7 +23,7 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import DivideScreen from '../components/DivideScreen'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol } from '../lib/money'
 import Rail from '../components/ui/Rail'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -471,7 +471,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           ref={amountInputRef}
           type="text"
           inputMode="decimal"
-          placeholder="₱0.00"
+          placeholder={`${baseSymbol()}0.00`}
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           className="amount-input font-semibold tabular-nums bg-transparent text-center w-full

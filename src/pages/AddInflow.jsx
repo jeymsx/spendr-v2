@@ -19,6 +19,7 @@ import { useQuickPrefill } from '../hooks/useQuickPrefill'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
+import { baseSymbol } from '../lib/money'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -225,7 +226,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           ref={amountInputRef}
           type="text"
           inputMode="decimal"
-          placeholder="₱0.00"
+          placeholder={`${baseSymbol()}0.00`}
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           className="amount-input font-semibold tabular-nums bg-transparent text-center w-full

@@ -10,7 +10,7 @@ import Sheet from '../../components/ui/Sheet'
 import Button from '../../components/ui/Button'
 import DeleteConfirmSheet from '../../components/DeleteConfirmSheet'
 import DetailRow from '../../components/ui/DetailRow'
-import { fmt } from '../../lib/money'
+import { fmt, baseSymbol } from '../../lib/money'
 import { fmtDueDate } from './shared'
 
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
@@ -155,7 +155,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
             type="text"
             inputMode="decimal"
             autoFocus={!editDebt}
-            placeholder="₱0.00"
+            placeholder={`${baseSymbol()}0.00`}
             value={amountStr}
             onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
             aria-label="Amount"
@@ -206,9 +206,9 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
                 TxDetailSheet's edit rows do it this way. The strip on the way
                 out is what keeps parseMoney seeing digits. */}
             <RowInput
-              value={paidStr && paidStr !== '0' ? `₱${paidStr}` : ''}
+              value={paidStr && paidStr !== '0' ? `${baseSymbol()}${paidStr}` : ''}
               onChange={e => { e.target.value = e.target.value.replace(/[^0-9.]/g, ''); moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
-              placeholder="₱0.00"
+              placeholder={`${baseSymbol()}0.00`}
               inputMode="decimal"
             />
           </EditRow>

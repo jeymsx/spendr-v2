@@ -1,5 +1,6 @@
 import { useMemo, useCallback } from 'react'
 import * as RadixSlider from '@radix-ui/react-slider'
+import { baseSymbol } from '../../lib/money'
 
 // ── Amount range histogram + slider ───────────────────────────────────────────
 
@@ -56,9 +57,9 @@ export function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, o
   const hiPos = amountMax != null ? toPos(amountMax) : 100
 
   const fmtAmt = (v) => {
-    if (v >= 1_000_000) return '₱' + (v / 1_000_000).toFixed(1) + 'M'
-    if (v >= 1_000)     return '₱' + (v / 1_000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k'
-    return '₱' + Math.round(v)
+    if (v >= 1_000_000) return baseSymbol() + (v / 1_000_000).toFixed(1) + 'M'
+    if (v >= 1_000)     return baseSymbol() + (v / 1_000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k'
+    return baseSymbol() + Math.round(v)
   }
 
   return (

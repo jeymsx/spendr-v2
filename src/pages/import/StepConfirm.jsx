@@ -5,6 +5,7 @@ import { IconImport, IconBankUI, IconSparkle, IconBalance } from '../../componen
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { IconArrowLeft, IconWarning } from './shared'
+import { baseSymbol } from '../../lib/money'
 
 // ── Step 4: Confirm import ─────────────────────────────────────────────────────
 
@@ -162,7 +163,7 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
                   {missingAccounts.size} account{missingAccounts.size > 1 ? 's' : ''} will be created
                 </p>
                 <p className="text-xs text-amber-600/80 dark:text-amber-500 mt-0.5">
-                  {[...missingAccounts].join(', ')} · as Cash, ₱0 balance
+                  {[...missingAccounts].join(', ')} · as Cash, {baseSymbol()}0 balance
                 </p>
               </div>
             </div>

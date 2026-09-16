@@ -1,8 +1,9 @@
 import { cx } from './cx'
 import { fieldFrame } from './Field'
+import { baseSymbol } from '../../lib/money'
 
 /**
- * A field that takes pesos, and says so before you type.
+ * A field that takes money, and says which before you type.
  *
  * ── Why a span and not a placeholder ──
  *
@@ -11,9 +12,9 @@ import { fieldFrame } from './Field'
  * the row saying what unit that was. The one number in this app that is never
  * a count, a day or a percentage was the one with no mark on it.
  *
- * So the peso is a span inside the frame, permanent, and the placeholder goes
- * back to a bare "0.00" because the mark is already there and two would be
- * worse than none.
+ * So the currency mark is a span inside the frame, permanent, and the
+ * placeholder goes back to a bare "0.00" because the mark is already there
+ * and two would be worse than none.
  *
  * ── Why not prefix the value string ──
  *
@@ -31,6 +32,9 @@ export default function MoneyField({
   value,
   onChange,
   placeholder = '0.00',
+  /** The amount's currency, for the mark in the frame. The base currency
+      when not given. */
+  currency,
   /** Turns the frame red, the same as Field's `error`. */
   invalid = false,
   /** Layout only - width, margins. */
@@ -43,7 +47,7 @@ export default function MoneyField({
         className="shrink-0 text-sm text-slate-400 dark:text-slate-500"
         aria-hidden="true"
       >
-        ₱
+        {baseSymbol(currency)}
       </span>
       <input
         type="text"

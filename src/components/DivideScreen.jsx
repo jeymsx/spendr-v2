@@ -6,7 +6,7 @@ import CategoryGlyph from './CategoryGlyph'
 import IconButton from './ui/IconButton'
 import { IconChevronLeft } from './icons'
 import { moneyChangeHandler, parseMoney } from '../utils/moneyInput'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol } from '../lib/money'
 import PeopleSplit, { EMPTY_SPLIT, resolveSplitValue } from './PeopleSplit'
 import { useTheme } from '../context/ThemeContext'
 
@@ -249,7 +249,7 @@ export default function DivideScreen({
                       a rendered one - without it the typed rows read as bare
                       numbers next to the formatted first row. */}
                   <span className="flex items-baseline gap-0.5 shrink-0">
-                    <span className="text-14 font-medium text-slate-400 dark:text-slate-500">₱</span>
+                    <span className="text-14 font-medium text-slate-400 dark:text-slate-500">{baseSymbol()}</span>
                     <input
                       value={leg.amountStr}
                       onChange={moneyChangeHandler(v => setLeg(i, { amountStr: v }))}

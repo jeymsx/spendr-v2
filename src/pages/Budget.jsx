@@ -21,7 +21,7 @@ import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
-import { fmt } from '../lib/money'
+import { fmt, baseSymbol } from '../lib/money'
 import { effectiveLimit, monthKey, prevMonth, sweepable } from '../lib/rollover'
 import SweepSheet from './budget/SweepSheet'
 import { postCardPayment } from '../db/txHelpers'
@@ -39,16 +39,16 @@ import { postCardPayment } from '../db/txHelpers'
  * report a budget blown by a plan that has barely started. See
  * utils/scheduled.js; this is the same cutoff every other spend surface uses.
  */
-/* Whole pesos. A budget limit is a round number somebody typed - there are
+/* Whole units. A budget limit is a round number somebody typed - there are
    no centavos in "15,000" - and the two zeroes made the longest string on
    the line the least informative part of it. `fmt` stays for everything
    actually measured, where the centavos are real. */
-const _phpWhole = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 0 })
-const fmtWhole = (v) => ((v ?? 0) < 0 ? '−₱' : '₱') + _phpWhole.format(Math.abs(Math.round(v ?? 0)))
+const _whole = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 0 })
+const fmtWhole = (v) => ((v ?? 0) < 0 ? '−' : '') + baseSymbol() + _whole.format(Math.abs(Math.round(v ?? 0)))
 
 function fmtCompact(v) {
   const abs = Math.abs(v ?? 0)
-  const sign = (v ?? 0) < 0 ? '−₱' : '₱'
+  const sign = ((v ?? 0) < 0 ? '−' : '') + baseSymbol()
   if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
   if (abs >= 1_000)     return sign + (abs / 1_000).toFixed(1) + 'K'
   return fmt(v)

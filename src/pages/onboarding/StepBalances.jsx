@@ -1,6 +1,7 @@
 import { Fragment } from 'react'
 import { ACCOUNT_TYPE_ICON, IconCashUI } from '../../components/icons'
 import Divider from '../../components/ui/Divider'
+import { baseSymbol } from '../../lib/money'
 
 // ── Step 4: Set starting balances ──────────────────────────────────────────────
 
@@ -49,7 +50,7 @@ export function StepSetBalances({ allAccounts, balances, creditLimits, onBalance
 
                     {!isCredit && (
                       <div className="flex items-baseline gap-0.5 shrink-0">
-                        <span className="text-slate-600 text-sm">₱</span>
+                        <span className="text-slate-600 text-sm">{baseSymbol()}</span>
                         <input
                           type="number"
                           inputMode="decimal"
@@ -69,7 +70,7 @@ export function StepSetBalances({ allAccounts, balances, creditLimits, onBalance
                       <div className="flex-1">
                         <p className="text-xs text-slate-600 mb-1">Owed</p>
                         <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
-                          <span className="text-slate-600 text-xs">₱</span>
+                          <span className="text-slate-600 text-xs">{baseSymbol()}</span>
                           <input
                             type="number"
                             inputMode="decimal"
@@ -84,7 +85,7 @@ export function StepSetBalances({ allAccounts, balances, creditLimits, onBalance
                       <div className="flex-1">
                         <p className="text-xs text-slate-600 mb-1">Limit</p>
                         <div className="flex items-baseline gap-0.5 border-b border-white/[0.10] pb-0.5">
-                          <span className="text-slate-600 text-xs">₱</span>
+                          <span className="text-slate-600 text-xs">{baseSymbol()}</span>
                           <input
                             type="number"
                             inputMode="decimal"
