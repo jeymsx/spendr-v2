@@ -43,6 +43,8 @@ import { TxList, TrendDelta } from './accounts/DetailBits'
 import CardPaymentSheet from './accounts/CardPaymentSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import ProgressBar from '../components/ui/ProgressBar'
+import { useBaseCurrency } from '../context/CurrencyContext'
+import useRates from '../hooks/useRates'
 
 /**
  * One account, as a page rather than a sheet.
@@ -118,6 +120,9 @@ export default function AccountDetail() {
 
      The child-account row is the one exception and passes its own - a
      sub-account can be held in a different currency from its parent. */
+  const baseCurrency = useBaseCurrency()
+  const { table: rates } = useRates()
+
   const acctFmt = useCallback(
     (/** @type {number|undefined} */ v) => fmt(v, account?.currency),
     [account?.currency],
@@ -331,9 +336,9 @@ export default function AccountDetail() {
   // React error rather than a glitch.
   const goalSplit = useMemo(() => {
     if (!account || account.type === 'credit') return null
-    const alloc = allocateGoals({ goals: goals ?? [], accounts: accounts ?? [] })
+    const alloc = allocateGoals({ goals: goals ?? [], accounts: accounts ?? [], base: baseCurrency, rates })
     return alloc.byAccount[account.name] ?? null
-  }, [goals, accounts, account])
+  }, [goals, accounts, account, baseCurrency, rates])
 
   // Still loading, or gone. Deleting from the edit sheet lands here, and so
   // does a stale link, so this has to be a real state rather than a crash.

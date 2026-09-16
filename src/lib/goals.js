@@ -56,6 +56,8 @@
  * be tested without a database or a clock.
  */
 
+import { convert } from './fx'
+
 /** Rank step. Leaves room to insert between two goals without a full rewrite. */
 export const GOAL_RANK_STEP = 100
 
@@ -126,19 +128,46 @@ export function isArchived(goal) {
  *  block and the checker rejects the duplicate, which is how this sentence
  *  was written the first time.)
  *
+ * ── The currency ──
+ *
+ * A goal's target is a figure in the LEDGER's currency - "₱90,000 for the
+ * emergency fund" - while the accounts funding it need not be. So a funding
+ * balance is converted before it is drawn down, and everything this returns
+ * is in the ledger's currency throughout: the saved amounts, the per-account
+ * shares, the unassigned remainder.
+ *
+ * `base` and `rates` are optional and the function is unchanged without them:
+ * convert() returns the amount itself when the currencies match, and every
+ * account in a single-currency ledger matches. An account whose rate is
+ * missing contributes NOTHING rather than its face value, which is the
+ * conservative direction - a goal reading under-funded is a smaller lie than
+ * one reading complete because 500 dollars were counted as 500 pesos.
+ *
  * @param {object}    input
  * @param {Goal[]}    [input.goals]     Goal records. `accounts` is a list of names.
  * @param {Account[]} [input.accounts]  Account records (the full set; filtered here).
+ * @param {string}    [input.base]      the ledger's currency
+ * @param {any}       [input.rates]     a RateTable from lib/fx.js
  * @returns {GoalAllocation}
  */
-export function allocateGoals({ goals = [], accounts = [] } = {}) {
+export function allocateGoals({ goals = [], accounts = [], base = '', rates = null } = {}) {
   const fundable = accounts.filter(isFundable).slice().sort(byAccountOrder)
 
   // Money still available on each account, drawn down as goals take from it.
   // Clamped at zero: an overdrawn asset account has nothing to give, and a
   // negative here would let one goal's shortfall inflate another's progress.
+  /* No base named means no conversion is being asked for, which is what every
+     caller that predates currencies passes. Not the same as "convert to the
+     empty string", which convert() would rightly refuse and which would then
+     zero every balance in the ledger. */
+  const inBase = (/** @type {any} */ a) => {
+    const v = a.balance ?? 0
+    if (!base) return v
+    return convert(v, a.currency || base, base, rates) ?? 0
+  }
+
   const remaining = new Map(
-    fundable.map(a => [a.name, Math.max(0, a.balance ?? 0)]),
+    fundable.map(a => [a.name, Math.max(0, inBase(a))]),
   )
   const startBalance = new Map(remaining)
   /** @type {Map<string, Array<{goalId?: number, name: string, amount: number}>>} */

@@ -47,6 +47,26 @@ import { planDedupe } from '../lib/dedupe'
 import { SheetsConfigSheet, ProfileSheet } from './settings/Profile'
 import { PolicySheet } from './settings/Policy'
 import { downloadBackupJson } from '../lib/backup'
+import useRates from '../hooks/useRates'
+
+/**
+ * When the rate table was last set by the provider, in words.
+ *
+ * "today" and "yesterday" rather than a date, because that is the only thing
+ * anybody is actually asking: a daily-updated rate is either current or it is
+ * not. Past that it says the number of days, which is what makes "stale"
+ * beside it mean something.
+ *
+ * @param {import('../lib/fx').RateTable|null} table
+ */
+function fxWhen(table) {
+  const at = Date.parse(table?.providerUpdatedAt ?? table?.fetchedAt ?? '')
+  if (!Number.isFinite(at)) return 'at an unknown time'
+  const days = Math.floor((Date.now() - at) / 86_400_000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  return `${days} days ago`
+}
 
 // ── Toggle switch ──────────────────────────────────────────────────────────────
 
@@ -92,6 +112,9 @@ export default function Settings() {
   const sheetsLastSync = useMemo(() => (meta ?? []).find(m => m.key === 'sheetsLastSynced')?.value ?? null, [meta])
 
   const txCount     = useLiveQuery(() => db.transactions.count(), [], 0)
+
+  /* Rates, and whether this ledger needs any. See hooks/useRates.js. */
+  const fx = useRates()
 
   /* Counted from the stored rows rather than by running the full evaluation
      here. useBadges reads seven tables and awards as a side effect of doing
@@ -263,6 +286,44 @@ export default function Settings() {
             <IconChevronRight size={14} strokeWidth="2" />
           </span>
         </button>
+
+        {/* Only for a ledger that actually holds a foreign account. A
+            peso-only ledger has no exchange rate, and telling somebody their
+            rates are eight days old when no figure on their screen depends on
+            one is noise dressed as diligence. useRates decides; this only
+            draws it. */}
+        {fx.needed && (
+          <div className="mt-3 flex items-center gap-3 px-4 py-3 rounded-2xl
+            bg-slate-50 dark:bg-white/[0.04]
+            border border-slate-100 dark:border-white/[0.06]">
+            <div className="flex-1 min-w-0">
+              <p className="text-13 font-semibold text-slate-800 dark:text-white">
+                Exchange rates
+              </p>
+              <p className="text-11 text-slate-500 dark:text-slate-400 truncate">
+                {fx.error
+                  ? 'Could not reach the rate service'
+                  : fx.table
+                    ? `${fx.foreign.join(', ')} · updated ${fxWhen(fx.table)}`
+                    : `${fx.foreign.join(', ')} · not downloaded yet`}
+              </p>
+            </div>
+            {fx.stale && !fx.busy && (
+              <span className="shrink-0 text-11 font-semibold px-2 py-0.5 rounded-full
+                bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                stale
+              </span>
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => fx.refresh()}
+              disabled={fx.busy}
+            >
+              {fx.busy ? 'Updating…' : 'Update'}
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* ══ 1. APPEARANCE ══ */}

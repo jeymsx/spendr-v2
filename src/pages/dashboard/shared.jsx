@@ -176,10 +176,14 @@ export const DUE_SOON_DAYS = 7
  * @param {Array<Partial<Goal>>} [input.goals]
  * @param {Array<Partial<Account>>} [input.accounts]
  * @param {Date} [input.today]
+ * @param {string} [input.base]   the ledger's currency, for goals funded by a
+ *   foreign account. Omitted, no conversion happens - see allocateGoals.
+ * @param {any} [input.rates]
  * @returns {{bills: number, debts: number, goals: number}}
  */
 export function quickActionCounts({
   recurring = [], debts = [], goals = [], accounts = [], today = new Date(),
+  base = '', rates = null,
 } = {}) {
   const start = new Date(today)
   start.setHours(0, 0, 0, 0)
@@ -198,7 +202,7 @@ export function quickActionCounts({
   const debtCount = debts.filter(d =>
     Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)) > 0 && dueSoon(d.dueDate)).length
 
-  const alloc = allocateGoals({ goals, accounts })
+  const alloc = allocateGoals({ goals, accounts, base, rates })
 
   return { bills, debts: debtCount, goals: alloc.active.filter(g => g.complete).length }
 }

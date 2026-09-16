@@ -33,6 +33,9 @@ import QuickActions from './dashboard/QuickActions'
 import UpcomingSection from './dashboard/Upcoming'
 import Rail from '../components/ui/Rail'
 import SectionHeading from '../components/ui/SectionHeading'
+import useRates from '../hooks/useRates'
+import { convert, sumInBase } from '../lib/fx'
+import { useBaseCurrency } from '../context/CurrencyContext'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -66,7 +69,49 @@ export default function Dashboard() {
   const goalRows   = useLiveQuery(() => db.goals.toArray(),      [], [])
 
   // ── Derived values ────────────────────────────────────────────────────────────
-  const { spendingBalance, savingsBalance } = useMemo(() => {
+  /* Every total on the wallet is in ONE currency, not in each account's own.
+     A dollar account's balance reads $500 on its own card, and contributes
+     whatever $500 is worth today to the figure at the top of this page -
+     which is the one number on the screen that has to be comparable with
+     itself month to month.
+
+     WHICH one is `viewCurrency`, and it is a tap on the card rather than a
+     setting. Somebody holding a dollar account wants both readings: what the
+     ledger is worth in the currency they live in, and what it is worth in
+     the one they are saving in. Neither is "the" answer, so the card offers
+     both and remembers which you were last looking at.
+
+     sumInBase reports what it could not convert rather than dropping it, so
+     a missing rate becomes a line of text under the figure instead of an
+     account quietly worth nothing. See lib/fx.js. */
+  const baseCurrency = useBaseCurrency()
+  const { table: rates, foreign } = useRates()
+
+  /* The ledger's own currency first, then each foreign one actually held -
+     but only the ones there is a rate for, since offering a reading the app
+     cannot compute is worse than not offering it. */
+  const viewOptions = useMemo(() => {
+    const priced = foreign.filter(c => convert(1, c, baseCurrency, rates) != null)
+    return [baseCurrency, ...priced]
+  }, [baseCurrency, foreign, rates])
+
+  const [viewCurrency, setViewCurrency] = useState(() => {
+    try { return localStorage.getItem('netWorthCurrency') || '' } catch { return '' }
+  })
+  /* Falls back rather than sticking: the remembered choice can name a
+     currency whose last account has since been deleted, or one whose rate has
+     gone missing, and a card stuck on a currency it can no longer price would
+     read as broken. */
+  const shownCurrency = viewOptions.includes(viewCurrency) ? viewCurrency : baseCurrency
+
+  const cycleCurrency = () => {
+    if (viewOptions.length < 2) return
+    const next = viewOptions[(viewOptions.indexOf(shownCurrency) + 1) % viewOptions.length]
+    setViewCurrency(next)
+    try { localStorage.setItem('netWorthCurrency', next) } catch { /* private mode */ }
+  }
+
+  const { spendingBalance, savingsBalance, unconverted } = useMemo(() => {
     const allAccts = accounts || []
     const roleOf = (a) => {
       if (a.type === 'credit') return 'credit'
@@ -74,10 +119,14 @@ export default function Dashboard() {
       return ['cash', 'ewallet'].includes(a.type) ? 'spending' : 'savings'
     }
     // Parents have their own real balance; sum all accounts (no double-counting)
-    const spendingBalance = allAccts.filter(a => roleOf(a) === 'spending').reduce((s, a) => s + (a.balance ?? 0), 0)
-    const savingsBalance  = allAccts.filter(a => roleOf(a) === 'savings').reduce((s, a)  => s + (a.balance ?? 0), 0)
-    return { spendingBalance, savingsBalance }
-  }, [accounts])
+    const spend = sumInBase(allAccts.filter(a => roleOf(a) === 'spending'), shownCurrency, rates)
+    const save  = sumInBase(allAccts.filter(a => roleOf(a) === 'savings'),  shownCurrency, rates)
+    return {
+      spendingBalance: spend.total,
+      savingsBalance: save.total,
+      unconverted: [...new Set([...spend.missing, ...save.missing])].sort(),
+    }
+  }, [accounts, shownCurrency, rates])
 
   const parentCombinedBal = useMemo(() => {
     const allAccts = accounts || []
@@ -271,15 +320,19 @@ export default function Dashboard() {
     () => quickActionCounts({
       recurring: recurring ?? [], debts: debts ?? [],
       goals: goalRows ?? [], accounts: accounts ?? [],
+      base: baseCurrency, rates,
     }),
-    [recurring, debts, goalRows, accounts],
+    [recurring, debts, goalRows, accounts, baseCurrency, rates],
   )
 
   const creditOutstanding = useMemo(() =>
-    (accounts || [])
-      .filter(a => a.type === 'credit')
-      .reduce((s, a) => s + (creditStmtMap[a.name]?.currentBalance ?? 0), 0),
-    [accounts, creditStmtMap],
+    sumInBase(
+      (accounts || []).filter(a => a.type === 'credit'),
+      shownCurrency,
+      rates,
+      a => creditStmtMap[a.name]?.currentBalance ?? 0,
+    ).total,
+    [accounts, creditStmtMap, shownCurrency, rates],
   )
 
   const netWorth = spendingBalance + savingsBalance - creditOutstanding
@@ -348,7 +401,36 @@ export default function Dashboard() {
 
               <div>
                 <div className="flex items-center justify-between mb-1">
-                  <span className="text-xs font-semibold text-white/60">Net worth</span>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-semibold text-white/60">Net worth</span>
+
+                    {/* Only when there is a second reading to switch to. One
+                        currency means one answer, and a control that cycles
+                        through a list of one is furniture.
+
+                        stopPropagation for the same reason the eye button
+                        does it: the wallet card is draggable, and a tap that
+                        starts a drag is a tap that never becomes a click. */}
+                    {viewOptions.length > 1 && (
+                      <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={cycleCurrency}
+                        className="flex items-center gap-1 pl-2 pr-1.5 py-0.5 rounded-full
+                          bg-white/[0.12] text-white/75 text-10 font-bold tracking-wide
+                          active:scale-95 transition-transform duration-100"
+                        aria-label={`Showing in ${shownCurrency}. Tap to switch currency.`}
+                      >
+                        {shownCurrency}
+                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                          <polyline points="4 8 17 8" />
+                          <polyline points="13 4 17 8 13 12" />
+                          <polyline points="20 16 7 16" />
+                          <polyline points="11 12 7 16 11 20" />
+                        </svg>
+                      </button>
+                    )}
+                  </div>
+
                   <button
                     onPointerDown={e => e.stopPropagation()}
                     onClick={() => setBalanceHidden(h => !h)}
@@ -362,12 +444,23 @@ export default function Dashboard() {
                 <div className="mt-2">
                   {revealed ? (
                     <span className="text-4xl font-semibold tracking-tight text-white tabular-nums">
-                      {fmt(animatedNetWorth)}
+                      {fmt(animatedNetWorth, shownCurrency)}
                     </span>
                   ) : (
-                    <span className="text-4xl font-semibold tracking-tight text-white/80">{fmtHidden(undefined, 6)}</span>
+                    <span className="text-4xl font-semibold tracking-tight text-white/80">{fmtHidden(shownCurrency, 6)}</span>
                   )}
                 </div>
+
+                {/* A net worth missing an account is not a net worth. It says
+                    which currency it could not price rather than quietly
+                    valuing that account at nothing, which is what dropping it
+                    would amount to. Only ever shown to somebody who holds a
+                    foreign account AND has no rate for it. */}
+                {unconverted.length > 0 && (
+                  <p className="mt-1.5 text-11 text-amber-200/90 leading-snug">
+                    {unconverted.join(', ')} not included: no exchange rate yet.
+                  </p>
+                )}
 
                 <div className="wallet-fold -mx-6" data-open={breakdownOpen}>
                   <div className="pt-5">
@@ -383,21 +476,21 @@ export default function Dashboard() {
                   <div>
                     <p className="text-white/50 text-11 mb-1">Spending</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
-                      {revealed ? fmt(spendingBalance) : '••••'}
+                      {revealed ? fmt(spendingBalance, shownCurrency) : '••••'}
                     </p>
                     <p className="text-white/35 text-10 mt-0.5">Cash, wallets</p>
                   </div>
                   <div>
                     <p className="text-white/50 text-11 mb-1">Savings</p>
                     <p className="text-white font-semibold text-sm tabular-nums">
-                      {revealed ? fmt(savingsBalance) : '••••'}
+                      {revealed ? fmt(savingsBalance, shownCurrency) : '••••'}
                     </p>
                     <p className="text-white/35 text-10 mt-0.5">Banks, deposits</p>
                   </div>
                   <div>
                     <p className="text-white/50 text-11 mb-1">Credit</p>
                     <p className="font-semibold text-sm tabular-nums text-white">
-                      {revealed ? fmt(creditOutstanding) : '••••'}
+                      {revealed ? fmt(creditOutstanding, shownCurrency) : '••••'}
                     </p>
                     <p className="text-white/35 text-10 mt-0.5">
                       {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}

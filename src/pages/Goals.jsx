@@ -23,6 +23,8 @@ import {
   GoalRing, IconPlus, IconReorder, fmtTargetDate,
 } from './goals/shared'
 import { fmt, fmtCompact } from '../lib/money'
+import { useBaseCurrency } from '../context/CurrencyContext'
+import useRates from '../hooks/useRates'
 
 /**
  * Savings goals.
@@ -210,6 +212,8 @@ export default function Goals() {
 
   const goalRows = useLiveQuery(() => db.goals.toArray(), [], undefined)
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
+  const baseCurrency = useBaseCurrency()
+  const { table: rates } = useRates()
 
   // One date for the whole render, so two tiles can never disagree about what
   // "this month" is if the clock ticks over mid-paint.
@@ -220,8 +224,8 @@ export default function Goals() {
   const today = useMemo(() => new Date(), [])
 
   const alloc = useMemo(
-    () => allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [] }),
-    [goalRows, accounts],
+    () => allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [], base: baseCurrency, rates }),
+    [goalRows, accounts, baseCurrency, rates],
   )
 
   const archived = useMemo(() => alloc.goals.filter(g => g.archived), [alloc])

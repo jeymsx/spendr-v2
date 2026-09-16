@@ -18,6 +18,8 @@ import DeleteConfirmSheet from '../components/DeleteConfirmSheet'
 import { useToast } from '../context/ToastContext'
 import { GoalRing, fmtTargetDate, fmtDateFull } from './goals/shared'
 import { fmt, fmtCompact } from '../lib/money'
+import { useBaseCurrency } from '../context/CurrencyContext'
+import useRates from '../hooks/useRates'
 
 /**
  * One goal.
@@ -81,6 +83,8 @@ export default function GoalDetail() {
 
   const goalRows = useLiveQuery(() => db.goals.toArray(), [], undefined)
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
+  const baseCurrency = useBaseCurrency()
+  const { table: rates } = useRates()
 
   const today = useMemo(() => new Date(), [])
 
@@ -88,8 +92,8 @@ export default function GoalDetail() {
      this goal has depends on every goal ranked above it, so there is no way
      to compute one in isolation. */
   const alloc = useMemo(
-    () => allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [] }),
-    [goalRows, accounts],
+    () => allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [], base: baseCurrency, rates }),
+    [goalRows, accounts, baseCurrency, rates],
   )
 
   const goalId = Number(id)

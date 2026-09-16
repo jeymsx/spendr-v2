@@ -49,7 +49,8 @@ const STORAGE_KEY = 'spendr-currency'
 
 const CurrencyContext = createContext(DEFAULT_CURRENCY)
 
-/** Anything not in the registry is not a currency, whatever it says. */
+/** Anything not in the registry is not a currency, whatever it says.
+ *  @param {string|null|undefined} code */
 function sane(code) {
   const up = code ? String(code).toUpperCase() : ''
   return CURRENCIES[up] ? up : DEFAULT_CURRENCY
@@ -63,13 +64,16 @@ function readMirror() {
   }
 }
 
+/** @param {{children: import('react').ReactNode}} props */
 export function CurrencyProvider({ children }) {
   /* Set during the initialiser rather than in an effect. An effect runs after
      the first paint, which is one frame of the wrong symbol on every figure
      on the screen. */
   const [code, setCode] = useState(() => setBaseCurrency(readMirror()))
 
-  const stored = useLiveQuery(() => db.meta.get('currency'), [], undefined)
+  /* `?? null` so a missing row is distinguishable from a pending read -
+     Dexie answers undefined for both. See the same note in useRates. */
+  const stored = useLiveQuery(async () => (await db.meta.get('currency')) ?? null, [], undefined)
 
   useEffect(() => {
     // undefined is "Dexie has not answered yet"; a missing row answers null.

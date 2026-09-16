@@ -2,6 +2,8 @@ import { createElement } from 'react'
 import db from '../db/db'
 import { getCreditStatus, getNextCycleRange } from './creditCycle'
 import { scheduledCutoff } from './scheduled'
+import { RATES_META_KEY, sumInBase } from '../lib/fx'
+import { DEFAULT_CURRENCY } from '../lib/currency'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
@@ -11,8 +13,12 @@ import { scheduledCutoff } from './scheduled'
  * Returns structured data for the PDF from Dexie.
  * @param {number} year
  * @param {number} month  1-indexed (1 = January)
+ * @param {string} [base]  the ledger's currency. Omitted, the roll-ups add
+ *   every account's figure as it stands - which is right for the
+ *   single-currency ledger and is what every caller before rates existed did.
+ * @param {import('../lib/fx').RateTable|null} [rates]
  */
-export async function fetchReportData(year, month) {
+export async function fetchReportData(year, month, base = '', rates = null) {
   const start = new Date(year, month - 1, 1)
   const end   = new Date(year, month, 1)
 
@@ -169,10 +175,21 @@ export async function fetchReportData(year, month) {
     endingBalances[acct.name] = bal
   }
 
-  const totalAssets      = nonCreditAccounts.reduce((s, a) => s + (endingBalances[a.name] ?? 0), 0)
-  const totalCreditUsed  = creditAccounts.reduce((s, a) => s + (creditDetailMap[a.name]?.balanceUsed ?? 0), 0)
-  const totalCreditLimit = creditAccounts.reduce((s, a) => s + (a.creditLimit ?? 0), 0)
+  /* The three roll-ups are in the LEDGER's currency; the per-account figures
+     above stay in each account's own, because that is what the account's row
+     in the report says. An account whose rate is unavailable is left out of
+     the totals and named in `unconverted`, rather than being added at face
+     value - a dollar counted as a peso is a wrong net worth, where an
+     acknowledged omission is only an incomplete one. */
+  const assets      = sumInBase(nonCreditAccounts, base, rates, a => endingBalances[a.name] ?? 0)
+  const creditUsed  = sumInBase(creditAccounts, base, rates, a => creditDetailMap[a.name]?.balanceUsed ?? 0)
+  const creditLimit = sumInBase(creditAccounts, base, rates, a => a.creditLimit ?? 0)
+
+  const totalAssets      = assets.total
+  const totalCreditUsed  = creditUsed.total
+  const totalCreditLimit = creditLimit.total
   const netWorth         = totalAssets - totalCreditUsed
+  const unconverted      = [...new Set([...assets.missing, ...creditUsed.missing, ...creditLimit.missing])].sort()
 
   // Transactions sorted ascending by date
   const transactions = [...monthTxs].sort((a, b) => {
@@ -194,6 +211,7 @@ export async function fetchReportData(year, month) {
     totalCreditUsed,
     totalCreditLimit,
     netWorth,
+    unconverted,
     categoryBreakdown,
     transactions,
   }
@@ -209,7 +227,17 @@ export async function fetchReportData(year, month) {
  * @returns {Promise<'shared'|'downloaded'|'cancelled'>}
  */
 export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF') {
-  const data = await fetchReportData(year, month)
+  /* Read here rather than passed in, because this is called from a menu item
+     that has no business knowing about exchange rates. Both are ordinary meta
+     rows: the ledger's currency syncs, the rate table is a device-local cache
+     that deliberately does not. */
+  const [currencyMeta, ratesMeta] = await Promise.all([
+    db.meta.get('currency'),
+    db.meta.get(RATES_META_KEY),
+  ])
+  const data = await fetchReportData(
+    year, month, currencyMeta?.value ?? DEFAULT_CURRENCY, ratesMeta?.value ?? null,
+  )
 
   const { default: MonthlyReport } = await import('../components/pdf/MonthlyReport.jsx')
   const { pdf }                    = await import('@react-pdf/renderer')

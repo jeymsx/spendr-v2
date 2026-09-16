@@ -3,6 +3,9 @@ import { useLiveQuery } from './useLiveQuery'
 import db from '../db/db'
 import { getCreditStatus } from '../utils/creditCycle'
 import { scheduledCutoff } from '../utils/scheduled'
+import { sumInBase } from '../lib/fx'
+import { useBaseCurrency } from '../context/CurrencyContext'
+import { useRates } from './useRates'
 
 /**
  * The figures every overview screen needs, derived once.
@@ -23,6 +26,8 @@ export function useFinanceSummary() {
   const recurring  = useLiveQuery(() => db.recurring.toArray(),    [], [])
   const txAll      = useLiveQuery(() => db.transactions.toArray(), [], undefined)
   const nameMeta   = useLiveQuery(() => db.meta.get('displayName'), [], null)
+  const baseCurrency = useBaseCurrency()
+  const { table: rates } = useRates()
 
   const loading = accounts === undefined || txAll === undefined
 
@@ -34,13 +39,21 @@ export function useFinanceSummary() {
     return ['cash', 'ewallet'].includes(a.type) ? 'spending' : 'savings'
   }
 
+  /* In the ledger's currency, not in each account's. A dollar account adds
+     what it is worth today, and an account whose rate is missing is reported
+     rather than silently valued at nothing - see lib/fx.js. */
   const balances = useMemo(() => {
     const all = accounts ?? []
     /** @param {string} role */
-    const sum = (role) => all.filter(a => roleOf(a) === role)
-      .reduce((s, a) => s + (a.balance ?? 0), 0)
-    return { spending: sum('spending'), savings: sum('savings') }
-  }, [accounts])
+    const sum = (role) => sumInBase(all.filter(a => roleOf(a) === role), baseCurrency, rates)
+    const spending = sum('spending')
+    const savings = sum('savings')
+    return {
+      spending: spending.total,
+      savings: savings.total,
+      unconverted: [...new Set([...spending.missing, ...savings.missing])].sort(),
+    }
+  }, [accounts, baseCurrency, rates])
 
   // Charges beyond today are committed, not spent — the same rule the mobile
   // history uses, so both agree on "this month".
@@ -64,8 +77,13 @@ export function useFinanceSummary() {
   }, [accounts, txAll])
 
   const creditOutstanding = useMemo(() =>
-    Object.values(creditStatus).reduce((s, st) => s + (st.currentBalance ?? 0), 0),
-    [creditStatus])
+    sumInBase(
+      (accounts ?? []).filter(a => a.type === 'credit'),
+      baseCurrency,
+      rates,
+      a => creditStatus[a.name]?.currentBalance ?? 0,
+    ).total,
+    [accounts, creditStatus, baseCurrency, rates])
 
   const budgets = useMemo(() => {
     /** @type {Record<string, number>} */
