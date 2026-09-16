@@ -54,9 +54,11 @@ function RateRow({ code, base, table, held = false }) {
 
       <div className="flex-1 min-w-0">
         <p className="text-13 font-semibold text-slate-800 dark:text-white truncate">{name}</p>
-        <p className="text-11 text-slate-400 dark:text-slate-500">
-          {code}{held ? ' · in your accounts' : ''}
-        </p>
+        {/* The code alone. It used to carry "· in your accounts", which is
+            what the section heading above already says and what the tint on
+            the row already shows - and at 320px it wrapped, making the one
+            row anybody cares about taller than its neighbours. */}
+        <p className="text-11 text-slate-400 dark:text-slate-500 truncate">{code}</p>
       </div>
 
       <div className="text-right shrink-0">
