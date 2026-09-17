@@ -1,8 +1,10 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import db from '../db/db'
 import { useLiveQuery } from './useLiveQuery'
 import { useBaseCurrency } from '../context/CurrencyContext'
-import { RATES_META_KEY, fetchRates, foreignCurrencies, isStale } from '../lib/fx'
+import {
+  RATES_META_KEY, fetchRates, foreignCurrencies, isStale, needsRefresh, singleFlight,
+} from '../lib/fx'
 
 /**
  * The exchange-rate table, fetched only if this ledger actually needs one.
@@ -19,17 +21,63 @@ import { RATES_META_KEY, fetchRates, foreignCurrencies, isStale } from '../lib/f
  * from the ledger's. Until one exists, `table` is whatever is cached (usually
  * nothing) and nothing goes to the network.
  *
- * ── Fetching, and not fetching ──
+ * ── The request budget, which is a real constraint ──
  *
- * The provider updates daily; the cache is used whatever its age. A refresh
- * is attempted when the table is missing or stale AND the browser believes it
- * is online, once per mount, guarded by a ref so React's double-invoked
- * effects in development do not send it twice.
+ * The provider's free tier is a thousand requests a month. This hook is
+ * called by eleven components and several of them mount together, so the
+ * guards that matter are the ones that are SHARED rather than per-instance:
+ *
+ *   singleFlight   one request at a time however many callers ask. Two
+ *                  instances mounting together used to send two identical
+ *                  requests - measured on /accounts, where the list and the
+ *                  currency picker inside its own form both call this.
+ *   autoTriedFor   one automatic attempt per page load. A module variable,
+ *                  because a ref is per-instance and that is exactly the bug.
+ *   needsRefresh   and only when the cached table is over a day old.
+ *
+ * Which leaves the arithmetic somewhere sane: about one request a day from
+ * ordinary use, against an allowance of thirty-three a day.
+ *
+ * ── And one that is not about age at all ──
+ *
+ * Adding a dollar account to a peso ledger has to fetch immediately, however
+ * fresh the table is, because the table it has does not price the thing that
+ * just appeared. `missing` is that case: a currency in use with no rate for
+ * it. It is the only path that can fire twice in a session, and only ever
+ * once per new currency.
+ *
+ * ── It uses the cache whatever its age ──
  *
  * A failure is kept and surfaced rather than retried in a loop. An app whose
  * whole premise is that it works on a dead connection must not spend that
  * connection on rates.
  */
+
+/**
+ * The fetch itself, shared by every instance of this hook.
+ *
+ * Module scope is the point: the instances cannot see each other, so the
+ * de-duplication has to live somewhere they all reach.
+ */
+const fetchOnce = singleFlight(async (/** @type {string} */ base) => {
+  const next = await fetchRates(base)
+  /* Not in the synced meta set - see lib/backup.js. A rate table is a
+     device-local cache of somebody else's data, and pushing it through sync
+     would have two phones overwriting each other's copy of a figure neither
+     of them owns. */
+  await db.meta.put({ key: RATES_META_KEY, value: next, updatedAt: next.fetchedAt })
+  return next
+})
+
+/**
+ * What an automatic fetch has already been attempted for, this page load.
+ *
+ * Keyed on the base currency AND the currencies in use, so adding an account
+ * in a new one is a new key and gets its own single attempt. Reset by a
+ * reload, which is when trying again is reasonable.
+ */
+let autoTriedFor = ''
+
 export function useRates() {
   const base = useBaseCurrency()
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
@@ -44,23 +92,22 @@ export function useRates() {
 
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState(/** @type {string|null} */ (null))
-  const tried = useRef(false)
 
   const table = stored?.value ?? null
   const foreign = useMemo(() => foreignCurrencies(accounts ?? [], base), [accounts, base])
   const needed = foreign.length > 0
 
+  /** Currencies this ledger holds that the cached table cannot price. */
+  const missing = useMemo(
+    () => foreign.filter(c => !(table?.rates ?? {})[c]),
+    [foreign, table],
+  )
+
   const refresh = useCallback(async () => {
     setBusy(true)
     setError(null)
     try {
-      const next = await fetchRates(base)
-      /* Not in the synced meta set - see lib/backup.js. A rate table is a
-         device-local cache of somebody else's data, and pushing it through
-         sync would have two phones overwriting each other's copy of a figure
-         neither of them owns. */
-      await db.meta.put({ key: RATES_META_KEY, value: next, updatedAt: next.fetchedAt })
-      return next
+      return await fetchOnce(base)
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e))
       return null
@@ -74,17 +121,21 @@ export function useRates() {
     // undefined is "Dexie has not answered yet", and fetching before it has
     // would discard a perfectly good cached table.
     if (stored === undefined || accounts === undefined) return
-    if (tried.current) return
-    if (!isStale(table)) return
     if (typeof navigator !== 'undefined' && navigator.onLine === false) return
-    tried.current = true
+
+    const key = `${base}|${foreign.join(',')}`
+    if (autoTriedFor === key) return
+    // Old enough to replace, or holding a currency it cannot price at all.
+    if (!needsRefresh(table) && missing.length === 0) return
+
+    autoTriedFor = key
     /* refresh() flips `busy`, which is a state write from an effect. The rule
        is right in general and wrong here: this is a network request being
        started, not a value that could have been derived during render, and
-       the ref above makes it happen at most once per mount. */
+       the module flag above makes it happen at most once per load. */
     // eslint-disable-next-line react-hooks/set-state-in-effect
     refresh()
-  }, [needed, stored, accounts, table, refresh])
+  }, [needed, stored, accounts, table, base, foreign, missing, refresh])
 
   /* A table quoted against a different currency than the ledger is not wrong,
      it is just indirect - convert() goes through the base either way. It is
@@ -98,6 +149,8 @@ export function useRates() {
     needed,
     /** The non-base currencies actually in use. */
     foreign,
+    /** Those of them the cached table cannot price. */
+    missing,
     stale: needed && (isStale(table) || rebased),
     busy,
     error,

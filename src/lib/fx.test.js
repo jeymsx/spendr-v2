@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   PROVIDER_URL, STALE_AFTER_MS,
-  PROVIDERS,
-  convert, fetchRates, foreignCurrencies, isStale, parseRates, sumInBase, toBase,
+  PROVIDERS, REFRESH_AFTER_MS,
+  convert, fetchRates, foreignCurrencies, isStale, needsRefresh, parseRates,
+  singleFlight, sumInBase, toBase,
 } from './fx'
 
 /**
@@ -176,6 +177,69 @@ describe('isStale', () => {
   it('treats no table and an unreadable one as stale', () => {
     expect(isStale(null)).toBe(true)
     expect(isStale(/** @type {any} */ ({ base: 'PHP', rates: {}, fetchedAt: 'not a date', providerUpdatedAt: null }))).toBe(true)
+  })
+})
+
+describe('singleFlight', () => {
+  /* Eleven components call useRates and several mount together. Each kept its
+     own "already tried" ref, so a cold start on /accounts sent two identical
+     requests - measured. On a thousand a month that is a race eating the
+     budget. */
+  it('gives every caller the same promise while one is in flight', async () => {
+    let calls = 0
+    /** @type {(v?: any) => void} */
+    let release = () => {}
+    const gate = new Promise(r => { release = r })
+    const run = singleFlight(async () => { calls++; await gate; return 'done' })
+
+    const a = run('PHP')
+    const b = run('PHP')
+    const c = run('PHP')
+    expect(calls).toBe(1)
+    release()
+    expect(await Promise.all([a, b, c])).toEqual(['done', 'done', 'done'])
+    expect(calls).toBe(1)
+  })
+
+  it('asks again once the first has settled', async () => {
+    let calls = 0
+    const run = singleFlight(async () => { calls++; return calls })
+    expect(await run('PHP')).toBe(1)
+    expect(await run('PHP')).toBe(2)
+  })
+
+  it('treats a different argument as a different request', async () => {
+    let calls = 0
+    const run = singleFlight(async (/** @type {string} */ base) => { calls++; return base })
+    const a = run('PHP')
+    const b = run('USD')
+    expect(calls).toBe(2)
+    expect(await a).toBe('PHP')
+    expect(await b).toBe('USD')
+  })
+
+  it('does not wedge when the call rejects', async () => {
+    let calls = 0
+    const run = singleFlight(async () => { calls++; throw new Error('down') })
+    await expect(run('PHP')).rejects.toThrow('down')
+    await expect(run('PHP')).rejects.toThrow('down')
+    expect(calls).toBe(2)
+  })
+})
+
+describe('needsRefresh', () => {
+  const at = Date.parse(/** @type {string} */ (TABLE?.providerUpdatedAt))
+
+  it('is a day, where stale is a week', () => {
+    // Two different questions: when to go and get a new one, and when to tell
+    // somebody the one on screen may be wrong.
+    expect(needsRefresh(TABLE, at + REFRESH_AFTER_MS - 1)).toBe(false)
+    expect(needsRefresh(TABLE, at + REFRESH_AFTER_MS + 1)).toBe(true)
+    expect(isStale(TABLE, at + REFRESH_AFTER_MS + 1)).toBe(false)
+  })
+
+  it('treats no table as needing one', () => {
+    expect(needsRefresh(null)).toBe(true)
   })
 })
 

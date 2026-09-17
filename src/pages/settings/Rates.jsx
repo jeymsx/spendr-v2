@@ -208,9 +208,14 @@ export default function RatesPage() {
                 stale
               </span>
             )}
-            <Button onClick={() => refresh()} disabled={busy} size="sm" className="px-4 shrink-0">
-              {busy ? 'Updating…' : 'Update'}
-            </Button>
+            {/* See the note on the same row in Settings: the app keeps these
+                current by itself, so a button is for the case where that
+                failed rather than a thing to press. */}
+            {(stale || error || busy) && (
+              <Button onClick={() => refresh()} disabled={busy} size="sm" className="px-4 shrink-0">
+                {busy ? 'Updating…' : 'Retry'}
+              </Button>
+            )}
           </div>
         </Card>
 

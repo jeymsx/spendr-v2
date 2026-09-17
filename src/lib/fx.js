@@ -81,8 +81,29 @@ export const PROVIDERS = [
 /** The first provider's URL builder, kept as a named export for tests. */
 export const PROVIDER_URL = 'https://api.fxratesapi.com/latest?base='
 
-/** Past this, the UI says so. It does not stop using them. */
+/**
+ * Past this, the UI says the rates are old. It does not stop using them.
+ *
+ * A week, not a day, because this is the "something is wrong" line rather
+ * than the refresh schedule - and the thing it usually means is that you have
+ * been offline, which the app is designed for. See REFRESH_AFTER_MS.
+ */
 export const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000
+
+/**
+ * How old the table has to be before a page load goes and gets a new one.
+ *
+ * A day. The provider republishes by the minute and the free tier allows a
+ * thousand requests a month, so the honest question is how fresh a household
+ * ledger's rates need to be - and the answer is "yesterday's are fine, last
+ * week's are not". Daily works out at about thirty requests a month, three
+ * per cent of the allowance, which leaves the rest for the Update button.
+ *
+ * Deliberately NOT the same number as STALE_AFTER_MS. Refreshing and
+ * complaining are different decisions: one is a background nicety, the other
+ * is telling somebody a figure on their screen may be wrong.
+ */
+export const REFRESH_AFTER_MS = 24 * 60 * 60 * 1000
 
 /**
  * @typedef {object} RateTable
@@ -238,6 +259,61 @@ export function convert(amount, from, to, table) {
 export const toBase = (amount, from, base, table) => convert(amount, from, base, table)
 
 /**
+ * Whether the table is old enough to be worth replacing.
+ *
+ * @param {RateTable|null|undefined} table
+ * @param {number} [nowMs]
+ */
+export function needsRefresh(table, nowMs = Date.now()) {
+  return olderThan(table, REFRESH_AFTER_MS, nowMs)
+}
+
+/** @param {RateTable|null|undefined} table @param {number} ms @param {number} nowMs */
+function olderThan(table, ms, nowMs) {
+  if (!table) return true
+  const at = Date.parse(table.providerUpdatedAt ?? table.fetchedAt ?? '')
+  if (!Number.isFinite(at)) return true
+  return nowMs - at > ms
+}
+
+/**
+ * One request at a time, however many callers ask.
+ *
+ * `useRates` is called by eleven components and several of them mount
+ * together - the accounts list and the currency picker inside its own form,
+ * for one. Each kept its own "already tried" ref, so a cold start on that
+ * page sent TWO identical requests, measured. On a free tier of a thousand a
+ * month that is half the budget going to a race.
+ *
+ * Module scope rather than a ref, because the whole point is that the
+ * instances cannot see each other. A second caller while one is in flight
+ * gets the SAME promise, so it waits for the answer instead of asking again.
+ *
+ * Keyed on the argument: a request for a different base currency is a
+ * different request and is allowed to overtake.
+ *
+ * @template T
+ * @param {(arg: string) => Promise<T>} fn
+ * @returns {(arg: string) => Promise<T>}
+ */
+export function singleFlight(fn) {
+  /** @type {string|null} */
+  let key = null
+  /** @type {Promise<any>|null} */
+  let pending = null
+  return (arg) => {
+    if (pending && key === arg) return pending
+    key = arg
+    const p = Promise.resolve(fn(arg)).finally(() => {
+      // Only clear if nothing newer has taken over.
+      if (pending === p) { pending = null; key = null }
+    })
+    pending = p
+    return p
+  }
+}
+
+/**
  * Whether the table is old enough to say so.
  *
  * Measured from what the PROVIDER last updated rather than from when we
@@ -248,10 +324,7 @@ export const toBase = (amount, from, base, table) => convert(amount, from, base,
  * @param {number} [nowMs]
  */
 export function isStale(table, nowMs = Date.now()) {
-  if (!table) return true
-  const at = Date.parse(table.providerUpdatedAt ?? table.fetchedAt ?? '')
-  if (!Number.isFinite(at)) return true
-  return nowMs - at > STALE_AFTER_MS
+  return olderThan(table, STALE_AFTER_MS, nowMs)
 }
 
 /**

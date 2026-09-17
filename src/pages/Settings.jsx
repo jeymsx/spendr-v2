@@ -364,23 +364,34 @@ export default function Settings() {
                 stale
               </span>
             )}
-            {/* px-4 and shrink-0 are not decoration. Button states its own
-                height and never its width - every caller pays for its own
-                horizontal padding - and in a flex row with a flex-1 sibling
-                an unpadded, shrinkable button collapses to a disc with the
-                word hanging out of both sides of it. */}
-            {/* Primary, like the one on the rates page it opens. Secondary
-                read as a disabled control against this card's own blue - a
-                grey pill on a blue panel is what "not available" looks like
-                everywhere else in the app. */}
-            <Button
-              size="sm"
-              className="px-4 shrink-0"
-              onClick={() => fx.refresh()}
-              disabled={fx.busy}
-            >
-              {fx.busy ? 'Updating…' : 'Update'}
-            </Button>
+            {/* Only when there is something to fix.
+
+                The app refreshes itself: once a load when the table is over a
+                day old, and immediately when an account appears in a currency
+                it cannot price. A button that refetches figures which are
+                already current spends a request from a thousand-a-month
+                allowance to change nothing, and invites tapping it to see
+                whether anything happens.
+
+                So it appears when the rates are out of date or the last
+                attempt failed - which is exactly when somebody needs a way to
+                try again, and the one case the automatic path cannot cover
+                because it has already used its attempt for this load.
+
+                px-4 and shrink-0 are not decoration: Button states its own
+                height and never its width, and in a flex row beside a flex-1
+                sibling an unpadded shrinkable button collapses to a disc with
+                the word hanging out of both sides. */}
+            {(fx.stale || fx.error || fx.busy) && (
+              <Button
+                size="sm"
+                className="px-4 shrink-0"
+                onClick={() => fx.refresh()}
+                disabled={fx.busy}
+              >
+                {fx.busy ? 'Updating…' : 'Retry'}
+              </Button>
+            )}
           </div>
         )}
       </div>
