@@ -22,6 +22,7 @@ import SectionLabel from '../components/ui/SectionLabel'
 import Divider from '../components/ui/Divider'
 import { fmt, baseSymbol } from '../lib/money'
 import AmountInput from '../components/ui/AmountInput'
+import ConversionChip from '../components/ConversionChip'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -301,6 +302,14 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           label="Amount"
         />
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">Amount</p>
+        {/* What that is in the ledger's currency, and the rate it used.
+            Renders nothing at all unless this account is held in another
+            currency, which is every account for most people. */}
+        <ConversionChip
+          amount={parseMoney(amountStr)}
+          currency={fromAccount?.currency}
+          className="mt-3"
+        />
       </div>
 
       {/* ── Form fields ── */}

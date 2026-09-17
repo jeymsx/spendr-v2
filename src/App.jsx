@@ -39,6 +39,7 @@ const SettingsAccent = lazy(() => import('./pages/SettingsAccent'))
 const SettingsCategories = lazy(() => import('./pages/Settings').then(m => ({ default: m.CategoriesPage })))
 const SettingsBudgets    = lazy(() => import('./pages/Settings').then(m => ({ default: m.BudgetsPage })))
 const SettingsRates      = lazy(() => import('./pages/settings/Rates'))
+const SettingsProfile    = lazy(() => import('./pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 const SettingsTemplates  = lazy(() => import('./pages/Settings').then(m => ({ default: m.TemplatesPage })))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
 const Onboarding   = lazy(() => import('./pages/Onboarding'))
@@ -117,6 +118,7 @@ export default function App() {
               <Route path="/settings/categories" element={<SettingsCategories />} />
               <Route path="/settings/budgets"    element={<SettingsBudgets />} />
               <Route path="/settings/rates"      element={<SettingsRates />} />
+              <Route path="/settings/profile"    element={<SettingsProfile />} />
               <Route path="/settings/templates"  element={<SettingsTemplates />} />
               <Route path="/import"       element={<ImportWizard />} />
             </Route>

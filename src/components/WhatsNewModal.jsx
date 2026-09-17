@@ -1,72 +1,47 @@
 import db from '../db/db'
 import {
-  IconSparkle, IconQuickLog, IconBell, IconBillHistory, IconDebt,
-  IconCategories, IconDrawn, IconPalette, IconSettings, IconContrast,
+  IconSparkle, IconCurrency, IconRates, IconWorldMoney, IconTap,
 } from './icons'
 import Button from './ui/Button'
 import Divider from './ui/Divider'
 import Sheet from './ui/Sheet'
 
-const CURRENT_VERSION = '0.3.0'
+const CURRENT_VERSION = '0.4.0'
 
 /* Written from the user's side of the change, not the code's: what is
-   different when you open the app. Ordered by what you meet first - the +
-   button, then the home screen, then the pages behind it, then settings - so
-   reading the list walks the app rather than the changelog.
+   different when you open the app.
 
-   What is NOT here: the 86 tests and the AST checks this release added. They
-   are the reason the figures stay right, but a test count is something the
-   person who wrote it wants to say, not something the person using it wants
-   to read. That belongs in plan.md.
+   ONE RELEASE AT A TIME. This list is keyed to CURRENT_VERSION and shown once
+   per version, so 0.3.0's nine entries are gone rather than accumulating -
+   somebody opening the app today is being told what changed today, and a
+   changelog that only grows is one nobody reads to the end of.
 
-   `Icon` is a COMPONENT, not a string. This list held emoji until 0.3.0 -
-   which is the release that took the emoji out of the app, so it could hardly
-   keep rendering nine of them. */
+   What is NOT here: the migration, the Dexie hook, the 60-odd call sites that
+   stopped hardcoding a peso sign, or the tests that hold them there. They are
+   the reason the figures are right, and none of them are something the person
+   using the app wants to read. That belongs in the commit messages.
+
+   `Icon` is a COMPONENT, not a string. */
 const WHATS_NEW = [
   {
-    Icon: IconQuickLog,
-    title: 'Hold the + and just type it',
-    desc: 'Say “150 jollibee” or “500 from gcash to bpi”. Spendr reads the amount, the merchant and the account, then opens the right form with it all filled in.',
+    Icon: IconCurrency,
+    title: 'Accounts in another currency',
+    desc: 'Give an account its own currency when you make it, and it keeps it everywhere: its card, its transactions, the form you type into and every sheet in between.',
   },
   {
-    Icon: IconBell,
-    title: 'You can tell at a glance',
-    desc: 'A number appears on Bills, Debts and Goals the moment one of them needs you.',
+    Icon: IconRates,
+    title: 'Rates, updated daily',
+    desc: 'Type a foreign amount and a chip under it shows what that is in your own currency, and the rate it used. Tap it for the full table.',
   },
   {
-    Icon: IconBillHistory,
-    title: 'Every bill has its own page',
-    desc: 'Tap one for what it costs you a year, when it last posted, and the button that posts the next charge.',
+    Icon: IconWorldMoney,
+    title: 'Net worth, your way',
+    desc: 'One combined figure at today’s rate, or one line per currency with nothing converted. Settings decides; tapping the code on the wallet reads it in another currency.',
   },
   {
-    Icon: IconDebt,
-    title: 'Debts, rebuilt',
-    desc: 'One list, or split by who owes whom. Recording a payment uses your keyboard now instead of a number pad of its own.',
-  },
-  {
-    Icon: IconCategories,
-    title: 'Pick a category with your thumb',
-    desc: 'The category picker is a row you swipe, not a sheet that covers the form you were filling in. The filters use the same row.',
-  },
-  {
-    Icon: IconDrawn,
-    title: 'No more emoji',
-    desc: 'Every glyph in the app is drawn now, at one weight, matching the bar along the bottom. Categories carry their own colour.',
-  },
-  {
-    Icon: IconPalette,
-    title: 'See the accent before you choose it',
-    desc: 'Accent colour is its own page, and each colour arrives as a card you swipe through showing the app wearing it.',
-  },
-  {
-    Icon: IconSettings,
-    title: 'Categories and Budgets are pages',
-    desc: 'Both open like everything else, with a back button - so editing one is no longer a sheet stacked on a sheet.',
-  },
-  {
-    Icon: IconContrast,
-    title: 'Readable in daylight',
-    desc: 'Accent-coloured text, category tiles and the new badges were all measured against the background they sit on, and moved until they passed.',
+    Icon: IconTap,
+    title: 'The + works on Android',
+    desc: 'Tapping it did nothing on some phones. It was measuring the tap itself and getting it wrong; the browser decides now, which is what it was always better at.',
   },
 ]
 

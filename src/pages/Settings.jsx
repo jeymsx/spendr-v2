@@ -20,7 +20,6 @@ import { BADGES as BADGE_LIST } from '../lib/badges'
 
 import { setViewMode, getViewPreference } from '../web/useViewMode'
 import Button from '../components/ui/Button'
-import Segmented from '../components/ui/Segmented'
 import Sheet from '../components/ui/Sheet'
 
 import SectionLabel from '../components/ui/SectionLabel'
@@ -49,24 +48,50 @@ import { SheetsConfigSheet, ProfileSheet } from './settings/Profile'
 import { PolicySheet } from './settings/Policy'
 import { downloadBackupJson } from '../lib/backup'
 import useRates from '../hooks/useRates'
+import { rateAge } from '../lib/fx'
 
 /**
- * When the rate table was last set by the provider, in words.
+ * The net-worth reading, as a dropdown rather than a segmented pair.
  *
- * "today" and "yesterday" rather than a date, because that is the only thing
- * anybody is actually asking: a daily-updated rate is either current or it is
- * not. Past that it says the number of days, which is what makes "stale"
- * beside it mean something.
+ * It was a card of its own with a two-up toggle and a paragraph under it,
+ * which is a lot of screen for a binary that most ledgers never see. As a row
+ * in Preferences it sits with the other things that change how the app
+ * behaves, and the choice is two words.
  *
- * @param {import('../lib/fx').RateTable|null} table
+ * The select is laid over the chip at zero opacity rather than styled with
+ * appearance-none - the same trick as the category chip in PeopleSplit, and
+ * for the same two reasons: it keeps the native option list, the iOS wheel,
+ * type-ahead and VoiceOver, while giving complete control of the closed
+ * state and sidestepping every browser's own idea of a select arrow.
  */
-function fxWhen(table) {
-  const at = Date.parse(table?.providerUpdatedAt ?? table?.fetchedAt ?? '')
-  if (!Number.isFinite(at)) return 'at an unknown time'
-  const days = Math.floor((Date.now() - at) / 86_400_000)
-  if (days <= 0) return 'today'
-  if (days === 1) return 'yesterday'
-  return `${days} days ago`
+function ModeSelect({ value, onChange, dark }) {
+  const LABEL = { converted: 'Combined', separated: 'Separate' }
+  return (
+    <span
+      className="relative inline-flex items-center gap-1 pl-3 pr-6 py-1.5 rounded-full
+        text-12 font-semibold bg-slate-100 dark:bg-white/[0.07]
+        text-slate-700 dark:text-slate-200"
+    >
+      {LABEL[value] ?? LABEL.converted}
+      <svg
+        className="absolute right-2 text-slate-400 dark:text-slate-500"
+        width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+        strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"
+      >
+        <path d="M6 9l6 6 6-6" />
+      </svg>
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        aria-label="How net worth adds up accounts in different currencies"
+        className="absolute inset-0 w-full h-full opacity-0"
+        style={{ colorScheme: dark ? 'dark' : 'light' }}
+      >
+        <option value="converted">Combined</option>
+        <option value="separated">Separate</option>
+      </select>
+    </span>
+  )
 }
 
 // ── Toggle switch ──────────────────────────────────────────────────────────────
@@ -89,7 +114,6 @@ export default function Settings() {
   const { user, signOut }      = useAuth()
   const { status: syncStatus, runSync } = useSyncManager()
 
-  const [profileOpen,  setProfileOpen]  = useState(false)
   const [resetOpen,    setResetOpen]    = useState(false)
   const [dedupeOpen,   setDedupeOpen]   = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
@@ -269,7 +293,7 @@ export default function Settings() {
       {/* ── Profile card ── */}
       <div className="px-5 pt-4 pb-6">
         <button
-          onClick={() => setProfileOpen(true)}
+          onClick={() => navigate('/settings/profile')}
           className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left
             bg-white dark:bg-primary/[0.10]
             border border-slate-100 dark:border-primary/[0.22]
@@ -326,7 +350,7 @@ export default function Settings() {
                   {fx.error
                     ? 'Could not reach the rate service'
                     : fx.table
-                      ? `${fx.foreign.join(', ')} · updated ${fxWhen(fx.table)}`
+                      ? `${fx.foreign.join(', ')} · updated ${rateAge(fx.table)}`
                       : `${fx.foreign.join(', ')} · not downloaded yet`}
                 </span>
               </span>
@@ -345,8 +369,11 @@ export default function Settings() {
                 horizontal padding - and in a flex row with a flex-1 sibling
                 an unpadded, shrinkable button collapses to a disc with the
                 word hanging out of both sides of it. */}
+            {/* Primary, like the one on the rates page it opens. Secondary
+                read as a disabled control against this card's own blue - a
+                grey pill on a blue panel is what "not available" looks like
+                everywhere else in the app. */}
             <Button
-              variant="secondary"
               size="sm"
               className="px-4 shrink-0"
               onClick={() => fx.refresh()}
@@ -354,39 +381,6 @@ export default function Settings() {
             >
               {fx.busy ? 'Updating…' : 'Update'}
             </Button>
-          </div>
-        )}
-
-        {/* Only for a ledger that holds more than one currency, for the same
-            reason as the row above: there is nothing to choose between when
-            every account is in pesos. */}
-        {fx.needed && (
-          <div className="mt-3 px-4 py-4 rounded-2xl
-            bg-white dark:bg-primary/[0.10]
-            border border-slate-100 dark:border-primary/[0.22]
-            shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.15),0_0_0_1px_rgba(var(--color-primary-rgb),0.06)]">
-            <p className="text-13 font-semibold text-slate-900 dark:text-white">
-              Net worth
-            </p>
-            <p className="text-11 text-slate-500 dark:text-slate-400 mt-0.5 leading-snug">
-              How the wallet on your home screen adds up accounts held in
-              different currencies.
-            </p>
-            <div className="mt-3">
-              <Segmented
-                value={netWorthMode}
-                onChange={setNetWorthMode}
-                options={[
-                  { value: 'converted', label: 'One total' },
-                  { value: 'separated', label: 'Per currency' },
-                ]}
-              />
-            </div>
-            <p className="text-11 text-slate-400 dark:text-slate-500 mt-2 leading-snug">
-              {netWorthMode === 'separated'
-                ? 'One line per currency, at face value. Nothing is converted, so nothing depends on a rate.'
-                : 'A single figure, converted at today’s rate. Tap the code on the card to read it in another currency.'}
-            </p>
           </div>
         )}
       </div>
@@ -459,6 +453,42 @@ export default function Settings() {
               key: 'budgetRollover', value: !budgetRollover, updatedAt: new Date().toISOString(),
             })}
           />
+
+          {/* Only for a ledger that actually holds more than one currency.
+              There is nothing to choose between when every account is in
+              pesos, and a row offering the choice anyway is a question about
+              a situation you are not in. */}
+          {fx.needed && (
+            <>
+              <RowDivider />
+              <SettingsRow
+                iconEl={
+                  <RowIcon color="teal">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M12 3v18" />
+                      <path d="M5 7h14" />
+                      <path d="M5 7l-3 6a3 3 0 006 0z" />
+                      <path d="M19 7l3 6a3 3 0 01-6 0z" />
+                      <path d="M8 21h8" />
+                    </svg>
+                  </RowIcon>
+                }
+                label="Net worth"
+                sublabel="Across currencies"
+                /* No onTap: the control on the right is the control. See the
+                   note on SettingsRow - a row with no tap is a div now, so a
+                   real <select> can live in it. */
+                right={(
+                  <ModeSelect
+                    value={netWorthMode}
+                    onChange={setNetWorthMode}
+                    dark={theme === 'dark'}
+                  />
+                )}
+              />
+            </>
+          )}
+
           <RowDivider />
           {/* Without this, choosing "switch to mobile" in the desktop sidebar
               was a one-way door: the preference is stored per-device in
@@ -990,12 +1020,6 @@ export default function Settings() {
         onClose={() => setSheetsOpen(false)}
         onSync={handleSheetsSync}
         syncing={syncing}
-      />
-      <ProfileSheet
-        open={profileOpen}
-        onClose={() => setProfileOpen(false)}
-        displayName={displayName}
-        currency={currency}
       />
       <DedupeSheet open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
 

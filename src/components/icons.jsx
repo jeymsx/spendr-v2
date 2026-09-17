@@ -181,6 +181,7 @@ import {
   Receipt, SwitchHorizontal01,
   CalendarCheck01, CoinsHand, Grid01, Brush01, Palette, Settings01,
   Contrast01, ZapFast,
+  CurrencyDollarCircle, CoinsSwap01, Globe01, Cursor01,
   Trophy01, Target04, CoinsStacked01, TrendUp01, BarChart10, Calculator,
   AlertCircle, CheckCircle,
 } from '@untitledui/icons'
@@ -222,6 +223,10 @@ export const IconPalette     = uui(Palette)          // accent colour
 export const IconSettings    = uui(Settings01)
 export const IconContrast    = uui(Contrast01)       // the light-mode contrast pass
 export const IconQuickLog    = uui(ZapFast)          // hold the + and type a line
+export const IconCurrency    = uui(CurrencyDollarCircle) // an account in another currency
+export const IconRates       = uui(CoinsSwap01)      // the exchange-rate table
+export const IconWorldMoney  = uui(Globe01)          // a net worth across currencies
+export const IconTap         = uui(Cursor01)         // the + that would not respond
 
 /**
  * An account type's icon.

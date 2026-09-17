@@ -27,14 +27,14 @@ import Sheet from './ui/Sheet'
  * flick, not a wall - so unlike the account picker this one does not try to
  * fit everything.
  */
-export default function CurrencyPickerSheet({ open, onClose, selected, onSelect, hint = null }) {
+export default function CurrencyPickerSheet({ open, onClose, selected, onSelect, hint = null, z = 130 }) {
   const pick = (code) => { onSelect(code); onClose() }
 
   return (
     <Sheet
       open={open}
       onClose={onClose}
-      z={130}
+      z={z}
       scrim={40}
       maxHeight="52dvh"
       title="Currency"

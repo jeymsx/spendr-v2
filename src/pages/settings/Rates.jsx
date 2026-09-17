@@ -7,7 +7,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import useRates from '../../hooks/useRates'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { CURRENCIES, currencyOf, symbolOf } from '../../lib/currency'
-import { convert } from '../../lib/fx'
+import { convert, rateAge } from '../../lib/fx'
 
 /**
  * What the rates actually are.
@@ -82,47 +82,41 @@ export default function RatesPage() {
     [base, foreign],
   )
 
-  const updated = useMemo(() => {
-    const at = Date.parse(table?.providerUpdatedAt ?? table?.fetchedAt ?? '')
-    if (!Number.isFinite(at)) return null
-    return new Date(at).toLocaleString('en-PH', {
-      year: 'numeric', month: 'long', day: 'numeric', hour: 'numeric', minute: '2-digit', hour12: true,
-    })
-  }, [table])
 
   return (
     <SubPage title="Exchange rates">
       <div className="px-5 pt-1 flex flex-col gap-5">
-        <Card padding="md">
-          <p className="text-13 text-slate-600 dark:text-slate-300 leading-snug">
-            Every figure below is what one unit is worth in {currencyOf(base).name}.
-          </p>
-          <p className="text-11 text-slate-400 dark:text-slate-500 mt-1.5 leading-snug">
-            {error
-              ? 'Could not reach the rate service. The figures below are the last ones downloaded.'
-              : updated
-                ? `Set by the provider on ${updated}.`
-                : 'Nothing downloaded yet.'}
-          </p>
+        {/* One row, the same shape as the rates card in Settings that opens
+            this page - a name, a status line, and the button.
 
-          <div className="flex items-center gap-2 mt-3">
-            <Button onClick={() => refresh()} disabled={busy} size="sm" className="px-4">
-              {busy ? 'Updating…' : 'Update now'}
-            </Button>
+            It was three paragraphs of prose above a button: what the figures
+            mean, when the provider set them, and a caveat about banks. The
+            first is answered by the rows themselves the moment you look at
+            one, and the third is a footnote rather than a preamble. What is
+            left is the only thing you came to the top of this page to do. */}
+        <Card padding="md">
+          <div className="flex items-center gap-3">
+            <div className="flex-1 min-w-0">
+              <p className="text-13 font-semibold text-slate-900 dark:text-white truncate">
+                Worth in {currencyOf(base).name}
+              </p>
+              <p className="text-11 text-slate-400 dark:text-slate-500 truncate">
+                {error
+                  ? 'Could not reach the rate service'
+                  : table
+                    ? `Mid-market · updated ${rateAge(table)}`
+                    : 'Not downloaded yet'}
+              </p>
+            </div>
             {stale && !busy && (
-              <span className="text-11 font-semibold px-2 py-1 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
-                out of date
+              <span className="shrink-0 text-11 font-semibold px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400">
+                stale
               </span>
             )}
+            <Button onClick={() => refresh()} disabled={busy} size="sm" className="px-4 shrink-0">
+              {busy ? 'Updating…' : 'Update'}
+            </Button>
           </div>
-
-          {/* Rates move. A household ledger does not need the interbank mid
-              rate to the fifth place, but somebody comparing this against a
-              remittance app should know which one they are looking at. */}
-          <p className="text-10 text-slate-400 dark:text-slate-500 mt-3 leading-snug">
-            Mid-market rates, updated once a day. Your bank will give you
-            slightly less than this when you actually convert.
-          </p>
         </Card>
 
         {!table ? (
@@ -151,6 +145,16 @@ export default function RatesPage() {
                 ))}
               </Card>
             </div>
+
+            {/* A household ledger does not need the interbank rate to the
+                fifth place, but somebody holding this up against a remittance
+                app should know which number they are looking at. At the
+                bottom, because it qualifies the figures rather than
+                introducing them. */}
+            <p className="text-10 text-slate-400 dark:text-slate-500 leading-snug px-1">
+              Your bank will give you slightly less than the mid-market rate
+              when you actually convert.
+            </p>
           </>
         )}
       </div>

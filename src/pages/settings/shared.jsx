@@ -16,7 +16,11 @@ import SectionLabel from '../../components/ui/SectionLabel'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-export const APP_VERSION = '0.1.0'
+/* The version in the Settings footer. It read 0.1.0 while package.json said
+   0.3.0 and the release notes said 0.3.0 - three numbers for one app, and
+   the one people can actually see was the stalest. Kept in step with
+   package.json and CURRENT_VERSION in WhatsNewModal from here on. */
+export const APP_VERSION = '0.4.0'
 
 export const EMOJI_OPTIONS = [
   '🍔', '🛍️', '🚗', '🎮', '💆', '🧾', '📦', '💰',
@@ -254,15 +258,26 @@ export function RowIcon({ color, children }) {
   )
 }
 
+/**
+ * A row with no `onTap` is a DIV, not a disabled button.
+ *
+ * It was always a button, disabled when nothing happened on tap - which is
+ * announced as a dimmed control to a screen reader, and, more practically,
+ * blocks pointer events on everything inside it. A row whose whole purpose is
+ * the control on its right (a dropdown, a switch that owns its own handler)
+ * could therefore never be operated: the disabled button swallowed the tap
+ * before it reached the child. A select inside a button is invalid markup
+ * anyway, disabled or not.
+ */
 export function SettingsRow({ iconEl, label, sublabel, right, onTap, destructive = false, disabled = false }) {
+  const tappable = !!onTap
+  const Wrap = tappable ? 'button' : 'div'
   return (
-    <button
-      type="button"
-      onClick={onTap}
-      disabled={disabled || !onTap}
+    <Wrap
+      {...(tappable ? { type: 'button', onClick: onTap, disabled } : {})}
       className={[
         'w-full flex items-center gap-4 px-4 py-3.5 text-left select-none transition-colors',
-        onTap && !disabled ? 'cursor-pointer active:bg-slate-50 dark:active:bg-white/[0.04]' : 'cursor-default',
+        tappable && !disabled ? 'cursor-pointer active:bg-slate-50 dark:active:bg-white/[0.04]' : 'cursor-default',
         disabled ? 'opacity-40' : '',
       ].join(' ')}
     >
@@ -280,7 +295,7 @@ export function SettingsRow({ iconEl, label, sublabel, right, onTap, destructive
       {right !== undefined && (
         <div className="shrink-0 ml-1 text-slate-400 dark:text-slate-500">{right}</div>
       )}
-    </button>
+    </Wrap>
   )
 }
 

@@ -20,6 +20,7 @@ import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import AmountInput from '../components/ui/AmountInput'
+import ConversionChip from '../components/ConversionChip'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -236,6 +237,14 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           label="Amount"
         />
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">Amount</p>
+        {/* What that is in the ledger's currency, and the rate it used.
+            Renders nothing at all unless this account is held in another
+            currency, which is every account for most people. */}
+        <ConversionChip
+          amount={parseMoney(amountStr)}
+          currency={account?.currency}
+          className="mt-3"
+        />
       </div>
 
       {/* ── Form fields ── */}

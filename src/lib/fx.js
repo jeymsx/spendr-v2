@@ -192,6 +192,29 @@ export function isStale(table, nowMs = Date.now()) {
 }
 
 /**
+ * How old the table is, in words.
+ *
+ * "today" and "yesterday" rather than a date, because that is the only thing
+ * anybody is asking of a rate published once a day: it is either current or
+ * it is not. Past that it counts days, which is what makes the word "stale"
+ * beside it mean something.
+ *
+ * Measured from the PROVIDER's own timestamp for the same reason isStale is -
+ * refetching an unchanged table does not make it newer.
+ *
+ * @param {RateTable|null|undefined} table
+ * @param {number} [nowMs]
+ */
+export function rateAge(table, nowMs = Date.now()) {
+  const at = Date.parse(table?.providerUpdatedAt ?? table?.fetchedAt ?? '')
+  if (!Number.isFinite(at)) return 'at an unknown time'
+  const days = Math.floor((nowMs - at) / 86_400_000)
+  if (days <= 0) return 'today'
+  if (days === 1) return 'yesterday'
+  return `${days} days ago`
+}
+
+/**
  * Every currency in a set of accounts that is not the base one.
  *
  * What the rest of the app asks before it does anything at all: a ledger with
