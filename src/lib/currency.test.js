@@ -32,13 +32,22 @@ describe('the registry', () => {
     expect(symbolOf('PHP')).toBe('\u20b1')
   })
 
+  it('falls back to the code itself when even Intl has never heard of it', () => {
+    // A crypto ticker, most likely: the provider sends eleven of them.
+    expect(currencyOf('ZZZ').name).toBe('ZZZ')
+    expect(formatAmount(500, 'ZZZ')).toContain('ZZZ')
+  })
+
   it('reads a code in any case, and falls back rather than blanking', () => {
     expect(symbolOf('usd')).toBe('$')
     expect(symbolOf(null)).toBe('\u20b1')
-    // Not a blank: a row that arrived from a newer version of the app should
-    // still be readable, and obviously foreign.
-    expect(currencyOf('NOK').name).toBe('NOK')
-    expect(formatAmount(500, 'NOK')).toContain('NOK')
+    /* Not a blank, and not just the code either. The registry curates
+       twenty-two; the provider sends a hundred and eighty, and Intl knows the
+       rest - including how many places each is quoted to, which is what stops
+       a yen figure printing centavos. */
+    expect(currencyOf('NOK').name).toBe('Norwegian Krone')
+    expect(currencyOf('JOD').decimals).toBe(3)
+    expect(formatAmount(500, 'NOK')).toMatch(/500/)
   })
 })
 

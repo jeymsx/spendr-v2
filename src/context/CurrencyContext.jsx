@@ -1,7 +1,7 @@
 import { Fragment, createContext, useContext, useEffect, useMemo, useState } from 'react'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import db from '../db/db'
-import { DEFAULT_CURRENCY, CURRENCIES } from '../lib/currency'
+import { DEFAULT_CURRENCY, currencyOf, isCurrencyCode } from '../lib/currency'
 import { setBaseCurrency } from '../lib/money'
 
 /**
@@ -49,11 +49,11 @@ const STORAGE_KEY = 'spendr-currency'
 
 const CurrencyContext = createContext(DEFAULT_CURRENCY)
 
-/** Anything not in the registry is not a currency, whatever it says.
+/** Shape, not membership - see isCurrencyCode.
  *  @param {string|null|undefined} code */
 function sane(code) {
   const up = code ? String(code).toUpperCase() : ''
-  return CURRENCIES[up] ? up : DEFAULT_CURRENCY
+  return isCurrencyCode(up) ? up : DEFAULT_CURRENCY
 }
 
 function readMirror() {
@@ -109,10 +109,17 @@ export function useBaseCurrency() {
   return useContext(CurrencyContext)
 }
 
-/** The base currency's registry entry, for a symbol or a name. */
+/**
+ * The base currency's description, for a symbol or a name.
+ *
+ * currencyOf rather than the registry directly: the base can now be any of
+ * the provider's hundred and eighty, and only twenty-two of those are in the
+ * registry - the rest are described through Intl. A straight index would have
+ * spread `undefined` and left this returning a code and nothing else.
+ */
 export function useBaseCurrencyInfo() {
   const code = useBaseCurrency()
-  return useMemo(() => ({ code, ...CURRENCIES[code] }), [code])
+  return useMemo(() => ({ code, ...currencyOf(code) }), [code])
 }
 
 export default CurrencyContext

@@ -45,7 +45,41 @@
 /** Where the cached table lives. Device-local: it is not in the synced set. */
 export const RATES_META_KEY = 'fxRates'
 
-export const PROVIDER_URL = 'https://open.er-api.com/v6/latest/'
+/**
+ * Where the rates come from, in the order they are tried.
+ *
+ * ── Two, and the order is the point ──
+ *
+ * fxratesapi first. It needs no key, sends `Access-Control-Allow-Origin: *`
+ * so a browser can call it, takes `?base=PHP` natively, carries 180
+ * currencies against the other's 166, and republishes by the MINUTE rather
+ * than once a day. Measured, not assumed: 61 requests a minute on the keyless
+ * tier, and this app asks for at most one per mount.
+ *
+ * open.er-api second, which is what shipped first and is the reason any of
+ * this works. Keeping it is not sentiment: a rate table is the one thing here
+ * that comes from outside, and a free keyless tier is exactly the kind of
+ * thing that starts wanting a key. If the first is down, or begins refusing,
+ * the rates keep working and nobody has to ship a release to make that true.
+ *
+ * Neither needs an API key, and that is the constraint rather than a
+ * convenience: this is a client-only app, so a key would sit in the bundle
+ * where it is not a secret, and every keyed provider's free tier forbids
+ * precisely that.
+ */
+export const PROVIDERS = [
+  {
+    name: 'fxratesapi',
+    url: (/** @type {string} */ code) => `https://api.fxratesapi.com/latest?base=${code}`,
+  },
+  {
+    name: 'open.er-api',
+    url: (/** @type {string} */ code) => `https://open.er-api.com/v6/latest/${code}`,
+  },
+]
+
+/** The first provider's URL builder, kept as a named export for tests. */
+export const PROVIDER_URL = 'https://api.fxratesapi.com/latest?base='
 
 /** Past this, the UI says so. It does not stop using them. */
 export const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000
@@ -66,15 +100,28 @@ export const STALE_AFTER_MS = 7 * 24 * 60 * 60 * 1000
  * and a rate of 0, NaN or a string would propagate into a balance without
  * anything downstream noticing.
  *
+ * ── It reads either provider's shape ──
+ *
+ * They disagree on three field names and nothing else that matters: the base
+ * is `base` or `base_code`, success is `success: true` or
+ * `result: 'success'`, and the timestamp is `timestamp` or
+ * `time_last_update_unix` - both seconds. Accepting both here rather than
+ * writing a parser per provider keeps ONE piece of code doing the validation,
+ * which is the part that must not be duplicated: it is the only thing
+ * standing between a third party's JSON and arithmetic on somebody's balance.
+ *
  * @param {any} json
  * @param {string} [receivedAt]  ISO; injectable so tests are not time-dependent
  * @returns {RateTable|null}
  */
 export function parseRates(json, receivedAt = new Date().toISOString()) {
   if (!json || typeof json !== 'object') return null
+  // Either provider's way of saying it failed.
   if (json.result && json.result !== 'success') return null
+  if (json.success === false) return null
 
-  const base = typeof json.base_code === 'string' ? json.base_code.toUpperCase() : null
+  const raw = json.base_code ?? json.base
+  const base = typeof raw === 'string' ? raw.toUpperCase() : null
   if (!base) return null
 
   const src = json.rates
@@ -94,7 +141,7 @@ export function parseRates(json, receivedAt = new Date().toISOString()) {
   // written here so the invariant does not depend on it being.
   rates[base] = 1
 
-  const stamp = Number(json.time_last_update_unix)
+  const stamp = Number(json.time_last_update_unix ?? json.timestamp)
   return {
     base,
     rates,
@@ -108,10 +155,18 @@ export function parseRates(json, receivedAt = new Date().toISOString()) {
 /**
  * Ask the provider for a fresh table.
  *
+ * Each provider in PROVIDERS is tried in turn and the first usable answer
+ * wins. A provider that is down, rate-limited, or has started demanding a key
+ * is skipped rather than fatal - that is the whole reason there is more than
+ * one - and only when every one of them has failed does this throw, carrying
+ * the last reason so the UI can say something truer than "error".
+ *
+ * It throws rather than returning null, because the caller has to be able to
+ * tell "the request failed, keep the cache" from "the response was garbage"
+ * and both from "here are the rates".
+ *
  * `fetchImpl` and `now` are injected so this is testable without a network or
- * a clock. It throws rather than returning null on a network failure, because
- * the caller has to be able to tell "the request failed, keep the cache" from
- * "the response was garbage" - and both from "here are the rates".
+ * a clock.
  *
  * @param {string} base
  * @param {typeof fetch} [fetchImpl]
@@ -122,16 +177,24 @@ export async function fetchRates(base, fetchImpl = fetch, now = () => new Date()
   const code = String(base || '').toUpperCase()
   if (!/^[A-Z]{3}$/.test(code)) throw new Error(`fx: not a currency code: ${base}`)
 
-  const res = await fetchImpl(PROVIDER_URL + code)
-  if (!res.ok) throw new Error(`fx: provider returned ${res.status}`)
+  let last = null
+  for (const provider of PROVIDERS) {
+    try {
+      const res = await fetchImpl(provider.url(code))
+      if (!res.ok) throw new Error(`returned ${res.status}`)
 
-  const table = parseRates(await res.json(), now())
-  if (!table) throw new Error('fx: provider response was not a usable rate table')
-  // A table that answers in a currency we did not ask about is not the one we
-  // asked for, and quietly rebasing everything to it would be worse than
-  // failing.
-  if (table.base !== code) throw new Error(`fx: asked for ${code}, got ${table.base}`)
-  return table
+      const table = parseRates(await res.json(), now())
+      if (!table) throw new Error('response was not a usable rate table')
+      /* A table quoted against a currency we did not ask about is not the one
+         we asked for, and quietly rebasing every figure in the app to it
+         would be far worse than failing. */
+      if (table.base !== code) throw new Error(`asked for ${code}, got ${table.base}`)
+      return table
+    } catch (e) {
+      last = `${provider.name}: ${e instanceof Error ? e.message : String(e)}`
+    }
+  }
+  throw new Error(`fx: no provider could supply ${code} rates (${last})`)
 }
 
 /**

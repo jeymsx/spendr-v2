@@ -69,6 +69,25 @@ export const CURRENCIES = {
   INR: { symbol: '₹',   name: 'Indian Rupee',         decimals: 2 },
 }
 
+/**
+ * Whether a string could be a currency code at all.
+ *
+ * The registry's twenty-two are the ones this app offers a flag and a curated
+ * name for; they were never meant to be the only ones somebody may HOLD. The
+ * provider sends a hundred and eighty, currencyOf can describe any of them
+ * through Intl, and refusing to store 'NOK' because it is not on our
+ * shortlist would be the app's own list overruling the user's bank.
+ *
+ * Shape only, and deliberately: three letters is ISO 4217, and the two-to-four
+ * range lets the crypto tickers the provider also sends through rather than
+ * silently discarding a currency somebody selected.
+ *
+ * @param {unknown} code
+ */
+export function isCurrencyCode(code) {
+  return typeof code === 'string' && /^[A-Za-z]{2,4}$/.test(code)
+}
+
 /** Every code, in the order the pickers should show them. */
 export const CURRENCY_CODES = Object.keys(CURRENCIES)
 
@@ -84,14 +103,112 @@ export const CURRENCY_CODES = Object.keys(CURRENCIES)
  */
 export function currencyOf(code) {
   if (!code) return CURRENCIES[DEFAULT_CURRENCY]
-  const c = CURRENCIES[String(code).toUpperCase()]
-  if (c) return c
   const up = String(code).toUpperCase()
-  return { symbol: up + ' ', name: up, decimals: 2 }
+  const c = CURRENCIES[up]
+  if (c) return c
+
+  /* Not in the registry, which is now the common case: the registry holds the
+     twenty-two you can open an account in, and the rate table carries a
+     hundred and eighty. Intl knows the rest - it has the symbol and, more
+     importantly, how many places the currency is actually quoted to, which is
+     the thing that would otherwise print a Japanese figure with centavos. */
+  try {
+    const nf = new Intl.NumberFormat('en-PH', { style: 'currency', currency: up })
+    const sym = nf.formatToParts(0).find(p => p.type === 'currency')?.value
+    return {
+      symbol: sym && sym !== up ? sym : up + ' ',
+      name: currencyName(up),
+      decimals: nf.resolvedOptions().maximumFractionDigits ?? 2,
+    }
+  } catch {
+    /* A code Intl will not take - a crypto ticker, most likely. Its own
+       letters are a better label than a blank. */
+    return { symbol: up + ' ', name: up, decimals: 2 }
+  }
 }
 
 /** @param {string|null|undefined} code */
 export const symbolOf = (code) => currencyOf(code).symbol
+
+/**
+ * Currencies that must NOT be given a flag by the rule below.
+ *
+ * The rule is "the first two letters are the country", and it is right for
+ * 172 of the 180 codes the rate table carries. It is confidently WRONG for
+ * these, which is worse than having no answer: BTC would fly the flag of
+ * Bhutan, ETH Ethiopia, DOT the Dominican Republic and SOL Somalia.
+ *
+ * Crypto and the metals have no country. The X-codes are ISO 4217's own
+ * reservation for things that are not one currency of one state - CFA francs
+ * shared by fourteen countries, the East Caribbean dollar by eight, the IMF's
+ * drawing rights by none - and picking one member's flag would be a claim
+ * this app has no business making.
+ */
+const NO_FLAG = new Set([
+  'ADA', 'ARB', 'BNB', 'BTC', 'DAI', 'DOT', 'ETH', 'LTC', 'OP', 'SOL', 'XRP',
+  'XAG', 'XAU', 'XPD', 'XPT',
+  'XAF', 'XOF', 'XCD', 'XDR',
+])
+
+/** The two that the rule gets wrong in a fixable way.
+ *  @type {Record<string, string>} */
+const COUNTRY_OVERRIDE = {
+  // Netherlands Antilles is dissolved; the guilder is Curacao's and Sint Maarten's.
+  ANG: 'CW',
+  // CFP franc, whose three territories share French Polynesia's flag in practice.
+  XPF: 'PF',
+}
+
+/**
+ * The country whose flag stands for a currency, or null.
+ *
+ * ── The rule is the first two letters, and that is not a hack ──
+ *
+ * ISO 4217 builds a currency code from the ISO 3166 country code plus a
+ * letter for the currency's name: US + D, PH + P, NO + K, TH + B. It holds
+ * for 172 of the 180 codes the provider sends, which is why there is a rule
+ * here and not a table of 180 rows to keep in step with a list that changes.
+ *
+ * The exceptions are handled above, and they are handled by REFUSING rather
+ * than guessing - see NO_FLAG.
+ *
+ * @param {string} code
+ * @returns {string|null} ISO 3166 alpha-2, uppercase
+ */
+export function countryOf(code) {
+  const up = String(code ?? '').toUpperCase()
+  if (!/^[A-Z]{2,4}$/.test(up)) return null
+  if (NO_FLAG.has(up)) return null
+  return COUNTRY_OVERRIDE[up] ?? (up.length >= 2 ? up.slice(0, 2) : null)
+}
+
+/**
+ * A currency's name, for the ones the registry does not carry.
+ *
+ * The registry holds twenty-two - the ones this app draws a flag for and
+ * offers in its pickers. The rate table carries a hundred and sixty-six, and
+ * the "all currencies" sheet lists every one of them, so something has to
+ * name the other hundred and forty-four.
+ *
+ * `Intl.DisplayNames` is that something: it is in the browser already, it
+ * names 160 of the 166 correctly, and shipping a table of our own would be
+ * shipping a worse copy of data the platform has. The registry still wins
+ * where it has an entry, so the pickers keep the Title Case wording chosen
+ * for them.
+ *
+ * Falls back to the code, which is what an unknown currency is called.
+ *
+ * @param {string} code
+ */
+export function currencyName(code) {
+  const up = String(code ?? '').toUpperCase()
+  if (CURRENCIES[up]) return CURRENCIES[up].name
+  try {
+    const named = new Intl.DisplayNames(['en'], { type: 'currency' }).of(up)
+    if (named && named !== up) return named
+  } catch { /* old browser, or a code Intl will not take */ }
+  return up
+}
 
 /**
  * Grouping, per decimal count. Built once each, because Intl.NumberFormat is

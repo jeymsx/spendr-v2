@@ -54,7 +54,7 @@
  */
 
 import {
-  CURRENCIES, DEFAULT_CURRENCY, compactAmount, formatAmount, maskedAmount, symbolOf,
+  DEFAULT_CURRENCY, compactAmount, formatAmount, isCurrencyCode, maskedAmount, symbolOf,
 } from './currency'
 
 let base = DEFAULT_CURRENCY
@@ -70,7 +70,11 @@ let base = DEFAULT_CURRENCY
  */
 export function setBaseCurrency(code) {
   const up = code ? String(code).toUpperCase() : ''
-  base = CURRENCIES[up] ? up : DEFAULT_CURRENCY
+  /* Shape, not membership. The registry's twenty-two are the ones with a
+     curated name and a flag, never the only ones a ledger may be kept in -
+     currencyOf describes any code through Intl, so refusing NOK here would be
+     our shortlist overruling somebody's bank. Garbage still cannot stick. */
+  base = isCurrencyCode(up) ? up : DEFAULT_CURRENCY
   return base
 }
 

@@ -84,7 +84,13 @@ export default defineConfig({
         // and is already dynamically imported (see utils/reportData.js), so
         // precaching it forces every install to pay for a feature most sessions
         // never touch. The runtimeCaching rule below picks it up on first use.
-        globIgnores: ['**/react-pdf.browser-*.js'],
+        // …and except the flag set. 265 SVGs from country-flag-icons, of
+        // which a given person sees maybe ten: precaching them would be
+        // ~600KB every install pays for a list most never open. Same trade as
+        // the PDF renderer above, same answer - the rule below catches them
+        // on first use, and a flag nobody has seen yet is a grey disc with
+        // the currency mark in it rather than a broken image.
+        globIgnores: ['**/react-pdf.browser-*.js', '**/flags/*.svg'],
         runtimeCaching: [
           {
             // PDF renderer chunk: fetched on the first monthly-report export,
@@ -95,6 +101,18 @@ export default defineConfig({
             options: {
               cacheName: 'pdf-renderer',
               expiration: { maxEntries: 2 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // Country flags: fetched as they are drawn, then kept. They never
+            // change within a build, and a wrong-but-cached flag is the least
+            // consequential staleness in the app.
+            urlPattern: /\/flags\/[A-Z-]+\.svg$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'country-flags',
+              expiration: { maxEntries: 80 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

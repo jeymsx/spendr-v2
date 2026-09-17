@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import {
   PROVIDER_URL, STALE_AFTER_MS,
+  PROVIDERS,
   convert, fetchRates, foreignCurrencies, isStale, parseRates, sumInBase, toBase,
 } from './fx'
 
@@ -77,6 +78,58 @@ describe('fetchRates', () => {
     const wrong = { ...RESPONSE, base_code: 'USD' }
     await expect(fetchRates('PHP', /** @type {any} */ (async () => ok(wrong))))
       .rejects.toThrow(/asked for PHP, got USD/)
+  })
+})
+
+describe('reading either provider', () => {
+  /* Two providers, three field names apart. One validator reads both, because
+     the validation is the part that must not be duplicated. */
+  const FXRATES = {
+    success: true,
+    base: 'PHP',
+    timestamp: 1789000000,
+    rates: { PHP: 1, USD: 0.016 },
+  }
+
+  it('reads fxratesapi shape as readily as the other', () => {
+    const t = parseRates(FXRATES, '2026-09-17T00:00:00.000Z')
+    expect(t?.base).toBe('PHP')
+    expect(t?.rates.USD).toBe(0.016)
+    expect(t?.providerUpdatedAt).toBe(new Date(1789000000 * 1000).toISOString())
+  })
+
+  it('honours either way of saying the request failed', () => {
+    expect(parseRates({ ...FXRATES, success: false })).toBeNull()
+    expect(parseRates({ result: 'error', base_code: 'PHP', rates: { USD: 1 } })).toBeNull()
+  })
+
+  it('falls through to the next provider rather than giving up', async () => {
+    const ok = { ok: true, status: 200, json: async () => FXRATES }
+    /** @type {string[]} */
+    const calls = []
+    const f = async (/** @type {string} */ url) => {
+      calls.push(url)
+      // The first is down; the second answers.
+      if (calls.length === 1) return { ok: false, status: 503 }
+      return ok
+    }
+    const t = await fetchRates('PHP', /** @type {any} */ (f), () => '2026-09-17T00:00:00.000Z')
+    expect(t.base).toBe('PHP')
+    expect(calls).toHaveLength(2)
+    expect(calls[0]).toContain(PROVIDERS[0].name === 'fxratesapi' ? 'fxratesapi' : '')
+  })
+
+  it('names the last failure when every provider is down', async () => {
+    const f = async () => ({ ok: false, status: 500 })
+    await expect(fetchRates('PHP', /** @type {any} */ (f)))
+      .rejects.toThrow(/no provider could supply PHP rates/)
+  })
+
+  it('tries every provider exactly once', async () => {
+    let n = 0
+    const f = async () => { n++; return { ok: false, status: 500 } }
+    await expect(fetchRates('PHP', /** @type {any} */ (f))).rejects.toThrow()
+    expect(n).toBe(PROVIDERS.length)
   })
 })
 

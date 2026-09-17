@@ -1,6 +1,10 @@
-import { CURRENCIES, CURRENCY_CODES } from '../lib/currency'
+import { CURRENCY_CODES, currencyName } from '../lib/currency'
+import CurrencyFlag from './CurrencyFlag'
 import Card from './ui/Card'
 import Sheet from './ui/Sheet'
+import { useMemo, useState } from 'react'
+import SearchField from './ui/SearchField'
+import useRates from '../hooks/useRates'
 
 /**
  * Which currency, from the twenty-two the app knows.
@@ -28,7 +32,28 @@ import Sheet from './ui/Sheet'
  * fit everything.
  */
 export default function CurrencyPickerSheet({ open, onClose, selected, onSelect, hint = null, z = 130 }) {
-  const pick = (code) => { onSelect(code); onClose() }
+  const pick = (code) => { onSelect(code); onClose(); setQuery('') }
+
+  const { table } = useRates()
+  const [query, setQuery] = useState('')
+
+  /* Everything the provider sends, which is a hundred and eighty - not the
+     twenty-two the registry curates. Those twenty-two are the ones with a
+     hand-written name and a flag; they were never meant to be the only
+     currencies somebody is allowed to hold an account in.
+
+     The registry is the fallback for a ledger that has never fetched a rate
+     table, which is every peso-only one: better a short list than none. */
+  const codes = useMemo(() => {
+    const all = Object.keys(table?.rates ?? {})
+    return (all.length ? all : CURRENCY_CODES).slice().sort()
+  }, [table])
+
+  const found = useMemo(() => {
+    const q = query.trim().toUpperCase()
+    if (!q) return codes
+    return codes.filter(c => c.includes(q) || currencyName(c).toUpperCase().includes(q))
+  }, [codes, query])
 
   return (
     <Sheet
@@ -44,9 +69,19 @@ export default function CurrencyPickerSheet({ open, onClose, selected, onSelect,
         {hint && (
           <p className="text-xs text-slate-500 dark:text-slate-400 mb-3 leading-snug">{hint}</p>
         )}
+
+        {/* A search box, because a hundred and eighty rows is a list you
+            query rather than one you scroll. */}
+        <SearchField
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          onClear={() => setQuery('')}
+          placeholder="Search a currency or code"
+          className="mb-3"
+        />
         <div className="flex flex-col gap-2">
-          {CURRENCY_CODES.map(code => {
-            const { symbol, name } = CURRENCIES[code]
+          {found.map(code => {
+            const name = currencyName(code)
             const isSelected = selected === code
             return (
               <Card key={code} surface="recessed" clip>
@@ -60,14 +95,11 @@ export default function CurrencyPickerSheet({ open, onClose, selected, onSelect,
                       : 'bg-slate-50 dark:bg-white/[0.04] active:bg-slate-100 dark:active:bg-white/[0.07]',
                   ].join(' ')}
                 >
-                  {/* Fixed width, so twenty-two marks of one to three characters
-                      still leave the names starting on one line. */}
-                  <span
-                    className="w-10 shrink-0 text-center text-17 font-semibold text-slate-700 dark:text-white tabular-nums"
-                    aria-hidden="true"
-                  >
-                    {symbol}
-                  </span>
+                  {/* The flag, not the mark. A column of currency symbols is
+                      a column of glyphs you have to read; a flag is one you
+                      recognise, and several of them share a symbol anyway -
+                      four of the dollars in this list are "$". */}
+                  <CurrencyFlag code={code} size={30} />
 
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{name}</p>
