@@ -20,6 +20,7 @@ import { FilterModal, TxRow, IconNoTransactions } from './transactions/FilterShe
 import Rail from '../components/ui/Rail'
 import SearchField from '../components/ui/SearchField'
 import SearchResults from './transactions/SearchResults'
+import LedgerSkeleton from './transactions/ListSkeleton'
 import { searchEverything, txMatches } from '../lib/search'
 import { baseSymbol } from '../lib/money'
 
@@ -43,9 +44,13 @@ function fmtGroupDate(dateKey) {
 
 export default function Transactions() {
   const navigate = useNavigate()
-  const txAll      = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray(), [], [])
+  /* undefined until read, not [], so the first frame can tell "still loading"
+     from "no transactions". Categories wait too: a row drawn before them
+     has no glyph to show and swaps it in a frame later. */
+  const txAll      = useLiveQuery(() => db.transactions.orderBy('date').reverse().toArray(), [], undefined)
   const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
-  const categories = useLiveQuery(() => db.categories.toArray(), [], [])
+  const categories = useLiveQuery(() => db.categories.toArray(), [], undefined)
+  const loading    = txAll === undefined || categories === undefined
 
   const [search,         setSearch]         = useState('')
   const [typeFilter,     setTypeFilter]     = useState('all')
@@ -311,6 +316,8 @@ export default function Transactions() {
           catMap={catMap}
           onTxClick={setSelectedTx}
         />
+      ) : loading ? (
+        <LedgerSkeleton />
       ) : filteredTx.length === 0 ? (
         <EmptyState
           icon={<IconNoTransactions />}

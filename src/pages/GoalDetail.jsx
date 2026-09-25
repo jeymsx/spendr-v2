@@ -129,8 +129,8 @@ export default function GoalDetail() {
       <SubPage title="Goal">
         <div className="px-5">
           <Skeleton className="w-[168px] h-[168px] rounded-full mx-auto mt-4" />
-          <Skeleton className="h-9 w-48 rounded mx-auto mt-6" />
-          <Skeleton className="h-4 w-32 rounded mx-auto mt-3" />
+          <Skeleton className="h-9 w-48 rounded-md mx-auto mt-6" />
+          <Skeleton className="h-4 w-32 rounded-md mx-auto mt-3" />
           <SkeletonList rows={3} className="mt-8" />
         </div>
       </SubPage>

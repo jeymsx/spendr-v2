@@ -141,8 +141,8 @@ function SkeletonGrid({ count = 4 }) {
               a skeleton 7px short of its own card is a page that settles
               downward as it loads. */}
           <Skeleton className="w-[104px] h-[104px] rounded-full" />
-          <Skeleton className="mt-3 h-[19.5px] w-24 rounded" />
-          <Skeleton className="mt-0.5 h-[16.5px] w-16 rounded" />
+          <Skeleton className="mt-3 h-[19.5px] w-24 rounded-md" />
+          <Skeleton className="mt-0.5 h-[16.5px] w-16 rounded-md" />
         </Card>
       ))}
     </div>

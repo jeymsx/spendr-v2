@@ -180,4 +180,14 @@ describe('Skeleton', () => {
     const { container } = render(<Skeleton className="h-4 w-24" />)
     expect(container.firstChild.getAttribute('aria-hidden')).toBe('true')
   })
+
+  /* Not a tautology: the default used to ride along with the caller's own
+     radius, and .rounded-xl comes later in the stylesheet, so it won. */
+  it('drops its default radius when the caller gives one', () => {
+    const cls = (className) => render(<Skeleton className={className} />).container.firstChild.className
+    expect(cls('h-4 w-24')).toContain('rounded-xl')
+    expect(cls('h-9 w-9 rounded-full')).not.toContain('rounded-xl')
+    expect(cls('h-3 rounded')).not.toContain('rounded-xl')
+    expect(cls('rounded-t-2xl rounded-b-none')).not.toContain('rounded-xl')
+  })
 })

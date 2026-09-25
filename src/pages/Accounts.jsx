@@ -33,6 +33,7 @@ import { QrViewerModal } from './accounts/QrSheets'
 import { AccountSortSheet } from './accounts/SortSheet'
 import { CreditTxSection, DetailTxRow } from './accounts/DetailParts'
 import { SummaryBar, AccountCard } from './accounts/ListCard'
+import AccountsSkeleton, { rememberStacks } from './accounts/ListSkeleton'
 import {
   QuickAddSheet, SortableAccountCard, lockToVerticalAxis, stackSortingStrategy,
 } from './accounts/QuickAddSheet'
@@ -152,10 +153,15 @@ export default function Accounts() {
   const [quickAddOpen,    setQuickAddOpen]    = useState(false)
   const [sortOpen,        setSortOpen]        = useState(false)
 
-  const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
+  /* undefined until read, not [], and the page waits for both: a card's
+     balance owed comes from the transactions, so drawing the accounts first
+     showed every credit card at nothing owed for a moment. See
+     accounts/ListSkeleton.jsx. */
+  const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], undefined)
   const baseCurrency = useBaseCurrency()
   const { table: rates } = useRates()
-  const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
+  const transactions = useLiveQuery(() => db.transactions.toArray(), [], undefined)
+  const loading      = accounts === undefined || transactions === undefined
 
   const creditStmtMap = useMemo(() => {
     const map = {}
@@ -219,6 +225,14 @@ export default function Accounts() {
     }
     return list.sort((a, b) => a.order - b.order)
   }, [parentAccts, groups])
+
+  // How many cards each stack held, so the next visit's skeleton is this shape.
+  useEffect(() => {
+    if (loading) return
+    rememberStacks(sections.map(s => (s.kind === 'parent'
+      ? 1 + accounts.filter(a => a.parentName === s.parent.name).length
+      : s.group.accounts.length)))
+  }, [loading, sections, accounts])
 
   // ?open=<accountName> used to pop the detail sheet. The detail view is a
   // route now, so this forwards instead - the desktop shell still links this
@@ -372,10 +386,12 @@ export default function Accounts() {
       </div>
 
       {/* ── Summary ── */}
-      <SummaryBar summary={summary} hidden={balanceHidden} />
+      {loading
+        ? <AccountsSkeleton />
+        : <SummaryBar summary={summary} hidden={balanceHidden} />}
 
       {/* ── Empty state ── */}
-      {(accounts ?? []).length === 0 && (
+      {!loading && (accounts ?? []).length === 0 && (
         <EmptyState
           icon={(
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
@@ -388,7 +404,7 @@ export default function Accounts() {
       )}
 
       {/* ── Account sections (parents + type groups, ordered by sort_order) ── */}
-      {sections.map(section => {
+      {!loading && sections.map(section => {
         if (section.kind === 'parent') {
           const { parent } = section
           const children = (accounts ?? []).filter(a => a.parentName === parent.name)

@@ -27,10 +27,22 @@ import { cx } from './cx'
  * which also turns the sweep off under prefers-reduced-motion.
  */
 
+/**
+ * rounded-xl is the default, not a base class.
+ *
+ * It was always applied, and `cx` is not a tailwind-merge, so a caller's own
+ * radius sat beside it and the stylesheet's order decided. Tailwind emits
+ * .rounded-xl after .rounded-2xl, .rounded-full and .rounded-md, so every
+ * one of those lost: 23 skeletons asked for a shape and all of them got
+ * 12px - the goal rings and the avatar as rounded squares, the 18px tiles a
+ * notch too sharp. A className that says how round it is now gets that.
+ */
+const HAS_RADIUS = /(^|\s)rounded(?=$|\s|-)/
+
 export default function Skeleton({ className = '', style, ...rest }) {
   return (
     <div
-      className={cx('skeleton rounded-xl', className)}
+      className={cx('skeleton', !HAS_RADIUS.test(className) && 'rounded-xl', className)}
       aria-hidden="true"
       style={style}
       {...rest}
