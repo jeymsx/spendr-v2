@@ -2,6 +2,10 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sheet from '../../components/ui/Sheet'
 import Button from '../../components/ui/Button'
+import Card from '../../components/ui/Card'
+import Divider from '../../components/ui/Divider'
+import Switch from '../../components/ui/Switch'
+import { REMINDER_HOUR } from '../../lib/reminders'
 import { IconChevronRight } from '../../components/icons'
 import { RowIcon, SettingsRow } from './shared'
 import {
@@ -17,10 +21,10 @@ import {
  * block for anything fixed inside it - the sheet would open clipped to the
  * card. So Settings puts the row in the card and the sheet with its others.
  *
- * Most of the sheet is about the states a phone can be in before reminders
- * are possible at all, because on an iPhone that is the common case: a
- * Safari tab cannot receive them, only the Home Screen app can, and the fix
- * is a thing to do rather than a switch to flip.
+ * The sheet is one switch, the time, and a test. Everything a phone can be
+ * before reminders are possible at all - signed out, a Safari tab on an
+ * iPhone, notifications refused - disables the switch and says, in a line,
+ * what to do about it, rather than replacing the sheet with an explanation.
  */
 
 function IconBell() {
@@ -37,9 +41,13 @@ export function useReminderSettings(user) {
   const [open, setOpen] = useState(false)
   const [support, setSupport] = useState(() => pushSupport())
   const [on, setOn] = useState(false)
-  const [busy, setBusy] = useState(false)
+  /* Which action is in flight, not just whether one is: the switch and the
+     test button each show their own wait, and neither should spin for the
+     other's. */
+  const [pending, setPending] = useState(/** @type {'on'|'off'|'test'|null} */ (null))
   const [note, setNote] = useState(/** @type {{tone: 'ok'|'error', text: string}|null} */ (null))
   const [key, setKey] = useState(/** @type {string|null} */ (null))
+  const busy = pending !== null
 
   useEffect(() => {
     let live = true
@@ -61,50 +69,43 @@ export function useReminderSettings(user) {
 
   async function turnOn() {
     if (!user?.id || busy) return
-    setBusy(true)
+    setPending('on')
     setNote(null)
     const r = await enableReminders(user.id, key)
-    setBusy(false)
-    if (r.ok) {
-      setOn(true)
-      setNote({ tone: 'ok', text: 'On. Send a test to see what they look like.' })
-    } else if (r.reason === 'blocked') {
-      setSupport('blocked')
-    } else if (r.reason === 'dismissed') {
-      setNote({ tone: 'error', text: 'Notifications were not allowed. Tap again to be asked.' })
-    } else if (r.reason === 'server') {
-      setNote({ tone: 'error', text: 'Could not reach the reminder server. Check your connection and try again.' })
-    } else {
-      setNote({ tone: 'error', text: r.message || 'Could not turn reminders on.' })
-    }
+    setPending(null)
+    if (r.ok) setOn(true)
+    else if (r.reason === 'blocked') setSupport('blocked')
+    else if (r.reason === 'dismissed') setNote({ tone: 'error', text: 'Allow notifications to turn this on.' })
+    else if (r.reason === 'server') setNote({ tone: 'error', text: 'Couldn’t reach the server. Try again.' })
+    else setNote({ tone: 'error', text: r.message || 'Couldn’t turn reminders on.' })
   }
 
   async function turnOff() {
     if (!user?.id || busy) return
-    setBusy(true)
+    setPending('off')
     setNote(null)
     try {
       await disableReminders(user.id)
       setOn(false)
     } catch {
-      setNote({ tone: 'error', text: 'Could not reach the server, so another device may still get reminders. Try again online.' })
+      setNote({ tone: 'error', text: 'Couldn’t reach the server. Try again when you’re online.' })
     } finally {
-      setBusy(false)
+      setPending(null)
     }
   }
 
   async function test() {
     if (busy) return
-    setBusy(true)
+    setPending('test')
     setNote(null)
     const r = await sendTestReminder()
-    setBusy(false)
+    setPending(null)
     setNote(r.ok
-      ? { tone: 'ok', text: 'Sent. It should arrive in a few seconds.' }
-      : { tone: 'error', text: r.message || 'Could not send a test.' })
+      ? { tone: 'ok', text: 'Test sent. Check your notifications.' }
+      : { tone: 'error', text: r.message || 'Couldn’t send a test.' })
   }
 
-  return { user, open, setOpen, support, on, busy, note, turnOn, turnOff, test }
+  return { user, open, setOpen, support, on, busy, pending, note, turnOn, turnOff, test }
 }
 
 /** @param {ReturnType<typeof useReminderSettings>} r */
@@ -130,57 +131,67 @@ export function RemindersRow({ r }) {
   )
 }
 
-const P = 'text-13 leading-relaxed text-slate-500 dark:text-slate-400'
+
+/** "9:00 AM", from the one hour every reminder is sent at. */
+const REMINDER_TIME = new Date(2000, 0, 1, REMINDER_HOUR)
+  .toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+
+/** The bell at the top of the sheet: the row's glyph, grown into a badge. */
+function BellBadge() {
+  return (
+    <span
+      className="mx-auto w-16 h-16 rounded-full flex items-center justify-center text-white"
+      style={{
+        background: 'linear-gradient(145deg, #fcd34d, #f59e0b)',
+        boxShadow: '0 10px 24px -10px rgba(245, 158, 11, 0.7)',
+      }}
+    >
+      <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
+        <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
+      </svg>
+    </span>
+  )
+}
+
+/**
+ * Why the switch cannot be used here, and what to do about it. Null when it
+ * can. Short on purpose: each one is a thing to do, not an explanation.
+ *
+ * @param {ReturnType<typeof useReminderSettings>} r
+ * @param {boolean} ios
+ */
+function blocker(r, ios) {
+  if (!r.user) return { text: 'Sign in to turn on reminders.' }
+  if (r.on) return null
+  if (r.support === 'ios-install') {
+    return {
+      text: 'Add Spendr to your Home Screen first.',
+      steps: ['In Safari, tap Share, then Add to Home Screen.', 'Open Spendr from the new icon and come back here.'],
+    }
+  }
+  if (r.support === 'unsupported') {
+    return {
+      text: ios
+        ? 'Needs iOS 16.4 or later, with Spendr opened from the Home Screen.'
+        : 'This browser can’t show notifications from web apps.',
+    }
+  }
+  if (r.support === 'blocked') {
+    return {
+      text: ios
+        ? 'Notifications are off for Spendr. Turn them on in Settings, then Notifications, then Spendr.'
+        : 'Notifications are blocked for Spendr. Allow them in your browser’s site settings.',
+    }
+  }
+  return null
+}
 
 /** @param {{r: ReturnType<typeof useReminderSettings>}} props */
 export function RemindersSheet({ r }) {
   const navigate = useNavigate()
-  const ios = isIos()
-
-  let body = null
-  let footer = <Button block variant="secondary" onClick={() => r.setOpen(false)}>Done</Button>
-
-  if (!r.user) {
-    body = <p className={P}>Reminders are sent from Spendr&apos;s server, so they only work while you are signed in.</p>
-    footer = <Button block onClick={() => { r.setOpen(false); navigate('/login') }}>Sign in</Button>
-  } else if (r.on) {
-    footer = (
-      <div className="flex gap-3">
-        <Button variant="dangerTint" className="flex-1" onClick={r.turnOff} disabled={r.busy}>Turn off</Button>
-        <Button variant="secondary" className="flex-[1.4]" onClick={r.test} loading={r.busy}>Send a test</Button>
-      </div>
-    )
-  } else if (r.support === 'ios-install') {
-    body = (
-      <>
-        <p className={P}>An iPhone only sends notifications to Spendr once it is on your Home Screen.</p>
-        <ol className={`${P} mt-3 list-decimal pl-5 space-y-1`}>
-          <li>Open Spendr in Safari.</li>
-          <li>Tap Share, then Add to Home Screen.</li>
-          <li>Open Spendr from the new icon and come back here.</li>
-        </ol>
-        <p className={`${P} mt-3`}>Needs iOS 16.4 or later.</p>
-      </>
-    )
-  } else if (r.support === 'unsupported') {
-    body = (
-      <p className={P}>
-        {ios
-          ? 'This iPhone cannot receive notifications from web apps. Update to iOS 16.4 or later, then open Spendr from your Home Screen.'
-          : 'This browser cannot receive notifications from web apps. Chrome, Edge, Firefox and Safari can.'}
-      </p>
-    )
-  } else if (r.support === 'blocked') {
-    body = (
-      <p className={P}>
-        {ios
-          ? 'Notifications are turned off for Spendr. Open the Settings app, tap Notifications, then Spendr, and turn on Allow Notifications.'
-          : 'Notifications are blocked for Spendr. Allow them in the browser’s site settings. On Android, press and hold the Spendr icon, then App info, then Notifications.'}
-      </p>
-    )
-  } else {
-    footer = <Button block onClick={r.turnOn} loading={r.busy}>Turn on reminders</Button>
-  }
+  const block = blocker(r, isIos())
+  const canSwitch = !!r.user && (r.on || !block)
 
   return (
     <Sheet
@@ -188,27 +199,81 @@ export function RemindersSheet({ r }) {
       onClose={() => r.setOpen(false)}
       z={100}
       scrim={45}
-      title="Reminders"
+      ariaLabel="Reminders"
       dismissible={!r.busy}
-      footer={footer}
     >
-      <div className="pt-1 pb-2">
-        <p className={P}>
-          A notification at 9 in the morning, three days before and on the day a credit card
-          payment is due, and on the day each bill is due.
-        </p>
-        {body && <div className="mt-4">{body}</div>}
+      <div className="pt-3 pb-2">
+        <div className="text-center">
+          <BellBadge />
+          <h3 className="mt-4 text-18 font-semibold text-slate-900 dark:text-white">
+            Never miss a due date
+          </h3>
+          <p className="mt-1 mx-auto max-w-[260px] text-13 leading-snug text-slate-500 dark:text-slate-400">
+            A heads-up before your card payments and bills are due.
+          </p>
+        </div>
+
+        <Card surface="recessed" clip className="mt-5">
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <span className="flex-1 text-15 font-semibold text-slate-800 dark:text-white">Remind me</span>
+            <Switch
+              on={r.on}
+              onChange={next => (next ? r.turnOn() : r.turnOff())}
+              label="Remind me"
+              disabled={!canSwitch}
+              busy={r.pending === 'on' || r.pending === 'off'}
+            />
+          </div>
+          <Divider inset="row" />
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <span className="flex-1 text-14 text-slate-600 dark:text-slate-300">Reminder time</span>
+            <span className="text-13 font-semibold tabular-nums px-2.5 py-1 rounded-lg
+              bg-white dark:bg-white/[0.07] text-slate-700 dark:text-slate-200"
+            >
+              {REMINDER_TIME}
+            </span>
+          </div>
+          <div className="px-4 pb-4 pt-1">
+            {r.user ? (
+              <Button
+                block
+                variant="tint"
+                onClick={r.test}
+                disabled={!r.on}
+                loading={r.pending === 'test'}
+              >
+                Send a test
+              </Button>
+            ) : (
+              <Button block onClick={() => { r.setOpen(false); navigate('/login') }}>
+                Sign in
+              </Button>
+            )}
+          </div>
+        </Card>
+
+        {block && r.user && (
+          <div className="mt-3 px-1 text-13 leading-snug text-amber-700 dark:text-amber-400">
+            <p className="font-semibold">{block.text}</p>
+            {block.steps && (
+              <ol className="mt-1.5 list-decimal pl-5 space-y-0.5 font-normal">
+                {block.steps.map(s => <li key={s}>{s}</li>)}
+              </ol>
+            )}
+          </div>
+        )}
+
         {r.note && (
-          <p className={`mt-4 text-13 font-medium ${r.note.tone === 'ok'
+          <p className={`mt-3 text-center text-13 font-medium ${r.note.tone === 'ok'
             ? 'text-emerald-600 dark:text-emerald-400'
-            : 'text-amber-600 dark:text-amber-400'}`}
+            : 'text-amber-700 dark:text-amber-400'}`}
           >
             {r.note.text}
           </p>
         )}
-        <p className="mt-5 text-12 leading-relaxed text-slate-500 dark:text-slate-400">
-          Worked out on this device. The server only keeps each reminder&apos;s time and wording, so
-          it can send them while Spendr is closed.
+
+        <p className="mt-4 text-center text-12 leading-snug text-slate-500 dark:text-slate-400">
+          Cards: 3 days before and on the day. Bills: on the day.
         </p>
       </div>
     </Sheet>

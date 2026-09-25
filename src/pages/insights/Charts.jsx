@@ -73,9 +73,16 @@ export function DailyAreaChart({ data, chartType = 'expenses' }) {
   const gradId     = `dailyGrad-${chartType}`
   const yTickFmt   = v => v >= 1000 ? `${(v/1000).toFixed(0)}K` : v
   const labelEvery = Math.ceil(data.length / 8)
+  const last = data.length - 1
   const xTick = ({ x, y, payload }) => {
-    if (payload.index % labelEvery !== 0 && payload.index !== data.length - 1) return null
-    return <text x={x} y={y+12} textAnchor="middle" fontSize={10} fill="#94a3b8">{payload.value}</text>
+    /* The last day is always labelled, so a regular label that lands just
+       before it is dropped - on a 30-day month "29" and "30" sat on top of
+       each other and read as "2930". */
+    const regular = payload.index % labelEvery === 0 && last - payload.index >= labelEvery / 2
+    if (!regular && payload.index !== last) return null
+    // Anchored inward at the right edge, or "30" is cut to "3".
+    const anchor = payload.index === last ? 'end' : 'middle'
+    return <text x={x} y={y+12} textAnchor={anchor} fontSize={10} fill="#94a3b8">{payload.value}</text>
   }
   return (
     <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
@@ -106,6 +113,116 @@ export function DailyAreaChart({ data, chartType = 'expenses' }) {
           <Area type="monotone" dataKey="value"
             stroke={color} strokeWidth={2.5}
             fill={`url(#${gradId})`} dot={false} baseValue={0}
+            activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
+            animationDuration={800}
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ── Chart: Net worth over time ────────────────────────────────────────────────
+
+/** A y-axis figure with no currency sign, like the Trend chart's: "120K",
+ *  "1.2M", and a real minus for a net worth below zero. */
+function compactTick(v) {
+  const a = Math.abs(v)
+  const sign = v < 0 ? '−' : ''
+  if (a >= 1e6) return `${sign}${+(a / 1e6).toFixed(1)}M`
+  if (a >= 1e3) return `${sign}${+(a / 1e3).toFixed(a >= 1e4 ? 0 : 1)}K`
+  return `${sign}${Math.round(a)}`
+}
+
+/**
+ * Round figures for the side of the chart: 0, 40K, 80K, 120K rather than
+ * wherever the data happened to start and stop. About four steps, each 1, 2,
+ * 2.5 or 5 times a power of ten, with the ends pushed out to the next step
+ * so the line never touches the top or bottom.
+ *
+ * Exported for Charts.test.js.
+ *
+ * @param {number} lo
+ * @param {number} hi
+ */
+export function niceAxis(lo, hi) {
+  const span = hi - lo || Math.abs(hi) || 1
+  const raw = span / 3
+  const mag = 10 ** Math.floor(Math.log10(raw))
+  const n = raw / mag
+  const step = (n <= 1 ? 1 : n <= 2 ? 2 : n <= 2.5 ? 2.5 : n <= 5 ? 5 : 10) * mag
+  let floor = Math.floor(lo / step) * step
+  let ceil = Math.ceil(hi / step) * step
+  if (floor === lo) floor -= step
+  if (ceil === hi) ceil += step
+  // A line that barely moved can fit inside one step; give it a guide above.
+  if ((ceil - floor) / step < 2) ceil += step
+  const ticks = []
+  for (let t = floor; t <= ceil + step / 2; t += step) ticks.push(Math.round(t / step) * step)
+  return { floor, ceil, ticks }
+}
+
+/**
+ * The same chart as the Trend below it - dashed guides, a date axis, a
+ * figure axis - drawn from a net worth instead of a day's spending.
+ *
+ * One difference, and it is the point of the chart: the figure axis does not
+ * start at zero. A net worth of P120,000 that moved by P8,000 is a flat line
+ * on a zero-based axis, and the whole question here is which way it moved.
+ * So the axis spans what the line actually did, with a little room above and
+ * below, and the fill runs down to the bottom of that.
+ *
+ * Five date labels, evenly spread, with the first and last anchored inward so
+ * neither is cut off at the edge or runs into its neighbour.
+ */
+export function NetWorthChart({ data, color, currency, rangeKey }) {
+  const values = data.map(d => d.value)
+  const { floor, ceil, ticks } = niceAxis(Math.min(...values), Math.max(...values))
+  const last = data.length - 1
+  const marks = new Set([0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * last)))
+  const xTick = ({ x, y, payload }) => {
+    const i = payload.index
+    if (!marks.has(i)) return null
+    const anchor = i === 0 ? 'start' : i === last ? 'end' : 'middle'
+    return <text x={x} y={y + 12} textAnchor={anchor} fontSize={10} fill="#94a3b8">{payload.value}</text>
+  }
+  const gradId = `netWorthGrad-${rangeKey}`
+  return (
+    <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
+      <ResponsiveContainer width="100%" height={160}>
+        <AreaChart key={rangeKey} data={data} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%"   stopColor={color} stopOpacity={0.25} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="4 3" vertical={false} stroke="rgba(148,163,184,0.12)" />
+          <XAxis dataKey="day" tick={xTick} axisLine={false} tickLine={false} interval={0} />
+          <YAxis
+            domain={[floor, ceil]}
+            ticks={ticks}
+            tickFormatter={compactTick}
+            tick={{ fontSize: 10, fill: '#94a3b8' }}
+            axisLine={false}
+            tickLine={false}
+            width={40}
+          />
+          <Tooltip
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null
+              return (
+                <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
+                  <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
+                  <p className="font-medium text-slate-700 dark:text-white tabular-nums">{fmt(payload[0].value, currency)}</p>
+                </div>
+              )
+            }}
+            cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '4 2' }}
+          />
+          <Area type="monotone" dataKey="value"
+            stroke={color} strokeWidth={2.5}
+            fill={`url(#${gradId})`} dot={false} baseValue={floor}
             activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
             animationDuration={800}
           />

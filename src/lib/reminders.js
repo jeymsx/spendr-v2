@@ -64,9 +64,6 @@ function ymd(d) {
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
 }
 
-/** @param {Date} d */
-const shortDate = (d) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-
 /**
  * A short id that is safe in a URL and a PostgREST filter: the stable sync id
  * when the record has one, else a hash of its name. Names are free text -
@@ -132,22 +129,25 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
       statements.push({ due: statementDueDate(s.nextCycleEnd, acct.dueDate), amount: null })
     }
 
+    /* Short on purpose. A lock screen shows two lines, and the phone already
+       labels it Spendr - so the title is the card and when, and the line
+       under it is the one figure that matters. */
     for (const { due, amount } of statements) {
       if (!due) continue
       const body = amount != null
-        ? `${fmt(amount, acct.currency || currencyOfAccountName(acct.name))} left to pay on this statement.`
-        : `Your statement is due ${shortDate(due)}. Check it for the amount.`
+        ? `${fmt(amount, acct.currency || currencyOfAccountName(acct.name))} to pay`
+        : 'Check your statement for the amount'
       push({
         tag: `card:${key}:${ymd(due)}:early`,
         fireAt: at9(due, -CARD_LEAD_DAYS).toISOString(),
-        title: `${acct.name} payment due in ${CARD_LEAD_DAYS} days`,
+        title: `${acct.name} due in ${CARD_LEAD_DAYS} days`,
         body,
         url,
       })
       push({
         tag: `card:${key}:${ymd(due)}:due`,
         fireAt: at9(due).toISOString(),
-        title: `${acct.name} payment due today`,
+        title: `${acct.name} due today`,
         body,
         url,
       })
@@ -161,7 +161,7 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
     const body = [
       bill.amount > 0 ? fmt(bill.amount, cur) : null,
       bill.account ? `from ${bill.account}` : null,
-    ].filter(Boolean).join(' ') || 'Due today.'
+    ].filter(Boolean).join(' ')
 
     let date = String(bill.nextDate).slice(0, 10)
     // Bounded: a daily bill across the horizon is the most there can be.
@@ -171,7 +171,7 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
       push({
         tag: `bill:${key}:${date}`,
         fireAt: at9(d).toISOString(),
-        title: `${bill.name} is due today`,
+        title: `${bill.name} due today`,
         body,
         url: '/recurring',
       })

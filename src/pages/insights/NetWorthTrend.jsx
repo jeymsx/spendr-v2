@@ -8,8 +8,10 @@ import { sumInBase } from '../../lib/fx'
 import { txBase } from '../../lib/fxContext'
 import { buildNetWorthTrend } from '../../lib/trend'
 import SectionHeading from '../../components/ui/SectionHeading'
-import { TREND_RANGES, RANGE_TITLE, TrendRangeChips, BalanceTrend } from '../accounts/Trend'
+import { TREND_RANGES, TrendRangeChips } from '../accounts/Trend'
 import { TrendDelta } from '../accounts/DetailBits'
+import { NetWorthChart } from './Charts'
+import { TrendEmpty } from './Trend'
 
 /**
  * Net worth over time - the one question the rest of Insights never answers.
@@ -70,6 +72,8 @@ export default function NetWorthTrend() {
   if (!accounts?.length || !data.length) return null
 
   const rising = data.at(-1).value >= data[0].value
+  const values = data.map(d => d.value)
+  const flat = Math.max(...values) - Math.min(...values) < 0.005
 
   return (
     <div>
@@ -78,16 +82,18 @@ export default function NetWorthTrend() {
       >
         Net worth
       </SectionHeading>
-      <BalanceTrend
-        data={data}
-        color={rising ? '#10b981' : '#ef4444'}
-        isCredit={false}
-        currency={base}
-        rangeKey={range.key}
-        rangeTitle={RANGE_TITLE[range.key]}
-        valueLabel="Net worth"
-        emptyBody="Nothing earned or spent in this period"
-      />
+      {/* Drawn like the Trend chart below it - dashed guides, dates along
+          the bottom, figures up the side - so the two read as one page. */}
+      {flat ? (
+        <TrendEmpty kind="netflow" height={160} />
+      ) : (
+        <NetWorthChart
+          data={data}
+          color={rising ? '#10b981' : '#ef4444'}
+          currency={base}
+          rangeKey={range.key}
+        />
+      )}
       <div className="mt-2.5 px-5">
         <TrendRangeChips range={range.key} onRange={setKey} ranges={RANGES} />
       </div>

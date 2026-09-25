@@ -33,12 +33,11 @@ describe('card payments', () => {
     // The closed statement is due today at 9 - still ahead of 8am.
     expect(card[0]).toMatchObject({
       tag: 'card:aaaa-1111:2026-09-25:due',
-      title: 'BPI Credit payment due today',
+      title: 'BPI Credit due today',
       url: '/accounts?open=BPI%20Credit',
     })
     expect(local(card[0].fireAt)).toBe('9/25 9:00')
-    expect(card[0].body).toContain('3,000.00')
-    expect(card[0].body).toContain('left to pay')
+    expect(card[0].body).toBe('₱3,000.00 to pay')
 
     /* Its three-day warning was on the 22nd, which has passed, so it is not
        scheduled. The unpaid balance carries into October's statement, due
@@ -49,7 +48,8 @@ describe('card payments', () => {
     expect(tags).toContain('card:aaaa-1111:2026-10-25:due')
     const oct = card.find(r => r.tag.endsWith('10-25:early'))
     expect(local(oct.fireAt)).toBe('10/22 9:00')
-    expect(oct.body).toBe('Your statement is due Oct 25. Check it for the amount.')
+    expect(oct.title).toBe('BPI Credit due in 3 days')
+    expect(oct.body).toBe('Check your statement for the amount')
   })
 
   it('says nothing for a card with nothing owing', () => {
@@ -108,7 +108,7 @@ describe('bills', () => {
       'bill:bbbb-2222:2026-09-28',
       'bill:bbbb-2222:2026-10-28',
     ])
-    expect(list[0]).toMatchObject({ title: 'Netflix is due today', url: '/recurring' })
+    expect(list[0]).toMatchObject({ title: 'Netflix due today', url: '/recurring' })
     expect(list[0].body).toMatch(/549\.00 from BPI$/)
     expect(local(list[0].fireAt)).toBe('9/28 9:00')
   })

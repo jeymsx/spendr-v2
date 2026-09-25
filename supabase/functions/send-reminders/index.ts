@@ -323,7 +323,7 @@ export function createHandler(
     for (const s of subs) {
       const out = await sendPush(s, {
         title: 'Reminders are on',
-        body: 'This is how Spendr will tell you a card payment or a bill is due.',
+        body: '',
         url: '/settings',
         tag: 'spendr-test',
       }, vapid, { fetch: doFetch, nowSec })
