@@ -7,6 +7,7 @@ import { DEFAULT_CURRENCY } from '../lib/currency'
 import { txBase } from '../lib/fxContext'
 import { statementDueDate } from '../lib/creditBills'
 import { receivedAmount } from '../lib/transferLegs'
+import { saveFile } from '../lib/share'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
@@ -228,10 +229,16 @@ export async function fetchReportData(year, month, base = '', rates = null) {
 
 /**
  * Fetches data, renders the PDF, and hands it over.
+ *
+ * Returns how it went, and `again` - the same file handed over once more.
+ * Rendering takes long enough on a phone to use up the tap that asked for
+ * it, and an iPhone then refuses the share sheet ('blocked'); `again`, run
+ * from a fresh tap, opens it without rendering anything twice.
+ *
  * @param {number} year
  * @param {number} month  1-indexed
  * @param {string} [accentColor]
- * @returns {Promise<'shared'|'downloaded'|'cancelled'>}
+ * @returns {Promise<{how: Awaited<ReturnType<typeof saveFile>>, again: () => ReturnType<typeof saveFile>}>}
  */
 export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF') {
   /* Read here rather than passed in, because this is called from a menu item
@@ -259,65 +266,8 @@ export async function downloadMonthlyReport(year, month, accentColor = '#2D9DFF'
     createElement(MonthlyReport, { ...data, accentColor, generatedAt })).toBlob()
 
   const mm = String(month).padStart(2, '0')
-  return deliverPdf(blob, `spendr-report-${year}-${mm}.pdf`)
-}
-
-/**
- * Get the finished PDF to the person who asked for it.
- *
- * ── Why this is not just an <a download> ──
- *
- * It was, and on an iPhone that does nothing at all. iOS Safari gives the
- * `download` attribute no useful meaning, and inside an installed PWA there
- * is no browser chrome to fall back to - the anchor is clicked, no file
- * appears, and the app cheerfully reports success. Nothing throws, so the
- * caller's try/catch never fires either.
- *
- * The same code also revoked the object URL on the very next line. That is a
- * race everywhere and a reliable failure on Safari: revoking tears down the
- * blob before the navigation it was created for has begun. Desktop Chrome
- * survives it because the click is dispatched synchronously enough, which is
- * exactly the kind of accident that makes a bug look platform-specific.
- *
- * So: Web Share first. It is the native way to keep a file on iOS - the share
- * sheet offers Files, Mail, anything - and it is the only route that reliably
- * produces a saved PDF from a standalone PWA. Desktop and Android fall
- * through to the anchor, which is right for them.
- *
- * @param {Blob} blob
- * @param {string} filename
- * @returns {Promise<'shared'|'downloaded'|'cancelled'>}
- */
-async function deliverPdf(blob, filename) {
-  const file = typeof File === 'function'
-    ? new File([blob], filename, { type: 'application/pdf' })
-    : null
-
-  /* canShare({files}) rather than a UA sniff: it answers the only question
-     that matters, which is whether THIS browser will take THIS file. */
-  if (file && navigator.canShare?.({ files: [file] })) {
-    try {
-      await navigator.share({ files: [file], title: filename })
-      return 'shared'
-    } catch (e) {
-      // Dismissing the share sheet is a decision, not a failure. Falling
-      // through to a download here would hand them the file they just
-      // declined.
-      if (/** @type {any} */ (e)?.name === 'AbortError') return 'cancelled'
-      // Anything else - share unsupported for this type, a transient
-      // failure - is worth trying the anchor for.
-    }
-  }
-
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename
-  document.body.appendChild(a)
-  a.click()
-  document.body.removeChild(a)
-  /* Long after the click, not on the next line. The browser needs the URL to
-     still resolve while it starts the download. */
-  setTimeout(() => URL.revokeObjectURL(url), 60_000)
-  return 'downloaded'
+  const name = `spendr-report-${year}-${mm}.pdf`
+  // The share sheet on an iPhone, a download elsewhere - see saveFile.
+  const again = () => saveFile(blob, name)
+  return { how: await again(), again }
 }

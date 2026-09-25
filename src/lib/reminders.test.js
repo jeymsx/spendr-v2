@@ -24,6 +24,9 @@ const CARD = {
   cutoffDate: 5, dueDate: 25, creditLimit: 50000,
 }
 
+/** The card reminders alone; a month with spending also gets its recap. @param {any[]} list */
+const cardOnly = (list) => list.filter(r => r.tag.startsWith('card:'))
+
 describe('card payments', () => {
   it('reminds on the day, and three days before the next statement', () => {
     const txs = [{ type: 'expense', account: 'BPI Credit', amount: 3000, date: at(8, 20) }]
@@ -73,7 +76,7 @@ describe('card payments', () => {
       { type: 'expense', account: 'BPI Credit', amount: 3000, date: at(9, 12) },
       { type: 'transfer', fromAccount: 'BPI', toAccount: 'BPI Credit', amount: 3000, date: at(9, 20) },
     ]
-    expect(buildReminders({ accounts: [CARD], transactions: txs, now: NOW })).toEqual([])
+    expect(cardOnly(buildReminders({ accounts: [CARD], transactions: txs, now: NOW }))).toEqual([])
   })
 
   it('still reminds when the running cycle is only partly paid ahead', () => {
@@ -81,7 +84,7 @@ describe('card payments', () => {
       { type: 'expense', account: 'BPI Credit', amount: 3000, date: at(9, 12) },
       { type: 'transfer', fromAccount: 'BPI', toAccount: 'BPI Credit', amount: 1000, date: at(9, 20) },
     ]
-    const tags = buildReminders({ accounts: [CARD], transactions: txs, now: NOW }).map(r => r.tag)
+    const tags = cardOnly(buildReminders({ accounts: [CARD], transactions: txs, now: NOW })).map(r => r.tag)
     expect(tags).toEqual(['card:aaaa-1111:2026-10-25:early', 'card:aaaa-1111:2026-10-25:due'])
   })
 
@@ -91,7 +94,7 @@ describe('card payments', () => {
       { type: 'transfer', fromAccount: 'BPI', toAccount: 'BPI Credit', amount: 3000, date: at(9, 10) },
       { type: 'expense', account: 'BPI Credit', amount: 450, date: at(9, 12) },
     ]
-    const tags = buildReminders({ accounts: [CARD], transactions: txs, now: NOW }).map(r => r.tag)
+    const tags = cardOnly(buildReminders({ accounts: [CARD], transactions: txs, now: NOW })).map(r => r.tag)
     expect(tags).toEqual(['card:aaaa-1111:2026-10-25:early', 'card:aaaa-1111:2026-10-25:due'])
   })
 })
@@ -132,6 +135,41 @@ describe('bills', () => {
   it('stops on a frequency it cannot step', () => {
     const list = buildReminders({ recurring: [{ ...NETFLIX, frequency: 'whenever' }], now: NOW })
     expect(list.map(r => r.tag)).toEqual(['bill:bbbb-2222:2026-09-28'])
+  })
+})
+
+describe('the monthly recap', () => {
+  it('is announced at 9 on the 1st, once the month has anything in it', () => {
+    const txs = [{ type: 'expense', account: 'BPI', amount: 120, date: at(9, 3) }]
+    const recap = buildReminders({ transactions: txs, now: NOW }).find(r => r.tag === 'recap:2026-09')
+    expect(recap).toMatchObject({ title: 'Your September recap is ready', body: 'See how your month went', url: '/recap/2026-09' })
+    expect(local(recap.fireAt)).toBe('10/1 9:00')
+  })
+
+  it('is not announced for a month with nothing in it', () => {
+    const txs = [{ type: 'transfer', fromAccount: 'BPI', toAccount: 'Cash', amount: 500, date: at(9, 3) }]
+    expect(buildReminders({ transactions: txs, now: NOW })).toEqual([])
+  })
+
+  /* Opening the app at 7 on the 1st rebuilds the list. September's recap is
+     two hours from going out, and a list without it would have the upload
+     withdraw it from the server. */
+  it('keeps last month\'s recap on the list until 9 on the 1st', () => {
+    const txs = [{ type: 'expense', account: 'BPI', amount: 120, date: at(9, 3) }]
+    const early = buildReminders({ transactions: txs, now: new Date(2026, 9, 1, 7) })
+    expect(early.map(r => r.tag)).toContain('recap:2026-09')
+    const after = buildReminders({ transactions: txs, now: new Date(2026, 9, 1, 9, 1) })
+    expect(after.map(r => r.tag)).not.toContain('recap:2026-09')
+  })
+
+  it('is never crowded out by a ledger of daily bills', () => {
+    const txs = [{ type: 'expense', account: 'BPI', amount: 120, date: at(9, 3) }]
+    const bills = [1, 2, 3].map(i => ({
+      name: `Daily ${i}`, amount: 10, account: 'BPI', frequency: 'daily', nextDate: '2026-09-26', active: true,
+    }))
+    const list = buildReminders({ transactions: txs, recurring: bills, now: NOW })
+    expect(list).toHaveLength(MAX_REMINDERS)
+    expect(list.map(r => r.tag)).toContain('recap:2026-09')
   })
 })
 

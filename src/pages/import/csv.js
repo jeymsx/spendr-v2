@@ -2,6 +2,35 @@ import Papa from 'papaparse'
 import { UNSYNCED } from '../../db/db'
 import { NEW_REQUIRED_COLS, LEGACY_REQUIRED_COLS, TRANSFER_RE } from './shared'
 
+// ── Dates ──────────────────────────────────────────────────────────────────────
+
+/**
+ * A date from a file, as the app stores every date: a UTC ISO instant.
+ *
+ * This app's own export is that already. A file made by hand is often a
+ * bare '2026-09-30', or an instant carrying its own offset - and every
+ * screen compares stored dates as strings, so a date in another form lands
+ * in the wrong day or the wrong month. A bare day is read as noon on that
+ * LOCAL day: the day the person wrote, whichever side of Greenwich they are.
+ *
+ * Anything that is not a real date is left exactly as it came, for the
+ * preview to show as it is.
+ *
+ * @param {unknown} raw
+ */
+export function normalizeDate(raw) {
+  const s = String(raw ?? '').trim()
+  if (!s) return s
+  const day = /^(\d{4})-(\d{2})-(\d{2})$/.exec(s)
+  if (day) {
+    const d = new Date(Number(day[1]), Number(day[2]) - 1, Number(day[3]), 12)
+    // 2026-02-30 is not a day; Date would quietly make it 2 March.
+    return d.getMonth() === Number(day[2]) - 1 ? d.toISOString() : s
+  }
+  const t = Date.parse(s)
+  return Number.isFinite(t) ? new Date(t).toISOString() : s
+}
+
 // ── CSV parser ─────────────────────────────────────────────────────────────────
 
 export function parseCSV(rawText) {
@@ -58,7 +87,7 @@ export function mapNewRows(data) {
     return {
       txId:        String(row.tx_id ?? '').trim() || null,
       type,
-      date:        String(row.transaction_date ?? '').trim(),
+      date:        normalizeDate(row.transaction_date),
       description,
       category:    String(row.category ?? '').trim(),
       account,
@@ -74,7 +103,7 @@ export function mapLegacyRows(data) {
   return data.map(row => ({
     txId:        String(row.txId        ?? '').trim() || null,
     type:        String(row.type        ?? '').trim().toLowerCase(),
-    date:        String(row.date        ?? '').trim(),
+    date:        normalizeDate(row.date),
     description: String(row.description ?? '').trim(),
     category:    String(row.category    ?? '').trim(),
     payment:     String(row.payment     ?? '').trim() || null,

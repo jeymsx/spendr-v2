@@ -57,9 +57,14 @@ export function ToastProvider({ children }) {
    * @param type     'success' | 'warning' | 'error'
    * @param options  { actionLabel, onAction, duration } — an actionable toast
    *                 becomes clickable and stays up longer.
+   *                 { ifIdle } — news that can wait: dropped rather than shown
+   *                 over a toast with a button on it, whose Undo would go
+   *                 with it. There is one slot, and the button is the one
+   *                 that cannot be got back.
    */
   const showToast = useCallback((message, type = 'success', options = {}) => {
-    const { actionLabel = null, onAction = null, duration } = options
+    const { actionLabel = null, onAction = null, duration, ifIdle = false } = options
+    if (ifIdle && actionRef.current) return
     if (timerRef.current) clearTimeout(timerRef.current)
 
     const id = Date.now()

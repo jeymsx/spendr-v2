@@ -150,8 +150,11 @@ export default function WebSettings() {
     try {
       const [year, month] = reportMonth.split('-').map(Number)
       const { downloadMonthlyReport } = await import('../../utils/reportData.js')
-      await downloadMonthlyReport(year, month, accentColor)
-      showToast('Report downloaded')
+      // An iPad in the desktop layout gets the share sheet; see saveFile.
+      const { how, again } = await downloadMonthlyReport(year, month, accentColor)
+      if (how === 'downloaded') showToast('Report downloaded')
+      else if (how === 'shared') showToast('Report ready to save')
+      else if (how === 'blocked') showToast('Your report is ready', 'success', { actionLabel: 'Save', onAction: () => { again() } })
     } catch (e) {
       console.error('[WebSettings] report failed:', e)
       showToast('Could not generate the report', 'error')

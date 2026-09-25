@@ -22,6 +22,23 @@
 /** @param {number} n */
 const pad = (n) => String(n).padStart(2, '0')
 
+/* ── Remembered, because it is asked constantly ──
+
+   Every month and day bucket in the app comes through here - the dashboard,
+   Budget, Insights, the recap, badges and notifications each sort the whole
+   ledger by it, and some on every render. Building a Date per row each time
+   measured 15ms a pass over 20,000 rows, where a string slice had cost 1.
+
+   The answer for a given string never changes unless the device's timezone
+   does, so answers are kept, and all dropped when the offset moves - checked
+   at most once a minute, which is how a phone that has flown somewhere finds
+   out. Bounded, so an app left open for weeks cannot grow it without limit. */
+const DAY_CACHE_MAX = 50_000
+/** @type {Map<string, string>} */
+const dayCache = new Map()
+let cachedOffset = new Date().getTimezoneOffset()
+let offsetCheckedAt = Date.now()
+
 /**
  * The value for a `<input type="date">`, in the reader's own timezone.
  *
@@ -32,8 +49,37 @@ const pad = (n) => String(n).padStart(2, '0')
  */
 export function isoToDateInput(iso) {
   if (!iso) return ''
-  const d = new Date(iso)
-  if (Number.isNaN(d.getTime())) return ''
+  if (typeof iso !== 'string') return localDay(iso)
+  const now = Date.now()
+  if (now - offsetCheckedAt > 60_000) {
+    offsetCheckedAt = now
+    const offset = new Date().getTimezoneOffset()
+    if (offset !== cachedOffset) { cachedOffset = offset; dayCache.clear() }
+  }
+  const hit = dayCache.get(iso)
+  if (hit !== undefined) return hit
+  const day = localDay(iso)
+  if (dayCache.size >= DAY_CACHE_MAX) dayCache.clear()
+  dayCache.set(iso, day)
+  return day
+}
+
+/** @param {string|number|Date} value */
+function localDay(value) {
+  const d = new Date(value)
+  return Number.isNaN(d.getTime()) ? '' : toDateInput(d)
+}
+
+/**
+ * A moment's LOCAL calendar day, as a date field's value - today's, by
+ * default. What a new form's date starts at, and what a file is dated with.
+ *
+ * Never `new Date().toISOString().slice(0, 10)`: that is the UTC date, and
+ * in Manila it is still yesterday until 8 in the morning.
+ *
+ * @param {Date} [d]
+ */
+export function toDateInput(d = new Date()) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
 }
 
@@ -78,4 +124,34 @@ export function dateInputToIso(dateStr, originalIso, now = new Date()) {
   )
 
   return (next.getTime() > now.getTime() ? now : next).toISOString()
+}
+
+/**
+ * The LOCAL calendar month a stored timestamp falls in, as "2026-09".
+ *
+ * Not `iso.slice(0, 7)`, and not `iso.startsWith("2026-09")`, which is the
+ * same thing. Those read the UTC month, and in Manila the first eight hours
+ * of every month are still the previous month in UTC - so a salary that
+ * landed at 7am on the 1st counted towards the month before, on the budget,
+ * the dashboard and Insights alike, while the daily chart put it on the 1st.
+ *
+ * @param {string|null|undefined} iso
+ */
+export function txMonthKey(iso) {
+  const day = isoToDateInput(iso)
+  return day ? day.slice(0, 7) : ''
+}
+
+/**
+ * Local midnight on the 1st of a month, as an ISO instant.
+ *
+ * What a range query over the `date` index has to compare against: the index
+ * holds UTC strings, so the bound has to be the UTC instant of LOCAL midnight,
+ * not the string "2026-09-01".
+ *
+ * @param {number} year
+ * @param {number} month  0-11; overflow rolls into the next year
+ */
+export function localMonthStartIso(year, month) {
+  return new Date(year, month, 1).toISOString()
 }

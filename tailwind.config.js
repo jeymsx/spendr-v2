@@ -69,6 +69,10 @@ export default {
         32: '32px',
         34: '34px',
         38: '38px',
+        /* The monthly recap's headline figures: one number per screen, read
+           at arm's length, the way a story is. Nowhere else. */
+        44: '44px',
+        56: '56px',
       },
       borderRadius: {
         '2xl': '18px',

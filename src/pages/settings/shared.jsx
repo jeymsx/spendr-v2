@@ -13,6 +13,7 @@
 import Divider from '../../components/ui/Divider'
 import { fieldFrame } from '../../components/ui/Field'
 import SectionLabel from '../../components/ui/SectionLabel'
+import { toDateInput } from '../../utils/txDate'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -108,7 +109,7 @@ export function buildAndDownloadCSV(transactions) {
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url
-  a.download = `spendr-export-${new Date().toISOString().slice(0, 10)}.csv`
+  a.download = `spendr-export-${toDateInput()}.csv`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

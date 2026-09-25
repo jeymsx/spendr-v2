@@ -197,12 +197,15 @@ export function netWorthDelta(tx, valueOf) {
  * @param {Array<Record<string, any>>} [input.txs]
  * @param {number} input.current  today's net worth, in the ledger's currency
  * @param {{span: number|null, points: number}} input.range
- * @param {(tx: Record<string, any>) => number} input.valueOf
+ * @param {(tx: Record<string, any>) => number} [input.priceOf]  a row in the
+ *   ledger's currency. Not called `valueOf`: destructuring that name finds
+ *   Object.prototype.valueOf on every object, so a missing one would never
+ *   have been noticed.
  * @param {number} [input.now]
  * @returns {Array<{t: number, value: number, day: string}>}
  */
-export function buildNetWorthTrend({ txs = [], current, range, valueOf, now = Date.now() }) {
-  return sweepBack(collectMoves(txs, tx => netWorthDelta(tx, valueOf)), current, range, now)
+export function buildNetWorthTrend({ txs = [], current, range, priceOf = txBase, now = Date.now() }) {
+  return sweepBack(collectMoves(txs, tx => netWorthDelta(tx, priceOf)), current, range, now)
 }
 
 /**

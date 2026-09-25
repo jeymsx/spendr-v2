@@ -244,9 +244,12 @@ export function ResetConfirmModal({ open, onClose }) {
   async function handleReset() {
     setLoading(true)
     try {
+      /* Everything the app holds. Goals and badges were left behind before:
+         goals pointing at accounts that no longer existed, and badges that
+         the fresh start then announced all over again. */
       await db.transaction('rw', [
-        db.transactions, db.balances, db.accounts,
-        db.categories, db.debts, db.recurring, db.templates, db.meta,
+        db.transactions, db.balances, db.accounts, db.categories, db.debts,
+        db.recurring, db.templates, db.goals, db.badges, db.meta, db.notifications,
       ], async () => {
         await db.transactions.clear()
         await db.balances.clear()
@@ -255,7 +258,10 @@ export function ResetConfirmModal({ open, onClose }) {
         await db.debts.clear()
         await db.recurring.clear()
         await db.templates.clear()
+        await db.goals.clear()
+        await db.badges.clear()
         await db.meta.clear()
+        await db.notifications.clear()
       })
       // Sign out so the Onboarding auto-sign-in effect doesn't fire on reload
       await signOut()
@@ -330,7 +336,7 @@ export function ResetConfirmModal({ open, onClose }) {
           <div className="text-center">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Reset app?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              This will permanently delete all transactions, accounts, categories, debts, and recurring payments. This cannot be undone.
+              This will permanently delete all transactions, accounts, categories, goals, debts, and recurring payments. This cannot be undone.
             </p>
           </div>
         )}

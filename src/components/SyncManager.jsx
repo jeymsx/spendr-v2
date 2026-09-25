@@ -5,6 +5,7 @@ import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { fullSync } from '../lib/sync'
 import db from '../db/db'
 import ReminderSync from './ReminderSync'
+import NotificationSync from './NotificationSync'
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
@@ -180,6 +181,8 @@ export default function SyncManager() {
       <SyncIndicator status={status} errMsg={errMsg} />
       {/* Push reminders need the server, so they need a user. */}
       {user?.id && isSupabaseConfigured && <ReminderSync userId={user.id} />}
+      {/* The notifications list is worked out on the device and needs neither. */}
+      <NotificationSync />
       <Outlet />
     </SyncContext.Provider>
   )

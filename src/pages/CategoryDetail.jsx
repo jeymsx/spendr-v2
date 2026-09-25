@@ -4,6 +4,7 @@ import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { scheduledCutoff } from '../utils/scheduled'
+import { txMonthKey } from '../utils/txDate'
 import SubPage from '../components/SubPage'
 import CategoryGlyph from '../components/CategoryGlyph'
 import TxDetailSheet from '../components/TxDetailSheet'
@@ -22,6 +23,7 @@ import {
 import { DetailTxRow } from './accounts/DetailParts'
 import { fmt, fmtCompact } from '../lib/money'
 import { txBase } from '../lib/fxContext'
+import { effectiveLimit } from '../lib/rollover'
 
 /**
  * One category.
@@ -71,6 +73,7 @@ export default function CategoryDetail() {
   const categories   = useLiveQuery(() => db.categories.toArray(), [], undefined)
   const accounts     = useLiveQuery(() => db.accounts.toArray(), [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], undefined)
+  const globalRollover = useLiveQuery(async () => !!(await db.meta.get('budgetRollover'))?.value, [], false)
 
   /* One clock reading for the whole render, like the Budget page - otherwise
      the month total and the cutoff can straddle midnight, and every memo
@@ -99,13 +102,17 @@ export default function CategoryDetail() {
   const isInflow = cat?.type === 'inflow'
   const verb = isInflow ? 'Received' : 'Spent'
 
+  /* This month's figure is the Budget row's figure: only the rows that are
+     this category's kind of money. A debt repaid into Food is an inflow filed
+     under Food - it belongs in the list below, and it is not spending. */
+  const flow = isInflow ? 'inflow' : 'expense'
+  const monthKeyNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const monthTotal = useMemo(() => {
     if (!catTxs) return 0
-    const pfx = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
     return catTxs
-      .filter(t => (t.date ?? '').startsWith(pfx))
+      .filter(t => t.type === flow && txMonthKey(t.date) === monthKeyNow)
       .reduce((sum, t) => sum + txBase(t), 0)
-  }, [catTxs, now])
+  }, [catTxs, flow, monthKeyNow])
 
   const range = useMemo(
     () => SPEND_TREND_RANGES.find(r => r.key === trendRange) ?? SPEND_TREND_RANGES[1],
@@ -135,8 +142,14 @@ export default function CategoryDetail() {
   )
   const rangeTotal = trend.length ? trend[trend.length - 1].value : 0
 
-  const budget = cat?.budget ?? 0
-  const pct    = budget > 0 ? (monthTotal / budget) * 100 : 0
+  /* The EFFECTIVE limit, rollover included - the one the Budget row that
+     opened this page was measured against, so the two never disagree. */
+  const budget = useMemo(() => {
+    if (!cat || isInflow || !((cat.budget ?? 0) > 0)) return cat?.budget ?? 0
+    return effectiveLimit({ cat, txs: transactions ?? [], month: monthKeyNow, globalDefault: globalRollover }).effective
+  }, [cat, isInflow, transactions, monthKeyNow, globalRollover])
+  const hasLimit = (cat?.budget ?? 0) > 0
+  const pct    = budget > 0 ? (monthTotal / budget) * 100 : monthTotal > 0 && hasLimit ? 100 : 0
   const tone   = budgetTone(pct)
   const left   = budget - monthTotal
 
@@ -183,7 +196,7 @@ export default function CategoryDetail() {
                 </div>
               </div>
 
-              {budget > 0 ? (
+              {hasLimit ? (
                 <>
                   <ProgressBar className="mt-3.5" value={pct} color={tone.color} />
                   <p className="mt-2 text-11 tabular-nums text-slate-500 dark:text-slate-400">

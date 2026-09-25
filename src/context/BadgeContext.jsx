@@ -87,8 +87,12 @@ export function BadgeProvider({ children }) {
     fresh.forEach(k => written.current.add(k))
     /* bulkPut, not bulkAdd: `key` is the primary key, so a row that raced in
        from another tab makes add() throw and put() a no-op. */
+    /* `silent` marks the ones that were already true - not celebrated, and
+       so not news in the notifications list either. Local only: sync's
+       badgeToRow names the columns it sends. */
+    const silent = primed.current ? {} : { silent: true }
     db.badges
-      .bulkPut(fresh.map(key => ({ key, earnedAt, synced: UNSYNCED })))
+      .bulkPut(fresh.map(key => ({ key, earnedAt, synced: UNSYNCED, ...silent })))
       .catch(e => console.warn('[badges] could not record', fresh, e))
 
     if (primed.current) setQueue(q => [...q, ...fresh])

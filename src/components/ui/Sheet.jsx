@@ -3,6 +3,7 @@ import { useScrollLock } from '../../hooks/useScrollLock'
 import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 import FadeScroller from '../FadeScroller'
 import { cx } from './cx'
+import { keepTabInside } from './focus'
 
 /**
  * The bottom sheet, once, instead of 28 times.
@@ -77,12 +78,6 @@ const EXIT_MS = 240
  * about its ancestors, only whether it is the one on top.
  */
 const openSheets = []
-
-const FOCUSABLE = [
-  'a[href]', 'button:not([disabled])', 'input:not([disabled])',
-  'select:not([disabled])', 'textarea:not([disabled])',
-  '[tabindex]:not([tabindex="-1"])',
-].join(',')
 
 /* The same numbers as .sheet-float: 56px of page left showing above the card
    and a 12px gap below it. They have to agree with that rule, because this is
@@ -290,28 +285,9 @@ export default function Sheet({
         if (dismissible) { e.preventDefault(); onClose?.() }
         return
       }
-      if (e.key !== 'Tab') return
       // Keep Tab inside the dialog. The page behind is already inert to a
       // pointer; it should be inert to a keyboard too.
-      /* Not an offsetParent check: that returns null for every element in
-         jsdom and for anything positioned fixed in a browser, so it made the
-         trap silently do nothing. `hidden` and an aria-hidden ancestor are
-         what actually occur here - these sheets conditionally render rather
-         than display:none their controls. */
-      const nodes = [...(panelRef.current?.querySelectorAll(FOCUSABLE) ?? [])]
-        .filter(n => !n.hasAttribute('hidden') && !n.closest('[aria-hidden="true"]'))
-      if (!nodes.length) { e.preventDefault(); return }
-      const first = nodes[0]
-      const last = nodes[nodes.length - 1]
-      const active = document.activeElement
-      const inside = panelRef.current?.contains(active)
-      if (!e.shiftKey && (active === last || !inside)) {
-        e.preventDefault()
-        first.focus()
-      } else if (e.shiftKey && (active === first || !inside)) {
-        e.preventDefault()
-        last.focus()
-      }
+      keepTabInside(e, panelRef.current)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)

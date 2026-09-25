@@ -24,6 +24,12 @@ const WebImport       = lazy(() => import('./pages/WebImport'))
 const AddExpense   = lazy(() => import('../pages/AddExpense'))
 const AddInflow    = lazy(() => import('../pages/AddInflow'))
 const Transfer     = lazy(() => import('../pages/Transfer'))
+/* The recap is a full-screen story on every screen size, and the list of
+   notifications a single column - both reused as they are. Both are where a
+   push notification lands, and a push goes to every device, a tablet in
+   landscape included: without them here, tapping one opened a blank page. */
+const Notifications = lazy(() => import('../pages/Notifications'))
+const Recap         = lazy(() => import('../pages/recap/RecapPage'))
 
 function LoadingScreen() {
   return (
@@ -65,6 +71,22 @@ export default function WebApp() {
               <Route path="/inflow"   element={<WebFormPage><AddInflow /></WebFormPage>} />
               <Route path="/transfer" element={<WebFormPage><Transfer /></WebFormPage>} />
               <Route path="/import"   element={<WebImport />} />
+              <Route path="/notifications" element={<WebFormPage><Notifications /></WebFormPage>} />
+              <Route path="/recap"         element={<WebFormPage><Recap /></WebFormPage>} />
+              <Route path="/recap/:month"  element={<WebFormPage><Recap /></WebFormPage>} />
+              {/* Addresses only the phone layout has - a notification's link,
+                  a bookmark, switching to desktop view while on one - go to
+                  where desktop keeps the same thing, and anything else goes
+                  home, rather than to a blank page. Budgets live in
+                  Insights here; badges have no desktop page. */}
+              <Route path="/budget"             element={<Navigate to="/insights" replace />} />
+              <Route path="/categories/:name"   element={<Navigate to="/insights" replace />} />
+              <Route path="/transactions/*"     element={<Navigate to="/transactions" replace />} />
+              <Route path="/accounts/*"         element={<Navigate to="/accounts" replace />} />
+              <Route path="/debts/*"            element={<Navigate to="/debts" replace />} />
+              <Route path="/recurring/*"        element={<Navigate to="/recurring" replace />} />
+              <Route path="/settings/*"         element={<Navigate to="/settings" replace />} />
+              <Route path="*"                   element={<Navigate to="/" replace />} />
             </Route>
           </Route>
         </Route>

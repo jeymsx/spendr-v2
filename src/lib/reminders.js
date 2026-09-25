@@ -3,6 +3,8 @@ import { statementDueDate } from './creditBills'
 import { advanceNextDate, parseDateLocal } from '../utils/recurring'
 import { currencyOfAccountName } from './fxContext'
 import { fmt } from './money'
+import { txMonthKey } from '../utils/txDate'
+import { addMonths, monthKeyOf, monthName, parseMonth } from './recap'
 
 /**
  * The reminders a ledger is owed, worked out on the device.
@@ -28,6 +30,9 @@ import { fmt } from './money'
  *   hears about next month's.
  *
  *   A bill, on the day it is due, for every occurrence inside the horizon.
+ *
+ *   The month's recap, on the 1st - once there is anything in the month to
+ *   look back on.
  *
  * All at 9 in the morning, local time, which is stored as an absolute instant
  * so the server needs no idea what time zone anybody is in.
@@ -81,6 +86,42 @@ export function stableKey(rec) {
   return `n${h.toString(16)}`
 }
 
+/** Where a card's reminder or notification opens. @param {Record<string, any>} acct */
+export const cardUrl = (acct) => `/accounts?open=${encodeURIComponent(acct.name)}`
+
+/**
+ * The statements a card still has to be paid for, and when.
+ *
+ * The closed statement, with the figure it still wants - and the one running
+ * now, as it stands. The running one's amount is not known until it closes,
+ * so it is null; by then the app has usually been opened and the figure is
+ * the real one.
+ *
+ * Shared by push reminders and the in-app notifications, so the two can
+ * never disagree about when a card is due.
+ *
+ * @param {Record<string, any>} acct   a credit account with a due day
+ * @param {Array<Record<string, any>>} transactions
+ * @param {Date} now
+ * @returns {Array<{due: Date, amount: number|null}>}
+ */
+export function cardStatements(acct, transactions, now) {
+  const s = getCreditStatus(/** @type {any} */ (acct), transactions, now)
+  const out = []
+  if (s.stmtOutstanding > 0) {
+    const due = statementDueDate(s.cycleEnd, acct.dueDate)
+    if (due) out.push({ due, amount: s.stmtOutstanding })
+  }
+  /* `carried` is signed on purpose: paying ahead of the cutoff leaves it
+     negative, and that credit comes off the next statement - so a card paid
+     in full before the statement closes has nothing to remind about. */
+  if (s.carried + s.nextStatementTotal > 0) {
+    const due = statementDueDate(s.nextCycleEnd, acct.dueDate)
+    if (due) out.push({ due, amount: null })
+  }
+  return out
+}
+
 /**
  * @typedef {object} Reminder
  * @property {string} tag
@@ -89,6 +130,9 @@ export function stableKey(rec) {
  * @property {string} body
  * @property {string} url     where tapping it opens the app
  */
+
+/** Soonest first, and a fixed order within the same minute. @param {Reminder} a @param {Reminder} b */
+const byTime = (a, b) => a.fireAt.localeCompare(b.fireAt) || a.tag.localeCompare(b.tag)
 
 /**
  * @param {object} input
@@ -110,30 +154,13 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
 
   for (const acct of accounts) {
     if (acct?.type !== 'credit' || !acct.dueDate) continue
-    const s = getCreditStatus(/** @type {any} */ (acct), transactions, now)
     const key = stableKey(acct)
-    const url = `/accounts?open=${encodeURIComponent(acct.name)}`
-
-    /* The closed statement, with the figure it still wants - and the one
-       running now, as it stands. Its amount is not known until it closes,
-       so it is not stated; by then the app has usually been opened and this
-       list rebuilt with the real one. */
-    const statements = []
-    if (s.stmtOutstanding > 0) {
-      statements.push({ due: statementDueDate(s.cycleEnd, acct.dueDate), amount: s.stmtOutstanding })
-    }
-    /* `carried` is signed on purpose: paying ahead of the cutoff leaves it
-       negative, and that credit comes off the next statement - so a card
-       paid in full before the statement closes has nothing to remind about. */
-    if (s.carried + s.nextStatementTotal > 0) {
-      statements.push({ due: statementDueDate(s.nextCycleEnd, acct.dueDate), amount: null })
-    }
+    const url = cardUrl(acct)
 
     /* Short on purpose. A lock screen shows two lines, and the phone already
        labels it Spendr - so the title is the card and when, and the line
        under it is the one figure that matters. */
-    for (const { due, amount } of statements) {
-      if (!due) continue
+    for (const { due, amount } of cardStatements(acct, transactions, now)) {
       const body = amount != null
         ? `${fmt(amount, acct.currency || currencyOfAccountName(acct.name))} to pay`
         : 'Check your statement for the amount'
@@ -181,9 +208,36 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
     }
   }
 
-  return out
-    .sort((a, b) => a.fireAt.localeCompare(b.fireAt) || a.tag.localeCompare(b.tag))
-    .slice(0, MAX_REMINDERS)
+  /* This month's recap, due on the 1st of the next - and last month's too,
+     until 9 on the 1st has passed. Without it, opening the app at 7 on the
+     1st rebuilt a list that no longer had the recap about to go out, and the
+     upload's clean-up withdrew it from the server two hours before it fired.
+     push() drops it once its time is past. */
+  const nowIso = now.toISOString()
+  /** @type {Reminder[]} */
+  const recaps = []
+  for (const month of [addMonths(monthKeyOf(now), -1), monthKeyOf(now)]) {
+    const logged = transactions.some(t =>
+      (t?.type === 'expense' || t?.type === 'inflow') && (t.date ?? '') <= nowIso && txMonthKey(t.date) === month)
+    if (!logged) continue
+    const { year, month: m } = parseMonth(month)
+    const fireAt = new Date(year, m + 1, 1, REMINDER_HOUR)
+    if (fireAt.getTime() <= now.getTime() || fireAt.getTime() > until) continue
+    recaps.push({
+      tag: `recap:${month}`,
+      fireAt: fireAt.toISOString(),
+      title: `Your ${monthName(month)} recap is ready`,
+      body: 'See how your month went',
+      url: `/recap/${month}`,
+    })
+  }
+
+  /* The cap is for a ledger of daily bills. It must not cost the one
+     reminder a month that is not a bill, so the recaps are kept outside it. */
+  return [
+    ...out.sort(byTime).slice(0, MAX_REMINDERS - recaps.length),
+    ...recaps,
+  ].sort(byTime)
 }
 
 /**

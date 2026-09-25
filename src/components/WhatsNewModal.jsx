@@ -1,12 +1,13 @@
 import db from '../db/db'
+import { markRead } from '../db/notifications'
 import {
-  IconSparkle, IconCurrency, IconRates, IconWorldMoney, IconTap,
+  IconSparkle, IconBarChart, IconBell, IconTarget, IconTransferUI,
 } from './icons'
 import Button from './ui/Button'
 import Divider from './ui/Divider'
 import Sheet from './ui/Sheet'
 
-const CURRENT_VERSION = '0.4.0'
+const CURRENT_VERSION = '0.5.0'
 
 /* Written from the user's side of the change, not the code's: what is
    different when you open the app.
@@ -24,26 +25,29 @@ const CURRENT_VERSION = '0.4.0'
    `Icon` is a COMPONENT, not a string. */
 const WHATS_NEW = [
   {
-    Icon: IconCurrency,
-    title: 'Accounts in another currency',
-    desc: 'Give an account its own currency when you make it, and it keeps it everywhere: its card, its transactions, the form you type into and every sheet in between.',
+    Icon: IconBarChart,
+    title: 'Your month, in a recap',
+    desc: 'On the 1st, a look back at last month: what you spent, what you kept, where it went. Save the summary as an image.',
   },
   {
-    Icon: IconRates,
-    title: 'Rates, updated daily',
-    desc: 'Type a foreign amount and a chip under it shows what that is in your own currency, and the rate it used. Tap it for the full table.',
+    Icon: IconBell,
+    title: 'Notifications, in one place',
+    desc: 'The bell on the home screen collects card due dates, bills, budget alerts and new badges.',
   },
   {
-    Icon: IconWorldMoney,
-    title: 'Net worth, your way',
-    desc: 'One combined figure at today’s rate, or one line per currency with nothing converted. Settings decides; tapping the code on the wallet reads it in another currency.',
+    Icon: IconTarget,
+    title: 'Budget alerts',
+    desc: 'A heads-up when a category reaches 80% of its budget, and when it goes over.',
   },
   {
-    Icon: IconTap,
-    title: 'The + works on Android',
-    desc: 'Tapping it did nothing on some phones. It was measuring the tap itself and getting it wrong; the browser decides now, which is what it was always better at.',
+    Icon: IconTransferUI,
+    title: 'Transfers between currencies',
+    desc: 'Moving money from a dollar account to a peso one now asks what actually arrived.',
   },
 ]
+
+/** The first line of this release, for the notifications list. */
+export const WHATS_NEW_HEADLINE = WHATS_NEW[0].title
 
 /**
  * What changed in this version.
@@ -75,8 +79,11 @@ export default function WhatsNewModal({ onClose }) {
      calls onClose the moment you dismiss, so there is nothing left to wait
      for. */
   async function acknowledge() {
-    try { await db.meta.put({ key: 'whatsNewSeen', value: CURRENT_VERSION }) }
-    catch (e) { console.warn('[whatsnew] could not record', e) }
+    try {
+      await db.meta.put({ key: 'whatsNewSeen', value: CURRENT_VERSION })
+      // Read here is read in the bell too: the same news, not twice.
+      await markRead([`whats-new:${CURRENT_VERSION}`])
+    } catch (e) { console.warn('[whatsnew] could not record', e) }
     onClose()
   }
 

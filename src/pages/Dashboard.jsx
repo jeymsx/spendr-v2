@@ -14,9 +14,10 @@ import {
 import CategoryGlyph from '../components/CategoryGlyph'
 import BillMark from '../components/BillMark'
 import { scheduledCutoff } from '../utils/scheduled'
+import { txMonthKey } from '../utils/txDate'
 import { cardGradient } from '../lib/accentTheme'
 import IconButton from '../components/ui/IconButton'
-import BadgeChip from '../components/BadgeChip'
+import BellButton from '../components/BellButton'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
 import { fmt, baseSymbol, fmtHidden } from '../lib/money'
@@ -62,7 +63,10 @@ export default function Dashboard() {
   const debts      = useLiveQuery(() => db.debts.toArray(),      [], [])
   const recurring  = useLiveQuery(() => db.recurring.toArray(),  [], [])
   const txAll      = useLiveQuery(() => db.transactions.toArray())
-  const userMeta   = useLiveQuery(() => db.meta.get('displayName'))
+  /* `?? null`: a person who never set a name has no row, and get() resolves
+     to undefined for it - the same value as "still loading", so the greeting
+     waited, invisible, for ever. null is "loaded, and there is none". */
+  const userMeta   = useLiveQuery(async () => (await db.meta.get('displayName')) ?? null)
   const templates  = useLiveQuery(() => db.templates.toArray(),  [], [])
   // Only the quick-action badge needs these. A goal's progress is derived from
   // real account balances, so "is it funded?" cannot be read off the row - it
@@ -192,7 +196,7 @@ export default function Dashboard() {
     const pfx = monthPrefix()
     const cutoff = scheduledCutoff()
     return (txAll || []).filter(t =>
-      t.type === 'expense' && (t.date ?? '').startsWith(pfx) && (t.date ?? '') <= cutoff)
+      t.type === 'expense' && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 
   const budgetCategories = useMemo(() => {
@@ -420,12 +424,10 @@ export default function Dashboard() {
           </h1>
           <ContextHint hint={getContextHint(txAll, budgetCategories, upcomingRecurring)} />
         </div>
-        {/* Two controls, and only one of them is a disc. BadgeChip wears the
-            same paint at the same 36px so the pair reads as one row, but its
-            SHAPE is a shield - which is how you can tell at a glance that it
-            does not open another list of switches. See BadgeChip. */}
+        {/* Two discs of the same paint and size, so the pair reads as one
+            row. The bell took the badges trophy's place - see BellButton. */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <BadgeChip />
+          <BellButton />
           <IconButton label="Settings" onClick={() => navigate('/settings')}>
             <IconSettings />
           </IconButton>

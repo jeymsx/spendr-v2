@@ -246,7 +246,7 @@ describe('net worth over time', () => {
 
   it('ends exactly on the figure the wallet shows', () => {
     const txs = [on(3, { type: 'expense', amount: 200 }), on(6, { type: 'inflow', amount: 1000 })]
-    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    const line = buildNetWorthTrend({ txs, current: 5000, range, priceOf: face, now: NOW })
     expect(line.at(-1)?.value).toBe(5000)
   })
 
@@ -255,7 +255,7 @@ describe('net worth over time', () => {
       on(3, { type: 'expense', amount: 200 }),   // 5,000 now, 5,200 before this
       on(6, { type: 'inflow', amount: 1000 }),   // and 4,200 before this
     ]
-    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    const line = buildNetWorthTrend({ txs, current: 5000, range, priceOf: face, now: NOW })
     const at = (/** @type {number} */ d) => line.find(p => Math.round((NOW - p.t) / DAY) === d)?.value
     expect(at(0)).toBe(5000)
     expect(at(4)).toBe(5200)
@@ -264,7 +264,7 @@ describe('net worth over time', () => {
 
   it('is flat across a period of nothing but transfers', () => {
     const txs = [on(2, { type: 'transfer', fromAccount: 'A', toAccount: 'B', amount: 9000 })]
-    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    const line = buildNetWorthTrend({ txs, current: 5000, range, priceOf: face, now: NOW })
     expect(new Set(line.map(p => p.value))).toEqual(new Set([5000]))
   })
 
@@ -272,7 +272,7 @@ describe('net worth over time', () => {
     // An installment plan books next month's charge today; it has not
     // happened, so it must not already be in the line.
     const txs = [on(-20, { type: 'expense', amount: 999 })]
-    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    const line = buildNetWorthTrend({ txs, current: 5000, range, priceOf: face, now: NOW })
     expect(line.at(-1)?.value).toBe(5999)
   })
 
@@ -280,7 +280,7 @@ describe('net worth over time', () => {
     // A dollar expense, priced on the day at P60.
     const priced = (/** @type {any} */ tx) => (tx.currency === 'USD' ? tx.amount * 60 : tx.amount)
     const txs = [on(3, { type: 'expense', amount: 10, currency: 'USD' })]
-    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: priced, now: NOW })
+    const line = buildNetWorthTrend({ txs, current: 5000, range, priceOf: priced, now: NOW })
     expect(line[0].value).toBe(5600)
   })
 })

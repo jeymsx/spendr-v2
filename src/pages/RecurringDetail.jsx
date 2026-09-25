@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { isoToDateInput } from '../utils/txDate'
 import { postRecurringCharge, deleteTxGroup } from '../db/txHelpers'
 import { useToast } from '../context/ToastContext'
 import { deleteRecurringRemote } from '../lib/sync'
@@ -221,7 +222,8 @@ export default function RecurringDetail() {
   const activeSince = useMemo(() => {
     if (!history?.length) return null
     const first = history[history.length - 1]
-    return first?.date ? fmtDateFull(String(first.date).slice(0, 10)) : null
+    // The local day of the first charge, not the UTC one.
+    return first?.date ? fmtDateFull(isoToDateInput(first.date)) : null
   }, [history])
 
   const cat  = useMemo(() => (categories ?? []).find(c => c.name === rec?.category), [categories, rec])

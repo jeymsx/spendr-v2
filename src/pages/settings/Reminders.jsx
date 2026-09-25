@@ -9,8 +9,9 @@ import { REMINDER_HOUR } from '../../lib/reminders'
 import { IconChevronRight } from '../../components/icons'
 import { RowIcon, SettingsRow } from './shared'
 import {
-  disableReminders, enableReminders, isIos, pushSupport, remindersOn, sendTestReminder, serverKey,
+  disableReminders, enableReminders, pushSupport, remindersOn, sendTestReminder, serverKey,
 } from '../../lib/push'
+import { isIos } from '../../utils/platform'
 
 /**
  * Settings > Sync > Reminders: a row, and the sheet it opens.
@@ -158,11 +159,14 @@ function BellBadge() {
  * Why the switch cannot be used here, and what to do about it. Null when it
  * can. Short on purpose: each one is a thing to do, not an explanation.
  *
+ * Signed out is not one of these: the sheet puts a Sign in button where the
+ * test would be, and a line saying the same thing under it would only repeat
+ * the button.
+ *
  * @param {ReturnType<typeof useReminderSettings>} r
  * @param {boolean} ios
  */
 function blocker(r, ios) {
-  if (!r.user) return { text: 'Sign in to turn on reminders.' }
   if (r.on) return null
   if (r.support === 'ios-install') {
     return {

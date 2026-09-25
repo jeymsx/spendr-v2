@@ -1,3 +1,5 @@
+import { toDateInput } from './txDate'
+
 /**
  * Advance a date string forward by one frequency period.
  * Returns a YYYY-MM-DD string.
@@ -8,7 +10,8 @@
 export function advanceNextDate(dateStr, frequency) {
   const step = FREQ_BY_VALUE[frequency]?.step
   const d = parseDateLocal(dateStr) ?? new Date(dateStr)
-  if (!step) return d.toISOString().slice(0, 10)
+  // An unknown frequency stays put - on the same LOCAL day, not the UTC one.
+  if (!step) return toDateInput(d)
 
   if (step.unit === 'day') {
     d.setDate(d.getDate() + step.n)

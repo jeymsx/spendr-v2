@@ -1,5 +1,6 @@
 import db, { UNSYNCED } from '../db/db'
 import { queueRemoteDelete, resetWatermarks } from './sync'
+import { toDateInput } from '../utils/txDate'
 
 /* Tables the JSON export writes.
  *
@@ -163,8 +164,12 @@ export async function restoreBackup(raw) {
 
   await db.transaction('rw', [
     db.transactions, db.accounts, db.categories, db.templates,
-    db.recurring, db.debts, db.goals, db.badges, db.balances, db.meta,
+    db.recurring, db.debts, db.goals, db.badges, db.balances, db.meta, db.notifications,
   ], async () => {
+    /* The notifications list is about the ledger it was worked out from. A
+       restored ledger gets its own, worked out afresh - and arriving all at
+       once, it arrives read (db/notifications.js), apart from the last day. */
+    await db.notifications.clear()
     if (Array.isArray(data.transactions)) { await db.transactions.clear(); await db.transactions.bulkAdd(transactions) }
     if (Array.isArray(data.accounts))     { await db.accounts.clear();     await db.accounts.bulkAdd(accounts) }
     if (Array.isArray(data.categories))   { await db.categories.clear();   await db.categories.bulkAdd(categories) }
@@ -341,7 +346,7 @@ export async function downloadBackupJson() {
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
-  a.download = `spendr-backup-${new Date().toISOString().slice(0, 10)}.json`
+  a.download = `spendr-backup-${toDateInput()}.json`
   document.body.appendChild(a)
   a.click()
   document.body.removeChild(a)

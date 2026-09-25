@@ -73,6 +73,9 @@ import { txBase } from './fxContext'
  * @property {string} tone
  * @property {string} glyph
  * @property {(ctx: BadgeCtx) => boolean} test
+ * @property {boolean} [judgesMonth]  earned for a completed month, so stamped
+ *   the month AFTER the one it is about - which the monthly recap needs to
+ *   know to show it in the right month
  */
 
 /** Local YYYY-MM-DD. Never toISOString: in UTC+8 a local midnight converts to
@@ -111,7 +114,9 @@ function monthKey(iso) {
  * @returns {string[]}
  */
 function completedMonths(transactions, today) {
-  const current = monthKey(ymd(today))
+  // ymd is already local; running it back through a Date would read it as
+  // UTC midnight, which west of Greenwich is the day before.
+  const current = ymd(today).slice(0, 7)
   const seen = new Set()
   for (const t of transactions) {
     const k = monthKey(t.date)
@@ -131,7 +136,7 @@ function completedMonths(transactions, today) {
  */
 export function longestDayStreak(transactions) {
   const days = [...new Set(
-    (transactions ?? []).map(t => String(t.date ?? '').slice(0, 10)).filter(Boolean),
+    (transactions ?? []).map(t => isoToDateInput(t.date)).filter(Boolean),
   )].sort()
   if (!days.length) return 0
 
@@ -177,10 +182,15 @@ function monthStats(transactions, today) {
   for (const key of completedMonths(transactions, today)) {
     stats.set(key, { inflow: 0, expense: 0, byCategory: {} })
   }
+  /* Signed, as every other screen counts them: a refund is a negative
+     expense, and it takes its purchase back off the month. It was
+     Math.abs, which counted a returned ₱2,000 order as ₱4,000 of spending -
+     so a month the Budget page showed inside every limit could fail Under
+     Budget, and one the recap called green could miss Green Month. */
   for (const t of transactions) {
     const row = stats.get(monthKey(t.date))
     if (!row) continue
-    const amt = Math.abs(txBase(t))
+    const amt = txBase(t)
     if (t.type === 'inflow') row.inflow += amt
     else if (t.type === 'expense') {
       row.expense += amt
@@ -302,6 +312,7 @@ export const BADGES = [
     how: 'Finish a calendar month without passing any category limit.',
     tone: 'green',
     glyph: 'gauge',
+    judgesMonth: true,
     /* Two budgeted categories minimum, or this is earned by setting one limit
        on something never bought. And at least one expense in the month, so an
        empty month does not get counted as restraint. */
@@ -315,6 +326,7 @@ export const BADGES = [
     how: 'Finish a calendar month with inflow above expenses.',
     tone: 'teal',
     glyph: 'trend',
+    judgesMonth: true,
     /* Both sides non-zero, in inTheGreen: a month with income and no spending
        is a month with no data in it, not a month you did well in. */
     test: ({ months }) => [...months.values()].some(inTheGreen),
@@ -410,7 +422,7 @@ export const BADGES = [
        transactions in a fortnight does not earn it and one a month for a year
        does. */
     test: ({ transactions }) => {
-      const days = transactions.map(t => String(t.date ?? '').slice(0, 10)).filter(Boolean).sort()
+      const days = transactions.map(t => isoToDateInput(t.date)).filter(Boolean).sort()
       if (days.length < 2) return false
       const span = new Date(days[days.length - 1] + 'T00:00:00').getTime()
         - new Date(days[0] + 'T00:00:00').getTime()
@@ -424,6 +436,7 @@ export const BADGES = [
     how: 'Finish three months in a row with inflow above expenses.',
     tone: 'emerald',
     glyph: 'bars',
+    judgesMonth: true,
     test: ({ months }) => hasRun(months, 3, inTheGreen),
   },
   {
@@ -433,6 +446,7 @@ export const BADGES = [
     how: 'Finish three months in a row without passing any category limit.',
     tone: 'bronze',
     glyph: 'target',
+    judgesMonth: true,
     test: ({ months, limits }) => limits.length >= 2 && hasRun(months, 3, withinLimits(limits)),
   },
   {
@@ -450,7 +464,7 @@ export const BADGES = [
     test: ({ transactions }) => {
       const days = [...new Set(
         transactions.filter(t => t.type === 'expense')
-          .map(t => String(t.date ?? '').slice(0, 10)).filter(Boolean),
+          .map(t => isoToDateInput(t.date)).filter(Boolean),
       )].sort()
       for (let i = 1; i < days.length; i++) {
         const gap = Math.round(

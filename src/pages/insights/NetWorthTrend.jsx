@@ -2,9 +2,7 @@ import { useMemo, useState } from 'react'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useBaseCurrency } from '../../context/CurrencyContext'
-import useRates from '../../hooks/useRates'
-import { getCreditStatus } from '../../utils/creditCycle'
-import { sumInBase } from '../../lib/fx'
+import useNetWorthNow from '../../hooks/useNetWorthNow'
 import { txBase } from '../../lib/fxContext'
 import { buildNetWorthTrend } from '../../lib/trend'
 import SectionHeading from '../../components/ui/SectionHeading'
@@ -12,6 +10,7 @@ import { TREND_RANGES, TrendRangeChips } from '../accounts/Trend'
 import { TrendDelta } from '../accounts/DetailBits'
 import { NetWorthChart } from './Charts'
 import { TrendEmpty } from './Trend'
+import { NetWorthSkeleton } from './Skeleton'
 
 /**
  * Net worth over time - the one question the rest of Insights never answers.
@@ -42,7 +41,6 @@ const RANGES = TREND_RANGES.filter(r => ['1m', '3m', '6m', '1y', 'all'].includes
 
 export default function NetWorthTrend() {
   const base = useBaseCurrency()
-  const { table: rates } = useRates()
   const [key, setKey] = useState('6m')
 
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
@@ -50,26 +48,21 @@ export default function NetWorthTrend() {
 
   const range = RANGES.find(r => r.key === key) ?? RANGES[2]
 
-  /* Today's figure, computed the same way the wallet does - assets at their
-     balance, cards at what they currently owe - so the right-hand end of this
-     line and the big number on the home screen are the same number. */
-  const current = useMemo(() => {
-    if (!accounts || !txs) return null
-    const assets = sumInBase(accounts.filter(a => a.type !== 'credit'), base, rates).total
-    const owed = sumInBase(
-      accounts.filter(a => a.type === 'credit'), base, rates,
-      a => getCreditStatus(a, txs).currentBalance ?? 0,
-    ).total
-    return assets - owed
-  }, [accounts, txs, base, rates])
+  /* Today's figure, the same way the wallet reads it - so the right-hand end
+     of this line and the big number on the home screen are the same number. */
+  const current = useNetWorthNow(accounts, txs)
 
   const data = useMemo(() => {
     if (current == null || !txs) return []
-    return buildNetWorthTrend({ txs, current, range, valueOf: txBase })
+    return buildNetWorthTrend({ txs, current, range, priceOf: txBase })
   }, [txs, current, range])
 
+  // Still reading. It returned null here too, and then pushed the trend
+  // below it down the page by a whole chart when the history landed.
+  if (!accounts || !txs) return <NetWorthSkeleton chips={RANGES.length} />
+
   // Nothing to draw a history of, and no account to have one.
-  if (!accounts?.length || !data.length) return null
+  if (!accounts.length || !data.length) return null
 
   const rising = data.at(-1).value >= data[0].value
   const values = data.map(d => d.value)

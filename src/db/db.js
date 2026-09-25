@@ -21,6 +21,7 @@ import { stampTxCurrency } from '../lib/fxContext'
  *   goals:        import('dexie').Table<Goal, number>,
  *   badges:       import('dexie').Table<BadgeRow, string>,
  *   meta:         import('dexie').Table<MetaRow, string>,
+ *   notifications: import('dexie').Table<NotificationRow, string>,
  * }} SpendrDB
  */
 
@@ -176,6 +177,20 @@ db.version(11).stores({
       if (!row.syncId) row.syncId = crypto.randomUUID()
     })
   }
+})
+
+/* v12 - notifications.
+ *
+ * One row per event the notifications list has shown: a card falling due, a
+ * budget reaching 80%, a badge, the monthly recap. Keyed by the event's own
+ * id ('budget:<category>:2026-09:80'), so recording it is an idempotent put
+ * and the same event can never appear twice. `read` is 0 or 1, not a
+ * boolean, for the reason `synced` is: IndexedDB will not index a boolean.
+ *
+ * Local only. It is derived from data that already syncs, so each device
+ * works it out for itself and nothing about it needs a Supabase table. */
+db.version(12).stores({
+  notifications: 'id, at, read',
 })
 
 /** The tables that carry a syncId. Exported so sync and backup agree. */

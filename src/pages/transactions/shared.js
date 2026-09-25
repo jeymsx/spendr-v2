@@ -28,12 +28,14 @@ export function inDateRange(tx, range, customFrom, customTo) {
     return txDate >= start && txDate <= end
   }
   if (range === 'custom') {
+    /* The picked days are LOCAL days. new Date('2026-09-01') is UTC
+       midnight, which west of Greenwich is still the 31st. */
     if (customFrom) {
-      const from = new Date(customFrom); from.setHours(0, 0, 0, 0)
+      const from = new Date(`${customFrom}T00:00:00`)
       if (txDate < from) return false
     }
     if (customTo) {
-      const to = new Date(customTo); to.setHours(23, 59, 59, 999)
+      const to = new Date(`${customTo}T23:59:59.999`)
       if (txDate > to) return false
     }
     return true

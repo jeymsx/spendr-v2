@@ -8,8 +8,8 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
-import { isoToDateInput } from '../../utils/txDate'
-import { currencyOfTx } from '../../lib/fxContext'
+import { isoToDateInput, localMonthStartIso } from '../../utils/txDate'
+import { currencyOfTx, txBase } from '../../lib/fxContext'
 
 const RANGES = [
   { key: '1m',  label: 'This month' },
@@ -20,8 +20,14 @@ const RANGES = [
 ]
 
 /**
- * Window boundaries as YYYY-MM-DD prefixes, compared against the stored ISO
- * dates as strings — no timezone arithmetic, so a charge can't slip a day.
+ * The window as two instants - LOCAL midnight on the first day, and on the
+ * first day after it - compared against the stored ISO dates, start included
+ * and end not.
+ *
+ * It was a pair of 'YYYY-MM' prefixes, which is the UTC month: in Manila the
+ * first eight hours of every month counted towards the month before, so this
+ * page and every other screen disagreed about the same month, and the daily
+ * chart - keyed by local day - grew a phantom "1" after the 31st.
  *
  * The mobile Insights page has its own range helper. This one is deliberately
  * simpler (whole months only, no 7-day view) rather than a copy of it, so
@@ -29,24 +35,23 @@ const RANGES = [
  */
 function windowFor(range, monthOffset) {
   const now = new Date()
-  const pad = (n) => String(n).padStart(2, '0')
+  const y = now.getFullYear(), m = now.getMonth()
 
-  if (range === 'all') return { from: '0000', to: '9999', label: 'All time' }
+  if (range === 'all') return { from: null, to: null, label: 'All time' }
 
   if (range === '1m') {
-    const d = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1)
-    const from = `${d.getFullYear()}-${pad(d.getMonth() + 1)}`
+    const d = new Date(y, m + monthOffset, 1)
     return {
-      from, to: from + '￿',
+      from: localMonthStartIso(y, m + monthOffset),
+      to: localMonthStartIso(y, m + monthOffset + 1),
       label: d.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' }),
     }
   }
 
   const months = { '3m': 3, '6m': 6, '12m': 12 }[range] ?? 3
-  const start = new Date(now.getFullYear(), now.getMonth() - (months - 1), 1)
   return {
-    from: `${start.getFullYear()}-${pad(start.getMonth() + 1)}`,
-    to: `${now.getFullYear()}-${pad(now.getMonth() + 1)}￿`,
+    from: localMonthStartIso(y, m - (months - 1)),
+    to: localMonthStartIso(y, m + 1),
     label: `Last ${months} months`,
   }
 }
@@ -85,21 +90,22 @@ export default function WebInsights() {
     const cutoff = scheduledCutoff()
     return (txAll ?? []).filter(t => {
       const d = t.date ?? ''
-      return d <= cutoff && d >= win.from && d <= win.to
+      return d <= cutoff && (!win.from || (d >= win.from && d < win.to))
     })
   }, [txAll, win])
 
   const expenses = useMemo(() => inWindow.filter(t => t.type === 'expense'), [inWindow])
   const inflows  = useMemo(() => inWindow.filter(t => t.type === 'inflow'),  [inWindow])
-  const spent    = useMemo(() => expenses.reduce((s, t) => s + (t.amount ?? 0), 0), [expenses])
-  const earned   = useMemo(() => inflows.reduce((s, t) => s + (t.amount ?? 0), 0), [inflows])
+  // In the ledger's currency, as every other screen adds them: a $40 row is its peso price, not ₱40.
+  const spent    = useMemo(() => expenses.reduce((s, t) => s + txBase(t), 0), [expenses])
+  const earned   = useMemo(() => inflows.reduce((s, t) => s + txBase(t), 0), [inflows])
 
   const byCategory = useMemo(() => {
     const m = {}
     expenses.forEach(t => {
       const key = t.category ?? 'Uncategorised'
       if (!m[key]) m[key] = { name: key, value: 0, color: catMap[key]?.color ?? '#6366f1', icon: catMap[key]?.icon ?? '📦' }
-      m[key].value += t.amount ?? 0
+      m[key].value += txBase(t)
     })
     return Object.values(m).sort((a, b) => b.value - a.value)
   }, [expenses, catMap])
@@ -108,7 +114,7 @@ export default function WebInsights() {
     const m = {}
     expenses.forEach(t => {
       const key = t.account ?? '—'
-      m[key] = (m[key] ?? 0) + (t.amount ?? 0)
+      m[key] = (m[key] ?? 0) + txBase(t)
     })
     return Object.entries(m)
       .map(([name, value]) => ({ name, value, color: (accounts ?? []).find(a => a.name === name)?.color }))
@@ -123,8 +129,8 @@ export default function WebInsights() {
       const key = isoToDateInput(t.date).slice(0, 7)
       if (!key) return
       if (!m[key]) m[key] = { key, expense: 0, income: 0 }
-      if (t.type === 'expense') m[key].expense += t.amount ?? 0
-      if (t.type === 'inflow')  m[key].income  += t.amount ?? 0
+      if (t.type === 'expense') m[key].expense += txBase(t)
+      if (t.type === 'inflow')  m[key].income  += txBase(t)
     })
     return Object.values(m).sort((a, b) => a.key.localeCompare(b.key)).map(r => ({
       ...r,
@@ -137,11 +143,11 @@ export default function WebInsights() {
     if (range !== '1m') return []
     const days = {}
     inWindow.forEach(t => {
-      const d = (t.date ?? '').slice(0, 10)
+      const d = isoToDateInput(t.date)
       if (!d) return
       if (!days[d]) days[d] = { key: d, expense: 0, income: 0 }
-      if (t.type === 'expense') days[d].expense += t.amount ?? 0
-      if (t.type === 'inflow')  days[d].income  += t.amount ?? 0
+      if (t.type === 'expense') days[d].expense += txBase(t)
+      if (t.type === 'inflow')  days[d].income  += txBase(t)
     })
     return Object.values(days).sort((a, b) => a.key.localeCompare(b.key))
       .map(r => ({ ...r, label: String(Number(r.key.slice(8, 10))) }))
@@ -149,7 +155,7 @@ export default function WebInsights() {
 
   const series = range === '1m' ? daily : monthly
   const topExpenses = useMemo(() =>
-    [...expenses].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)).slice(0, 8), [expenses])
+    [...expenses].sort((a, b) => txBase(b) - txBase(a)).slice(0, 8), [expenses])
 
   // Budgets are monthly, so they only mean anything against a single month's
   // spend. On a 3m/6m/12m window the same figure would read as wildly over
@@ -159,7 +165,7 @@ export default function WebInsights() {
   const budgets = useMemo(() => {
     if (!budgetsApply) return []
     const bySpent = {}
-    expenses.forEach(t => { bySpent[t.category] = (bySpent[t.category] ?? 0) + (t.amount ?? 0) })
+    expenses.forEach(t => { bySpent[t.category] = (bySpent[t.category] ?? 0) + txBase(t) })
     return (categories ?? [])
       .filter(c => c.type === 'expense' && (c.budget ?? 0) > 0)
       .map(c => ({ ...c, spent: bySpent[c.name] ?? 0 }))

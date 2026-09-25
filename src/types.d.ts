@@ -258,3 +258,18 @@ interface MetaRow {
   value?: any
   [key: string]: any
 }
+
+/** One entry in the notifications list. See lib/notifications.js. */
+interface NotificationRow {
+  /** The event's own id, e.g. 'budget:<category>:2026-09:80'. */
+  id: string
+  kind: string
+  /** When the event happened, as an ISO instant. */
+  at: string
+  title: string
+  body: string
+  /** Where tapping it goes; null for an action handled in place. */
+  url: string | null
+  /** 0 or 1, never a boolean - IndexedDB will not index a boolean. */
+  read: number
+}

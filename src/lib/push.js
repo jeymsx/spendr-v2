@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase'
 import { reminderDigest } from './reminders'
+import { isIos, isStandalone } from '../utils/platform'
 
 /**
  * Push reminders, from the device's side: permission, the subscription, and
@@ -44,17 +45,6 @@ function readFlag() {
 /** @param {boolean} on */
 function writeFlag(on) {
   try { on ? localStorage.setItem(FLAG_KEY, 'on') : localStorage.removeItem(FLAG_KEY) } catch { /* private mode */ }
-}
-
-export function isIos() {
-  const ua = navigator.userAgent || ''
-  // iPadOS reports itself as a Mac, and gives itself away with touch.
-  return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
-}
-
-export function isStandalone() {
-  return window.matchMedia?.('(display-mode: standalone)').matches
-    || /** @type {any} */ (navigator).standalone === true
 }
 
 /**

@@ -166,7 +166,7 @@ export default function Settings() {
   /* Counted from the stored rows rather than by running the full evaluation
      here. useBadges reads seven tables and awards as a side effect of doing
      so; Settings needs one number for a sublabel and has no business paying
-     for that. The dashboard mounts BadgeChip on every launch, so the table is
+     for that. BadgeProvider evaluates on every launch, so the table is
      current by the time anyone reaches this row. */
   const badgeCount = useLiveQuery(() => db.badges.count(), [], null)
 
@@ -209,13 +209,16 @@ export default function Settings() {
     setGeneratingReport(true)
     try {
       const { downloadMonthlyReport } = await import('../utils/reportData.js')
-      const how = await downloadMonthlyReport(reportMonth.year, reportMonth.month, accentColor)
-      /* Three outcomes, because on a phone the file goes to the share sheet
-         rather than a downloads folder, and dismissing that sheet is a
-         decision rather than a failure. Saying "downloaded" for all three
-         is how a report that never arrived still looked like a success. */
+      const { how, again } = await downloadMonthlyReport(reportMonth.year, reportMonth.month, accentColor)
+      /* Several outcomes, because on an iPhone the file goes to the share
+         sheet rather than a downloads folder, and dismissing that sheet is a
+         decision rather than a failure. Saying "downloaded" for all of them
+         is how a report that never arrived still looked like a success.
+         'blocked' is the iPhone refusing a share sheet the render made late:
+         the file is ready, and the toast's button is the fresh tap it needs. */
       if (how === 'shared') showToast('Report ready to save')
       else if (how === 'downloaded') showToast('Report downloaded')
+      else if (how === 'blocked') showToast('Your report is ready', 'success', { actionLabel: 'Save', onAction: () => { again() } })
     } catch (e) {
       console.error(e)
       /* The reason, not just the fact. A report can fail for the month you

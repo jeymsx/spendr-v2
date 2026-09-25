@@ -31,6 +31,7 @@ import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import { currencyOfAccountName } from '../lib/fxContext'
+import { toDateInput } from '../utils/txDate'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -307,8 +308,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
       setCategory(null)
       setAccount(null)
       setFrequency('monthly')
-      const today = new Date().toISOString().slice(0, 10)
-      setNextDate(today)
+      setNextDate(toDateInput())
       setActive(true)
     }
     setErrors({})

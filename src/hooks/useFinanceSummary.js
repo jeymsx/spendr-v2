@@ -3,6 +3,7 @@ import { useLiveQuery } from './useLiveQuery'
 import db from '../db/db'
 import { getCreditStatus } from '../utils/creditCycle'
 import { scheduledCutoff } from '../utils/scheduled'
+import { txMonthKey } from '../utils/txDate'
 import { sumInBase } from '../lib/fx'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { useRates } from './useRates'
@@ -63,7 +64,7 @@ export function useFinanceSummary() {
     const pfx = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
     const cutoff = scheduledCutoff()
     return (txAll ?? []).filter(t =>
-      t.type === 'expense' && (t.date ?? '').startsWith(pfx) && (t.date ?? '') <= cutoff)
+      t.type === 'expense' && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 
   const creditStatus = useMemo(() => {

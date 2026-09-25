@@ -23,6 +23,7 @@ import { fmt, baseSymbol } from '../lib/money'
 import { fieldFrame } from '../components/ui/Field'
 import PeopleSplit, { EMPTY_SPLIT, resolveSplitValue } from '../components/PeopleSplit'
 import SubPage from '../components/SubPage'
+import { toDateInput } from '../utils/txDate'
 
 /**
  * Adding a bill, as a page rather than a sheet.
@@ -61,12 +62,6 @@ const DRAFT_DEFAULTS = {
   active: true,
 }
 
-/** Today, as a local calendar day rather than a UTC-shifted one. */
-function todayStr() {
-  const d = new Date()
-  const p = (n) => String(n).padStart(2, '0')
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
-}
 
 export default function RecurringForm() {
   const navigate = useNavigate()
@@ -89,7 +84,7 @@ export default function RecurringForm() {
   const [category, setCategory] = useState(null)
   const [account, setAccount] = useState(null)
   const [frequency, setFrequency] = useState(DRAFT_DEFAULTS.frequency)
-  const [nextDate, setNextDate] = useState(todayStr)
+  const [nextDate, setNextDate] = useState(() => toDateInput())
   const [active, setActive] = useState(DRAFT_DEFAULTS.active)
   const [split, setSplit] = useState(/** @type {any} */ (null))
   const [dividing, setDividing] = useState(false)
@@ -117,7 +112,7 @@ export default function RecurringForm() {
     setName(editRec.name ?? '')
     setAmountStr(editRec.amount != null ? numToMoneyStr(editRec.amount) : '')
     setFrequency(editRec.frequency ?? 'monthly')
-    setNextDate(editRec.nextDate ? editRec.nextDate.slice(0, 10) : todayStr())
+    setNextDate(editRec.nextDate ? editRec.nextDate.slice(0, 10) : toDateInput())
     setActive(editRec.active !== false)
     setSplit(editRec.split ?? null)
   }, [isEdit, editRec])

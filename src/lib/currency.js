@@ -282,6 +282,21 @@ export function roundMoney(n, code) {
 }
 
 /**
+ * The figure to the whole unit: "₱128,450", "−$340". For a headline, where
+ * the centavos are noise at 56px - never for a ledger row, where they are
+ * the point. Rounded half away from zero, the same way roundMoney rounds.
+ *
+ * @param {number} [v]
+ * @param {string} [code]
+ * @returns {string}
+ */
+export function formatWhole(v, code) {
+  const n = Number.isFinite(v) ? /** @type {number} */ (v) : 0
+  const whole = Math.round(Math.abs(n) + Number.EPSILON)
+  return (n < 0 && whole !== 0 ? MINUS : '') + symbolOf(code) + grouper(0).format(whole)
+}
+
+/**
  * The short one, for anywhere a column is narrower than an amount:
  * "₱1.2K", "$3.4M", and the full figure below a thousand.
  *

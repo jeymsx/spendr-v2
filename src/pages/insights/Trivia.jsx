@@ -4,6 +4,7 @@ import {
   IconTarget, IconCoins, IconTrendUp as IconTrendGlyph, IconBarChart, IconCalc,
 } from '../../components/icons'
 import { fmtCompact } from '../../lib/money'
+import { txBase } from '../../lib/fxContext'
 
 // ── Trivia ─────────────────────────────────────────────────────────────────────
 
@@ -23,7 +24,7 @@ export function generateTrivia({ expenses, inflows, totalSpent, totalEarned, cat
 
   if (topExpenses.length > 0) {
     const top = topExpenses[0]
-    push('receipt', `Your biggest single expense: ${fmtCompact(top.amount)} on "${top.description || top.category}".`)
+    push('receipt', `Your biggest single expense: ${fmtCompact(txBase(top))} on "${top.description || top.category}".`)
   }
 
   push('calc', `${numExpenses} expense transaction${numExpenses !== 1 ? 's' : ''} in ${monthName}, averaging ${fmtCompact(totalSpent / numExpenses)} each.`, hasExpenses)
@@ -47,7 +48,7 @@ export function generateTrivia({ expenses, inflows, totalSpent, totalEarned, cat
 
   if (hasExpenses) {
     const byDow = [0,0,0,0,0,0,0]
-    for (const tx of expenses) byDow[new Date(tx.date).getDay()] += tx.amount ?? 0
+    for (const tx of expenses) byDow[new Date(tx.date).getDay()] += txBase(tx)
     const maxDow = byDow.indexOf(Math.max(...byDow))
     const days = ['Sundays','Mondays','Tuesdays','Wednesdays','Thursdays','Fridays','Saturdays']
     push('calendar', `${days[maxDow]} are your heaviest spending day in ${monthName}.`, byDow[maxDow] > 0)

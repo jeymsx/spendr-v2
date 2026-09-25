@@ -2,6 +2,7 @@ import { useState, useMemo } from 'react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { scheduledCutoff } from '../utils/scheduled'
+import { isoToDateInput, localMonthStartIso } from '../utils/txDate'
 import Divider from '../components/ui/Divider'
 import SectionLabel from '../components/ui/SectionLabel'
 /* IconTrendUp is aliased: this file already has one, hand-drawn at a fixed
@@ -14,7 +15,9 @@ import { SpendingByCategory } from './insights/Panels'
 import { TopTransactions, AccountBreakdown } from './insights/Tables'
 import { SpendingTrend } from './insights/Trend'
 import NetWorthTrend from './insights/NetWorthTrend'
+import RecapCard, { useRecapMonth } from './insights/RecapCard'
 import { generateTrivia, SpendingTrivia } from './insights/Trivia'
+import { HeroSkeleton, TriviaSkeleton, CategorySkeleton, TrendSkeleton } from './insights/Skeleton'
 import { txBase } from '../lib/fxContext'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -23,10 +26,12 @@ const MONTHS       = ['January','February','March','April','May','June','July','
 const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const DAYS_SHORT   = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
 
+/* The UTC instants of LOCAL midnight on the 1st of this month and the next.
+   They were the strings "2026-09-01" and "2026-10-01", compared against UTC
+   timestamps - so everything logged before 8am on the 1st in Manila landed in
+   the previous month, and on that month's daily chart as day 1. */
 function monthBounds(year, month) {
-  const start = `${year}-${pad(month + 1)}-01`
-  const end   = month === 11 ? `${year + 1}-01-01` : `${year}-${pad(month + 2)}-01`
-  return { start, end }
+  return { start: localMonthStartIso(year, month), end: localMonthStartIso(year, month + 1) }
 }
 
 // ── Range window ───────────────────────────────────────────────────────────────
@@ -34,10 +39,10 @@ function monthBounds(year, month) {
 function getRangeWindow(range, monthOffset) {
   const now = new Date()
   if (range === '7d') {
-    const end   = new Date(now); end.setDate(end.getDate() + 1)
-    const start = new Date(now); start.setDate(start.getDate() - 6)
-    const f = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
-    return { start: f(start), end: f(end), year: null, month: null }
+    // Local midnights, as instants - see monthBounds.
+    const end   = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1)
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate() - 6)
+    return { start: start.toISOString(), end: end.toISOString(), year: null, month: null }
   }
   if (range === '1m') {
     const d = new Date(); d.setDate(1); d.setMonth(d.getMonth() + monthOffset)
@@ -47,11 +52,9 @@ function getRangeWindow(range, monthOffset) {
     return { start: '2000-01-01', end: '2100-01-01', year: null, month: null }
   }
   const numMonths = range === '3m' ? 3 : 6
-  const end   = new Date(now.getFullYear(), now.getMonth() + 1, 1)
-  const start = new Date(now.getFullYear(), now.getMonth() - (numMonths - 1), 1)
   return {
-    start: `${start.getFullYear()}-${pad(start.getMonth()+1)}-01`,
-    end:   `${end.getFullYear()}-${pad(end.getMonth()+1)}-01`,
+    start: localMonthStartIso(now.getFullYear(), now.getMonth() - (numMonths - 1)),
+    end:   localMonthStartIso(now.getFullYear(), now.getMonth() + 1),
     year: null, month: null,
   }
 }
@@ -210,8 +213,18 @@ export default function Insights() {
     db.transactions.where('date').between(rangeStart, rangeEnd, true, false).toArray(),
     [rangeStart, rangeEnd], null,
   )
-  const categories = useLiveQuery(() => db.categories.toArray(), [], [])
-  const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
+  const categories = useLiveQuery(() => db.categories.toArray(), [], undefined)
+  const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], undefined)
+  // The recap card follows the month arrows when they point at a finished month.
+  const recapMonth = useRecapMonth(range === '1m' && year != null ? `${year}-${pad(month + 1)}` : null)
+  /* The first read only. A change of range keeps the last window's rows on
+     screen until the next arrive, so rangeTxs is null exactly once. The other
+     reads wait too: segments drawn before categories are all the fallback
+     indigo, and recolour a frame later - and a recap card that arrived after
+     the skeletons had become the page pushed the whole column down under a
+     reader's thumb. */
+  const loading = rangeTxs === null || categories === undefined || accounts === undefined
+    || recapMonth === undefined
 
   const catMap  = useMemo(() => Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
   const acctMap = useMemo(() => Object.fromEntries((accounts ?? []).map(a => [a.name, a])), [accounts])
@@ -265,8 +278,9 @@ export default function Insights() {
       const d = new Date(now); d.setDate(d.getDate() - (6 - i))
       const dateStr = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`
       const label   = DAYS_SHORT[d.getDay()]
-      const exp = expenses.filter(t => (t.date ?? '').startsWith(dateStr)).reduce((s, t) => s + (t.amount ?? 0), 0)
-      const inc = inflows.filter(t  => (t.date ?? '').startsWith(dateStr)).reduce((s, t) => s + (t.amount ?? 0), 0)
+      // The local day, and each row in the ledger's currency, like every other series here.
+      const exp = expenses.filter(t => isoToDateInput(t.date) === dateStr).reduce((s, t) => s + txBase(t), 0)
+      const inc = inflows.filter(t  => isoToDateInput(t.date) === dateStr).reduce((s, t) => s + txBase(t), 0)
       return { label, exp, inc }
     })
     return {
@@ -295,7 +309,8 @@ export default function Insights() {
     if (range === 'all') {
       const txs = postedTxs
       if (!txs.length) return []
-      const dates = txs.map(t => t.date ?? '').filter(Boolean).sort()
+      // Local calendar days, so the grouping agrees with monthBounds.
+      const dates = txs.map(t => isoToDateInput(t.date)).filter(Boolean).sort()
       const firstDate = dates[0], lastDate = dates[dates.length - 1]
       const fy = parseInt(firstDate.slice(0, 4), 10), fm = parseInt(firstDate.slice(5, 7), 10) - 1
       const ly = parseInt(lastDate.slice(0, 4),  10), lm = parseInt(lastDate.slice(5, 7),  10) - 1
@@ -317,9 +332,9 @@ export default function Insights() {
         return result
       } else {
         // Group by year
-        const years = [...new Set(txs.map(t => t.date?.slice(0, 4)).filter(Boolean))].sort()
+        const years = [...new Set(txs.map(t => isoToDateInput(t.date).slice(0, 4)).filter(Boolean))].sort()
         return years.map(year => {
-          const yt = txs.filter(t => (t.date ?? '').startsWith(year))
+          const yt = txs.filter(t => isoToDateInput(t.date).startsWith(year))
           return {
             label:   year,
             income:  yt.filter(t => t.type === 'inflow').reduce((s, t)  => s + txBase(t), 0),
@@ -331,8 +346,9 @@ export default function Insights() {
     return []
   }, [range, postedTxs])
 
+  // By what each cost in the ledger's currency - ¥5,000 is not bigger than ₱3,000.
   const topExpenses = useMemo(() =>
-    [...expenses].sort((a, b) => (b.amount ?? 0) - (a.amount ?? 0)).slice(0, 5),
+    [...expenses].sort((a, b) => txBase(b) - txBase(a)).slice(0, 5),
     [expenses],
   )
 
@@ -404,11 +420,20 @@ export default function Insights() {
 
       <div className="flex flex-col py-5">
 
+        {/* The month's recap, once there is a finished month to look back on. */}
+        {!loading && recapMonth && <RecapCard month={recapMonth} />}
+
+        {/* Each section swaps for its skeleton in its own slot, so the
+            column's shape - and NetWorthTrend's place in it - holds across
+            the first read. See insights/Skeleton.jsx. */}
+
         {/* Hero */}
-        <HeroStats totalSpent={totalSpent} totalEarned={totalEarned} />
+        {loading
+          ? <HeroSkeleton />
+          : <HeroStats totalSpent={totalSpent} totalEarned={totalEarned} />}
 
         {/* Trivia */}
-        {triviaList.length > 0 && (
+        {loading ? <TriviaSkeleton /> : triviaList.length > 0 && (
           <>
             <div className="h-4" />
             <SpendingTrivia trivia={triviaList} triviaKey={animKey} />
@@ -418,11 +443,13 @@ export default function Insights() {
         <Divider inset="gutter" className="my-5" />
 
         {/* By category */}
-        <SpendingByCategory
-          key={animKey}
-          segments={categorySegments} total={totalSpent}
-          animKey={animKey} rangeLabel={rangeLabel}
-        />
+        {loading ? <CategorySkeleton /> : (
+          <SpendingByCategory
+            key={animKey}
+            segments={categorySegments} total={totalSpent}
+            animKey={animKey} rangeLabel={rangeLabel}
+          />
+        )}
 
         <Divider inset="gutter" className="my-5" />
 
@@ -435,16 +462,18 @@ export default function Insights() {
         <Divider inset="gutter" className="my-5" />
 
         {/* Trend chart */}
-        <SpendingTrend
-          range={range}
-          dailyExpense={dailyExpense}
-          dailyIncome={dailyIncome}
-          dailyNetflow={dailyNetflow}
-          sevenDayExpense={sevenDayExpense}
-          sevenDayIncome={sevenDayIncome}
-          sevenDayNetflow={sevenDayNetflow}
-          multiBarData={multiBarData}
-        />
+        {loading ? <TrendSkeleton /> : (
+          <SpendingTrend
+            range={range}
+            dailyExpense={dailyExpense}
+            dailyIncome={dailyIncome}
+            dailyNetflow={dailyNetflow}
+            sevenDayExpense={sevenDayExpense}
+            sevenDayIncome={sevenDayIncome}
+            sevenDayNetflow={sevenDayNetflow}
+            multiBarData={multiBarData}
+          />
+        )}
 
         {topExpenses.length > 0 && (
           <>

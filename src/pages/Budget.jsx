@@ -6,6 +6,7 @@ import { useToast } from '../context/ToastContext'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useTheme } from '../context/ThemeContext'
 import { scheduledCutoff } from '../utils/scheduled'
+import { txMonthKey } from '../utils/txDate'
 /* budgetTone only. The horizontal meter this page used to headline with is
    now an arc; Dashboard still renders BudgetMeter, so the component stays. */
 import { budgetTone } from '../components/BudgetMeter'
@@ -296,7 +297,7 @@ export default function Budget() {
     const pfx = monthPrefix(now)
     const cutoff = scheduledCutoff()
     return (transactions ?? []).filter(t =>
-      t.type === 'expense' && (t.date ?? '').startsWith(pfx) && (t.date ?? '') <= cutoff)
+      t.type === 'expense' && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [transactions, now])
 
   const spentByCat = useMemo(() => {

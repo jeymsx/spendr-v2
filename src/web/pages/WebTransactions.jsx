@@ -7,8 +7,8 @@ import TxDetailSheet from '../../components/TxDetailSheet'
 import { WebPageHeader, WebPanel, WebEmpty, money, rowTone } from '../components/WebPanel'
 import WebSelect from '../components/WebSelect'
 import CategoryGlyph from '../../components/CategoryGlyph'
-import { isoToDateInput } from '../../utils/txDate'
-import { currencyOfTx } from '../../lib/fxContext'
+import { isoToDateInput, txMonthKey } from '../../utils/txDate'
+import { currencyOfTx, txBase } from '../../lib/fxContext'
 
 const PAGE = 100
 
@@ -119,7 +119,7 @@ export default function WebTransactions() {
       if (type !== 'all' && t.type !== type) return false
       if (account && t.account !== account && t.fromAccount !== account && t.toAccount !== account) return false
       if (category && t.category !== category) return false
-      if (month && !(t.date ?? '').startsWith(month)) return false
+      if (month && txMonthKey(t.date) !== month) return false
       if (q) {
         const hay = `${t.description ?? ''} ${t.category ?? ''} ${t.account ?? ''} ${t.fromAccount ?? ''} ${t.toAccount ?? ''}`
         if (!hay.toLowerCase().includes(q)) return false
@@ -128,11 +128,12 @@ export default function WebTransactions() {
     })
   }, [posted, deferred, type, account, category, month])
 
+  // In the ledger's currency: a $40 row adds its peso price, not ₱40.
   const totals = useMemo(() => {
     let out = 0, inn = 0
     filtered.forEach(t => {
-      if (t.type === 'expense') out += t.amount ?? 0
-      if (t.type === 'inflow')  inn += t.amount ?? 0
+      if (t.type === 'expense') out += txBase(t)
+      if (t.type === 'inflow')  inn += txBase(t)
     })
     return { out, inn }
   }, [filtered])
