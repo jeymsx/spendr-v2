@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { creditCardBills, statementDueDate, daysToDue } from './creditBills'
+import { creditCardBills, statementDueDate, daysToDue, upcomingDueDate } from './creditBills'
+import { getCreditStatus } from '../utils/creditCycle'
 
 /** @param {Record<string, any>} [over] @returns {any} */
 const card = (over = {}) => ({
@@ -16,18 +17,54 @@ const pay = (m, d, amount) =>
 const at = (m, d) => new Date(2026, m - 1, d, 10)
 
 describe('statementDueDate', () => {
-  it('falls in the month after the cycle closes', () => {
-    // Cycle closing 14 Sep, due on the 5th -> 5 Oct.
-    const due = statementDueDate(new Date(2026, 8, 14), 5)
-    expect(due.getMonth()).toBe(9)
-    expect(due.getDate()).toBe(5)
+  /** @param {Date|null} d */
+  const ymd = (d) => (d ? [d.getFullYear(), d.getMonth() + 1, d.getDate()] : null)
+
+  it('is next month when the due day comes before the closing day', () => {
+    // Closes 14 Sep, due the 5th -> 5 Oct.
+    expect(ymd(statementDueDate(new Date(2026, 8, 14), 5))).toEqual([2026, 10, 5])
+  })
+
+  /* THE bug. It always went to the following month, so this read 25 Oct - a
+     month later than the card is really due, which is the direction that
+     gets a card paid late. */
+  it('is the SAME month when the due day comes after the closing day', () => {
+    expect(ymd(statementDueDate(new Date(2026, 8, 5), 25))).toEqual([2026, 9, 25])
+  })
+
+  /* This test used to assert Feb 28 for a cycle closing 14 Jan with a due day
+     of 31 - pinning the off-by-a-month as correct while claiming to test
+     clamping. That card is due 31 Jan. The case below clamps for real. */
+  it('is the same month for a late due day, not the one after', () => {
+    expect(ymd(statementDueDate(new Date(2026, 0, 14), 31))).toEqual([2026, 1, 31])
   })
 
   /** A card due on the 31st still has to land somewhere in February. */
   it('clamps a day the month does not have', () => {
-    const due = statementDueDate(new Date(2026, 0, 14), 31)
-    expect(due.getMonth()).toBe(1)
-    expect(due.getDate()).toBe(28)
+    // Closes 31 Jan, due the 30th: 30 is not after 31, so February - which
+    // has no 30th.
+    expect(ymd(statementDueDate(new Date(2026, 0, 31), 30))).toEqual([2026, 2, 28])
+    // And in a leap year, the 29th.
+    expect(ymd(statementDueDate(new Date(2028, 0, 31), 30))).toEqual([2028, 2, 29])
+  })
+
+  it('compares the clamped day, so it never lands on the closing day', () => {
+    // Closes 28 Feb, due the 30th. Clamped into February that is the 28th -
+    // the day it closed - so it has to be March.
+    expect(ymd(statementDueDate(new Date(2026, 1, 28), 30))).toEqual([2026, 3, 30])
+  })
+
+  it('is next month when due on the same day it closes', () => {
+    expect(ymd(statementDueDate(new Date(2026, 8, 20), 20))).toEqual([2026, 10, 20])
+  })
+
+  it('crosses the year', () => {
+    expect(ymd(statementDueDate(new Date(2026, 11, 20), 10))).toEqual([2027, 1, 10])
+  })
+
+  it('is the last moment of the day, so a same-day payment is on time', () => {
+    const due = statementDueDate(new Date(2026, 8, 5), 25)
+    expect([due?.getHours(), due?.getMinutes()]).toEqual([23, 59])
   })
 
   it('is null when the card has no due day set', () => {
@@ -43,6 +80,33 @@ describe('statementDueDate', () => {
   it('returns a past date once the due date has gone', () => {
     const due = statementDueDate(new Date(2025, 0, 14), 5)
     expect(due.getTime()).toBeLessThan(Date.now())
+  })
+})
+
+describe('upcomingDueDate', () => {
+  /** @param {Date|null} d */
+  const ymd = (d) => (d ? [d.getFullYear(), d.getMonth() + 1, d.getDate()] : null)
+  const same = card({ cutoffDate: 5, dueDate: 25 })
+
+  /* The case that was wrong: owing money on the due date itself. The next
+     time the 25th comes round is October, and that is what the card said. */
+  it('is the closed statement date while it still owes, even on the day', () => {
+    const s = getCreditStatus(same, [charge(8, 20, 3000)], at(9, 25))
+    expect(ymd(upcomingDueDate(s, 25))).toEqual([2026, 9, 25])
+  })
+
+  it('stays on that date once it has passed, because that payment is late', () => {
+    const s = getCreditStatus(same, [charge(8, 20, 3000)], at(9, 28))
+    expect(ymd(upcomingDueDate(s, 25))).toEqual([2026, 9, 25])
+  })
+
+  it('moves to the running statement once the closed one is paid', () => {
+    const s = getCreditStatus(same, [charge(8, 20, 3000), pay(9, 10, 3000)], at(9, 25))
+    expect(ymd(upcomingDueDate(s, 25))).toEqual([2026, 10, 25])
+  })
+
+  it('is nothing without a due day', () => {
+    expect(upcomingDueDate(getCreditStatus(same, [], at(9, 25)), null)).toBeNull()
   })
 })
 
@@ -122,10 +186,15 @@ describe('creditCardBills', () => {
   })
 
   it('orders by urgency, and puts a card with no due day last', () => {
+    /* All three close on the 15th. This fixture used to call the card due on
+       the 28th "Later" and the one due on the 2nd "Sooner" - true only under
+       the old rule, which pushed BOTH into October. The 28th card is really
+       due 28 Sep, before the 2nd card's 2 Oct; the test was pinning the bug.
+       These dates are the real order: 25 Sep, then 5 Oct. */
     const accounts = [
-      card({ name: 'Later',  dueDate: 28 }),
+      card({ name: 'Later',  dueDate: 5 }),
       card({ name: 'Undated', dueDate: null }),
-      card({ name: 'Sooner', dueDate: 2 }),
+      card({ name: 'Sooner', dueDate: 25 }),
     ]
     const txs = ['Later', 'Undated', 'Sooner'].map(n =>
       ({ type: 'expense', account: n, amount: 1000, date: new Date(2026, 7, 20, 12).toISOString() }))

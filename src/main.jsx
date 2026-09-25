@@ -7,7 +7,17 @@ import { ToastProvider } from './context/ToastContext'
 import { CurrencyProvider } from './context/CurrencyContext'
 import FxContextSync from './context/FxContextSync'
 import ErrorBoundary from './components/ErrorBoundary'
+import { recordCrash } from './lib/crashLog'
+import { version as APP_VERSION } from '../package.json'
 import Shell from './Shell'
+/* Inter, from this origin rather than Google Fonts: the same three weights
+   the stylesheet link used to ask for, so nothing renders differently, and
+   one fewer third party contacted on every launch. Each weight brings all of
+   its script subsets behind unicode-range, exactly as Google served them -
+   the browser only downloads the ones a page actually uses. */
+import '@fontsource/inter/400.css'
+import '@fontsource/inter/500.css'
+import '@fontsource/inter/600.css'
 import './index.css'
 
 /**
@@ -43,7 +53,19 @@ window.addEventListener('unhandledrejection', (e) => {
   const msg = String(e?.reason?.message ?? e?.reason ?? '')
   if (/Failed to fetch dynamically imported module|error loading dynamically imported module|Importing a module script failed/i.test(msg)) {
     recoverFromStaleChunk(e)
+    // A stale chunk after a deploy is expected and self-healing, not a crash.
+    return
   }
+  /* Everything else that nothing caught: a failed write, a rejected fetch, a
+     Dexie error inside an async handler. ErrorBoundary only sees errors thrown
+     DURING RENDER, and most of what goes wrong in this app happens in an
+     event handler or a promise, which React never hears about. */
+  recordCrash(e?.reason ?? msg, 'promise', { version: APP_VERSION })
+})
+
+// And a synchronous throw outside React - an event handler, a timer.
+window.addEventListener('error', (e) => {
+  recordCrash(e?.error ?? e?.message, 'error', { version: APP_VERSION })
 })
 
 createRoot(document.getElementById('root')).render(

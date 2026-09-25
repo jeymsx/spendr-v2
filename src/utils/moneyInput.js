@@ -1,13 +1,30 @@
+import { roundMoney } from '../lib/currency'
+
 // Parse a display string (may contain commas) → number
 /** @param {string|number} [str] */
 export const parseMoney = (str) =>
   parseFloat(String(str ?? '').replace(/,/g, '')) || 0
 
-// Format a number → display string with commas (no forced decimals)
-/** @param {number} num */
+/**
+ * A number, as the string a money field should be prefilled with.
+ *
+ * Rounded to two places first, which is the fix for a balance appearing as
+ * 140.0000000123. The stored figure carries binary float noise from every
+ * addition that ever built it; `fmt` rounds on the way to the screen, so the
+ * noise was invisible everywhere except here, where the raw number went
+ * straight into a text field.
+ *
+ * Two places, not the currency's own, because that is what moneyChangeHandler
+ * lets you TYPE - a prefill must never be more precise than the field would
+ * accept from your keyboard. Commas, no forced trailing zeros.
+ *
+ * @param {number} num
+ */
 export function numToMoneyStr(num) {
   if (!num) return '0'
-  const str = String(num)
+  const r = roundMoney(num)
+  if (!r) return '0'
+  const str = String(r)
   const [int, dec] = str.split('.')
   const formatted = int.replace(/\B(?=(\d{3})+(?!\d))/g, ',')
   return dec ? `${formatted}.${dec}` : formatted

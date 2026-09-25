@@ -49,6 +49,10 @@ import { PolicySheet } from './settings/Policy'
 import { downloadBackupJson } from '../lib/backup'
 import useRates from '../hooks/useRates'
 import { rateAge } from '../lib/fx'
+import { clearCrashes, crashReport, readCrashes } from '../lib/crashLog'
+import { shareOrCopy } from '../lib/share'
+import { isSupabaseConfigured } from '../lib/supabase'
+import { RemindersRow, RemindersSheet, useReminderSettings } from './settings/Reminders'
 
 /**
  * The net-worth reading, as a dropdown rather than a segmented pair.
@@ -113,10 +117,17 @@ export default function Settings() {
   const [restoreOpen, setRestoreOpen] = useState(false)
   const { user, signOut }      = useAuth()
   const { status: syncStatus, runSync } = useSyncManager()
+  const reminders              = useReminderSettings(user)
 
   const [resetOpen,    setResetOpen]    = useState(false)
   const [dedupeOpen,   setDedupeOpen]   = useState(false)
   const [policyOpen,   setPolicyOpen]   = useState(null)
+  /* Read once on mount rather than subscribed to: it is localStorage, not
+     Dexie, and a crash while you are sitting on Settings would take this page
+     with it anyway. */
+  const [crashes,      setCrashes]      = useState(() => readCrashes())
+  const [crashesOpen,  setCrashesOpen]  = useState(false)
+  const [crashNote,    setCrashNote]    = useState('')
   const [legalOpen,    setLegalOpen]    = useState(false)
   const [exporting,          setExporting]          = useState(false)
   const [backingUp,          setBackingUp]          = useState(false)
@@ -712,6 +723,11 @@ export default function Settings() {
               onTap={() => navigate('/login')}
             />
           )}
+          {/* Push reminders. Only where there is a server to send them. */}
+          {isSupabaseConfigured && (<>
+            <RowDivider />
+            <RemindersRow r={reminders} />
+          </>)}
           {user?.email === 'sablayjames@gmail.com' && (<>
             <RowDivider />
             <div className="flex items-center gap-4 px-4 py-3.5">
@@ -961,8 +977,76 @@ export default function Settings() {
             right={<IconChevronRight size={14} strokeWidth="2" />}
             onTap={() => setLegalOpen(true)}
           />
+
+          {/* Only when there is something in it. A row offering a report of
+              nothing is noise - and the moment it matters is when somebody
+              says "it broke", at which point it is here. */}
+          {crashes.length > 0 && (
+            <>
+              <RowDivider />
+              <SettingsRow
+                iconEl={<RowIcon color="amber"><IconWarning /></RowIcon>}
+                label="Error reports"
+                sublabel={`${crashes.length} recorded on this device`}
+                right={<IconChevronRight size={14} strokeWidth="2" />}
+                onTap={() => setCrashesOpen(true)}
+              />
+            </>
+          )}
         </SectionCard>
       </div>
+
+      {/* The log, and the two things you can do with it. Everything in it has
+          stayed on this phone; Send is the only way any of it leaves. */}
+      <Sheet
+        open={crashesOpen}
+        onClose={() => { setCrashesOpen(false); setCrashNote('') }}
+        maxHeight="78dvh"
+        title="Error reports"
+        footer={(
+          <div className="flex gap-3">
+            <Button
+              variant="secondary"
+              className="flex-1"
+              onClick={() => { clearCrashes(); setCrashes([]); setCrashesOpen(false) }}
+            >
+              Clear
+            </Button>
+            <Button
+              className="flex-[2]"
+              onClick={async () => {
+                const outcome = await shareOrCopy('Spendr error report', crashReport(crashes))
+                setCrashNote(outcome === 'copied' ? 'Copied - paste it into a message.'
+                  : outcome === 'failed' ? 'Could not copy it on this browser.' : '')
+              }}
+            >
+              Send
+            </Button>
+          </div>
+        )}
+      >
+        <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug mb-3">
+          Kept on this device only. Sending them is up to you, and helps whoever
+          fixes the app see what went wrong.
+        </p>
+        {crashNote && (
+          <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3">{crashNote}</p>
+        )}
+        <div className="flex flex-col gap-2">
+          {crashes.map((c, i) => (
+            <div key={i} className="px-3.5 py-3 rounded-2xl bg-slate-50 dark:bg-white/[0.04]">
+              <p className="text-13 font-semibold text-slate-800 dark:text-white break-words">
+                {c.message}
+              </p>
+              <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
+                {new Date(c.last).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                {' · '}{c.route || '/'}
+                {c.count > 1 ? ` · ${c.count} times` : ''}
+              </p>
+            </div>
+          ))}
+        </div>
+      </Sheet>
 
       {/* Legal picker sheet.
 
@@ -1044,6 +1128,7 @@ export default function Settings() {
         type={policyOpen}
         onClose={() => setPolicyOpen(null)}
       />
+      {isSupabaseConfigured && <RemindersSheet r={reminders} />}
 
     </div>
   )

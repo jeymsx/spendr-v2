@@ -1,3 +1,5 @@
+import { receivedAmount } from '../lib/transferLegs'
+
 /**
  * @param {number} year
  * @param {number} month
@@ -223,11 +225,17 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
 
   /** @param {Array<Partial<Transaction>>} arr */
   const sum                = (arr) => arr.reduce((s, tx) => s + (tx.amount ?? 0), 0)
+  /* A payment counts for what reached the card. For a transfer from an
+     account in another currency that is its received leg, not the figure
+     that left the source - see lib/transferLegs.js. An inflow on the card
+     (a refund) is in the card's own currency already. */
+  /** @param {Array<Partial<Transaction>>} arr */
+  const paid               = (arr) => arr.reduce((s, tx) => s + (tx.type === 'transfer' ? receivedAmount(tx) : (tx.amount ?? 0)), 0)
   const thisTotal          = sum(thisCharges)
   const nextTotal          = sum(nextCharges)
   const nextStatementTotal = sum(nextStatementCharges)
   const laterTotal         = sum(laterCharges)
-  const totalPayments      = sum(payments)
+  const totalPayments      = paid(payments)
 
   /* ── The carried balance ──────────────────────────────────────────────────
 
@@ -245,7 +253,7 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
      Nothing here needs a new field on a transaction or a new table. The rows
      were always right; only the window was wrong. */
   const billedTotal = sum(priorCharges) + thisTotal
-  const paidTotal   = sum(priorPayments) + totalPayments
+  const paidTotal   = paid(priorPayments) + totalPayments
 
   /* Three states, where there used to be two.
 

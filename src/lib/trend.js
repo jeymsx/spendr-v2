@@ -15,6 +15,7 @@
  */
 
 import { txBase } from './fxContext'
+import { receivedAmount } from './transferLegs'
 
 // ── 30-day trend ───────────────────────────────────────────────────────────────
 
@@ -33,17 +34,20 @@ import { txBase } from './fxContext'
  */
 export function forwardDelta(tx, name, isCredit) {
   const amt = tx.amount ?? 0
+  /* A transfer's destination moved by what ARRIVED, which differs from `amt`
+     when the two accounts hold different currencies. */
+  const got = receivedAmount(tx)
   if (isCredit) {
     if (tx.type === 'expense'  && tx.account === name)     return  amt  // charge
     if (tx.type === 'inflow'   && tx.account === name)     return -amt  // refund
-    if (tx.type === 'transfer' && tx.toAccount === name)   return -amt  // payment
+    if (tx.type === 'transfer' && tx.toAccount === name)   return -got  // payment
     if (tx.type === 'transfer' && tx.fromAccount === name) return  amt  // cash advance
     return 0
   }
   if (tx.type === 'expense'  && tx.account === name)     return -amt
   if (tx.type === 'inflow'   && tx.account === name)     return  amt
   if (tx.type === 'transfer' && tx.fromAccount === name) return -amt
-  if (tx.type === 'transfer' && tx.toAccount === name)   return  amt
+  if (tx.type === 'transfer' && tx.toAccount === name)   return  got
   return 0
 }
 
@@ -129,17 +133,89 @@ export function trendLabeller(span) {
  * @returns {Array<{t: number, value: number, day: string}>}
  */
 export function buildTrend(txs, name, isCredit, current, range, now = Date.now()) {
+  return sweepBack(collectMoves(txs, tx => forwardDelta(tx, name, isCredit)), current, range, now)
+}
+
+/**
+ * Every transaction as a timed movement, newest first, dropping the ones that
+ * move nothing.
+ *
+ * @param {Array<Record<string, any>>} txs
+ * @param {(tx: Record<string, any>) => number} deltaOf
+ * @returns {{moves: Array<{t: number, delta: number}>, oldest: number}}
+ */
+function collectMoves(txs, deltaOf) {
   const moves = []
   let oldest = Infinity
   for (const tx of txs) {
     const t = new Date(tx.date ?? 0).getTime()
     if (Number.isNaN(t)) continue
-    const delta = forwardDelta(tx, name, isCredit)
+    const delta = deltaOf(tx)
     if (!delta) continue
     moves.push({ t, delta })
     if (t < oldest) oldest = t
   }
   moves.sort((a, b) => b.t - a.t)   // newest first
+  return { moves, oldest }
+}
+
+/**
+ * What a transaction does to NET WORTH, in the ledger's currency.
+ *
+ * Simpler than a balance, and that is the useful fact: across every account
+ * you hold, an expense lowers net worth and an inflow raises it, whether it
+ * landed on a card or in a wallet - a card charge is money owed, which is net
+ * worth down by exactly the charge. A transfer between two of your own
+ * accounts changes nothing at all, card payments included: one account goes
+ * down and another goes up (or a debt goes down) by the same amount.
+ *
+ * So there is no need to reconstruct eleven account histories and add them
+ * up. One sweep over the ledger does it.
+ *
+ * `valueOf` prices the row in the ledger's currency - txBase, which uses the
+ * figure stored on the day where there is one, so a closed month does not
+ * redraw itself every time the peso moves.
+ *
+ * @param {Record<string, any>} tx
+ * @param {(tx: Record<string, any>) => number} valueOf
+ */
+export function netWorthDelta(tx, valueOf) {
+  if (tx.type === 'expense') return -valueOf(tx)
+  if (tx.type === 'inflow') return valueOf(tx)
+  return 0
+}
+
+/**
+ * Net worth over time, as `points` samples ending now.
+ *
+ * Anchored on `current` - the figure the dashboard's wallet shows - and built
+ * backwards by undoing each transaction, exactly as buildTrend does for one
+ * account. The right-hand end of the line therefore always agrees with the big
+ * number on the home screen.
+ *
+ * @param {object} input
+ * @param {Array<Record<string, any>>} [input.txs]
+ * @param {number} input.current  today's net worth, in the ledger's currency
+ * @param {{span: number|null, points: number}} input.range
+ * @param {(tx: Record<string, any>) => number} input.valueOf
+ * @param {number} [input.now]
+ * @returns {Array<{t: number, value: number, day: string}>}
+ */
+export function buildNetWorthTrend({ txs = [], current, range, valueOf, now = Date.now() }) {
+  return sweepBack(collectMoves(txs, tx => netWorthDelta(tx, valueOf)), current, range, now)
+}
+
+/**
+ * Walk backwards from `current`, undoing each movement, and sample the running
+ * figure. Shared by the balance and net-worth trends, which differ only in
+ * what they count as a movement.
+ *
+ * @param {{moves: Array<{t: number, delta: number}>, oldest: number}} collected
+ * @param {number} current
+ * @param {{span: number|null, points: number}} range
+ * @param {number} now
+ */
+function sweepBack({ moves, oldest }, current, range, now) {
 
   // ALL spans back to the oldest movement - plus exactly one sample step, so
   // the first point sits BEFORE that movement rather than on it.

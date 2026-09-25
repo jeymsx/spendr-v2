@@ -82,6 +82,11 @@ export function mapLegacyRows(data) {
     fromAccount: String(row.fromAccount ?? '').trim() || null,
     toAccount:   String(row.toAccount   ?? '').trim() || null,
     amount:      parseFloat(row.amount) || 0,
+    /* A transfer between two currencies carries what arrived. Absent from
+       exports made before the columns existed, and then nothing is set. */
+    ...(parseFloat(row.toAmount) > 0 && String(row.toCurrency ?? '').trim()
+      ? { toAmount: parseFloat(row.toAmount), toCurrency: String(row.toCurrency).trim().toUpperCase() }
+      : {}),
     synced:      UNSYNCED,
   }))
 }

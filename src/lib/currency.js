@@ -247,6 +247,41 @@ export function formatAmount(v, code) {
 }
 
 /**
+ * A figure rounded to the places its currency is quoted to.
+ *
+ * ── Why this exists ──
+ *
+ * Money arrives here as binary floats, and adding them is not exact: 0.1 plus
+ * 0.2 is 0.30000000000000004. A balance that has had a few hundred
+ * transactions applied to it drifts the same way, and every screen hid it
+ * because `fmt` rounds on the way out - except the account form, which put
+ * the stored number straight into a text field and showed somebody their
+ * balance as 140.0000000123.
+ *
+ * Rounding at the currency's own places is exact rather than lossy here,
+ * because every amount that moves a balance is already a whole number of
+ * cents: typed amounts are capped at two places by moneyChangeHandler, splits
+ * distribute in cents, and installments store the monthly figure you typed.
+ * The true result is always on the cent; rounding only removes the noise
+ * around it.
+ *
+ * Half away from zero, which is how money is conventionally rounded - plain
+ * Math.round sends -2.5 to -2. The EPSILON nudge is what makes 1.005 round to
+ * 1.01 instead of 1.00, since 1.005 is stored as 1.00499999999999989...
+ *
+ * @param {number} n
+ * @param {string} [code]  the currency, for its decimal places; two if omitted
+ * @returns {number}
+ */
+export function roundMoney(n, code) {
+  if (!Number.isFinite(n)) return 0
+  const f = 10 ** currencyOf(code).decimals
+  const r = Math.sign(n) * Math.round((Math.abs(n) + Number.EPSILON) * f) / f
+  // Never a negative zero: it prints as "0" but compares and sorts oddly.
+  return r === 0 ? 0 : r
+}
+
+/**
  * The short one, for anywhere a column is narrower than an amount:
  * "₱1.2K", "$3.4M", and the full figure below a thousand.
  *

@@ -49,6 +49,27 @@ describe('numToMoneyStr', () => {
     expect(numToMoneyStr(undefined)).toBe('0')
   })
 
+  /* What the account form showed for a balance built from a few hundred
+     transactions. fmt rounds on the way to the screen, so this was the only
+     field that ever showed the float noise underneath. */
+  it('never prefills a field with float noise', () => {
+    expect(numToMoneyStr(140.0000000123)).toBe('140')
+    expect(numToMoneyStr(0.1 + 0.2)).toBe('0.3')
+    expect(numToMoneyStr(1234.5600000001)).toBe('1,234.56')
+    expect(numToMoneyStr(99.99499999)).toBe('99.99')
+  })
+
+  it('rounds half away from zero, as money does', () => {
+    // 1.005 is stored as 1.00499999999999989 - the EPSILON nudge is what
+    // stops it rounding down to 1.00.
+    expect(numToMoneyStr(1.005)).toBe('1.01')
+    expect(numToMoneyStr(2.675)).toBe('2.68')
+  })
+
+  it('shows nothing of a figure that rounds away to nought', () => {
+    expect(numToMoneyStr(0.0000000123)).toBe('0')
+  })
+
   it('round-trips through parseMoney', () => {
     for (const n of [0, 1, 999, 1000, 1234.56, 1234567.89]) {
       expect(parseMoney(numToMoneyStr(n))).toBe(n)

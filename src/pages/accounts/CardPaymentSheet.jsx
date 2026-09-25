@@ -12,6 +12,7 @@ import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
 import { chipClass } from './shared'
 import { fmt } from '../../lib/money'
 import { currencyOfAccountName } from '../../lib/fxContext'
+import { estimateConversion } from '../../lib/transferLegs'
 
 /** The accent the app paints money leaving an account. */
 const PAY_COLOR = '#10b981'
@@ -106,8 +107,16 @@ export default function CardPaymentSheet({
   }, [open, due, payable])
 
   const value = parseMoney(amount)
-  const short = from ? value - (from.balance ?? 0) : 0
-  const ready = value > 0 && !!from && !saving
+  /* What LEAVES the source, in the source's currency. The same number when
+     both are in one currency; today's estimate when they are not, because
+     the card is asking for pesos and the dollar account pays in dollars.
+     Null when there is no rate to estimate with, and then the sheet cannot
+     say what this costs, so it does not let the payment through - the
+     transfer form, which asks for both figures, still can. */
+  const crosses = !!from && fromCur !== cardCur
+  const sourceValue = crosses ? estimateConversion(value, cardCur, fromCur) : value
+  const short = from && sourceValue != null ? sourceValue - (from.balance ?? 0) : 0
+  const ready = value > 0 && !!from && !saving && sourceValue != null
 
   /* Digits and one point, same rule as every other money input - but written
      out rather than using moneyChangeHandler, because the hero shows the raw
@@ -218,6 +227,22 @@ export default function CardPaymentSheet({
             </button>
           )}
 
+          {crosses && value > 0 && (
+            sourceValue != null ? (
+              <DetailRow
+                label={`From ${from?.name}`}
+                value={`≈ ${fmt(sourceValue, fromCur)}`}
+                sub="At today's rate"
+                padded={false}
+                isLast
+              />
+            ) : (
+              <p className="mb-2 text-11 text-amber-600 dark:text-amber-400">
+                There is no {fromCur} to {cardCur} rate yet. Use Transfer to enter what left {from?.name} and what reached the card.
+              </p>
+            )
+          )}
+
           {/* Said, not blocked: the app warns and lets you through everywhere
               else money moves, because the balance it knows about is not
               always the balance you have. */}
@@ -229,7 +254,7 @@ export default function CardPaymentSheet({
 
           <div className="mt-5">
             <SwipeConfirm
-              onConfirm={() => onPay({ amount: value, from })}
+              onConfirm={() => onPay({ amount: value, from, sourceAmount: crosses ? sourceValue : null })}
               disabled={!ready}
               busy={saving}
               label="Swipe to pay"

@@ -21,8 +21,10 @@
  *      maybe a date. That is a regex and a lookup, not a reasoning problem.
  *
  *   4. It would send your spending to a third party. The privacy policy in
- *      Settings currently says nothing leaves the device unless you enable
- *      cloud sync, and that sentence is worth more than this feature.
+ *      Settings promises no analytics and that your financial data goes
+ *      nowhere unless you turn on sync or the Sheets export - and a model
+ *      reading every line you type would break that. The promise is worth
+ *      more than this feature.
  *
  * And one reason a parser is actually BETTER: it can learn from your own
  * ledger. `learnLedger` reads what you have historically done with a merchant,

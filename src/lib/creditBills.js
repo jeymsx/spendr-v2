@@ -27,12 +27,42 @@ import { getCreditStatus } from '../utils/creditCycle'
  */
 
 /**
- * The date a closed statement has to be paid by.
+ * The date a closed statement has to be paid by: the first time the due day
+ * comes round AFTER the statement closes.
  *
- * The due day falls in the month AFTER the cycle closes, which is what every
- * PH issuer does and what the PDF report already assumed. Returning a real
- * past date when it has passed is the point - `nextDueDate()` always answers
- * with a future occurrence, which would make an overdue card look punctual.
+ * ── This used to be off by a month, in the dangerous direction ──
+ *
+ * It always put the due day in the month after the close, on the premise that
+ * "every PH issuer" works that way. They do not. An issuer gives a grace
+ * period of roughly twenty days from the statement, and whether that lands in
+ * the same month or the next depends on the statement day:
+ *
+ *   closes Sep 15, due the 5th   ->  Oct 5    next month (5 comes before 15)
+ *   closes Sep 5,  due the 25th  ->  Sep 25   SAME month (25 comes after 5)
+ *
+ * The old rule said Oct 25 for the second one. It told somebody they had a
+ * month longer than they did, which is precisely how a card gets paid late -
+ * a late fee and a month of interest, on the figure this app exists to get
+ * right. Two plans in a row named it the highest-value fix on the list.
+ *
+ * "First occurrence after the close" is right for any grace period under a
+ * month, which is every card; a period of a month or more would be the only
+ * thing that could make a same-month due day mean next month instead.
+ *
+ * ── Clamped, on the candidate and not the input ──
+ *
+ * A due day of 31 is the 30th in a 30-day month and the 28th in February. The
+ * comparison uses the CLAMPED day: a statement closing on 28 Feb with a due
+ * day of 30 must not read as "the 28th, same month" - that is the closing day
+ * itself - so it moves to 30 March.
+ *
+ * ── It may return a date in the past ──
+ *
+ * On purpose. `nextDueDate()` always answers with a future occurrence, which
+ * would make an overdue card look punctual - the reason this is separate.
+ *
+ * utils/reportData.js had its own copy of the old rule, with no clamping at
+ * all; it calls this now, so the PDF and the app cannot disagree again.
  *
  * @param {Date} cycleEnd
  * @param {number} [dueDay]
@@ -41,10 +71,39 @@ import { getCreditStatus } from '../utils/creditCycle'
 export function statementDueDate(cycleEnd, dueDay) {
   if (!dueDay || dueDay < 1 || dueDay > 31) return null
   const y = cycleEnd.getFullYear()
-  const m = cycleEnd.getMonth() + 1
-  // Clamped, so a card due on the 31st still lands in February.
-  const last = new Date(y, m + 1, 0).getDate()
-  return new Date(y, m, Math.min(dueDay, last), 23, 59, 59, 999)
+  const m = cycleEnd.getMonth()
+  const closedOn = cycleEnd.getDate()
+
+  /** The due day, clamped into month `mm` of year `yy`. */
+  const inMonth = (/** @type {number} */ yy, /** @type {number} */ mm) => {
+    const last = new Date(yy, mm + 1, 0).getDate()
+    return new Date(yy, mm, Math.min(dueDay, last), 23, 59, 59, 999)
+  }
+
+  const sameMonth = inMonth(y, m)
+  return sameMonth.getDate() > closedOn ? sameMonth : inMonth(y, m + 1)
+}
+
+/**
+ * The due date a card is working towards right now.
+ *
+ * The closed statement's while it still owes anything - even once that date
+ * has passed, because that is the payment that is late - and otherwise the
+ * statement now running. What it replaces, on the card faces and the payment
+ * sheet, was the next time the due DAY comes round on the calendar: on the
+ * due date itself that is already next month, so a card owing money today
+ * said "Due Oct 25" on the one day it mattered most.
+ *
+ * @param {{stmtOutstanding?: number, cycleEnd?: Date, nextCycleEnd?: Date}|null|undefined} status
+ *   what getCreditStatus returns
+ * @param {number|null|undefined} dueDay
+ * @returns {Date|null}
+ */
+export function upcomingDueDate(status, dueDay) {
+  if (!status || !dueDay) return null
+  const closed = (status.stmtOutstanding ?? 0) > 0
+  const end = closed ? status.cycleEnd : status.nextCycleEnd
+  return end ? statementDueDate(end, dueDay) : null
 }
 
 /**

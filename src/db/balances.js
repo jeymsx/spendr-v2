@@ -1,4 +1,6 @@
 import db from './db'
+import { roundMoney } from '../lib/currency'
+import { receivedAmount } from '../lib/transferLegs'
 
 /**
  * Moving an account's stored balance, and undoing it.
@@ -26,7 +28,11 @@ async function adjustBalance(accountName, delta) {
   if (!accountName || !delta) return
   const acct = await db.accounts.where('name').equals(accountName).first()
   if (!acct) return
-  const newBal = (acct.balance ?? 0) + delta
+  /* Rounded to the account's own currency, which stops float noise from
+     accumulating across every transaction a balance is ever built from. Exact
+     rather than lossy, because every delta is already a whole number of
+     cents - see roundMoney. A yen account rounds to the yen. */
+  const newBal = roundMoney((acct.balance ?? 0) + delta, acct.currency)
   const now = new Date().toISOString()
   await db.accounts.update(acct.id, { balance: newBal, updatedAt: now })
   await db.balances.put({ account: accountName, balance: newBal })
@@ -42,7 +48,7 @@ export async function reverseBalanceEffect(tx) {
   if (tx.type === 'inflow')   await adjustBalance(tx.account, -a)
   if (tx.type === 'transfer') {
     await adjustBalance(tx.fromAccount, +a)
-    await adjustBalance(tx.toAccount, -a)
+    await adjustBalance(tx.toAccount, -receivedAmount(tx))
   }
 }
 
@@ -70,6 +76,10 @@ export async function applyBalanceEffect(tx) {
        derived from the transactions and always right - so the stored number
        drifted quietly underneath. */
     await adjustBalance(tx.fromAccount, -a)
-    await adjustBalance(tx.toAccount, +a)
+    /* What ARRIVED, which is `a` unless the two accounts hold different
+       currencies - see lib/transferLegs.js. A row with no received leg is
+       read as `a`, which is what was applied to it when it was written, so
+       reversing an old transfer still takes off exactly what it put on. */
+    await adjustBalance(tx.toAccount, +receivedAmount(tx))
   }
 }

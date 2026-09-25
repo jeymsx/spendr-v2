@@ -40,6 +40,9 @@ export default function TxConfirmSheet({
   account,
   fromAccount,
   toAccount,
+  /* { amount, currency } - what arrives, for a transfer between two
+     currencies. Null otherwise, and then nothing is drawn for it. */
+  received       = null,
   onSaveTemplate = null,  // if provided, shows save-as-template toggle
   installment    = null,  // { months, monthly, total, firstLabel, lastLabel }
   /* A split purchase has no single category, so `category` alone would show
@@ -307,6 +310,14 @@ export default function TxConfirmSheet({
               two accounts. The four-row fee breakdown that used to follow is
               gone: "Total from GCash" and "Received by Maya" said in words
               exactly what the legs and the fee row now say between them. */}
+          {received && (
+            <DetailRow
+              label={`${toAccount?.name ?? 'Destination'} receives`}
+              value={fmt(received.amount, received.currency)}
+              padded={false}
+              isLast
+            />
+          )}
           {(fromAccount || toAccount) && (
             <TransferLegs from={fromAccount} to={toAccount} />
           )}

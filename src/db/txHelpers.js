@@ -4,6 +4,8 @@ import { advanceNextDate } from '../utils/recurring'
 import { resolveBillShares } from '../lib/splitModes'
 import { applyPayment } from '../lib/people'
 import { deleteDebtRemote } from '../lib/sync'
+import { currencyOfAccountName } from '../lib/fxContext'
+import { estimateConversion } from '../lib/transferLegs'
 
 /* Re-exported: they used to live here and ten files import them from
    here. See db/balances.js for why they moved. */
@@ -188,18 +190,37 @@ export async function updateTransaction(tx, patch) {
  * write, because a balance can change between a review sheet and a commit.
  * Callers catch OverdrawError and retry with allowOverdraw.
  *
+ * ── `amount` is what reaches the CARD ──
+ *
+ * In the card's currency, because that is what the sheet asks for: the
+ * statement, the minimum, the balance. When the money comes from an account
+ * in another currency, what LEAVES it is a different number, and that is the
+ * one the row's `amount` has to hold - see lib/transferLegs.js. The caller
+ * passes it as `sourceAmount` when it showed one; otherwise it is estimated
+ * at today's rate, and with no rate at all the payment is refused rather
+ * than written as the same number in two currencies.
+ *
  * @param {{cardName: string, fromName: string, amount: number,
- *          allowOverdraw?: boolean}} input
+ *          sourceAmount?: number|null, allowOverdraw?: boolean}} input
  * @returns {Promise<number|null>} the new row's id, for an undo
  */
-export async function postCardPayment({ cardName, fromName, amount, allowOverdraw = false }) {
+export async function postCardPayment({ cardName, fromName, amount, sourceAmount = null, allowOverdraw = false }) {
   if (!cardName || !fromName) throw new Error('A payment needs an account on both ends.')
   if (!(amount > 0)) throw new Error('A payment needs an amount.')
   if (cardName === fromName) throw new Error('A card cannot pay itself.')
 
+  const cardCur = currencyOfAccountName(cardName)
+  const fromCur = currencyOfAccountName(fromName)
+  const crosses = cardCur !== fromCur
+  const sent = crosses
+    ? (sourceAmount > 0 ? sourceAmount : estimateConversion(amount, cardCur, fromCur))
+    : amount
+  if (sent == null) throw new Error(`There is no exchange rate for ${fromCur} to ${cardCur} yet.`)
+  const leg = crosses ? { toAmount: amount, toCurrency: cardCur } : {}
+
   if (!allowOverdraw) {
-    const over = await checkOverdraw(fromName, amount)
-    if (over) throw new OverdrawError(over.name, over.balance ?? 0, amount)
+    const over = await checkOverdraw(fromName, sent)
+    if (over) throw new OverdrawError(over.name, over.balance ?? 0, sent)
   }
 
   const nowISO = new Date().toISOString()
@@ -209,7 +230,8 @@ export async function postCardPayment({ cardName, fromName, amount, allowOverdra
     addedId = await db.transactions.add({
       txId:        crypto.randomUUID(),
       type:        'transfer',
-      amount,
+      amount:      sent,
+      ...leg,
       fromAccount: fromName,
       toAccount:   cardName,
       date:        nowISO,
@@ -217,7 +239,7 @@ export async function postCardPayment({ cardName, fromName, amount, allowOverdra
       updatedAt:   nowISO,
     })
     await applyBalanceEffect(/** @type {Transaction} */ (
-      { type: 'transfer', amount, fromAccount: fromName, toAccount: cardName }))
+      { type: 'transfer', amount: sent, ...leg, fromAccount: fromName, toAccount: cardName }))
   })
 
   return addedId

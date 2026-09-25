@@ -7,7 +7,7 @@ import SchemeMark from '../../components/SchemeMark'
 import { TYPE_LABEL } from '../../lib/accountMeta'
 import { fmt, fmtCompact, fmtHidden } from '../../lib/money'
 import SectionLabel from '../../components/ui/SectionLabel'
-import { nextOccurrence } from './shared'
+import { upcomingDueDate } from '../../lib/creditBills'
 
 // ── Summary bar ────────────────────────────────────────────────────────────────
 
@@ -96,7 +96,10 @@ export const AccountCard = forwardRef(function AccountCard({
   const available      = isCredit ? limit - currentBalance : null
   const stmtPct        = isCredit && limit > 0
     ? Math.min((currentBalance / limit) * 100, 100) : 0
-  const nextDue        = isCredit ? nextOccurrence(acct.dueDate) : null
+  /* The statement's due date, not the next 25th on the calendar - see
+     upcomingDueDate for the day those two disagree. */
+  const dueOn          = isCredit ? upcomingDueDate(stmt, acct.dueDate) : null
+  const nextDue        = dueOn ? dueOn.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) : null
   const brand          = accountBrand(acct)
 
   // An account named after its own type - "Cash" - would otherwise label

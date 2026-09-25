@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   buildSpendTrend, SPEND_TREND_RANGES, TREND_RANGES, DAY_MS,
   spendSpan, spendBaseline, BASELINE_MIN_DAYS, BASELINE_MIN_ROWS,
+  buildNetWorthTrend, netWorthDelta,
 } from './trend'
 
 /** A fixed "now" so nothing here depends on when it runs. */
@@ -217,5 +218,69 @@ describe('spendBaseline', () => {
     const txs = priorHistory()
     const span = spendSpan({ txs, range: RANGE_ALL, now: NOW })
     expect(spendBaseline({ txs, span, now: NOW })).toBeNull()
+  })
+})
+
+describe('net worth over time', () => {
+  const DAY = 24 * 60 * 60 * 1000
+  const NOW = Date.UTC(2026, 8, 25, 12)
+  const range = { span: 10 * DAY, points: 11 }
+  /** Face value - the ledger is single-currency in these. */
+  const face = (/** @type {any} */ tx) => tx.amount ?? 0
+  /** @param {number} daysAgo @param {Record<string, any>} r */
+  const on = (daysAgo, r) => ({ date: new Date(NOW - daysAgo * DAY).toISOString(), ...r })
+
+  it('lowers on an expense, raises on an inflow, whichever account', () => {
+    expect(netWorthDelta({ type: 'expense', account: 'Card', amount: 800 }, face)).toBe(-800)
+    expect(netWorthDelta({ type: 'expense', account: 'Cash', amount: 800 }, face)).toBe(-800)
+    expect(netWorthDelta({ type: 'inflow', account: 'BPI', amount: 14000 }, face)).toBe(14000)
+  })
+
+  /* The whole reason one sweep is enough: moving your own money around is not
+     earning or spending it. A card payment included - the wallet goes down
+     and the debt goes down by the same amount. */
+  it('ignores a transfer between your own accounts, card payments included', () => {
+    expect(netWorthDelta({ type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount: 3200 }, face)).toBe(0)
+    expect(netWorthDelta({ type: 'transfer', fromAccount: 'BPI', toAccount: 'Maya', amount: 500 }, face)).toBe(0)
+  })
+
+  it('ends exactly on the figure the wallet shows', () => {
+    const txs = [on(3, { type: 'expense', amount: 200 }), on(6, { type: 'inflow', amount: 1000 })]
+    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    expect(line.at(-1)?.value).toBe(5000)
+  })
+
+  it('undoes history walking backwards', () => {
+    const txs = [
+      on(3, { type: 'expense', amount: 200 }),   // 5,000 now, 5,200 before this
+      on(6, { type: 'inflow', amount: 1000 }),   // and 4,200 before this
+    ]
+    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    const at = (/** @type {number} */ d) => line.find(p => Math.round((NOW - p.t) / DAY) === d)?.value
+    expect(at(0)).toBe(5000)
+    expect(at(4)).toBe(5200)
+    expect(at(8)).toBe(4200)
+  })
+
+  it('is flat across a period of nothing but transfers', () => {
+    const txs = [on(2, { type: 'transfer', fromAccount: 'A', toAccount: 'B', amount: 9000 })]
+    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    expect(new Set(line.map(p => p.value))).toEqual(new Set([5000]))
+  })
+
+  it('ignores a row dated in the future, as the balance trend does', () => {
+    // An installment plan books next month's charge today; it has not
+    // happened, so it must not already be in the line.
+    const txs = [on(-20, { type: 'expense', amount: 999 })]
+    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: face, now: NOW })
+    expect(line.at(-1)?.value).toBe(5999)
+  })
+
+  it('prices each row in the ledger currency through valueOf', () => {
+    // A dollar expense, priced on the day at P60.
+    const priced = (/** @type {any} */ tx) => (tx.currency === 'USD' ? tx.amount * 60 : tx.amount)
+    const txs = [on(3, { type: 'expense', amount: 10, currency: 'USD' })]
+    const line = buildNetWorthTrend({ txs, current: 5000, range, valueOf: priced, now: NOW })
+    expect(line[0].value).toBe(5600)
   })
 })

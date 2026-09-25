@@ -19,7 +19,11 @@ export default defineConfig({
     rollupOptions: {
       output: {
         manualChunks: {
-          'vendor-react':    ['react', 'react-dom', 'react-router-dom'],
+          /* react-router as well as -dom: from v7, react-router-dom is a thin
+             re-export and the router itself lives in react-router. Naming only
+             the -dom package would leave the real code to land in the entry
+             chunk instead of this one. */
+          'vendor-react':    ['react', 'react-dom', 'react-router', 'react-router-dom'],
           'vendor-supabase': ['@supabase/supabase-js'],
           'vendor-dexie':    ['dexie'],
           'vendor-dnd':      ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
@@ -90,7 +94,20 @@ export default defineConfig({
         // the PDF renderer above, same answer - the rule below catches them
         // on first use, and a flag nobody has seen yet is a grey disc with
         // the currency mark in it rather than a broken image.
-        globIgnores: ['**/react-pdf.browser-*.js', '**/flags/*.svg'],
+        // …and except the Inter subsets nobody here reads. Latin and Latin
+        // Extended are precached - the peso sign lives in the second, so every
+        // screen needs both. Cyrillic, Greek and Vietnamese are only fetched if
+        // a name uses them, and the rule below keeps them once they are. The
+        // .woff copies are a fallback for browsers that cannot read woff2,
+        // which is none that can install this app.
+        globIgnores: [
+          '**/react-pdf.browser-*.js', '**/flags/*.svg',
+          '**/inter-cyrillic*', '**/inter-greek*', '**/inter-vietnamese*', '**/*.woff',
+        ],
+        /* The push and notification-click handlers. A separate file pulled
+           into the generated worker, because generateSW writes the worker
+           itself and has nowhere to put event listeners of our own. */
+        importScripts: ['push-sw.js'],
         runtimeCaching: [
           {
             // PDF renderer chunk: fetched on the first monthly-report export,
@@ -127,18 +144,14 @@ export default defineConfig({
             },
           },
           {
-            // Google Fonts stylesheet
-            urlPattern: /^https:\/\/fonts\.googleapis\.com\//i,
-            handler: 'StaleWhileRevalidate',
-            options: { cacheName: 'google-fonts-stylesheets' },
-          },
-          {
-            // Google Fonts files — immutable, cache for 1 year
-            urlPattern: /^https:\/\/fonts\.gstatic\.com\//i,
+            /* The Inter subsets left out of the precache above. Served from
+               this origin now rather than Google Fonts - see main.jsx - and
+               content-hashed, so CacheFirst can never serve a stale one. */
+            urlPattern: /\/assets\/inter-[^/]+\.woff2?$/,
             handler: 'CacheFirst',
             options: {
-              cacheName: 'google-fonts-webfonts',
-              expiration: { maxEntries: 20, maxAgeSeconds: 60 * 60 * 24 * 365 },
+              cacheName: 'inter-subsets',
+              expiration: { maxEntries: 20 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

@@ -36,6 +36,7 @@
  */
 
 import { currencyOfTx } from './fxContext'
+import { receivedAmount, receivedCurrency } from './transferLegs'
 
 /** True when this row is money coming back on a purchase.
  *  @param {Record<string, any>} [tx] */
@@ -82,7 +83,13 @@ export function amountDisplay(tx, ctx = {}) {
   const { account } = ctx
   if (tx?.type === 'transfer') {
     if (account && tx.fromAccount === account) return { sign: '−', magnitude, tone: 'out', currency }
-    if (account && tx.toAccount === account)   return { sign: '+', magnitude, tone: 'in', currency }
+    /* The destination's page shows what ARRIVED, in its own currency: a
+       $100 transfer into a peso account reads +₱5,750.00 there, not +$100. */
+    if (account && tx.toAccount === account) {
+      return {
+        sign: '+', magnitude: Math.abs(receivedAmount(tx)), tone: 'in', currency: receivedCurrency(tx),
+      }
+    }
     return { sign: '', magnitude, tone: 'transfer', currency }
   }
   if (tx?.type === 'inflow') return { sign: '+', magnitude, tone: 'in', currency }

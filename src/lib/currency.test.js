@@ -1,7 +1,7 @@
 import { describe, it, expect, afterEach } from 'vitest'
 import {
   CURRENCIES, CURRENCY_CODES, DEFAULT_CURRENCY, SINGLE_MARKS,
-  compactAmount, currencyOf, formatAmount, maskedAmount, symbolOf,
+  compactAmount, currencyOf, formatAmount, maskedAmount, roundMoney, symbolOf,
 } from './currency'
 import { baseSymbol, fmt, fmtCompact, fmtHidden, getBaseCurrency, setBaseCurrency } from './money'
 
@@ -80,6 +80,39 @@ describe('compactAmount and maskedAmount', () => {
   it('keeps the mark while the figure is hidden', () => {
     expect(maskedAmount('USD')).toBe('$ \u2022\u2022\u2022\u2022')
     expect(maskedAmount('PHP', 6)).toBe('\u20b1 \u2022\u2022\u2022\u2022\u2022\u2022')
+  })
+})
+
+describe('roundMoney', () => {
+  it('rounds to the currency own places', () => {
+    expect(roundMoney(140.0000000123, 'PHP')).toBe(140)
+    expect(roundMoney(1200.4, 'JPY')).toBe(1200)
+    expect(roundMoney(1.2345, 'JOD')).toBe(1.235)
+  })
+
+  it('goes half away from zero on both sides', () => {
+    expect(roundMoney(2.5, 'JPY')).toBe(3)
+    // Plain Math.round would give -2 here.
+    expect(roundMoney(-2.5, 'JPY')).toBe(-3)
+  })
+
+  it('never returns a negative zero', () => {
+    expect(Object.is(roundMoney(-0.0000001), 0)).toBe(true)
+  })
+
+  it('treats a number that is not one as nought', () => {
+    expect(roundMoney(NaN)).toBe(0)
+    expect(roundMoney(Infinity)).toBe(0)
+  })
+
+  /* The guard behind the account form's correction row. The field shows the
+     balance rounded while the stored figure may still carry noise from before
+     rounding existed; compared raw, a save that changed nothing would write a
+     "Balance adjustment" for a ten-billionth of a peso. */
+  it('makes a balance equal to its own rounded display', () => {
+    const stored = 140.0000000123
+    const shown = 140
+    expect(roundMoney(shown - stored)).toBe(0)
   })
 })
 

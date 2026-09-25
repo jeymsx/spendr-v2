@@ -28,7 +28,26 @@ export function AuthProvider({ children }) {
     })
   }
 
-  function signOut() {
+  async function signOut() {
+    /* A device that signs out stops getting this person's reminders - its
+       push address is theirs until it is removed, and nothing else would
+       remove it. Best-effort and bounded: signing out must work offline, so
+       a slow or failed cleanup never holds it up. Imported on demand to keep
+       the push code off the start-up path. */
+    const uid = session?.user?.id
+    if (uid) {
+      try {
+        const push = await import('../lib/push')
+        if (await push.remindersOn()) {
+          await Promise.race([
+            push.disableReminders(uid),
+            new Promise(resolve => setTimeout(resolve, 4000)),
+          ])
+        }
+      } catch (e) {
+        console.warn('[auth] could not turn reminders off before signing out:', e?.message ?? e)
+      }
+    }
     return supabase.auth.signOut({ scope: 'local' })
   }
 

@@ -15,7 +15,7 @@ import { PH_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
 import { PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole } from '../../lib/accountMeta'
 import { fmt, getBaseCurrency } from '../../lib/money'
-import { currencyOf, symbolOf } from '../../lib/currency'
+import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
 import SubPage from '../../components/SubPage'
 import {
@@ -426,8 +426,13 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
      preview inside the body shows. */
   /* What saving will write, if anything. Zero for a new account and for a
      credit card, neither of which shows the field. */
+  /* On the cent, not on the float. The field now shows the balance rounded
+     (see numToMoneyStr), while the stored figure may still carry noise from
+     before rounding existed - 140.0000000123. Compared raw, opening an
+     account and pressing Save without touching anything would write a
+     "Balance adjustment" transaction for P0.0000000123 and sync it. */
   const adjustDiff = isEdit && type !== 'credit'
-    ? parseMoney(startingBal) - (account?.balance ?? 0)
+    ? roundMoney(parseMoney(startingBal) - (account?.balance ?? 0), currency)
     : 0
 
   /* The delete confirmation's content, defined once.

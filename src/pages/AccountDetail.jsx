@@ -11,7 +11,8 @@ import BrandWatermark from '../components/BrandWatermark'
 import SchemeMark from '../components/SchemeMark'
 import TxDetailSheet from '../components/TxDetailSheet'
 import LimitMeter from '../components/LimitMeter'
-import { statementDueDate, daysToDue } from '../lib/creditBills'
+import { statementDueDate, daysToDue, upcomingDueDate } from '../lib/creditBills'
+import { receivedAmount } from '../lib/transferLegs'
 import {
   estimateFinanceCharge, financeChargeRow, financeChargeLogged,
 } from '../lib/financeCharge'
@@ -26,7 +27,6 @@ import {
   TYPE_LABEL,
   fmt,
   fmtCycleDate,
-  nextOccurrence,
   nextOccurrenceDate,
 } from './Accounts'
 import Button from '../components/ui/Button'
@@ -176,7 +176,8 @@ export default function AccountDetail() {
       else if (tx.type === 'inflow' && tx.account === account.name)   bal -= tx.amount ?? 0
       else if (tx.type === 'transfer') {
         if (tx.fromAccount === account.name) bal += tx.amount ?? 0
-        if (tx.toAccount   === account.name) bal += acctIsCredit ? (tx.amount ?? 0) : -(tx.amount ?? 0)
+        // What arrived, which is the received leg across currencies.
+        if (tx.toAccount   === account.name) bal += acctIsCredit ? receivedAmount(tx) : -receivedAmount(tx)
       }
       return { ...tx, balAfter }
     })
@@ -239,22 +240,30 @@ export default function AccountDetail() {
    * warning sheet, which retries with the flag set - the same shape the bill
    * page uses for Post now.
    */
-  const handlePay = useCallback(async ({ amount, from, force = false }) => {
+  const handlePay = useCallback(async ({ amount, from, sourceAmount = null, force = false }) => {
     if (!account || !from || !(amount > 0)) return
     setPaying(true)
     try {
       await postCardPayment({
-        cardName: account.name, fromName: from.name, amount, allowOverdraw: force,
+        cardName: account.name, fromName: from.name, amount, sourceAmount, allowOverdraw: force,
       })
       setPayOpen(false)
       setPayOverdraw(null)
       showToast(`Paid ${fmt(amount, account.currency)} to ${account.name}`)
     } catch (e) {
       if (e?.name === 'OverdrawError') {
-        setPayOverdraw({ accountName: e.accountName, balance: e.balance, amount, from })
+        /* The warning is about the account the money LEAVES, in its own
+           currency - which is what the error carries. `amount` and
+           `sourceAmount` ride along unchanged for the retry. It read
+           `e.accountName`, which OverdrawError has never set, so the sheet
+           named no account at all. */
+        setPayOverdraw({
+          accountName: e.account, balance: e.balance, shortAmount: e.amount,
+          amount, sourceAmount, from,
+        })
       } else {
         console.error('[AccountDetail] card payment failed:', e)
-        showToast('Could not record the payment', 'error')
+        showToast(/no exchange rate/i.test(e?.message ?? '') ? e.message : 'Could not record the payment', 'error')
       }
     } finally {
       setPaying(false)
@@ -298,7 +307,11 @@ export default function AccountDetail() {
       nextStart, nextEnd, stmtDue, stmtDays,
       // minimumDue now comes from ...status, which caps it at what is still
       // owed rather than printing the account's stored figure regardless.
-      nextDue:    nextOccurrence(account.dueDate),
+      /* What the payment sheet says it is due by: the statement's date, not
+         the next time the due day comes round - on the due date itself that
+         is already next month. */
+      nextDue:    upcomingDueDate(status, account.dueDate)
+        ?.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' }) ?? null,
       dueSoon:    dueDate && ((dueDate - new Date()) / DAY_MS) <= 7,
       tone:       !status.hasStatement ? 'none' : status.stmtPaid ? 'paid' : 'owing',
     }
@@ -897,11 +910,11 @@ export default function AccountDetail() {
         onSaveAnyway={() => {
           const p = payOverdraw
           setPayOverdraw(null)
-          if (p) handlePay({ amount: p.amount, from: p.from, force: true })
+          if (p) handlePay({ amount: p.amount, from: p.from, sourceAmount: p.sourceAmount, force: true })
         }}
         accountName={payOverdraw?.accountName}
         balance={payOverdraw?.balance}
-        amount={payOverdraw?.amount}
+        amount={payOverdraw?.shortAmount}
       />
 
       <TxDetailSheet

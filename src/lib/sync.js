@@ -125,6 +125,11 @@ export function toSupabaseRow(r, userId) {
     currency:         r.currency ?? null,
     base_amount:      r.baseAmount ?? null,
     base_currency:    r.baseCurrency ?? null,
+    /* 019. What ARRIVED at the destination of a transfer between two
+       currencies, and in which one. Null on every other row - a same-currency
+       transfer lands as `amount` - see lib/transferLegs.js. */
+    to_amount:        r.toAmount ?? null,
+    to_currency:      r.toCurrency ?? null,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
   })
@@ -324,6 +329,11 @@ export function toDexieRecord(row) {
     currency:     row.currency ?? null,
     baseAmount:   row.base_amount ?? null,
     baseCurrency: row.base_currency ?? null,
+    /* Only when the remote HAS the column. A database that has not had 019
+       returns rows without the key, and writing null here would wipe a
+       received leg this device knows about - the pull spreads this over the
+       local row, so an absent key has to stay absent. */
+    ...('to_amount' in row ? { toAmount: row.to_amount ?? null, toCurrency: row.to_currency ?? null } : {}),
     synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
@@ -743,9 +753,13 @@ const OPTIONAL_COLS = {
      foreign-currency row still syncs and still nets correctly in its own
      account - it just loses the figure that was priced on the day, and the
      reader falls back to today's rate. */
+  /* 019's two as well. Until it runs, a cross-currency transfer still syncs
+     and still moves both balances correctly - the balances travel on the
+     accounts - but another device reading the row sees one number for both
+     ends, which is how every transfer read before 019. */
   transactions: [
     'refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id',
-    'currency', 'base_amount', 'base_currency',
+    'currency', 'base_amount', 'base_currency', 'to_amount', 'to_currency',
   ],
   user_preferences: ['theme', 'budget_rollover'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],

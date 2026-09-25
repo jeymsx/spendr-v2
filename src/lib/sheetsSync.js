@@ -1,5 +1,7 @@
 import db from '../db/db'
 import { getCreditStatus } from '../utils/creditCycle'
+import { currencyOfTx } from './fxContext'
+import { getBaseCurrency } from './money'
 
 /** @param {string} url */
 export async function syncToSheets(url) {
@@ -18,7 +20,14 @@ export async function syncToSheets(url) {
                    ? (tx.fromAccount || tx.account || '')
                    : (tx.account     || ''),
     toAccount:   tx.toAccount   || '',
-    currency:    tx.currency    || 'PHP',
+    /* The row's own currency, resolved through its account when the row
+       predates the column - not the literal 'PHP', which mislabelled every
+       older transaction in a dollar account as pesos in the export. */
+    currency:    currencyOfTx(tx),
+    /* What arrived at the other end of a transfer between two currencies,
+       and in which. Blank on every other row. */
+    toAmount:    tx.toAmount ?? '',
+    toCurrency:  tx.toCurrency ?? '',
   }))
 
   const accountRows = accounts.map(a => {
@@ -35,7 +44,7 @@ export async function syncToSheets(url) {
       balance,
       balanceType: isCredit ? 'Available Credit' : 'Balance',
       creditLimit: isCredit ? (a.creditLimit ?? 0) : null,
-      currency:    a.currency    || 'PHP',
+      currency:    a.currency    || getBaseCurrency(),
     }
   })
 

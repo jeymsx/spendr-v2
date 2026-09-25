@@ -65,6 +65,12 @@ interface Transaction {
    *  move when the rate does. Absent means "the same as amount". */
   baseAmount?: number | null
   baseCurrency?: string | null
+  /** 019. A transfer between two currencies: what ARRIVED, in the
+   *  destination's currency, and which currency that is. Absent on every
+   *  other row, and absent means the destination moved by `amount`. See
+   *  lib/transferLegs.js. */
+  toAmount?: number | null
+  toCurrency?: string | null
   [key: string]: any
 }
 

@@ -1,5 +1,8 @@
 import { Component } from 'react'
 import Button from './ui/Button'
+import { crashReport, readCrashes, recordCrash } from '../lib/crashLog'
+import { shareOrCopy } from '../lib/share'
+import { version as APP_VERSION } from '../../package.json'
 
 /**
  * Catches render-time errors so one failure doesn't blank the whole app.
@@ -11,9 +14,17 @@ import Button from './ui/Button'
  * `resetKeys` — when any value in the array changes, the boundary clears itself.
  * AppLayout passes the pathname so navigating away from a broken page recovers
  * instead of leaving the fallback stuck in place.
+ *
+ * ── It records what it catches ──
+ *
+ * It used to log to the console and nowhere else, which on a phone means
+ * nowhere at all: nobody reads the console of a home-screen app. Now each one
+ * goes to the on-device log (lib/crashLog.js), and the screen offers to share
+ * it - the only way a crash on somebody else's phone ever reaches the person
+ * who can fix it. It stays on the device unless they tap.
  */
 export default class ErrorBoundary extends Component {
-  state = { error: null }
+  state = { error: null, shared: '' }
 
   static getDerivedStateFromError(error) {
     return { error }
@@ -21,6 +32,12 @@ export default class ErrorBoundary extends Component {
 
   componentDidCatch(error, info) {
     console.error('[ErrorBoundary]', error, info?.componentStack)
+    recordCrash(error, 'render', { version: APP_VERSION, extra: info?.componentStack ?? '' })
+  }
+
+  share = async () => {
+    const outcome = await shareOrCopy('Spendr error report', crashReport(readCrashes()))
+    this.setState({ shared: outcome === 'copied' ? 'Copied' : outcome === 'shared' ? 'Sent' : '' })
   }
 
   componentDidUpdate(prevProps) {
@@ -28,7 +45,7 @@ export default class ErrorBoundary extends Component {
     const next = this.props.resetKeys
     if (!this.state.error || !prev || !next) return
     if (prev.length !== next.length || prev.some((k, i) => k !== next[i])) {
-      this.setState({ error: null })
+      this.setState({ error: null, shared: '' })
     }
   }
 
@@ -71,7 +88,7 @@ export default class ErrorBoundary extends Component {
             variant="outline"
             size="sm"
             className="px-4"
-            onClick={() => this.setState({ error: null })}
+            onClick={() => this.setState({ error: null, shared: '' })}
           >
             Try again
           </Button>
@@ -79,6 +96,18 @@ export default class ErrorBoundary extends Component {
             Reload app
           </Button>
         </div>
+
+        {/* Quiet, and under the two actions that actually fix things: this is
+            for somebody who is going to send it to whoever built the app, and
+            most people just want the Reload button. */}
+        <button
+          type="button"
+          onClick={this.share}
+          className="mt-4 text-xs font-medium text-slate-500 dark:text-slate-400 underline
+            underline-offset-2 active:opacity-60"
+        >
+          {this.state.shared || 'Send error details'}
+        </button>
       </div>
     )
   }

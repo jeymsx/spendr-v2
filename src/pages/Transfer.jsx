@@ -23,11 +23,20 @@ import Divider from '../components/ui/Divider'
 import { fmt, baseSymbol } from '../lib/money'
 import AmountInput from '../components/ui/AmountInput'
 import ConversionChip from '../components/ConversionChip'
+import useRates from '../hooks/useRates'
+import { useBaseCurrency } from '../context/CurrencyContext'
+import { estimateConversion } from '../lib/transferLegs'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
+}
+
+/** "57.5", "0.01724" - four significant figures, no trailing zeros. */
+function fmtRate(r) {
+  if (!Number.isFinite(r) || r <= 0) return ''
+  return Number(r.toPrecision(4)).toLocaleString('en-US', { maximumFractionDigits: 6 })
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
@@ -72,6 +81,11 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
   const [saving,         setSaving]         = useState(false)
   const [dupWarning,     setDupWarning]     = useState(false)
   const [overdraw,       setOverdraw]       = useState(null)
+  /* What arrived, when the two accounts hold different currencies. Follows
+     today's estimate until it is typed into, and from then on is whatever
+     was typed - see lib/transferLegs.js for why the typed figure wins. */
+  const [receivedStr,     setReceivedStr]     = useState('')
+  const [receivedTouched, setReceivedTouched] = useState(false)
 
   const accounts     = useLiveQuery(() => db.accounts.toArray(),     [], [])
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], [])
@@ -105,6 +119,25 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
   const amount = parseMoney(amountStr)
   const fee    = parseMoney(feeStr)
 
+  /* Two currencies, two figures. What LEAVES is `amount`, in the source's
+     currency, as it always was; what ARRIVES is asked for separately, because
+     it is the bank's rate and not ours. Offered as today's estimate so the
+     common case is still one number to type. */
+  const base     = useBaseCurrency()
+  const { table: rates } = useRates()
+  const fromCur  = String(fromAccount?.currency || base).toUpperCase()
+  const toCur    = String(toAccount?.currency || base).toUpperCase()
+  const crosses  = !!fromAccount && !!toAccount && fromCur !== toCur
+  const estimate = crosses ? estimateConversion(amount, fromCur, toCur, rates) : null
+  const receivedShown = !crosses ? ''
+    : receivedTouched ? receivedStr
+    : estimate != null && estimate > 0 ? numToMoneyStr(estimate) : ''
+  const received = crosses ? parseMoney(receivedShown) : amount
+  /** Fields for the row: the received leg, or explicitly none. */
+  const receivedFields = crosses
+    ? { toAmount: received, toCurrency: toCur }
+    : { toAmount: null, toCurrency: null }
+
   // Net outstanding on the destination credit card, matching what Accounts and
   // Dashboard show. This previously subtracted every payment ever made to the
   // card, so after a few months of use it always read zero and the overpay
@@ -114,10 +147,12 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     return getCreditStatus(toAccount, transactions ?? []).currentBalance
   }, [toAccount, transactions])
 
+  // What reaches the card, in the card's currency - which is `amount` unless
+  // the money is coming from an account in another one.
   const overpayWarning = toAccount?.type === 'credit'
     && creditOutstanding !== null
-    && amount > 0
-    && amount > creditOutstanding
+    && received > 0
+    && received > creditOutstanding
 
   useEffect(() => {
     const t = setTimeout(() => amountInputRef.current?.focus(), 80)
@@ -126,6 +161,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
 
   const handleAmountChange = moneyChangeHandler(setAmountStr)
   const handleFeeChange    = moneyChangeHandler(setFeeStr)
+  const handleReceivedChange = moneyChangeHandler(v => { setReceivedStr(v); setReceivedTouched(true) })
 
   /* Filling the form from the transfer being edited. Waits for the accounts,
      guarded by a ref - see AddExpense for why both. */
@@ -139,7 +175,18 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     if (editTx.date) setDate(isoToDateInput(editTx.date))
     setFromAccount(accounts.find(a => a.name === editTx.fromAccount) ?? null)
     setToAccount(accounts.find(a => a.name === editTx.toAccount) ?? null)
+    /* A stored received leg is a real figure and is shown as typed. A
+       cross-currency transfer saved before there was one is left to the
+       estimate, with the note below saying why the number is new. */
+    if (editTx.toAmount != null) {
+      setReceivedStr(numToMoneyStr(editTx.toAmount))
+      setReceivedTouched(true)
+    }
   }, [isEdit, editTx, accounts])
+
+  /** A transfer between currencies saved before the received leg existed. */
+  const legacyCross = isEdit && crosses && editTx?.toAmount == null
+    && fromAccount?.name === editTx?.fromAccount && toAccount?.name === editTx?.toAccount
 
   async function onConfirmPress() {
     let err = false
@@ -195,6 +242,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
       if (isEdit) {
         await updateTransaction(editTx, {
           amount,
+          ...receivedFields,
           fromAccount: fromAccount.name,
           toAccount: toAccount.name,
           date: dateInputToIso(date, editTx.date),
@@ -218,17 +266,19 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
             await db.categories.add({ name: 'Transfer Fee', icon: '💸', color: '#f59e0b', type: 'expense', budget: 0 })
           }
         }
+        const leg = crosses ? { toAmount: received, toCurrency: toCur } : {}
         await db.transactions.add({
           txId:        crypto.randomUUID(),
           type:        'transfer',
           amount,
+          ...leg,
           fromAccount: fromAccount.name,
           toAccount:   toAccount.name,
           date:        dateISO,
           synced:      UNSYNCED,
           updatedAt:   updISO,
         })
-        await applyBalanceEffect({ type: 'transfer', amount, fromAccount: fromAccount.name, toAccount: toAccount.name })
+        await applyBalanceEffect({ type: 'transfer', amount, ...leg, fromAccount: fromAccount.name, toAccount: toAccount.name })
 
         if (fee > 0) {
           await db.transactions.add({
@@ -359,6 +409,45 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           </p>
         )}
 
+        {/* What arrived, when the money changes currency on the way.
+
+            Only here, between the two accounts it depends on, and only when
+            they differ - which for most ledgers is never, so the form they
+            know is unchanged. */}
+        {crosses && (
+          <div>
+            <SectionLabel>{toAccount.name} receives</SectionLabel>
+            <div className={fieldFrame()}>
+              <span className="text-slate-400 dark:text-slate-500 text-sm shrink-0">{baseSymbol(toCur)}</span>
+              <input
+                type="text"
+                inputMode="decimal"
+                placeholder="0.00"
+                aria-label={`Amount ${toAccount.name} receives`}
+                value={receivedShown === '0' ? '' : receivedShown}
+                onChange={handleReceivedChange}
+                className="flex-1 bg-transparent text-sm text-slate-800 dark:text-white
+                  placeholder-slate-400 dark:placeholder-slate-500 outline-none min-w-0 tabular-nums"
+              />
+              <span className="text-11 text-slate-400 dark:text-slate-500 shrink-0 font-medium">{toCur}</span>
+            </div>
+            <p className="text-11 text-slate-500 dark:text-slate-400 mt-1.5 px-1 leading-snug">
+              {receivedTouched && amount > 0 && received > 0
+                ? `Your rate: 1 ${fromCur} = ${fmtRate(received / amount)} ${toCur}`
+                : estimate != null
+                  ? "At today's rate. Change it to what actually arrived."
+                  : 'No exchange rate yet. Enter what arrived.'}
+            </p>
+            {legacyCross && (
+              <p className="text-11 text-amber-600 dark:text-amber-400 mt-1.5 px-1 leading-snug">
+                This transfer was saved before Spendr asked what arrived, so {toAccount.name} was
+                credited {fmt(editTx.amount ?? 0, toCur)}. Check the figure above and save to put
+                its balance right.
+              </p>
+            )}
+          </div>
+        )}
+
         {/* credit card overpayment warning */}
         {overpayWarning && (
           <div className="px-4 py-3 rounded-2xl bg-amber-50 dark:bg-amber-500/[0.08] border border-amber-200 dark:border-amber-500/20 -mt-1">
@@ -366,8 +455,8 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
               <IconWarning size={13} className="inline-block mr-1 -mt-px" /> Payment exceeds outstanding balance
             </p>
             <p className="text-xs text-amber-600 dark:text-amber-500 mt-0.5">
-              {fmt(creditOutstanding)} is currently owed on {toAccount.name}.
-              {' '}Paying {fmt(amount)} will overpay by {fmt(amount - creditOutstanding)}. The excess won't increase available credit beyond the card limit.
+              {fmt(creditOutstanding, toCur)} is currently owed on {toAccount.name}.
+              {' '}Paying {fmt(received, toCur)} will overpay by {fmt(received - creditOutstanding, toCur)}. The excess won't increase available credit beyond the card limit.
             </p>
           </div>
         )}
@@ -424,7 +513,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         <Button
           size="lg"
           block
-          onClick={onConfirmPress} disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id}
+          onClick={onConfirmPress} disabled={saving || amount <= 0 || !fromAccount || !toAccount || fromAccount?.id === toAccount?.id || (crosses && !(received > 0))}
         >
           {isEdit ? (saving ? 'Saving…' : 'Save changes') : 'Review transfer'}
         </Button>
@@ -436,7 +525,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         onClose={() => setShowFromSheet(false)}
         accounts={accounts ?? []}
         selected={fromAccount}
-        onSelect={acct => { setFromAccount(acct); setFromError(false) }}
+        onSelect={acct => { setFromAccount(acct); setFromError(false); setReceivedTouched(false) }}
         exclude={toAccount ? [toAccount.id] : []}
       />
       <AccountPickerSheet
@@ -444,7 +533,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         onClose={() => setShowToSheet(false)}
         accounts={accounts ?? []}
         selected={toAccount}
-        onSelect={acct => { setToAccount(acct); setToError(false) }}
+        onSelect={acct => { setToAccount(acct); setToError(false); setReceivedTouched(false) }}
         exclude={fromAccount ? [fromAccount.id] : []}
       />
       <TxConfirmSheet
@@ -457,6 +546,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         fee={fee}
         fromAccount={fromAccount}
         toAccount={toAccount}
+        received={crosses ? { amount: received, currency: toCur } : null}
         onSaveTemplate={() => {}}
       />
       <TemplatePickerSheet

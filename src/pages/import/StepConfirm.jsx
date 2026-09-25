@@ -6,6 +6,7 @@ import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { IconArrowLeft, IconWarning } from './shared'
 import { baseSymbol } from '../../lib/money'
+import { receivedAmount } from '../../lib/transferLegs'
 
 // ── Step 4: Confirm import ─────────────────────────────────────────────────────
 
@@ -118,7 +119,9 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
         if (balMap.has(tx.fromAccount)) balMap.set(tx.fromAccount, balMap.get(tx.fromAccount) - amt)
         if (balMap.has(tx.toAccount)) {
           const toIsCredit = acctTypeMap.get(tx.toAccount) === 'credit'
-          balMap.set(tx.toAccount, balMap.get(tx.toAccount) + (toIsCredit ? -amt : amt))
+          // What arrived - the received leg when the ends differ in currency.
+          const got = receivedAmount(tx)
+          balMap.set(tx.toAccount, balMap.get(tx.toAccount) + (toIsCredit ? -got : got))
         }
       }
     }

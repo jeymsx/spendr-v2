@@ -14,7 +14,7 @@ import { QuickAddSheet } from '../../pages/accounts/QuickAddSheet'
 import { WebPageHeader, WebPanel, WebStat, WebEmpty, WebBar, money, moneyCompact } from '../components/WebPanel'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import { sumInBase } from '../../lib/fx'
-import { currencyOfTx } from '../../lib/fxContext'
+import { legFor } from '../../lib/transferLegs'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import useRates from '../../hooks/useRates'
 
@@ -63,6 +63,8 @@ function LedgerRow({ tx, accountName, catMap, onSelect }) {
   const label = tx.description || (tx.type === 'transfer'
     ? (tx.fromAccount === accountName ? `→ ${tx.toAccount}` : `← ${tx.fromAccount}`)
     : (tx.category ?? '—'))
+  // The side this page is looking at: a transfer in shows what arrived.
+  const leg = legFor(tx, accountName)
 
   return (
     <button
@@ -79,7 +81,7 @@ function LedgerRow({ tx, accountName, catMap, onSelect }) {
         </span>
       </span>
       <span className={`text-13 font-bold tabular-nums shrink-0 ${tone}`}>
-        {sign}{money(tx.amount, currencyOfTx(tx))}
+        {sign}{money(leg.amount, leg.currency)}
       </span>
     </button>
   )

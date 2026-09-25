@@ -24,6 +24,7 @@ import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
 import { fmt, baseSymbol } from '../lib/money'
 import { currencyOfTx } from '../lib/fxContext'
+import { impliedRate, rederiveReceived } from '../lib/transferLegs'
 
 const TYPE_CFG = {
   expense:  { label: 'Expense',  color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',      sign: '−' },
@@ -227,6 +228,13 @@ export default function TxDetailSheet({
       } else {
         patch.fromAccount = editFrom?.name ?? tx.fromAccount
         patch.toAccount   = editTo?.name   ?? tx.toAccount
+        /* The received leg follows the edit: scaled at the rate the transfer
+           actually got when only the amount moved, re-estimated when an end
+           changed, cleared when both ends now share a currency. See
+           lib/transferLegs.js. */
+        const leg = rederiveReceived(tx, { ...tx, ...patch })
+        patch.toAmount   = leg.toAmount
+        patch.toCurrency = leg.toCurrency
       }
 
       await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
@@ -593,6 +601,20 @@ export default function TxDetailSheet({
                   padded={false}
                   isLast
                 />
+                {/* What arrived, when it was a different currency from what
+                    left - the hero above is the sent figure. */}
+                {rec.type === 'transfer' && rec.toAmount != null && (() => {
+                  const r = impliedRate(rec)
+                  return (
+                    <DetailRow
+                      label={`${rec.toAccount ?? 'Destination'} received`}
+                      value={fmt(rec.toAmount, rec.toCurrency)}
+                      sub={r ? `1 ${r.from} = ${Number(r.rate.toPrecision(4))} ${r.to}` : null}
+                      padded={false}
+                      isLast
+                    />
+                  )
+                })()}
                 {(fromAcct || toAcct) && (
                   <TransferLegs from={fromAcct} to={toAcct} />
                 )}

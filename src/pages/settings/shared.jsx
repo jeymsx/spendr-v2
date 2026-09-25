@@ -83,12 +83,15 @@ export function fmtRelTime(isoStr) {
  * were already in the data and had nowhere to go: which purchase a refund
  * came from, which legs are one purchase, which charges are one plan. Empty
  * on the ordinary rows, which is most of them.
+ *
+ * toAmount and toCurrency follow them: what arrived at the other end of a
+ * transfer between two currencies. Blank everywhere else.
  */
 export function buildAndDownloadCSV(transactions) {
   const headers = [
     'txId', 'type', 'date', 'description', 'category',
     'payment', 'account', 'fromAccount', 'toAccount', 'amount',
-    'refundOf', 'splitId', 'installmentId',
+    'refundOf', 'splitId', 'installmentId', 'toAmount', 'toCurrency',
   ]
   const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`
   const lines = [
@@ -98,6 +101,7 @@ export function buildAndDownloadCSV(transactions) {
       esc(t.category), esc(t.payment), esc(t.account),
       esc(t.fromAccount), esc(t.toAccount), Number(t.amount ?? 0),
       esc(t.refundOf), esc(t.splitId), esc(t.installmentId),
+      t.toAmount ?? '', esc(t.toCurrency),
     ].join(',')),
   ]
   const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' })

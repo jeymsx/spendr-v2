@@ -14,6 +14,8 @@ import DetailRow from './ui/DetailRow'
 import Sheet from './ui/Sheet'
 import { fieldFrame } from './ui/Field'
 import { currencyOfAccountName } from '../lib/fxContext'
+import { receivedLeg } from '../lib/transferLegs'
+import { fmt } from '../lib/money'
 
 const TYPE_CONFIG = {
   expense:  { label: 'Expense',  sign: '−', color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' },
@@ -52,9 +54,17 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
   const account     = (accounts ?? []).find(a => a.name === template.account)
   const fromAccount = (accounts ?? []).find(a => a.name === template.fromAccount)
   const toAccount   = (accounts ?? []).find(a => a.name === template.toAccount)
+  /* A template cannot ask what arrived, so a transfer between two currencies
+     is written at today's rate - and not at all when there is no rate, since
+     the only other figure available is the same number in the wrong
+     currency. See lib/transferLegs.js. */
+  const leg = template.type === 'transfer'
+    ? receivedLeg({ fromAccount: template.fromAccount, toAccount: template.toAccount, amount })
+    : null
+  const blocked = !!leg && !leg.ok
 
   async function handleSave() {
-    if (amount <= 0) return
+    if (amount <= 0 || blocked) return
     setSaving(true)
     try {
       const now    = new Date()
@@ -63,12 +73,15 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
 
       if (template.type === 'transfer') {
         await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
+          const received = leg?.toAmount != null
+            ? { toAmount: leg.toAmount, toCurrency: leg.toCurrency }
+            : {}
           await db.transactions.add({
-            txId: crypto.randomUUID(), type: 'transfer', amount,
+            txId: crypto.randomUUID(), type: 'transfer', amount, ...received,
             fromAccount: template.fromAccount, toAccount: template.toAccount,
             date: dateISO, synced: UNSYNCED, updatedAt: updISO,
           })
-          await applyBalanceEffect({ type: 'transfer', amount, fromAccount: template.fromAccount, toAccount: template.toAccount })
+          await applyBalanceEffect({ type: 'transfer', amount, ...received, fromAccount: template.fromAccount, toAccount: template.toAccount })
         })
       } else {
         await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
@@ -127,7 +140,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
       <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>
         Cancel
       </Button>
-      <Button className="flex-[2]" onClick={handleSave} loading={saving} disabled={amount <= 0}>
+      <Button className="flex-[2]" onClick={handleSave} loading={saving} disabled={amount <= 0 || blocked}>
         {saving ? 'Saving…' : 'Save transaction'}
       </Button>
     </div>
@@ -170,7 +183,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
             label="Amount"
             sign={cfg.sign}
             color={cfg.color}
-            currency={currencyOfAccountName(template?.account)}
+            currency={currencyOfAccountName(template?.account ?? template?.fromAccount)}
           />
         </AmountHero>
 
@@ -205,6 +218,21 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
               isLast
             />
           ))}
+
+          {leg?.toCurrency && leg.toAmount != null && (
+            <DetailRow
+              label={`${template.toAccount} receives`}
+              value={`≈ ${fmt(leg.toAmount, leg.toCurrency)}`}
+              sub="At today's rate"
+              padded={false}
+              isLast
+            />
+          )}
+          {blocked && (
+            <p className="py-2 text-12 text-amber-600 dark:text-amber-400">
+              There is no exchange rate between these two accounts yet. Use Transfer to enter what left and what arrived.
+            </p>
+          )}
 
           {(fromAccount || toAccount) && (
             <TransferLegs from={fromAccount} to={toAccount} />

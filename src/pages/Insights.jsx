@@ -13,6 +13,7 @@ import { fmtCompact } from '../lib/money'
 import { SpendingByCategory } from './insights/Panels'
 import { TopTransactions, AccountBreakdown } from './insights/Tables'
 import { SpendingTrend } from './insights/Trend'
+import NetWorthTrend from './insights/NetWorthTrend'
 import { generateTrivia, SpendingTrivia } from './insights/Trivia'
 import { txBase } from '../lib/fxContext'
 
@@ -422,6 +423,14 @@ export default function Insights() {
           segments={categorySegments} total={totalSpent}
           animKey={animKey} rangeLabel={rangeLabel}
         />
+
+        <Divider inset="gutter" className="my-5" />
+
+        {/* Net worth over time. First among the charts because it is the one
+            question the rest of this page never answers - every other figure
+            here is about money moving, and none says whether you are better
+            off than you were. It keeps its own range; see the component. */}
+        <NetWorthTrend />
 
         <Divider inset="gutter" className="my-5" />
 

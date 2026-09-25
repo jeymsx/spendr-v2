@@ -5,6 +5,8 @@ import { scheduledCutoff } from './scheduled'
 import { RATES_META_KEY, sumInBase } from '../lib/fx'
 import { DEFAULT_CURRENCY } from '../lib/currency'
 import { txBase } from '../lib/fxContext'
+import { statementDueDate } from '../lib/creditBills'
+import { receivedAmount } from '../lib/transferLegs'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
@@ -121,11 +123,11 @@ export async function fetchReportData(year, month, base = '', rates = null) {
     const available   = Math.max(limit - balanceUsed, 0)
     const usedPct     = limit > 0 ? Math.min((balanceUsed / limit) * 100, 100) : 0
 
-    // Due date = dueDate day of the month after cycleEnd
-    const dueDay = acct.dueDate
-    const dueDateObj = dueDay
-      ? new Date(cycleEnd.getFullYear(), cycleEnd.getMonth() + 1, dueDay)
-      : null
+    /* The same rule the app uses, not a copy of it. This had its own: always
+       the month after the close, and no clamping - so a due day of 31 in a
+       30-day month rolled over to the 1st of the month after. See
+       statementDueDate for the case that put the PDF a month late. */
+    const dueDateObj = statementDueDate(cycleEnd, acct.dueDate)
 
     creditDetailMap[acct.name] = {
       stmtTotal,
@@ -173,7 +175,8 @@ export async function fetchReportData(year, month, base = '', rates = null) {
            backwards, so every card payment deepened the debt it was paying
            off. A card is not an exception to "a transfer adds to where it
            lands", which makes reversing one an ordinary subtraction. */
-        if (tx.toAccount === acct.name) bal -= a
+        // What arrived - the received leg when the two ends differ in currency.
+        if (tx.toAccount === acct.name) bal -= receivedAmount(tx)
       }
     }
     endingBalances[acct.name] = bal

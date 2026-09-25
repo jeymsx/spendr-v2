@@ -1,9 +1,10 @@
 import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
-import { supabase } from '../lib/supabase'
+import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { fullSync } from '../lib/sync'
 import db from '../db/db'
+import ReminderSync from './ReminderSync'
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
@@ -177,6 +178,8 @@ export default function SyncManager() {
   return (
     <SyncContext.Provider value={{ status, runSync }}>
       <SyncIndicator status={status} errMsg={errMsg} />
+      {/* Push reminders need the server, so they need a user. */}
+      {user?.id && isSupabaseConfigured && <ReminderSync userId={user.id} />}
       <Outlet />
     </SyncContext.Provider>
   )
