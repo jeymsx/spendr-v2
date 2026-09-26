@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import SubPage from '../components/SubPage'
+import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
 import Divider from '../components/ui/Divider'
 import NotificationIcon, { BellGlyph } from '../components/NotificationIcon'
@@ -20,6 +21,14 @@ const MARK_READ_AFTER_MS = 1200
  * when you arrived keep their dot for as long as you stay, so you can still
  * tell which ones are new - marking them read is about the bell, not about
  * pretending you have seen them.
+ *
+ * ── Laid out as the ledger is ──
+ *
+ * A day's heading over a hairline, and the day's rows in one card, each led
+ * by a 40px tile - Transactions' shape, so the two lists read as one app.
+ * Where a ledger row is one line and an amount, a notification is a title
+ * and a sentence, so the rows wrap rather than cut, and the time takes the
+ * amount's place at the top right.
  */
 export default function Notifications() {
   const navigate = useNavigate()
@@ -66,50 +75,69 @@ export default function Notifications() {
         />
       )}
 
-      {groups.map((g, gi) => (
-        <section key={g.heading} aria-label={g.heading}>
-          {gi > 0 && <Divider inset="gutter" className="mt-2" />}
-          <h2 className="px-5 pt-5 pb-1 text-13 font-semibold text-slate-500 dark:text-slate-400">
-            {g.heading}
-          </h2>
-          <ul>
-            {g.items.map(n => {
-              const isNew = newIds.has(n.id)
-              return (
-                <li key={n.id}>
-                  <button
-                    type="button"
-                    onClick={() => open(n)}
-                    className="w-full flex items-start gap-4 px-5 py-3 text-left
-                      active:bg-slate-100 dark:active:bg-white/[0.04] transition-colors"
-                  >
-                    <NotificationIcon kind={n.kind} />
-                    <span className="flex-1 min-w-0 pt-0.5">
-                      <span className={`block text-15 leading-snug text-slate-900 dark:text-white ${isNew ? 'font-semibold' : 'font-medium'}`}>
-                        {n.title}
-                      </span>
-                      {n.body && (
-                        <span className="block mt-0.5 text-14 leading-snug text-slate-600 dark:text-slate-300">
-                          {n.body}
+      {groups.map(g => {
+        const fresh = g.items.filter(n => newIds.has(n.id)).length
+        return (
+          <section key={g.heading} aria-label={g.heading} className="mb-1">
+            <div className="flex items-center gap-3 px-5 py-2">
+              <h2 className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                {g.heading}
+              </h2>
+              <Divider className="flex-1" />
+              {/* In the accent's ink, as the rows' dots are: a light accent's
+                  own fill is 1.6:1 on white. */}
+              {fresh > 0 && (
+                <span className="text-11 font-semibold accent-ink tabular-nums whitespace-nowrap">
+                  {fresh} new
+                </span>
+              )}
+            </div>
+
+            <Card clip className="mx-5">
+              <ul>
+                {g.items.map((n, i) => {
+                  const isNew = newIds.has(n.id)
+                  return (
+                    <li key={n.id}>
+                      <button
+                        type="button"
+                        onClick={() => open(n)}
+                        className="w-full flex items-start gap-3 px-4 py-3 text-left
+                          active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+                      >
+                        <NotificationIcon kind={n.kind} />
+                        {/* Two lines of text are 36px beside a 40px tile: the
+                            2px down centres them on it, and a longer row
+                            grows from the tile's top edge. A title alone is
+                            centred on the tile outright. */}
+                        <span className={`flex-1 min-w-0 ${n.body ? 'pt-0.5' : 'self-center'}`}>
+                          <span className="flex items-start justify-between gap-3">
+                            <span className={`min-w-0 break-words text-13 leading-snug text-slate-800 dark:text-slate-100 ${isNew ? 'font-semibold' : 'font-medium'}`}>
+                              {n.title}
+                            </span>
+                            <span className="shrink-0 flex items-center gap-1.5 h-[18px] text-10 text-slate-500 dark:text-slate-400 tabular-nums">
+                              {isNew && <span className="w-2 h-2 rounded-full bg-current accent-ink" aria-hidden="true" />}
+                              {timeOf(n.at)}
+                            </span>
+                          </span>
+                          {n.body && (
+                            <span className="block mt-0.5 text-12 leading-snug text-slate-500 dark:text-slate-400 break-words">
+                              {n.body}
+                            </span>
+                          )}
                         </span>
-                      )}
-                      <span className="block mt-1 text-12 text-slate-500 dark:text-slate-400 tabular-nums">
-                        {timeOf(n.at)}
-                      </span>
-                    </span>
-                    {isNew && (
-                      <>
-                        <span className="mt-2 w-2 h-2 rounded-full bg-primary shrink-0" aria-hidden="true" />
-                        <span className="sr-only">New</span>
-                      </>
-                    )}
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-        </section>
-      ))}
+                        {isNew && <span className="sr-only">New</span>}
+                      </button>
+                      {/* Under the text, not under the tile, as the ledger's are. */}
+                      {i < g.items.length - 1 && <Divider inset="glyph" />}
+                    </li>
+                  )
+                })}
+              </ul>
+            </Card>
+          </section>
+        )
+      })}
 
       {whatsNewOpen && <WhatsNewModal onClose={() => setWhatsNewOpen(false)} />}
     </SubPage>

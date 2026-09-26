@@ -6,14 +6,19 @@
  * sources. Every kind has an entry, and anything unknown falls back to the
  * bell, so a row is never blank however the list grows.
  *
- * The small disc at the corner says what KIND of attention the row wants -
- * a clock for "coming up", an exclamation for "late" or "over" - in a colour
- * that means the same thing everywhere it is used. It is decoration on top of
- * the words, never the only place the meaning lives.
+ * ── The tile a transaction wears ──
+ *
+ * A notification sits in the same card a transaction does, so it wears the
+ * same 40px tile: .cat-tile's wash of a colour under .cat-glyph's ink of it,
+ * measured for contrast in both themes (index.css). The colour says what KIND
+ * of attention the row wants - amber for "coming up", red for "late" or
+ * "over", violet for something earned, the accent for news - and means the
+ * same thing everywhere it is used. It is decoration on top of the words,
+ * never the only place the meaning lives: every title says it too.
  */
 
 /** @param {{children: import('react').ReactNode, size?: number}} props */
-function Glyph({ children, size = 22 }) {
+function Glyph({ children, size = 20 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false">
@@ -32,53 +37,44 @@ const GLYPHS = {
   bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>,
 }
 
-const MARKS = {
-  soon: <><circle cx="12" cy="12" r="8" /><path d="M12 8v4l2.5 1.5" /></>,
-  alert: <><path d="M12 6v7" /><path d="M12 18h.01" /></>,
-  star: <path d="m12 4 2.3 4.9 5.2.6-3.9 3.6 1.1 5.2L12 15.7l-4.7 2.6 1.1-5.2-3.9-3.6 5.2-.6Z" />,
-  arrow: <path d="M6 12h12M13 7l5 5-5 5" />,
-}
-
-/** The tones a mark can take. Solid, one per meaning. */
+/**
+ * The colours a tile can take, one per meaning: the -500 step, as category
+ * colours are, so .cat-glyph darkens it for light mode the same way.
+ */
 const TONES = {
-  soon: 'bg-amber-600',
-  late: 'bg-red-600',
-  good: 'bg-violet-600',
-  news: 'bg-primary',
+  soon: '#F59E0B',
+  late: '#EF4444',
+  good: '#8B5CF6',
+  news: 'var(--color-primary)',
 }
 
 /**
- * @type {Record<string, {glyph: keyof typeof GLYPHS, mark?: keyof typeof MARKS, tone?: keyof typeof TONES}>}
+ * @type {Record<string, {glyph: keyof typeof GLYPHS, tone: keyof typeof TONES}>}
  */
 export const NOTIFICATION_KINDS = {
-  'card-due':     { glyph: 'card',     mark: 'soon',  tone: 'soon' },
-  'card-overdue': { glyph: 'card',     mark: 'alert', tone: 'late' },
-  'bill-due':     { glyph: 'calendar', mark: 'soon',  tone: 'soon' },
-  'bill-overdue': { glyph: 'calendar', mark: 'alert', tone: 'late' },
-  'budget-warn':  { glyph: 'gauge',    mark: 'alert', tone: 'soon' },
-  'budget-over':  { glyph: 'gauge',    mark: 'alert', tone: 'late' },
-  badge:          { glyph: 'medal',    mark: 'star',  tone: 'good' },
-  recap:          { glyph: 'chart',    mark: 'arrow', tone: 'news' },
-  'whats-new':    { glyph: 'sparkle',  mark: 'star',  tone: 'news' },
+  'card-due':     { glyph: 'card',     tone: 'soon' },
+  'card-overdue': { glyph: 'card',     tone: 'late' },
+  'bill-due':     { glyph: 'calendar', tone: 'soon' },
+  'bill-overdue': { glyph: 'calendar', tone: 'late' },
+  'budget-warn':  { glyph: 'gauge',    tone: 'soon' },
+  'budget-over':  { glyph: 'gauge',    tone: 'late' },
+  badge:          { glyph: 'medal',    tone: 'good' },
+  recap:          { glyph: 'chart',    tone: 'news' },
+  'whats-new':    { glyph: 'sparkle',  tone: 'news' },
 }
-
-const FALLBACK = { glyph: /** @type {const} */ ('bell') }
 
 /** @param {{kind: string}} props */
 export default function NotificationIcon({ kind }) {
-  const spec = NOTIFICATION_KINDS[kind] ?? FALLBACK
+  const spec = NOTIFICATION_KINDS[kind]
   return (
-    <span className="relative w-12 h-12 shrink-0 rounded-full flex items-center justify-center
-      bg-slate-100 text-slate-600 dark:bg-white/[0.07] dark:text-slate-300"
+    <span
+      className="cat-tile w-10 h-10 shrink-0 rounded-2xl flex items-center justify-center"
+      // Unknown kinds keep the tile's own slate: a bell, and no claim about urgency.
+      style={spec ? /** @type {import('react').CSSProperties} */ ({ '--cat-color': TONES[spec.tone] }) : undefined}
     >
-      <Glyph>{GLYPHS[spec.glyph]}</Glyph>
-      {spec.mark && (
-        <span className={`absolute -right-0.5 -bottom-0.5 w-5 h-5 rounded-full flex items-center justify-center
-          text-white ring-2 ring-slate-50 dark:ring-slate-950 ${TONES[spec.tone] ?? TONES.news}`}
-        >
-          <Glyph size={12}>{MARKS[spec.mark]}</Glyph>
-        </span>
-      )}
+      <span className="cat-glyph flex">
+        <Glyph>{GLYPHS[spec?.glyph ?? 'bell']}</Glyph>
+      </span>
     </span>
   )
 }
