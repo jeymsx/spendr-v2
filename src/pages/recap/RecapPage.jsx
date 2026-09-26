@@ -1,14 +1,14 @@
 import { useMemo } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
-import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
-import useNetWorthNow from '../../hooks/useNetWorthNow'
 import useBack from '../../hooks/useBack'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { useTheme } from '../../context/ThemeContext'
-import { addMonths, buildRecap, monthKeyOf, monthLabel, parseMonth, recapMonths } from '../../lib/recap'
+import { addMonths, monthKeyOf, monthLabel, parseMonth, recapMonths } from '../../lib/recap'
 import SubPage from '../../components/SubPage'
 import EmptyState from '../../components/ui/EmptyState'
+import { readRecapInputs, recapFrom } from './recapData'
+import { recapPalette } from './theme'
 import RecapStory, { RecapBackdrop } from './RecapStory'
 
 /** "2026-09", and nothing else: a real month, zero-padded. */
@@ -17,9 +17,10 @@ const MONTH_PARAM = /^\d{4}-(0[1-9]|1[0-2])$/
 /**
  * /recap/2026-09, or /recap for the latest month there is one for.
  *
- * Loads what the recap needs, works the month out once (lib/recap.js), and
- * hands the figures to the story. A month that is not over yet, or that has
- * nothing in it, gets a plain page saying which, instead of an empty story.
+ * Loads what the recap needs (recapData.js), works the month out once
+ * (lib/recap.js), and hands the figures to the story. A month that is not
+ * over yet, or that has nothing in it, gets a plain page saying which,
+ * instead of an empty story.
  *
  * /recap on its own becomes the latest month's address, so what is on screen
  * always has a URL of its own - a reload a month later still shows the month
@@ -28,37 +29,24 @@ const MONTH_PARAM = /^\d{4}-(0[1-9]|1[0-2])$/
 export default function RecapPage() {
   const { month: param } = useParams()
   const currency = useBaseCurrency()
-  const { theme } = useTheme()
+  const { theme, accentColor } = useTheme()
   const tone = theme === 'dark' ? 'dark' : 'light'
 
-  const transactions = useLiveQuery(() => db.transactions.toArray(), [], undefined)
-  const categories = useLiveQuery(() => db.categories.toArray(), [], undefined)
-  const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
-  const badges = useLiveQuery(() => db.badges.toArray(), [], undefined)
-  const meta = useLiveQuery(async () => {
-    const [rollover, name] = await Promise.all([db.meta.get('budgetRollover'), db.meta.get('displayName')])
-    return { rollover: !!rollover?.value, name: String(name?.value ?? '').trim() }
-  }, [], undefined)
-  const netWorthNow = useNetWorthNow(accounts, transactions)
-
-  const loaded = [transactions, categories, accounts, badges, meta].every(v => v !== undefined)
-  const available = useMemo(() => (transactions ? recapMonths(transactions) : []), [transactions])
+  const inputs = useLiveQuery(() => readRecapInputs(), [], undefined)
+  const available = useMemo(() => (inputs ? recapMonths(inputs.transactions) : []), [inputs])
   const month = param && MONTH_PARAM.test(param) ? param : null
 
   const recap = useMemo(() => {
-    if (!loaded || !month || !available.includes(month)) return null
-    return buildRecap({
-      month, transactions, categories, badges, netWorthNow, currency,
-      globalRollover: meta.rollover,
-    })
-  }, [loaded, month, available, transactions, categories, badges, netWorthNow, currency, meta])
+    if (!inputs || !month || !available.includes(month)) return null
+    return recapFrom(inputs, { month, currency })
+  }, [inputs, month, available, currency])
 
   /* Back where you came from - or, opened from a notification with nothing
      behind it, to Insights, where the recap lives. */
   const close = useBack('/insights')
 
   if (param && !month) return <Navigate to="/recap" replace />
-  if (!loaded) return <RecapBackdrop theme={tone} />
+  if (!inputs) return <RecapBackdrop pal={recapPalette(accentColor, tone)} />
   if (!param && available[0]) return <Navigate to={`/recap/${available[0]}`} replace />
 
   if (!recap) {
@@ -74,8 +62,9 @@ export default function RecapPage() {
       key={recap.month}
       recap={recap}
       currency={currency}
+      accent={accentColor}
       theme={tone}
-      name={meta.name || undefined}
+      name={inputs.name || undefined}
       onClose={close}
     />
   )

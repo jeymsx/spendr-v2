@@ -14,6 +14,12 @@ export function isIos() {
   return /iPad|iPhone|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
 }
 
+/** An Android phone or tablet. */
+export function isAndroid() {
+  if (typeof navigator === 'undefined') return false
+  return /Android/i.test(navigator.userAgent || '')
+}
+
 /** Opened from the Home Screen as an installed app, not in a browser tab. */
 export function isStandalone() {
   if (typeof window === 'undefined') return false

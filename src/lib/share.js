@@ -1,4 +1,4 @@
-import { isIos } from '../utils/platform'
+import { isAndroid, isIos } from '../utils/platform'
 
 /**
  * Put a file where the person can keep it: a PDF report, a recap picture.
@@ -60,6 +60,52 @@ export async function saveFile(blob, filename) {
      before the navigation it was created for has begun. */
   setTimeout(() => URL.revokeObjectURL(url), 60_000)
   return 'downloaded'
+}
+
+/**
+ * Whether sendFile will open a share sheet here, rather than download. For
+ * choosing a button's words and icon before there is a file to ask about.
+ *
+ * @returns {boolean}
+ */
+export function canSendFiles() {
+  if (!(isIos() || isAndroid())) return false
+  if (typeof navigator === 'undefined' || typeof navigator.canShare !== 'function' || typeof File !== 'function') return false
+  try {
+    return navigator.canShare({ files: [new File([new Uint8Array(1)], 'probe.png', { type: 'image/png' })] })
+  } catch {
+    return false
+  }
+}
+
+/**
+ * Send a picture on - to Instagram, a chat, Photos - through the share sheet,
+ * on a phone that has one for files. Everywhere else it is saved the way
+ * saveFile saves it.
+ *
+ * Not the same as saveFile, which reaches for the sheet only on an iPhone:
+ * that is about keeping a file, and on Android the sheet has nowhere to keep
+ * one. This is about sending it, and on Android the sheet is exactly where
+ * the apps to send it to are. Same answers, same 'blocked' when the tap that
+ * asked has lapsed - see saveFile.
+ *
+ * @param {Blob} blob
+ * @param {string} filename
+ * @returns {Promise<'shared'|'downloaded'|'cancelled'|'blocked'>}
+ */
+export async function sendFile(blob, filename) {
+  const file = typeof File === 'function' ? new File([blob], filename, { type: blob.type }) : null
+  if (file && (isIos() || isAndroid()) && navigator.canShare?.({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file] })
+      return 'shared'
+    } catch (e) {
+      const why = /** @type {any} */ (e)?.name
+      if (why === 'AbortError') return 'cancelled'
+      if (why === 'NotAllowedError') return 'blocked'
+    }
+  }
+  return saveFile(blob, filename)
 }
 
 /**

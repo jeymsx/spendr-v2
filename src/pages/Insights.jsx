@@ -15,7 +15,9 @@ import { SpendingByCategory } from './insights/Panels'
 import { TopTransactions, AccountBreakdown } from './insights/Tables'
 import { SpendingTrend } from './insights/Trend'
 import NetWorthTrend from './insights/NetWorthTrend'
-import RecapCard, { useRecapMonth } from './insights/RecapCard'
+import LazyWrappedCard from './recap/LazyWrappedCard'
+import { useRecapMonth } from './recap/useRecapMonth'
+import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
 import { generateTrivia, SpendingTrivia } from './insights/Trivia'
 import { HeroSkeleton, TriviaSkeleton, CategorySkeleton, TrendSkeleton } from './insights/Skeleton'
 import { txBase } from '../lib/fxContext'
@@ -215,7 +217,7 @@ export default function Insights() {
   )
   const categories = useLiveQuery(() => db.categories.toArray(), [], undefined)
   const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], undefined)
-  // The recap card follows the month arrows when they point at a finished month.
+  // The Wrapped card follows the month arrows when they point at a finished month.
   const recapMonth = useRecapMonth(range === '1m' && year != null ? `${year}-${pad(month + 1)}` : null)
   /* The first read only. A change of range keeps the last window's rows on
      screen until the next arrive, so rangeTxs is null exactly once. The other
@@ -420,9 +422,6 @@ export default function Insights() {
 
       <div className="flex flex-col py-5">
 
-        {/* The month's recap, once there is a finished month to look back on. */}
-        {!loading && recapMonth && <RecapCard month={recapMonth} />}
-
         {/* Each section swaps for its skeleton in its own slot, so the
             column's shape - and NetWorthTrend's place in it - holds across
             the first read. See insights/Skeleton.jsx. */}
@@ -452,6 +451,15 @@ export default function Insights() {
         )}
 
         <Divider inset="gutter" className="my-5" />
+
+        {/* A finished month's Wrapped, above net worth - except last month's
+            while Home is leading with it, in the first days of this one. */}
+        {!loading && recapMonth && !(wrappedOnHome() && recapMonth === addMonths(monthKeyOf(new Date()), -1)) && (
+          <>
+            <LazyWrappedCard month={recapMonth} className="px-5" />
+            <Divider inset="gutter" className="my-5" />
+          </>
+        )}
 
         {/* Net worth over time. First among the charts because it is the one
             question the rest of this page never answers - every other figure

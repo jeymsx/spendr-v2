@@ -73,6 +73,7 @@ export default {
            at arm's length, the way a story is. Nowhere else. */
         44: '44px',
         56: '56px',
+        64: '64px',
       },
       borderRadius: {
         '2xl': '18px',

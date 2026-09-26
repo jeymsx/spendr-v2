@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { addMonths, buildRecap, daysInMonth, monthLabel, recapMonths } from './recap'
 import {
   budgetsCopy, daysCopy, heroAmount, heroFormatFor, keptCopy, netWorthCopy, percent, recapSlides,
-  signedAmount, spentComparison, spentCopy, summaryHero, summaryRows,
+  signedAmount, spentComparison, spentCopy, summaryHero, summaryTiles, weeksOf, wrappedOnHome, wrappedTitle,
 } from './recapCopy'
 
 /**
@@ -207,7 +207,7 @@ describe('the rest of the story', () => {
       // Written by the app, not somewhere you went.
       ...[6, 7, 8, 11].map(d => spend(9, d, 15, 'Transfer Fee', { description: 'Transfer fee' })),
     ]
-    expect(recap(rows).goTo).toEqual({ label: 'Jollibee', count: 5, amount: 895 })
+    expect(recap(rows).goTo).toEqual({ label: 'Jollibee', count: 5, amount: 895, icon: null })
   })
 
   it('needs three visits to call it a habit', () => {
@@ -372,7 +372,7 @@ describe('what counts as a purchase', () => {
         spend(9, d, 400, 'Home', { description: 'SM Supermarket', splitId: `m${d}` }),
       ]),
     ]
-    expect(recap(rows).goTo).toEqual({ label: 'SM Supermarket', count: 3, amount: 3600 })
+    expect(recap(rows).goTo).toEqual({ label: 'SM Supermarket', count: 3, amount: 3600, icon: null })
   })
 
   it('does not count a visit that was refunded in full', () => {
@@ -380,7 +380,7 @@ describe('what counts as a purchase', () => {
     const back = spend(9, 16, -180, 'Food', { refundOf: visits[2].txId })
     expect(recap([...HISTORY, ...visits, back]).goTo).toBeNull()
     const partly = spend(9, 16, -80, 'Food', { refundOf: visits[2].txId })
-    expect(recap([...HISTORY, ...visits, partly]).goTo).toEqual({ label: 'Jollibee', count: 3, amount: 460 })
+    expect(recap([...HISTORY, ...visits, partly]).goTo).toEqual({ label: 'Jollibee', count: 3, amount: 460, icon: null })
   })
 
   it('takes off only the refunds made within the month', () => {
@@ -480,8 +480,65 @@ describe('budgets and net worth, said plainly', () => {
     expect(netWorthCopy(r, 'PHP')).toEqual({ label: 'Net worth on Sep 30', line: 'Up ₱12,000 since Sep 1', tone: 'good' })
   })
 
-  it('sums up with rows that are not the same figure twice', () => {
+  it('sums up in tiles that are not the same figure twice, most telling first', () => {
     const r = recap([...HISTORY, earn(9, 15, 20000), spend(9, 20, 8000, 'Food')], { netWorthNow: 96000 })
-    expect(summaryRows(r, 'PHP').map(x => x.label)).toEqual(['Came in', 'Kept', 'Top category', 'Purchases', 'No-spend days'])
+    expect(summaryTiles(r, 'PHP').map(x => x.label)).toEqual(['Came in', 'Kept', 'Top category', 'Purchases', 'No-spend days', 'Busiest day'])
+    expect(summaryTiles(r, 'PHP')[1]).toMatchObject({ emoji: '🐷', value: '₱12,000', tone: 'good' })
+  })
+
+  it('never has more than six tiles', () => {
+    const badges = [{ key: 'seven-days', earnedAt: at(9, 30) }]
+    const r = recap([...HISTORY, earn(9, 15, 20000), spend(9, 20, 8000, 'Food')], { badges })
+    expect(summaryTiles(r, 'PHP')).toHaveLength(6)
+  })
+})
+
+describe('the emoji each thing is drawn with', () => {
+  const categories = [
+    { name: 'Food', type: 'expense', icon: '🍔', color: '#FFB347', budget: 5000 },
+    { name: 'Bills', type: 'expense', icon: '🧾', color: '#FF6B6B' },
+  ]
+
+  it("carries each category's own emoji to the slides that draw it", () => {
+    const rows = [
+      ...HISTORY,
+      ...[1, 8, 15].map(d => spend(9, d, 180, 'Food', { description: 'Jollibee' })),
+      spend(9, 5, 4500, 'Bills', { description: 'Meralco' }),
+    ]
+    const r = recap(rows, { categories })
+    expect(r.categories.map(c => [c.name, c.icon])).toEqual([['Bills', '🧾'], ['Food', '🍔']])
+    expect(r.biggest).toMatchObject({ description: 'Meralco', icon: '🧾' })
+    expect(r.goTo).toMatchObject({ label: 'Jollibee', icon: '🍔' })
+    expect(r.budgets.rows[0]).toMatchObject({ name: 'Food', icon: '🍔' })
+  })
+
+  it('has none for a category nobody gave one', () => {
+    expect(recap([...HISTORY, spend(9, 2, 100, 'Mystery')]).categories[0].icon).toBeNull()
+  })
+})
+
+describe('Wrapped, by name and by date', () => {
+  it('is called by its month', () => {
+    expect(wrappedTitle('2026-08')).toBe('August Wrapped')
+  })
+
+  it('leads on Home for the first three days of a month, then moves to Insights', () => {
+    expect(wrappedOnHome(new Date(2026, 9, 1, 9))).toBe(true)
+    expect(wrappedOnHome(new Date(2026, 9, 3, 23, 59))).toBe(true)
+    expect(wrappedOnHome(new Date(2026, 9, 4, 0, 1))).toBe(false)
+  })
+})
+
+describe('the receipt, a week at a time', () => {
+  it('splits the month into weeks that add up to what was spent', () => {
+    const r = recap([...HISTORY, spend(9, 2, 1000), spend(9, 9, 250), spend(9, 30, 400)])
+    const weeks = weeksOf(r)
+    expect(weeks.map(w => w.label)).toEqual(['Sep 1–7', 'Sep 8–14', 'Sep 15–21', 'Sep 22–28', 'Sep 29–30'])
+    expect(weeks.reduce((s, w) => s + w.amount, 0)).toBeCloseTo(r.spent, 2)
+  })
+
+  it('leaves off the weeks before a first month began', () => {
+    const r = recap([spend(9, 20, 500)])
+    expect(weeksOf(r).map(w => w.label)).toEqual(['Sep 15–21', 'Sep 22–28', 'Sep 29–30'])
   })
 })

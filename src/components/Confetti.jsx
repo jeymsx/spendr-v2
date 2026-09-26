@@ -132,8 +132,12 @@ const SHAPES = ['bar', 'bar', 'dot', 'ring', 'curl']
  * keyframe, so this is still zero JavaScript per frame. `--by` has gravity
  * folded into it rather than animated separately: a second keyframe on a
  * wrapper would double the element count for a curve nobody can see.
+ *
+ * `colors` is for a burst over a coloured surface rather than the page - the
+ * recap throws light pastels over its accent-coloured cards, where the
+ * default set's own blue would vanish into an Azure card.
  */
-export function ConfettiBurst({ count = 46 }) {
+export function ConfettiBurst({ count = 46, colors = COLORS }) {
   const [particles] = useState(() =>
     Array.from({ length: count }, (_, i) => {
       /* Jittered around an even spread rather than fully random: pure
@@ -154,7 +158,7 @@ export function ConfettiBurst({ count = 46 }) {
            moving where it came from. */
         by: Math.sin(angle) * dist + Math.random() * 45,
         rot: Math.random() * 900 - 450,
-        color: COLORS[Math.floor(Math.random() * COLORS.length)],
+        color: colors[Math.floor(Math.random() * colors.length)],
         size: 5 + Math.random() * 4,
         delay: Math.random() * 0.16,
         /* Slow and long. The first pass was under a second and was over before

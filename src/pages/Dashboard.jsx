@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react'
+import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
@@ -38,6 +38,9 @@ import useRates from '../hooks/useRates'
 import { convert, sumInBase } from '../lib/fx'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { txBase } from '../lib/fxContext'
+import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
+import { useRecapMonth } from './recap/useRecapMonth'
+import LazyWrappedCard, { preloadWrappedCard } from './recap/LazyWrappedCard'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -76,6 +79,16 @@ export default function Dashboard() {
      ledger that holds more than one currency. See the block below. */
   const netWorthMode = useLiveQuery(
     async () => (await db.meta.get('netWorthMode'))?.value ?? 'converted', [], 'converted')
+
+  /* The month just gone, as "August Wrapped", for the first days of the next
+     one - above the budget, while it is news. After that it lives on
+     Insights. Only last month, and only if it had something in it. */
+  const [wrappedDays] = useState(() => wrappedOnHome())
+  const lastMonth = useMemo(() => addMonths(monthKeyOf(new Date()), -1), [])
+  const recapMonth = useRecapMonth(wrappedDays ? lastMonth : null)
+  const wrappedMonth = wrappedDays && recapMonth === lastMonth ? recapMonth : null
+  // Its code is fetched while the ledger is still being read, not after.
+  useEffect(() => { if (wrappedDays) preloadWrappedCard() }, [wrappedDays])
 
   // ── Derived values ────────────────────────────────────────────────────────────
   /* Every total on the wallet is in ONE currency, not in each account's own.
@@ -400,7 +413,10 @@ export default function Dashboard() {
   const animatedNetWorth = useCountUp(netWorth)
 
   // ── Loading skeleton ──────────────────────────────────────────────────────────
-  if (accounts === undefined || txAll === undefined) {
+  /* The Wrapped card waits with the rest on the days it shows: arriving
+     after the page had drawn, it pushed the budget and everything under it
+     down under a reader's thumb. */
+  if (accounts === undefined || txAll === undefined || (wrappedDays && recapMonth === undefined)) {
     return <DashboardSkeleton />
   }
 
@@ -645,6 +661,8 @@ export default function Dashboard() {
       </section>
 
       <QuickActions counts={actionCounts} />
+
+      {wrappedMonth && <LazyWrappedCard month={wrappedMonth} className="px-5 mt-8" />}
 
       {/* ── Budget ────────────────────────────────────────────────────────────
           One line and one meter, tapping through to the full breakdown. It

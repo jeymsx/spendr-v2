@@ -1,4 +1,7 @@
 import { formatAmount, formatWhole } from './currency'
+import { monthName } from './recap'
+
+export { WRAPPED_HOME_DAYS, wrappedOnHome } from './recap'
 
 /**
  * What the recap says, chosen from the figures in lib/recap.js.
@@ -10,6 +13,26 @@ import { formatAmount, formatWhole } from './currency'
  */
 
 /** @typedef {import('./recap').Recap} Recap */
+
+/** The dial's name for each chapter: short, because the dial is a ring of them. */
+export const CHAPTERS = {
+  intro: 'Hello',
+  spent: 'Spent',
+  kept: 'Kept',
+  categories: 'Where',
+  days: 'Days',
+  biggest: 'Biggest',
+  goto: 'Go-to',
+  budgets: 'Budgets',
+  networth: 'Net worth',
+  badges: 'Badges',
+  summary: 'Wrap',
+}
+
+/** "August Wrapped". @param {string} month "2026-08" */
+export function wrappedTitle(month) {
+  return `${monthName(month)} Wrapped`
+}
 
 /**
  * The slides this month has something to say on, in order. The intro and the
@@ -154,6 +177,30 @@ export function keptCopy(r, code) {
 }
 
 /**
+ * The month a week at a time - "Aug 1–7", "Aug 8–14" ... "Aug 29–31" - each
+ * with what it came to, for the receipt on the spending slide. Refunds are
+ * inside the weeks they came back in, so the weeks add up to the month's
+ * total exactly. In a first month, the weeks before the first purchase are
+ * weeks before the app, and are left off rather than printed as nothing.
+ *
+ * @param {Recap} r
+ * @returns {Array<{label: string, amount: number}>}
+ */
+export function weeksOf(r) {
+  /** @type {Array<{label: string, amount: number}>} */
+  const weeks = []
+  for (let start = 1; start <= r.days; start += 7) {
+    const end = Math.min(start + 6, r.days)
+    const amount = r.daily.slice(start - 1, end).reduce((sum, d) => sum + d.amount, 0)
+    const first = dayLabel(r.month, start)
+    weeks.push({ label: end === start ? first : `${first}–${end}`, amount: Math.round(amount * 100) / 100 })
+  }
+  if (!r.firstMonth) return weeks
+  const lead = weeks.findIndex(w => w.amount !== 0)
+  return lead < 0 ? weeks : weeks.slice(lead)
+}
+
+/**
  * @param {Recap} r
  */
 export function daysCopy(r) {
@@ -222,27 +269,38 @@ export function summaryHero(r, code) {
   }
 }
 
+/** The most tiles the closing card holds: two columns of three. */
+export const SUMMARY_TILES = 6
+
 /**
- * The rows of the closing summary - the same rows on screen and in the saved
- * image, which is why they are decided here and not in either.
+ * The tiles of the closing card - the same tiles on screen and in the saved
+ * picture, which is why they are decided here and not in either. Most telling
+ * first, so a card with room for fewer keeps the ones that matter.
+ *
+ * Emoji that every phone in use can draw: nothing newer than Emoji 11, or an
+ * older Android shows a box where the pig should be.
  *
  * @param {Recap} r
  * @param {string} code
- * @returns {Array<{label: string, value: string, tone?: 'good'|'soft'}>}
+ * @returns {Array<{emoji: string, label: string, value: string, tone?: 'good'|'soft'}>}
  */
-export function summaryRows(r, code) {
-  /** @type {Array<{label: string, value: string, tone?: 'good'|'soft'}>} */
-  const rows = []
+export function summaryTiles(r, code) {
+  /** @type {Array<{emoji: string, label: string, value: string, tone?: 'good'|'soft'}>} */
+  const tiles = []
   if (r.income > 0) {
-    rows.push({ label: 'Came in', value: heroAmount(r.income, code) })
-    rows.push(r.net >= 0
-      ? { label: 'Kept', value: heroAmount(r.net, code), tone: 'good' }
-      : { label: 'Overspent', value: heroAmount(-r.net, code), tone: 'soft' })
+    tiles.push({ emoji: '💰', label: 'Came in', value: heroAmount(r.income, code) })
+    tiles.push(r.net >= 0
+      ? { emoji: '🐷', label: 'Kept', value: heroAmount(r.net, code), tone: 'good' }
+      : { emoji: '📉', label: 'Overspent', value: heroAmount(-r.net, code), tone: 'soft' })
   }
-  if (r.categories.length) rows.push({ label: 'Top category', value: r.categories[0].name })
+  if (r.categories.length) tiles.push({ emoji: r.categories[0].icon || '🏷️', label: 'Top category', value: r.categories[0].name })
   if (r.purchaseCount > 0) {
-    rows.push({ label: 'Purchases', value: r.purchaseCount.toLocaleString('en-US') })
-    rows.push({ label: 'No-spend days', value: String(r.noSpendDays) })
+    tiles.push({ emoji: '🛍️', label: 'Purchases', value: r.purchaseCount.toLocaleString('en-US') })
+    tiles.push({ emoji: '🌿', label: 'No-spend days', value: String(r.noSpendDays) })
   }
-  return rows
+  if (r.busiestDay) tiles.push({ emoji: '🔥', label: 'Busiest day', value: dayLabel(r.month, r.busiestDay.day) })
+  if (r.badges.length) {
+    tiles.push({ emoji: '🏅', label: r.badges.length === 1 ? 'New badge' : 'New badges', value: String(r.badges.length) })
+  }
+  return tiles.slice(0, SUMMARY_TILES)
 }

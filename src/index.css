@@ -1979,3 +1979,111 @@ html.web.dark input[type="date"] {
     linear-gradient(150deg, rgba(var(--color-primary-rgb), 0.12), rgba(var(--color-primary-rgb), 0.04));
   border: 1px solid rgba(var(--color-primary-rgb), 0.22);
 }
+
+/* ── Monthly recap: the card surface and the idle motion ─────────────────────
+
+   The surface is the wallet card's own recipe - the same 260px grain and the
+   same light from above - so a recap card reads as made of the same stuff as
+   the net-worth card on Home. It is a class rather than inline style because
+   the grain is a data URL, and a data URL repeated on every card of the deck
+   is the same string parsed again for each one.
+
+   The motion here is the kind that never ends: an illustration bobbing, a
+   sparkle twinkling, rays turning behind a gift. It is CSS on purpose. A
+   JavaScript loop would run a frame callback for the whole time a card is on
+   screen; a CSS animation of a transform runs on the compositor and costs the
+   main thread nothing. Entrances stay with motion/react, which they need for
+   their springs.
+
+   All of it is switched off under prefers-reduced-motion at the end of this
+   block: nothing that loops carries meaning. */
+
+.recap-texture,
+.recap-texture::before,
+.recap-texture::after {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  border-radius: inherit;
+}
+
+.recap-texture::before {
+  content: '';
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='w'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.62' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23w)'/%3E%3C/svg%3E");
+  background-size: 260px 260px;
+  opacity: 0.1;
+}
+
+.recap-texture::after {
+  content: '';
+  background:
+    radial-gradient(125% 72% at 50% -12%, rgba(255, 255, 255, 0.22) 0%, rgba(255, 255, 255, 0) 68%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.16) 100%);
+}
+
+/* An illustration at rest: a slow bob, never a bounce. */
+@keyframes recapFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+
+/* Its shadow on the card below, shrinking as it rises. */
+@keyframes recapShadow {
+  0%, 100% { transform: scaleX(1);    opacity: 0.55; }
+  50%      { transform: scaleX(0.82); opacity: 0.38; }
+}
+
+@keyframes recapTwinkle {
+  0%, 100% { transform: scale(1)    rotate(0deg);  opacity: 1; }
+  50%      { transform: scale(0.72) rotate(12deg); opacity: 0.7; }
+}
+
+/* A hanging tag, moving on its string. */
+@keyframes recapSway {
+  0%, 100% { transform: rotate(-5deg); }
+  50%      { transform: rotate(5deg); }
+}
+
+/* The "tap to go on" chevron. */
+@keyframes recapNudge {
+  0%, 60%, 100% { transform: translateX(0); }
+  30%           { transform: translateX(4px); }
+}
+
+@keyframes recapSpin {
+  to { transform: rotate(360deg); }
+}
+
+.recap-float  { animation: recapFloat 3.8s ease-in-out infinite; }
+.recap-shadow { animation: recapShadow 3.8s ease-in-out infinite; }
+.recap-twinkle { animation: recapTwinkle 2.6s ease-in-out infinite; }
+.recap-sway   { animation: recapSway 3.2s ease-in-out infinite; transform-origin: 50% 0; }
+.recap-nudge  { animation: recapNudge 1.8s ease-in-out infinite; }
+.recap-spin   { animation: recapSpin 48s linear infinite; }
+
+/* A coin dropping into the piggy bank, again and again: it falls, reaches
+   the slot, and shrinks away behind the pig drawn over it. */
+@keyframes recapDrop {
+  0%        { transform: translateY(-140%) rotate(-24deg); opacity: 0; }
+  10%       { opacity: 1; }
+  46%       { transform: translateY(0) rotate(0deg) scale(1); opacity: 1; }
+  58%, 100% { transform: translateY(30%) rotate(0deg) scale(0.4); opacity: 0; }
+}
+
+.recap-drop { animation: recapDrop 2.4s cubic-bezier(0.55, 0, 0.8, 0.4) infinite; opacity: 0; }
+
+/* Sunburst rays behind a centrepiece: twelve soft wedges of white. */
+.recap-rays {
+  background: repeating-conic-gradient(from 0deg,
+    rgba(255, 255, 255, 0.13) 0deg 9deg,
+    rgba(255, 255, 255, 0) 9deg 30deg);
+  -webkit-mask-image: radial-gradient(closest-side, #000 18%, transparent 100%);
+          mask-image: radial-gradient(closest-side, #000 18%, transparent 100%);
+  border-radius: 50%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .recap-float, .recap-shadow, .recap-twinkle,
+  .recap-sway, .recap-nudge, .recap-spin { animation: none; }
+  .recap-drop { animation: none; opacity: 0; }
+}

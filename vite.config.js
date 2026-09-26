@@ -83,7 +83,7 @@ export default defineConfig({
       },
       workbox: {
         // Precache all static build output
-        globPatterns: ['**/*.{js,css,html,ico,png,svg,woff,woff2}'],
+        globPatterns: ['**/*.{js,css,html,ico,png,svg,webp,woff,woff2}'],
         // …except the PDF renderer. It is ~1.4 MB — nearly half the precache —
         // and is already dynamically imported (see utils/reportData.js), so
         // precaching it forces every install to pay for a feature most sessions

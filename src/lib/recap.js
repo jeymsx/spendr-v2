@@ -78,6 +78,21 @@ export function monthName(key) {
   return MONTH_NAMES[parseMonth(key).month] ?? ''
 }
 
+/** How many days into a month last month's Wrapped leads on Home, before it moves to Insights. */
+export const WRAPPED_HOME_DAYS = 3
+
+/**
+ * Whether this is still the start of a month, when last month's Wrapped leads
+ * on Home. Here rather than with the recap's copy because Home asks it on
+ * every load, and this module is already in the first bundle - the copy is
+ * not, and should not be for one comparison.
+ *
+ * @param {Date} [now]
+ */
+export function wrappedOnHome(now = new Date()) {
+  return now.getDate() <= WRAPPED_HOME_DAYS
+}
+
 /** "September", or "September 2025" when it is not this year. @param {string} key @param {Date} [now] */
 export function monthLabel(key, now = new Date()) {
   const { year } = parseMonth(key)
@@ -143,16 +158,16 @@ export function recapMonths(transactions, now = new Date()) {
  * @property {number|null} savingsRate  net / income, when there was income
  * @property {{month: string, label: string, spent: number, income: number, hasActivity: boolean, partial: boolean}} prev
  * @property {{pct: number, ratio: number, direction: 'less'|'more'|'same'}|null} spentChange
- * @property {Array<{name: string, amount: number, share: number, color: string|null}>} categories
+ * @property {Array<{name: string, amount: number, share: number, color: string|null, icon: string|null}>} categories
  * @property {Array<{name: string, amount: number, share: number}>} incomeSources
  * @property {Array<{day: number, amount: number}>} daily
  * @property {number} trackedDays    days counted - from the first purchase, in a first month
  * @property {{day: number, amount: number}|null} busiestDay
  * @property {number} noSpendDays
  * @property {number} avgPerDay
- * @property {{description: string, category: string, amount: number, day: number}|null} biggest
- * @property {{label: string, count: number, amount: number}|null} goTo
- * @property {{tracked: number, under: number, rows: Array<{name: string, limit: number, spent: number, over: boolean}>}|null} budgets
+ * @property {{description: string, category: string, icon: string|null, amount: number, day: number}|null} biggest
+ * @property {{label: string, count: number, amount: number, icon: string|null}|null} goTo
+ * @property {{tracked: number, under: number, rows: Array<{name: string, icon: string|null, limit: number, spent: number, over: boolean}>}|null} budgets
  * @property {{start: number, end: number, change: number, series: Array<{day: number, value: number}>}|null} netWorth
  * @property {Array<{key: string, name: string}>} badges
  */
@@ -218,8 +233,10 @@ export function buildRecap({
     byCat.set(name, (byCat.get(name) ?? 0) + priceOf(t))
   }
   const catMeta = new Map(categories.map(c => [c.name, c]))
+  /** The emoji the category was given, for the slides to draw it by. @param {string} name */
+  const iconOf = (name) => catMeta.get(name)?.icon ?? null
   const spending = shares([...byCat].map(([name, amount]) => ({ name, amount: money(amount) })))
-    .map(c => ({ ...c, color: catMeta.get(c.name)?.color ?? null }))
+    .map(c => ({ ...c, color: catMeta.get(c.name)?.color ?? null, icon: iconOf(c.name) }))
 
   /** @type {Map<string, number>} */
   const bySource = new Map()
@@ -278,8 +295,8 @@ export function buildRecap({
     busiestDay,
     noSpendDays,
     avgPerDay: trackedDays > 0 ? money(Math.max(0, spent) / trackedDays) : 0,
-    biggest: biggestPurchase(bought, money),
-    goTo: goToPlace(bought, money),
+    biggest: biggestPurchase(bought, money, iconOf),
+    goTo: goToPlace(bought, money, iconOf),
     budgets: budgetSummary({ categories, posted, month, byCat, globalRollover, money }),
     // Every row, scheduled ones too: see netWorthOver.
     netWorth: netWorthOver({ month, transactions, netWorthNow, priceOf, money }),
@@ -393,14 +410,15 @@ function purchasesIn(expenses, priceOf) {
  *
  * @param {ReturnType<typeof purchasesIn>} bought
  * @param {(v: number) => number} money
+ * @param {(category: string) => string|null} iconOf
  */
-function biggestPurchase(bought, money) {
+function biggestPurchase(bought, money, iconOf) {
   let best = null
   for (const p of bought) {
     if (p.amount > 0.004 && (!best || p.amount > best.amount)) best = p
   }
   return best
-    ? { description: best.description, category: best.category, amount: money(best.amount), day: best.day }
+    ? { description: best.description, category: best.category, icon: iconOf(best.category), amount: money(best.amount), day: best.day }
     : null
 }
 
@@ -408,19 +426,22 @@ function biggestPurchase(bought, money) {
  * The place you kept going back to: the description that turns up most,
  * three times or more. A split purchase counts once; a visit refunded in
  * full was not really one, and one partly refunded counts at what it cost.
+ * It wears the emoji of the category it was filed under most often.
  *
  * @param {ReturnType<typeof purchasesIn>} bought
  * @param {(v: number) => number} money
+ * @param {(category: string) => string|null} iconOf
  */
-function goToPlace(bought, money) {
-  /** @type {Map<string, {count: number, amount: number, spellings: Map<string, number>}>} */
+function goToPlace(bought, money, iconOf) {
+  /** @type {Map<string, {count: number, amount: number, spellings: Map<string, number>, categories: Map<string, number>}>} */
   const seen = new Map()
   for (const p of bought) {
     if (!p.place || !(p.amount > 0.004)) continue
-    const e = seen.get(p.place) ?? { count: 0, amount: 0, spellings: new Map() }
+    const e = seen.get(p.place) ?? { count: 0, amount: 0, spellings: new Map(), categories: new Map() }
     e.count += 1
     e.amount += p.amount
     e.spellings.set(p.description, (e.spellings.get(p.description) ?? 0) + 1)
+    e.categories.set(p.category, (e.categories.get(p.category) ?? 0) + 1)
     seen.set(p.place, e)
   }
 
@@ -430,9 +451,10 @@ function goToPlace(bought, money) {
     if (!best || e.count > best.count || (e.count === best.count && e.amount > best.amount)) best = e
   }
   if (!best) return null
+  /** The most frequent key of a tally, ties by name. @param {Map<string, number>} tally */
+  const mostOf = (tally) => [...tally].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0]
   // Shown the way it was typed most often.
-  const label = [...best.spellings].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))[0][0]
-  return { label, count: best.count, amount: money(best.amount) }
+  return { label: mostOf(best.spellings), count: best.count, amount: money(best.amount), icon: iconOf(mostOf(best.categories)) }
 }
 
 /**
@@ -460,7 +482,7 @@ function budgetSummary({ categories, posted, month, byCat, globalRollover, money
   const rows = budgeted.map(c => {
     const { effective } = effectiveLimit({ cat: c, txs: posted, month, globalDefault: globalRollover })
     const spent = money(Math.max(0, byCat.get(c.name) ?? 0))
-    return { name: c.name, limit: effective, spent, over: spent > effective }
+    return { name: c.name, icon: c.icon ?? null, limit: effective, spent, over: spent > effective }
   }).sort((a, b) => Number(b.over) - Number(a.over) || (b.spent - b.limit) - (a.spent - a.limit))
   return { tracked: rows.length, under: rows.filter(r => !r.over).length, rows }
 }
