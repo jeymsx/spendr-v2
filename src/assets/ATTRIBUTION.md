@@ -239,12 +239,13 @@ and dropping a new file into this directory needs no code change.
 Microsoft's [Fluent Emoji](https://github.com/microsoft/fluentui-emoji),
 3D style, **MIT** (Copyright (c) Microsoft Corporation). Each is the
 repository's `assets/<Name>/3D/<name>_3d.png`, kept at its 256px and saved
-as WebP at quality 88 - fifteen files, about 90KB together. Not recoloured
+as WebP at quality 88 - nineteen files, about 110KB together. Not recoloured
 and not cropped; the file names are the emoji's own, kebab-cased.
 
 wrapped-gift, party-popper, sparkles, glowing-star, money-with-wings, coin,
 money-bag, pig-face, face-exhaling, spiral-calendar, shopping-bags,
-round-pushpin, bullseye, rocket, chart-decreasing.
+round-pushpin, bullseye, rocket, chart-decreasing, herb, hamburger, seedling,
+hot-beverage.
 
 They are pictures of emoji, not marks, so the trademark note below does not
 apply to them. The licence asks that its notice travel with the files, so

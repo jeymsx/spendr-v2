@@ -69,48 +69,30 @@ export function recapFrom(inputs, { month, currency, now = new Date() }) {
   })
 }
 
-/** Money that came or went - what makes a month worth a recap. @param {Record<string, any>} t */
-const isFlow = (t) => t.type === 'expense' || t.type === 'inflow'
-
 /**
- * A glance at a month, for the Wrapped card: the emoji of its biggest
- * categories, most spent first, to decorate itself with - no amounts, since
- * the card sits on Home, where balances may be hidden - and a `stamp` that
- * changes whenever anything its picture shows could have, so a picture drawn
- * ahead of time is thrown away rather than shared out of date.
- *
- * `undefined` while it is being read.
+ * The emoji of a month's biggest categories, most spent first - what the
+ * Wrapped card decorates itself with. No amounts: the card sits on Home,
+ * where balances may be hidden. `undefined` while it is being read.
  *
  * @param {string|null|undefined} month
  * @param {number} [count]
- * @returns {{icons: string[], stamp: string}|undefined}
+ * @returns {string[]|undefined}
  */
-export function useMonthGlance(month, count = 3) {
+export function useMonthIcons(month, count = 3) {
   return useLiveQuery(async () => {
-    if (!month) return { icons: [], stamp: '' }
+    if (!month) return []
     const { year, month: m } = parseMonth(month)
-    const [rows, categories, badges, name] = await Promise.all([
+    const [rows, categories] = await Promise.all([
       db.transactions.where('date')
         .between(localMonthStartIso(year, m), localMonthStartIso(year, m + 1), true, false)
-        .filter(isFlow).toArray(),
+        .filter(t => t.type === 'expense').toArray(),
       db.categories.toArray(),
-      db.badges.count(),
-      db.meta.get('displayName'),
     ])
     const icon = new Map(categories.map(c => [c.name, c.icon]))
     /** @type {Map<string, number>} */
     const spent = new Map()
-    let total = 0
-    for (const t of rows) {
-      const v = txBase(t)
-      total += t.type === 'expense' ? v : -v
-      if (t.type === 'expense') spent.set(t.category, (spent.get(t.category) ?? 0) + v)
-    }
-    const ranked = [...spent].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).map(([n]) => n)
-    const icons = ranked.map(n => icon.get(n)).filter(Boolean).slice(0, count)
-    return {
-      icons,
-      stamp: [rows.length, Math.round(total * 100), ranked[0] ?? '', icons.join(''), badges, String(name?.value ?? '').trim()].join('|'),
-    }
+    for (const t of rows) spent.set(t.category, (spent.get(t.category) ?? 0) + txBase(t))
+    return [...spent].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
+      .map(([n]) => icon.get(n)).filter(Boolean).slice(0, count)
   }, [month, count], undefined)
 }

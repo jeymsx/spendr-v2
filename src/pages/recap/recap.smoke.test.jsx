@@ -15,12 +15,14 @@ import { recapSlides } from '../../lib/recapCopy'
  * slide is mounted on its own, with the context the story gives it, and
  * asked to put its words on the page. Nothing here is about how it looks.
  *
- * jsdom has no layout, so the story itself never draws its deck (the stage
- * measures 0x0); its header, controls and keyboard are what it can check.
+ * jsdom has no layout and no canvas, so what the story can be asked about
+ * here is its words, its controls and its keyboard; how it looks, and the
+ * pictures it draws, are the browser's to check.
  */
 
 vi.mock('../../db/db', () => ({ default: {}, dbReady: Promise.resolve() }))
 vi.mock('../../hooks/useScrollLock', () => ({ useScrollLock: () => {} }))
+vi.mock('../../context/ToastContext', () => ({ useToast: () => ({ showToast: () => {}, dismiss: () => {} }) }))
 
 const { recapPalette, tonesFor } = await import('./theme')
 const { SlideContext } = await import('./parts')
@@ -63,7 +65,7 @@ const sparse = buildRecap({
 const SLIDE_OF = {
   intro: slides.IntroSlide, spent: slides.SpentSlide, kept: slides.KeptSlide, categories: slides.CategoriesSlide,
   days: slides.DaysSlide, biggest: slides.BiggestSlide, goto: slides.GoToSlide, budgets: slides.BudgetsSlide,
-  networth: slides.NetWorthSlide, badges: slides.BadgesSlide,
+  networth: slides.NetWorthSlide, badges: slides.BadgesSlide, personality: slides.PersonalitySlide,
 }
 
 /** @param {import('../../lib/recap').Recap} recap @param {string} id */
@@ -83,7 +85,7 @@ function renderSlide(recap, id) {
 const SAYS = {
   intro: /Ana's month in money/, spent: /You spent/, kept: /You kept/, categories: /Most went to/,
   days: /Your busiest day/, biggest: /Biggest purchase/, goto: /Your go-to/, budgets: /Budgets/,
-  networth: /Net worth on/, badges: /A new badge/, summary: /Spendr/,
+  networth: /Net worth on/, badges: /A new badge/, personality: /Your money personality/, summary: /Spendr/,
 }
 
 describe('every slide renders', () => {
@@ -111,32 +113,42 @@ describe('every slide renders', () => {
 })
 
 describe('the story', () => {
+  /** @param {string} [name] */
+  const open = (name) => render(
+    <MemoryRouter>
+      <RecapStory recap={full} currency="PHP" accent="#2D9DFF" theme="dark" name={name} onClose={() => {}} />
+    </MemoryRouter>,
+  )
+  const live = () => document.querySelector('[role="dialog"] .sr-only[aria-live]')?.textContent
+  const press = (/** @type {string} */ key) => act(() => { fireEvent.keyDown(window, { key }) })
+
   it('opens on the first slide, names itself, and moves with the keyboard', () => {
-    render(
-      <MemoryRouter>
-        <RecapStory recap={full} currency="PHP" accent="#2D9DFF" theme="dark" name="Ana" onClose={() => {}} />
-      </MemoryRouter>,
-    )
+    open('Ana')
     expect(screen.getByRole('dialog', { name: 'September Wrapped' })).toBeTruthy()
-    const live = () => document.querySelector('[role="dialog"] .sr-only')?.textContent
-    expect(live()).toMatch(/Slide 1 of 11: Your month/)
-    act(() => { fireEvent.keyDown(window, { key: 'ArrowRight' }) })
-    expect(live()).toMatch(/Slide 2 of 11: What you spent/)
-    act(() => { fireEvent.keyDown(window, { key: ' ' }) })
+    expect(live()).toMatch(/Slide 1 of 12: Your month/)
+    press('ArrowRight')
+    expect(live()).toMatch(/Slide 2 of 12: What you spent/)
+    press(' ')
     expect(live()).toMatch(/, paused$/)
     expect(screen.getByRole('button', { name: 'Play recap' }).getAttribute('aria-pressed')).toBe('true')
   })
 
-  it('goes back to the start from the last slide', () => {
-    render(
-      <MemoryRouter>
-        <RecapStory recap={full} currency="PHP" accent="#2D9DFF" theme="dark" onClose={() => {}} />
-      </MemoryRouter>,
-    )
-    const live = () => document.querySelector('[role="dialog"] .sr-only')?.textContent
-    for (let i = 0; i < 12; i++) act(() => { fireEvent.keyDown(window, { key: 'ArrowRight' }) })
-    expect(live()).toMatch(/Slide 11 of 11: Summary/)
-    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Replay recap' })) })
-    expect(live()).toMatch(/Slide 1 of 11/)
+  it('offers a share on every slide, and ends on Done and Share', () => {
+    open()
+    expect(screen.getByRole('button', { name: 'Share this slide' })).toBeTruthy()
+    for (let i = 0; i < 13; i++) press('ArrowRight')
+    expect(live()).toMatch(/Slide 12 of 12: Summary/)
+    expect(screen.getByRole('button', { name: 'Done' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'Share your Wrapped' })).toBeTruthy()
+  })
+
+  it('shares from a sheet with a switch that hides the amounts', () => {
+    open()
+    act(() => { fireEvent.click(screen.getByRole('button', { name: 'Share this slide' })) })
+    expect(screen.getByRole('dialog', { name: 'Share this slide' })).toBeTruthy()
+    expect(screen.getByRole('switch', { name: 'Hide amounts' })).toBeTruthy()
+    // The story holds still, and leaves the keys to the sheet, while it is open.
+    press('ArrowRight')
+    expect(live()).toMatch(/Slide 1 of 12/)
   })
 })

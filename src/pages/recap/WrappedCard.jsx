@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MotionConfig } from 'motion/react'
 import { useTheme } from '../../context/ThemeContext'
@@ -6,12 +6,12 @@ import { useBaseCurrency } from '../../context/CurrencyContext'
 import { useToast } from '../../context/ToastContext'
 import { monthName } from '../../lib/recap'
 import { wrappedTitle } from '../../lib/recapCopy'
-import { canSendFiles, sendFile } from '../../lib/share'
+import { canSendFiles } from '../../lib/share'
 import { CONFETTI, seeded, seedOf } from './assets'
 import { Art, Glow, Rays } from './art'
 import { SlideContext, Sticker } from './parts'
-import { readRecapInputs, recapFrom, useMonthGlance } from './recapData'
-import { pictureName, renderSummaryImage } from './summaryImage'
+import { readRecapInputs, recapFrom, useMonthIcons } from './recapData'
+import ShareSheet from './ShareSheet'
 import { recapPalette } from './theme'
 
 /**
@@ -24,45 +24,10 @@ import { recapPalette } from './theme'
  * story's first card in miniature: the accent's gradient, its grain, the
  * gift, and the month's own biggest categories as stickers around it.
  *
- * ── Share, from here ──
- *
- * The button beside View draws the same picture the story's last slide
- * saves, from the same figures (recapData.js), and hands it to the share
- * sheet. An iPhone opens that sheet only from inside the tap, and drawing
- * the picture takes longer than a tap lasts - so it is drawn ahead, once
- * the card has been on screen for a moment, and kept until anything it
- * shows changes (`stamp`). Tapped before it is ready, the button draws it
- * then, and if the tap has lapsed by the time it is done, says one more
- * tap will send it.
+ * The button beside View opens the story's own share sheet on its summary
+ * picture - the same figures as the story (recapData.js), the same switch to
+ * leave the amounts out - read when it is tapped, not before.
  */
-
-/**
- * The picture drawn ahead, for one month as the card showed it. One slot at
- * module level, not per card: Home and Insights are never on screen at once,
- * and a trip from one to the other should not draw the same picture twice.
- *
- * @type {{key: string, drawing: Promise<Blob>|null, blob: Blob|null}}
- */
-const ahead = { key: '', drawing: null, blob: null }
-
-/**
- * The picture for `key`, drawing it if it is not drawn or being drawn.
- *
- * @param {string} key
- * @param {() => Promise<Blob>} draw
- */
-function picture(key, draw) {
-  if (ahead.key === key && ahead.drawing) return ahead.drawing
-  const drawing = draw()
-  ahead.key = key
-  ahead.drawing = drawing
-  ahead.blob = null
-  drawing.then(
-    b => { if (ahead.drawing === drawing) ahead.blob = b },
-    () => { if (ahead.drawing === drawing) { ahead.key = ''; ahead.drawing = null } },
-  )
-  return drawing
-}
 
 /** The band's confetti: where each piece is, its shape and colour. @param {string} month */
 function useConfetti(month) {
@@ -95,73 +60,28 @@ export default function WrappedCard({ month, className = '' }) {
   const mode = theme === 'dark' ? 'dark' : 'light'
   const pal = useMemo(() => recapPalette(accentColor, mode), [accentColor, mode])
   const context = useMemo(() => ({ pal, tone: pal.tones[0], currency, hold: () => {} }), [pal, currency])
-  const glance = useMonthGlance(month)
+  const own = useMonthIcons(month)
   const bits = useConfetti(month)
   const title = wrappedTitle(month)
   const name = monthName(month)
   const [sends] = useState(canSendFiles)
-  const [busy, setBusy] = useState(false)
+  const [sharing, setSharing] = useState(false)
+  const [shared, setShared] = useState(/** @type {{recap: import('../../lib/recap').Recap, name?: string}|null} */ (null))
 
-  const icons = useMemo(() => [...new Set([...(glance?.icons ?? []), '💸', '🛍️', '🧾'])].slice(0, 3), [glance])
-  const key = glance ? [month, currency, pal.accent, pal.mode, glance.stamp].join('|') : ''
-
-  const draw = useCallback(async () => {
-    const inputs = await readRecapInputs()
-    const recap = recapFrom(inputs, { month, currency })
-    return renderSummaryImage({ recap, currency, pal, name: inputs.name || undefined })
-  }, [month, currency, pal])
-
-  /* Drawn ahead once the card has been properly in view for a moment, in an
-     idle stretch - never on a page load that only scrolled past it. */
-  const cardRef = useRef(/** @type {HTMLDivElement|null} */ (null))
-  const [seen, setSeen] = useState(false)
-  useEffect(() => {
-    const el = cardRef.current
-    if (!el || seen || typeof IntersectionObserver === 'undefined') return
-    const io = new IntersectionObserver(([entry]) => { if (entry.isIntersecting) setSeen(true) }, { threshold: 0.6 })
-    io.observe(el)
-    return () => io.disconnect()
-  }, [seen])
-  useEffect(() => {
-    if (!seen || !key || ahead.key === key) return
-    let idle = 0
-    const t = setTimeout(() => {
-      const go = () => { picture(key, draw).catch(() => {}) }
-      if (typeof requestIdleCallback === 'function') idle = requestIdleCallback(go, { timeout: 2000 })
-      else go()
-    }, 1200)
-    return () => {
-      clearTimeout(t)
-      if (idle) window.cancelIdleCallback?.(idle)
-    }
-  }, [seen, key, draw])
-
+  const icons = useMemo(() => [...new Set([...(own ?? []), '💸', '🛍️', '🧾'])].slice(0, 3), [own])
   const open = () => navigate(`/recap/${month}`)
 
-  async function share() {
-    if (busy || !key) return
-    // Ready: straight to the sheet, as the first thing the tap does.
-    const ready = ahead.key === key ? ahead.blob : null
-    try {
-      if (ready) {
-        report(await sendFile(ready, pictureName(month)))
-        return
-      }
-      setBusy(true)
-      const blob = await picture(key, draw)
-      report(await sendFile(blob, pictureName(month)))
-    } catch {
-      showToast('Could not make the picture. Try again.', 'error')
-    } finally {
-      setBusy(false)
-    }
-  }
-
-  /** @param {'shared'|'downloaded'|'cancelled'|'blocked'} done */
-  function report(done) {
-    if (done === 'downloaded') showToast('Saved to your downloads')
-    // The picture is ready now; it was the tap that ran out.
-    else if (done === 'blocked') showToast('Your picture is ready. Tap share again to send it.', 'success', { duration: 4000 })
+  /* The month is read on the tap: the sheet opens at once on its spinner,
+     and the preview follows as soon as the figures are in. */
+  function share() {
+    setSharing(true)
+    readRecapInputs().then(
+      inputs => setShared({ recap: recapFrom(inputs, { month, currency }), name: inputs.name || undefined }),
+      () => {
+        setSharing(false)
+        showToast('Could not read this month. Try again.', 'error')
+      },
+    )
   }
 
   const cardShadow = mode === 'dark'
@@ -172,7 +92,7 @@ export default function WrappedCard({ month, className = '' }) {
     <MotionConfig reducedMotion="user">
       <SlideContext.Provider value={context}>
         <section className={className}>
-          <div ref={cardRef} className="relative isolate overflow-hidden rounded-[28px]" style={{ background: pal.tones[0].background, boxShadow: cardShadow }}>
+          <div className="relative isolate overflow-hidden rounded-[28px]" style={{ background: pal.tones[0].background, boxShadow: cardShadow }}>
             <span className="recap-texture" aria-hidden="true" />
 
             {/* The picture band. A tap on it opens the story too; the button
@@ -222,27 +142,30 @@ export default function WrappedCard({ month, className = '' }) {
                 <button
                   type="button"
                   onClick={share}
-                  disabled={!key}
-                  aria-busy={busy || undefined}
                   aria-label={sends ? `Share ${title}` : `Save ${title} picture`}
-                  className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center active:scale-95 transition-transform disabled:opacity-60"
+                  className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center active:scale-95 transition-transform"
                   style={{ backgroundColor: pal.track, color: pal.ink }}
                 >
-                  {busy ? (
-                    <span className="w-5 h-5 rounded-full border-2 border-current border-t-transparent animate-spin" aria-hidden="true" />
-                  ) : (
-                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                      {sends
-                        ? <path d="M12 15V4M8 8l4-4 4 4M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1" />
-                        : <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />}
-                    </svg>
-                  )}
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {sends
+                      ? <path d="M12 15V4M8 8l4-4 4 4M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1" />
+                      : <path d="M12 4v11M7 10l5 5 5-5M5 20h14" />}
+                  </svg>
                 </button>
               </div>
             </div>
           </div>
         </section>
       </SlideContext.Provider>
+      <ShareSheet
+        open={sharing}
+        onClose={() => setSharing(false)}
+        id="summary"
+        recap={shared?.recap ?? null}
+        currency={currency}
+        pal={pal}
+        name={shared?.name}
+      />
     </MotionConfig>
   )
 }

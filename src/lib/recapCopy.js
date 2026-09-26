@@ -14,21 +14,6 @@ export { WRAPPED_HOME_DAYS, wrappedOnHome } from './recap'
 
 /** @typedef {import('./recap').Recap} Recap */
 
-/** The dial's name for each chapter: short, because the dial is a ring of them. */
-export const CHAPTERS = {
-  intro: 'Hello',
-  spent: 'Spent',
-  kept: 'Kept',
-  categories: 'Where',
-  days: 'Days',
-  biggest: 'Biggest',
-  goto: 'Go-to',
-  budgets: 'Budgets',
-  networth: 'Net worth',
-  badges: 'Badges',
-  summary: 'Wrap',
-}
-
 /** "August Wrapped". @param {string} month "2026-08" */
 export function wrappedTitle(month) {
   return `${monthName(month)} Wrapped`
@@ -54,6 +39,9 @@ export function recapSlides(r) {
   if (r.budgets && bought) ids.push('budgets')
   if (r.netWorth && Math.abs(r.netWorth.change) >= 0.005) ids.push('networth')
   if (r.badges.length > 0) ids.push('badges')
+  // Every month has a personality, even a quiet one: the story's last word
+  // before the summary.
+  ids.push('personality')
   ids.push('summary')
   return ids
 }
@@ -257,11 +245,22 @@ export function dayLabel(month, day) {
  * The closing summary's headline - the spent figure, or what came back when
  * refunds outweighed it. Shared by the slide and the saved picture.
  *
+ * `hideAmounts` is for a picture about to be posted somewhere public: the
+ * headline becomes a share rather than a sum - how much of what came in was
+ * kept - or, with nothing coming in, how many things were bought. The line
+ * under it stays; it is already a comparison, not a figure.
+ *
  * @param {Recap} r
  * @param {string} code
+ * @param {{hideAmounts?: boolean}} [options]
  */
-export function summaryHero(r, code) {
+export function summaryHero(r, code, { hideAmounts = false } = {}) {
   const s = spentCopy(r, code)
+  if (hideAmounts) {
+    if (r.income > 0 && r.net > 0) return { label: 'Kept', value: percent(r.savingsRate ?? 0), line: 'of what came in' }
+    if (r.income > 0) return { label: 'Spent', value: `${Math.round((Math.max(0, r.spent) / r.income) * 100)}%`, line: 'of what came in' }
+    return { label: 'Bought', value: `${r.purchaseCount.toLocaleString('en-US')} ${r.purchaseCount === 1 ? 'thing' : 'things'}`, line: s.refunds ? null : spentComparison(r) }
+  }
   return {
     label: s.refunds ? 'Came back in refunds' : 'Spent',
     value: heroAmount(s.value, code),
@@ -277,17 +276,26 @@ export const SUMMARY_TILES = 6
  * picture, which is why they are decided here and not in either. Most telling
  * first, so a card with room for fewer keeps the ones that matter.
  *
+ * With `hideAmounts`, no tile holds a sum of money: what came in is left out,
+ * and kept or overspent is said as a share of it. Everything else on the
+ * card - a category, a count, a day - was never an amount.
+ *
  * Emoji that every phone in use can draw: nothing newer than Emoji 11, or an
  * older Android shows a box where the pig should be.
  *
  * @param {Recap} r
  * @param {string} code
+ * @param {{hideAmounts?: boolean}} [options]
  * @returns {Array<{emoji: string, label: string, value: string, tone?: 'good'|'soft'}>}
  */
-export function summaryTiles(r, code) {
+export function summaryTiles(r, code, { hideAmounts = false } = {}) {
   /** @type {Array<{emoji: string, label: string, value: string, tone?: 'good'|'soft'}>} */
   const tiles = []
-  if (r.income > 0) {
+  if (r.income > 0 && hideAmounts) {
+    tiles.push(r.net >= 0
+      ? { emoji: '🐷', label: 'Kept', value: percent(r.savingsRate ?? 0), tone: 'good' }
+      : { emoji: '📉', label: 'Overspent', value: `${Math.round((-r.net / r.income) * 100)}% over`, tone: 'soft' })
+  } else if (r.income > 0) {
     tiles.push({ emoji: '💰', label: 'Came in', value: heroAmount(r.income, code) })
     tiles.push(r.net >= 0
       ? { emoji: '🐷', label: 'Kept', value: heroAmount(r.net, code), tone: 'good' }
@@ -303,4 +311,112 @@ export function summaryTiles(r, code) {
     tiles.push({ emoji: '🏅', label: r.badges.length === 1 ? 'New badge' : 'New badges', value: String(r.badges.length) })
   }
   return tiles.slice(0, SUMMARY_TILES)
+}
+
+/**
+ * @typedef {object} Personality
+ * @property {string} key     which one, for tests and for the picture
+ * @property {string} name    "The Regular"
+ * @property {string} emoji
+ * @property {string} art     the 3D illustration drawn for it (src/assets/recap)
+ * @property {string} line    why - one sentence from the month's own figures
+ * @property {Array<{emoji: string, text: string}>} traits  up to three facts to back it
+ */
+
+/** Categories that are eating and drinking, by the words people name them with. */
+const FOOD = /food|dining|restaurant|eat|meal|grocer|coffee|caf[eé]|snack|lunch|dinner|breakfast/i
+/** Places that are cafés, by the words their names use. */
+const CAFE = /coffee|caf[eé]|kape|starbucks|tim hortons|tea|brew|espresso/i
+
+/**
+ * The month's money personality: a name for how it went, the way a
+ * streaming service names your taste. Chosen by rules, not at random, so the
+ * same month always gets the same one, and every one of them is backed by a
+ * figure the slide shows as well.
+ *
+ * Each rule says when it applies and how strongly; the strongest wins.
+ * Kind even at its bluntest - a month that ran over is a Fresh Start, and a
+ * first month is a New Arrival, not a verdict on four days.
+ *
+ * @param {Recap} r
+ * @returns {Personality}
+ */
+export function personalityOf(r) {
+  const top = r.categories[0] ?? null
+  const bigShare = r.biggest && r.purchases > 0 ? r.biggest.amount / r.purchases : 0
+  const b = r.budgets
+  /** @type {Array<{when: boolean, score: number, p: Omit<Personality, 'traits'>}>} */
+  const rules = [
+    {
+      when: r.income > 0 && (r.savingsRate ?? 0) >= 0.3,
+      score: 40 + (r.savingsRate ?? 0) * 100,
+      p: { key: 'saver', name: 'The Saver', emoji: '🐷', art: 'pig-face', line: `You kept ${percent(r.savingsRate ?? 0)} of what came in.` },
+    },
+    {
+      when: !!r.goTo && r.goTo.count >= 8,
+      score: 50 + (r.goTo?.count ?? 0) * 2,
+      p: {
+        key: 'regular', name: 'The Regular', emoji: r.goTo?.icon || '📍',
+        // A café regular gets a cup; anywhere else, the pin on the map.
+        art: r.goTo && (r.goTo.icon === '☕' || CAFE.test(r.goTo.label)) ? 'hot-beverage' : 'round-pushpin',
+        line: `${r.goTo?.count} visits to ${r.goTo?.label}.`,
+      },
+    },
+    {
+      when: !!b && b.tracked >= 2 && b.under === b.tracked,
+      score: 62 + (b?.tracked ?? 0) * 3,
+      p: { key: 'planner', name: 'The Planner', emoji: '🎯', art: 'bullseye', line: `All ${b?.tracked} budgets stayed on track.` },
+    },
+    {
+      when: r.purchaseCount > 0 && r.noSpendDays >= 8,
+      // Capped: a month with two purchases has 28 quiet days, which is a fact, not a flair.
+      score: 40 + Math.min(r.noSpendDays, 12) * 2,
+      p: { key: 'minimalist', name: 'The Minimalist', emoji: '🌿', art: 'herb', line: `${r.noSpendDays} days without spending a thing.` },
+    },
+    {
+      // Four purchases at least: with two, one of them is half the month by arithmetic alone.
+      when: r.purchaseCount >= 4 && bigShare >= 0.25,
+      score: 40 + Math.min(bigShare, 0.5) * 60,
+      p: { key: 'treat', name: 'The Treat Yourself', emoji: '🛍️', art: 'shopping-bags', line: `${percent(bigShare)} of the month went on one buy.` },
+    },
+    {
+      when: !!top && FOOD.test(top.name) && top.share >= 0.35,
+      score: 35 + Math.min(top?.share ?? 0, 0.6) * 50,
+      p: { key: 'foodie', name: 'The Foodie', emoji: '🍔', art: 'hamburger', line: `${percent(top?.share ?? 0)} of your spending was ${top?.name}.` },
+    },
+    {
+      when: !!r.netWorth && r.netWorth.change > 0 && r.spentChange?.direction === 'less',
+      score: 38,
+      p: { key: 'climber', name: 'The Steady Climber', emoji: '📈', art: 'rocket', line: `You spent less than ${r.prev.label}, and your net worth went up.` },
+    },
+    {
+      when: r.income > 0 && r.net < 0,
+      score: 66,
+      p: { key: 'fresh', name: 'The Fresh Start', emoji: '🌱', art: 'seedling', line: 'A big month. The next one is a clean slate.' },
+    },
+    {
+      when: r.firstMonth,
+      // Above the quiet-days rule: a first month is mostly days before the app.
+      score: 66,
+      p: { key: 'new', name: 'The New Arrival', emoji: '✨', art: 'sparkles', line: 'Your first month with Spendr. Here is to the next.' },
+    },
+    {
+      when: true,
+      score: 10,
+      p: { key: 'allrounder', name: 'The All-Rounder', emoji: '⚖️', art: 'glowing-star', line: 'A bit of everything, and nothing out of hand.' },
+    },
+  ]
+  const best = rules.filter(x => x.when).sort((a, z) => z.score - a.score)[0].p
+
+  /* Three facts to back it, never the one its own line already says. */
+  /** @type {Array<{key: string, emoji: string, text: string}>} */
+  const facts = []
+  if (r.income > 0 && r.net > 0) facts.push({ key: 'saver', emoji: '🐷', text: `Kept ${percent(r.savingsRate ?? 0)}` })
+  if (r.goTo) facts.push({ key: 'regular', emoji: r.goTo.icon || '📍', text: `${r.goTo.count}× ${r.goTo.label}` })
+  if (b) facts.push({ key: 'planner', emoji: '🎯', text: `${b.under} of ${b.tracked} budgets on track` })
+  if (r.purchaseCount > 0) facts.push({ key: 'minimalist', emoji: '🌿', text: `${r.noSpendDays} no-spend ${r.noSpendDays === 1 ? 'day' : 'days'}` })
+  if (top) facts.push({ key: 'foodie', emoji: top.icon || '🏷️', text: `Most on ${top.name}` })
+  if (r.purchaseCount > 0) facts.push({ key: 'count', emoji: '🛍️', text: `${r.purchaseCount.toLocaleString('en-US')} ${r.purchaseCount === 1 ? 'purchase' : 'purchases'}` })
+  const traits = facts.filter(f => f.key !== best.key).slice(0, 3).map(({ emoji, text }) => ({ emoji, text }))
+  return { ...best, traits }
 }

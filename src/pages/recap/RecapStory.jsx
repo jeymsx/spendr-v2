@@ -1,45 +1,45 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { MotionConfig, animate, motion, useMotionValue, useReducedMotion } from 'motion/react'
+import { AnimatePresence, MotionConfig, animate, motion, useIsPresent, useMotionValue, useReducedMotion } from 'motion/react'
 import { recapSlides, wrappedTitle } from '../../lib/recapCopy'
 import { parseMonth } from '../../lib/recap'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import { keepTabInside } from '../../components/ui/focus'
 import { EXIT, SLIDE_MS, SPRING, recapPalette, tonesFor } from './theme'
-import { SlideContext, useBox } from './parts'
-import { Logo } from './art'
-import Deck from './Deck'
-import Dial from './Dial'
+import { CardTexture, SlideContext } from './parts'
+import { LogoChip } from './art'
+import ShareSheet from './ShareSheet'
 import {
   BadgesSlide, BiggestSlide, BudgetsSlide, CategoriesSlide, DaysSlide, GoToSlide,
-  IntroSlide, KeptSlide, NetWorthSlide, SpentSlide,
+  IntroSlide, KeptSlide, NetWorthSlide, PersonalitySlide, SpentSlide,
 } from './slides'
 import SummarySlide from './SummarySlide'
 
 /**
- * The monthly recap, as a story: "August Wrapped", one card at a time,
- * moving on by itself.
+ * The monthly recap, as a story: "August Wrapped", full screen, one slide at
+ * a time, moving on by itself - the way a story is on Instagram.
  *
  * ── What is on screen ──
  *
- * The app's own backdrop under an accent wash; the Spendr mark and the
- * story's name above; the deck of cards (Deck) in the middle, in the accent's
- * tones; and the chapter dial and the controls (Dial) below. Everything is
- * drawn from the accent you chose - on Azure it is blues, on Honey golds -
- * the way the net-worth card on Home is (theme.js).
+ * Each slide's own colour fills the screen edge to edge, with the card's
+ * grain and light (theme.js, CardTexture), and cross-fades into the next.
+ * Over it: the progress bars and the story's name at the top, the slide in
+ * the middle, and Share at the foot of every slide - any slide can be sent as
+ * a picture of its own (ShareSheet, pictures.js). On a tablet or a desktop
+ * the story is a phone-width column on its own backdrop, as a story is.
  *
  * ── How it is driven ──
  *
- *   tap the right of a card      next      tap the left    back
- *   swipe left or right          the same  drag down       close
- *   hold a card or a chart       pause
- *   the dial and the buttons     jump, back, play/pause, forward
- *   arrow keys, Escape           the same from a keyboard; Space pauses
+ *   tap the right of the screen   next      tap the left    back
+ *   swipe left or right           the same  drag down       close
+ *   hold the screen or a chart    pause
+ *   arrow keys, Escape            the same from a keyboard; Space pauses
  *
- * Autoplay also stops for the pause button, while the tab is hidden, and on
- * the last slide, which waits for you. Touching a chart gives its slide its
- * full time again. Reduced motion keeps every slide and every figure: the
- * cards change places at once instead of flying, and nothing loops.
+ * Autoplay also stops for the pause button, while the tab is hidden, while
+ * the share sheet is open, and on the last slide, which waits for you.
+ * Touching a chart gives its slide its full time again. Reduced motion keeps
+ * every slide and every figure; slides change without moving, and nothing
+ * loops.
  *
  * ── Out of the page, into the body ──
  *
@@ -50,9 +50,9 @@ import SummarySlide from './SummarySlide'
  *
  * ── Per frame, nothing re-renders ──
  *
- * The slide's clock and the drag-down are motion values written straight to
+ * The progress bar and the drag-down are motion values written straight to
  * the DOM, so a finger dragging the story or the clock ticking never renders
- * the card underneath again.
+ * the slide underneath again.
  */
 
 const SLIDES = {
@@ -66,6 +66,7 @@ const SLIDES = {
   budgets: BudgetsSlide,
   networth: NetWorthSlide,
   badges: BadgesSlide,
+  personality: PersonalitySlide,
 }
 
 /** What each slide is, for a screen reader moving through them. */
@@ -80,6 +81,7 @@ const SLIDE_NAMES = {
   budgets: 'Budgets',
   networth: 'Net worth',
   badges: 'New badges',
+  personality: 'Your money personality',
   summary: 'Summary',
 }
 
@@ -91,6 +93,17 @@ const CLOSE_DRAG = 90
 
 /** Space and Enter belong to a focused control, not to the story. */
 const OWNS_KEYS = 'button, a[href], input, select, textarea'
+
+/** The room the header and the foot take, and so where the slide sits between them. */
+const TOP = 'calc(max(10px, env(safe-area-inset-top)) + 60px)'
+const BOTTOM = 'calc(max(16px, env(safe-area-inset-bottom)) + 64px)'
+
+/** The slide leaves a little the way the story is going, and the next arrives from the other side. */
+const SWAP = {
+  enter: (/** @type {number} */ d) => ({ opacity: 0, x: d >= 0 ? 28 : -28, filter: 'blur(8px)' }),
+  shown: { opacity: 1, x: 0, filter: 'blur(0px)', transition: { duration: 0.34, ease: [0.22, 1, 0.36, 1] } },
+  leave: (/** @type {number} */ d) => ({ opacity: 0, x: d >= 0 ? -28 : 28, filter: 'blur(8px)', transition: { duration: 0.18, ease: [0.4, 0, 1, 1] } }),
+}
 
 /**
  * The story's own screen, empty: shown while the recap loads, so the step
@@ -107,13 +120,39 @@ export function RecapBackdrop({ pal }) {
 }
 
 /**
+ * The slide on screen. A slide on its way out is still in the page until its
+ * exit finishes, so it asks whether it is present, and once it is not it is
+ * hidden from a screen reader - which would otherwise read two slides at
+ * once - closed to taps, and no longer marked as the current slide.
+ *
+ * @param {{dir: number, children: import('react').ReactNode}} props
+ */
+function Face({ dir, children }) {
+  const present = useIsPresent()
+  return (
+    <motion.div
+      className="absolute inset-0"
+      style={{ containerType: 'size', pointerEvents: present ? undefined : 'none' }}
+      custom={dir}
+      variants={SWAP}
+      initial="enter"
+      animate="shown"
+      exit="leave"
+      data-current-slide={present ? '' : undefined}
+      aria-hidden={present ? undefined : true}
+    >
+      {children}
+    </motion.div>
+  )
+}
+
+/**
  * @param {{recap: import('../../lib/recap').Recap, currency: string, accent: string, theme: 'light'|'dark',
  *          name?: string, onClose: () => void}} props
  */
 export default function RecapStory({ recap: opened, currency, accent, theme, name, onClose }) {
   /* The month as it was when the story opened. A sync landing mid-story
-     would otherwise rebuild the slides under the person reading them - and
-     throw away the summary picture already drawn for them. */
+     would otherwise rebuild the slides under the person reading them. */
   const [recap] = useState(opened)
   const ids = useMemo(() => recapSlides(recap), [recap])
   const pal = useMemo(() => recapPalette(accent, theme), [accent, theme])
@@ -122,8 +161,8 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
   const { year } = parseMonth(recap.month)
   const reduce = useReducedMotion()
 
-  /* Where the story is, and which way it last moved - the deck throws a card
-     off to the left going forward, and brings it back from there going back. */
+  /* Where the story is, and which way it last moved - a slide leaves the way
+     the story is going. */
   const [nav, setNav] = useState({ index: 0, dir: 1 })
   const at = Math.min(nav.index, ids.length - 1)
   const id = ids[at]
@@ -140,9 +179,8 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
 
   /* Out the way it came, then gone - quicker than it arrived, and only once:
      a second tap on Done, or Escape during a drag, must not start a second
-     exit. The backdrop stays put, so the bare app never shows through. And a
-     story that unmounts mid-exit - the back button, pressed during it - must
-     not then navigate back a second time from beyond the grave. */
+     exit. And a story that unmounts mid-exit - the back button, pressed
+     during it - must not then navigate back a second time. */
   const closing = useRef(false)
   const mounted = useRef(true)
   // Set in the effect, not only cleared: React mounts twice in development.
@@ -167,16 +205,15 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
 
   // ── Moving between slides ──
   const progress = useMotionValue(0)
-  const [userPaused, setUserPaused] = useState(false)
   const next = useCallback(() => setNav(n => (n.index >= ids.length - 1 ? n : { index: n.index + 1, dir: 1 })), [ids.length])
   const prev = useCallback(() => setNav(n => (n.index <= 0 ? n : { index: n.index - 1, dir: -1 })), [])
-  const jump = useCallback((/** @type {number} */ i) => setNav(n => (i === n.index ? n : { index: i, dir: i > n.index ? 1 : -1 })), [])
-  const replay = useCallback(() => { setUserPaused(false); setNav({ index: 0, dir: -1 }) }, [])
-  // Before paint, so a new slide's ring never shows the last one's full circle.
+  // Before paint, so a new slide's bar never shows the last one's full width.
   useLayoutEffect(() => { progress.set(isLast ? 1 : 0) }, [at, isLast, progress])
 
   // ── Holding still ──
   const [fingerDown, setFingerDown] = useState(false)
+  const [userPaused, setUserPaused] = useState(false)
+  const [sharing, setSharing] = useState(false)
   /* A chart hold belongs to the slide it started on. Kept with the slide's
      index, so a hold whose finger never lifted - the slide changed under it
      - cannot freeze every slide after it. */
@@ -188,7 +225,7 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [])
-  const paused = fingerDown || chartHeld || userPaused || hidden || isLast
+  const paused = fingerDown || chartHeld || userPaused || hidden || isLast || sharing
 
   /** @param {boolean} on */
   const hold = useCallback((on) => {
@@ -197,7 +234,7 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
     if (!on) progress.set(0)
   }, [at, progress])
 
-  // ── Autoplay: the ring is the clock ──
+  // ── Autoplay: the progress bar is the clock ──
   useEffect(() => {
     if (paused) return
     let raf = 0
@@ -216,9 +253,11 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
   // ── Keyboard ──
   /* On the capture phase, and stopped there: while the story is open it is
      the only thing on screen, so its keys are its own - a sheet left open
-     underneath it must not close on the same Escape, or trap the same Tab. */
+     underneath it must not close on the same Escape, or trap the same Tab.
+     Except its own share sheet, which is above it and has keys of its own. */
   useEffect(() => {
     const onKey = (/** @type {KeyboardEvent} */ e) => {
+      if (sharing) return
       // Alt+Left is the browser's own Back; leave every chord alone.
       if (e.altKey || e.ctrlKey || e.metaKey) return
       const onControl = !!(/** @type {HTMLElement} */ (e.target)).closest?.(OWNS_KEYS)
@@ -233,7 +272,7 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
     }
     window.addEventListener('keydown', onKey, true)
     return () => window.removeEventListener('keydown', onKey, true)
-  }, [next, prev, dismiss])
+  }, [next, prev, dismiss, sharing])
 
   // ── Touch: tap, hold, swipe, drag down ──
   /* One finger at a time: a second one landing mid-hold is ignored rather
@@ -288,28 +327,19 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
     settle()
   }
 
-  const [stageRef, stage] = useBox()
-  // One context per card, made once: a fresh object per render would render
-  // every slide again on every tap and hold.
+  // One context per slide, made once: a fresh object per render would render
+  // the slide again on every tap and hold.
   const contexts = useMemo(() => tones.map(tone => ({ pal, tone, currency, hold })), [tones, pal, currency, hold])
-  const face = useCallback((/** @type {string} */ sid, /** @type {number} */ i) => {
-    const Slide = SLIDES[/** @type {keyof typeof SLIDES} */ (sid)]
-    return (
-      <SlideContext.Provider value={contexts[i]}>
-        {sid === 'summary'
-          ? <SummarySlide recap={recap} name={name} onDone={dismiss} />
-          : Slide && <Slide recap={recap} name={name} />}
-      </SlideContext.Provider>
-    )
-  }, [contexts, recap, name, dismiss])
+  const Slide = SLIDES[/** @type {keyof typeof SLIDES} */ (id)]
 
-  const screen = theme === 'dark' ? '#0b0f14' : '#f8fafc'
+  /** A button on the colour: the story's own chrome. */
+  const chrome = 'w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform'
 
   return createPortal(
     <MotionConfig reducedMotion="user">
       {/* design-ok: a full-screen story, not a sheet. It owns the whole
-          viewport, its own backdrop and a drag-down close; Sheet's docked
-          panel, handle and scrim are the opposite of that. */}
+          viewport and a drag-down close; Sheet's docked panel, handle and
+          scrim are the opposite of that. */}
       <div className="fixed inset-0 z-[500]" style={{ background: pal.backdrop, touchAction: 'none', overscrollBehavior: 'none' }}>
         <motion.div
           ref={dialogRef}
@@ -317,26 +347,58 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
           aria-modal="true"
           aria-label={title}
           tabIndex={-1}
-          /* A phone's width at most: on a tablet or a desktop the story is a
-             column on its own backdrop, as a story is, not a card stretched
-             across the screen. */
-          className="absolute inset-0 mx-auto w-full max-w-[440px] flex flex-col select-none outline-none"
+          className="absolute inset-0 mx-auto w-full max-w-[440px] overflow-hidden select-none outline-none sm:top-4 sm:bottom-4 sm:rounded-[28px]"
           style={{ y, opacity }}
         >
-          <header className="px-4" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
-            <div className="h-12 flex items-center gap-2.5">
-              <Logo size={30} />
-              <p className="flex-1 min-w-0 truncate text-15 font-semibold" style={{ color: pal.chrome }}>
-                {title} <span className="font-medium" style={{ color: pal.chromeMuted }}>{year}</span>
+          {/* The slide's colour, full bleed. The next fades in over the last,
+              which stays until it is covered, so no frame shows the
+              backdrop between them. */}
+          <AnimatePresence initial={false}>
+            <motion.div
+              key={id}
+              className="absolute inset-0"
+              style={{ background: tones[at]?.background }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, zIndex: 1 }}
+              exit={{ opacity: 0, zIndex: 0, transition: { duration: 0.01, delay: 0.45 } }}
+              transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
+              aria-hidden="true"
+            >
+              <CardTexture />
+            </motion.div>
+          </AnimatePresence>
+
+          <header className="absolute inset-x-0 top-0 z-20 px-4" style={{ paddingTop: 'max(10px, env(safe-area-inset-top))' }}>
+            <div className="flex gap-1" aria-hidden="true">
+              {ids.map((sid, i) => (
+                <span key={sid} className="flex-1 h-[3px] rounded-full overflow-hidden bg-white/30">
+                  <motion.span
+                    className="block h-full bg-white origin-left"
+                    style={{ scaleX: i < at ? 1 : i === at ? progress : 0 }}
+                  />
+                </span>
+              ))}
+            </div>
+            <div className="mt-3 h-11 flex items-center gap-2.5">
+              <LogoChip size={30} />
+              <p className="flex-1 min-w-0 truncate text-15 font-semibold text-white">
+                {title} <span className="font-medium text-white/80">{year}</span>
               </p>
-              <button
-                type="button"
-                onClick={dismiss}
-                aria-label="Close recap"
-                className="w-10 h-10 -mr-1.5 rounded-full flex items-center justify-center active:scale-95 transition-transform"
-                style={{ color: pal.chrome, backgroundColor: theme === 'dark' ? 'rgba(255, 255, 255, 0.1)' : 'rgba(15, 23, 42, 0.06)' }}
-              >
-                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+              {!isLast && (
+                <button
+                  type="button"
+                  onClick={() => setUserPaused(p => !p)}
+                  aria-label={userPaused ? 'Play recap' : 'Pause recap'}
+                  aria-pressed={userPaused}
+                  className={chrome}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    {userPaused ? <path d="M8 5.5v13l10.5-6.5z" /> : <path fill="none" d="M9 6v12M15 6v12" />}
+                  </svg>
+                </button>
+              )}
+              <button type="button" onClick={dismiss} aria-label="Close recap" className={`${chrome} -mr-1.5`}>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
                   <path d="M6 6l12 12M18 6 6 18" />
                 </svg>
               </button>
@@ -344,40 +406,69 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
           </header>
 
           <main
-            ref={stageRef}
-            className="relative flex-1 min-h-0 mx-4 mt-1 mb-3"
+            className="absolute inset-x-0 z-10"
+            style={{ top: TOP, bottom: BOTTOM }}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerCancel}
           >
-            {stage.w > 0 && (
-              <Deck
-                ids={ids}
-                tones={tones}
-                at={at}
-                dir={nav.dir}
-                width={stage.w}
-                height={stage.h}
-                screen={screen}
-                dark={theme === 'dark'}
-                face={face}
-              />
-            )}
+            <AnimatePresence initial={false} custom={nav.dir}>
+              <Face key={id} dir={nav.dir}>
+                <SlideContext.Provider value={contexts[at]}>
+                  {id === 'summary'
+                    ? <SummarySlide recap={recap} name={name} />
+                    : Slide && <Slide recap={recap} name={name} />}
+                </SlideContext.Provider>
+              </Face>
+            </AnimatePresence>
           </main>
 
-          <Dial
-            ids={ids}
-            at={at}
+          {/* For a keyboard and a screen reader, the taps have buttons too:
+              out of sight until one is focused. */}
+          <div className="absolute left-3 top-1/2 z-30 flex flex-col gap-2">
+            <button type="button" onClick={prev} disabled={at === 0} className="sr-only focus:not-sr-only focus:px-3 focus:py-2 focus:rounded-full focus:bg-white focus:text-slate-900 focus:text-13 focus:font-semibold">
+              Previous slide
+            </button>
+            <button type="button" onClick={next} disabled={isLast} className="sr-only focus:not-sr-only focus:px-3 focus:py-2 focus:rounded-full focus:bg-white focus:text-slate-900 focus:text-13 focus:font-semibold">
+              Next slide
+            </button>
+          </div>
+
+          <footer className="absolute inset-x-0 bottom-0 z-20 px-5 flex items-center justify-center gap-3" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+            {isLast && (
+              <button
+                type="button"
+                onClick={dismiss}
+                className="flex-1 h-12 rounded-full text-15 font-semibold text-white bg-white/20 active:scale-[0.98] transition-transform"
+              >
+                Done
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => setSharing(true)}
+              aria-label={isLast ? 'Share your Wrapped' : 'Share this slide'}
+              className={`${isLast ? 'flex-[1.4]' : 'px-6'} h-12 rounded-full flex items-center justify-center gap-2 text-15 font-semibold bg-white active:scale-[0.98] transition-transform shadow-[0_8px_20px_rgba(0,0,0,0.2)]`}
+              style={{ color: pal.deepInk }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 15V4M8 8l4-4 4 4M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1" />
+              </svg>
+              Share
+            </button>
+          </footer>
+
+          <ShareSheet
+            open={sharing}
+            onClose={() => setSharing(false)}
+            id={id}
+            recap={recap}
+            currency={currency}
             pal={pal}
-            progress={progress}
-            userPaused={userPaused}
-            isLast={isLast}
-            onJump={jump}
-            onPrev={prev}
-            onNext={next}
-            onToggle={() => setUserPaused(p => !p)}
-            onReplay={replay}
+            tone={tones[at]}
+            name={name}
+            z={40}
           />
 
           <p className="sr-only" aria-live="polite">

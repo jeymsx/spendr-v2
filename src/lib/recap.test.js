@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { addMonths, buildRecap, daysInMonth, monthLabel, recapMonths } from './recap'
 import {
   budgetsCopy, daysCopy, heroAmount, heroFormatFor, keptCopy, netWorthCopy, percent, recapSlides,
-  signedAmount, spentComparison, spentCopy, summaryHero, summaryTiles, weeksOf, wrappedOnHome, wrappedTitle,
+  personalityOf, signedAmount, spentComparison, spentCopy, summaryHero, summaryTiles, weeksOf, wrappedOnHome, wrappedTitle,
 } from './recapCopy'
 
 /**
@@ -265,9 +265,9 @@ describe('the rest of the story', () => {
 describe('the slides', () => {
   it('always opens and closes, and only says what it has', () => {
     const quiet = recap([...HISTORY, earn(9, 15, 5000)])
-    expect(recapSlides(quiet)).toEqual(['intro', 'kept', 'summary'])
+    expect(recapSlides(quiet)).toEqual(['intro', 'kept', 'personality', 'summary'])
     const full = recap([...HISTORY, earn(9, 15, 5000), spend(9, 2, 100)], { netWorthNow: 50000 })
-    expect(recapSlides(full)).toEqual(['intro', 'spent', 'kept', 'categories', 'days', 'biggest', 'networth', 'summary'])
+    expect(recapSlides(full)).toEqual(['intro', 'spent', 'kept', 'categories', 'days', 'biggest', 'networth', 'personality', 'summary'])
   })
 
   it('formats headline figures for the size they are drawn at', () => {
@@ -540,5 +540,78 @@ describe('the receipt, a week at a time', () => {
   it('leaves off the weeks before a first month began', () => {
     const r = recap([spend(9, 20, 500)])
     expect(weeksOf(r).map(w => w.label)).toEqual(['Sep 15–21', 'Sep 22–28', 'Sep 29–30'])
+  })
+})
+
+describe('the money personality', () => {
+  const coffee = (/** @type {number} */ d) => spend(9, d, 180, 'Coffee', { description: 'Kape Tayo' })
+
+  it('calls a month that kept a third or more of what came in a Saver', () => {
+    const r = recap([...HISTORY, earn(9, 15, 20000), spend(9, 5, 4000), spend(9, 18, 4000)])
+    expect(personalityOf(r)).toMatchObject({ key: 'saver', name: 'The Saver', art: 'pig-face', line: 'You kept 60% of what came in.' })
+  })
+
+  it('calls a month of going back to the same place a Regular, with the place in its line', () => {
+    const r = recap([...HISTORY, ...[1, 3, 5, 8, 10, 12, 15, 17, 19].map(coffee)])
+    expect(personalityOf(r)).toMatchObject({ key: 'regular', name: 'The Regular', line: '9 visits to Kape Tayo.' })
+  })
+
+  it('calls a month inside every budget a Planner', () => {
+    const categories = [
+      { name: 'Food', type: 'expense', budget: 5000 },
+      { name: 'Bills', type: 'expense', budget: 5000 },
+    ]
+    const r = recap([...HISTORY, earn(9, 15, 7000), spend(9, 4, 3000), spend(9, 9, 2500, 'Bills'), spend(9, 20, 1000)], { categories })
+    expect(personalityOf(r).key).toBe('planner')
+  })
+
+  it('is kind about a month that ran over: a Fresh Start', () => {
+    const r = recap([...HISTORY, earn(9, 15, 5000), ...[2, 6, 11, 16, 21, 26].map(d => spend(9, d, 1500))])
+    expect(personalityOf(r)).toMatchObject({ key: 'fresh', name: 'The Fresh Start' })
+  })
+
+  it('calls a first month a New Arrival rather than judging a few days', () => {
+    const r = recap([spend(9, 24, 450)])
+    expect(personalityOf(r)).toMatchObject({ key: 'new', name: 'The New Arrival' })
+  })
+
+  it('has a fallback for a month with nothing striking', () => {
+    const days = [1, 2, 3, 4, 6, 7, 8, 9, 10, 12, 13, 14, 15, 16, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28]
+    const r = recap([...HISTORY, earn(9, 15, 10000), ...days.map(d => spend(9, d, 300, d % 2 ? 'Home' : 'Bills', { description: `Shop ${d}` }))])
+    expect(personalityOf(r).key).toBe('allrounder')
+  })
+
+  it('backs it with up to three facts, never the one its own line already says', () => {
+    const r = recap([...HISTORY, earn(9, 15, 20000), spend(9, 5, 4000), spend(9, 18, 4000)])
+    const p = personalityOf(r)
+    expect(p.traits.length).toBeGreaterThan(0)
+    expect(p.traits.length).toBeLessThanOrEqual(3)
+    expect(p.traits.map(t => t.text).join(' ')).not.toMatch(/Kept/)
+  })
+
+  it('is always the same for the same month', () => {
+    const txs = [...HISTORY, ...[1, 3, 5, 8, 10, 12, 15, 17, 19].map(coffee)]
+    expect(personalityOf(recap(txs))).toEqual(personalityOf(recap(txs)))
+  })
+})
+
+describe('a picture with the amounts hidden', () => {
+  const r = recap([...HISTORY, earn(9, 15, 20000), spend(9, 20, 8000, 'Food')])
+
+  it('keeps every tile, and no tile holds a sum of money', () => {
+    const tiles = summaryTiles(r, 'PHP', { hideAmounts: true })
+    expect(tiles.map(t => t.label)).toEqual(['Kept', 'Top category', 'Purchases', 'No-spend days', 'Busiest day'])
+    expect(tiles.map(t => t.value).join(' ')).not.toMatch(/₱/)
+    expect(tiles[0]).toMatchObject({ value: '60%', tone: 'good' })
+  })
+
+  it('leads with what was kept, as a share', () => {
+    expect(summaryHero(r, 'PHP', { hideAmounts: true })).toEqual({ label: 'Kept', value: '60%', line: 'of what came in' })
+  })
+
+  it('says an overspent month as how far over, not by how much', () => {
+    const over = recap([...HISTORY, earn(9, 15, 4000), spend(9, 20, 5000, 'Food')])
+    expect(summaryTiles(over, 'PHP', { hideAmounts: true })[0]).toMatchObject({ label: 'Overspent', value: '25% over' })
+    expect(summaryHero(over, 'PHP', { hideAmounts: true })).toMatchObject({ label: 'Spent', value: '125%' })
   })
 })

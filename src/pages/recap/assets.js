@@ -9,8 +9,8 @@
  * ── The illustrations ──
  *
  * Microsoft's Fluent Emoji, 3D style (MIT - see src/assets/ATTRIBUTION.md),
- * at 256px, saved as WebP: the fifteen the recap uses come to under
- * 90KB. `import.meta.glob` finds them at build time, so a new file in
+ * at 256px, saved as WebP: the nineteen the recap uses come to about
+ * 110KB. `import.meta.glob` finds them at build time, so a new file in
  * src/assets/recap/ is available by its name with nothing else to update.
  *
  * They are pictures, not text, which is why they can be newer emoji than a

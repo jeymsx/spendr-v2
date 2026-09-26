@@ -84,12 +84,15 @@ export function Receipt({ items, fallback, total, title, sub, seed, stamp = null
             <div className="rounded-b-sm px-4 shadow-[0_10px_24px_rgba(0,0,0,0.22)]" style={{ backgroundColor: pal.paper, paddingTop: R_PAD, paddingBottom: R_PAD }}>
               {head && (
                 <>
-                  <div className="flex items-center justify-between gap-2" style={{ height: R_HEAD }}>
-                    <span className="flex items-center gap-1.5 min-w-0">
-                      <Logo size={18} />
-                      <span className="text-12 font-semibold uppercase tracking-[0.18em]" style={{ color: pal.paperInk }}>Spendr</span>
+                  {/* Who printed it and when, stacked on the left the way a
+                      till prints them: the right-hand end is where the
+                      illustration lands, and a date there was half hidden. */}
+                  <div className="flex items-center gap-2 min-w-0" style={{ height: R_HEAD }}>
+                    <Logo size={22} />
+                    <span className="min-w-0">
+                      <span className="block text-12 leading-4 font-semibold uppercase tracking-[0.18em]" style={{ color: pal.paperInk }}>Spendr</span>
+                      <span className="block text-10 leading-3 font-semibold uppercase tracking-wider truncate" style={{ color: pal.paperMuted }}>{title}</span>
                     </span>
-                    <span className="text-11 font-semibold uppercase tracking-wider truncate" style={{ color: pal.paperMuted }}>{title}</span>
                   </div>
                   {subline && <p className="text-12 truncate" style={{ height: R_SUB, color: pal.paperMuted }}>{sub}</p>}
                   {rule}

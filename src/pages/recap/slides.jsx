@@ -3,7 +3,7 @@ import { AnimatePresence, motion } from 'motion/react'
 import { formatAmount } from '../../lib/currency'
 import {
   budgetsCopy, dayLabel, daysCopy, heroAmount, heroFormatFor, keptCopy, netWorthCopy, percent,
-  spentCopy, weeksOf,
+  personalityOf, spentCopy, weeksOf,
 } from '../../lib/recapCopy'
 import { monthName, parseMonth } from '../../lib/recap'
 import { BADGES } from '../../lib/badges'
@@ -266,7 +266,7 @@ export function SpentSlide({ recap }) {
           <Art
             name={copy.refunds ? 'coin' : 'money-with-wings'}
             size="min(24cqw, 16cqh)"
-            className="-right-2 -top-8"
+            className="-right-2 -top-10"
             rotate={14}
             delay={1.1}
           />
@@ -587,6 +587,60 @@ export function BadgesSlide({ recap }) {
           </ul>
         </FitBox>
         {burst && <ConfettiBurst count={44} colors={CONFETTI} />}
+      </div>
+    </Stack>
+  )
+}
+
+/**
+ * The reveal before the summary: the month's money personality - a name, the
+ * figure behind it, and three facts to back it (lib/recapCopy.js). Centred,
+ * unlike the rest: this one is announced, not read.
+ *
+ * @param {{recap: Recap}} props
+ */
+export function PersonalitySlide({ recap }) {
+  const { pal } = useSlide()
+  const p = useMemo(() => personalityOf(recap), [recap])
+  const burst = useAfter(900)
+  return (
+    <Stack className="relative h-full flex flex-col p-6">
+      <Eyebrow emoji="✨">Your money personality</Eyebrow>
+
+      <div className="relative flex-1 min-h-0 flex items-center justify-center my-2">
+        <div className="relative h-full max-h-[66cqw] aspect-square">
+          <Rays size="140%" className="-left-[20%] -top-[20%]" />
+          <Glow color={pal.glow} size="90%" className="left-[5%] top-[5%]" />
+          <Art name={p.art} size="62%" className="left-[19%] top-[16%]" rotate={-4} delay={0.25} shadow />
+          <Sticker emoji={p.emoji} size={52} rotate={10} delay={0.7} className="right-[4%] top-[8%]" />
+          {burst && <ConfettiBurst count={40} colors={CONFETTI} />}
+        </div>
+      </div>
+
+      <div className="flex flex-col items-center text-center">
+        <Piece>
+          <h2 className="text-44 font-semibold tracking-tight leading-tight text-balance" style={{ color: pal.ink }}>{p.name}</h2>
+        </Piece>
+        <Piece className="mt-1.5">
+          <p className="text-15 leading-snug line-clamp-2 break-words" style={{ color: pal.muted }}>{p.line}</p>
+        </Piece>
+        <Piece className="mt-4 w-full">
+          <ul className="flex flex-wrap justify-center gap-2">
+            {p.traits.map((t, i) => (
+              <motion.li
+                key={t.text}
+                className="inline-flex max-w-full items-center gap-1.5 h-9 px-3 rounded-full text-13 font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.14)]"
+                style={{ backgroundColor: pal.paper, color: pal.deepInk }}
+                initial={{ opacity: 0, scale: 0.7, rotate: i % 2 ? 4 : -4 }}
+                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                transition={{ ...SPRING, delay: 0.9 + i * 0.1 }}
+              >
+                <span className="text-15 leading-none shrink-0" aria-hidden="true">{t.emoji}</span>
+                <span className="truncate">{t.text}</span>
+              </motion.li>
+            ))}
+          </ul>
+        </Piece>
       </div>
     </Stack>
   )
