@@ -93,4 +93,22 @@ describe('dateInputToIso', () => {
     expect(dateInputToIso('', iso, now)).toBe(iso)
     expect(dateInputToIso('rubbish', iso, now)).toBe(iso)
   })
+
+  /* One payment of an installment plan, saved for Nov 5. Edited for any
+     reason, it went to "now" - off its statement, and onto today with every
+     other payment edited the same way. */
+  it('clamps a day ahead to now, unless the row may be ahead', () => {
+    const payment = new Date(2026, 10, 5, 9, 12, 0).toISOString()
+    expect(dateInputToIso('2026-11-05', payment, now)).toBe(now.toISOString())
+    const kept = new Date(dateInputToIso('2026-11-05', payment, now, true))
+    expect([kept.getMonth(), kept.getDate(), kept.getHours(), kept.getMinutes()]).toEqual([10, 5, 9, 12])
+    const moved = new Date(dateInputToIso('2026-10-05', payment, now, true))
+    expect([moved.getMonth(), moved.getDate(), moved.getHours()]).toEqual([9, 5, 9])
+  })
+
+  it('still clamps today to now when the row may be ahead', () => {
+    const late = new Date(2026, 10, 5, 23, 55, 0).toISOString()
+    const out = new Date(dateInputToIso('2026-09-14', late, now, true))
+    expect(out.getTime()).toBeLessThanOrEqual(now.getTime())
+  })
 })

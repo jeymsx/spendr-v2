@@ -1,4 +1,4 @@
-import { getCreditStatus } from '../utils/creditCycle'
+import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
 
 /**
  * A credit card's statement, as a bill.
@@ -82,6 +82,34 @@ export function statementDueDate(cycleEnd, dueDay) {
 
   const sameMonth = inMonth(y, m)
   return sameMonth.getDate() > closedOn ? sameMonth : inMonth(y, m + 1)
+}
+
+/**
+ * The statement a charge dated `date` lands on, and the day that statement
+ * is due.
+ *
+ * The cycle is the one running on that date: getNextCycleRange asked as of
+ * the charge's own day, which is how getCreditStatus sorts every charge into
+ * a statement. So what the expense form says a payment will be billed on is
+ * what the card's page then shows it on.
+ *
+ * It exists for installments. A plan's first payment used to be asked for as
+ * "First payment", and the natural answer to that is the day you pay - the
+ * due date - which is a statement too late: due Oct 5 for a card whose cycle
+ * runs Aug 26 to Sep 25 lands in the Sep 26 cycle, due Nov 5, and every month
+ * of the plan after it moves with it. The form asks for the purchase date now
+ * and shows this beside it, so a date that lands on the wrong bill says so
+ * before it is saved.
+ *
+ * @param {{cutoffDate?: number|string|null, dueDate?: number|string|null}|null|undefined} account
+ *   cutoffDate: the day a cycle starts (none bills by calendar month);
+ *   dueDate: the day of the month it is due (none: `due` is null)
+ * @param {Date} date
+ * @returns {{cycleStart: Date, cycleEnd: Date, due: Date|null}}
+ */
+export function statementFor(account, date) {
+  const { cycleStart, cycleEnd } = getNextCycleRange(Number(account?.cutoffDate) || 0, date)
+  return { cycleStart, cycleEnd, due: statementDueDate(cycleEnd, Number(account?.dueDate) || undefined) }
 }
 
 /**

@@ -102,11 +102,21 @@ export function toDateInput(d = new Date()) {
  * Never later than this moment, then. That also matches what the add form
  * does, which stamps the current time onto whatever date you pick.
  *
+ * ── Unless the row is meant to be ahead ──
+ *
+ * One payment of an installment plan is in the future by definition - the
+ * plan writes every month up front. Clamped, editing one for any reason, a
+ * note or an amount, re-dated it to this moment: it left its month, landed on
+ * the wrong statement, and every payment edited that way piled onto today.
+ * `allowFuture` keeps a later day as picked. Today is still clamped - a late
+ * hour carried onto it would hide it for the rest of the day, as above.
+ *
  * @param {string} dateStr  'YYYY-MM-DD' from the field, read as local
  * @param {string|null|undefined} originalIso  the row's current timestamp
  * @param {Date} [now]  injectable, so the clamp is testable
+ * @param {boolean} [allowFuture]  keep a day after today: a plan's payment
  */
-export function dateInputToIso(dateStr, originalIso, now = new Date()) {
+export function dateInputToIso(dateStr, originalIso, now = new Date(), allowFuture = false) {
   if (!dateStr) return originalIso ?? null
 
   const [y, m, d] = dateStr.split('-').map(Number)
@@ -123,6 +133,7 @@ export function dateInputToIso(dateStr, originalIso, now = new Date()) {
     keep ? keep.getMilliseconds() : 0,
   )
 
+  if (allowFuture && toDateInput(next) > toDateInput(now)) return next.toISOString()
   return (next.getTime() > now.getTime() ? now : next).toISOString()
 }
 

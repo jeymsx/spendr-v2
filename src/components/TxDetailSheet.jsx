@@ -218,7 +218,8 @@ export default function TxDetailSheet({
       const now = new Date().toISOString()
       /* Same two-clock problem as the field above: the old form pasted a
          local date onto a UTC time. */
-      const newDateISO = editDate ? dateInputToIso(editDate, tx.date) : tx.date
+      // A plan's payment keeps a date ahead; anything else is capped at now.
+      const newDateISO = editDate ? dateInputToIso(editDate, tx.date, undefined, isInstallmentRow(tx)) : tx.date
 
       const patch = { amount: newAmount, description: editDescription.trim(), date: newDateISO, updatedAt: now, synced: UNSYNCED }
 

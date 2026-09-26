@@ -6,7 +6,9 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { isoToDateInput, dateInputToIso } from '../utils/txDate'
-import { advanceNextDate } from '../utils/recurring'
+import { advanceNextDate, parseDateLocal } from '../utils/recurring'
+import { isInstallmentRow } from '../utils/installments'
+import { statementFor } from '../lib/creditBills'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import CategoryRail from '../components/CategoryRail'
 import AccountPickerSheet from '../components/AccountPickerSheet'
@@ -47,6 +49,11 @@ function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
 }
 
+/** "Oct 5", with the year only when it is not this one. */
+function fmtShortDate(d) {
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined })
+}
+
 function fmtDateLabel(dateStr) {
   const today = new Date()
   const yest  = new Date(today); yest.setDate(today.getDate() - 1)
@@ -54,8 +61,13 @@ function fmtDateLabel(dateStr) {
   const yesterKey = localDateStr(yest)
   if (dateStr === todayKey)   return 'Today'
   if (dateStr === yesterKey)  return 'Yesterday'
-  const d = new Date(dateStr + 'T00:00:00')
-  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: d.getFullYear() !== today.getFullYear() ? 'numeric' : undefined })
+  return fmtShortDate(new Date(dateStr + 'T00:00:00'))
+}
+
+/** "Aug 26 – Sep 25", as the card's own page names a statement. */
+function fmtStatement({ cycleStart, cycleEnd }) {
+  const day = (/** @type {Date} */ d) => d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+  return `${day(cycleStart)} – ${day(cycleEnd)}`
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────────
@@ -178,6 +190,24 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
   const termIsCustom  = customTerm
     || (installMonths > 1 && !INSTALLMENT_TERMS.includes(installMonths))
 
+  /* Which bill the date lands on, and when that bill is due.
+
+     A plan's rows are dated from the day it was bought, one a month, and each
+     is billed on the statement running on its date. The field used to be
+     called "First payment", and the natural answer to that is the day you
+     pay - which is a statement late, and moves every month of the plan with
+     it. So the field asks for the purchase date, the day people actually
+     know, and this line answers in the terms they were thinking in: the due
+     date. Shown too when moving one payment of a plan by hand, which is the
+     way out for a plan already saved a month late. */
+  const editsPlanPayment = isEdit && isCredit && isInstallmentRow(editTx)
+  const billOf = (/** @type {string|null} */ day) => {
+    const d = parseDateLocal(day)
+    return d ? statementFor(account, d) : null
+  }
+  const dateBill = isInstallment || editsPlanPayment ? billOf(date) : null
+  const lastBill = isInstallment ? billOf(installLast) : null
+
   /* Picking a non-credit account cancels any term already chosen.
 
      Done in the one handler every account change goes through, rather than
@@ -260,7 +290,8 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           description: description.trim(),
           category: category.name,
           account: account.name,
-          date: dateInputToIso(date, editTx.date),
+          // A plan's payment keeps a date ahead; anything else is capped at now.
+          date: dateInputToIso(date, editTx.date, undefined, editsPlanPayment),
         })
         showToast('Expense updated')
         if (onSaved) onSaved(); else navigate(-1)
@@ -667,7 +698,11 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
               <p className="text-11 text-slate-500 dark:text-slate-400 mt-2 px-1 tabular-nums">
                 {installMonths} × {fmt(amount, account?.currency)} ={' '}
                 <span className="font-semibold text-slate-700 dark:text-slate-200">{fmt(installTotal, account?.currency)}</span> total
-                {' · '}{fmtDateLabel(date)} → {fmtDateLabel(installLast)}
+                {' · '}
+                {/* Due dates when the card has a due day; the billing dates otherwise. */}
+                {dateBill?.due && lastBill?.due
+                  ? `due ${fmtShortDate(dateBill.due)} → ${fmtShortDate(lastBill.due)}`
+                  : `${fmtDateLabel(date)} → ${fmtDateLabel(installLast)}`}
               </p>
             )}
           </div>
@@ -675,19 +710,27 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
 
         {/* Date — last */}
         <div>
-          <SectionLabel>{isInstallment ? 'First payment' : 'Date'}</SectionLabel>
+          <SectionLabel>{isInstallment ? 'Purchase date' : 'Date'}</SectionLabel>
           <div className={fieldFrame()}>
             <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
             <input
               type="date"
               value={date}
-              /* An installment's first payment is normally next month, so the
-                 future is allowed here and nowhere else. */
-              max={isInstallment ? undefined : localDateStr(new Date())}
+              /* The future is allowed for a plan, and nowhere else: a plan
+                 whose payments start later is dated on, and its later
+                 payments are in the future by definition - so is moving one. */
+              max={isInstallment || editsPlanPayment ? undefined : localDateStr(new Date())}
               onChange={e => e.target.value && setDate(e.target.value)}
               className="flex-1 min-w-0 bg-transparent text-sm font-medium text-slate-800 dark:text-white outline-none"
             />
           </div>
+          {dateBill && (
+            <p className="text-11 text-slate-500 dark:text-slate-400 mt-2 px-1">
+              {isInstallment
+                ? `First payment ${dateBill.due ? `due ${fmtShortDate(dateBill.due)}, ` : ''}on the ${fmtStatement(dateBill)} statement`
+                : `${dateBill.due ? `Due ${fmtShortDate(dateBill.due)}, on` : 'On'} the ${fmtStatement(dateBill)} statement`}
+            </p>
+          )}
         </div>
 
       </div>
@@ -725,8 +768,9 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           months:     installMonths,
           monthly:    amount,
           total:      installTotal,
-          firstLabel: fmtDateLabel(date),
-          lastLabel:  fmtDateLabel(installLast),
+          // When each is due, as the form's line says; the billing dates if the card has no due day.
+          firstLabel: dateBill?.due ? fmtShortDate(dateBill.due) : fmtDateLabel(date),
+          lastLabel:  lastBill?.due ? fmtShortDate(lastBill.due) : fmtDateLabel(installLast),
         } : null}
       />
       <TemplatePickerSheet

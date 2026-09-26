@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { creditCardBills, statementDueDate, daysToDue, upcomingDueDate } from './creditBills'
+import { creditCardBills, statementDueDate, statementFor, daysToDue, upcomingDueDate } from './creditBills'
 import { getCreditStatus } from '../utils/creditCycle'
 
 /** @param {Record<string, any>} [over] @returns {any} */
@@ -15,6 +15,50 @@ const pay = (m, d, amount) =>
   ({ type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount, date: new Date(2026, m - 1, d, 12).toISOString() })
 /** @param {number} m @param {number} d */
 const at = (m, d) => new Date(2026, m - 1, d, 10)
+
+describe('statementFor', () => {
+  /** @param {Date|null} d */
+  const ymd = (d) => (d ? [d.getFullYear(), d.getMonth() + 1, d.getDate()] : null)
+  /* SPayLater's shape: a cycle from the 26th to the 25th, due on the 5th. */
+  const spay = { cutoffDate: 26, dueDate: 5 }
+
+  it('puts a purchase on the statement running that day, due after it closes', () => {
+    const s = statementFor(spay, new Date(2026, 8, 10, 12))
+    expect(ymd(s.cycleStart)).toEqual([2026, 8, 26])
+    expect(ymd(s.cycleEnd)).toEqual([2026, 9, 25])
+    expect(ymd(s.due)).toEqual([2026, 10, 5])
+  })
+
+  /* The mistake the form's wording invited: the due date typed as the first
+     payment. It is billed a statement later, and says so. */
+  it('bills a payment dated on the due day a statement later', () => {
+    const s = statementFor(spay, new Date(2026, 9, 5, 12))
+    expect(ymd(s.cycleStart)).toEqual([2026, 9, 26])
+    expect(ymd(s.due)).toEqual([2026, 11, 5])
+  })
+
+  it('starts the next statement on the cutoff day itself', () => {
+    expect(ymd(statementFor(spay, new Date(2026, 8, 25, 23)).due)).toEqual([2026, 10, 5])
+    expect(ymd(statementFor(spay, new Date(2026, 8, 26, 0, 5)).due)).toEqual([2026, 11, 5])
+  })
+
+  it('is due the same month when the due day comes after the close', () => {
+    const s = statementFor({ cutoffDate: 6, dueDate: 25 }, new Date(2026, 8, 10, 12))
+    expect(ymd(s.cycleEnd)).toEqual([2026, 10, 5])
+    expect(ymd(s.due)).toEqual([2026, 10, 25])
+  })
+
+  it('reads days that arrive as text, as they do from sync', () => {
+    expect(ymd(statementFor({ cutoffDate: '26', dueDate: '5' }, new Date(2026, 8, 10, 12)).due)).toEqual([2026, 10, 5])
+  })
+
+  it('bills by calendar month without a cutoff, and names no due date without a due day', () => {
+    const s = statementFor({}, new Date(2026, 8, 10, 12))
+    expect(ymd(s.cycleStart)).toEqual([2026, 9, 1])
+    expect(ymd(s.cycleEnd)).toEqual([2026, 9, 30])
+    expect(s.due).toBeNull()
+  })
+})
 
 describe('statementDueDate', () => {
   /** @param {Date|null} d */
