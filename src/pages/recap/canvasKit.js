@@ -226,16 +226,63 @@ export function wrap(g, text, width, max) {
   return lines.slice(0, max).map((l, i, all) => (i === all.length - 1 ? clip(g, l, width) : l))
 }
 
-/** @param {CanvasRenderingContext2D} g @param {number} x @param {number} y @param {number} w @param {number} h @param {number} r */
-export function roundRect(g, x, y, w, h, r) {
-  const rr = Math.min(r, w / 2, h / 2)
+/**
+ * A rounded rectangle's path - with `rb`, a different radius for the two
+ * corners at its foot.
+ *
+ * @param {CanvasRenderingContext2D} g
+ * @param {number} x @param {number} y @param {number} w @param {number} h
+ * @param {number} r @param {number} [rb]
+ */
+export function roundRect(g, x, y, w, h, r, rb = r) {
+  const top = Math.min(r, w / 2, h / 2)
+  const foot = Math.min(rb, w / 2, h / 2)
   g.beginPath()
-  g.moveTo(x + rr, y)
-  g.arcTo(x + w, y, x + w, y + h, rr)
-  g.arcTo(x + w, y + h, x, y + h, rr)
-  g.arcTo(x, y + h, x, y, rr)
-  g.arcTo(x, y, x + w, y, rr)
+  g.moveTo(x + top, y)
+  g.arcTo(x + w, y, x + w, y + h, top)
+  g.arcTo(x + w, y + h, x, y + h, foot)
+  g.arcTo(x, y + h, x, y, foot)
+  g.arcTo(x, y, x + w, y, top)
   g.closePath()
+}
+
+/**
+ * CSS's linear-gradient(<deg>, ...) over a box, as a canvas gradient: the
+ * line through the box's centre at that angle, long enough to put the first
+ * and last stops exactly on the corners they fall on in the browser.
+ *
+ * @param {CanvasRenderingContext2D} g
+ * @param {number} deg
+ * @param {number} x @param {number} y @param {number} w @param {number} h
+ * @param {Array<[number, string]>} stops
+ */
+export function cssLinear(g, deg, x, y, w, h, stops) {
+  const a = (deg * Math.PI) / 180
+  const half = (Math.abs(w * Math.sin(a)) + Math.abs(h * Math.cos(a))) / 2
+  const dx = Math.sin(a) * half, dy = -Math.cos(a) * half
+  const grad = g.createLinearGradient(x + w / 2 - dx, y + h / 2 - dy, x + w / 2 + dx, y + h / 2 + dy)
+  for (const [at, color] of stops) grad.addColorStop(at, color)
+  return grad
+}
+
+/**
+ * CSS's radial-gradient(rx ry at cx cy, ...), whose ellipse a canvas cannot
+ * draw - its radial gradients are circles - so drawn as a circle in a
+ * squashed space.
+ *
+ * @param {CanvasRenderingContext2D} g
+ * @param {number} cx @param {number} cy @param {number} rx @param {number} ry
+ * @param {Array<[number, string]>} stops
+ */
+export function ellipseGlow(g, cx, cy, rx, ry, stops) {
+  g.save()
+  g.translate(cx, cy)
+  g.scale(1, ry / rx)
+  const grad = g.createRadialGradient(0, 0, 0, 0, 0, rx)
+  for (const [at, color] of stops) grad.addColorStop(at, color)
+  g.fillStyle = grad
+  g.fillRect(-rx, -rx, rx * 2, rx * 2)
+  g.restore()
 }
 
 /** "#AABBCC" at `alpha`. @param {string} hex @param {number} alpha */
@@ -294,16 +341,7 @@ export function glow(g, x, y, r, color, alpha) {
  * @param {CardTone} tone
  */
 export function drawSurface(g, pal, tone) {
-  /* CSS's 165deg, worked out: the line runs down and a little to the right,
-     long enough to put each colour stop exactly on the corners it would in
-     the browser. */
-  const a = (165 * Math.PI) / 180
-  const half = (Math.abs(W * Math.sin(a)) + Math.abs(H * Math.cos(a))) / 2
-  const dx = Math.sin(a) * half, dy = -Math.cos(a) * half
-  const base = g.createLinearGradient(W / 2 - dx, H / 2 - dy, W / 2 + dx, H / 2 + dy)
-  base.addColorStop(0, tone.light)
-  base.addColorStop(1, tone.deep)
-  g.fillStyle = base
+  g.fillStyle = cssLinear(g, 165, 0, 0, W, H, [[0, tone.light], [1, tone.deep]])
   g.fillRect(0, 0, W, H)
 
   glow(g, W * 0.86, 470, 640, pal.glow, 0.3)
@@ -438,8 +476,9 @@ export function drawBrand(g, pal, logo, pill) {
  * @param {RecapPalette} pal
  * @param {HTMLImageElement|null} logo
  * @param {number} [y] the text's baseline
+ * @param {string} [rim] a hairline around the mark's tile, where the ground is as pale as the tile
  */
-export function drawSign(g, pal, logo, y = 1587) {
+export function drawSign(g, pal, logo, y = 1587, rim) {
   const madeWith = 'Made with Spendr'
   g.font = font(500, 32)
   const signW = g.measureText(madeWith).width
@@ -448,6 +487,12 @@ export function drawSign(g, pal, logo, y = 1587) {
     g.fillStyle = pal.paper
     roundRect(g, x, y - 35, 48, 48, 14)
     g.fill()
+    if (rim) {
+      g.lineWidth = 2
+      g.strokeStyle = rim
+      roundRect(g, x + 1, y - 34, 46, 46, 13)
+      g.stroke()
+    }
     g.drawImage(logo, x + 5, y - 30, 38, 38)
   }
   g.fillStyle = pal.muted

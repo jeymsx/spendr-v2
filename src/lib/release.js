@@ -32,13 +32,13 @@ export const RELEASE_DATE = '2026-09-27'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'lock',
-    title: 'Lock Spendr with Face ID',
-    desc: "Turn it on in Settings, under App lock. It asks for Face ID when you open Spendr, and a backup PIN gets you in if Face ID can't.",
+    icon: 'trophy',
+    title: 'Seven new badges',
+    desc: 'Fifteen in all now, for things like paying yourself first, keeping half of what came in, and splitting a bill.',
   },
   {
-    icon: 'sparkle',
-    title: 'Sharper pictures to share',
-    desc: 'Badges and Wrapped slides saved on an iPhone come out crisp, without a grey box behind the art.',
+    icon: 'contrast',
+    title: 'Wrapped, four ways',
+    desc: "Your month's picture comes in colour, dark, light or Lights out, like the app itself. Swipe to pick one when you share.",
   },
 ]

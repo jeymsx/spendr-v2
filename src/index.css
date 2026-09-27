@@ -2119,6 +2119,17 @@ html.web.dark input[type="date"] {
   .recap-drop { animation: none; opacity: 0; }
 }
 
+/* The share sheet's rail of looks for the summary (ShareSheet.jsx). A card's
+   size and dimness follow the scroll, set from script frame by frame, so
+   they have no transition of their own; the dot for the chosen look
+   stretches into a pill. */
+.look-card:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
+.look-dot { transition: width 0.24s var(--ease-out), background-color 0.24s var(--ease-out); }
+
+@media (prefers-reduced-motion: reduce) {
+  .look-dot { transition: none; }
+}
+
 /* ── Glass illustrations ─────────────────────────────────────────────
    The frosted-glass pictures in components/glass. Still ones are <img>s and
    none of this applies; a live one is inline SVG, and each of its layers

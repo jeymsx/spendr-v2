@@ -8,8 +8,8 @@ import {
 } from '../../lib/recapCopy'
 import { EMOJI_GLASS, LOGO_LARGE, artSvg, glassForEmoji, seeded, seedOf } from './assets'
 import {
-  INNER, P, W, clip, drawArt, drawBrand, drawChip, drawConfetti, drawEmoji, drawPill, drawRays, drawSign,
-  drawSticker, drawSurface, drawTile, drawWrappedMark, fit, font, glow, loadFonts,
+  H, INNER, P, W, clip, cssLinear, drawArt, drawBrand, drawChip, drawConfetti, drawEmoji, drawPill, drawRays,
+  drawSign, drawSticker, drawSurface, drawTile, drawWrappedMark, ellipseGlow, fit, font, glow, loadFonts,
   loadGlass, loadImage, makeCanvas, rgba, roundRect, shadowed, toPng, wrap,
 } from './canvasKit'
 
@@ -47,11 +47,30 @@ import {
  * @property {(v: number) => string} money   an exact amount, or its mask
  * @property {string} month  "August"
  * @property {number} year
+ * @property {string} look   the summary's look: one of SUMMARY_LOOKS
  */
 
-/** The file a slide's picture is saved as. @param {string} month "2026-08" @param {string} [id] */
-export function pictureName(month, id = 'summary') {
-  return id === 'summary' ? `spendr-wrapped-${month}.png` : `spendr-wrapped-${month}-${id}.png`
+/**
+ * The summary, four ways, for the share sheet to slide between: the story's
+ * own card, in colour, and three of the looks Spendr itself comes in - dark
+ * and light, the accent's light behind the app's own cards, and Lights out,
+ * true black and flat. The same words and figures in all four (appLook).
+ */
+export const SUMMARY_LOOKS = [
+  { id: 'colour', name: 'Colour' },
+  { id: 'dark', name: 'Dark' },
+  { id: 'light', name: 'Light' },
+  { id: 'lightsout', name: 'Lights out' },
+]
+
+/**
+ * The file a slide's picture is saved as.
+ *
+ * @param {string} month "2026-08" @param {string} [id] @param {string} [look]
+ */
+export function pictureName(month, id = 'summary', look = 'colour') {
+  if (id !== 'summary') return `spendr-wrapped-${month}-${id}.png`
+  return look === 'colour' ? `spendr-wrapped-${month}.png` : `spendr-wrapped-${month}-${look}.png`
 }
 
 /** The illustrations each picture draws, loaded before it starts. */
@@ -67,7 +86,7 @@ const NEEDS = {
   networth: ['rocket', 'chart-decreasing'],
   badges: ['glowing-star', 'sparkles'],
   personality: [],
-  summary: ['wrapped-gift', 'sparkles', 'party-popper', 'money-bag'],
+  summary: ['wrapped-gift', 'sparkles'],
 }
 
 /* The size glass is flattened at (see loadGlass): the illustrations and the
@@ -91,9 +110,10 @@ const ART_BOTTOM = 1510
  * @param {CardTone} [input.tone]     the slide's own card; the summary's is the first
  * @param {string} [input.name]
  * @param {boolean} [input.hideAmounts]
+ * @param {string} [input.look]       the summary's look (SUMMARY_LOOKS); the other slides have one
  * @returns {Promise<Blob>}
  */
-export async function renderPicture({ id, recap, currency, pal, tone, name, hideAmounts = false }) {
+export async function renderPicture({ id, recap, currency, pal, tone, name, hideAmounts = false, look = 'colour' }) {
   const kind = /** @type {keyof typeof DRAW} */ (id in DRAW ? id : 'summary')
   const persona = kind === 'personality' ? personalityOf(recap) : null
   const artNames = persona ? [persona.art] : NEEDS[kind]
@@ -128,6 +148,7 @@ export async function renderPicture({ id, recap, currency, pal, tone, name, hide
     money: v => (hideAmounts ? maskedAmount(currency) : formatAmount(v, currency)),
     month: monthName(recap.month),
     year,
+    look,
   }
   const { canvas, g } = makeCanvas()
   DRAW[kind](g, c)
@@ -651,13 +672,22 @@ const DRAW = {
     })
   },
 
-  /** @param {CanvasRenderingContext2D} g @param {Picture} c */
+  /**
+   * The month on one card. In colour it is the story's own last card, plain -
+   * no confetti, nothing below the fold - so the figures are the picture. In
+   * any other look it is Spendr's own screen (summaryInLook).
+   *
+   * @param {CanvasRenderingContext2D} g @param {Picture} c
+   */
   summary(g, c) {
+    if (c.look && c.look !== 'colour') {
+      summaryInLook(g, c, appLook(c.look, c.pal))
+      return
+    }
     const r = c.recap
     const hero = summaryHero(r, c.currency, { hideAmounts: c.hide })
     const tiles = summaryTiles(r, c.currency, { hideAmounts: c.hide })
     drawSurface(g, c.pal, c.tone)
-    drawConfetti(g, c.rand, 34)
     drawBrand(g, c.pal, c.logo, String(c.year))
 
     // The gift, beside the title.
@@ -687,10 +717,310 @@ const DRAW = {
     tiles.forEach((t, i) => drawTile(g, c.pal, t, P + (i % 2) * (tileW + 24), 1084 + Math.floor(i / 2) * 156, tileW, 136, markOf(c, t.emoji, t.art)))
 
     drawSign(g, c.pal, c.logo)
-    // And a party below the fold.
-    drawArt(g, c.art['party-popper'], 170, 1780, 230, -14)
-    drawArt(g, c.art['money-bag'], W - 170, 1790, 210, 10)
   },
+}
+
+// ── The summary in Spendr's own looks ────────────────────────────────────
+
+/**
+ * @typedef {object} Look
+ * @property {string} ground     the screen behind everything
+ * @property {Array<[number, number, number, number, Array<[number, string]>]>} glows
+ *           the accent's light on it: x, y and the two radii as shares of the
+ *           picture, as CSS's radial-gradient(rx ry at x y) has them, and stops
+ * @property {string} ink
+ * @property {string} muted
+ * @property {string} label      a tile's small caps
+ * @property {string} good
+ * @property {string} soft
+ * @property {{fill: string, stroke: string, shadow: string|null, rim: string|null}} card  a tile
+ * @property {boolean} wallet    the hero on the wallet's leather, or on a plain panel
+ * @property {{fill: string, text: string}} pill  the verdict under the hero's figure
+ * @property {{fill: string, stroke: string, text: string}} year  the pill beside the name
+ * @property {{paper: string, ink: string}} mark  the "Wrapped" label
+ * @property {number} giftGlow   how strongly the accent glows behind the gift: 0, not at all
+ * @property {number} lift       the shadow under the logo and the wallet
+ * @property {string|null} logoRim  a hairline around the logo's white tile, on a ground as pale as it
+ */
+
+/**
+ * Spendr's looks, in the app's own values. Dark is the Wrapped story's own
+ * screen - #0b0f14 under the accent's light, as the story draws it behind
+ * its cards - with the tiles as the app's tinted cards. Light is the same
+ * on #f8fafc, with white cards on a hairline. Lights out is the flat look
+ * in the dark: true black, near-black cards, and no light anywhere.
+ *
+ * Dark and light carry the figure on Home's net-worth wallet, in the
+ * summary card's own gradient: the one the colour look is drawn in, and
+ * clamped so white reads on it in every accent (theme.js).
+ *
+ * @param {string} id @param {RecapPalette} pal
+ * @returns {Look}
+ */
+function appLook(id, pal) {
+  const a = (/** @type {number} */ alpha) => rgba(pal.accent, alpha)
+  const onWallet = { fill: 'rgba(0, 0, 0, 0.2)', text: '#FFFFFF' }
+  if (id === 'light') {
+    return {
+      ground: '#F8FAFC',
+      glows: [
+        [0.5, -0.12, 1.3, 0.85, [[0, a(0.24)], [0.42, a(0.08)], [0.74, a(0)]]],
+        [0.85, 1.12, 1.1, 0.8, [[0, a(0.16)], [0.7, a(0)]]],
+      ],
+      ink: '#0F172A',
+      muted: '#475569',
+      label: '#64748B',
+      // Green-700 and orange-700, as the paper tiles have them.
+      good: '#15803D',
+      soft: '#C2410C',
+      card: { fill: '#FFFFFF', stroke: 'rgba(15, 23, 42, 0.08)', shadow: 'rgba(15, 23, 42, 0.07)', rim: null },
+      wallet: true,
+      pill: onWallet,
+      year: { fill: '#FFFFFF', stroke: 'rgba(15, 23, 42, 0.08)', text: '#334155' },
+      mark: { paper: pal.deepInk, ink: '#FFFFFF' },
+      giftGlow: 0.2,
+      lift: 0.14,
+      logoRim: 'rgba(15, 23, 42, 0.08)',
+    }
+  }
+  if (id === 'lightsout') {
+    return {
+      ground: '#000000',
+      glows: [],
+      ink: '#FFFFFF',
+      muted: 'rgba(255, 255, 255, 0.62)',
+      label: 'rgba(255, 255, 255, 0.5)',
+      good: '#34D399',
+      soft: '#FB923C',
+      card: { fill: '#111113', stroke: 'rgba(255, 255, 255, 0.08)', shadow: null, rim: null },
+      wallet: false,
+      // The one place the accent shows, besides the glass.
+      pill: { fill: a(0.22), text: '#FFFFFF' },
+      year: { fill: '#1C1C1F', stroke: 'rgba(255, 255, 255, 0.08)', text: '#FFFFFF' },
+      mark: { paper: '#FFFFFF', ink: pal.deepInk },
+      giftGlow: 0,
+      lift: 0,
+      logoRim: null,
+    }
+  }
+  return {
+    ground: '#0B0F14',
+    glows: [
+      [0.5, -0.12, 1.3, 0.85, [[0, a(0.3)], [0.42, a(0.1)], [0.74, a(0)]]],
+      [0.85, 1.12, 1.1, 0.8, [[0, a(0.2)], [0.7, a(0)]]],
+    ],
+    ink: '#FFFFFF',
+    muted: 'rgba(255, 255, 255, 0.66)',
+    label: 'rgba(255, 255, 255, 0.55)',
+    good: '#34D399',
+    soft: '#FB923C',
+    /* The app's dark card: the accent at a low wash, a hairline of it, and a
+       catch of light along the top edge. No shadow: under a card you can see
+       through, a canvas shadow shows through the card and muddies it. */
+    card: { fill: a(0.1), stroke: a(0.22), shadow: null, rim: 'rgba(255, 255, 255, 0.07)' },
+    wallet: true,
+    pill: onWallet,
+    year: { fill: 'rgba(255, 255, 255, 0.08)', stroke: 'rgba(255, 255, 255, 0.12)', text: '#FFFFFF' },
+    mark: { paper: '#FFFFFF', ink: pal.deepInk },
+    giftGlow: 0.35,
+    lift: 0.3,
+    logoRim: null,
+  }
+}
+
+/**
+ * Where the app looks put things: the colour card's order, a little closer
+ * together, to make room for the wallet around the figure.
+ */
+const LOOK_Y = { name: 428, month: 566, mark: 628, hero: 736, sign: 1590 }
+const LOOK_TILE = { h: 120, gap: 16 }
+
+/**
+ * The summary on one of Spendr's own screens.
+ *
+ * @param {CanvasRenderingContext2D} g @param {Picture} c @param {Look} L
+ */
+function summaryInLook(g, c, L) {
+  const r = c.recap
+  const hero = summaryHero(r, c.currency, { hideAmounts: c.hide })
+  const tiles = summaryTiles(r, c.currency, { hideAmounts: c.hide })
+
+  g.fillStyle = L.ground
+  g.fillRect(0, 0, W, H)
+  for (const [x, y, rx, ry, stops] of L.glows) ellipseGlow(g, x * W, y * H, rx * W, ry * H, stops)
+
+  lookBrand(g, L, c.logo, String(c.year))
+
+  // The gift, beside the title.
+  if (L.giftGlow) glow(g, 862, 490, 260, c.pal.accent, L.giftGlow)
+  drawArt(g, c.art['wrapped-gift'], 862, 490, 300, 8)
+  drawArt(g, c.art.sparkles, 740, 335, 96, -6)
+
+  // Whose month, which month, and the label over its foot.
+  const titleW = 600
+  g.fillStyle = L.muted
+  g.font = font(500, 44)
+  g.fillText(clip(g, c.name ? `${c.name}'s` : 'My', titleW), P, LOOK_Y.name)
+  g.fillStyle = L.ink
+  g.fillText(fit(g, c.month, 600, 150, 88, titleW), P, LOOK_Y.month)
+  drawWrappedMark(g, { ...c.pal, paper: L.mark.paper, deepInk: L.mark.ink }, P + 36, LOOK_Y.mark, 80)
+
+  const foot = lookHero(g, c, L, hero, LOOK_Y.hero)
+
+  // The tiles, as the app's cards.
+  const tileW = (INNER - 24) / 2
+  const step = LOOK_TILE.h + LOOK_TILE.gap
+  tiles.forEach((t, i) => lookTile(g, L, t, P + (i % 2) * (tileW + 24), foot + 24 + Math.floor(i / 2) * step, tileW, LOOK_TILE.h, markOf(c, t.emoji, t.art)))
+
+  drawSign(g, { ...c.pal, paper: '#FFFFFF', muted: L.muted }, c.logo, LOOK_Y.sign, L.logoRim ?? undefined)
+}
+
+/**
+ * What the month came to, on the wallet Home keeps your net worth in: its
+ * leather, its light from above and the shade settling into its base, and
+ * the saddle stitching inset from its edge - or, in Lights out, the plain
+ * panel the flat look makes of it. Returns its foot.
+ *
+ * @param {CanvasRenderingContext2D} g @param {Picture} c @param {Look} L
+ * @param {{label: string, value: string, line: string|null}} hero
+ * @param {number} top
+ */
+function lookHero(g, c, L, hero, top) {
+  const x = P, w = INNER
+  const h = hero.line ? 361 : 281
+  // The wallet's corners: tighter at the foot, a billfold rather than a card.
+  const outline = (/** @type {number} */ inset) => roundRect(g, x + inset, top + inset, w - inset * 2, h - inset * 2, 72 - inset, 52 - inset)
+  if (L.wallet) {
+    shadowed(g, () => {
+      g.fillStyle = c.tone.deep
+      outline(0)
+      g.fill()
+    }, 48, 22, L.lift)
+    g.save()
+    outline(0)
+    g.clip()
+    g.fillStyle = cssLinear(g, 165, x, top, w, h, [[0, c.tone.light], [1, c.tone.deep]])
+    g.fillRect(x, top, w, h)
+    ellipseGlow(g, x + w / 2, top - h * 0.12, w * 1.25, h * 0.72, [[0, 'rgba(255, 255, 255, 0.2)'], [0.68, 'rgba(255, 255, 255, 0)']])
+    const settle = g.createLinearGradient(0, top, 0, top + h)
+    settle.addColorStop(0.34, 'rgba(0, 0, 0, 0)')
+    settle.addColorStop(1, 'rgba(0, 0, 0, 0.2)')
+    g.fillStyle = settle
+    g.fillRect(x, top, w, h)
+    // The rim's catch of light along the top.
+    g.fillStyle = 'rgba(255, 255, 255, 0.18)'
+    g.fillRect(x, top, w, 3)
+    g.restore()
+    g.save()
+    g.setLineDash([10, 8])
+    g.lineWidth = 2.5
+    g.strokeStyle = 'rgba(255, 255, 255, 0.34)'
+    outline(26)
+    g.stroke()
+    g.restore()
+  } else {
+    g.fillStyle = '#1C1C1F'
+    outline(0)
+    g.fill()
+    g.lineWidth = 2
+    g.strokeStyle = 'rgba(255, 255, 255, 0.09)'
+    outline(1)
+    g.stroke()
+  }
+
+  const tx = x + 60
+  const room = w - 120
+  g.fillStyle = L.wallet ? c.pal.muted : L.muted
+  g.font = font(500, 40)
+  g.fillText(clip(g, hero.label, room), tx, top + 81)
+  g.fillStyle = '#FFFFFF'
+  g.fillText(fit(g, hero.value, 600, 140, 80, room), tx, top + 213)
+  if (hero.line) {
+    g.font = font(600, 34)
+    const line = clip(g, hero.line, room - 64)
+    const pillW = g.measureText(line).width + 64
+    g.fillStyle = L.pill.fill
+    roundRect(g, tx, top + 241, pillW, 68, 34)
+    g.fill()
+    g.fillStyle = L.pill.text
+    g.fillText(line, tx + 32, top + 287)
+  }
+  return top + h
+}
+
+/**
+ * Spendr's mark and name, and the year on a pill - drawBrand, in a look.
+ *
+ * @param {CanvasRenderingContext2D} g @param {Look} L
+ * @param {HTMLImageElement|null} logo @param {string} pill
+ */
+function lookBrand(g, L, logo, pill) {
+  shadowed(g, () => {
+    g.fillStyle = '#FFFFFF'
+    roundRect(g, P, 262, 80, 80, 24)
+    g.fill()
+  }, 24, 8, L.lift)
+  if (logo) g.drawImage(logo, P + 8, 270, 64, 64)
+  g.fillStyle = L.ink
+  g.font = font(600, 46)
+  g.fillText('Spendr', P + 104, 318)
+  g.font = font(500, 34)
+  const text = clip(g, pill, 420)
+  const pillW = g.measureText(text).width + 52
+  g.fillStyle = L.year.fill
+  roundRect(g, W - P - pillW, 272, pillW, 60, 30)
+  g.fill()
+  g.lineWidth = 2
+  g.strokeStyle = L.year.stroke
+  roundRect(g, W - P - pillW + 1, 273, pillW - 2, 58, 29)
+  g.stroke()
+  g.fillStyle = L.year.text
+  g.textAlign = 'center'
+  g.fillText(text, W - P - pillW / 2, 314)
+  g.textAlign = 'left'
+}
+
+/**
+ * A figure on one of the app's cards - drawTile, in a look.
+ *
+ * @param {CanvasRenderingContext2D} g @param {Look} L
+ * @param {{emoji: string, label: string, value: string, tone?: 'good'|'soft'}} t
+ * @param {number} x @param {number} y @param {number} w @param {number} h
+ * @param {CanvasImageSource|null} img
+ */
+function lookTile(g, L, t, x, y, w, h, img) {
+  const R = 36
+  g.save()
+  if (L.card.shadow) {
+    g.shadowColor = L.card.shadow
+    g.shadowBlur = 24
+    g.shadowOffsetY = 6
+  }
+  g.fillStyle = L.card.fill
+  roundRect(g, x, y, w, h, R)
+  g.fill()
+  g.restore()
+  if (L.card.rim) {
+    g.save()
+    roundRect(g, x, y, w, h, R)
+    g.clip()
+    g.fillStyle = L.card.rim
+    g.fillRect(x, y + 2, w, 2.5)
+    g.restore()
+  }
+  g.lineWidth = 2
+  g.strokeStyle = L.card.stroke
+  roundRect(g, x + 1, y + 1, w - 2, h - 2, R - 1)
+  g.stroke()
+  if (img) g.drawImage(img, x + 16, y + h / 2 - 46, 92, 92)
+  else drawEmoji(g, t.emoji, x + 28, y + h / 2 + 3, 60, 'left')
+  const tx = x + 118
+  const room = w - 118 - 28
+  g.fillStyle = L.label
+  g.font = font(600, 26)
+  g.fillText(clip(g, t.label.toUpperCase(), room), tx, y + h / 2 - 14)
+  g.fillStyle = t.tone === 'good' ? L.good : t.tone === 'soft' ? L.soft : L.ink
+  g.fillText(fit(g, t.value, 600, 46, 30, room), tx, y + h / 2 + 34)
 }
 
 // ── The objects the pictures draw ────────────────────────────────────────

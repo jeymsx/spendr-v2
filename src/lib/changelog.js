@@ -24,6 +24,14 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.7.0',
+    date: '2026-09-27',
+    items: [
+      { title: 'Lock Spendr with Face ID', desc: "Turn it on in Settings, under App lock. It asks for Face ID when you open Spendr, and a backup PIN gets you in if Face ID can't." },
+      { title: 'Sharper pictures to share', desc: 'Badges and Wrapped slides saved on an iPhone come out crisp, without a grey box behind the art.' },
+    ],
+  },
+  {
     version: '0.6.0',
     date: '2026-09-27',
     items: [
