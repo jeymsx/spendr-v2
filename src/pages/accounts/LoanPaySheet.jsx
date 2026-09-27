@@ -12,7 +12,7 @@ import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
 import { chipClass } from './shared'
 import { fmt } from '../../lib/money'
 import { isLiquid } from '../../lib/accountMeta'
-import { splitPayment } from '../../lib/loans'
+import { rateLabel, splitPayment } from '../../lib/loans'
 
 /** The accent the app paints money leaving an account. */
 const PAY_COLOR = '#10b981'
@@ -130,7 +130,7 @@ export default function LoanPaySheet({ open, onClose, loan, accounts = [], statu
             <DetailRow
               label="Interest"
               value={fmt(split.interest, cur)}
-              sub={loan?.interestRate ? `${loan.interestRate}% a month` : 'No rate set'}
+              sub={loan?.interestRate ? `${rateLabel(loan.interestRate)}% a month` : 'No rate set'}
               padded={false}
               isLast
             />

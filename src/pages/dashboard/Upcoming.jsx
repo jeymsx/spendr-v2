@@ -39,7 +39,7 @@ export function toUpcomingItem(e, catMap, acctByName) {
   }
   if (e.kind === 'card') {
     return {
-      ...common, meta: 'Statement, already counted', icon: <IconCardUI size={17} />,
+      ...common, meta: 'Card due, counted', icon: <IconCardUI size={17} />,
       color: acctByName[e.name]?.color ?? null,
       ...(e.overdue ? { status: 'Overdue', late: true } : {}),
     }

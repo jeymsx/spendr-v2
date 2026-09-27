@@ -8,8 +8,9 @@ import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
 import { fmt } from '../../lib/money'
 import { valuedAgo } from '../../lib/investments'
 
-/** The accent the app paints money that is yours but not spendable. */
-const VALUE_COLOR = '#6366f1'
+/** The accent, the colour a transfer is drawn in: a value update is a move
+ *  that is neither income nor spending, and red or green would say it was. */
+const VALUE_COLOR = 'var(--color-primary)'
 
 /**
  * What an investment is worth now - typed from what the provider shows you.

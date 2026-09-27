@@ -145,7 +145,7 @@ export default function Preferences() {
               </RowIcon>
             }
             label="Count debts in net worth"
-            sublabel="What people owe you, less what you owe"
+            sublabel="Owed to you, less what you owe"
             right={<ToggleSwitch on={countDebts} />}
             onTap={() => put('netWorthDebts', !countDebts)}
           />

@@ -142,12 +142,12 @@ export default function ForecastPage() {
             <DetailRow
               label="Starting from"
               value={fmt(forecast.start, base)}
-              sub="Cash and banks, less what cards owe"
+              sub="Cash and banks, less cards"
             />
             <DetailRow
               label="Everyday spending"
               value={forecast.dailySpend ? `${fmt(forecast.dailySpend, base)} a day` : 'Not yet'}
-              sub={forecast.dailySpend ? 'A typical week of yours, spread out' : 'Needs 3 weeks of history'}
+              sub={forecast.dailySpend ? 'Your usual week, per day' : 'Needs 3 weeks of history'}
             />
             <button
               type="button"
@@ -258,8 +258,8 @@ function FloorSheet({ open, onClose, floor, currency }) {
       }
     >
       <p className="text-13 text-slate-500 dark:text-slate-400 mb-4">
-        The least you want in cash and banks. The forecast tells you the day you would go below it,
-        and safe to spend keeps it aside. Leave it empty for none.
+        The least you want to keep in cash and banks. The forecast warns you before you dip
+        below it. Leave it empty for none.
       </p>
       <MoneyField value={value} onChange={moneyChangeHandler(setValue)} currency={currency} />
     </Sheet>

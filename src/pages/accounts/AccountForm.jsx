@@ -17,7 +17,7 @@ import {
   PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, INVESTMENT_KINDS, defaultRole,
 } from '../../lib/accountMeta'
 import { CORRECTION_DESC } from '../../lib/flows'
-import { monthsToClear, solveMonthlyRate } from '../../lib/loans'
+import { monthsToClear, rateLabel, solveMonthlyRate } from '../../lib/loans'
 import { createInvestment } from '../../db/accountWrites'
 import { fmt, getBaseCurrency } from '../../lib/money'
 import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
@@ -449,8 +449,11 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   }
 
   const isParentItself = (allAccounts ?? []).some(a => a.parentName === account?.name)
+  /* Grouping is for money you spend and save - a GSave under GCash. An
+     investment or a loan has its own section on Accounts, so it neither
+     groups under anything nor has anything grouped under it. */
   const potentialParents = (allAccounts ?? []).filter(a =>
-    !a.parentName && a.type !== 'credit' && a.type !== 'loan' && a.name !== name
+    !a.parentName && !['credit', 'loan', 'investment'].includes(a.type) && a.name !== name
   )
 
   const isLoanType = type === 'loan'
@@ -648,7 +651,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 provider shows you. */}
             {isInvestmentType && (
               <div>
-                <SectionLabel>Kind</SectionLabel>
+                <SectionLabel>Invested in</SectionLabel>
                 <Rail className="items-center gap-2 px-5 -mx-5 py-0.5">
                   {INVESTMENT_KINDS.map(k => (
                     <button
@@ -694,7 +697,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 this page is the account's facts. */}
 
             {/* Group under parent */}
-            {type !== 'credit' && type !== 'loan' && !isParentItself && potentialParents.length > 0 && (
+            {!['credit', 'loan', 'investment'].includes(type) && !isParentItself && potentialParents.length > 0 && (
               <div>
                 <SectionLabel>Group under</SectionLabel>
                 {/* One line that scrolls, not a wrapping block.
@@ -873,7 +876,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                       value={interestRate}
                       onChange={e => setInterestRate(e.target.value.replace(/[^0-9.]/g, ''))}
                       inputMode="decimal"
-                      placeholder={!isEdit && loanRate ? String(loanRate) : 'Optional'}
+                      placeholder={!isEdit && loanRate ? rateLabel(loanRate) : 'Optional'}
                       right={<span className="text-sm">%</span>}
                     />
                   </div>
@@ -881,7 +884,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
                 <p className="text-11 text-slate-400 dark:text-slate-500 px-1 -mt-2">
                   {loanMonthsLeft != null && Number.isFinite(loanMonthsLeft)
-                    ? `About ${loanMonthsLeft} ${loanMonthsLeft === 1 ? 'payment' : 'payments'} left${loanRate ? ` at ${loanRate}% a month` : ''}`
+                    ? `About ${loanMonthsLeft} ${loanMonthsLeft === 1 ? 'payment' : 'payments'} left${loanRate ? ` at ${rateLabel(loanRate)}% a month` : ''}`
                     : loanMonthsLeft === Infinity
                       ? 'The payment does not cover the interest'
                       : 'Leave the rate blank and it is worked out from the months left'}

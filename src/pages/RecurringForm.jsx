@@ -7,7 +7,7 @@ import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
 import { deleteRecurringRemote } from '../lib/sync'
 import { moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { validateRecurring, saveRecurring } from '../lib/recurringWrite'
-import { FREQ_OPTIONS } from '../utils/recurring'
+import { FREQ_OPTIONS, snapToCutoff } from '../utils/recurring'
 import { isEverydayAccount } from '../lib/accountMeta'
 import Segmented from '../components/ui/Segmented'
 import { IconChevronLeft, IconChevronRight } from '../components/icons'
@@ -96,7 +96,7 @@ export default function RecurringForm() {
   const [category, setCategory] = useState(null)
   const [account, setAccount] = useState(null)
   const [frequency, setFrequency] = useState(askedIncome ? 'semimonthly' : DRAFT_DEFAULTS.frequency)
-  const [nextDate, setNextDate] = useState(() => toDateInput())
+  const [nextDate, setNextDate] = useState(() => (askedIncome ? snapToCutoff(toDateInput()) : toDateInput()))
   const [active, setActive] = useState(DRAFT_DEFAULTS.active)
   const [split, setSplit] = useState(/** @type {any} */ (null))
   const [dividing, setDividing] = useState(false)
@@ -160,6 +160,34 @@ export default function RecurringForm() {
   }
 
   const noun = isIncome ? 'Income' : 'Bill'
+
+  /* Twice a month lands on the 15th and the month's last day, so the date
+     field only ever holds one of those - picking the 20th shows the 30th,
+     the day it will actually post, rather than saving something else. */
+  const pickFrequency = (/** @type {string} */ f) => {
+    setFrequency(f)
+    if (f === 'semimonthly') setNextDate(d => (d ? snapToCutoff(d) : d))
+  }
+
+  /* The chosen frequency, scrolled into view. Twice a month is the fifth
+     chip, past the right edge on a phone, and it is what income opens on -
+     a selection you cannot see reads as no selection. Instant the first
+     time, so the form does not open with the row sliding. */
+  const freqRail = useRef(/** @type {HTMLElement|null} */ (null))
+  const freqSeen = useRef(false)
+  useEffect(() => {
+    const rail = freqRail.current
+    const chip = rail?.querySelector('[aria-pressed="true"]')
+    if (!rail || !chip) return
+    const r = rail.getBoundingClientRect()
+    const c = chip.getBoundingClientRect()
+    const gutter = 20
+    const delta = c.right > r.right - gutter ? c.right - r.right + gutter
+      : c.left < r.left + gutter ? c.left - r.left - gutter
+      : 0
+    if (delta) rail.scrollBy({ left: delta, behavior: freqSeen.current ? 'smooth' : 'auto' })
+    freqSeen.current = true
+  }, [frequency, editRec])
   const back = () => navigate(-1)
 
   async function handleSave() {
@@ -399,14 +427,14 @@ export default function RecurringForm() {
                 runs to the screen edge rather than stopping 20px short. */}
             <div>
               <SectionLabel>Frequency</SectionLabel>
-              <FadeScroller axis="x" className="-mx-5 px-5 flex items-center gap-2 pb-0.5">
+              <FadeScroller ref={freqRail} axis="x" className="-mx-5 px-5 flex items-center gap-2 pb-0.5">
                 {FREQ_OPTIONS.map(opt => {
                   const on = frequency === opt.value
                   return (
                     <button
                       key={opt.value}
                       type="button"
-                      onClick={() => setFrequency(opt.value)}
+                      onClick={() => pickFrequency(opt.value)}
                       aria-pressed={on}
                       className={[
                         'shrink-0 h-9 px-4 rounded-full text-13 font-semibold',
@@ -431,7 +459,7 @@ export default function RecurringForm() {
             {/* ── Next due date ── */}
             <div>
               <div className="flex items-baseline gap-2">
-                <SectionLabel>Next due date</SectionLabel>
+                <SectionLabel>{isIncome ? 'Next payday' : 'Next due date'}</SectionLabel>
                 {errors.nextDate && (
                   <p className="text-xs font-medium text-red-500 dark:text-red-400 mb-1.5">
                     {errors.nextDate}
@@ -455,9 +483,13 @@ export default function RecurringForm() {
                 <input
                   type="date"
                   value={nextDate}
-                  onChange={e => { setNextDate(e.target.value); setErrors(p => ({ ...p, nextDate: null })) }}
+                  onChange={e => {
+                    const v = e.target.value
+                    setNextDate(frequency === 'semimonthly' && v ? snapToCutoff(v) : v)
+                    setErrors(p => ({ ...p, nextDate: null }))
+                  }}
                   onClick={e => { try { e.currentTarget.showPicker?.() } catch { /* older engine */ } }}
-                  aria-label="Next due date"
+                  aria-label={isIncome ? 'Next payday' : 'Next due date'}
                   className="absolute inset-0 w-full h-full opacity-0 cursor-pointer
                     [color-scheme:light] dark:[color-scheme:dark]"
                 />

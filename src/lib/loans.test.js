@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dueOn, loanStatus, monthsToClear, solveMonthlyRate, splitPayment, upcomingLoanPayments } from './loans'
+import { dueOn, loanStatus, monthsToClear, rateLabel, solveMonthlyRate, splitPayment, upcomingLoanPayments } from './loans'
 
 describe('the rate a lender never told you', () => {
   it('finds the monthly rate that clears the loan in the months left', () => {
@@ -19,6 +19,19 @@ describe('the rate a lender never told you', () => {
     expect(monthsToClear(12000, 1000, 0)).toBe(12)
     expect(monthsToClear(100000, 1000, 0.01)).toBe(Infinity)
     expect(monthsToClear(0, 1000, 0.01)).toBe(0)
+  })
+
+  /* Found in the new-loan form: 24 months typed, the rate solved and kept to
+     four places, and the line under it said "About 25 payments left". */
+  it('gives back the months typed, through a rate rounded for storage', () => {
+    const pct = Math.round(solveMonthlyRate(30000, 1500, 24) * 100 * 10000) / 10000
+    expect(monthsToClear(30000, 1500, pct / 100)).toBe(24)
+  })
+
+  it('shows a rate to two places at most', () => {
+    expect(rateLabel(1.5131)).toBe('1.51')
+    expect(rateLabel('0.9')).toBe('0.9')
+    expect(rateLabel(2)).toBe('2')
   })
 })
 

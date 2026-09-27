@@ -7,7 +7,7 @@ import { GRADIENT_PRESETS } from '../lib/accountBrands'
 import { CARD_DESIGNS } from '../lib/cardDesigns'
 import { PH_ACCOUNTS, PH_HOLDINGS } from '../lib/phAccounts'
 import { INVESTMENT_KINDS } from '../lib/accountMeta'
-import { monthsToClear, solveMonthlyRate } from '../lib/loans'
+import { monthsToClear, rateLabel, solveMonthlyRate } from '../lib/loans'
 import { createInvestment } from '../db/accountWrites'
 import Field from '../components/ui/Field'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
@@ -628,7 +628,7 @@ export default function AccountNew() {
               valued the same way: by typing what the provider shows you. */}
           {isInvestment && (
             <div>
-              <SectionLabel>Kind</SectionLabel>
+              <SectionLabel>Invested in</SectionLabel>
               <Rail className="gap-2 px-5 -mx-5 pb-1">
                 {INVESTMENT_KINDS.map(k => (
                   <button
@@ -799,7 +799,7 @@ export default function AccountNew() {
               />
             </div>
             <div>
-              <SectionLabel hint="Day it is due.">Due day</SectionLabel>
+              <SectionLabel>Due day</SectionLabel>
               <input
                 inputMode="numeric"
                 value={draft.dueDay}
@@ -827,7 +827,7 @@ export default function AccountNew() {
                 value={draft.interestRate}
                 onChange={e => set({ interestRate: e.target.value.replace(/[^0-9.]/g, '') })}
                 inputMode="decimal"
-                placeholder={loanRate ? String(loanRate) : 'Optional'}
+                placeholder={loanRate ? rateLabel(loanRate) : 'Optional'}
                 right={<span className="text-sm">%</span>}
               />
             </div>
@@ -835,7 +835,7 @@ export default function AccountNew() {
 
           <p className="text-11 text-slate-500 dark:text-slate-400">
             {loanMonthsLeft != null && Number.isFinite(loanMonthsLeft)
-              ? `About ${loanMonthsLeft} ${loanMonthsLeft === 1 ? 'payment' : 'payments'} left${loanRate ? ` at ${loanRate}% a month` : ''}. Each payment you make is split: only the interest counts as spending.`
+              ? `About ${loanMonthsLeft} ${loanMonthsLeft === 1 ? 'payment' : 'payments'} left${loanRate ? ` at ${rateLabel(loanRate)}% a month` : ''}. Each payment you make is split: only the interest counts as spending.`
               : loanMonthsLeft === Infinity
                 ? 'That payment does not cover the interest. Check the monthly payment or the rate.'
                 : 'Leave the rate blank and it is worked out from the months left.'}

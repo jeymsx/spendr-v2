@@ -12,7 +12,7 @@ import { describe, it, expect, vi } from 'vitest'
  */
 vi.mock('../db/db', () => ({ default: { recurring: {} }, UNSYNCED: 0, SYNCED: 1 }))
 
-const { validateRecurring, toRecurringRow } = await import('./recurringWrite')
+const { validateRecurring, toRecurringRow, isIncomeRecurring } = await import('./recurringWrite')
 
 const filled = {
   name: 'Netflix',
@@ -83,5 +83,37 @@ describe('toRecurringRow', () => {
     expect(row.frequency).toBe('monthly')
     expect(row.nextDate).toBe('2026-10-05')
     expect(row.active).toBe(true)
+  })
+})
+
+describe('income on a schedule', () => {
+  it('marks income as inflow and a bill as expense', () => {
+    expect(toRecurringRow({ ...filled, type: 'inflow' }).type).toBe('inflow')
+    expect(toRecurringRow({ ...filled, type: 'expense' }).type).toBe('expense')
+  })
+
+  /* The desktop sheet builds drafts with no type. An update from there must
+     not write one, or editing a salary on desktop would turn it into a bill. */
+  it('leaves the type out when the draft does not say', () => {
+    expect('type' in toRecurringRow(filled)).toBe(false)
+  })
+
+  it('never stores a division on income', () => {
+    const split = { people: [{ name: 'Gelo' }], mode: 'equal' }
+    expect(toRecurringRow({ ...filled, type: 'inflow', split }).split).toBeNull()
+    expect(toRecurringRow({ ...filled, type: 'expense', split }).split).toBe(split)
+  })
+
+  it('lands twice-a-month on the 15th or the last day', () => {
+    expect(toRecurringRow({ ...filled, frequency: 'semimonthly', nextDate: '2026-10-05' }).nextDate).toBe('2026-10-15')
+    expect(toRecurringRow({ ...filled, frequency: 'semimonthly', nextDate: '2026-02-20' }).nextDate).toBe('2026-02-28')
+    expect(toRecurringRow({ ...filled, frequency: 'monthly', nextDate: '2026-10-05' }).nextDate).toBe('2026-10-05')
+  })
+
+  it('tells income from a bill, and reads a row with no type as a bill', () => {
+    expect(isIncomeRecurring({ type: 'inflow' })).toBe(true)
+    expect(isIncomeRecurring({ type: 'expense' })).toBe(false)
+    expect(isIncomeRecurring({})).toBe(false)
+    expect(isIncomeRecurring(null)).toBe(false)
   })
 })

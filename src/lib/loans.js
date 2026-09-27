@@ -28,7 +28,7 @@
  *
  * A transfer of the principal into the loan (it moves money, it is not
  * spending) and an expense for the interest (which is). See
- * db/loanWrites.js. Nothing here writes anything.
+ * db/accountWrites.js (payLoan). Nothing here writes anything.
  */
 
 const round2 = (/** @type {number} */ n) => Math.round(n * 100) / 100
@@ -76,7 +76,20 @@ export function monthsToClear(owed, payment, r) {
   if (!(r > 0)) return Math.ceil(owed / payment - 1e-9)
   if (owed * r >= payment) return Infinity
   const n = -Math.log(1 - (owed * r) / payment) / Math.log(1 + r)
-  return Math.ceil(n - 1e-6)
+  /* A hundredth of a payment is the rate's rounding, not another month: a
+     rate solved from "24 months left" and stored to four places comes back
+     as 24.0006, and the form would answer the 24 you typed with 25. */
+  return Math.ceil(n - 0.01)
+}
+
+/**
+ * A monthly rate for reading: "1.51", "0.9". The stored figure keeps four
+ * places so the split stays exact; nobody needs to read all four.
+ * @param {number|string} pct
+ */
+export function rateLabel(pct) {
+  const n = Number(pct)
+  return Number.isFinite(n) ? String(Math.round(n * 100) / 100) : ''
 }
 
 /**
