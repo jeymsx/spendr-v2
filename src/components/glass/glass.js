@@ -275,10 +275,14 @@ function fill(tpl, pal) {
  * straight through it and fought with the medallion. Grey says "not yet" on
  * its own.
  *
+ * `size` is the width and height the SVG claims - 128 unless something
+ * needs more. A canvas does: WebKit draws an SVG's filters right on a canvas
+ * only at the SVG's own size (see loadGlass in pages/recap/canvasKit.js).
+ *
  * @param {Layer[]} layers
  * @param {GlassPalette} pal
  * @param {string} p   an id prefix, unique among pictures in one document
- * @param {{shadow?: boolean, locked?: boolean}} [o]
+ * @param {{shadow?: boolean, locked?: boolean, size?: number}} [o]
  */
 function render(layers, pal, p, o = {}) {
   const solids = /** @type {number[]} */ ([])
@@ -350,7 +354,8 @@ function render(layers, pal, p, o = {}) {
     + '<feMerge><feMergeNode/><feMergeNode in="SourceGraphic"/></feMerge></filter>'
     + '</defs>'
 
-  return '<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 128 128" width="128" height="128">'
+  const px = Math.round(o.size ?? 128)
+  return `<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 128 128" width="${px}" height="${px}">`
     + defs
     + `<g class="gx"${o.shadow === false ? '' : ` filter="url(#${p}sh)"`}>${body}</g>`
     + '</svg>'
@@ -625,12 +630,12 @@ export function glassId() {
  * A picture, as SVG markup.
  *
  * @param {string} name   one of GLASS_NAMES; an unknown one draws the sparkles
- * @param {{hue?: string, id?: string, locked?: boolean, shadow?: boolean, lift?: number}} [o]
+ * @param {{hue?: string, id?: string, locked?: boolean, shadow?: boolean, lift?: number, size?: number}} [o]
  */
 export function glassSvg(name, o = {}) {
   const make = PICTURES[name] ?? PICTURES.sparkles
   const pal = o.locked ? LOCKED_PALETTE : glassPalette(o.hue ?? GLASS_BLUE, o.lift ?? 0)
-  return render(make(), pal, o.id ?? 'g', { shadow: o.shadow, locked: o.locked })
+  return render(make(), pal, o.id ?? 'g', { shadow: o.shadow, locked: o.locked, size: o.size })
 }
 
 // ── Medallions: the achievements' own shapes ──────────────────────────────────
@@ -647,7 +652,7 @@ const SHIELD_BADGE = rpoly([[64, 16], [104, 30], [104, 62], [64, 112], [24, 62],
  *   shield  a challenge
  *
  * @param {{glyph: string, hue: string, shape?: 'hex'|'circle'|'shield', level?: string|number,
- *          locked?: boolean, id?: string, shadow?: boolean}} o
+ *          locked?: boolean, id?: string, shadow?: boolean, size?: number}} o
  */
 export function glassBadgeSvg(o) {
   const shape = o.shape ?? 'hex'
@@ -670,7 +675,7 @@ export function glassBadgeSvg(o) {
     layers.push(X(`<path d="${rr(x, 96, w, 22, 11)}" fill="${pal.ink}"/><path d="${rr(x + 3, 97.2, w - 6, 8, 4)}" fill="#fff" opacity="0.16"/>`))
     layers.push(X(`<text x="68" y="112" text-anchor="middle" font-family="Inter, -apple-system, 'Segoe UI', Roboto, sans-serif" font-size="15" font-weight="700" fill="#fff">${text.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c] ?? c)}</text>`))
   }
-  return render(layers, pal, o.id ?? 'b', { shadow: o.shadow, locked: o.locked })
+  return render(layers, pal, o.id ?? 'b', { shadow: o.shadow, locked: o.locked, size: o.size })
 }
 
 /** An SVG string as a URL an <img> or a canvas can load. @param {string} svg */

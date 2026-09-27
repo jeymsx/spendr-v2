@@ -1,3 +1,4 @@
+import { svgUrl } from '../../components/glass/glass'
 import { CONFETTI } from './assets'
 
 /**
@@ -115,6 +116,47 @@ export function loadImage(src) {
   return p
 }
 
+/** Glass already flattened, the most recently asked for last. @type {Map<string, Promise<HTMLCanvasElement|null>>} */
+const flats = new Map()
+const FLATS_KEPT = 24
+
+/**
+ * Glass, as pixels a picture can be drawn with.
+ *
+ * WebKit - so every browser on an iPhone - gets an SVG's filters wrong when
+ * the SVG is drawn to a canvas at any size but its own. The frost and the
+ * edges come out soft, worked out at the SVG's 128px and stretched, and the
+ * drop shadow is cut off in a hard grey box around the picture: what a saved
+ * badge looked like. Drawn once at exactly its own size onto a canvas of
+ * that size, it is right, and that canvas is plain pixels from then on, to
+ * be drawn at any size, turned and shadowed like any other image.
+ *
+ * So `svg` must be made at `size` - glassSvg and glassBadgeSvg take it. A
+ * couple of dozen are kept for the next picture; older ones are let go
+ * rather than held, since an iPhone caps what all canvases together may use.
+ *
+ * @param {string} svg
+ * @param {number} size
+ * @returns {Promise<HTMLCanvasElement|null>}
+ */
+export function loadGlass(svg, size) {
+  const key = `${size}|${svg}`
+  let p = flats.get(key)
+  if (p) flats.delete(key)
+  else {
+    p = loadImage(svgUrl(svg)).then(img => {
+      if (!img) return null
+      const flat = document.createElement('canvas')
+      flat.width = flat.height = size
+      flat.getContext('2d')?.drawImage(img, 0, 0, size, size)
+      return flat
+    })
+  }
+  flats.set(key, p)
+  while (flats.size > FLATS_KEPT) flats.delete(/** @type {string} */ (flats.keys().next().value))
+  return p
+}
+
 /**
  * Text cut to fit `width` with an ellipsis, in the font already set. Cut by
  * character, not by UTF-16 unit, so an emoji in a category name is dropped
@@ -216,7 +258,7 @@ export function shadowed(g, paint, blur = 30, y = 10, alpha = 0.18) {
  * An image centred on (cx, cy), turned by `deg`, with a soft drop shadow.
  *
  * @param {CanvasRenderingContext2D} g
- * @param {HTMLImageElement|null} img
+ * @param {CanvasImageSource|null} img
  * @param {number} cx @param {number} cy @param {number} size @param {number} [deg]
  */
 export function drawArt(g, img, cx, cy, size, deg = 0) {
@@ -421,7 +463,7 @@ export function drawSign(g, pal, logo, y = 1587) {
  * @param {string} emoji
  * @param {string} label
  * @param {number} x @param {number} y the chip's top
- * @param {HTMLImageElement|null} [img] a glass mark to draw instead of the emoji
+ * @param {CanvasImageSource|null} [img] a glass mark to draw instead of the emoji
  */
 export function drawChip(g, pal, emoji, label, x = P, y = 392, img = null) {
   g.font = font(600, 38)
@@ -497,7 +539,7 @@ export function drawWrappedMark(g, pal, x, cy, size = 80) {
  * @param {RecapPalette} pal
  * @param {{emoji: string, label: string, value: string, tone?: 'good'|'soft'}} t
  * @param {number} x @param {number} y @param {number} w @param {number} h
- * @param {HTMLImageElement|null} [img] a glass mark to draw instead of the emoji
+ * @param {CanvasImageSource|null} [img] a glass mark to draw instead of the emoji
  */
 export function drawTile(g, pal, t, x, y, w, h, img = null) {
   shadowed(g, () => {

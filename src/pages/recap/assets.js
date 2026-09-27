@@ -75,19 +75,30 @@ const HUE_FOR = /** @type {Record<string, string>} */ ({
 const urls = new Map()
 
 /**
- * An illustration, as a URL an <img> or a canvas can load.
+ * An illustration, as SVG markup.
  *
  * @param {string} name   a recap name ('pig-face') or a glass one ('piggy')
  * @param {string} hue    the accent
  * @param {number} [lift] lifted for the card by default; 0 for glass on paper
+ * @param {number} [size] the size it claims: a picture on a canvas needs the
+ *                        size it is drawn at (see loadGlass in canvasKit.js)
+ */
+export function artSvg(name, hue, lift = LIFT, size) {
+  const glass = GLASS_FOR[name] ?? name
+  return glassSvg(glass, { hue: HUE_FOR[glass] ?? hue, lift, id: 'r', size })
+}
+
+/**
+ * An illustration, as a URL an <img> can load.
+ *
+ * @param {string} name @param {string} hue @param {number} [lift]  as artSvg
  */
 export function artUrl(name, hue, lift = LIFT) {
   const glass = GLASS_FOR[name] ?? name
-  const tint = HUE_FOR[glass] ?? hue
-  const key = `${glass}|${tint}|${lift}`
+  const key = `${glass}|${HUE_FOR[glass] ?? hue}|${lift}`
   let url = urls.get(key)
   if (!url) {
-    url = svgUrl(glassSvg(glass, { hue: tint, lift, id: 'r' }))
+    url = svgUrl(artSvg(name, hue, lift))
     urls.set(key, url)
   }
   return url

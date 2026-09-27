@@ -1,7 +1,7 @@
-import { glassBadgeSvg, glassPalette, svgUrl } from '../glass/glass'
+import { glassBadgeSvg, glassPalette } from '../glass/glass'
 import { LOGO_LARGE, seeded, seedOf } from '../../pages/recap/assets'
 import {
-  H, INNER, P, W, clip, font, loadFonts, loadImage, makeCanvas, roundRect, shadowed, toPng, wrap,
+  H, INNER, P, W, clip, font, loadFonts, loadGlass, loadImage, makeCanvas, roundRect, shadowed, toPng, wrap,
 } from '../../pages/recap/canvasKit'
 
 /**
@@ -16,6 +16,10 @@ import {
  *
  * @typedef {import('../../context/AchievementContext').Celebration} Celebration
  */
+
+/* The medallion's size on the picture, and so the size it is flattened at:
+   see loadGlass for why those have to be the same. */
+const MEDALLION = 640
 
 /** What a kind of achievement is called on its eyebrow. */
 export const EYEBROW = {
@@ -63,10 +67,10 @@ export function earnedDate(iso) {
  */
 export async function renderAchievementPicture(item) {
   const pal = glassPalette(item.hue)
-  const art = svgUrl(glassBadgeSvg({ glyph: item.glyph, hue: item.hue, shape: item.shape, level: item.level, id: 'p' }))
+  const art = glassBadgeSvg({ glyph: item.glyph, hue: item.hue, shape: item.shape, level: item.level, id: 'p', size: MEDALLION })
   const [logo, badge] = await Promise.all([
     loadImage(LOGO_LARGE),
-    loadImage(art),
+    loadGlass(art, MEDALLION),
     loadFonts(`${item.name} ${item.blurb} ${EYEBROW[item.kind]} ${CLOSER[item.kind]}. Spendr Made with 0123456789 ${earnedDate(item.earnedAt)}`),
   ])
   const { canvas, g } = makeCanvas()
@@ -121,7 +125,7 @@ export async function renderAchievementPicture(item) {
     g.shadowColor = 'rgba(15, 23, 42, 0.22)'
     g.shadowBlur = 60
     g.shadowOffsetY = 30
-    g.drawImage(badge, cx - 320, cy - 320, 640, 640)
+    g.drawImage(badge, cx - MEDALLION / 2, cy - MEDALLION / 2, MEDALLION, MEDALLION)
     g.restore()
   }
 

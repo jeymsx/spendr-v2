@@ -1,16 +1,16 @@
 import { formatAmount, maskedAmount } from '../../lib/currency'
 import { achievementArt, achievementDef, earnedLabel } from '../../lib/achievements'
-import { glassBadgeSvg, svgUrl } from '../../components/glass/glass'
+import { glassBadgeSvg } from '../../components/glass/glass'
 import { monthName, parseMonth } from '../../lib/recap'
 import {
   budgetsCopy, dayLabel, daysCopy, heroAmount, keptCopy, netWorthCopy, percent, personalityOf,
   spentCopy, summaryHero, summaryTiles, weeksOf,
 } from '../../lib/recapCopy'
-import { EMOJI_GLASS, LOGO_LARGE, artUrl, glassForEmoji, seeded, seedOf } from './assets'
+import { EMOJI_GLASS, LOGO_LARGE, artSvg, glassForEmoji, seeded, seedOf } from './assets'
 import {
   INNER, P, W, clip, drawArt, drawBrand, drawChip, drawConfetti, drawEmoji, drawPill, drawRays, drawSign,
   drawSticker, drawSurface, drawTile, drawWrappedMark, fit, font, glow, loadFonts,
-  loadImage, makeCanvas, rgba, roundRect, shadowed, toPng, wrap,
+  loadGlass, loadImage, makeCanvas, rgba, roundRect, shadowed, toPng, wrap,
 } from './canvasKit'
 
 /**
@@ -40,9 +40,9 @@ import {
  * @property {string} [name]
  * @property {boolean} hide
  * @property {HTMLImageElement|null} logo
- * @property {Record<string, HTMLImageElement|null>} art
- * @property {Array<HTMLImageElement|null>} badges
- * @property {Record<string, HTMLImageElement|null>} marks  glass marks for chips and tiles, by picture name
+ * @property {Record<string, CanvasImageSource|null>} art
+ * @property {Array<CanvasImageSource|null>} badges
+ * @property {Record<string, CanvasImageSource|null>} marks  glass marks for chips and tiles, by picture name
  * @property {() => number} rand
  * @property {(v: number) => string} money   an exact amount, or its mask
  * @property {string} month  "August"
@@ -70,6 +70,11 @@ const NEEDS = {
   summary: ['wrapped-gift', 'sparkles', 'party-popper', 'money-bag'],
 }
 
+/* The size glass is flattened at (see loadGlass): the illustrations and the
+   badges are drawn at up to 520 and 380, the marks on chips and tiles at 92. */
+const ART_PX = 640
+const MARK_PX = 192
+
 /** Where a slide's headline sits, and the line under it. */
 const HEAD_Y = 640
 const LINE_Y = 704
@@ -92,10 +97,10 @@ export async function renderPicture({ id, recap, currency, pal, tone, name, hide
   const kind = /** @type {keyof typeof DRAW} */ (id in DRAW ? id : 'summary')
   const persona = kind === 'personality' ? personalityOf(recap) : null
   const artNames = persona ? [persona.art] : NEEDS[kind]
-  const badgeUrls = kind === 'badges'
+  const badgeSvgs = kind === 'badges'
     ? recap.badges.slice(0, 6).map((b, i) => {
       const art = achievementArt(b.key)
-      return art ? svgUrl(glassBadgeSvg({ ...art, id: `pb${i}` })) : null
+      return art ? glassBadgeSvg({ ...art, id: `pb${i}`, size: ART_PX }) : null
     })
     : []
   /* The glass marks on chips and tiles, all of them: a few small pictures,
@@ -104,9 +109,9 @@ export async function renderPicture({ id, recap, currency, pal, tone, name, hide
   const markNames = [...new Set(Object.values(EMOJI_GLASS))]
   const [logo, arts, badges, marks] = await Promise.all([
     loadImage(LOGO_LARGE),
-    Promise.all(artNames.map(n => loadImage(artUrl(n, pal.accent)))),
-    Promise.all(badgeUrls.map(loadImage)),
-    Promise.all(markNames.map(n => loadImage(artUrl(n, pal.accent, 0)))),
+    Promise.all(artNames.map(n => loadGlass(artSvg(n, pal.accent, undefined, ART_PX), ART_PX))),
+    Promise.all(badgeSvgs.map(svg => (svg ? loadGlass(svg, ART_PX) : null))),
+    Promise.all(markNames.map(n => loadGlass(artSvg(n, pal.accent, 0, MARK_PX), MARK_PX))),
     loadFonts(sampleText(recap, name)),
   ])
   const { year } = parseMonth(recap.month)
