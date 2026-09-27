@@ -1,50 +1,30 @@
 import db from '../db/db'
 import { markRead } from '../db/notifications'
 import {
-  IconSparkle, IconBarChart, IconBell, IconTarget, IconTransferUI,
+  IconSparkle, IconBarChart, IconBell, IconTarget, IconTransferUI, IconTrophy, IconContrast, IconSettings,
 } from './icons'
 import Button from './ui/Button'
 import Divider from './ui/Divider'
 import Sheet from './ui/Sheet'
+import { APP_VERSION, RELEASE_NOTES } from '../lib/release'
 
-const CURRENT_VERSION = '0.5.0'
+/* The version is package.json's, through lib/release.js - one number for the
+   whole app. */
+const CURRENT_VERSION = APP_VERSION
 
-/* Written from the user's side of the change, not the code's: what is
-   different when you open the app.
+/* ONE RELEASE AT A TIME. The notes are this release's (lib/release.js),
+   shown once per version: somebody opening the app today is told what
+   changed today. The whole history is the Changelog page in Settings, for
+   whoever wants it - which is where a list that only grows belongs.
 
-   ONE RELEASE AT A TIME. This list is keyed to CURRENT_VERSION and shown once
-   per version, so 0.3.0's nine entries are gone rather than accumulating -
-   somebody opening the app today is being told what changed today, and a
-   changelog that only grows is one nobody reads to the end of.
-
-   What is NOT here: the migration, the Dexie hook, the 60-odd call sites that
-   stopped hardcoding a peso sign, or the tests that hold them there. They are
-   the reason the figures are right, and none of them are something the person
-   using the app wants to read. That belongs in the commit messages.
-
-   `Icon` is a COMPONENT, not a string. */
-const WHATS_NEW = [
-  {
-    Icon: IconBarChart,
-    title: 'Your month, in a recap',
-    desc: 'On the 1st, a look back at last month: what you spent, what you kept, where it went. Save the summary as an image.',
-  },
-  {
-    Icon: IconBell,
-    title: 'Notifications, in one place',
-    desc: 'The bell on the home screen collects card due dates, bills, budget alerts and new badges.',
-  },
-  {
-    Icon: IconTarget,
-    title: 'Budget alerts',
-    desc: 'A heads-up when a category reaches 80% of its budget, and when it goes over.',
-  },
-  {
-    Icon: IconTransferUI,
-    title: 'Transfers between currencies',
-    desc: 'Moving money from a dollar account to a peso one now asks what actually arrived.',
-  },
-]
+   What is NOT here: migrations, hooks, refactors and the tests that hold
+   them. They are why the figures are right, and none of them is something
+   the person using the app wants to read. */
+const ICONS = /** @type {Record<string, import('react').ComponentType<{size?: number}>>} */ ({
+  trophy: IconTrophy, sparkle: IconSparkle, contrast: IconContrast, chart: IconBarChart,
+  settings: IconSettings, bell: IconBell, target: IconTarget, transfer: IconTransferUI,
+})
+const WHATS_NEW = RELEASE_NOTES.map(n => ({ Icon: ICONS[n.icon] ?? IconSparkle, title: n.title, desc: n.desc }))
 
 /** The first line of this release, for the notifications list. */
 export const WHATS_NEW_HEADLINE = WHATS_NEW[0].title

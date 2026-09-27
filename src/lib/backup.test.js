@@ -33,6 +33,7 @@ const good = {
   debts: [],
   goals: [],
   badges: [],
+  challenges: [],
 }
 
 describe('inspectBackup', () => {

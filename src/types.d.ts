@@ -251,6 +251,23 @@ interface BadgeRow {
   [key: string]: any
 }
 
+/** One attempt at a challenge. See lib/challenges.js. */
+interface ChallengeRow {
+  id?: number
+  syncId?: string
+  key: string
+  params?: Record<string, any>
+  /** Local 'YYYY-MM-DD', inclusive at both ends. */
+  startDay: string
+  endDay: string
+  status: 'active' | 'won' | 'lost' | 'quit'
+  startedAt?: string
+  finishedAt?: string | null
+  updatedAt?: string
+  synced?: number
+  [key: string]: any
+}
+
 /** The key-value table: seeded flags, tombstones, the user's settings. */
 interface MetaRow {
   key: string

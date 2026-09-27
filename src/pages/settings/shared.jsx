@@ -13,15 +13,18 @@
 import Divider from '../../components/ui/Divider'
 import { fieldFrame } from '../../components/ui/Field'
 import SectionLabel from '../../components/ui/SectionLabel'
+import { IconChevronRight } from '../../components/icons'
+import {
+  Database01, FileDownload02, LogOut01, MessageAlertCircle, RefreshCw01, ShieldTick, Sliders04,
+} from '@untitledui/icons'
 import { toDateInput } from '../../utils/txDate'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-/* The version in the Settings footer. It read 0.1.0 while package.json said
-   0.3.0 and the release notes said 0.3.0 - three numbers for one app, and
-   the one people can actually see was the stalest. Kept in step with
-   package.json and CURRENT_VERSION in WhatsNewModal from here on. */
-export const APP_VERSION = '0.4.0'
+/* The version in the Settings footer is the app's own, from package.json by
+   way of lib/release.js. It was typed in here, and read 0.4.0 while the app
+   was on 0.5.0 - the one version people can actually see was the stalest. */
+export { APP_VERSION } from '../../lib/release'
 
 export const EMOJI_OPTIONS = [
   '🍔', '🛍️', '🚗', '🎮', '💆', '🧾', '📦', '💰',
@@ -62,6 +65,14 @@ export function fmtRelTime(isoStr) {
   const hrs = Math.floor(mins / 60)
   if (hrs < 24)  return `${hrs}h ago`
   return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+}
+
+/** "Synced just now", "Synced 5m ago", "Synced on Sep 20". @param {string|null} isoStr */
+export function syncedLabel(isoStr) {
+  const rel = fmtRelTime(isoStr)
+  if (rel === 'Never') return 'Not synced yet'
+  if (rel === 'Just now') return 'Synced just now'
+  return /ago$/.test(rel) ? `Synced ${rel}` : `Synced on ${rel}`
 }
 
 // ── CSV export ─────────────────────────────────────────────────────────────────
@@ -224,6 +235,24 @@ export function IconTarget() {
   )
 }
 
+// ── Settings' own icons ──────────────────────────────────────────────────────
+/* Imported here rather than added to components/icons.jsx: that module is in
+   the first bundle, and a Settings-only icon has no business riding in it.
+   Same size and stroke as its uui() wrapper, so they sit with the rest. */
+/** @param {import('react').ComponentType<any>} Cmp */
+const ui = (Cmp) => {
+  const Wrapped = (/** @type {any} */ props) => <Cmp size={18} strokeWidth={1.8} {...props} />
+  Wrapped.displayName = `Icon(${Cmp.displayName ?? 'settings'})`
+  return Wrapped
+}
+export const IconLogOut   = ui(LogOut01)
+export const IconShield   = ui(ShieldTick)
+export const IconSliders  = ui(Sliders04)
+export const IconSyncing  = ui(RefreshCw01)
+export const IconReport   = ui(FileDownload02)
+export const IconFeedback = ui(MessageAlertCircle)
+export const IconDatabase = ui(Database01)
+
 // ── UI primitives ──────────────────────────────────────────────────────────────
 
 /* A 12px semibold caption at the page gutter - which is SectionLabel, a
@@ -246,19 +275,58 @@ export function SectionCard({ children }) {
   )
 }
 
+/* Each row colour as a flat, low tint with the icon in the colour itself -
+   and in dark mode, the icon white on the tint: a coloured outline on a
+   coloured wash in the dark read as a smudge. `blue` is the accent, so it
+   follows whatever accent is chosen. */
+const TILE = /** @type {Record<string, string>} */ ({
+  slate:  'bg-slate-100 text-slate-600 dark:bg-white/[0.08]',
+  blue:   'bg-primary/[0.10] text-primary dark:bg-primary/[0.20]',
+  green:  'bg-emerald-100 text-emerald-600 dark:bg-emerald-500/[0.20]',
+  amber:  'bg-amber-100 text-amber-600 dark:bg-amber-500/[0.20]',
+  violet: 'bg-violet-100 text-violet-600 dark:bg-violet-500/[0.20]',
+  red:    'bg-red-100 text-red-500 dark:bg-red-500/[0.20]',
+  teal:   'bg-teal-100 text-teal-600 dark:bg-teal-500/[0.20]',
+})
+
 export function RowIcon({ color, children }) {
-  const colorMap = {
-    slate:  'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-300',
-    blue:   'bg-primary/[0.10] dark:bg-primary/[0.15] text-primary',
-    green:  'bg-emerald-100 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400',
-    amber:  'bg-amber-100 dark:bg-amber-500/15 text-amber-600 dark:text-amber-400',
-    violet: 'bg-violet-100 dark:bg-violet-500/15 text-violet-600 dark:text-violet-400',
-    red:    'bg-red-100 dark:bg-red-500/15 text-red-500 dark:text-red-400',
-    teal:   'bg-teal-100 dark:bg-teal-500/15 text-teal-600 dark:text-teal-400',
-  }
   return (
-    <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${colorMap[color] ?? colorMap.slate}`}>
+    <span className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 dark:text-white ${TILE[color] ?? TILE.slate}`}>
       {children}
+    </span>
+  )
+}
+
+/**
+ * The way into a row: a chevron in a small disc, the row's last thing. A bare
+ * chevron at the edge read as a hairline; in a disc it reads as the button it
+ * is.
+ */
+export function RowChevron() {
+  return (
+    <span
+      className="w-7 h-7 rounded-full flex items-center justify-center bg-slate-100 text-slate-500 dark:bg-white/[0.08] dark:text-slate-300"
+      aria-hidden="true"
+    >
+      <IconChevronRight size={12} strokeWidth="2.4" />
+    </span>
+  )
+}
+
+/**
+ * Your initial on a disc of the accent's tint, the same flat treatment as
+ * the row icons - the profile's picture, since Spendr keeps no photo of you.
+ *
+ * @param {{letter: string, size?: number}} props
+ */
+export function ProfileAvatar({ letter, size = 88 }) {
+  return (
+    <span
+      className="inline-flex items-center justify-center shrink-0 rounded-full bg-primary/[0.12] text-primary dark:bg-primary/[0.22] dark:text-white"
+      style={{ width: size, height: size }}
+      aria-hidden="true"
+    >
+      <span className="font-bold tracking-tight" style={{ fontSize: Math.round(size * 0.4) }}>{letter}</span>
     </span>
   )
 }

@@ -6,8 +6,7 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import Switch from '../../components/ui/Switch'
 import { REMINDER_HOUR } from '../../lib/reminders'
-import { IconChevronRight } from '../../components/icons'
-import { RowIcon, SettingsRow } from './shared'
+import { RowChevron, RowIcon, SettingsRow } from './shared'
 import {
   disableReminders, enableReminders, pushSupport, remindersOn, sendTestReminder, serverKey,
 } from '../../lib/push'
@@ -126,7 +125,7 @@ export function RemindersRow({ r }) {
       iconEl={<RowIcon color="amber"><IconBell /></RowIcon>}
       label="Reminders"
       sublabel={sublabelFor(r)}
-      right={<IconChevronRight size={14} strokeWidth="2" />}
+      right={<RowChevron />}
       onTap={() => r.setOpen(true)}
     />
   )

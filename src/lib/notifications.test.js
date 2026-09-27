@@ -129,15 +129,47 @@ describe('budget alerts', () => {
 
 describe('badges, the recap and this release', () => {
   it('announces a badge when it was earned', () => {
-    const feed = collectNotifications({ badges: [{ key: 'seven-days', earnedAt: at(9, 22) }, { key: 'nope', earnedAt: at(9, 22) }], now: NOW })
+    const feed = collectNotifications({ badges: [{ key: 'debt-cleared', earnedAt: at(9, 22) }, { key: 'nope', earnedAt: at(9, 22) }], now: NOW })
     expect(feed).toHaveLength(1)
-    expect(feed[0]).toMatchObject({ id: 'badge:seven-days', title: 'New badge: Seven Days', url: '/badges' })
+    expect(feed[0]).toMatchObject({ id: 'badge:debt-cleared', kind: 'badge', title: 'New badge: Debt Cleared', url: '/achievements?tab=badges' })
     expect(feed[0].quiet).toBeUndefined()
+  })
+
+  /* Seven Days is a level on the logging track now, under its old key - so
+     it keeps its old id, and a feed that already recorded it does not show
+     it again as news. */
+  it('announces a milestone as one, under the id it always had', () => {
+    const feed = collectNotifications({ badges: [{ key: 'seven-days', earnedAt: at(9, 22) }], now: NOW })
+    expect(feed[0]).toMatchObject({ id: 'badge:seven-days', kind: 'milestone', title: 'Milestone: 7-Day Streak', url: '/achievements?tab=milestones' })
+  })
+
+  it('announces a challenge won, and not one missed', () => {
+    const challenges = [
+      { key: 'no-spend-weekend', status: 'won', finishedAt: at(9, 21), syncId: 'a' },
+      { key: 'log-seven', status: 'lost', finishedAt: at(9, 21), syncId: 'b' },
+    ]
+    const feed = collectNotifications({ challenges, now: NOW })
+    expect(feed).toHaveLength(1)
+    expect(feed[0]).toMatchObject({ id: 'challenge:a', kind: 'challenge', title: 'Challenge won: No-Spend Weekend' })
   })
 
   it('keeps a badge that was already true quiet', () => {
     const feed = collectNotifications({ badges: [{ key: 'seven-days', earnedAt: at(9, 22), silent: true }], now: NOW })
     expect(feed[0]).toMatchObject({ id: 'badge:seven-days', quiet: true })
+  })
+
+  /* The first run of achievements against months of history writes every
+     level at once. One quiet entry per track, not a screenful. */
+  it('lists only the highest of the levels a track reached quietly', () => {
+    const quiet = (/** @type {string} */ key) => ({ key, earnedAt: at(9, 22), silent: true })
+    const badges = [
+      quiet('logging-3'), quiet('seven-days'), quiet('logging-14'),
+      quiet('first-peso'), quiet('entries-50'),
+      quiet('limits-set'),
+      { key: 'century', earnedAt: at(9, 24) },
+    ]
+    const ids = collectNotifications({ badges, now: NOW }).map(f => f.id).sort()
+    expect(ids).toEqual(['badge:century', 'badge:entries-50', 'badge:limits-set', 'badge:logging-14'])
   })
 
   it('offers last month\'s recap from 9 on the 1st', () => {

@@ -7,6 +7,7 @@ import Card from '../../components/ui/Card'
 import { IconArrowLeft, IconWarning } from './shared'
 import { baseSymbol } from '../../lib/money'
 import { receivedAmount } from '../../lib/transferLegs'
+import { PRIMED_META } from '../../lib/achievements'
 
 // ── Step 4: Confirm import ─────────────────────────────────────────────────────
 
@@ -78,7 +79,13 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
           synced:      UNSYNCED,
           updatedAt:   new Date().toISOString(),
         }))
-        await db.transactions.bulkAdd(records)
+        /* History arriving, so the next look at achievements writes what it
+           earns without a celebration for each - see PRIMED_META. In one
+           transaction, so no look can see the rows without the flag. */
+        await db.transaction('rw', db.transactions, db.meta, async () => {
+          await db.transactions.bulkAdd(records)
+          await db.meta.delete(PRIMED_META)
+        })
       }
 
       // 6. Apply credit limits to credit accounts

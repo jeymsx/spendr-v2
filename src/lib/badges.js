@@ -25,7 +25,7 @@ import { txBase } from './fxContext'
  * question as "has this ever been true" - a green month stops being the
  * current month, a goal can be edited upward after it was funded, a debt can
  * be re-opened. So the caller unions the result with what is already stored
- * and never removes (see hooks/useBadges.js). Earning is a one-way door,
+ * and never removes (see context/AchievementContext.jsx). Earning is a one-way door,
  * which is the only thing that makes a badge worth having.
  *
  * ── Completed months only ──
@@ -158,7 +158,7 @@ export function longestDayStreak(transactions) {
  * @param {string} key  "2026-09"
  * @returns {string}
  */
-function nextMonth(key) {
+export function nextMonth(key) {
   const [y, m] = key.split('-').map(Number)
   return m === 12 ? `${y + 1}-01` : `${y}-${String(m + 1).padStart(2, '0')}`
 }
@@ -176,7 +176,7 @@ function nextMonth(key) {
  * @param {Date} today
  * @returns {Map<string, MonthStat>}
  */
-function monthStats(transactions, today) {
+export function monthStats(transactions, today) {
   /** @type {Map<string, MonthStat>} */
   const stats = new Map()
   for (const key of completedMonths(transactions, today)) {
@@ -228,7 +228,7 @@ function hasRun(stats, n, passes) {
  * @param {Category[]} limits
  * @returns {(m: MonthStat) => boolean}
  */
-function withinLimits(limits) {
+export function withinLimits(limits) {
   return month => month.expense > 0 && limits.every(c => (month.byCategory[c.name] ?? 0) <= c.budget)
 }
 
@@ -236,7 +236,7 @@ function withinLimits(limits) {
  *
  * @param {MonthStat} month
  */
-function inTheGreen(month) {
+export function inTheGreen(month) {
   return month.inflow > 0 && month.expense > 0 && month.inflow > month.expense
 }
 

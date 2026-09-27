@@ -5,7 +5,7 @@ import { recapSlides, wrappedTitle } from '../../lib/recapCopy'
 import { parseMonth } from '../../lib/recap'
 import { useScrollLock } from '../../hooks/useScrollLock'
 import { keepTabInside } from '../../components/ui/focus'
-import { EXIT, SLIDE_MS, SPRING, recapPalette, tonesFor } from './theme'
+import { EXIT, SLIDE_MS, SPRING, TAP_MS, TAP_SLOP, recapPalette, tonesFor } from './theme'
 import { CardTexture, SlideContext } from './parts'
 import { LogoChip } from './art'
 import ShareSheet from './ShareSheet'
@@ -85,9 +85,6 @@ const SLIDE_NAMES = {
   summary: 'Summary',
 }
 
-/** A tap is short and still; anything else is a hold, a swipe or a drag. */
-const TAP_MS = 250
-const TAP_SLOP = 10
 const SWIPE = 48
 const CLOSE_DRAG = 90
 
@@ -281,7 +278,17 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
      story only starts to follow the finger down once it has moved further
      than a tap may, so a still hold does not jiggle it. */
   const down = useRef(/** @type {{id: number, t: number, x: number, y: number}|null} */ (null))
+  const stageRef = useRef(/** @type {HTMLElement|null} */ (null))
   const settle = () => (reduce ? y.set(0) : animate(y, 0, SPRING))
+  /* Where a tap goes: the left of the stage back, the rest on. The charts
+     call this too - a quick, still tap on one is the same tap as anywhere
+     else, and only a hold or a drag is theirs (charts.jsx). */
+  const tapAt = useCallback((/** @type {number} */ clientX) => {
+    const box = stageRef.current?.getBoundingClientRect()
+    if (!box) return
+    if (clientX < box.left + box.width * 0.3) prev()
+    else next()
+  }, [next, prev])
   /** @param {import('react').PointerEvent<HTMLElement>} e */
   const onPointerDown = (e) => {
     if (down.current || closing.current) return
@@ -313,11 +320,7 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
       return
     }
     const quick = performance.now() - start.t < TAP_MS
-    if (quick && Math.abs(dx) < TAP_SLOP && Math.abs(dy) < TAP_SLOP) {
-      const box = e.currentTarget.getBoundingClientRect()
-      if (e.clientX < box.left + box.width * 0.3) prev()
-      else next()
-    }
+    if (quick && Math.abs(dx) < TAP_SLOP && Math.abs(dy) < TAP_SLOP) tapAt(e.clientX)
   }
   /** @param {import('react').PointerEvent} e */
   const onPointerCancel = (e) => {
@@ -329,7 +332,7 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
 
   // One context per slide, made once: a fresh object per render would render
   // the slide again on every tap and hold.
-  const contexts = useMemo(() => tones.map(tone => ({ pal, tone, currency, hold })), [tones, pal, currency, hold])
+  const contexts = useMemo(() => tones.map(tone => ({ pal, tone, currency, hold, tapAt })), [tones, pal, currency, hold, tapAt])
   const Slide = SLIDES[/** @type {keyof typeof SLIDES} */ (id)]
 
   /** A button on the colour: the story's own chrome. */
@@ -406,6 +409,7 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
           </header>
 
           <main
+            ref={stageRef}
             className="absolute inset-x-0 z-10"
             style={{ top: TOP, bottom: BOTTOM }}
             onPointerDown={onPointerDown}

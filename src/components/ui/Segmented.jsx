@@ -16,6 +16,14 @@
  *
  * A control used by two screens is a ui/ component. Nothing about it knows
  * what an account is.
+ *
+ * ── The chosen segment is the accent ──
+ *
+ * It was a white thumb on grey, the iOS way, and in a dark app that reads
+ * as grey on grey: which one is on took a second look. The accent is what
+ * this app uses to say "chosen" everywhere else - a primary button, a
+ * selected chip - so the thumb is the accent, with white on it as a primary
+ * button has.
  */
 export default function Segmented({ options, value, onChange }) {
   const index = Math.max(0, options.findIndex(o => o.value === value))
@@ -34,7 +42,7 @@ export default function Segmented({ options, value, onChange }) {
           each segment exactly however many there are. */}
       <span
         aria-hidden="true"
-        className="absolute top-1 bottom-1 rounded-full bg-white dark:bg-white/[0.14]
+        className="absolute top-1 bottom-1 rounded-full bg-primary
           shadow-sm transition-transform duration-200 ease-out"
         style={{
           width: `calc((100% - 8px) / ${options.length})`,
@@ -52,7 +60,7 @@ export default function Segmented({ options, value, onChange }) {
           className={`relative z-10 flex-1 py-2 text-13 font-semibold rounded-full
             transition-colors duration-150 ${
               value === o.value
-                ? 'text-slate-900 dark:text-white'
+                ? 'text-white'
                 : 'text-slate-500 dark:text-slate-400'
             }`}
         >

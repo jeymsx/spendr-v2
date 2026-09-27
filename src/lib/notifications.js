@@ -2,7 +2,8 @@ import { cardStatements, cardUrl, CARD_LEAD_DAYS, REMINDER_HOUR, stableKey } fro
 import { effectiveLimit } from './rollover'
 import { currencyOfAccountName, txBase } from './fxContext'
 import { fmt } from './money'
-import { BADGES } from './badges'
+import { achievementDef } from './achievements'
+import { challengeDef } from './challenges'
 import { addMonths, monthKeyOf, monthName } from './recap'
 import { parseDateLocal } from '../utils/recurring'
 import { txMonthKey } from '../utils/txDate'
@@ -50,7 +51,7 @@ export const BUDGET_WARN_AT = 0.8
 const DAY_MS = 864e5
 
 /**
- * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'recap'|'whats-new'} NotificationKind
+ * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'milestone'|'challenge'|'recap'|'whats-new'} NotificationKind
  *
  * @typedef {object} FeedItem
  * @property {string} id
@@ -93,6 +94,7 @@ function latest(stages, nowMs) {
  * @param {Array<Record<string, any>>} [input.recurring]
  * @param {Array<Record<string, any>>} [input.categories]
  * @param {Array<{key: string, earnedAt?: string, silent?: boolean}>} [input.badges]
+ * @param {Array<Record<string, any>>} [input.challenges]  stored challenge attempts
  * @param {boolean} [input.globalRollover]
  * @param {{version: string, headline: string, at: string}|null} [input.whatsNew]
  *   this release, dated when this device first had it - null when there is
@@ -101,7 +103,7 @@ function latest(stages, nowMs) {
  * @returns {FeedItem[]}  newest first
  */
 export function collectNotifications({
-  accounts = [], transactions = [], recurring = [], categories = [], badges = [],
+  accounts = [], transactions = [], recurring = [], categories = [], badges = [], challenges = [],
   globalRollover = false, whatsNew = null, now = new Date(),
 } = {}) {
   const nowMs = now.getTime()
@@ -160,11 +162,44 @@ export function collectNotifications({
   const months = [addMonths(thisMonth, -1), thisMonth]
   for (const e of budgetCrossings({ categories, transactions: posted, months, globalRollover })) offer(e)
 
-  // ── Badges ──
+  // ── Badges and milestones: both stored in `badges`, told apart by their definition ──
+  /* A first pass awards every level a ledger already qualifies for, at once
+     and silently: a fourteen-day streak brings the three- and seven-day
+     levels with it. As old news they would bury the feed in read entries, so
+     of the quiet ones only each track's highest is listed. A level that was
+     celebrated is news in its own right, and always is. */
+  const topQuiet = new Map()
   for (const b of badges) {
-    const def = BADGES.find(x => x.key === b?.key)
+    const def = achievementDef(b?.key)
+    if (!b?.silent || def?.kind !== 'milestone' || !def.track) continue
+    if ((def.n ?? 0) > (topQuiet.get(def.track)?.n ?? -Infinity)) topQuiet.set(def.track, def)
+  }
+  for (const b of badges) {
+    const def = achievementDef(b?.key)
     if (!def || !b.earnedAt) continue
-    offer({ id: `badge:${b.key}`, kind: 'badge', at: b.earnedAt, title: `New badge: ${def.name}`, body: def.blurb ?? '', url: '/badges', ...(b.silent ? { quiet: true } : {}) })
+    const milestone = def.kind === 'milestone'
+    if (b.silent && milestone && topQuiet.get(def.track)?.key !== def.key) continue
+    offer({
+      /* `badge:` for both, as the ids already recorded are: a key earned
+         before milestones existed must not come back as a new event. */
+      id: `badge:${b.key}`,
+      kind: milestone ? 'milestone' : 'badge',
+      at: b.earnedAt,
+      title: milestone ? `Milestone: ${def.name}` : `New badge: ${def.name}`,
+      body: def.blurb ?? '',
+      url: `/achievements?tab=${milestone ? 'milestones' : 'badges'}`,
+      ...(b.silent ? { quiet: true } : {}),
+    })
+  }
+
+  // ── Challenges won ──
+  for (const c of challenges) {
+    const def = challengeDef(c?.key)
+    if (!def || c.status !== 'won' || !c.finishedAt) continue
+    offer({
+      id: `challenge:${c.syncId ?? c.id}`, kind: 'challenge', at: c.finishedAt,
+      title: `Challenge won: ${def.name}`, body: def.win, url: '/achievements?tab=challenges',
+    })
   }
 
   // ── The monthly recap, from 9 on the 1st ──

@@ -86,7 +86,7 @@ export default function EditTransaction() {
           body={gone
             ? 'It may have been deleted.'
             : 'A refund is money coming back, and the form only knows how to record money going out. Delete it and record it again.'}
-          action={<Button onClick={() => navigate(-1)}>Go back</Button>}
+          action={<Button className="px-6" onClick={() => navigate(-1)}>Go back</Button>}
         />
       </div>
     )

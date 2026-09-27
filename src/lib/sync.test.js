@@ -8,6 +8,7 @@ import {
   templateToRow, rowToTemplate,
   goalToRow, rowToGoal,
   badgeToRow,
+  challengeToRow, rowToChallenge,
   isPendingDelete,
   isLocalIdConflict,
   deleteRecurringRemote,
@@ -284,6 +285,32 @@ describe('badges', () => {
     expect(row.key).toBe('first-peso')
     expect(row.earned_at).toBe('2026-01-01T00:00:00.000Z')
     expect(row.user_id).toBe(UID)
+  })
+})
+
+describe('challenges', () => {
+  const local = {
+    syncId: 'c-1', key: 'category-cap', params: { category: 'Coffee', cap: 1000 },
+    startDay: '2026-09-20', endDay: '2026-09-26', status: /** @type {const} */ ('won'),
+    startedAt: '2026-09-20T01:00:00.000Z', finishedAt: '2026-09-27T01:00:00.000Z', updatedAt: '2026-09-27T01:00:00.000Z',
+  }
+
+  it('round-trips an attempt, its setting and its outcome', () => {
+    expect(rowToChallenge(challengeToRow({ id: 4, ...local }, UID))).toEqual({ ...local, synced: SYNCED })
+  })
+
+  /* The pull matches a sync_id it has not seen on local_id instead, and every
+     device numbers its first challenge 1: sent, it would let one device's
+     attempt take over another's. */
+  it('is known by its sync_id alone, never by the row number it has here', () => {
+    const row = challengeToRow({ id: 1, ...local }, UID)
+    expect(row).not.toHaveProperty('local_id')
+    expect(row.sync_id).toBe('c-1')
+  })
+
+  it('reads a row with no setting as having none', () => {
+    const back = rowToChallenge({ sync_id: 'c-2', key: 'log-seven', params: null, start_day: '2026-09-01', end_day: '2026-09-07', status: null })
+    expect(back).toMatchObject({ key: 'log-seven', params: {}, status: 'active' })
   })
 })
 

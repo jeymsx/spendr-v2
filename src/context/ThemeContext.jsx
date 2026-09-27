@@ -36,6 +36,19 @@ export function ThemeProvider({ children }) {
     }
   })
 
+  /* 'vivid' is the app as it has always looked: the accent washing the
+     background, tinted glass cards. 'flat' is the clean one - neutral flat
+     surfaces and hairlines, iOS and shadcn rather than Spendr's own glow -
+     and in dark mode it goes to true black: lights out. Orthogonal to the
+     theme, so either works in light and dark. See `html.flat` in index.css. */
+  const [style, setStyleState] = useState(() => {
+    try {
+      return localStorage.getItem('spendr-style') === 'flat' ? 'flat' : 'vivid'
+    } catch {
+      return 'vivid'
+    }
+  })
+
   const [accentColor, setAccentColorState] = useState(() => {
     try {
       return localStorage.getItem('accentColor') || DEFAULT_ACCENT
@@ -59,6 +72,29 @@ export function ThemeProvider({ children }) {
   }, [theme])
 
   useEffect(() => {
+    document.documentElement.classList.toggle('flat', style === 'flat')
+    try {
+      localStorage.setItem('spendr-style', style)
+    } catch {
+      // storage unavailable
+    }
+  }, [style])
+
+  /* The status bar, which the page cannot paint: true black under lights
+     out, the app's own near-black otherwise - what index.html ships. */
+  useEffect(() => {
+    const meta = document.querySelector('meta[name="theme-color"]')
+    if (meta) meta.setAttribute('content', theme === 'dark' && style === 'flat' ? '#000000' : '#0b0f14')
+    /* And the page's own ground, which index.html set inline before the app
+       loaded - inline, it outranks the stylesheet, so it has to follow a
+       change here or the edges of an overscroll show the old colour. */
+    const flat = style === 'flat'
+    document.documentElement.style.background = theme === 'dark'
+      ? (flat ? '#000000' : '#0b0f14')
+      : (flat ? '#f2f2f7' : '#f8fafc')
+  }, [theme, style])
+
+  useEffect(() => {
     applyAccent(accentColor)
     try {
       localStorage.setItem('accentColor', accentColor)
@@ -69,9 +105,10 @@ export function ThemeProvider({ children }) {
 
   const toggleTheme = () => setTheme(t => (t === 'light' ? 'dark' : 'light'))
   const setAccentColor = (color) => setAccentColorState(color)
+  const setStyle = (next) => setStyleState(next === 'flat' ? 'flat' : 'vivid')
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme, accentColor, setAccentColor }}>
+    <ThemeContext.Provider value={{ theme, setTheme, toggleTheme, style, setStyle, accentColor, setAccentColor }}>
       {children}
     </ThemeContext.Provider>
   )

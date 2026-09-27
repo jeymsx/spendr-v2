@@ -1,9 +1,10 @@
 import { motion } from 'motion/react'
-import { ART, LOGO } from './assets'
+import { LOGO, artUrl } from './assets'
+import { useSlide } from './parts'
 import { SPRING } from './theme'
 
 /**
- * The recap's decoration: the 3D illustrations, the Spendr mark, and the
+ * The recap's decoration: the glass illustrations, the Spendr mark, and the
  * light and rays that sit behind a centrepiece. Everything here is
  * aria-hidden and ignores the pointer - a slide says in words whatever its
  * pictures show, and a tap on a picture is a tap on the slide.
@@ -17,7 +18,7 @@ import { SPRING } from './theme'
 /** @typedef {import('react').CSSProperties} CSSProperties */
 
 /**
- * A 3D illustration: pops in on the shared spring, then bobs gently for as
+ * A glass illustration: pops in on the shared spring, then bobs gently for as
  * long as it is on screen. `shadow` puts a soft shadow on the card under it
  * that shrinks as it rises, which is what makes it read as floating rather
  * than pasted on.
@@ -26,8 +27,8 @@ import { SPRING } from './theme'
  *          delay?: number, rotate?: number, float?: boolean, shadow?: boolean}} props
  */
 export function Art({ name, size, className = '', style = undefined, delay = 0, rotate = 0, float = true, shadow = false }) {
-  const src = ART[name]
-  if (!src) return null
+  const { pal } = useSlide()
+  const src = artUrl(name, pal.accent)
   return (
     <motion.span
       aria-hidden="true"
@@ -53,7 +54,7 @@ export function Art({ name, size, className = '', style = undefined, delay = 0, 
           height={256}
           draggable={false}
           decoding="async"
-          className="block w-full h-full object-contain drop-shadow-[0_10px_14px_rgba(0,0,0,0.24)]"
+          className="block w-full h-full object-contain"
         />
       </span>
     </motion.span>

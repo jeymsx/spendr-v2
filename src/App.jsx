@@ -31,7 +31,7 @@ const GoalDetail   = lazy(() => import('./pages/GoalDetail'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
 const RecurringDetail = lazy(() => import('./pages/RecurringDetail'))
 const RecurringForm   = lazy(() => import('./pages/RecurringForm'))
-const Badges       = lazy(() => import('./pages/Badges'))
+const Achievements = lazy(() => import('./pages/Achievements'))
 const Notifications = lazy(() => import('./pages/Notifications'))
 const Recap        = lazy(() => import('./pages/recap/RecapPage'))
 const Settings     = lazy(() => import('./pages/Settings'))
@@ -41,6 +41,11 @@ const SettingsAccent = lazy(() => import('./pages/SettingsAccent'))
 const SettingsCategories = lazy(() => import('./pages/Settings').then(m => ({ default: m.CategoriesPage })))
 const SettingsBudgets    = lazy(() => import('./pages/Settings').then(m => ({ default: m.BudgetsPage })))
 const SettingsRates      = lazy(() => import('./pages/settings/Rates'))
+const SettingsPreferences = lazy(() => import('./pages/settings/Preferences'))
+const SettingsSync       = lazy(() => import('./pages/settings/Sync'))
+const SettingsReports    = lazy(() => import('./pages/settings/Reports'))
+const SettingsBackup     = lazy(() => import('./pages/settings/BackupRestore'))
+const SettingsChangelog  = lazy(() => import('./pages/settings/Changelog'))
 const SettingsProfile    = lazy(() => import('./pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 const SettingsTemplates  = lazy(() => import('./pages/Settings').then(m => ({ default: m.TemplatesPage })))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
@@ -114,11 +119,18 @@ export default function App() {
               <Route path="/recurring/new" element={<RecurringForm />} />
               <Route path="/recurring/:id/edit" element={<RecurringForm />} />
               <Route path="/recurring/:id" element={<RecurringDetail />} />
-              <Route path="/badges"       element={<Badges />} />
+              <Route path="/achievements" element={<Achievements />} />
+              {/* The old address, from notifications and links already out there. */}
+              <Route path="/badges"       element={<Navigate to="/achievements?tab=badges" replace />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/recap"        element={<Recap />} />
               <Route path="/recap/:month" element={<Recap />} />
               <Route path="/settings"     element={<Settings />} />
+              <Route path="/settings/preferences" element={<SettingsPreferences />} />
+              <Route path="/settings/sync"       element={<SettingsSync />} />
+              <Route path="/settings/reports"    element={<SettingsReports />} />
+              <Route path="/settings/backup"     element={<SettingsBackup />} />
+              <Route path="/settings/changelog"  element={<SettingsChangelog />} />
               <Route path="/settings/accent" element={<SettingsAccent />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />
               <Route path="/settings/budgets"    element={<SettingsBudgets />} />

@@ -47,6 +47,9 @@ export const COLOR_EASE = { duration: 0.45, ease: [0.22, 1, 0.36, 1] }
 export const EXIT = { duration: 0.22, ease: [0.4, 0, 1, 1] }
 /** How long a slide stays before moving on by itself. */
 export const SLIDE_MS = 7000
+/** A tap is short and still; anything else is a hold, a swipe or a drag. */
+export const TAP_MS = 250
+export const TAP_SLOP = 10
 
 const WHITE = [255, 255, 255]
 /** What white must clear on a card's lightest stop - see the note above. */

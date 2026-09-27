@@ -85,7 +85,7 @@ function renderSlide(recap, id) {
 const SAYS = {
   intro: /Ana's month in money/, spent: /You spent/, kept: /You kept/, categories: /Most went to/,
   days: /Your busiest day/, biggest: /Biggest purchase/, goto: /Your go-to/, budgets: /Budgets/,
-  networth: /Net worth on/, badges: /A new badge/, personality: /Your money personality/, summary: /Spendr/,
+  networth: /Net worth on/, badges: /A new (badge|milestone)|new (badges|milestones)|achievements/, personality: /Your money personality/, summary: /Spendr/,
 }
 
 describe('every slide renders', () => {

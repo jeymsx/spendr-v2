@@ -274,6 +274,35 @@ export function badgeToRow(r, userId) {
 }
 
 /**
+ * One attempt at a challenge. See migrations/021_challenges.sql.
+ *
+ * No local_id, unlike the tables that predate syncIds. The pull falls back to
+ * matching on it when a sync_id is new to this device - which for those
+ * tables is how a row from before stamping finds itself. Every challenge has
+ * had a syncId from the moment it was created, so here the fallback could only
+ * ever do harm: two devices each number their first challenge 1, and the
+ * second to sync would take the first's over and lose its own.
+ *
+ * @param {ChallengeRow} r
+ * @param {string} userId
+ */
+export function challengeToRow(r, userId) {
+  return {
+    user_id:     userId,
+    sync_id:     r.syncId ?? null,
+    key:         r.key,
+    // jsonb: a cap and its category, an amount - whatever that challenge was started with.
+    params:      r.params ?? {},
+    start_day:   r.startDay,
+    end_day:     r.endDay,
+    status:      r.status,
+    started_at:  r.startedAt ?? null,
+    finished_at: r.finishedAt ?? null,
+    updated_at:  r.updatedAt ?? new Date().toISOString(),
+  }
+}
+
+/**
  * @param {Template} r
  * @param {string} userId
  */
@@ -464,6 +493,22 @@ export function rowToGoal(row) {
     priority:   row.priority ?? 0,
     archivedAt: row.archived_at ?? null,
     createdAt:  row.created_at,
+    updatedAt:  row.updated_at,
+    synced:     SYNCED,
+  }
+}
+
+/** @param {Record<string, any>} row  a row as Supabase returned it */
+export function rowToChallenge(row) {
+  return {
+    ...syncIdOf(row),
+    key:        row.key,
+    params:     row.params && typeof row.params === 'object' ? row.params : {},
+    startDay:   row.start_day,
+    endDay:     row.end_day,
+    status:     row.status ?? 'active',
+    startedAt:  row.started_at ?? null,
+    finishedAt: row.finished_at ?? null,
     updatedAt:  row.updated_at,
     synced:     SYNCED,
   }
@@ -712,6 +757,8 @@ export async function syncToSupabase(userId) {
     pushTable('goals', db.goals, goalToRow, userId, 'user_id,name'))
   await optionalSync('badges push', () =>
     pushTable('badges', db.badges, badgeToRow, userId, 'user_id,key'))
+  await optionalSync('challenges push', () =>
+    pushTable('challenges', db.challenges, challengeToRow, userId, 'user_id,sync_id'))
   await pushPreferences(userId)
 }
 
@@ -1131,6 +1178,8 @@ export async function syncFromSupabase(userId) {
   await optionalSync('goals pull', () =>
     pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending))
   await optionalSync('badges pull', () => pullBadges(userId))
+  await optionalSync('challenges pull', () =>
+    pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()
@@ -1406,8 +1455,10 @@ async function pullBadges(userId) {
     const local = await db.badges.get(row.key)
     const remoteAt = row.earned_at ?? null
 
+    /* Quiet: it was celebrated, and announced, on the device that earned
+       it. Here it is news only in the sense of arriving. */
     if (!local) {
-      await db.badges.put({ key: row.key, earnedAt: remoteAt, synced: SYNCED })
+      await db.badges.put({ key: row.key, earnedAt: remoteAt, synced: SYNCED, silent: true })
       continue
     }
 

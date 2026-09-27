@@ -1,12 +1,12 @@
 import { formatAmount, maskedAmount } from '../../lib/currency'
-import { BADGES } from '../../lib/badges'
+import { achievementArt, achievementDef, earnedLabel } from '../../lib/achievements'
+import { glassBadgeSvg, svgUrl } from '../../components/glass/glass'
 import { monthName, parseMonth } from '../../lib/recap'
 import {
   budgetsCopy, dayLabel, daysCopy, heroAmount, keptCopy, netWorthCopy, percent, personalityOf,
   spentCopy, summaryHero, summaryTiles, weeksOf,
 } from '../../lib/recapCopy'
-import { badgeArtUrl } from '../../components/BadgeMark'
-import { ART, LOGO_LARGE, seeded, seedOf } from './assets'
+import { EMOJI_GLASS, LOGO_LARGE, artUrl, glassForEmoji, seeded, seedOf } from './assets'
 import {
   INNER, P, W, clip, drawArt, drawBrand, drawChip, drawConfetti, drawEmoji, drawPill, drawRays, drawSign,
   drawSticker, drawSurface, drawTile, drawWrappedMark, fit, font, glow, loadFonts,
@@ -42,6 +42,7 @@ import {
  * @property {HTMLImageElement|null} logo
  * @property {Record<string, HTMLImageElement|null>} art
  * @property {Array<HTMLImageElement|null>} badges
+ * @property {Record<string, HTMLImageElement|null>} marks  glass marks for chips and tiles, by picture name
  * @property {() => number} rand
  * @property {(v: number) => string} money   an exact amount, or its mask
  * @property {string} month  "August"
@@ -91,11 +92,21 @@ export async function renderPicture({ id, recap, currency, pal, tone, name, hide
   const kind = /** @type {keyof typeof DRAW} */ (id in DRAW ? id : 'summary')
   const persona = kind === 'personality' ? personalityOf(recap) : null
   const artNames = persona ? [persona.art] : NEEDS[kind]
-  const badgeUrls = kind === 'badges' ? recap.badges.slice(0, 6).map(b => badgeArtUrl(b.key)) : []
-  const [logo, arts, badges] = await Promise.all([
+  const badgeUrls = kind === 'badges'
+    ? recap.badges.slice(0, 6).map((b, i) => {
+      const art = achievementArt(b.key)
+      return art ? svgUrl(glassBadgeSvg({ ...art, id: `pb${i}` })) : null
+    })
+    : []
+  /* The glass marks on chips and tiles, all of them: a few small pictures,
+     cached after the first, and simpler than working out which this slide's
+     copy will ask for. */
+  const markNames = [...new Set(Object.values(EMOJI_GLASS))]
+  const [logo, arts, badges, marks] = await Promise.all([
     loadImage(LOGO_LARGE),
-    Promise.all(artNames.map(n => loadImage(ART[n]))),
+    Promise.all(artNames.map(n => loadImage(artUrl(n, pal.accent)))),
     Promise.all(badgeUrls.map(loadImage)),
+    Promise.all(markNames.map(n => loadImage(artUrl(n, pal.accent, 0)))),
     loadFonts(sampleText(recap, name)),
   ])
   const { year } = parseMonth(recap.month)
@@ -107,6 +118,7 @@ export async function renderPicture({ id, recap, currency, pal, tone, name, hide
     logo,
     art: Object.fromEntries(artNames.map((n, i) => [n, arts[i]])),
     badges,
+    marks: Object.fromEntries(markNames.map((n, i) => [n, marks[i]])),
     rand: seeded(seedOf(`${recap.month}-${kind}`)),
     money: v => (hideAmounts ? maskedAmount(currency) : formatAmount(v, currency)),
     month: monthName(recap.month),
@@ -140,8 +152,14 @@ function sampleText(r, name) {
 function frame(g, c, emoji, label) {
   drawSurface(g, c.pal, c.tone)
   drawBrand(g, c.pal, c.logo, `${c.month} ${c.year}`)
-  drawChip(g, c.pal, emoji, label)
+  drawChip(g, c.pal, emoji, label, undefined, undefined, markOf(c, emoji))
   drawSign(g, c.pal, c.logo)
+}
+
+/** The glass mark for an emoji or a named picture, if one is loaded. @param {Picture} c @param {string|undefined} emoji @param {string} [art] */
+function markOf(c, emoji, art) {
+  const name = art ?? glassForEmoji(emoji)
+  return name ? c.marks[name] ?? null : null
 }
 
 /**
@@ -331,13 +349,13 @@ const DRAW = {
 
     const tileW = (INNER - 24) / 2
     const left = r.spent > 0
-      ? { emoji: '💸', label: 'Spent', value: c.hide ? `${Math.round(spentShare * 100)}%` : heroAmount(r.spent, c.currency), tone: /** @type {const} */ (r.net < 0 ? 'soft' : undefined) }
-      : { emoji: '💰', label: 'Came in', value: c.hide ? '100%' : heroAmount(r.income, c.currency) }
+      ? { emoji: '💸', art: 'cash', label: 'Spent', value: c.hide ? `${Math.round(spentShare * 100)}%` : heroAmount(r.spent, c.currency), tone: /** @type {const} */ (r.net < 0 ? 'soft' : undefined) }
+      : { emoji: '💰', art: 'moneyBag', label: 'Came in', value: c.hide ? '100%' : heroAmount(r.income, c.currency) }
     const right = kept
-      ? { emoji: '🐷', label: 'Kept', value: c.hide ? percent(r.savingsRate ?? 0) : heroAmount(r.net, c.currency), tone: /** @type {const} */ ('good') }
-      : { emoji: '💰', label: 'Came in', value: c.hide ? '100%' : heroAmount(r.income, c.currency) }
-    drawTile(g, c.pal, left, P, 1380, tileW, 130)
-    drawTile(g, c.pal, right, P + tileW + 24, 1380, tileW, 130)
+      ? { emoji: '🐷', art: 'piggy', label: 'Kept', value: c.hide ? percent(r.savingsRate ?? 0) : heroAmount(r.net, c.currency), tone: /** @type {const} */ ('good') }
+      : { emoji: '💰', art: 'moneyBag', label: 'Came in', value: c.hide ? '100%' : heroAmount(r.income, c.currency) }
+    drawTile(g, c.pal, left, P, 1380, tileW, 130, markOf(c, left.emoji, left.art))
+    drawTile(g, c.pal, right, P + tileW + 24, 1380, tileW, 130, markOf(c, right.emoji, right.art))
   },
 
   /** @param {CanvasRenderingContext2D} g @param {Picture} c */
@@ -406,7 +424,12 @@ const DRAW = {
       g.font = font(600, Math.round(cell * 0.32))
       g.fillText(String(d.day), cx + cell / 2, cy + cell / 2 + cell * 0.11)
       // On the day's top corner, as if stuck there.
-      if (d.day === busiest.day) drawEmoji(g, '🔥', cx + cell - 8, cy + 10 - cell * 0.15, Math.round(cell * 0.5))
+      if (d.day === busiest.day) {
+        const flame = c.marks.flame
+        const s = Math.round(cell * 0.62)
+        if (flame) g.drawImage(flame, cx + cell - s * 0.62, cy - s * 0.42, s, s)
+        else drawEmoji(g, '🔥', cx + cell - 8, cy + 10 - cell * 0.15, Math.round(cell * 0.5))
+      }
     })
     g.textAlign = 'left'
   },
@@ -527,8 +550,8 @@ const DRAW = {
   badges(g, c) {
     const r = c.recap
     const n = r.badges.length
-    const defs = r.badges.map(b => BADGES.find(d => d.key === b.key) ?? { ...b, blurb: '' })
-    frame(g, c, '🏅', n === 1 ? 'A new badge' : `${n} new badges`)
+    const defs = r.badges.map(b => achievementDef(b.key) ?? { ...b, blurb: '' })
+    frame(g, c, '🏅', earnedLabel(r.badges.map(b => b.key)))
     drawConfetti(g, c.rand, 24)
     headline(g, c, n === 1 ? defs[0].name : 'Look at you go', { max: 120, min: 72 })
     subline(g, c, n === 1 && defs[0].blurb ? defs[0].blurb : `Earned in ${c.month}`)
@@ -612,7 +635,9 @@ const DRAW = {
           roundRect(g, x, y, t.w, PILL_H, PILL_H / 2)
           g.fill()
         }, 18, 6, 0.16)
-        drawEmoji(g, t.emoji, x + 28, y + 40, 34, 'left')
+        const mark = markOf(c, t.emoji, t.art)
+        if (mark) g.drawImage(mark, x + 18, y + 12, 52, 52)
+        else drawEmoji(g, t.emoji, x + 28, y + 40, 34, 'left')
         g.font = font(600, 32)
         g.fillStyle = c.pal.deepInk
         g.fillText(t.text, x + 80, y + 50)
@@ -654,7 +679,7 @@ const DRAW = {
 
     // The tiles: the slide's own, two by three.
     const tileW = (INNER - 24) / 2
-    tiles.forEach((t, i) => drawTile(g, c.pal, t, P + (i % 2) * (tileW + 24), 1084 + Math.floor(i / 2) * 156, tileW, 136))
+    tiles.forEach((t, i) => drawTile(g, c.pal, t, P + (i % 2) * (tileW + 24), 1084 + Math.floor(i / 2) * 156, tileW, 136, markOf(c, t.emoji, t.art)))
 
     drawSign(g, c.pal, c.logo)
     // And a party below the fold.

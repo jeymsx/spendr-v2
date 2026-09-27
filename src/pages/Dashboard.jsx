@@ -671,7 +671,7 @@ export default function Dashboard() {
       <section className="px-5 mt-8">
         <SectionHeading inset="none" gap="none" subtitle="This month">Budget</SectionHeading>
         <div className="mt-3">
-          <BudgetSummaryTile totals={budgetTotals} count={budgetCategories.length} />
+          <BudgetSummaryTile totals={budgetTotals} />
         </div>
       </section>
 

@@ -3,6 +3,8 @@ import { Outlet, useLocation } from 'react-router-dom'
 import WebSidebar from './WebSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { AddFlowProvider } from './AddFlow'
+import { AchievementProvider } from '../context/AchievementContext'
+import Moments from '../components/achievements/Moments'
 
 function PageFallback() {
   return (
@@ -44,16 +46,22 @@ function Chrome() {
         </div>
       </main>
 
+      {/* Renders nothing until something is actually earned. */}
+      <Moments />
     </div>
   )
 }
 
 export default function WebLayout() {
-  // The provider wraps the chrome so both the sidebar and any page can open
-  // the add overlay through useAddFlow().
+  // The providers wrap the chrome so both the sidebar and any page can open
+  // the add overlay through useAddFlow(), and so the one achievement
+  // evaluation - the same as the phone's, in AppLayout - is shared by every
+  // page and still celebrates something earned on the way to another.
   return (
-    <AddFlowProvider>
-      <Chrome />
-    </AddFlowProvider>
+    <AchievementProvider>
+      <AddFlowProvider>
+        <Chrome />
+      </AddFlowProvider>
+    </AchievementProvider>
   )
 }

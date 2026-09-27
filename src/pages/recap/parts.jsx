@@ -1,6 +1,7 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState } from 'react'
 import { motion } from 'motion/react'
 import { SPRING } from './theme'
+import { artUrl, glassForEmoji } from './assets'
 
 /**
  * The small set of pieces every recap slide is built from, so eleven slides
@@ -27,17 +28,20 @@ import { SPRING } from './theme'
 
 /**
  * What a slide needs from the story around it: the palette, its own card's
- * tone, the ledger's currency, and `hold` - true while a finger is on a
+ * tone, the ledger's currency, `hold` - true while a finger is exploring a
  * chart, which keeps the story still; false when it lifts, which gives the
- * slide its full time again, so it never moves on the moment someone lets go.
+ * slide its full time again, so it never moves on the moment someone lets go
+ * - and `tapAt`, the story's own tap, for a chart handed a tap that was not
+ * for it.
  *
- * @type {import('react').Context<{pal: RecapPalette, tone: CardTone, currency: string, hold: (on: boolean) => void}>}
+ * @type {import('react').Context<{pal: RecapPalette, tone: CardTone, currency: string, hold: (on: boolean) => void, tapAt: (clientX: number) => void}>}
  */
 export const SlideContext = createContext({
   pal: /** @type {RecapPalette} */ ({}),
   tone: /** @type {CardTone} */ ({}),
   currency: 'PHP',
   hold: (/** @type {boolean} */ _on) => {},
+  tapAt: (/** @type {number} */ _x) => {},
 })
 export const useSlide = () => useContext(SlideContext)
 
@@ -83,11 +87,26 @@ export function Eyebrow({ emoji = null, children }) {
         className="inline-flex max-w-full items-center gap-1.5 h-8 pl-2.5 pr-3 rounded-full text-13 font-semibold shadow-[0_4px_12px_rgba(0,0,0,0.12)]"
         style={{ backgroundColor: pal.paper, color: pal.deepInk }}
       >
-        {emoji && <span className="text-15 leading-none shrink-0" aria-hidden="true">{emoji}</span>}
+        <Mark emoji={emoji} px={20} hue={pal.accent} />
         <span className="truncate">{children}</span>
       </p>
     </Piece>
   )
+}
+
+/**
+ * A small mark on paper: glass, when it is one of the app's own emoji or a
+ * picture is named outright; the emoji itself otherwise - a category's
+ * emoji is the user's choice, and stays theirs.
+ *
+ * @param {{emoji?: string|null, art?: string|null, px: number, hue: string, text?: string}} props
+ */
+export function Mark({ emoji, art = null, px, hue, text = 'text-15' }) {
+  const glass = art ?? glassForEmoji(emoji)
+  if (glass) {
+    return <img src={artUrl(glass, hue, 0)} alt="" aria-hidden="true" width={px} height={px} draggable={false} className="shrink-0 -my-1" style={{ width: px, height: px }} />
+  }
+  return emoji ? <span className={`${text} leading-none shrink-0`} aria-hidden="true">{emoji}</span> : null
 }
 
 /**
@@ -207,7 +226,7 @@ export function FitBox({ children, className = '' }) {
  * @param {{emoji: string, label: string, value: string, tone?: 'good'|'soft', height: number,
  *          delay?: number, tilt?: number}} props
  */
-export function Tile({ emoji, label, value, tone, height, delay = 0, tilt = 0 }) {
+export function Tile({ emoji, art = null, label, value, tone, height, delay = 0, tilt = 0 }) {
   const { pal } = useSlide()
   return (
     <motion.li
@@ -217,7 +236,7 @@ export function Tile({ emoji, label, value, tone, height, delay = 0, tilt = 0 })
       animate={{ opacity: 1, scale: 1, rotate: 0 }}
       transition={{ ...SPRING, delay }}
     >
-      <span className="text-20 leading-none shrink-0" aria-hidden="true">{emoji}</span>
+      <Mark emoji={emoji} art={art} px={30} hue={pal.accent} text="text-20" />
       <span className="min-w-0 flex flex-col">
         <span className="text-12 font-medium truncate" style={{ color: pal.paperMuted }}>{label}</span>
         <span

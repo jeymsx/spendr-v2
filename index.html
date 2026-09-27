@@ -25,11 +25,14 @@
         try {
           var t=localStorage.getItem('spendr-theme')||'dark';
           var a=localStorage.getItem('accentColor')||'#2D9DFF';
+          var f=localStorage.getItem('spendr-style')==='flat';
           var d=document.documentElement;
           // Apply theme class immediately so dark: variants work on first paint
           if(t==='dark') d.classList.add('dark');
+          // The clean style, likewise - lights out has to be black from the first frame
+          if(f) d.classList.add('flat');
           // Set background so there's no white flash while JS is parsing
-          d.style.background=t==='dark'?'#0b0f14':'#f8fafc';
+          d.style.background=t==='dark'?(f?'#000000':'#0b0f14'):(f?'#f2f2f7':'#f8fafc');
           // Apply accent color
           var h=a.replace('#','');
           var r=parseInt(h.slice(0,2),16),g=parseInt(h.slice(2,4),16),b=parseInt(h.slice(4,6),16);

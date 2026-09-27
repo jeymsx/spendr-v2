@@ -10,6 +10,8 @@ import { isSupabaseConfigured } from '../../lib/supabase'
 import { downloadBackupJson } from '../../lib/backup'
 import { syncToSheets } from '../../lib/sheetsSync'
 import { setViewMode, getViewPreference } from '../useViewMode'
+import { APP_VERSION } from '../../lib/release'
+import { useAchievements } from '../../context/AchievementContext'
 // Every heavy manager is the mobile sheet, reused — roughly 2,000 lines of
 // category, budget, template, profile, restore and reset logic.
 import {
@@ -34,15 +36,21 @@ function last12Months() {
   return out
 }
 
+/* The same groups as the phone's Settings, in the same order: who you are,
+   the shape of your money, the app itself, your data, and the fine print.
+   Reset lives at the foot of Data & Reports, as it does in the phone's
+   Backup & restore, rather than in a section of its own. */
 const SECTIONS = [
-  { key: 'general',    label: 'General' },
-  { key: 'appearance', label: 'Appearance' },
-  { key: 'manage',     label: 'Manage' },
-  { key: 'data',       label: 'Data & reports' },
-  { key: 'sync',       label: 'Sync' },
-  { key: 'about',      label: 'About' },
-  { key: 'danger',     label: 'Danger zone' },
+  { key: 'profile', label: 'Profile' },
+  { key: 'manage',  label: 'Manage' },
+  { key: 'app',     label: 'App' },
+  { key: 'data',    label: 'Data & Reports' },
+  { key: 'about',   label: 'Help & About' },
 ]
+
+/* Offered to the account that owns the Apps Script endpoint only, as on the
+   phone - nobody else has one to point it at. */
+const SHEETS_OWNER = 'sablayjames@gmail.com'
 
 /** One settings line: label, description, and a control on the right. */
 function Row({ label, hint, children, danger }) {
@@ -100,11 +108,12 @@ function Toggle({ on, onChange, label }) {
 
 export default function WebSettings() {
   const navigate = useNavigate()
-  const [section, setSection] = useState('general')
-  const { theme, toggleTheme, accentColor, setAccentColor } = useTheme()
+  const [section, setSection] = useState('profile')
+  const { theme, toggleTheme, style, setStyle, accentColor, setAccentColor } = useTheme()
   const { user, signOut, signInWithGoogle } = useAuth()
   const { showToast } = useToast()
   const { status, runSync } = useSyncManager()
+  const achievements = useAchievements()
 
   const [sheet, setSheet]   = useState(null)   // which reused sheet is open
   const [policy, setPolicy] = useState(null)
@@ -223,9 +232,7 @@ export default function WebSettings() {
                 'text-left px-3 h-9 rounded-xl text-sm font-medium transition-colors duration-150',
                 section === s.key
                   ? 'bg-primary/[0.12] text-primary dark:bg-primary/[0.18]'
-                  : s.key === 'danger'
-                    ? 'text-red-600 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-500/[0.08]'
-                    : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/[0.05]',
+                  : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/[0.05]',
               ].join(' ')}
             >
               {s.label}
@@ -234,25 +241,33 @@ export default function WebSettings() {
         </nav>
 
         <div className="flex-1 min-w-0 max-w-[760px]">
-          {section === 'general' && (
-            <WebPanel title="General">
+          {section === 'profile' && (
+            <WebPanel title="Profile">
               <Row label="Profile" hint={`${nameMeta?.value || 'Not set'} · ${currencyMeta?.value || 'PHP'}`}>
                 <Btn onClick={() => setSheet('profile')}>Edit profile</Btn>
               </Row>
-              <Row label="Skip confirmation" hint="Save transactions instantly, without a review step">
-                <Toggle on={skipConfirm} onChange={toggleSkip} label="Skip confirmation" />
-              </Row>
-              <Row label="Layout" hint={`Currently desktop · preference: ${viewPref}`}>
-                <Btn onClick={() => setViewMode('mobile')}>Switch to mobile</Btn>
-                {viewPref !== 'auto' && <Btn onClick={() => setViewMode('auto')}>Use auto</Btn>}
+              <Row
+                label="Achievements"
+                hint={achievements.loading ? 'Challenges, milestones and badges' : `${achievements.earnedCount} of ${achievements.total} earned`}
+              >
+                <Btn onClick={() => navigate('/achievements')}>Open</Btn>
               </Row>
             </WebPanel>
           )}
 
-          {section === 'appearance' && (
+          {section === 'app' && (
+            <div className="flex flex-col gap-6">
             <WebPanel title="Appearance">
               <Row label="Theme" hint={theme === 'dark' ? 'Dark' : 'Light'}>
                 <Toggle on={theme === 'light'} onChange={toggleTheme} label="Light mode" />
+              </Row>
+              {/* The clean style: flat neutral surfaces, and true black in
+                  dark mode. See html.flat in index.css. */}
+              <Row
+                label={theme === 'dark' ? 'Lights out' : 'Clean style'}
+                hint={style === 'flat' ? 'Flat and neutral' : 'Vivid: your accent all through'}
+              >
+                <Toggle on={style === 'flat'} onChange={() => setStyle(style === 'flat' ? 'vivid' : 'flat')} label="Clean style" />
               </Row>
               {/* On a phone the eight accents live behind a sheet because there
                   is nowhere else to put them. Here they all fit, so choosing
@@ -289,6 +304,54 @@ export default function WebSettings() {
                 </div>
               </StackRow>
             </WebPanel>
+
+            <WebPanel title="Behaviour">
+              <Row label="Skip confirmation" hint="Save transactions instantly, without a review step">
+                <Toggle on={skipConfirm} onChange={toggleSkip} label="Skip confirmation" />
+              </Row>
+              <Row label="Layout" hint={`Currently desktop · preference: ${viewPref}`}>
+                <Btn onClick={() => setViewMode('mobile')}>Switch to mobile</Btn>
+                {viewPref !== 'auto' && <Btn onClick={() => setViewMode('auto')}>Use auto</Btn>}
+              </Row>
+            </WebPanel>
+
+            <WebPanel title="Cloud sync">
+              {!isSupabaseConfigured ? (
+                /* The two env vars this is really about - VITE_SUPABASE_URL and
+                   VITE_SUPABASE_ANON_KEY - belong in a comment, not on screen.
+                   Whoever needs them is reading the source; whoever is reading
+                   the screen just wants to know if their money is safe. */
+                <p className="text-xs text-amber-700 dark:text-amber-400 py-2">
+                  Cloud sync isn&apos;t set up on this device, so everything stays
+                  right here. The rest of Spendr works exactly as it should.
+                </p>
+              ) : (
+                <>
+                  <Row label="Account" hint={user?.email ?? 'Not signed in'}>
+                    {user
+                      ? <Btn onClick={() => signOut()}>Sign out</Btn>
+                      : <Btn tone="primary" onClick={() => signInWithGoogle()}>Sign in with Google</Btn>}
+                  </Row>
+                  <Row label="Last sync" hint={lastSync}>
+                    <Btn onClick={() => runSync()} disabled={status === 'syncing' || !user}>
+                      {status === 'syncing' ? 'Syncing…' : 'Sync now'}
+                    </Btn>
+                  </Row>
+                </>
+              )}
+            </WebPanel>
+
+            {user?.email === SHEETS_OWNER && (
+              <WebPanel title="Google Sheets">
+                <Row label="Apps Script endpoint"
+                  hint={sheetsUrl?.value
+                    ? (sheetsLastSync ? `Configured · last pushed ${sheetsLastSync}` : 'Configured · never pushed')
+                    : 'Not configured'}>
+                  <Btn onClick={() => setSheet('sheets')}>Configure</Btn>
+                </Row>
+              </WebPanel>
+            )}
+            </div>
           )}
 
           {section === 'manage' && (
@@ -297,7 +360,7 @@ export default function WebSettings() {
                 <Btn ariaLabel="Open the category manager"
                   onClick={() => setSheet('categories')}>Open manager</Btn>
               </Row>
-              <Row label="Monthly budgets" hint="Per-category spending limits">
+              <Row label="Budget limits" hint="Per-category spending limits">
                 <Btn ariaLabel="Open the budget manager"
                   onClick={() => setSheet('budgets')}>Open manager</Btn>
               </Row>
@@ -346,51 +409,23 @@ export default function WebSettings() {
                   </Btn>
                 </div>
               </StackRow>
+              <Row label="Reset app" danger
+                hint="Permanently deletes every transaction, account, category, bill and debt on this device">
+                <Btn tone="danger" onClick={() => setSheet('reset')}>Reset…</Btn>
+              </Row>
+              <p className="text-xs text-slate-500 dark:text-slate-400 pt-3">
+                If you're signed in, your cloud copy is separate. Resetting here does not
+                delete it, and signing back in brings it all back. Download a backup first if
+                you want a local copy.
+              </p>
             </WebPanel>
           )}
 
-          {section === 'sync' && (
-            <div className="flex flex-col gap-6">
-              <WebPanel title="Cloud sync">
-                {!isSupabaseConfigured ? (
-                  /* The two env vars this is really about - VITE_SUPABASE_URL and
-                     VITE_SUPABASE_ANON_KEY - belong in a comment, not on screen.
-                     Whoever needs them is reading the source; whoever is reading
-                     the screen just wants to know if their money is safe. */
-                  <p className="text-xs text-amber-700 dark:text-amber-400 py-2">
-                    Cloud sync isn&apos;t set up on this device, so everything stays
-                    right here. The rest of Spendr works exactly as it should.
-                  </p>
-                ) : (
-                  <>
-                    <Row label="Account" hint={user?.email ?? 'Not signed in'}>
-                      {user
-                        ? <Btn onClick={() => signOut()}>Sign out</Btn>
-                        : <Btn tone="primary" onClick={() => signInWithGoogle()}>Sign in with Google</Btn>}
-                    </Row>
-                    <Row label="Last sync" hint={lastSync}>
-                      <Btn onClick={() => runSync()} disabled={status === 'syncing' || !user}>
-                        {status === 'syncing' ? 'Syncing…' : 'Sync now'}
-                      </Btn>
-                    </Row>
-                  </>
-                )}
-              </WebPanel>
-
-              <WebPanel title="Google Sheets">
-                <Row label="Apps Script endpoint"
-                  hint={sheetsUrl?.value
-                    ? (sheetsLastSync ? `Configured · last pushed ${sheetsLastSync}` : 'Configured · never pushed')
-                    : 'Not configured'}>
-                  <Btn onClick={() => setSheet('sheets')}>Configure</Btn>
-                </Row>
-              </WebPanel>
-            </div>
-          )}
-
           {section === 'about' && (
-            <WebPanel title="About">
-              <Row label="Spendr" hint="Offline-first personal finance, built for the Philippines" />
+            <WebPanel title="Help & About">
+              <Row label="Spendr" hint={`Version ${APP_VERSION} · offline-first personal finance, built for the Philippines`}>
+                <Btn onClick={() => navigate('/settings/changelog')}>Changelog</Btn>
+              </Row>
               <Row label="Stored locally" hint={`${txCount ?? '—'} transactions · ${acctCount ?? '—'} accounts · ${catCount ?? '—'} categories`} />
               <Row label="Privacy policy">
                 <Btn ariaLabel="Read the privacy policy"
@@ -403,19 +438,6 @@ export default function WebSettings() {
             </WebPanel>
           )}
 
-          {section === 'danger' && (
-            <WebPanel title="Danger zone">
-              <Row label="Reset app" danger
-                hint="Permanently deletes every transaction, account, category, bill and debt on this device">
-                <Btn tone="danger" onClick={() => setSheet('reset')}>Reset…</Btn>
-              </Row>
-              <p className="text-xs text-slate-500 dark:text-slate-400 pt-3">
-                If you're signed in, your cloud copy is separate. Resetting here does not
-                delete it, and signing back in brings it all back. Export a backup first if
-                you want a local copy.
-              </p>
-            </WebPanel>
-          )}
         </div>
       </div>
 

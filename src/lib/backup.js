@@ -1,6 +1,7 @@
 import db, { UNSYNCED } from '../db/db'
 import { queueRemoteDelete, resetWatermarks } from './sync'
 import { toDateInput } from '../utils/txDate'
+import { PRIMED_META } from './achievements'
 
 /* Tables the JSON export writes.
  *
@@ -32,7 +33,7 @@ export const BACKUP_VERSION = 2
 
 const BACKUP_TABLES = [
   'transactions', 'accounts', 'categories', 'templates', 'recurring', 'debts',
-  'goals', 'badges',
+  'goals', 'badges', 'challenges',
 ]
 
 /* Badges are the one table a restore MERGES rather than replaces - look for
@@ -133,12 +134,13 @@ export async function restoreBackup(raw) {
   const stampBadge = (rows) => (rows ?? []).map(r => ({ ...r, synced: UNSYNCED }))
 
   // Captured before the wipe so we know what the backup drops.
-  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals] = await Promise.all([
+  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges] = await Promise.all([
     db.transactions.toArray(),
     db.accounts.toArray(),
     db.categories.toArray(),
     db.templates.toArray(),
     db.goals.toArray(),
+    db.challenges.toArray(),
   ])
 
   /* Each call names the table it is restoring. A backup file is parsed JSON,
@@ -153,6 +155,7 @@ export async function restoreBackup(raw) {
   const transactions = /** @type {Transaction[]} */ (stamp(data.transactions))
   const goals      = /** @type {Goal[]}         */ (stamp(data.goals))
   const badges     = /** @type {BadgeRow[]}     */ (stampBadge(data.badges))
+  const challenges = /** @type {ChallengeRow[]} */ (stamp(data.challenges))
 
   const keptTxIds  = new Set(transactions.map(t => t.txId).filter(Boolean))
   const droppedTxIds = oldTxs.map(t => t.txId).filter(id => id && !keptTxIds.has(id))
@@ -161,10 +164,12 @@ export async function restoreBackup(raw) {
   const keptTemplateNames = new Set(templates.map(t => t.name))
   const keptCategoryKeys  = new Set(categories.map(c => `${c.name}|${c.type}`))
   const keptGoalNames     = new Set(goals.map(g => g.name))
+  const keptChallengeIds  = new Set(challenges.map(c => c.syncId).filter(Boolean))
 
   await db.transaction('rw', [
     db.transactions, db.accounts, db.categories, db.templates,
     db.recurring, db.debts, db.goals, db.badges, db.balances, db.meta, db.notifications,
+    db.challenges,
   ], async () => {
     /* The notifications list is about the ledger it was worked out from. A
        restored ledger gets its own, worked out afresh - and arriving all at
@@ -177,6 +182,7 @@ export async function restoreBackup(raw) {
     if (Array.isArray(data.recurring))    { await db.recurring.clear();    await db.recurring.bulkAdd(recurring) }
     if (Array.isArray(data.debts))        { await db.debts.clear();        await db.debts.bulkAdd(debts) }
     if (Array.isArray(data.goals))        { await db.goals.clear();        await db.goals.bulkAdd(goals) }
+    if (Array.isArray(data.challenges))   { await db.challenges.clear();   await db.challenges.bulkAdd(challenges) }
     // Merged, not replaced - see the note by BACKUP_TABLES. bulkPut so a badge already held
     // locally keeps its row rather than colliding on the `key` primary key.
     if (Array.isArray(data.badges) && badges.length) await db.badges.bulkPut(badges)
@@ -196,6 +202,9 @@ export async function restoreBackup(raw) {
       }
     }
     if (accounts.length) await db.meta.put({ key: 'onboarded', value: true })
+    /* A restored ledger is history arriving: the next look at achievements
+       writes what it earns without celebrating each - see PRIMED_META. */
+    await db.meta.delete(PRIMED_META)
 
     // balances mirrors accounts; rebuild rather than trust a stale copy.
     await db.balances.clear()
@@ -232,6 +241,14 @@ export async function restoreBackup(raw) {
   if (Array.isArray(data.goals)) {
     for (const g of oldGoals) {
       if (g.name && !keptGoalNames.has(g.name)) await queueRemoteDelete('goals', { name: g.name })
+    }
+  }
+  /* The same for challenges, by their syncId. Left on the server, an attempt
+     started after the backup would come straight back on the next pull - and
+     one it had finished would sit beside the backup's copy still running. */
+  if (Array.isArray(data.challenges)) {
+    for (const c of oldChallenges) {
+      if (c.syncId && !keptChallengeIds.has(c.syncId)) await queueRemoteDelete('challenges', { sync_id: c.syncId })
     }
   }
 
@@ -296,6 +313,7 @@ function readLocalPrefs() {
     return {
       theme: localStorage.getItem('spendr-theme'),
       accentColor: localStorage.getItem('accentColor'),
+      style: localStorage.getItem('spendr-style'),
     }
   } catch {
     return {}   // private mode, blocked storage: a backup without them is fine
@@ -308,11 +326,12 @@ function writeLocalPrefs(prefs) {
   try {
     if (prefs.theme) localStorage.setItem('spendr-theme', prefs.theme)
     if (prefs.accentColor) localStorage.setItem('accentColor', prefs.accentColor)
+    if (prefs.style === 'flat' || prefs.style === 'vivid') localStorage.setItem('spendr-style', prefs.style)
   } catch { /* nothing to do about it, and not worth failing a restore over */ }
 }
 
 export async function buildBackupPayload() {
-  const [transactions, accounts, categories, templates, recurring, debts, goals, badges] =
+  const [transactions, accounts, categories, templates, recurring, debts, goals, badges, challenges] =
     await Promise.all([
       db.transactions.toArray(),
       db.accounts.toArray(),
@@ -322,6 +341,7 @@ export async function buildBackupPayload() {
       db.debts.toArray(),
       db.goals.toArray(),
       db.badges.toArray(),
+      db.challenges.toArray(),
     ])
 
   const meta = (await db.meta.toArray())
@@ -331,7 +351,7 @@ export async function buildBackupPayload() {
   return {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
-    transactions, accounts, categories, templates, recurring, debts, goals, badges,
+    transactions, accounts, categories, templates, recurring, debts, goals, badges, challenges,
     /* Added in version 2. A version 1 file simply has neither, and the
        restore leaves the current settings alone rather than blanking them. */
     meta,

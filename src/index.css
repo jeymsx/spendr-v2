@@ -1789,24 +1789,16 @@ html.web.dark input[type="date"] {
   color-scheme: dark;
 }
 
-/* ── Badge unlocked ───────────────────────────────────────────────────────────
+/* ── The flip and the burst ───────────────────────────────────────────────────
 
-   Three animations, in sequence: the card arrives, the badge flips face-up,
-   and from then on it catches the light every few seconds.
+   What is left of the old unlock card: a badge landing face-up (the Wrapped
+   badges slide) and paper thrown out from it (components/Confetti). The
+   full-screen celebration that replaced the card has its own block, further
+   down, as does the glass art.
 
-   All three are transform and opacity only, so they stay on the compositor -
-   which matters here more than usual, because the confetti burst is 70 more
-   animated elements running at the same moment.
-
-   Every one is switched off under prefers-reduced-motion at the bottom of this
-   block. A spinning object, a screenful of fast-moving confetti and a
-   repeating specular sweep is close to the worst case for anyone who set that,
-   and none of it carries meaning the card does not also say in words. */
-
-@keyframes badgeCardIn {
-  0%   { transform: scale(0.86) translateY(12px); opacity: 0; }
-  100% { transform: scale(1) translateY(0);       opacity: 1; }
-}
+   Both are transform and opacity only, so they stay on the compositor while
+   seventy particles run at the same moment, and both are switched off under
+   prefers-reduced-motion at the bottom of this block. */
 
 /* The flip. Two and a bit turns rather than one, because a single half-turn
    from -180 reads as the badge being wiped on sideways; the extra rotation is
@@ -1822,31 +1814,7 @@ html.web.dark input[type="date"] {
   100% { transform: perspective(900px) rotateY(0deg)    scale(1); }
 }
 
-/* The specular sweep, masked to the badge's own alpha - see BadgeShine. It
-   travels across twice its own width so the band is fully off-badge at both
-   ends, otherwise it sits parked at the edge between repeats. */
-@keyframes badgeShine {
-  0%,  62% { transform: translateX(-130%) rotate(8deg); }
-  100%     { transform: translateX(130%)  rotate(8deg); }
-}
-
-/* What the badge does once it has landed: a slow tilt each way, never a full
-   turn. A looping 360 reads as the badge arriving again every few seconds,
-   which undoes the one moment the entrance flip exists to create. Fourteen
-   degrees is enough to catch the gloss on the artwork and move the sparkles
-   without the hexagon ever looking like it is edge-on. */
-@keyframes badgeSway {
-  0%,  100% { transform: perspective(900px) rotateY(-14deg); }
-  50%       { transform: perspective(900px) rotateY(14deg); }
-}
-
-.badge-flip  { animation: badgeFlip 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-.badge-sway  { animation: badgeSway 4200ms ease-in-out infinite; }
-.badge-card-in { animation: badgeCardIn 320ms cubic-bezier(0.22, 1, 0.36, 1) both; }
-.badge-shine {
-  animation: badgeShine 2900ms linear infinite;
-  animation-delay: 1000ms;
-}
+.badge-flip { animation: badgeFlip 900ms cubic-bezier(0.22, 1, 0.36, 1) both; }
 
 /* Thrown outward from the centre. Each particle supplies its own --bx/--by/--br
    so one keyframe serves all forty-odd of them.
@@ -1869,55 +1837,8 @@ html.web.dark input[type="date"] {
   animation-fill-mode: forwards;
 }
 
-/* ── The unlock card's own surface ────────────────────────────────────────────
-
-   `.card` is translucent with a backdrop blur - right for a panel on a page,
-   wrong for one over a scrim, where the dashboard read straight through it and
-   competed with the badge. `.card-solid` fixed that and went too far the other
-   way: a flat opaque slab.
-
-   So: a gradient, mostly opaque, with a few percent of the scrim still coming
-   through, and a soft highlight along the top edge so the card reads as lit
-   from above like everything else in this app. */
-/* Light is flat and fully opaque. A translucent card on a light scrim has
-   nothing to be translucent AGAINST - the page behind it is nearly the same
-   value, so all the transparency buys is muddier text. No backdrop-filter
-   either: on an opaque element it is a compositing pass that changes nothing,
-   and there are forty confetti particles animating over the top of it. */
-.badge-card {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.07);
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.9);
-}
-
-/* Dark keeps the gradient at about 0.65, where the scrim still reads through
-   it. The blur is what carries legibility at that opacity: the fill is more
-   see-through than solid, so what keeps the copy readable is the backdrop
-   being flattened to a wash first, not the fill itself. */
-.dark .badge-card {
-  background: linear-gradient(165deg,
-    rgba(52, 76, 116, 0.34) 0%,
-    rgba(20, 29, 43, 0.28) 55%,
-    rgba(16, 23, 34, 0.32) 100%);
-  border: 1px solid rgba(var(--color-primary-rgb), 0.22);
-  /* Blur pushed up as the fill came down. Below about 0.5 the fill is no
-     longer doing the work - the scrim behind, flattened by this, is what the
-     text sits on. Lower the fill without raising this and the copy starts
-     reading against whatever card happens to be underneath. */
-  backdrop-filter: blur(44px) saturate(165%);
-  -webkit-backdrop-filter: blur(44px) saturate(165%);
-  box-shadow:
-    0 24px 60px rgba(0, 0, 0, 0.55),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
-}
-
 @media (prefers-reduced-motion: reduce) {
-  .badge-flip,
-  .badge-sway,
-  .badge-card-in  { animation: none; }
-  .badge-shine    { animation: none; opacity: 0; }
+  .badge-flip     { animation: none; }
   .confetti-burst { animation: none; opacity: 0; }
 }
 
@@ -1930,9 +1851,10 @@ html.web.dark input[type="date"] {
 
    The mask is an inline SVG rather than a clip-path polygon because a polygon
    cannot round its corners, and the tips are the most recognisable part of the
-   shape - a hexagon with sharp points reads as a warning sign. Same geometry as
-   HEX_OUTER in BadgeMark, rounded the same way: fill and stroke in one paint
-   with a round linejoin. */
+   shape - a hexagon with sharp points reads as a warning sign. The same
+   point-up hexagon as a badge's glass medallion (HEX_OUTER in
+   components/glass/glass.js), rounded by painting fill and stroke at once with
+   a round linejoin. */
 .skeleton-hex {
   -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,4 56,18.4 56,45.6 32,60 8,45.6 8,18.4' fill='%23000' stroke='%23000' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E");
   mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cpolygon points='32,4 56,18.4 56,45.6 32,60 8,45.6 8,18.4' fill='%23000' stroke='%23000' stroke-width='5' stroke-linejoin='round'/%3E%3C/svg%3E");
@@ -2087,3 +2009,306 @@ html.web.dark input[type="date"] {
   .recap-sway, .recap-nudge, .recap-spin { animation: none; }
   .recap-drop { animation: none; opacity: 0; }
 }
+
+/* ── Glass illustrations ─────────────────────────────────────────────
+   The frosted-glass pictures in components/glass. Still ones are <img>s and
+   none of this applies; a live one is inline SVG, and each of its layers
+   carries a class and its place in the stack as --i, so the pieces can
+   arrive one after another: the solid set back slides in, the pane settles
+   over it, the mark lands last. All of it transform and opacity, and all of
+   it stops for reduced motion - a still picture is the same picture. */
+.glass-live { display: inline-block; position: relative; }
+.glass-live > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.glass-live .gx-s,
+.glass-live .gx-g,
+.glass-live .gx-y,
+.glass-live .gx-p {
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.glass-enter .gx-s { animation: gxBack 0.8s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--i) * 70ms + var(--gx-delay, 0ms)); }
+.glass-enter .gx-g { animation: gxPane 0.8s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--i) * 70ms + var(--gx-delay, 0ms)); }
+.glass-enter .gx-y,
+.glass-enter .gx-p { animation: gxMark 0.6s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--i) * 70ms + 120ms + var(--gx-delay, 0ms)); }
+
+@keyframes gxBack {
+  from { opacity: 0; transform: translate(-9px, 7px) rotate(-10deg) scale(0.88); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes gxPane {
+  from { opacity: 0; transform: translate(8px, -6px) scale(0.9); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes gxMark {
+  from { opacity: 0; transform: scale(0.55); }
+  to   { opacity: 1; transform: none; }
+}
+
+/* Idle: the whole picture bobs, and a band of light crosses each pane now
+   and then - clipped to the pane, so it reads as the glass catching light. */
+.glass-float > svg { animation: gxFloat 4.2s ease-in-out infinite; animation-delay: var(--gx-float-delay, 0s); }
+.glass-shine .gx-shine {
+  transform-box: view-box;
+  transform-origin: 64px 64px;
+  animation: gxShine 4.6s cubic-bezier(0.45, 0, 0.3, 1) infinite;
+  animation-delay: var(--gx-shine-delay, 1.4s);
+}
+@keyframes gxFloat {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-6%); }
+}
+@keyframes gxShine {
+  0%       { transform: rotate(24deg) translateX(0); }
+  38%, 100% { transform: rotate(24deg) translateX(260px); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .glass-enter .gx-s, .glass-enter .gx-g,
+  .glass-enter .gx-y, .glass-enter .gx-p,
+  .glass-float > svg, .glass-shine .gx-shine { animation: none; }
+}
+
+/* ── The celebration screen ──────────────────────────────────────────
+   components/achievements/Celebration.jsx. The medallion arrives turning
+   over to face you, the words rise in after it, and paper drifts down the
+   whole time. Eased to a stop, never past it. */
+.celebrate { animation: celebrateFade 0.35s ease-out both; }
+.celebrate-fade { animation: celebrateFade 0.6s ease-out both; }
+.celebrate-in { animation: celebrateIn 1s cubic-bezier(0.2, 0.9, 0.25, 1) both; transform-style: preserve-3d; }
+.celebrate-rise { animation: celebrateRise 0.6s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.celebrate-fall {
+  animation-name: celebrateFall;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  will-change: transform;
+}
+/* The rays behind the medallion, turning: a revolution every half minute,
+   alive without being busy. Faster than the recap's 48s, because here the
+   rays ARE the backdrop rather than a detail on a card. */
+.celebrate-spin { animation: recapSpin 30s linear infinite; }
+
+@keyframes celebrateFade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes celebrateIn {
+  0%   { opacity: 0; transform: rotateY(-160deg) scale(0.35); }
+  45%  { opacity: 1; }
+  100% { opacity: 1; transform: rotateY(0deg) scale(1); }
+}
+@keyframes celebrateRise {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: none; }
+}
+@keyframes celebrateFall {
+  from { transform: translate3d(0, -6vh, 0) rotate(0deg); }
+  to   { transform: translate3d(var(--dx, 0px), 106vh, 0) rotate(var(--rot, 360deg)); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .celebrate, .celebrate-fade, .celebrate-in, .celebrate-rise, .celebrate-spin { animation: none; }
+  .celebrate-fall { display: none; }
+}
+
+/* ── The achievements guide ──────────────────────────────────────────────────
+   A centred card of four steps (pages/achievements/Guide.jsx). The card rises
+   and sharpens in; each step's content comes a little from the side it was
+   turned from and sharpens - the app's morph-and-blur swap, with no bounce.
+   Inside a step, levels light up in turn and a progress bar fills, so the
+   picture shows the idea rather than sitting beside it. */
+@keyframes guideScrim { from { opacity: 0; } }
+@keyframes guideCard {
+  from { opacity: 0; transform: translateY(14px) scale(0.97); filter: blur(6px); }
+}
+@keyframes guideStep {
+  from { opacity: 0; transform: translateX(calc(var(--dir, 1) * 20px)); filter: blur(5px); }
+}
+@keyframes guideOut { to { opacity: 0; transform: scale(0.98); } }
+@keyframes guideScrimOut { to { opacity: 0; } }
+@keyframes guideLight { from { background-color: var(--guide-off); color: var(--guide-off-ink); } }
+@keyframes guideRise { from { opacity: 0; transform: translateY(8px) scale(0.94); } }
+@keyframes guideFill { from { transform: scaleX(0); } }
+
+.guide-scrim { animation: guideScrim 0.22s ease-out both; }
+.guide-card  { animation: guideCard 0.38s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.guide-step  { animation: guideStep 0.34s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.guide-closing .guide-card  { animation: guideOut 0.18s ease-in both; }
+.guide-closing .guide-scrim { animation: guideScrimOut 0.18s ease-in both; }
+.guide-light {
+  --guide-off: #f1f5f9;
+  --guide-off-ink: #64748b;
+  animation: guideLight 0.35s ease-out both;
+}
+.dark .guide-light {
+  --guide-off: rgba(255, 255, 255, 0.07);
+  --guide-off-ink: #94a3b8;
+}
+.guide-light-in { animation: guideRise 0.4s cubic-bezier(0.22, 1, 0.36, 1) both; }
+.guide-fill { animation: guideFill 1.1s cubic-bezier(0.22, 1, 0.36, 1) 0.35s both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .guide-scrim, .guide-card, .guide-step, .guide-light, .guide-light-in, .guide-fill,
+  .guide-closing .guide-card, .guide-closing .guide-scrim { animation: none; }
+}
+
+/* ══ The clean style: html.flat ═══════════════════════════════════════
+   Preferences > Style > Clean. Flat, neutral surfaces with hairline edges -
+   the iOS and shadcn look - instead of Spendr's accent glow and tinted
+   glass. In dark mode it is lights out: a true black ground, near-black
+   cards, no gradient anywhere behind them.
+
+   One layer, like html.web: every rule here is `html.flat` plus what it
+   restyles, so nothing outside it changes and turning it off is removing
+   a class. The accent stays exactly where it MEANS something - a primary
+   button, a selected chip, a figure's colour - and leaves every surface.
+
+   The dark rules that neutralise accent-tinted surfaces match the utility
+   tokens themselves ([class~="dark:bg-primary/[0.07]"]): those washes are
+   spelled into a few dozen components as surfaces, and a selector on the
+   token reaches all of them without touching one. Only the low washes used
+   as SURFACES are matched - the 0.12 and 0.20 ones mark a selection, and
+   stay the accent. */
+
+html.flat {
+  --surface-page:   #f2f2f7;
+  --surface-panel:  #ffffff;
+  --surface-lifted: #ffffff;
+  background-color: #f2f2f7;
+}
+html.flat body { background: #f2f2f7; }
+
+html.flat.dark {
+  --surface-page:   #000000;
+  --surface-panel:  #111113;
+  --surface-lifted: #1c1c1f;
+  background-color: #000000;
+}
+html.flat.dark body { background: #000000; }
+html.flat.dark::before { display: none; }
+
+/* Cards: white on the grouped grey, or near-black on black, a hairline, and
+   no glow. No blur either - there is nothing behind a flat card worth
+   seeing, and backdrop-filter costs a repaint of everything under it. */
+html.flat .card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+}
+html.flat.dark .card,
+html.flat.dark.accent-custom .card {
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.flat.dark .card-solid {
+  background: #1c1c1f;
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.6);
+}
+html.flat .glass-card {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+html.flat.dark .glass-card {
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+
+/* A category's tile keeps its own colour - that is data - on a neutral
+   ground instead of the blue-grey one. Not the selected tile: its fill is how
+   you can tell which category you are about to save under, and this rule
+   outranks the one that paints it. */
+html.flat.dark .cat-tile:not([data-on='true']) {
+  background: linear-gradient(var(--cat-wash), var(--cat-wash)), #1c1c1f;
+}
+
+/* The insight hero's aurora of accent light: a plain card in this style. */
+html.flat .insight-aurora {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+html.flat.dark .insight-aurora {
+  background: #111113;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Accent-tinted surfaces spelled into components - fields, header chips,
+   the profile card - go neutral. Their borders follow. */
+html.flat.dark [class~="dark:bg-primary/[0.07]"],
+html.flat.dark [class~="dark:bg-primary/[0.08]"],
+html.flat.dark [class~="dark:bg-primary/[0.10]"] {
+  background-color: rgba(255, 255, 255, 0.06);
+}
+html.flat.dark [class~="dark:border-primary/[0.10]"],
+html.flat.dark [class~="dark:border-primary/[0.14]"],
+html.flat.dark [class~="dark:border-primary/[0.20]"],
+html.flat.dark [class~="dark:border-primary/[0.22]"],
+html.flat.dark [class~="dark:border-primary/[0.25]"],
+html.flat.dark [class~="dark:border-primary/20"],
+html.flat.dark [class~="dark:border-primary/25"] {
+  border-color: rgba(255, 255, 255, 0.10);
+}
+html.flat.dark [class*="dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb)"] {
+  box-shadow: none;
+}
+
+/* The tab bar: black glass over black rather than navy, and white glass over
+   the grey. The light rule is :not(.dark) because it matches the same bar
+   with the same specificity as the dark one, and coming later it won - a
+   white bar under a black app. */
+html.flat.dark [class~="dark:bg-navy/90"] {
+  background-color: rgba(0, 0, 0, 0.86);
+}
+html.flat:not(.dark) [class~="bg-white/90"][class~="border-t"] {
+  background-color: rgba(255, 255, 255, 0.92);
+}
+/* The desktop sidebar: off-black beside the black page, not navy. */
+html.flat.dark [class~="dark:bg-navy/60"] {
+  background-color: #0a0a0b;
+}
+
+/* The net-worth wallet without the leather: a plain panel in the page's own
+   neutrals - no grain, no overhead light, no stitching - so the hero is its
+   figure rather than its colour. The silhouette and its tab stay; they are
+   the control, not the finish. The background needs !important over the
+   accent gradient Dashboard.jsx sets inline. */
+/* The hairline every other card has, drawn as four one-pixel drop shadows on
+   the wrapper: the card is clip-pathed to its billfold shape, which clips a
+   border and a box-shadow away, but a filter on the wrapper follows the
+   clipped silhouette - tab and fillets included. */
+html.flat .wallet {
+  filter:
+    drop-shadow(0 1px 0 rgba(0, 0, 0, 0.06)) drop-shadow(0 -1px 0 rgba(0, 0, 0, 0.06))
+    drop-shadow(1px 0 0 rgba(0, 0, 0, 0.06)) drop-shadow(-1px 0 0 rgba(0, 0, 0, 0.06))
+    drop-shadow(0 1px 2px rgba(0, 0, 0, 0.05));
+}
+html.flat .wallet-card { background: #ffffff !important; box-shadow: none; }
+html.flat.dark .wallet {
+  filter:
+    drop-shadow(0 1px 0 rgba(255, 255, 255, 0.09)) drop-shadow(0 -1px 0 rgba(255, 255, 255, 0.09))
+    drop-shadow(1px 0 0 rgba(255, 255, 255, 0.09)) drop-shadow(-1px 0 0 rgba(255, 255, 255, 0.09));
+}
+html.flat.dark .wallet-card { background: #1c1c1f !important; }
+html.flat .wallet-card::before,
+html.flat .wallet-card::after,
+html.flat .wallet-card > .wallet-stitch { display: none; }
+html.flat .wallet-pocket { box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.06); }
+html.flat.dark .wallet-pocket { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08); }
+
+/* ...and on white, the figures and labels it wrote in white go to ink, each
+   keeping its place in the hierarchy. */
+html.flat:not(.dark) .wallet-card .text-white,
+html.flat:not(.dark) .wallet-card [class~="hover:text-white/90"]:hover { color: #0f172a; }
+html.flat:not(.dark) .wallet-card [class~="text-white/80"] { color: #334155; }
+html.flat:not(.dark) .wallet-card [class~="text-white/75"] { color: #475569; }
+html.flat:not(.dark) .wallet-card [class~="text-white/60"],
+html.flat:not(.dark) .wallet-card [class~="text-white/55"],
+html.flat:not(.dark) .wallet-card [class~="text-white/50"] { color: #64748b; }
+html.flat:not(.dark) .wallet-card [class~="text-white/35"] { color: #94a3b8; }
+html.flat:not(.dark) .wallet-card [class~="bg-white/[0.12]"] { background-color: rgba(15, 23, 42, 0.06); }
+html.flat:not(.dark) .wallet-card [class~="text-amber-200/90"] { color: #b45309; }
+html.flat:not(.dark) .wallet-card > .wallet-tab { color: #64748b; }
+html.flat:not(.dark) .wallet-card > .wallet-tab:active { color: #0f172a; }

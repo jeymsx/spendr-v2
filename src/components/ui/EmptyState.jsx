@@ -43,7 +43,9 @@ export default function EmptyState({
   title,
   /** What to do about it. One sentence, or nothing. */
   body = null,
-  /** The way out - usually a <Button>. */
+  /** The way out - usually a <Button>, given its own px (className="px-6"):
+   *  Button sets its height and never its width, and centred here without
+   *  padding it shrink-wraps its label into a pill with no room at the ends. */
   action = null,
   tone = 'calm',
   /** `sm` for an empty state inside a card or section rather than a page. */

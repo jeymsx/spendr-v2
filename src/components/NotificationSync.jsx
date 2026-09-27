@@ -43,6 +43,7 @@ export default function NotificationSync() {
   const recurring    = useLiveQuery(() => db.recurring.toArray(), [], undefined)
   const categories   = useLiveQuery(() => db.categories.toArray(), [], undefined)
   const badges       = useLiveQuery(() => db.badges.toArray(), [], undefined)
+  const challenges   = useLiveQuery(() => db.challenges.toArray(), [], undefined)
   const rollover     = useLiveQuery(async () => (await db.meta.get('budgetRollover'))?.value ?? false, [], undefined)
   const [tick, setTick] = useState(0)
 
@@ -54,13 +55,13 @@ export default function NotificationSync() {
   }, [])
 
   useEffect(() => {
-    if ([accounts, transactions, recurring, categories, badges, rollover].some(v => v === undefined)) return
+    if ([accounts, transactions, recurring, categories, badges, challenges, rollover].some(v => v === undefined)) return
     const t = setTimeout(async () => {
       const now = new Date()
       try {
         const seenAt = await releaseSeenAt(CURRENT_VERSION, now)
         const candidates = collectNotifications({
-          accounts, transactions, recurring, categories, badges,
+          accounts, transactions, recurring, categories, badges, challenges,
           globalRollover: !!rollover,
           whatsNew: seenAt ? { version: CURRENT_VERSION, headline: WHATS_NEW_HEADLINE, at: seenAt } : null,
           now,
@@ -80,7 +81,7 @@ export default function NotificationSync() {
       }
     }, SETTLE_MS)
     return () => clearTimeout(t)
-  }, [accounts, transactions, recurring, categories, badges, rollover, tick])
+  }, [accounts, transactions, recurring, categories, badges, challenges, rollover, tick])
 
   return null
 }

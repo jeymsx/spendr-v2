@@ -6,15 +6,15 @@ import {
   personalityOf, spentCopy, weeksOf,
 } from '../../lib/recapCopy'
 import { monthName, parseMonth } from '../../lib/recap'
-import { BADGES } from '../../lib/badges'
-import BadgeMark from '../../components/BadgeMark'
+import { achievementArt, achievementDef, earnedLabel } from '../../lib/achievements'
+import { GlassBadge } from '../../components/glass/GlassArt'
 import { ConfettiBurst } from '../../components/Confetti'
 import AnimatedNumber from './AnimatedNumber'
-import { ART, CONFETTI } from './assets'
+import { CONFETTI, artUrl } from './assets'
 import { Art, Glow, Rays } from './art'
 import { CATEGORY_GAP_PX, CATEGORY_ROW_PX, CalendarHeat, CategoryRows, NetWorthArea } from './charts'
 import { PriceTag, Receipt, SavingsRing, StampCard } from './objects'
-import { Eyebrow, FitBox, Line, Piece, Pill, Stack, Sticker, Tile, heroClass, useRowsThatFit, useSlide } from './parts'
+import { Eyebrow, FitBox, Line, Piece, Pill, Stack, Sticker, Tile, heroClass, useRowsThatFit, useSlide, Mark } from './parts'
 import { SPRING } from './theme'
 
 /**
@@ -306,7 +306,7 @@ export function KeptSlide({ recap }) {
                 {[0, 1, 2].map(i => (
                   <img
                     key={i}
-                    src={ART.coin}
+                    src={artUrl('coin', pal.accent)}
                     alt=""
                     aria-hidden="true"
                     draggable={false}
@@ -327,11 +327,11 @@ export function KeptSlide({ recap }) {
         <ul className="grid grid-cols-2 gap-2">
           {/* Nothing spent to show when refunds took spending below nothing. */}
           {recap.spent > 0
-            ? <Tile emoji="💸" label="Spent" value={hero(recap.spent)} tone={recap.net < 0 ? 'soft' : undefined} height={TILE_PX} delay={0.9} tilt={-3} />
-            : <Tile emoji="💰" label="Came in" value={hero(recap.income)} height={TILE_PX} delay={0.9} tilt={-3} />}
+            ? <Tile emoji="💸" art="cash" label="Spent" value={hero(recap.spent)} tone={recap.net < 0 ? 'soft' : undefined} height={TILE_PX} delay={0.9} tilt={-3} />
+            : <Tile emoji="💰" art="moneyBag" label="Came in" value={hero(recap.income)} height={TILE_PX} delay={0.9} tilt={-3} />}
           {kept
-            ? <Tile emoji="🐷" label="Kept" value={hero(recap.net)} tone="good" height={TILE_PX} delay={0.98} tilt={3} />
-            : <Tile emoji="💰" label="Came in" value={hero(recap.income)} height={TILE_PX} delay={0.98} tilt={3} />}
+            ? <Tile emoji="🐷" art="piggy" label="Kept" value={hero(recap.net)} tone="good" height={TILE_PX} delay={0.98} tilt={3} />
+            : <Tile emoji="💰" art="moneyBag" label="Came in" value={hero(recap.income)} height={TILE_PX} delay={0.98} tilt={3} />}
         </ul>
       </Piece>
     </Stack>
@@ -392,7 +392,7 @@ export function DaysSlide({ recap }) {
         <CalendarHeat month={recap.month} days={recap.daily} selected={selected} busiest={busiest} onSelect={setSelected} />
       </Piece>
       <Piece className="mt-3">
-        <Pill><span aria-hidden="true">🌿</span>{daysCopy(recap).noSpend}</Pill>
+        <Pill><Mark emoji="🌿" px={18} hue={pal.accent} />{daysCopy(recap).noSpend}</Pill>
       </Piece>
     </Stack>
   )
@@ -540,11 +540,18 @@ export function NetWorthSlide({ recap }) {
   )
 }
 
+/** An earned achievement's glass medallion, filling its cell. @param {{achievementKey: string}} props */
+function MedalOf({ achievementKey }) {
+  const art = achievementArt(achievementKey)
+  if (!art) return null
+  return <GlassBadge {...art} size={160} style={{ width: '100%', height: '100%' }} />
+}
+
 /** @param {{recap: Recap}} props */
 export function BadgesSlide({ recap }) {
   const { pal } = useSlide()
   const n = recap.badges.length
-  const defs = recap.badges.map(b => BADGES.find(d => d.key === b.key) ?? { ...b, tone: 'slate', glyph: 'check' })
+  const defs = recap.badges.map(b => achievementDef(b.key) ?? { ...b, blurb: '' })
   /* A first month can earn a handful at once. Six fit two rows on the
      smallest phone; past that, the rest are counted rather than crowded in. */
   const shown = n > BADGES_SHOWN ? defs.slice(0, BADGES_SHOWN - 1) : defs
@@ -554,7 +561,7 @@ export function BadgesSlide({ recap }) {
   const cols = Math.min(3, shown.length + (more > 0 ? 1 : 0))
   return (
     <Stack className="relative h-full flex flex-col p-6">
-      <Eyebrow emoji="🏅">{one ? 'A new badge' : `${n} new badges`}</Eyebrow>
+      <Eyebrow emoji="🏅">{earnedLabel(recap.badges.map(b => b.key))}</Eyebrow>
       <Piece className="mt-3">
         <p className="text-32 font-semibold tracking-tight leading-tight line-clamp-2 break-words" style={{ color: pal.ink }}>
           {one ? one.name : 'Look at you go'}
@@ -571,7 +578,7 @@ export function BadgesSlide({ recap }) {
             {shown.map((b, i) => (
               <li key={b.key} className="flex flex-col items-center text-center min-w-0">
                 <span className="badge-flip block w-full aspect-square" style={{ animationDelay: `${0.25 + i * 0.14}s` }}>
-                  <BadgeMark badge={b} earned size={160} className="w-full h-full" />
+                  <MedalOf achievementKey={b.key} />
                 </span>
                 {n > 1 && <span className="mt-1.5 max-w-full text-12 font-semibold line-clamp-2" style={{ color: pal.ink }}>{b.name}</span>}
               </li>
@@ -635,7 +642,7 @@ export function PersonalitySlide({ recap }) {
                 animate={{ opacity: 1, scale: 1, rotate: 0 }}
                 transition={{ ...SPRING, delay: 0.9 + i * 0.1 }}
               >
-                <span className="text-15 leading-none shrink-0" aria-hidden="true">{t.emoji}</span>
+                <Mark emoji={t.emoji} art={t.art} px={20} hue={pal.accent} />
                 <span className="truncate">{t.text}</span>
               </motion.li>
             ))}

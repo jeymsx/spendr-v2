@@ -42,6 +42,11 @@ export default function InfoButton({
    * "About", which announced "About How goals are funded".
    */
   label,
+  /**
+   * Open something of your own instead of the sheet - an explainer that needs
+   * more than a paragraph, like the achievements guide. The (i) stays the same.
+   */
+  onOpen = null,
   className = '',
 }) {
   const [open, setOpen] = useState(false)
@@ -55,7 +60,7 @@ export default function InfoButton({
           though the mark is 15px. */}
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => (onOpen ? onOpen() : setOpen(true))}
         aria-label={label ?? title}
         className={[
           'shrink-0 -my-1.5 -mr-1 w-7 h-7 inline-flex items-center justify-center rounded-full',
@@ -68,13 +73,15 @@ export default function InfoButton({
         <IconInfo size={15} />
       </button>
 
-      <Sheet open={open} onClose={() => setOpen(false)} title={title}>
-        {/* No padding here: Sheet's body already carries px-5 and the bottom
-            inset. Adding it again indents the text past the title. */}
-        <div className="text-13 leading-relaxed text-slate-600 dark:text-slate-300">
-          {children}
-        </div>
-      </Sheet>
+      {!onOpen && (
+        <Sheet open={open} onClose={() => setOpen(false)} title={title}>
+          {/* No padding here: Sheet's body already carries px-5 and the bottom
+              inset. Adding it again indents the text past the title. */}
+          <div className="text-13 leading-relaxed text-slate-600 dark:text-slate-300">
+            {children}
+          </div>
+        </Sheet>
+      )}
     </>
   )
 }

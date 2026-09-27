@@ -30,6 +30,11 @@ const Transfer     = lazy(() => import('../pages/Transfer'))
    landscape included: without them here, tapping one opened a blank page. */
 const Notifications = lazy(() => import('../pages/Notifications'))
 const Recap         = lazy(() => import('../pages/recap/RecapPage'))
+/* A milestone's notification and the celebration's share both point here,
+   and the page is one column of cards whose sheets already become centred
+   modals under html.web - so it is reused as it is too. */
+const Achievements  = lazy(() => import('../pages/Achievements'))
+const Changelog     = lazy(() => import('../pages/settings/Changelog'))
 
 function LoadingScreen() {
   return (
@@ -74,12 +79,15 @@ export default function WebApp() {
               <Route path="/notifications" element={<WebFormPage><Notifications /></WebFormPage>} />
               <Route path="/recap"         element={<WebFormPage><Recap /></WebFormPage>} />
               <Route path="/recap/:month"  element={<WebFormPage><Recap /></WebFormPage>} />
+              <Route path="/achievements"  element={<WebFormPage width={640}><Achievements /></WebFormPage>} />
+              <Route path="/settings/changelog" element={<WebFormPage width={640}><Changelog /></WebFormPage>} />
               {/* Addresses only the phone layout has - a notification's link,
                   a bookmark, switching to desktop view while on one - go to
                   where desktop keeps the same thing, and anything else goes
                   home, rather than to a blank page. Budgets live in
-                  Insights here; badges have no desktop page. */}
+                  Insights here. */}
               <Route path="/budget"             element={<Navigate to="/insights" replace />} />
+              <Route path="/badges"             element={<Navigate to="/achievements?tab=badges" replace />} />
               <Route path="/categories/:name"   element={<Navigate to="/insights" replace />} />
               <Route path="/transactions/*"     element={<Navigate to="/transactions" replace />} />
               <Route path="/accounts/*"         element={<Navigate to="/accounts" replace />} />

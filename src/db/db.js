@@ -22,6 +22,7 @@ import { stampTxCurrency } from '../lib/fxContext'
  *   badges:       import('dexie').Table<BadgeRow, string>,
  *   meta:         import('dexie').Table<MetaRow, string>,
  *   notifications: import('dexie').Table<NotificationRow, string>,
+ *   challenges:   import('dexie').Table<ChallengeRow, number>,
  * }} SpendrDB
  */
 
@@ -172,7 +173,10 @@ db.version(11).stores({
      than the first time it happens to be written - a row that is never edited
      again would otherwise never get one, and those are exactly the rows that
      have been syncing the longest. */
-  for (const name of SYNCED_TABLES) {
+  /* The six tables that existed at v11, named here rather than read from
+     SYNCED_TABLES: that list grows, and an upgrade that runs for someone on
+     v10 must not reach for a table v11 did not have yet. */
+  for (const name of ['accounts', 'categories', 'debts', 'recurring', 'templates', 'goals']) {
     await tx.table(name).toCollection().modify(row => {
       if (!row.syncId) row.syncId = crypto.randomUUID()
     })
@@ -193,9 +197,22 @@ db.version(12).stores({
   notifications: 'id, at, read',
 })
 
+/* v13 - challenges.
+ *
+ * One row per attempt at a challenge (lib/challenges.js): which one, its
+ * window as two local days, any settings it was started with, and how it
+ * ended. Never deleted - giving up is a status, not a removal - so the
+ * history of every attempt is kept and nothing has to sync a deletion.
+ *
+ * Synced, through 021_challenges.sql, and identified by syncId like the
+ * other synced tables. */
+db.version(13).stores({
+  challenges: '++id, key, status, startDay, endDay, syncId',
+})
+
 /** The tables that carry a syncId. Exported so sync and backup agree. */
 export const SYNCED_TABLES = [
-  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals',
+  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges',
 ]
 
 /** How a row is FILED, as opposed to what it says. Changing only these is not

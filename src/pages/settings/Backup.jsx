@@ -85,7 +85,7 @@ export function RestoreBackupSheet({ open, onClose }) {
     [c.transactions, 'transactions'], [c.accounts, 'accounts'],
     [c.categories, 'categories'], [c.recurring, 'recurring'],
     [c.debts, 'debts'], [c.templates, 'templates'],
-    [c.goals, 'goals'], [c.badges, 'badges'],
+    [c.goals, 'goals'], [c.badges, 'badges'], [c.challenges, 'challenges'],
   ].filter(([n]) => n > 0)
 
   /* What the file has no opinion about.

@@ -241,7 +241,7 @@ describe('the rest of the story', () => {
 
   it('lists the badges earned in the month', () => {
     const badges = [{ key: 'seven-days', earnedAt: at(9, 30) }, { key: 'first-peso', earnedAt: at(7, 10) }, { key: 'gone', earnedAt: at(9, 2) }]
-    expect(recap([...HISTORY, spend(9, 2, 10)], { badges }).badges).toEqual([{ key: 'seven-days', name: 'Seven Days' }])
+    expect(recap([...HISTORY, spend(9, 2, 10)], { badges }).badges).toEqual([{ key: 'seven-days', name: '7-Day Streak' }])
   })
 
   /* Green Month judges a finished month, so it is awarded on the first look

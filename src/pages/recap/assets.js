@@ -1,29 +1,97 @@
+import { glassSvg, svgUrl } from '../../components/glass/glass'
+
 /**
- * What the recap is decorated with, in one place: the 3D illustrations, the
- * Spendr mark, the confetti's colours, and the seeded randomness that places
- * things so they land in the same spot on every render and in every picture.
+ * What the recap is decorated with, in one place: the glass illustrations,
+ * the Spendr mark, the confetti's colours, and the seeded randomness that
+ * places things so they land in the same spot on every render and in every
+ * picture.
  *
  * Plain JS, not JSX, so the canvas that draws the saved picture can use the
- * same files and the same colours as the slides without pulling React in.
+ * same pictures and the same colours as the slides without pulling React in.
  *
  * ── The illustrations ──
  *
- * Microsoft's Fluent Emoji, 3D style (MIT - see src/assets/ATTRIBUTION.md),
- * at 256px, saved as WebP: the nineteen the recap uses come to about
- * 110KB. `import.meta.glob` finds them at build time, so a new file in
- * src/assets/recap/ is available by its name with nothing else to update.
- *
- * They are pictures, not text, which is why they can be newer emoji than a
- * slide's own text may use: an old Android draws an exhaling face as two
- * separate glyphs, but it draws this file the same as everything else.
+ * Frosted glass over solid colour, drawn in code (components/glass) in the
+ * accent you chose - so a Honey recap has gold glass and an Azure one blue -
+ * and lifted a step, because they sit on cards that are that accent too.
+ * The slides still ask for them by the names they always used; GLASS_FOR is
+ * the one place those names meet the pictures.
  */
 
-const FILES = import.meta.glob('../../assets/recap/*.webp', { eager: true, query: '?url', import: 'default' })
+/** What each illustration the recap asks for is drawn as. */
+export const GLASS_FOR = /** @type {Record<string, string>} */ ({
+  'wrapped-gift': 'gift',
+  sparkles: 'sparkles',
+  'money-with-wings': 'cash',
+  coin: 'coin',
+  'pig-face': 'piggy',
+  'face-exhaling': 'scale',
+  'spiral-calendar': 'calendar',
+  'shopping-bags': 'bag',
+  'round-pushpin': 'pin',
+  bullseye: 'target',
+  rocket: 'rocket',
+  'chart-decreasing': 'chartDown',
+  'glowing-star': 'star',
+  'party-popper': 'party',
+  'money-bag': 'moneyBag',
+  herb: 'leaf',
+  hamburger: 'food',
+  seedling: 'seedling',
+  'hot-beverage': 'coffee',
+})
 
-/** Bundled URL of each illustration, by file name: `ART['wrapped-gift']`. */
-export const ART = /** @type {Record<string, string>} */ (Object.fromEntries(
-  Object.entries(FILES).map(([path, url]) => [path.split('/').pop()?.replace(/\.webp$/, '') ?? '', url]),
-))
+/**
+ * The small marks on a slide's chip and on its paper tiles, which were emoji,
+ * as glass. Only the app's own decoration is swapped: a category's emoji is
+ * something you chose, and it stays as you chose it.
+ */
+export const EMOJI_GLASS = /** @type {Record<string, string>} */ ({
+  '💸': 'cash', '🐷': 'piggy', '🏆': 'trophy', '👉': 'star', '🔥': 'flame', '📅': 'calendar',
+  '🛍️': 'bag', '📍': 'pin', '🎯': 'target', '📈': 'chartUp', '📉': 'chartDown', '🏅': 'medal',
+  '✨': 'sparkles', '🎉': 'party', '🌱': 'seedling', '⚖️': 'scale', '💰': 'moneyBag', '🌿': 'leaf',
+})
+
+/** The glass picture standing in for one of the app's own emoji, if there is one. @param {string|null|undefined} emoji */
+export function glassForEmoji(emoji) {
+  return emoji ? EMOJI_GLASS[emoji] ?? null : null
+}
+
+/** How far the recap's glass is lifted off the accent it sits on. */
+const LIFT = 0.1
+
+/**
+ * The few pictures whose colour says something. Everything else takes the
+ * month's accent, so a slide reads as one colour - but a flame drawn in blue
+ * read as a drop of water, and a blue leaf as nothing at all.
+ */
+const HUE_FOR = /** @type {Record<string, string>} */ ({
+  flame: '#F76707',
+  leaf: '#66A80F',
+  seedling: '#66A80F',
+})
+
+/** Drawn once per picture, colour and lift. @type {Map<string, string>} */
+const urls = new Map()
+
+/**
+ * An illustration, as a URL an <img> or a canvas can load.
+ *
+ * @param {string} name   a recap name ('pig-face') or a glass one ('piggy')
+ * @param {string} hue    the accent
+ * @param {number} [lift] lifted for the card by default; 0 for glass on paper
+ */
+export function artUrl(name, hue, lift = LIFT) {
+  const glass = GLASS_FOR[name] ?? name
+  const tint = HUE_FOR[glass] ?? hue
+  const key = `${glass}|${tint}|${lift}`
+  let url = urls.get(key)
+  if (!url) {
+    url = svgUrl(glassSvg(glass, { hue: tint, lift, id: 'r' }))
+    urls.set(key, url)
+  }
+  return url
+}
 
 /**
  * The Spendr mark. The 512 is for the saved picture, which draws it at about

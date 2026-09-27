@@ -79,7 +79,7 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
  * With no budgets set this becomes the prompt to set one, because an empty
  * meter would imply everything is fine when nothing is being tracked at all.
  */
-export function BudgetSummaryTile({ totals, count }) {
+export function BudgetSummaryTile({ totals }) {
   const hasBudget = totals.budget > 0
   const pct = Math.round(totals.pct)
   const { textClass } = budgetTone(totals.pct)
@@ -113,7 +113,7 @@ export function BudgetSummaryTile({ totals, count }) {
             Using <span className={`font-bold ${textClass}`}>{pct}%</span> of spending budget
           </p>
           <p className="text-12 text-slate-500 dark:text-slate-400 mt-0.5 tabular-nums">
-            {fmt(totals.spent)} of {fmt(totals.budget)} across {count} categor{count === 1 ? 'y' : 'ies'}
+            {fmt(totals.spent)} of {fmt(totals.budget)}
           </p>
         </div>
         <span

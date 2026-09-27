@@ -1,9 +1,10 @@
-import { createContext, useContext, useEffect, useRef, useState, useCallback } from 'react'
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
 import { fullSync } from '../lib/sync'
 import db from '../db/db'
+import { setSyncState } from '../hooks/useSyncState'
 import ReminderSync from './ReminderSync'
 import NotificationSync from './NotificationSync'
 
@@ -107,6 +108,16 @@ export default function SyncManager() {
   const [errMsg,   setErrMsg]   = useState('')
   const syncingRef = useRef(false)
   const dismissRef = useRef(null)
+  /** The user the last successful sync in this session was for. */
+  const syncedFor  = useRef(/** @type {string|null} */ (null))
+
+  /* Where this session stands with the cloud, for the readers that must not
+     act on a ledger that has not caught up - see hooks/useSyncState.js. A
+     layout effect, so it is in place before any child's effect reads it. */
+  useLayoutEffect(() => {
+    const signedIn = !!user?.id && isSupabaseConfigured
+    setSyncState({ caughtUp: !signedIn || syncedFor.current === user?.id })
+  }, [user?.id])
 
   const runSync = useCallback(async ({ silent = false } = {}) => {
     if (!user?.id || syncingRef.current || _syncLocked) return
@@ -114,6 +125,7 @@ export default function SyncManager() {
     syncingRef.current = true
     _syncLocked = true
     clearTimeout(dismissRef.current)
+    setSyncState({ syncing: true })
 
     if (!silent) {
       setStatus('syncing')
@@ -127,6 +139,8 @@ export default function SyncManager() {
 
       await fullSync(user.id)
       await db.meta.put({ key: 'lastSync', value: new Date().toISOString() })
+      syncedFor.current = user.id
+      setSyncState({ syncing: false, caughtUp: true })
 
       if (!silent) {
         setStatus('success')
@@ -141,6 +155,7 @@ export default function SyncManager() {
     } finally {
       syncingRef.current = false
       _syncLocked = false
+      setSyncState({ syncing: false })
     }
   }, [user?.id])
 

@@ -286,29 +286,29 @@ export const SUMMARY_TILES = 6
  * @param {Recap} r
  * @param {string} code
  * @param {{hideAmounts?: boolean}} [options]
- * @returns {Array<{emoji: string, label: string, value: string, tone?: 'good'|'soft'}>}
+ * @returns {Array<{emoji: string, art?: string, label: string, value: string, tone?: 'good'|'soft'}>}
  */
 export function summaryTiles(r, code, { hideAmounts = false } = {}) {
-  /** @type {Array<{emoji: string, label: string, value: string, tone?: 'good'|'soft'}>} */
+  /** @type {Array<{emoji: string, art?: string, label: string, value: string, tone?: 'good'|'soft'}>} */
   const tiles = []
   if (r.income > 0 && hideAmounts) {
     tiles.push(r.net >= 0
-      ? { emoji: '🐷', label: 'Kept', value: percent(r.savingsRate ?? 0), tone: 'good' }
-      : { emoji: '📉', label: 'Overspent', value: `${Math.round((-r.net / r.income) * 100)}% over`, tone: 'soft' })
+      ? { emoji: '🐷', art: 'piggy', label: 'Kept', value: percent(r.savingsRate ?? 0), tone: 'good' }
+      : { emoji: '📉', art: 'chartDown', label: 'Overspent', value: `${Math.round((-r.net / r.income) * 100)}% over`, tone: 'soft' })
   } else if (r.income > 0) {
-    tiles.push({ emoji: '💰', label: 'Came in', value: heroAmount(r.income, code) })
+    tiles.push({ emoji: '💰', art: 'moneyBag', label: 'Came in', value: heroAmount(r.income, code) })
     tiles.push(r.net >= 0
-      ? { emoji: '🐷', label: 'Kept', value: heroAmount(r.net, code), tone: 'good' }
-      : { emoji: '📉', label: 'Overspent', value: heroAmount(-r.net, code), tone: 'soft' })
+      ? { emoji: '🐷', art: 'piggy', label: 'Kept', value: heroAmount(r.net, code), tone: 'good' }
+      : { emoji: '📉', art: 'chartDown', label: 'Overspent', value: heroAmount(-r.net, code), tone: 'soft' })
   }
   if (r.categories.length) tiles.push({ emoji: r.categories[0].icon || '🏷️', label: 'Top category', value: r.categories[0].name })
   if (r.purchaseCount > 0) {
-    tiles.push({ emoji: '🛍️', label: 'Purchases', value: r.purchaseCount.toLocaleString('en-US') })
-    tiles.push({ emoji: '🌿', label: 'No-spend days', value: String(r.noSpendDays) })
+    tiles.push({ emoji: '🛍️', art: 'bag', label: 'Purchases', value: r.purchaseCount.toLocaleString('en-US') })
+    tiles.push({ emoji: '🌿', art: 'leaf', label: 'No-spend days', value: String(r.noSpendDays) })
   }
-  if (r.busiestDay) tiles.push({ emoji: '🔥', label: 'Busiest day', value: dayLabel(r.month, r.busiestDay.day) })
+  if (r.busiestDay) tiles.push({ emoji: '🔥', art: 'flame', label: 'Busiest day', value: dayLabel(r.month, r.busiestDay.day) })
   if (r.badges.length) {
-    tiles.push({ emoji: '🏅', label: r.badges.length === 1 ? 'New badge' : 'New badges', value: String(r.badges.length) })
+    tiles.push({ emoji: '🏅', art: 'medal', label: r.badges.length === 1 ? 'Achievement' : 'Achievements', value: String(r.badges.length) })
   }
   return tiles.slice(0, SUMMARY_TILES)
 }
@@ -318,9 +318,9 @@ export function summaryTiles(r, code, { hideAmounts = false } = {}) {
  * @property {string} key     which one, for tests and for the picture
  * @property {string} name    "The Regular"
  * @property {string} emoji
- * @property {string} art     the 3D illustration drawn for it (src/assets/recap)
+ * @property {string} art     the glass illustration drawn for it (pages/recap/assets.js)
  * @property {string} line    why - one sentence from the month's own figures
- * @property {Array<{emoji: string, text: string}>} traits  up to three facts to back it
+ * @property {Array<{emoji: string, art?: string, text: string}>} traits  up to three facts to back it
  */
 
 /** Categories that are eating and drinking, by the words people name them with. */
@@ -409,14 +409,14 @@ export function personalityOf(r) {
   const best = rules.filter(x => x.when).sort((a, z) => z.score - a.score)[0].p
 
   /* Three facts to back it, never the one its own line already says. */
-  /** @type {Array<{key: string, emoji: string, text: string}>} */
+  /** @type {Array<{key: string, emoji: string, art?: string, text: string}>} */
   const facts = []
-  if (r.income > 0 && r.net > 0) facts.push({ key: 'saver', emoji: '🐷', text: `Kept ${percent(r.savingsRate ?? 0)}` })
+  if (r.income > 0 && r.net > 0) facts.push({ key: 'saver', emoji: '🐷', art: 'piggy', text: `Kept ${percent(r.savingsRate ?? 0)}` })
   if (r.goTo) facts.push({ key: 'regular', emoji: r.goTo.icon || '📍', text: `${r.goTo.count}× ${r.goTo.label}` })
-  if (b) facts.push({ key: 'planner', emoji: '🎯', text: `${b.under} of ${b.tracked} budgets on track` })
-  if (r.purchaseCount > 0) facts.push({ key: 'minimalist', emoji: '🌿', text: `${r.noSpendDays} no-spend ${r.noSpendDays === 1 ? 'day' : 'days'}` })
+  if (b) facts.push({ key: 'planner', emoji: '🎯', art: 'target', text: `${b.under} of ${b.tracked} budgets on track` })
+  if (r.purchaseCount > 0) facts.push({ key: 'minimalist', emoji: '🌿', art: 'leaf', text: `${r.noSpendDays} no-spend ${r.noSpendDays === 1 ? 'day' : 'days'}` })
   if (top) facts.push({ key: 'foodie', emoji: top.icon || '🏷️', text: `Most on ${top.name}` })
-  if (r.purchaseCount > 0) facts.push({ key: 'count', emoji: '🛍️', text: `${r.purchaseCount.toLocaleString('en-US')} ${r.purchaseCount === 1 ? 'purchase' : 'purchases'}` })
-  const traits = facts.filter(f => f.key !== best.key).slice(0, 3).map(({ emoji, text }) => ({ emoji, text }))
+  if (r.purchaseCount > 0) facts.push({ key: 'count', emoji: '🛍️', art: 'bag', text: `${r.purchaseCount.toLocaleString('en-US')} ${r.purchaseCount === 1 ? 'purchase' : 'purchases'}` })
+  const traits = facts.filter(f => f.key !== best.key).slice(0, 3).map(({ emoji, art, text }) => ({ emoji, art, text }))
   return { ...best, traits }
 }

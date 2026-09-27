@@ -228,7 +228,7 @@ export default function Debts() {
           icon={<IconNoDebts />}
           title={EMPTY_COPY.all.title}
           body={EMPTY_COPY.all.body}
-          action={<Button onClick={openAdd}>Add a debt</Button>}
+          action={<Button className="px-6" onClick={openAdd}>Add a debt</Button>}
         />
       ) : (
         <>
@@ -286,7 +286,7 @@ export default function Debts() {
                 icon={<IconNoDebts />}
                 title={emptyCopy.title}
                 body={emptyCopy.body}
-                action={<Button onClick={openAdd}>Add a debt</Button>}
+                action={<Button className="px-6" onClick={openAdd}>Add a debt</Button>}
               />
             </div>
           ) : (

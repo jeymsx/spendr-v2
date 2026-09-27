@@ -1,7 +1,8 @@
-import { useId, useMemo, useRef } from 'react'
+import { useEffect, useId, useMemo, useRef } from 'react'
 import { motion, useReducedMotion } from 'motion/react'
-import { SPRING } from './theme'
+import { SPRING, TAP_MS, TAP_SLOP } from './theme'
 import { useBox, useSlide } from './parts'
+import { artUrl } from './assets'
 
 /**
  * The recap's charts. Drawn here rather than with the app's chart library,
@@ -9,8 +10,14 @@ import { useBox, useSlide } from './parts'
  * the shared spring, in the card's own colours, and a finger on any of them
  * holds the story still.
  *
- * Every chart is `data-interactive`, which the story reads as "this tap is
- * not a request for the next slide".
+ * ── A tap moves on; a hold or a drag explores ──
+ *
+ * Every chart is `data-interactive`, so the story leaves its touches to it -
+ * and the chart hands a quick, still tap straight back (useScrub). Only a
+ * finger held down, or dragged, chooses what is under it. Before, every touch
+ * was the chart's, and the calendar and the category list fill most of their
+ * slides: a tap on the right of the screen, the way on everywhere else in the
+ * story, picked a day instead, and the story seemed not to hear it.
  *
  * ── Arriving and answering are two different speeds ──
  *
@@ -24,49 +31,74 @@ import { useBox, useSlide } from './parts'
 const ANSWER = { duration: 0.15 }
 
 /**
- * Holding the story still while a finger is on a chart, and giving the
- * slide its full time again once the finger lifts - so a slide someone has
- * just interacted with never moves on the moment they let go.
- */
-function useHold() {
-  const { hold } = useSlide()
-  return {
-    onPointerDown: () => hold(true),
-    onPointerUp: () => hold(false),
-    onPointerCancel: () => hold(false),
-    onLostPointerCapture: () => hold(false),
-  }
-}
-
-/**
- * Pointer tracking that turns a finger's position into a choice, and holds
- * the story while the finger is down. `at` maps a point inside the element
- * to an index, or -1 for none.
+ * A chart under a finger. A quick, still tap is the story's: it goes back to
+ * it (`tapAt`), and the story moves on or back as a tap anywhere does. A
+ * finger held still past a tap, or dragged, is the chart's: it chooses what
+ * is under it, follows the finger, and keeps the story still until it lifts
+ * - then gives the slide its full time again, so it never moves on the
+ * moment someone lets go. `at` maps a point inside the element to an index,
+ * or -1 for none.
  *
+ * @template {HTMLElement} T
  * @param {(x: number, y: number, box: DOMRect) => number} at
  * @param {(i: number) => void} onPick
  */
 function useScrub(at, onPick) {
-  const holding = useHold()
-  const ref = useRef(/** @type {HTMLDivElement|null} */ (null))
-  /** @param {import('react').PointerEvent} e */
-  const pick = (e) => {
+  const { hold, tapAt } = useSlide()
+  const ref = useRef(/** @type {T|null} */ (null))
+  const press = useRef(/** @type {{id: number, x: number, y: number, t: number, exploring: boolean}|null} */ (null))
+  const timer = useRef(0)
+  useEffect(() => () => clearTimeout(timer.current), [])
+
+  /** @param {number} x @param {number} y */
+  const pick = (x, y) => {
     const box = ref.current?.getBoundingClientRect()
     if (!box) return
-    const i = at(e.clientX - box.left, e.clientY - box.top, box)
+    const i = at(x - box.left, y - box.top, box)
     if (i >= 0) onPick(i)
   }
+  /** @param {number} x @param {number} y */
+  const explore = (x, y) => {
+    const p = press.current
+    if (!p) return
+    if (!p.exploring) { p.exploring = true; hold(true) }
+    pick(x, y)
+  }
+  /** @param {import('react').PointerEvent} e @param {boolean} lifted */
+  const end = (e, lifted) => {
+    const p = press.current
+    if (!p || p.id !== e.pointerId) return
+    clearTimeout(timer.current)
+    press.current = null
+    if (p.exploring) { hold(false); return }
+    const still = Math.abs(e.clientX - p.x) < TAP_SLOP && Math.abs(e.clientY - p.y) < TAP_SLOP
+    if (lifted && still && performance.now() - p.t < TAP_MS) tapAt(e.clientX)
+  }
+
   return {
-    ...holding,
     ref,
     'data-interactive': true,
-    style: { touchAction: 'none' },
-    onPointerDown: (/** @type {import('react').PointerEvent<HTMLDivElement>} */ e) => {
+    style: /** @type {import('react').CSSProperties} */ ({ touchAction: 'none' }),
+    onPointerDown: (/** @type {import('react').PointerEvent<HTMLElement>} */ e) => {
+      if (press.current) return
       e.currentTarget.setPointerCapture?.(e.pointerId)
-      holding.onPointerDown()
-      pick(e)
+      const { pointerId: id, clientX: x, clientY: y } = e
+      press.current = { id, x, y, t: performance.now(), exploring: false }
+      // Held still past a tap: the day under the finger, chosen where it rests.
+      timer.current = window.setTimeout(() => explore(x, y), TAP_MS)
     },
-    onPointerMove: (/** @type {import('react').PointerEvent} */ e) => { if (e.buttons || e.pointerType === 'touch') pick(e) },
+    onPointerMove: (/** @type {import('react').PointerEvent} */ e) => {
+      const p = press.current
+      if (!p || p.id !== e.pointerId) return
+      if (p.exploring) { pick(e.clientX, e.clientY); return }
+      if (Math.abs(e.clientX - p.x) >= TAP_SLOP || Math.abs(e.clientY - p.y) >= TAP_SLOP) {
+        clearTimeout(timer.current)
+        explore(e.clientX, e.clientY)
+      }
+    },
+    onPointerUp: (/** @type {import('react').PointerEvent} */ e) => end(e, true),
+    onPointerCancel: (/** @type {import('react').PointerEvent} */ e) => end(e, false),
+    onLostPointerCapture: (/** @type {import('react').PointerEvent} */ e) => end(e, false),
   }
 }
 
@@ -77,24 +109,31 @@ export const CATEGORY_GAP_PX = 8
 
 /**
  * Where the money went: one row per category, each with its emoji, the
- * chosen one lit. Tapping a row chooses it.
+ * chosen one lit. Holding a row, or running a finger down the list, chooses
+ * it; a tap moves the story on, as it does everywhere. The rows stay buttons
+ * for a keyboard and a screen reader, which choose with them as before - a
+ * pointer's click never reaches them, the list has it captured.
  *
  * @param {{rows: Array<{name: string, amount: number, share: number, icon?: string|null}>, selected: number,
  *          onSelect: (i: number) => void, format: (v: number) => string}} props
  */
 export function CategoryRows({ rows, selected, onSelect, format }) {
   const { pal } = useSlide()
-  const holding = useHold()
   const max = Math.max(...rows.map(r => r.amount), 1)
+  const scrub = useScrub((_px, py) => {
+    const i = Math.floor(py / (CATEGORY_ROW_PX + CATEGORY_GAP_PX))
+    return i >= 0 && i < rows.length ? i : -1
+  }, onSelect)
   return (
-    <ul className="flex flex-col" style={{ gap: CATEGORY_GAP_PX }} data-interactive {...holding}>
+    <ul {...scrub} className="flex flex-col" style={{ ...scrub.style, gap: CATEGORY_GAP_PX }}>
       {rows.map((r, i) => {
         const on = i === selected
         return (
           <li key={r.name}>
             <button
               type="button"
-              onClick={() => onSelect(i)}
+              // A keyboard's Enter or Space: detail 0. A pointer is useScrub's.
+              onClick={(e) => { if (e.detail === 0) onSelect(i) }}
               aria-pressed={on}
               className="w-full flex items-center gap-3 text-left"
               style={{ height: CATEGORY_ROW_PX }}
@@ -137,7 +176,7 @@ const HEAD_PX = 18
 
 /**
  * The month as a calendar, each day shaded by what was spent on it - the
- * busiest in full white with a flame on it. Tap a day, or drag across the
+ * busiest in full white with a flame on it. Hold a day, or drag across the
  * month, to read any of them.
  *
  * The cells are sized from the room the slide leaves - by width on a tall
@@ -149,6 +188,7 @@ const HEAD_PX = 18
  */
 export function CalendarHeat({ month, days, selected, busiest, onSelect }) {
   const { pal } = useSlide()
+  const flame = artUrl('flame', pal.accent, 0)
   const [y, m] = month.split('-').map(Number)
   const lead = new Date(y, m - 1, 1).getDay()
   const weeks = Math.ceil((lead + days.length) / 7)
@@ -216,15 +256,16 @@ export function CalendarHeat({ month, days, selected, busiest, onSelect }) {
                   >
                     {d.day}
                     {i === busiest && (
-                      <motion.span
-                        className="absolute -top-2 -right-1.5 leading-none"
-                        style={{ fontSize: Math.max(12, Math.round(cell * 0.5)) }}
+                      <motion.img
+                        src={flame}
+                        alt=""
+                        draggable={false}
+                        className="absolute -top-2.5 -right-2 pointer-events-none"
+                        style={{ width: Math.max(16, Math.round(cell * 0.62)), height: Math.max(16, Math.round(cell * 0.62)) }}
                         initial={{ opacity: 0, scale: 0, rotate: -30 }}
                         animate={{ opacity: 1, scale: 1, rotate: 0 }}
                         transition={{ ...SPRING, delay: 0.9 }}
-                      >
-                        🔥
-                      </motion.span>
+                      />
                     )}
                   </motion.span>
                 )

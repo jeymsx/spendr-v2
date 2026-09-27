@@ -421,8 +421,9 @@ export function drawSign(g, pal, logo, y = 1587) {
  * @param {string} emoji
  * @param {string} label
  * @param {number} x @param {number} y the chip's top
+ * @param {HTMLImageElement|null} [img] a glass mark to draw instead of the emoji
  */
-export function drawChip(g, pal, emoji, label, x = P, y = 392) {
+export function drawChip(g, pal, emoji, label, x = P, y = 392, img = null) {
   g.font = font(600, 38)
   const text = clip(g, label, INNER - 140)
   const w = 104 + g.measureText(text).width + 36
@@ -431,7 +432,8 @@ export function drawChip(g, pal, emoji, label, x = P, y = 392) {
     roundRect(g, x, y, w, 88, 44)
     g.fill()
   }, 24, 8, 0.14)
-  drawEmoji(g, emoji, x + 30, y + 46, 42, 'left')
+  if (img) g.drawImage(img, x + 18, y + 12, 64, 64)
+  else drawEmoji(g, emoji, x + 30, y + 46, 42, 'left')
   g.fillStyle = pal.deepInk
   g.font = font(600, 38)
   g.fillText(text, x + 92, y + 58)
@@ -495,14 +497,16 @@ export function drawWrappedMark(g, pal, x, cy, size = 80) {
  * @param {RecapPalette} pal
  * @param {{emoji: string, label: string, value: string, tone?: 'good'|'soft'}} t
  * @param {number} x @param {number} y @param {number} w @param {number} h
+ * @param {HTMLImageElement|null} [img] a glass mark to draw instead of the emoji
  */
-export function drawTile(g, pal, t, x, y, w, h) {
+export function drawTile(g, pal, t, x, y, w, h, img = null) {
   shadowed(g, () => {
     g.fillStyle = pal.paper
     roundRect(g, x, y, w, h, 36)
     g.fill()
   }, 30, 10, 0.16)
-  drawEmoji(g, t.emoji, x + 28, y + h / 2 + 3, 60, 'left')
+  if (img) g.drawImage(img, x + 16, y + h / 2 - 46, 92, 92)
+  else drawEmoji(g, t.emoji, x + 28, y + h / 2 + 3, 60, 'left')
   const tx = x + 118
   const room = w - 118 - 28
   g.fillStyle = pal.paperMuted

@@ -35,6 +35,8 @@ const GLYPHS = {
   chart: <><path d="M3 3v18h18" /><path d="M18 17V9M13 17V5M8 17v-3" /></>,
   sparkle: <path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9Z" />,
   bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>,
+  flag: <><path d="M5.4 20V4" /><path d="M5.4 4.6h13.2l-4.4 4.4 4.4 4.4H5.4" /></>,
+  trophy: <><path d="M7 3.6h10v5a5 5 0 0 1-10 0z" /><path d="M7 5.4H4.4v1.4a3 3 0 0 0 3 3M17 5.4h2.6v1.4a3 3 0 0 1-3 3" /><path d="M12 13.6v3.6M8.4 20.4h7.2l-.8-3.2H9.2z" /></>,
 }
 
 /**
@@ -59,6 +61,8 @@ export const NOTIFICATION_KINDS = {
   'budget-warn':  { glyph: 'gauge',    tone: 'soon' },
   'budget-over':  { glyph: 'gauge',    tone: 'late' },
   badge:          { glyph: 'medal',    tone: 'good' },
+  milestone:      { glyph: 'flag',     tone: 'good' },
+  challenge:      { glyph: 'trophy',   tone: 'good' },
   recap:          { glyph: 'chart',    tone: 'news' },
   'whats-new':    { glyph: 'sparkle',  tone: 'news' },
 }

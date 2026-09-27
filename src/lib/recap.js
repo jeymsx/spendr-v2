@@ -3,7 +3,7 @@ import { txBase } from './fxContext'
 import { roundMoney } from './currency'
 import { effectiveLimit } from './rollover'
 import { netWorthDelta } from './trend'
-import { BADGES } from './badges'
+import { achievementDef } from './achievements'
 
 /**
  * A month, looked back on: every figure the monthly recap shows.
@@ -547,7 +547,7 @@ function badgesIn(badges, month) {
   /** @type {Array<{key: string, name: string}>} */
   const out = []
   for (const b of badges ?? []) {
-    const def = BADGES.find(x => x.key === b?.key)
+    const def = achievementDef(b?.key)
     const earned = b?.earnedAt ? txMonthKey(b.earnedAt) : ''
     if (!def || !earned) continue
     if ((def.judgesMonth ? addMonths(earned, -1) : earned) === month) out.push({ key: b.key, name: def.name })

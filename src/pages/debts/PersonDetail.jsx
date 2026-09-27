@@ -126,7 +126,7 @@ export default function PersonDetail() {
           icon={<IconNotFound />}
           title="Nobody here"
           body="Every entry for this person has been deleted."
-          action={<Button onClick={back}>Back to debts</Button>}
+          action={<Button className="px-6" onClick={back}>Back to debts</Button>}
         />
       </div>
     )
