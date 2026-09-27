@@ -28,6 +28,7 @@ import {
   quickActionCounts,
 } from './dashboard/shared'
 import RollingNumber from '../components/ui/RollingNumber'
+import { useSwap } from '../components/ui/useSwap'
 import { useWalletClip } from './dashboard/wallet'
 import DashboardSkeleton from './dashboard/Skeleton'
 import {
@@ -53,18 +54,10 @@ export default function Dashboard() {
   const [balanceHidden,    setBalanceHidden]    = useState(true)
   const [accountsHidden,   setAccountsHidden]   = useState(false)
   const [peek,             setPeek]             = useState(false)
-  /* The figures swap through a short blur when they are revealed or hidden -
-     but only once that has actually happened. On arrival they are simply
-     there; a page that opened by blurring its own dots in would be waiting
-     on a transition nobody asked for. */
-  const revealedNow = !balanceHidden || peek
-  const [lastRevealed, setLastRevealed] = useState(revealedNow)
-  const [revealSwaps, setRevealSwaps] = useState(false)
-  if (lastRevealed !== revealedNow) {
-    setLastRevealed(revealedNow)
-    setRevealSwaps(true)
-  }
-  const swap = revealSwaps ? 'swap-in' : ''
+  /* The wallet's figures swap through a short blur when the eye or a
+     press-and-hold reveals or hides them - see ui/useSwap. The account rail
+     below has its own eye, and its cards answer it themselves. */
+  const swap = useSwap(!balanceHidden || peek)
   // The wallet's tab folds the breakdown away. Remembered, because it is a
   // preference about how much of your own finances you want on screen.
   const [breakdownOpen,    setBreakdownOpen]    = useState(() => {

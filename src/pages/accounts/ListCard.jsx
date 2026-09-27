@@ -8,6 +8,7 @@ import { TYPE_LABEL } from '../../lib/accountMeta'
 import { fmt, fmtCompact, fmtHidden } from '../../lib/money'
 import SectionLabel from '../../components/ui/SectionLabel'
 import RollingNumber from '../../components/ui/RollingNumber'
+import { useSwap } from '../../components/ui/useSwap'
 import { upcomingDueDate } from '../../lib/creditBills'
 
 // ── Summary bar ────────────────────────────────────────────────────────────────
@@ -29,15 +30,18 @@ import { upcomingDueDate } from '../../lib/creditBills'
  * halves - the figure is the answer and the line below is the working.
  */
 export function SummaryBar({ summary, hidden }) {
+  // The page's eye button: both lines swap through a blur - ui/useSwap.
+  const swap = useSwap(hidden)
+  const k = hidden ? 'h' : 's'
   return (
     <section className="px-5 mb-6">
       <SectionLabel inset="none" gap="none" className="text-center">Net worth</SectionLabel>
-      <p className="mt-0.5 text-center text-38 leading-none font-semibold tracking-tight
-        tabular-nums text-slate-900 dark:text-white">
+      <p key={`net-${k}`} className={`${swap} mt-0.5 text-center text-38 leading-none font-semibold tracking-tight
+        tabular-nums text-slate-900 dark:text-white`}>
         {/* Rolls from what you last saw - ui/RollingNumber. */}
         {hidden ? fmtHidden() : <RollingNumber id="accounts:net" value={summary.net} format={fmtCompact} />}
       </p>
-      <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums">
+      <p key={`parts-${k}`} className={`${swap} mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums`}>
         {hidden ? '•••• assets' : `${fmtCompact(summary.assets)} assets`}
         {summary.creditUsed > 0 && (
           hidden ? ' · •••• credit used' : ` · ${fmtCompact(summary.creditUsed)} credit used`
@@ -116,6 +120,11 @@ export const AccountCard = forwardRef(function AccountCard({
 
   const pullUp = `calc(${STACK_STRIP}px - ${(100 / CARD_RATIO).toFixed(2)}%)`
 
+  /* The page's eye button: every figure on the face swaps through a blur -
+     ui/useSwap. Keyed by `hidden`, so each tap is a fresh element. */
+  const swap = useSwap(hidden)
+  const k = hidden ? 'h' : 's'
+
   return (
     <button
       ref={ref}
@@ -161,7 +170,7 @@ export const AccountCard = forwardRef(function AccountCard({
         </span>
 
         <span className="text-right shrink-0">
-          <span className="block text-16 font-bold tabular-nums leading-tight">
+          <span key={`bal-${k}`} className={`${swap} block text-16 font-bold tabular-nums leading-tight`}>
             {hidden ? fmtHidden(acct.currency) : (
               <RollingNumber
                 id={`card:${acct.id}:${acct.currency}`}
@@ -170,7 +179,8 @@ export const AccountCard = forwardRef(function AccountCard({
               />
             )}
           </span>
-          <span className="block text-10 text-white/65">
+          {/* Only a card's line holds a figure; "Balance" stays put. */}
+          <span key={isCredit ? `left-${k}` : 'label'} className={`${isCredit ? swap : ''} block text-10 text-white/65`}>
             {isCredit
               ? `${hidden ? '••••' : fmtCompact(available ?? 0, acct.currency)} left`
               : 'Balance'}
@@ -189,7 +199,7 @@ export const AccountCard = forwardRef(function AccountCard({
               />
             </div>
             <div className="flex items-end justify-between mt-1.5 gap-2">
-              <span className="text-10 text-white/60">
+              <span key={`limit-${k}`} className={`${swap} text-10 text-white/60`}>
                 {Math.round(stmtPct)}% of {hidden ? '••••' : fmtCompact(limit, acct.currency)} used
               </span>
               <SchemeMark scheme={acct.scheme} className="h-[34px]" />

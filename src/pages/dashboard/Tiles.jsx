@@ -8,6 +8,7 @@ import CategoryGlyph from '../../components/CategoryGlyph'
 import Card from '../../components/ui/Card'
 import { RowDivider } from '../../components/ui/Presence'
 import RollingNumber from '../../components/ui/RollingNumber'
+import { useSwap } from '../../components/ui/useSwap'
 import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 import { currencyOfTx } from '../../lib/fxContext'
@@ -27,6 +28,8 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
 
   const meta  = ACCOUNT_ICON[acct.type] ?? ACCOUNT_ICON.bank
   const brand = accountBrand(acct)
+  // The rail's eye button: the figure swaps through a blur - ui/useSwap.
+  const swap  = useSwap(hidden)
 
   return (
     <button
@@ -57,7 +60,7 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
         <p className="text-10 font-semibold text-white/60 mb-0.5">
           {isCredit ? 'Available' : 'Balance'}
         </p>
-        <p className="text-17 font-bold tabular-nums leading-none">
+        <p key={hidden ? 'h' : 's'} className={`${swap} text-17 font-bold tabular-nums leading-none`}>
           {/* Its own id: this face shows what is AVAILABLE on a card, the
               Accounts face what is owed, so the two are different figures. */}
           {hidden ? fmtHidden(acct.currency) : (
