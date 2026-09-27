@@ -31,6 +31,7 @@ const GLOBALS = new Set([
   'HTMLElement', 'Node', 'Text', 'DOMParser', 'XMLHttpRequest', 'WebSocket',
   'Worker', 'caches', 'Notification', 'ClipboardItem', 'DataTransfer',
   'Uint8Array', 'Int8Array', 'Float32Array', 'Float64Array', 'ArrayBuffer',
+  'DataView', 'DOMException',
   'TextEncoder', 'TextDecoder', 'AggregateError', 'FinalizationRegistry',
   'screen', 'frames', 'top', 'self', 'parent', 'name', 'status', 'open',
   'close', 'focus', 'blur', 'scroll', 'scrollTo', 'scrollBy', 'print',

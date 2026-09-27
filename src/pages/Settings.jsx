@@ -21,7 +21,7 @@ import SectionLabel from '../components/ui/SectionLabel'
 import {
   APP_VERSION, ACCENT_COLORS, buildAndDownloadCSV, syncedLabel,
   IconTag, IconCloud, IconFileText, IconTarget, IconFeedback, IconLogOut, IconReport, IconShield, IconSliders,
-  SectionHeader, RowDivider, SectionCard, RowIcon, RowChevron, SettingsRow,
+  IconFaceId, SectionHeader, RowDivider, SectionCard, RowIcon, RowChevron, SettingsRow,
 } from './settings/shared'
 import { ProfileHero, AchievementsCard } from './settings/Top'
 import { TemplateManagerSheet, TemplatesPage } from './settings/Templates'
@@ -38,6 +38,11 @@ import { clearCrashes, crashReport, readCrashes } from '../lib/crashLog'
 import { shareOrCopy } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { RemindersRow, RemindersSheet, useReminderSettings } from './settings/Reminders'
+
+/* TEMPORARY: the Face ID check (phase 1 of the app lock) is for the owner's
+   own phone, like the Google Sheets row, and for the dev server. Goes with
+   pages/settings/FaceIdTest.jsx and its route when the lock lands. */
+const FACE_ID_TESTER = 'sablayjames@gmail.com'
 
 // ── Main Settings page ─────────────────────────────────────────────────────────
 
@@ -228,6 +233,18 @@ export default function Settings() {
             right={<RowChevron />}
             onTap={() => navigate('/settings/sync')}
           />
+          {(import.meta.env.DEV || user?.email === FACE_ID_TESTER) && (
+            <>
+              <RowDivider />
+              <SettingsRow
+                iconEl={<RowIcon color="slate"><IconFaceId /></RowIcon>}
+                label="Test Face ID"
+                sublabel="Temporary, for the app lock"
+                right={<RowChevron />}
+                onTap={() => navigate('/settings/face-id-test')}
+              />
+            </>
+          )}
         </SectionCard>
       </div>
 

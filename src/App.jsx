@@ -46,6 +46,8 @@ const SettingsSync       = lazy(() => import('./pages/settings/Sync'))
 const SettingsReports    = lazy(() => import('./pages/settings/Reports'))
 const SettingsBackup     = lazy(() => import('./pages/settings/BackupRestore'))
 const SettingsChangelog  = lazy(() => import('./pages/settings/Changelog'))
+// TEMPORARY: phase 1 of the app lock. Goes with its row in Settings.
+const SettingsFaceIdTest = lazy(() => import('./pages/settings/FaceIdTest'))
 const SettingsProfile    = lazy(() => import('./pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 const SettingsTemplates  = lazy(() => import('./pages/Settings').then(m => ({ default: m.TemplatesPage })))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
@@ -131,6 +133,7 @@ export default function App() {
               <Route path="/settings/reports"    element={<SettingsReports />} />
               <Route path="/settings/backup"     element={<SettingsBackup />} />
               <Route path="/settings/changelog"  element={<SettingsChangelog />} />
+              <Route path="/settings/face-id-test" element={<SettingsFaceIdTest />} />
               <Route path="/settings/accent" element={<SettingsAccent />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />
               <Route path="/settings/budgets"    element={<SettingsBudgets />} />
