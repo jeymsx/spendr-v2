@@ -24,6 +24,14 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.8.0',
+    date: '2026-09-27',
+    items: [
+      { title: 'Seven new badges', desc: 'Fifteen in all now, for things like paying yourself first, keeping half of what came in, and splitting a bill.' },
+      { title: 'Wrapped, four ways', desc: "Your month's picture comes in colour, dark, light or Lights out, like the app itself. Swipe to pick one when you share." },
+    ],
+  },
+  {
     version: '0.7.0',
     date: '2026-09-27',
     items: [

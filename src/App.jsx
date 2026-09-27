@@ -17,6 +17,10 @@ const AddInflow    = lazy(() => import('./pages/AddInflow'))
 const Transfer     = lazy(() => import('./pages/Transfer'))
 const Transactions = lazy(() => import('./pages/Transactions'))
 const Insights     = lazy(() => import('./pages/Insights'))
+const InsightsTrend    = lazy(() => import('./pages/insights/TrendPage'))
+const InsightsExpenses = lazy(() => import('./pages/insights/ExpensesPage'))
+const InsightsAccounts = lazy(() => import('./pages/insights/AccountsPage'))
+const InsightsNetWorth = lazy(() => import('./pages/insights/NetWorthPage'))
 const Accounts     = lazy(() => import('./pages/Accounts'))
 const AccountDetail = lazy(() => import('./pages/AccountDetail'))
 const AccountNew    = lazy(() => import('./pages/AccountNew'))
@@ -100,6 +104,13 @@ export default function App() {
               <Route path="/transactions/:id/edit" element={<EditTransaction />} />
               <Route path="/transactions" element={<Transactions />} />
               <Route path="/insights"     element={<Insights />} />
+              {/* What the Insights cards open. They share its period
+                  (pages/insights/period.js), so each opens on the month
+                  the overview was showing. */}
+              <Route path="/insights/trend"     element={<InsightsTrend />} />
+              <Route path="/insights/expenses"  element={<InsightsExpenses />} />
+              <Route path="/insights/accounts"  element={<InsightsAccounts />} />
+              <Route path="/insights/net-worth" element={<InsightsNetWorth />} />
               <Route path="/budget"       element={<Budget />} />
               {/* The name, not an id. A transaction stores its category as a
                   string, so the name is the key the whole app already joins

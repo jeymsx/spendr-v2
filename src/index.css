@@ -2119,6 +2119,26 @@ html.web.dark input[type="date"] {
   .recap-drop { animation: none; opacity: 0; }
 }
 
+/* An Insights card opening into its page, and closing back into it
+   (pages/insights/zoom.js). The surface sits over the page and under the
+   tab bar (z-50), is drawn by script, and takes no taps. The page it opens
+   resolves out of a short blur as the surface fades off it. */
+.zoom-surface {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+  contain: strict;
+}
+.zoom-arrive { animation: zoomArrive 0.26s var(--ease-out) both; }
+@keyframes zoomArrive {
+  from { opacity: 0; filter: blur(6px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .zoom-arrive { animation: none; }
+}
+
 /* The share sheet's rail of looks for the summary (ShareSheet.jsx). A card's
    size and dimness follow the scroll, set from script frame by frame, so
    they have no transition of their own; the dot for the chosen look

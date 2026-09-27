@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { EASE_OUT } from '../../components/ui/motion'
 import EmptyState from '../../components/ui/EmptyState'
 import { CHART_COLORS, DailyAreaChart, MultiBarChart } from './Charts'
 import { SectionHeading } from './shared'
@@ -91,26 +92,28 @@ export const CHART_TYPE_OPTS = [
   { key: 'netflow',  label: 'Net flow' },
 ]
 
-export function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, sevenDayExpense, sevenDayIncome, sevenDayNetflow, multiBarData }) {
-  const [chartType, setChartType] = useState('expenses')
-
-  const isArea = range === '7d' || range === '1m'
+/**
+ * The period's money over time: day by day for 7D and 1M, as expenses,
+ * income or the two netted; month by month (or year by year) as paired bars
+ * for the longer ranges.
+ *
+ * @param {{isArea: boolean, series: {expenses: Array<{day: number|string, value: number}>,
+ *          income: Array<{day: number|string, value: number}>, netflow: Array<{day: number|string, value: number}>},
+ *          multiBarData: Array<{label: string, income: number, expense: number}>, title: string,
+ *          initialType?: string}} props
+ */
+export function SpendingTrend({ isArea, series, multiBarData, title, initialType = 'expenses' }) {
+  const [chartType, setChartType] = useState(CHART_TYPE_OPTS.some(o => o.key === initialType) ? initialType : 'expenses')
 
   const activeData = isArea
-    ? (range === '7d'
-        ? (chartType === 'expenses' ? sevenDayExpense : chartType === 'income' ? sevenDayIncome : sevenDayNetflow)
-        : (chartType === 'expenses' ? dailyExpense    : chartType === 'income' ? dailyIncome    : dailyNetflow))
+    ? series[/** @type {'expenses'|'income'|'netflow'} */ (chartType)] ?? series.expenses
     : multiBarData
 
   const hasData = isArea
     ? activeData.some(d => d.value !== 0)
-    : multiBarData.some(d => d.expense > 0)
+    : multiBarData.some(d => d.expense > 0 || d.income > 0)
 
-  const label = range === '7d'  ? 'Last 7 days'
-    : range === '1m'            ? 'Trend'
-    : range === '3m'            ? 'Last 3 months'
-    : range === '6m'            ? 'Last 6 months'
-    : 'All time'
+  const label = title
 
   /* Bare labels and one pill that slides. No track.
  
@@ -136,7 +139,7 @@ export function SpendingTrend({ range, dailyExpense, dailyIncome, dailyNetflow, 
         style={{
           width: `calc(100% / ${CHART_TYPE_OPTS.length})`,
           transform: `translateX(${activeTypeIdx * 100}%)`,
-          transition: 'transform 0.3s cubic-bezier(0.34, 1.4, 0.64, 1), background-color 0.2s, border-color 0.2s',
+          transition: `transform 0.3s ${EASE_OUT}, background-color 0.2s, border-color 0.2s`,
           // color-mix rather than string-concatenating an alpha suffix: netflow's
           // colour is `var(--color-primary)`, and 'var(--color-primary)' + '22'
           // is not a colour.

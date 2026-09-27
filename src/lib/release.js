@@ -32,13 +32,13 @@ export const RELEASE_DATE = '2026-09-27'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'trophy',
-    title: 'Seven new badges',
-    desc: 'Fifteen in all now, for things like paying yourself first, keeping half of what came in, and splitting a bill.',
+    icon: 'chart',
+    title: 'Insights, reorganised',
+    desc: 'Your month leads with where it went, with income, net and how it compares with last month. Trend, top expenses, accounts and net worth each open a page of their own.',
   },
   {
-    icon: 'contrast',
-    title: 'Wrapped, four ways',
-    desc: "Your month's picture comes in colour, dark, light or Lights out, like the app itself. Swipe to pick one when you share.",
+    icon: 'sparkle',
+    title: 'Highlights to swipe through',
+    desc: 'Every fact about your month side by side, instead of one at random.',
   },
 ]

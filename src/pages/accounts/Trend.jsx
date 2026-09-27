@@ -2,6 +2,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { fmt } from '../../lib/money'
+import { EASE_OUT } from '../../components/ui/motion'
 import { TREND_RANGES } from '../../lib/trend'
 
 /* The arithmetic moved to lib/trend.js when the category page needed
@@ -33,7 +34,8 @@ export function TrendRangeChips({ range, onRange, ranges = TREND_RANGES }) {
           style={{
             width: `${100 / ranges.length}%`,
             transform: `translateX(${activeIdx * 100}%)`,
-            transition: 'transform 0.26s cubic-bezier(0.34, 1.4, 0.64, 1)',
+            // The app's ease-out: nothing in Spendr overshoots and bounces back.
+            transition: `transform 0.3s ${EASE_OUT}`,
           }}
         />
         {ranges.map(r => (

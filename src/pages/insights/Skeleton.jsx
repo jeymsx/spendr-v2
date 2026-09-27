@@ -1,40 +1,16 @@
-import Skeleton, { SkeletonHero } from '../../components/ui/Skeleton'
+import Skeleton from '../../components/ui/Skeleton'
 
 /**
- * Insights, before the month has been read.
+ * Insights, before the period has been read.
  *
  * The page used to draw a ₱0 month straight away - "Total spent ₱0", a
- * "No expenses this month" where the donut goes, an empty trend - and then
- * redraw it with the real figures, so every visit opened by saying you had
- * spent nothing.
+ * "No expenses this month" where the donut goes - and then redraw it with
+ * the real figures, so every visit opened by saying you had spent nothing.
  *
- * Each piece stands in for one section at that section's height, and
- * Insights.jsx swaps them one slot at a time rather than swapping the whole
- * column. That keeps NetWorthTrend mounted from the first frame, so its own
- * queries start with the page's instead of after them, and it shows its own
- * skeleton (below) while they run.
+ * Each piece stands in for one section at that section's height, and the
+ * page swaps them one slot at a time, so nothing below moves when the
+ * figures land.
  */
-
-/** The hero is SkeletonHero's shape exactly - 90px against HeroStats' 89.5. */
-export function HeroSkeleton() {
-  return (
-    <div className="px-5">
-      {/* The page's one loading line for a screen reader - the shapes
-          below are hidden from it. sr-only moves nothing. */}
-      <p className="sr-only" role="status">Loading insights</p>
-      <SkeletonHero />
-    </div>
-  )
-}
-
-/** The h-4 spacer above the trivia card, then the card's fixed 84px. */
-export function TriviaSkeleton() {
-  return (
-    <div className="px-5 pt-4">
-      <Skeleton className="h-[84px] rounded-2xl" />
-    </div>
-  )
-}
 
 /* The Pie in Charts.jsx is 116 out and 90 in, centred in a 270px box. A
    radial mask cuts the hole, so the sweep crosses the ring rather than a
@@ -42,28 +18,68 @@ export function TriviaSkeleton() {
 const RING = 'radial-gradient(circle, transparent 89.5px, #000 90px)'
 const LEGEND_ITEMS = 6
 
-export function CategorySkeleton() {
+/** The donut, with the total in its middle - and the page's one loading line for a screen reader. */
+export function DonutSkeleton() {
   return (
-    <div>
-      <div className="relative mx-auto flex items-center justify-center" style={{ maxWidth: 280, height: 270 }}>
-        <Skeleton
-          className="rounded-full"
-          style={{ width: 232, height: 232, WebkitMaskImage: RING, maskImage: RING }}
-        />
-        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5">
-          <Skeleton className="h-[11px] w-16 rounded-md" />
-          <Skeleton className="h-6 w-24 rounded-lg" />
-        </div>
+    <div className="relative mx-auto flex items-center justify-center" style={{ maxWidth: 280, height: 270 }}>
+      <p className="sr-only" role="status">Loading insights</p>
+      <Skeleton
+        className="rounded-full"
+        style={{ width: 232, height: 232, WebkitMaskImage: RING, maskImage: RING }}
+      />
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2.5" aria-hidden="true">
+        <Skeleton className="h-[11px] w-16 rounded-md" />
+        <Skeleton className="h-6 w-24 rounded-lg" />
       </div>
-      {/* The legend's grid, with a dot, a name and a figure in each 16px cell. */}
-      <div className="px-5 pt-4 grid grid-cols-2 gap-x-4 gap-y-3">
-        {Array.from({ length: LEGEND_ITEMS }, (_, i) => (
-          <div key={i} className="flex items-center gap-2 h-4">
-            <Skeleton className="w-2.5 h-2.5 rounded-full shrink-0" />
-            <Skeleton className="h-[10px] w-14 rounded-md" />
-            <Skeleton className="h-[10px] w-10 rounded-md ml-auto" />
-          </div>
-        ))}
+    </div>
+  )
+}
+
+/** Income and net: two 64px cards. */
+export function StatPairSkeleton() {
+  return (
+    <div className="px-5 grid grid-cols-2 gap-3" aria-hidden="true">
+      <Skeleton className="h-16 rounded-2xl" />
+      <Skeleton className="h-16 rounded-2xl" />
+    </div>
+  )
+}
+
+/** The legend's grid, with a dot, a name and a figure in each 31px row. */
+export function LegendSkeleton() {
+  return (
+    <div className="px-5 grid grid-cols-2 gap-x-4" aria-hidden="true">
+      {Array.from({ length: LEGEND_ITEMS }, (_, i) => (
+        <div key={i} className="flex items-center gap-2 h-[31px]">
+          <Skeleton className="w-2.5 h-2.5 rounded-full shrink-0" />
+          <Skeleton className="h-[10px] w-14 rounded-md" />
+          <Skeleton className="h-[10px] w-10 rounded-md ml-auto" />
+        </div>
+      ))}
+    </div>
+  )
+}
+
+/** Highlights: its heading, then the first card and a sliver of the next. */
+export function HighlightsSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <HeadingSkeleton />
+      <div className="flex gap-3 pl-5 overflow-hidden">
+        <Skeleton className="shrink-0 w-[264px] h-[96px] rounded-2xl" />
+        <Skeleton className="shrink-0 w-[264px] h-[96px] rounded-2xl" />
+      </div>
+    </div>
+  )
+}
+
+/** Explore: its heading and the four 132px cards. */
+export function ExploreSkeleton() {
+  return (
+    <div aria-hidden="true">
+      <HeadingSkeleton />
+      <div className="px-5 grid grid-cols-2 gap-3">
+        {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[132px] rounded-2xl" />)}
       </div>
     </div>
   )

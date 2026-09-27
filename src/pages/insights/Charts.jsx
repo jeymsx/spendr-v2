@@ -9,7 +9,11 @@ import { fmt, fmtCompact } from '../../lib/money'
 
 // ── Chart: Donut ───────────────────────────────────────────────────────────────
 
-export function DonutChart({ segments, total, animKey, selected, onSelect }) {
+/**
+ * The categories as a ring, the total in its middle - or the slice you
+ * tapped - and `caption` under the total: how it compares with before.
+ */
+export function DonutChart({ segments, total, animKey, selected, onSelect, caption = null }) {
   const active = selected != null ? segments[selected] : null
   return (
     <div className="[&_*]:outline-none [&_*]:focus:outline-none"
@@ -53,6 +57,7 @@ export function DonutChart({ segments, total, animKey, selected, onSelect }) {
           <>
             <SectionLabel>Total spent</SectionLabel>
             <span className="text-2xl font-bold text-slate-800 dark:text-white tabular-nums">{fmtCompact(total)}</span>
+            {caption}
           </>
         )}
       </div>

@@ -91,6 +91,9 @@ export default function WebApp() {
               <Route path="/budget"             element={<Navigate to="/insights" replace />} />
               <Route path="/badges"             element={<Navigate to="/achievements?tab=badges" replace />} />
               <Route path="/categories/:name"   element={<Navigate to="/insights" replace />} />
+              {/* The phone's Insights opens its cards as pages; the desktop
+                  one has all of it on one screen already. */}
+              <Route path="/insights/*"         element={<Navigate to="/insights" replace />} />
               <Route path="/transactions/*"     element={<Navigate to="/transactions" replace />} />
               <Route path="/accounts/*"         element={<Navigate to="/accounts" replace />} />
               <Route path="/debts/*"            element={<Navigate to="/debts" replace />} />
