@@ -36,7 +36,7 @@
  */
 import { readdirSync, statSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
-import { join, dirname } from 'node:path'
+import { join, dirname, relative } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const HERE = dirname(fileURLToPath(import.meta.url))
@@ -78,8 +78,15 @@ const TS_ERROR = /error TS[0-9]+/
   }
 }
 
+/* Relative to the root, and run from it. The list is one command line, and
+   Windows caps a command line at 32,767 characters: as absolute paths, 378
+   files came to 32,127 and every checker failed to start ("exit null",
+   ENAMETOOLONG) - on a clean tree. Relative, the same list is a third of that. */
+const relFiles = files.map(f => relative(ROOT, f))
+
 for (const checker of CHECKERS) {
-  const r = spawnSync(process.execPath, [join(HERE, checker), ...files], {
+  const r = spawnSync(process.execPath, [join(HERE, checker), ...relFiles], {
+    cwd: ROOT,
     encoding: 'utf8',
     // Not `inherit`: the verdict line has to be parsed, and one checker
     // prints a leading blank line - a `tail` of its output once hid a real
