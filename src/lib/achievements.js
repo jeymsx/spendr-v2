@@ -300,7 +300,17 @@ export function tierLabel(tier) {
 
 const IN_TRACKS = new Set(TRACKS.flatMap(t => t.tiers.map(tier => tier.key).filter(Boolean)))
 
-/** The two badges that arrived with achievements. Same rule as the rest. */
+/**
+ * The badges that arrived after the original twenty. Same rule as the rest:
+ * something done with the money, proved from the ledger.
+ *
+ * They are asked with the posted rows and the completed months - `months`,
+ * judged once the 1st after a month is over, as the month tracks are - so a
+ * month still running cannot earn one and have to take it back.
+ *
+ * @typedef {AchievementCtx & {months: Map<string, import('./badges').MonthStat>}} BadgeInput
+ */
+/** @type {Array<{key: string, name: string, blurb: string, how: string, tone: string, glyph: string, judgesMonth?: boolean, test: (ctx: BadgeInput) => boolean}>} */
 const NEW_BADGES = [
   {
     key: 'limits-set',
@@ -309,7 +319,6 @@ const NEW_BADGES = [
     how: 'Set a monthly limit on three categories.',
     tone: 'indigo',
     glyph: 'target',
-    /** @param {{categories?: any[]}} ctx */
     test: ({ categories }) => (categories ?? []).filter(c => c?.type !== 'inflow' && (c?.budget ?? 0) > 0).length >= 3,
   },
   {
@@ -319,8 +328,106 @@ const NEW_BADGES = [
     how: 'Create a savings goal.',
     tone: 'sky',
     glyph: 'summit',
-    /** @param {{goals?: any[]}} ctx */
     test: ({ goals }) => (goals ?? []).length >= 1,
+  },
+  /* ── Seven more, 2026-09-27 ──────────────────────────────────────────────
+     Saving on purpose, spending less, and money that comes back - from a
+     shop, from a friend - and money that lives in more than one currency.
+     Their tones are ones the other eight badges on the page do not wear:
+     those are mostly blues already. */
+  {
+    key: 'pay-yourself-first',
+    name: 'Pay Yourself First',
+    blurb: 'You moved money into savings.',
+    how: 'Transfer money from another account into a savings account.',
+    tone: 'teal',
+    glyph: 'bank',
+    /* Into savings from somewhere that is not savings: shuffling between two
+       savings accounts is not setting anything aside. */
+    test: ({ transactions, accounts }) => {
+      const savings = new Set((accounts ?? []).filter(a => a?.type === 'savings').map(a => a.name))
+      return (transactions ?? []).some(t => t?.type === 'transfer' && (t.amount ?? 0) > 0
+        && savings.has(t.toAccount) && !savings.has(t.fromAccount))
+    },
+  },
+  {
+    key: 'half-kept',
+    name: 'Half Kept',
+    blurb: 'You kept half of what came in.',
+    how: 'Finish a month having spent no more than half of what came in.',
+    tone: 'lime',
+    glyph: 'piggy',
+    judgesMonth: true,
+    test: ({ months }) => [...months.values()].some(m => m.inflow > 0 && m.expense > 0 && m.expense <= m.inflow / 2),
+  },
+  {
+    key: 'lighter-month',
+    name: 'A Lighter Month',
+    blurb: 'You spent less than the month before.',
+    how: 'Keep logging, and spend at least 10% less in a month than the month before.',
+    tone: 'orange',
+    glyph: 'trendDown',
+    judgesMonth: true,
+    /* A month that looks lighter because nothing was logged in it is not
+       one. Fifteen days with an entry is what shows you were still counting. */
+    test: ({ months, transactions }) => {
+      /** @type {Map<string, Set<string>>} */
+      const logged = new Map()
+      for (const t of transactions ?? []) {
+        const d = isoToDateInput(t?.date ?? '')
+        if (!d) continue
+        const k = d.slice(0, 7)
+        if (!logged.has(k)) logged.set(k, new Set())
+        logged.get(k)?.add(d)
+      }
+      for (const [k, m] of months) {
+        const before = months.get(prevMonth(k))
+        if (!before || before.expense <= 0 || m.expense <= 0) continue
+        if (m.expense <= before.expense * 0.9 && (logged.get(k)?.size ?? 0) >= 15) return true
+      }
+      return false
+    },
+  },
+  {
+    key: 'money-back',
+    name: 'Money Back',
+    blurb: 'A refund, logged against what you bought.',
+    how: 'Log a refund on a purchase.',
+    tone: 'plum',
+    glyph: 'receipt',
+    test: ({ transactions }) => (transactions ?? []).some(t => t?.type === 'expense' && !!t.refundOf),
+  },
+  {
+    key: 'fair-share',
+    name: 'Fair Share',
+    blurb: 'You split a purchase with someone.',
+    how: 'Split an expense with someone, so they owe you their share.',
+    tone: 'violet',
+    glyph: 'people',
+    test: ({ debts }) => (debts ?? []).some(d => d?.type === 'owed_to_me' && !!d.sourceTxId),
+  },
+  {
+    key: 'all-squared',
+    name: 'All Squared',
+    blurb: 'Someone paid you back in full.',
+    how: 'Collect everything a person owed you.',
+    tone: 'gold',
+    glyph: 'checkCircle',
+    test: ({ debts }) => (debts ?? []).some(d => d?.type === 'owed_to_me' && (d.amount ?? 0) > 0 && (d.amountPaid ?? 0) >= d.amount),
+  },
+  {
+    key: 'two-currencies',
+    name: 'Worldly',
+    blurb: 'Your money lives in two currencies.',
+    how: 'Hold money in accounts of two different currencies.',
+    tone: 'bronze',
+    glyph: 'globe',
+    /* Held, not merely opened: an empty dollar account is not money in dollars. */
+    test: ({ accounts }) => {
+      const base = String(getFxContext().base || 'PHP').toUpperCase()
+      const held = (accounts ?? []).filter(a => a && a.type !== 'credit' && (a.role ?? '') !== 'credit' && (a.balance ?? 0) > 0)
+      return new Set(held.map(a => String(a.currency || base).toUpperCase())).size >= 2
+    },
   },
 ]
 
@@ -357,6 +464,7 @@ export const ACHIEVEMENTS = [
   })),
   ...NEW_BADGES.map(b => /** @type {AchievementDef} */ ({
     key: b.key, kind: 'badge', name: b.name, blurb: b.blurb, how: b.how, tone: b.tone, glyph: b.glyph,
+    judgesMonth: !!b.judgesMonth,
   })),
 ]
 
@@ -487,8 +595,12 @@ export function evaluateAchievements(input = {}, progress = trackProgress(input)
     const value = progress[t.key]?.value ?? 0
     for (const tier of t.tiers) if (value >= tier.n) earned.add(tierKey(t, tier))
   }
+  const today = input.today ?? new Date()
+  const graceDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 12)
+  /** @type {BadgeInput} */
+  const ctx = { ...input, transactions: posted, today, months: monthStats(posted, graceDay) }
   for (const b of NEW_BADGES) {
-    try { if (b.test(input)) earned.add(b.key) } catch { /* see evaluateBadges */ }
+    try { if (b.test(ctx)) earned.add(b.key) } catch { /* see evaluateBadges */ }
   }
   return earned
 }

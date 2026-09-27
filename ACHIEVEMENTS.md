@@ -40,11 +40,26 @@ The **bold** levels are seven of the original twenty badges, which were already
 harder versions of each other (Seven Days then Thirty Days, Century then Five
 Hundred). They kept their keys, so nothing already earned moved.
 
-### The eight badges
+### The fifteen badges
 
 Debt Cleared, On Autopilot, Diversified, Year One, Rainy Day and Debt Free from
-the original set, plus two new ones: **Limits Set** (a monthly limit on three
-categories) and **Something to Save For** (a first savings goal).
+the original set, plus two that came with achievements: **Limits Set** (a
+monthly limit on three categories) and **Something to Save For** (a first
+savings goal). And seven more (0.8.0):
+
+| Badge | Earned by |
+| --- | --- |
+| **Pay Yourself First** | A transfer into a savings account from one that isn't |
+| **Half Kept** | A finished month with spending at most half of what came in |
+| **A Lighter Month** | A finished month at least 10% under the one before, with 15+ days logged |
+| **Money Back** | A refund logged against a purchase |
+| **Fair Share** | A purchase split with someone, so they owe you their share |
+| **All Squared** | Someone paying back everything they owed you |
+| **Worldly** | Money held in accounts of two currencies (credit cards and empty accounts don't count) |
+
+The two month badges wait for the month to end, as the month tracks do, so a
+month still running can't earn one and then take it back. Like every badge
+they are rows in `badges` (006), keyed by name: **no SQL** for any of them.
 
 ### The eight challenges (three at a time)
 

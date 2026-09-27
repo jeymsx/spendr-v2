@@ -158,6 +158,69 @@ describe('evaluateAchievements', () => {
     expect(earned.has('first-goal')).toBe(true)
   })
 
+  it('keeps fifteen badges, every one with a mark and a colour of its own to draw', () => {
+    const badges = ACHIEVEMENTS.filter(a => a.kind === 'badge')
+    expect(badges).toHaveLength(15)
+    expect(new Set(badges.map(b => b.key)).size).toBe(15)
+  })
+
+  describe('the seven that came after', () => {
+    /** Noon on a day of a month in 2026, stored. @param {number} m @param {number} d */
+    const on = (m, d) => new Date(2026, m - 1, d, 12).toISOString()
+    const has = (/** @type {Record<string, any>} */ input, /** @type {string} */ k) => evaluateAchievements({ today: TODAY, ...input }).has(k)
+
+    it('Pay Yourself First: into savings, from somewhere that is not', () => {
+      const accounts = [{ name: 'BPI', type: 'bank' }, { name: 'Savings', type: 'savings' }, { name: 'MP2', type: 'savings' }]
+      const moved = { date: ago(3), type: 'transfer', amount: 2000, fromAccount: 'BPI', toAccount: 'Savings' }
+      const shuffled = { ...moved, fromAccount: 'MP2' }
+      expect(has({ accounts, transactions: [moved] }, 'pay-yourself-first')).toBe(true)
+      expect(has({ accounts, transactions: [shuffled] }, 'pay-yourself-first')).toBe(false)
+    })
+
+    it('Half Kept: a finished month that spent no more than half of what came in', () => {
+      const august = (/** @type {number} */ spent) => [
+        { date: on(8, 15), type: 'inflow', amount: 30000, category: 'Salary' },
+        { date: on(8, 20), type: 'expense', amount: spent, category: 'Food' },
+      ]
+      expect(has({ transactions: august(15000) }, 'half-kept')).toBe(true)
+      expect(has({ transactions: august(16000) }, 'half-kept')).toBe(false)
+      // This month is not over, however well it is going.
+      const september = [{ date: ago(5), type: 'inflow', amount: 30000 }, { date: ago(4), type: 'expense', amount: 100 }]
+      expect(has({ transactions: september }, 'half-kept')).toBe(false)
+    })
+
+    it('A Lighter Month: a tenth less than the month before, on a month still being logged', () => {
+      const july = [{ date: on(7, 10), type: 'expense', amount: 20000, category: 'Food' }]
+      const august = (/** @type {number} */ days) => Array.from({ length: days }, (_, i) =>
+        ({ date: on(8, i + 1), type: 'expense', amount: Math.round(17000 / days), category: 'Food' }))
+      expect(has({ transactions: [...july, ...august(15)] }, 'lighter-month')).toBe(true)
+      expect(has({ transactions: [...july, ...august(10)] }, 'lighter-month')).toBe(false)
+      const barelyLess = Array.from({ length: 20 }, (_, i) => ({ date: on(8, i + 1), type: 'expense', amount: 950, category: 'Food' }))
+      expect(has({ transactions: [...july, ...barelyLess] }, 'lighter-month')).toBe(false)
+    })
+
+    it('Money Back: a refund against a purchase', () => {
+      const refund = { date: ago(2), type: 'expense', amount: -500, category: 'Shopping', refundOf: 'tx-1' }
+      expect(has({ transactions: [refund] }, 'money-back')).toBe(true)
+      expect(has({ transactions: [tx(2, 'expense')] }, 'money-back')).toBe(false)
+    })
+
+    it('Fair Share and All Squared: money a friend owes you, split and then paid', () => {
+      const split = { name: 'Ana', type: 'owed_to_me', amount: 600, amountPaid: 0, sourceTxId: 'dinner' }
+      expect(has({ debts: [split] }, 'fair-share')).toBe(true)
+      expect(has({ debts: [split] }, 'all-squared')).toBe(false)
+      expect(has({ debts: [{ ...split, amountPaid: 600 }] }, 'all-squared')).toBe(true)
+      // Paying off what you owe is Debt Cleared's, not this.
+      expect(has({ debts: [{ name: 'Bank', type: 'i_owe', amount: 600, amountPaid: 600 }] }, 'all-squared')).toBe(false)
+    })
+
+    it('Worldly: money held in two currencies, not an account opened and left empty', () => {
+      const peso = { name: 'BPI', type: 'bank', balance: 1000, currency: 'PHP' }
+      expect(has({ accounts: [peso, { name: 'USD', type: 'bank', balance: 50, currency: 'USD' }] }, 'two-currencies')).toBe(true)
+      expect(has({ accounts: [peso, { name: 'USD', type: 'bank', balance: 0, currency: 'USD' }] }, 'two-currencies')).toBe(false)
+    })
+  })
+
   it('earns nothing from an empty app', () => {
     expect(evaluateAchievements({ today: TODAY }).size).toBe(0)
   })
