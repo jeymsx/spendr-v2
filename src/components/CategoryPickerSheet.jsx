@@ -1,7 +1,14 @@
 import Sheet from './ui/Sheet'
 import CategoryTile from './CategoryTile'
 
-export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect }) {
+/**
+ * @param {{open: boolean, onClose: () => void, categories: Array<Record<string, any>>,
+ *          selected: Record<string, any>|null|undefined, onSelect: (cat: Record<string, any>) => void,
+ *          title?: string, intro?: import('react').ReactNode}} props
+ *   intro: a line above the grid - what is being filed, when the sheet is
+ *   opened from a list rather than from the form that is filing it
+ */
+export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect, title = 'Select Category', intro = null }) {
   const pick = (cat) => { onSelect(cat); onClose() }
 
   return (
@@ -15,9 +22,10 @@ export default function CategoryPickerSheet({ open, onClose, categories, selecte
       z={130}
       scrim={40}
       maxHeight="78dvh"
-      title="Select Category"
+      title={title}
     >
       <div>
+        {intro}
         {/* The tile the add form uses, not a second answer to the same
             question.
 

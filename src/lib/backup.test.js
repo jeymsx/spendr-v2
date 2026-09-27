@@ -34,6 +34,7 @@ const good = {
   goals: [],
   badges: [],
   challenges: [],
+  trash: [],
 }
 
 describe('inspectBackup', () => {

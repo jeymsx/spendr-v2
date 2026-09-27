@@ -31,6 +31,8 @@
           if(t==='dark') d.classList.add('dark');
           // The clean style, likewise - lights out has to be black from the first frame
           if(f) d.classList.add('flat');
+          // Reduce motion, from Preferences - before anything has a chance to move
+          if(localStorage.getItem('spendr-reduce-motion')==='1') d.classList.add('reduce-motion');
           // Set background so there's no white flash while JS is parsing
           d.style.background=t==='dark'?(f?'#000000':'#0b0f14'):(f?'#f2f2f7':'#f8fafc');
           // Apply accent color

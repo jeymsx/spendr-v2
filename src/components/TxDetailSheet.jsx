@@ -1,8 +1,8 @@
 import { cloneElement, useEffect, useState, useMemo } from 'react'
 import db, { UNSYNCED } from '../db/db'
 import { postRefund } from '../db/txHelpers'
-import { reverseBalanceEffect, applyBalanceEffect, restoreDeletedTx,
-         deleteTxGroup, restoreDeletedTxs } from '../db/txHelpers'
+import { reverseBalanceEffect, applyBalanceEffect } from '../db/txHelpers'
+import { moveToTrash, restoreFromTrash } from '../db/trash'
 import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
 import { isoToDateInput, dateInputToIso } from '../utils/txDate'
 import { isRefund, refundedAmount, refundableAmount, splitGroup, splitTotal } from '../lib/txMoney'
@@ -79,6 +79,12 @@ export default function TxDetailSheet({
    * page behind it - so that side keeps the inline rows, unchanged.
    */
   onEdit = null,
+  /**
+   * 'delete' opens straight on the delete confirmation - for a row swiped
+   * away in a list that is part of a plan, where one gesture should not take
+   * twelve payments without saying so.
+   */
+  startWith = 'detail',
 }) {
   /* The record the panel keeps showing while it slides away - see the note
      above `rec`. State rather than a ref, because a ref read during render is
@@ -189,7 +195,7 @@ export default function TxDetailSheet({
     // mounted through its own exit animation, so the parent can neither
     // unmount nor re-key it to reset these fields for the next record.
     // eslint-disable-next-line react-hooks/set-state-in-effect
-    if (tx) setMode('detail')
+    if (tx) setMode(startWith === 'delete' ? 'confirm-delete' : 'detail')
     setSaving(false)
     // Hydrates the form when the sheet opens. Listing every field would
     // re-run the effect that SETS them and clobber edits in progress;
@@ -251,58 +257,27 @@ export default function TxDetailSheet({
     }
   }
 
+  /* Into Recently deleted (db/trash.js), whole: a plan with all its months,
+     and whatever deleting the row takes with it - a split's other legs, its
+     refunds, what a settlement paid. Undo is putting it straight back. It
+     used to delete a single row by hand here, which left a split's other
+     legs and a settlement's payments behind; moveToTrash goes through the
+     one deletion the rest of the app uses. */
   async function handleDelete() {
     setSaving(true)
-    // Snapshot before deleting — this is what Undo replays. For an installment
-    // plan that's every month, since deleting one would strand the rest.
-    const group    = planCount > 1 ? planRows.map(t => ({ ...t })) : null
-    const snapshot = { ...tx }
+    const group = planCount > 1 ? planRows.map(t => ({ ...t })) : [{ ...tx }]
     try {
-      if (group) {
-        await deleteTxGroup(group)
-        onClose()
-        showToast(`${group.length} payments deleted`, 'success', {
-          actionLabel: 'Undo',
-          onAction: async () => {
-            try {
-              const n = await restoreDeletedTxs(group)
-              showToast(n ? `${n} payments restored` : 'Already restored',
-                        n ? 'success' : 'warning')
-            } catch (err) {
-              console.error('[TxDetailSheet] group undo failed:', err)
-              showToast('Undo failed', 'error')
-            }
-          },
-        })
-        return
-      }
-      // The tombstone write used to sit outside the transaction, so a failure
-      // below left the txId marked deleted while the row survived locally —
-      // and the next sync then removed it remotely. It's inside now.
-      await db.transaction('rw',
-        [db.transactions, db.accounts, db.balances, db.recurring, db.meta],
-        async () => {
-          if (tx.txId) {
-            const existing = await db.meta.get('deletedTxIds')
-            const list = existing?.value ?? []
-            if (!list.includes(tx.txId)) {
-              await db.meta.put({ key: 'deletedTxIds', value: [...list, tx.txId] })
-            }
-          }
-          await reverseBalanceEffect(tx)
-          await db.transactions.delete(tx.id)
-          if (tx.recurringId && tx.recurringPrevDate) {
-            await db.recurring.update(tx.recurringId, { nextDate: tx.recurringPrevDate })
-          }
-        })
+      const moved = await moveToTrash(group)
       onClose()
-      showToast('Transaction deleted', 'success', {
+      if (!moved) return
+      const what = planCount > 1 ? `${moved.count} payments` : moved.count > 1 ? `${moved.count} transactions` : 'Transaction'
+      showToast(`${what} moved to Recently deleted`, 'success', {
         actionLabel: 'Undo',
         onAction: async () => {
           try {
-            const ok = await restoreDeletedTx(snapshot)
-            showToast(ok ? 'Transaction restored' : 'Already restored',
-                      ok ? 'success' : 'warning')
+            const n = await restoreFromTrash(moved.id)
+            showToast(n ? (n > 1 ? `${n} transactions restored` : 'Transaction restored') : 'Already restored',
+                      n ? 'success' : 'warning')
           } catch (err) {
             console.error('[TxDetailSheet] undo failed:', err)
             showToast('Undo failed', 'error')
@@ -739,7 +714,7 @@ export default function TxDetailSheet({
                 </h3>
                 <p className="mt-1 mx-auto max-w-[268px] text-13 leading-snug text-balance
                   text-slate-400 dark:text-slate-500">
-                  You&apos;ll get a quick chance to undo this straight after.
+                  It goes to Recently deleted, where you can put it back for 30 days.
                 </p>
               </div>
 

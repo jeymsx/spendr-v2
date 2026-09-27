@@ -23,6 +23,7 @@ import { stampTxCurrency } from '../lib/fxContext'
  *   meta:         import('dexie').Table<MetaRow, string>,
  *   notifications: import('dexie').Table<NotificationRow, string>,
  *   challenges:   import('dexie').Table<ChallengeRow, number>,
+ *   trash:        import('dexie').Table<Record<string, any>, number>,
  * }} SpendrDB
  */
 
@@ -210,9 +211,29 @@ db.version(13).stores({
   challenges: '++id, key, status, startDay, endDay, syncId',
 })
 
+/* v14 - Recently deleted.
+ *
+ * One row per deletion - a transaction, or everything that went with it: an
+ * installment plan's months, a split purchase's legs, its refunds - holding
+ * a copy of each row as it was and what the deletion did to debts, so all of
+ * it can be put back together (db/trash.js). */
+db.version(14).stores({
+  trash: '++id, deletedAt',
+})
+
+/* v15 - and synced (022_trash.sql), so it carries a syncId like every other
+ * synced table: a deletion put back or deleted for good on one device is
+ * then found and dropped on the others. In backups too. */
+db.version(15).stores({
+  trash: '++id, deletedAt, syncId',
+})
+
+/** How long Recently deleted keeps a deletion, in days. */
+export const TRASH_DAYS = 30
+
 /** The tables that carry a syncId. Exported so sync and backup agree. */
 export const SYNCED_TABLES = [
-  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges',
+  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash',
 ]
 
 /** How a row is FILED, as opposed to what it says. Changing only these is not

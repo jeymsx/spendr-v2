@@ -1,5 +1,6 @@
 import { useLayoutEffect, useRef } from 'react'
-import { animate, useReducedMotion } from 'motion/react'
+import { animate } from 'motion/react'
+import { useReduceMotion } from '../../hooks/useReduceMotion'
 
 /**
  * A figure that counts up to itself, landing exactly on the true value.
@@ -21,7 +22,7 @@ export default function AnimatedNumber({ value, format, className = '', delay = 
   const ref = useRef(/** @type {HTMLSpanElement|null} */ (null))
   const formatRef = useRef(format)
   useLayoutEffect(() => { formatRef.current = format }, [format])
-  const reduce = useReducedMotion()
+  const reduce = useReduceMotion()
 
   useLayoutEffect(() => {
     const node = ref.current

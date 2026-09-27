@@ -168,6 +168,38 @@ export async function updateTransaction(tx, patch) {
 }
 
 /**
+ * File rows under another category - the one-tap change from a list.
+ *
+ * Nothing but the category moves, so there is no balance to reverse and
+ * reapply: one write per row, all or none, each stamped so the change
+ * syncs. Returns what they were filed under before, for an undo.
+ *
+ * @param {Array<Record<string, any>>} txs
+ * @param {string} category
+ * @returns {Promise<Array<{id: number, category: string}>>}
+ */
+export async function recategorize(txs, category) {
+  const before = txs.filter(t => t?.id != null).map(t => ({ id: t.id, category: t.category }))
+  const stamp = new Date().toISOString()
+  await db.transaction('rw', db.transactions, async () => {
+    for (const { id } of before) await db.transactions.update(id, { category, updatedAt: stamp, synced: UNSYNCED })
+  })
+  return before
+}
+
+/**
+ * Put rows back under the categories recategorize took them from.
+ *
+ * @param {Array<{id: number, category: string}>} before
+ */
+export async function refile(before) {
+  const stamp = new Date().toISOString()
+  await db.transaction('rw', db.transactions, async () => {
+    for (const { id, category } of before) await db.transactions.update(id, { category, updatedAt: stamp, synced: UNSYNCED })
+  })
+}
+
+/**
  * Pay a credit card.
  *
  * ── A transfer, not an expense, and this is the one place it matters most ──
@@ -323,11 +355,17 @@ export async function restoreDeletedTx(tx) {
  * leave some months deleted and others not. Tombstones are merged in the same
  * write, so the next sync removes exactly this set remotely.
  *
+ * `journal`, when given, is told everything the deletion did - the rows as
+ * they were, and each change it made to a debt - so Recently deleted can put
+ * it all back (db/trash.js).
+ *
  * @param {Transaction[]} txs
+ * @param {DeletionJournal} [journal]
  */
-export async function deleteTxGroup(txs) {
+export async function deleteTxGroup(txs, journal) {
   const list = await expandDeletion((txs ?? []).filter(Boolean))
   if (!list.length) return 0
+  if (journal) journal.txs.push(...list.map(t => ({ ...t })))
 
   await db.transaction('rw',
     [db.transactions, db.accounts, db.balances, db.recurring, db.meta, db.debts],
@@ -357,9 +395,10 @@ export async function deleteTxGroup(txs) {
             ? await db.debts.where('syncId').equals(part.syncId).first()
             : null) ?? (part.id ? await db.debts.get(part.id) : null)
           if (!d) continue
-          await db.debts.update(d.id, {
-            amountPaid: Math.max(0, Math.round(((d.amountPaid ?? 0) - (part.delta ?? 0)) * 100) / 100),
-          })
+          const was = d.amountPaid ?? 0
+          const amountPaid = Math.max(0, Math.round((was - (part.delta ?? 0)) * 100) / 100)
+          await db.debts.update(d.id, { amountPaid })
+          journal?.paid.push({ id: d.id, syncId: d.syncId ?? null, delta: Math.round((was - amountPaid) * 100) / 100 })
         }
 
         /* And the credit row it opened, if paying more than was owed left
@@ -370,6 +409,7 @@ export async function deleteTxGroup(txs) {
             ? await db.debts.where('syncId').equals(tx.creditSyncId).first()
             : null) ?? (tx.creditDebtId ? await db.debts.get(tx.creditDebtId) : null)
           if (credit) {
+            journal?.debts.push({ ...credit })
             await db.debts.delete(credit.id)
             await deleteDebtRemote(null, credit.id, credit.syncId)
           }
@@ -402,9 +442,11 @@ export async function deleteTxGroup(txs) {
         for (const d of await db.debts.toArray()) {
           if (!d.sourceTxId || !gone.has(d.sourceTxId)) continue
           if ((d.amountPaid ?? 0) <= 0.005) {
+            journal?.debts.push({ ...d })
             await db.debts.delete(d.id)
             await deleteDebtRemote(null, d.id, d.syncId)
           } else {
+            journal?.unhooked.push({ id: d.id, syncId: d.syncId ?? null, sourceTxId: d.sourceTxId })
             await db.debts.update(d.id, { sourceTxId: null, updatedAt: stamp })
           }
         }
@@ -414,6 +456,24 @@ export async function deleteTxGroup(txs) {
     })
 
   return list.length
+}
+
+/**
+ * What a deletion did, for putting it back.
+ *
+ * @typedef {object} DeletionJournal
+ * @property {Transaction[]} txs  every row deleted, as it was
+ * @property {Array<Record<string, any>>} debts  debts deleted with them: a
+ *   split's receivable nobody had paid into, an overpayment's credit
+ * @property {Array<{id: number, syncId: string|null, sourceTxId: string}>} unhooked
+ *   receivables that had money against them, and were cut loose instead
+ * @property {Array<{id: number, syncId: string|null, delta: number}>} paid
+ *   what a deleted settlement had paid off each debt
+ */
+
+/** An empty journal. @returns {DeletionJournal} */
+export function newJournal() {
+  return { txs: [], debts: [], unhooked: [], paid: [] }
 }
 
 /**

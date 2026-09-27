@@ -7,7 +7,8 @@ import { useSyncManager } from '../components/SyncManager'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
-import { IconTemplate, IconInfo, IconWarning, IconRates } from '../components/icons'
+import { IconTemplate, IconInfo, IconWarning, IconRates, IconTrash } from '../components/icons'
+import { TRASH_DAYS } from '../db/trash'
 import { useAchievements } from '../context/AchievementContext'
 import Button from '../components/ui/Button'
 import Sheet from '../components/ui/Sheet'
@@ -112,6 +113,7 @@ export default function Settings() {
     return planDedupe({ debts, recurring, templates })
   }, [], null)
   const dupCount = dupPlan?.total ?? 0
+  const trashCount = useLiveQuery(() => db.trash.count(), [], 0)
 
   const accentName = ACCENT_COLORS.find(c => c.hex === accentColor)?.name ?? 'Custom'
   const syncSub = !user ? 'Off · sign in to sync'
@@ -273,6 +275,17 @@ export default function Settings() {
             label="Backup & restore"
             right={<RowChevron />}
             onTap={() => navigate('/settings/backup')}
+          />
+          <RowDivider />
+          {/* Deleted transactions, kept thirty days to put back - synced, and
+              in backups. Also at the foot of Transactions while it holds
+              anything. */}
+          <SettingsRow
+            iconEl={<RowIcon color="slate"><IconTrash size={16} /></RowIcon>}
+            label="Recently deleted"
+            sublabel={trashCount ? `${trashCount} deleted, kept ${TRASH_DAYS} days` : 'Empty'}
+            right={<RowChevron />}
+            onTap={() => navigate('/transactions/deleted')}
           />
         </SectionCard>
       </div>

@@ -1,9 +1,17 @@
 import { useState, useMemo, useDeferredValue } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import TxDetailSheet from '../components/TxDetailSheet'
+import CategoryPickerSheet from '../components/CategoryPickerSheet'
+import SwipeRow from '../components/ui/SwipeRow'
+import { useToast } from '../context/ToastContext'
+import { moveToTrash, restoreFromTrash } from '../db/trash'
+import { recategorize, refile } from '../db/txHelpers'
+import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
+import { fmt } from '../lib/money'
+import { currencyOfTx } from '../lib/fxContext'
 import CalendarView from '../components/CalendarView'
 import { scheduledCutoff } from '../utils/scheduled'
 import IconButton from '../components/ui/IconButton'
@@ -46,6 +54,7 @@ function fmtGroupDate(dateKey) {
 
 export default function Transactions() {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   /* undefined until read, not [], so the first frame can tell "still loading"
      from "no transactions". Categories wait too: a row drawn before them
      has no glyph to show and swaps it in a frame later. */
@@ -66,6 +75,10 @@ export default function Transactions() {
   const [filterOpen,     setFilterOpen]     = useState(false)
   const [visibleCount,   setVisibleCount]   = useState(PAGE_SIZE)
   const [selectedTx,     setSelectedTx]     = useState(null)
+  // Opened from a swipe on a plan's payment: straight to the delete confirmation.
+  const [detailIntent,   setDetailIntent]   = useState('detail')
+  const [quickCatTx,     setQuickCatTx]     = useState(null)
+  const trashCount = useLiveQuery(() => db.trash.count(), [], 0)
   const [amountMin,      setAmountMin]      = useState(null)
   const [amountMax,      setAmountMax]      = useState(null)
   const [viewMode,       setViewMode]       = useState('list')
@@ -189,6 +202,56 @@ export default function Transactions() {
     if (calMonth === 11) { setCalYear(y => y + 1); setCalMonth(0) }
     else setCalMonth(m => m + 1)
     setCalSelected(null)
+  }
+
+  /* A row swiped away: into Recently deleted, with Undo on the toast. A
+     plan's payment goes to the plan's own confirmation instead - one gesture
+     should not take every month of it without saying so - and the row
+     slides back. */
+  async function swipeDelete(tx) {
+    if (isInstallmentRow(tx)) {
+      setDetailIntent('delete')
+      setSelectedTx(tx)
+      return false
+    }
+    try {
+      const moved = await moveToTrash([tx])
+      if (!moved) return false
+      showToast(moved.count > 1 ? `Deleted with ${moved.count - 1} linked` : 'Moved to Recently deleted', 'success', {
+        actionLabel: 'Undo',
+        onAction: async () => {
+          try {
+            const n = await restoreFromTrash(moved.id)
+            showToast(n ? 'Transaction restored' : 'Already restored', n ? 'success' : 'warning')
+          } catch (e) {
+            console.error('[Transactions] undo failed:', e)
+            showToast('Undo failed', 'error')
+          }
+        },
+      })
+      return true
+    } catch (e) {
+      console.error('[Transactions] delete failed:', e)
+      showToast('Could not delete that. Try again.', 'error')
+      return false
+    }
+  }
+
+  /* The tile, tapped: file the row under another category. A plan's months
+     move together, so the plan is not left half in one category. */
+  async function refileTx(tx, cat) {
+    if (!cat || cat.name === tx.category) return
+    const rows = isInstallmentRow(tx) ? findInstallmentGroup(tx, txAll ?? []) : [tx]
+    try {
+      const before = await recategorize(rows, cat.name)
+      showToast(rows.length > 1 ? `${rows.length} payments filed under ${cat.name}` : `Filed under ${cat.name}`, 'success', {
+        actionLabel: 'Undo',
+        onAction: () => { refile(before).catch(e => console.error('[Transactions] refile undo failed:', e)) },
+      })
+    } catch (e) {
+      console.error('[Transactions] recategorize failed:', e)
+      showToast('Could not change the category', 'error')
+    }
   }
 
   function clearFilters() {
@@ -369,7 +432,12 @@ export default function Transactions() {
                           key={tx.id}
                           appear={dayArrival === 'none' ? rows.arrival(tx.id) : 'none'}
                         >
-                          <TxRow tx={tx} catMap={catMap} onClick={setSelectedTx} />
+                          <SwipeRow
+                            label={`Delete ${tx.description || tx.category || 'transaction'}`}
+                            onDelete={() => swipeDelete(tx)}
+                          >
+                            <TxRow tx={tx} catMap={catMap} onClick={(t) => { setDetailIntent('detail'); setSelectedTx(t) }} onCategory={setQuickCatTx} />
+                          </SwipeRow>
                           {/* Under the text, not under the tile: the row is led
                               by a 40px glyph, so the line starts where the row's
                               content does rather than cutting the card in half. */}
@@ -398,6 +466,36 @@ export default function Transactions() {
           )}
         </>
       )}
+
+      {/* The way back to what was deleted, at the foot of where it was
+          deleted from - only while there is something there. */}
+      {viewMode === 'list' && !loading && trashCount > 0 && (
+        <div className="flex justify-center mt-6 px-5">
+          <Link
+            to="/transactions/deleted"
+            className="press press-fade text-13 font-semibold text-slate-500 dark:text-slate-400 px-3 py-2"
+          >
+            Recently deleted · {trashCount}
+          </Link>
+        </div>
+      )}
+
+      {/* The tile's own sheet: this row, filed somewhere else. */}
+      <CategoryPickerSheet
+        open={!!quickCatTx}
+        onClose={() => setQuickCatTx(null)}
+        title="Change category"
+        categories={(categories ?? []).filter(c => c.type === quickCatTx?.type)}
+        selected={quickCatTx ? catMap[quickCatTx.category] : null}
+        onSelect={(cat) => { if (quickCatTx) refileTx(quickCatTx, cat) }}
+        intro={quickCatTx && (
+          <p className="mb-4 text-13 text-slate-500 dark:text-slate-400 truncate">
+            <span className="font-semibold text-slate-800 dark:text-white">{quickCatTx.description || quickCatTx.category}</span>
+            {' · '}{fmt(Math.abs(quickCatTx.amount ?? 0), currencyOfTx(quickCatTx))}
+            {isInstallmentRow(quickCatTx) ? ' · every payment in the plan' : ''}
+          </p>
+        )}
+      />
 
       {/* ── Filter sheet ── */}
       <FilterModal
@@ -429,6 +527,7 @@ export default function Transactions() {
         transaction={selectedTx}
         accounts={accounts ?? []}
         categories={categories ?? []}
+        startWith={detailIntent}
       />
     </div>
   )

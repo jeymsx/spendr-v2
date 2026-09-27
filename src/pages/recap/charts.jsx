@@ -1,5 +1,6 @@
 import { useEffect, useId, useMemo, useRef } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReduceMotion } from '../../hooks/useReduceMotion'
 import { SPRING, TAP_MS, TAP_SLOP } from './theme'
 import { useBox, useSlide } from './parts'
 import { artUrl } from './assets'
@@ -286,7 +287,7 @@ export function CalendarHeat({ month, days, selected, busiest, onSelect }) {
  */
 export function NetWorthArea({ series, selected, onSelect, rising }) {
   const { pal } = useSlide()
-  const reduce = useReducedMotion()
+  const reduce = useReduceMotion()
   const scrub = useScrub((px, _py, box) => {
     if (series.length < 1) return -1
     const f = Math.min(0.9999, Math.max(0, px / box.width))

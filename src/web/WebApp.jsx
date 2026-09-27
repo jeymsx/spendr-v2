@@ -36,6 +36,7 @@ const Recap         = lazy(() => import('../pages/recap/RecapPage'))
 const Achievements  = lazy(() => import('../pages/Achievements'))
 const Changelog     = lazy(() => import('../pages/settings/Changelog'))
 const AppLock       = lazy(() => import('../pages/settings/AppLock'))
+const RecentlyDeleted = lazy(() => import('../pages/transactions/RecentlyDeleted'))
 
 function LoadingScreen() {
   return (
@@ -94,6 +95,7 @@ export default function WebApp() {
               {/* The phone's Insights opens its cards as pages; the desktop
                   one has all of it on one screen already. */}
               <Route path="/insights/*"         element={<Navigate to="/insights" replace />} />
+              <Route path="/transactions/deleted" element={<WebFormPage width={640}><RecentlyDeleted /></WebFormPage>} />
               <Route path="/transactions/*"     element={<Navigate to="/transactions" replace />} />
               <Route path="/accounts/*"         element={<Navigate to="/accounts" replace />} />
               <Route path="/debts/*"            element={<Navigate to="/debts" replace />} />

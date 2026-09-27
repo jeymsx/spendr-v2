@@ -12,6 +12,8 @@ import { syncToSheets } from '../../lib/sheetsSync'
 import { setViewMode, getViewPreference } from '../useViewMode'
 import { APP_VERSION } from '../../lib/release'
 import { lockSummary } from '../../lib/appLock'
+import { setReduceMotion, systemReducesMotion } from '../../components/ui/motion'
+import { useReduceMotionChosen } from '../../hooks/useReduceMotion'
 import { useAppLock } from '../../components/lock/LockGate'
 import { useAchievements } from '../../context/AchievementContext'
 // Every heavy manager is the mobile sheet, reused — roughly 2,000 lines of
@@ -111,6 +113,7 @@ function Toggle({ on, onChange, label }) {
 export default function WebSettings() {
   const navigate = useNavigate()
   const appLock = useAppLock()
+  const reduceChosen = useReduceMotionChosen()
   const [section, setSection] = useState('profile')
   const { theme, toggleTheme, style, setStyle, accentColor, setAccentColor } = useTheme()
   const { user, signOut, signInWithGoogle } = useAuth()
@@ -311,6 +314,9 @@ export default function WebSettings() {
             <WebPanel title="Behaviour">
               <Row label="Skip confirmation" hint="Save transactions instantly, without a review step">
                 <Toggle on={skipConfirm} onChange={toggleSkip} label="Skip confirmation" />
+              </Row>
+              <Row label="Reduce motion" hint={systemReducesMotion() ? "On in your computer's settings" : 'Fewer animations and transitions'}>
+                <Toggle on={reduceChosen || systemReducesMotion()} onChange={() => !systemReducesMotion() && setReduceMotion(!reduceChosen)} label="Reduce motion" />
               </Row>
               <Row label="App lock" hint={`${lockSummary(appLock.config)} · a lock on the screen, not encryption`}>
                 <Btn onClick={() => navigate('/settings/app-lock')}>Manage</Btn>

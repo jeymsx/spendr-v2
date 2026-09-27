@@ -87,6 +87,7 @@ export function RestoreBackupSheet({ open, onClose }) {
     [c.categories, 'categories'], [c.recurring, 'recurring'],
     [c.debts, 'debts'], [c.templates, 'templates'],
     [c.goals, 'goals'], [c.badges, 'badges'], [c.challenges, 'challenges'],
+    [c.trash, 'recently deleted'],
   ].filter(([n]) => n > 0)
 
   /* What the file has no opinion about.
@@ -95,7 +96,7 @@ export function RestoreBackupSheet({ open, onClose }) {
      is the whole of the "I restored a backup and my old goals are still here"
      report: backups written before goals existed say nothing about them, so
      the restore could not clear them. Now the sheet says so before you tap. */
-  const untouched = (info?.missing ?? []).join(' and ')
+  const untouched = (info?.missing ?? []).map(t => (t === 'trash' ? 'Recently deleted' : t)).join(' and ')
 
   return (
     /* Was a hand-rolled centred card. It stays centred on desktop - that is
@@ -250,7 +251,7 @@ export function ResetConfirmModal({ open, onClose }) {
          the fresh start then announced all over again. */
       await db.transaction('rw', [
         db.transactions, db.balances, db.accounts, db.categories, db.debts,
-        db.recurring, db.templates, db.goals, db.badges, db.meta, db.notifications,
+        db.recurring, db.templates, db.goals, db.badges, db.meta, db.notifications, db.trash,
       ], async () => {
         await db.transactions.clear()
         await db.balances.clear()
@@ -263,6 +264,7 @@ export function ResetConfirmModal({ open, onClose }) {
         await db.badges.clear()
         await db.meta.clear()
         await db.notifications.clear()
+        await db.trash.clear()
       })
       /* The app lock too: a fresh start behind yesterday's Face ID would be a
          locked door on an empty room. */

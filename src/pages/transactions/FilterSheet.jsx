@@ -9,7 +9,7 @@ import BrandWatermark from '../../components/BrandWatermark'
 import { accountBrand } from '../../lib/accountBrands'
 import { normalizeDesign } from '../../lib/cardDesigns'
 import { fmt } from '../../lib/money'
-import { DATE_OPTS, txRowTone, fmtTime } from './shared'
+import { DATE_OPTS, canRecategorize, txRowTone, fmtTime } from './shared'
 import { AmountRangeFilter } from './AmountRange'
 import { DateRow } from './QuickFilter'
 
@@ -236,24 +236,73 @@ export function FilterModal({
   )
 }
 
-export function TxRow({ tx, catMap, onClick }) {
+/**
+ * One transaction in a list.
+ *
+ * With `onCategory`, the category's tile is a button of its own that opens
+ * the category picker for this row - the one change people make most, a tap
+ * from the list, without opening the transaction first. That is also what
+ * makes it reachable for anyone who finds the full edit form hard to get
+ * through. The rest of the row opens the transaction, as it always has.
+ * Rows whose category cannot be changed here (canRecategorize) stay one
+ * button.
+ *
+ * @param {{tx: Record<string, any>, catMap: Record<string, any>, onClick: (tx: any) => void,
+ *          onCategory?: (tx: any) => void}} props
+ */
+export function TxRow({ tx, catMap, onClick, onCategory }) {
   const cat = catMap[tx.category]
   const { cls, sign, magnitude, currency } = txRowTone(tx)
+  const tile = (
+    <div
+      className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+      style={{ '--cat-color': cat?.color ?? '#64748b' }}
+    >
+      <CategoryGlyph cat={cat} size={20} emoji="💸" />
+    </div>
+  )
+
+  if (onCategory && canRecategorize(tx)) {
+    return (
+      <div className="flex items-stretch">
+        <button
+          type="button"
+          onClick={() => onCategory(tx)}
+          aria-label={`Change category${cat?.name ?? tx.category ? `, now ${cat?.name ?? tx.category}` : ''}`}
+          className="press shrink-0 flex items-center pl-4 py-3 [--press-scale:0.92]"
+        >
+          {tile}
+        </button>
+        <button
+          type="button"
+          onClick={() => onClick(tx)}
+          className="press press-fade flex-1 min-w-0 flex items-center gap-3 pl-3 pr-4 py-3 text-left
+            active:bg-slate-50 dark:active:bg-white/[0.04]"
+        >
+          <RowBody tx={tx} cat={cat} cls={cls} sign={sign} magnitude={magnitude} currency={currency} />
+        </button>
+      </div>
+    )
+  }
 
   return (
     <button
+      type="button"
       onClick={() => onClick(tx)}
       /* press-fade: the tint comes in fast and fades out slowly - index.css. */
       className="press press-fade w-full flex items-center gap-3 px-4 py-3 text-left
         active:bg-slate-50 dark:active:bg-white/[0.04]"
     >
-      <div
-        className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-        style={{ '--cat-color': cat?.color ?? '#64748b' }}
-      >
-        <CategoryGlyph cat={cat} size={20} emoji="💸" />
-      </div>
+      {tile}
+      <RowBody tx={tx} cat={cat} cls={cls} sign={sign} magnitude={magnitude} currency={currency} />
+    </button>
+  )
+}
 
+/** A row's words and figure: what it was, where from, how much, when. */
+function RowBody({ tx, cat, cls, sign, magnitude, currency }) {
+  return (
+    <>
       <div className="flex-1 min-w-0">
         <p className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
           {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
@@ -274,7 +323,7 @@ export function TxRow({ tx, catMap, onClick }) {
         </p>
         <p className="text-10 text-slate-500 dark:text-slate-400 mt-0.5">{fmtTime(tx.date)}</p>
       </div>
-    </button>
+    </>
   )
 }
 

@@ -75,6 +75,25 @@ export function groupByDate(txs) {
 
 export const PAGE_SIZE = 50
 
+/** Categories the app files its own rows under - lib/recap.js has the same three. */
+const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collection'])
+
+/**
+ * Whether a row's category can be changed from the list with one tap.
+ *
+ * Money that came or went, filed by you. Not a transfer, which has no
+ * category. Not a refund, which follows the purchase it refunds - filed
+ * elsewhere it would take money back off a category it never came out of.
+ * And not a row the app wrote for itself - a transfer's fee, a debt paid or
+ * collected, a balance corrected by hand - whose category is what it is.
+ *
+ * @param {Record<string, any>} tx
+ */
+export function canRecategorize(tx) {
+  return (tx?.type === 'expense' || tx?.type === 'inflow') && !tx.refundOf && !tx.settles
+    && !MACHINE_CATEGORIES.has(tx.category) && tx.description !== 'Balance adjustment'
+}
+
 export const TYPE_OPTS = [
   { value: 'all',      label: 'All'      },
   { value: 'expense',  label: 'Expense'  },

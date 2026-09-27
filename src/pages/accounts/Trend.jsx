@@ -2,7 +2,7 @@ import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
 } from 'recharts'
 import { fmt } from '../../lib/money'
-import { EASE_OUT } from '../../components/ui/motion'
+import { EASE_OUT, prefersReducedMotion } from '../../components/ui/motion'
 import { TREND_RANGES } from '../../lib/trend'
 
 /* The arithmetic moved to lib/trend.js when the category page needed
@@ -194,6 +194,7 @@ export function BalanceTrend({
             strokeWidth={2.5}
             dot={false}
             activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
+            isAnimationActive={!prefersReducedMotion()}
             animationDuration={800}
           />
         </LineChart>

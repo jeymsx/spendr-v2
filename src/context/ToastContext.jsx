@@ -28,7 +28,10 @@ function GlobalToast({ toast, onAction }) {
         bg-slate-900 dark:bg-white
         shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
         {v && <span className={`${v.iconClass} shrink-0`}><v.Icon size={16} /></span>}
-        <p className="text-sm font-semibold text-white dark:text-slate-900 break-words leading-snug">
+        {/* A live region, always there, so a screen reader says what just
+            happened - "Filed under Food", "Moved to Recently deleted" - as
+            it happens, the way it is seen. It was silent. */}
+        <p role="status" className="text-sm font-semibold text-white dark:text-slate-900 break-words leading-snug">
           {toast?.message}
         </p>
         {hasAction && (

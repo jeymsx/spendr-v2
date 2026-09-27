@@ -1,4 +1,4 @@
-import db, { UNSYNCED } from '../db/db'
+import db, { SYNCED, UNSYNCED } from '../db/db'
 import { queueRemoteDelete, resetWatermarks } from './sync'
 import { toDateInput } from '../utils/txDate'
 import { PRIMED_META } from './achievements'
@@ -33,7 +33,7 @@ export const BACKUP_VERSION = 2
 
 const BACKUP_TABLES = [
   'transactions', 'accounts', 'categories', 'templates', 'recurring', 'debts',
-  'goals', 'badges', 'challenges',
+  'goals', 'badges', 'challenges', 'trash',
 ]
 
 /* Badges are the one table a restore MERGES rather than replaces - look for
@@ -134,13 +134,14 @@ export async function restoreBackup(raw) {
   const stampBadge = (rows) => (rows ?? []).map(r => ({ ...r, synced: UNSYNCED }))
 
   // Captured before the wipe so we know what the backup drops.
-  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges] = await Promise.all([
+  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges, oldTrash] = await Promise.all([
     db.transactions.toArray(),
     db.accounts.toArray(),
     db.categories.toArray(),
     db.templates.toArray(),
     db.goals.toArray(),
     db.challenges.toArray(),
+    db.trash.toArray(),
   ])
 
   /* Each call names the table it is restoring. A backup file is parsed JSON,
@@ -156,6 +157,8 @@ export async function restoreBackup(raw) {
   const goals      = /** @type {Goal[]}         */ (stamp(data.goals))
   const badges     = /** @type {BadgeRow[]}     */ (stampBadge(data.badges))
   const challenges = /** @type {ChallengeRow[]} */ (stamp(data.challenges))
+  // Recently deleted, as it was when the backup was made (db/trash.js).
+  const trash      = stamp(data.trash)
 
   const keptTxIds  = new Set(transactions.map(t => t.txId).filter(Boolean))
   const droppedTxIds = oldTxs.map(t => t.txId).filter(id => id && !keptTxIds.has(id))
@@ -165,11 +168,12 @@ export async function restoreBackup(raw) {
   const keptCategoryKeys  = new Set(categories.map(c => `${c.name}|${c.type}`))
   const keptGoalNames     = new Set(goals.map(g => g.name))
   const keptChallengeIds  = new Set(challenges.map(c => c.syncId).filter(Boolean))
+  const keptTrashIds      = new Set(trash.map(e => e.syncId).filter(Boolean))
 
   await db.transaction('rw', [
     db.transactions, db.accounts, db.categories, db.templates,
     db.recurring, db.debts, db.goals, db.badges, db.balances, db.meta, db.notifications,
-    db.challenges,
+    db.challenges, db.trash,
   ], async () => {
     /* The notifications list is about the ledger it was worked out from. A
        restored ledger gets its own, worked out afresh - and arriving all at
@@ -183,6 +187,7 @@ export async function restoreBackup(raw) {
     if (Array.isArray(data.debts))        { await db.debts.clear();        await db.debts.bulkAdd(debts) }
     if (Array.isArray(data.goals))        { await db.goals.clear();        await db.goals.bulkAdd(goals) }
     if (Array.isArray(data.challenges))   { await db.challenges.clear();   await db.challenges.bulkAdd(challenges) }
+    if (Array.isArray(data.trash))        { await db.trash.clear();        await db.trash.bulkAdd(trash) }
     // Merged, not replaced - see the note by BACKUP_TABLES. bulkPut so a badge already held
     // locally keeps its row rather than colliding on the `key` primary key.
     if (Array.isArray(data.badges) && badges.length) await db.badges.bulkPut(badges)
@@ -249,6 +254,14 @@ export async function restoreBackup(raw) {
   if (Array.isArray(data.challenges)) {
     for (const c of oldChallenges) {
       if (c.syncId && !keptChallengeIds.has(c.syncId)) await queueRemoteDelete('challenges', { sync_id: c.syncId })
+    }
+  }
+  /* And Recently deleted, from a file that carries it: a deletion made after
+     the backup belongs to a ledger the restore just replaced. Only the ones
+     that ever went up - the rest were never on the server to delete. */
+  if (Array.isArray(data.trash)) {
+    for (const e of oldTrash) {
+      if (e.syncId && e.synced === SYNCED && !keptTrashIds.has(e.syncId)) await queueRemoteDelete('trash', { sync_id: e.syncId })
     }
   }
 
@@ -331,7 +344,7 @@ function writeLocalPrefs(prefs) {
 }
 
 export async function buildBackupPayload() {
-  const [transactions, accounts, categories, templates, recurring, debts, goals, badges, challenges] =
+  const [transactions, accounts, categories, templates, recurring, debts, goals, badges, challenges, trash] =
     await Promise.all([
       db.transactions.toArray(),
       db.accounts.toArray(),
@@ -342,6 +355,7 @@ export async function buildBackupPayload() {
       db.goals.toArray(),
       db.badges.toArray(),
       db.challenges.toArray(),
+      db.trash.toArray(),
     ])
 
   const meta = (await db.meta.toArray())
@@ -352,6 +366,8 @@ export async function buildBackupPayload() {
     version: BACKUP_VERSION,
     exportedAt: new Date().toISOString(),
     transactions, accounts, categories, templates, recurring, debts, goals, badges, challenges,
+    // Recently deleted, so a restore brings back what could still be put back.
+    trash,
     /* Added in version 2. A version 1 file simply has neither, and the
        restore leaves the current settings alone rather than blanking them. */
     meta,

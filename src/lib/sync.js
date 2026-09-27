@@ -1,4 +1,4 @@
-import db, { dbReady, getUnsyncedTxs, SYNCED, SYNCED_TABLES } from '../db/db'
+import db, { dbReady, getUnsyncedTxs, SYNCED, SYNCED_TABLES, TRASH_DAYS } from '../db/db'
 import { reverseBalanceEffect } from '../db/balances'
 import { supabase } from './supabase'
 // Single definition, shared with onboarding — the two lists used to be
@@ -25,6 +25,23 @@ export async function queueRemoteDelete(table, match) {
   const list = meta?.value ?? []
   list.push({ table, match })
   await db.meta.put({ key: PENDING_KEY, value: list })
+}
+
+/**
+ * Take back a remote delete that has not gone out yet - for a row that has
+ * been put back (Recently deleted). Matched on every column the queued
+ * delete names, so only a delete aimed at this row is dropped.
+ *
+ * @param {string} table
+ * @param {Record<string, any>} row  column/value pairs the row can be known by
+ */
+export async function cancelRemoteDelete(table, row) {
+  const meta = await db.meta.get(PENDING_KEY)
+  const list = meta?.value ?? []
+  const kept = list.filter((/** @type {{table: string, match?: Record<string, any>}} */ p) => !(p.table === table
+    && Object.entries(p.match ?? {}).length > 0
+    && Object.entries(p.match ?? {}).every(([k, v]) => row[k] !== undefined && row[k] === v)))
+  if (kept.length !== list.length) await db.meta.put({ key: PENDING_KEY, value: kept })
 }
 
 async function getPendingDeletes() {
@@ -303,6 +320,42 @@ export function challengeToRow(r, userId) {
 }
 
 /**
+ * One deletion in Recently deleted. See migrations/022_trash.sql.
+ *
+ * Sent without this device's row numbers. The copies inside are of rows as
+ * they were HERE - a transaction's `id`, a debt's, the bill a charge came
+ * from - and those numbers name different rows, or nothing, on another
+ * device: putting one back there would find "it is already back" in some
+ * stranger at the same number, or roll the wrong bill's date on. What is
+ * left identifies each row everywhere - a transaction's txId, a debt's
+ * syncId, a charge's recurringSyncId - and that is what putting back looks
+ * things up by.
+ *
+ * @param {Record<string, any>} r
+ * @param {string} userId
+ */
+export function trashToRow(r, userId) {
+  /** @param {Record<string, any>} o @param {string[]} keys */
+  const without = (o, keys) => {
+    const copy = { ...o }
+    for (const k of keys) delete copy[k]
+    return copy
+  }
+  return {
+    user_id:    userId,
+    sync_id:    r.syncId ?? null,
+    deleted_at: r.deletedAt,
+    entry: {
+      txs:      (r.txs ?? []).map((/** @type {Record<string, any>} */ t) => without(t, ['id', 'recurringId', 'synced'])),
+      debts:    (r.debts ?? []).map((/** @type {Record<string, any>} */ d) => without(d, ['id', 'synced'])),
+      unhooked: (r.unhooked ?? []).map((/** @type {Record<string, any>} */ u) => without(u, ['id'])),
+      paid:     (r.paid ?? []).map((/** @type {Record<string, any>} */ p) => without(p, ['id'])),
+    },
+    updated_at: r.updatedAt ?? r.deletedAt ?? new Date().toISOString(),
+  }
+}
+
+/**
  * @param {Template} r
  * @param {string} userId
  */
@@ -511,6 +564,22 @@ export function rowToChallenge(row) {
     finishedAt: row.finished_at ?? null,
     updatedAt:  row.updated_at,
     synced:     SYNCED,
+  }
+}
+
+/** @param {Record<string, any>} row */
+export function rowToTrash(row) {
+  const entry = row.entry && typeof row.entry === 'object' ? row.entry : {}
+  const list = (/** @type {any} */ v) => (Array.isArray(v) ? v : [])
+  return {
+    ...syncIdOf(row),
+    deletedAt: row.deleted_at,
+    txs:       list(entry.txs),
+    debts:     list(entry.debts),
+    unhooked:  list(entry.unhooked),
+    paid:      list(entry.paid),
+    updatedAt: row.updated_at,
+    synced:    SYNCED,
   }
 }
 
@@ -759,7 +828,45 @@ export async function syncToSupabase(userId) {
     pushTable('badges', db.badges, badgeToRow, userId, 'user_id,key'))
   await optionalSync('challenges push', () =>
     pushTable('challenges', db.challenges, challengeToRow, userId, 'user_id,sync_id'))
+  await optionalSync('trash push', () => pushTrash(userId))
   await pushPreferences(userId)
+}
+
+/**
+ * Recently deleted, up: only what has not gone up yet.
+ *
+ * Not pushTable, which re-sends every row of a table on every sync. A
+ * deletion is never edited, and each holds whole copies of the rows it took
+ * - sending a month of them again every time would be all cost - so each
+ * goes once, and is marked when it has.
+ *
+ * @param {string} userId
+ */
+async function pushTrash(userId) {
+  const rows = (await db.trash.toArray()).filter(r => r.syncId && r.synced !== SYNCED)
+  if (!rows.length) return
+  const { error } = await supabase.from('trash')
+    .upsert(rows.map(r => trashToRow(r, userId)), { onConflict: 'user_id,sync_id', ignoreDuplicates: false })
+  if (error) throw new Error(`trash push: ${error.message}`)
+  await db.transaction('rw', db.trash, async () => {
+    for (const r of rows) await db.trash.update(r.id, { synced: SYNCED })
+  })
+}
+
+/**
+ * Recently deleted, down - and what has passed thirty days goes, here and
+ * on the server, rather than arriving on a new device only to be purged the
+ * first time Recently deleted is opened.
+ *
+ * @param {string} userId
+ * @param {Array<{table: string, match?: Record<string, any>}>} pending
+ */
+async function pullTrash(userId, pending) {
+  await pullSimpleTable('trash', db.trash, rowToTrash, null, userId, null, pending)
+  const cutoff = new Date(Date.now() - TRASH_DAYS * 86_400_000).toISOString()
+  const old = await db.trash.where('deletedAt').below(cutoff).toArray()
+  for (const e of old) if (e.syncId) await queueRemoteDelete('trash', { sync_id: e.syncId })
+  if (old.length) await db.trash.bulkDelete(old.map(e => e.id))
 }
 
 /**
@@ -1180,6 +1287,7 @@ export async function syncFromSupabase(userId) {
   await optionalSync('badges pull', () => pullBadges(userId))
   await optionalSync('challenges pull', () =>
     pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending))
+  await optionalSync('trash pull', () => pullTrash(userId, pending))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()

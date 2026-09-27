@@ -6,6 +6,7 @@ import {
 import CategoryGlyph from '../../components/CategoryGlyph'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { fmt, fmtCompact } from '../../lib/money'
+import { prefersReducedMotion } from '../../components/ui/motion'
 
 // ── Chart: Donut ───────────────────────────────────────────────────────────────
 
@@ -33,7 +34,7 @@ export function DonutChart({ segments, total, animKey, selected, onSelect, capti
             cx="50%" cy="50%" innerRadius={90} outerRadius={116}
             paddingAngle={3} cornerRadius={6} startAngle={90} endAngle={-270}
             onClick={(_, i) => onSelect(selected === i ? null : i)}
-            stroke="none" isAnimationActive animationBegin={0} animationDuration={600}
+            stroke="none" isAnimationActive={!prefersReducedMotion()} animationBegin={0} animationDuration={600}
           >
             {segments.map((seg, i) => (
               <Cell key={i} fill={`url(#sg-${animKey}-${i})`}
@@ -119,7 +120,7 @@ export function DailyAreaChart({ data, chartType = 'expenses' }) {
             stroke={color} strokeWidth={2.5}
             fill={`url(#${gradId})`} dot={false} baseValue={0}
             activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
-            animationDuration={800}
+            isAnimationActive={!prefersReducedMotion()} animationDuration={800}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -229,7 +230,7 @@ export function NetWorthChart({ data, color, currency, rangeKey }) {
             stroke={color} strokeWidth={2.5}
             fill={`url(#${gradId})`} dot={false} baseValue={floor}
             activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
-            animationDuration={800}
+            isAnimationActive={!prefersReducedMotion()} animationDuration={800}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -264,8 +265,8 @@ export function MultiBarChart({ data }) {
             }}
             cursor={{ fill: 'rgba(148,163,184,0.08)' }}
           />
-          <Bar dataKey="income"  fill="#22c55e" fillOpacity={0.85} radius={[4,4,0,0]} animationDuration={600} activeBar={{ stroke: 'none', fillOpacity: 1 }} />
-          <Bar dataKey="expense" fill="#ef4444" fillOpacity={0.85} radius={[4,4,0,0]} animationDuration={600} activeBar={{ stroke: 'none', fillOpacity: 1 }} />
+          <Bar dataKey="income"  fill="#22c55e" fillOpacity={0.85} radius={[4,4,0,0]} isAnimationActive={!prefersReducedMotion()} animationDuration={600} activeBar={{ stroke: 'none', fillOpacity: 1 }} />
+          <Bar dataKey="expense" fill="#ef4444" fillOpacity={0.85} radius={[4,4,0,0]} isAnimationActive={!prefersReducedMotion()} animationDuration={600} activeBar={{ stroke: 'none', fillOpacity: 1 }} />
         </BarChart>
       </ResponsiveContainer>
     </div>

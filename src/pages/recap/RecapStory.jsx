@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { AnimatePresence, MotionConfig, animate, motion, useIsPresent, useMotionValue, useReducedMotion } from 'motion/react'
+import { AnimatePresence, MotionConfig, animate, motion, useIsPresent, useMotionValue } from 'motion/react'
+import { useReduceMotion } from '../../hooks/useReduceMotion'
 import { recapSlides, wrappedTitle } from '../../lib/recapCopy'
 import { parseMonth } from '../../lib/recap'
 import { useScrollLock } from '../../hooks/useScrollLock'
@@ -156,7 +157,8 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
   const tones = useMemo(() => tonesFor(ids).map(t => pal.tones[t]), [ids, pal])
   const title = wrappedTitle(recap.month)
   const { year } = parseMonth(recap.month)
-  const reduce = useReducedMotion()
+  // The phone's Reduce Motion or Spendr's own switch - Motion's hook only knows the phone.
+  const reduce = useReduceMotion()
 
   /* Where the story is, and which way it last moved - a slide leaves the way
      the story is going. */
@@ -341,7 +343,7 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
   const chrome = 'w-10 h-10 rounded-full flex items-center justify-center text-white active:scale-95 transition-transform'
 
   return createPortal(
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion={reduce ? 'always' : 'never'}>
       {/* design-ok: a full-screen story, not a sheet. It owns the whole
           viewport and a drag-down close; Sheet's docked panel, handle and
           scrim are the opposite of that. */}

@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { MotionConfig } from 'motion/react'
+import { useReduceMotion } from '../../hooks/useReduceMotion'
 import { useTheme } from '../../context/ThemeContext'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { useToast } from '../../context/ToastContext'
@@ -58,6 +59,7 @@ export default function WrappedCard({ month, className = '' }) {
   const currency = useBaseCurrency()
   const { showToast } = useToast()
   const mode = theme === 'dark' ? 'dark' : 'light'
+  const reduce = useReduceMotion()
   const pal = useMemo(() => recapPalette(accentColor, mode), [accentColor, mode])
   const context = useMemo(() => ({ pal, tone: pal.tones[0], currency, hold: () => {} }), [pal, currency])
   const own = useMonthIcons(month)
@@ -89,7 +91,7 @@ export default function WrappedCard({ month, className = '' }) {
     : '0 14px 30px -18px rgba(15, 23, 42, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
 
   return (
-    <MotionConfig reducedMotion="user">
+    <MotionConfig reducedMotion={reduce ? 'always' : 'never'}>
       <SlideContext.Provider value={context}>
         <section className={className}>
           <div className="relative isolate overflow-hidden rounded-[28px]" style={{ background: pal.tones[0].background, boxShadow: cardShadow }}>

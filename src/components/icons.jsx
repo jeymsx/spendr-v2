@@ -183,7 +183,7 @@ import {
   Contrast01, ZapFast,
   CurrencyDollarCircle, CoinsSwap01, Globe01, Cursor01,
   Trophy01, Target04, CoinsStacked01, TrendUp01, BarChart10, Calculator,
-  AlertCircle, CheckCircle, Lock01,
+  AlertCircle, CheckCircle, Lock01, PauseCircle,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -196,6 +196,7 @@ function uui(Cmp, defaultSize = 18) {
 
 export const IconWarning   = uui(AlertTriangle)  // overdue, over budget, overdrawn
 export const IconLock      = uui(Lock01)         // the app lock, in What's New
+export const IconMotion    = uui(PauseCircle)    // Reduce motion, in What's New
 export const IconX         = uui(XClose)         // dismiss, and the error toast
 export const IconTick      = uui(Check)          // distinct from IconCheck above, hand-drawn
 export const IconTrash     = uui(Trash01)

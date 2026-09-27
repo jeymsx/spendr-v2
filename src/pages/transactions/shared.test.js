@@ -42,3 +42,24 @@ describe('grouping a day, from the reader s side', () => {
     expect(groups[0].date).toBe('unknown')
   })
 })
+
+/**
+ * Which rows the tile in a list can refile with one tap: money that came or
+ * went, filed by you - not a transfer, a refund, or a row the app wrote.
+ */
+describe('canRecategorize', () => {
+  it('takes an expense and an inflow', async () => {
+    const { canRecategorize } = await import('./shared')
+    expect(canRecategorize({ type: 'expense', category: 'Food' })).toBe(true)
+    expect(canRecategorize({ type: 'inflow', category: 'Salary' })).toBe(true)
+  })
+
+  it('leaves alone what has no category of its own to change', async () => {
+    const { canRecategorize } = await import('./shared')
+    expect(canRecategorize({ type: 'transfer' })).toBe(false)
+    expect(canRecategorize({ type: 'expense', category: 'Food', refundOf: 'buy-1', amount: -50 })).toBe(false)
+    expect(canRecategorize({ type: 'inflow', category: 'Debt Collection', settles: [{ id: 1 }] })).toBe(false)
+    expect(canRecategorize({ type: 'expense', category: 'Transfer Fee' })).toBe(false)
+    expect(canRecategorize({ type: 'expense', category: 'Food', description: 'Balance adjustment' })).toBe(false)
+  })
+})

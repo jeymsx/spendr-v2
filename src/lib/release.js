@@ -41,4 +41,19 @@ export const RELEASE_NOTES = [
     title: 'Highlights to swipe through',
     desc: 'Every fact about your month side by side, instead of one at random.',
   },
+  {
+    icon: 'categories',
+    title: 'Change a category from the list',
+    desc: "Tap a transaction's icon to file it under another category, without opening it.",
+  },
+  {
+    icon: 'trash',
+    title: 'Swipe to delete, and Recently deleted',
+    desc: 'Swipe a transaction left to delete it. It stays in Recently deleted for 30 days, to put back.',
+  },
+  {
+    icon: 'motion',
+    title: 'Reduce motion',
+    desc: "A switch in Preferences that turns off Spendr's animations, whatever your phone is set to.",
+  },
 ]

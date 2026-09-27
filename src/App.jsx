@@ -16,6 +16,7 @@ const AddExpense   = lazy(() => import('./pages/AddExpense'))
 const AddInflow    = lazy(() => import('./pages/AddInflow'))
 const Transfer     = lazy(() => import('./pages/Transfer'))
 const Transactions = lazy(() => import('./pages/Transactions'))
+const RecentlyDeleted = lazy(() => import('./pages/transactions/RecentlyDeleted'))
 const Insights     = lazy(() => import('./pages/Insights'))
 const InsightsTrend    = lazy(() => import('./pages/insights/TrendPage'))
 const InsightsExpenses = lazy(() => import('./pages/insights/ExpensesPage'))
@@ -103,6 +104,7 @@ export default function App() {
               <Route path="/transfer"     element={<Transfer />} />
               <Route path="/transactions/:id/edit" element={<EditTransaction />} />
               <Route path="/transactions" element={<Transactions />} />
+              <Route path="/transactions/deleted" element={<RecentlyDeleted />} />
               <Route path="/insights"     element={<Insights />} />
               {/* What the Insights cards open. They share its period
                   (pages/insights/period.js), so each opens on the month

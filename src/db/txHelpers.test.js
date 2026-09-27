@@ -47,6 +47,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  * @property {Row[]} recurring
  * @property {Row[]} templates
  * @property {Row[]} meta
+ * @property {Row[]} trash
  */
 
 /** @type {Store} */
@@ -67,9 +68,9 @@ function table(rows, key) {
       rows().push({ ...row, id })
       return id
     },
-    /** @param {number} id */
+    /** @param {number|string} id  by the table's own key, as Dexie does - meta is keyed by `key` */
     async get(id) {
-      return rows().find(r => r.id === id) ?? undefined
+      return rows().find(r => (key === 'id' ? r.id === id : r[key] === id)) ?? undefined
     },
     /** @param {number} id @param {Row} patch */
     async update(id, patch) {
@@ -92,9 +93,24 @@ function table(rows, key) {
       else all[i] = { ...all[i], ...row }
       return row[key]
     },
+    async clear() { rows().splice(0) },
+    async count() { return rows().length },
     /** @param {string} field */
     where(field) {
       return {
+        /** @param {any} value */
+        below(value) {
+          const hits = () => rows().filter(r => r[field] < value)
+          return {
+            async toArray() { return hits() },
+            async delete() {
+              const gone = new Set(hits())
+              const all = rows()
+              for (let i = all.length - 1; i >= 0; i--) if (gone.has(all[i])) all.splice(i, 1)
+              return gone.size
+            },
+          }
+        },
         /** @param {any} value */
         equals(value) {
           const hits = () => rows().filter(r => r[field] === value)
@@ -126,6 +142,7 @@ const db = {
   recurring:    table(() => store.recurring, 'id'),
   templates:    table(() => store.templates, 'id'),
   meta:         table(() => store.meta, 'key'),
+  trash:        table(() => store.trash, 'id'),
   /**
    * Dexie runs the body and rolls back if it throws. The rollback is the part
    * a fake cannot fake cheaply, so this snapshots the tables first and
@@ -152,12 +169,13 @@ const db = {
   },
 }
 
-vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1 }))
+vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1, TRASH_DAYS: 30 }))
 
 const {
   postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
-  updateTransaction, settleWithPerson, saveTemplate,
+  updateTransaction, settleWithPerson, saveTemplate, recategorize, refile,
 } = await import('./txHelpers')
+const { moveToTrash, restoreFromTrash, purgeTrash, describeEntry, deleteForever } = await import('./trash')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
 beforeEach(() => {
@@ -177,6 +195,7 @@ beforeEach(() => {
     recurring: [],
     templates: [],
     meta: [],
+    trash: [],
   }
 })
 
@@ -799,5 +818,170 @@ describe('saveTemplate', () => {
   it('refuses a template with no name rather than storing a blank one', async () => {
     expect(await saveTemplate(/** @type {any} */ ({ type: 'expense', amount: 1 }))).toBeNull()
     expect(store.templates).toHaveLength(0)
+  })
+})
+
+/**
+ * Recently deleted: a deletion kept whole for thirty days, and put back
+ * whole - the rows, the balance, the tombstone, and what it did to debts.
+ */
+describe('Recently deleted', () => {
+  const purchase = (over = {}) => ({
+    id: 90, txId: 'buy-1', type: 'expense', amount: 1000,
+    category: 'Groceries', account: 'Maya Savings', date: '2026-09-02T08:00:00+08:00', ...over,
+  })
+  const tombstones = () => store.meta.find(m => m.key === 'deletedTxIds')?.value ?? []
+
+  it('keeps a purchase and its refund as one deletion, and puts both back', async () => {
+    store.transactions.push(purchase())
+    await applyStartingSpend(1000)
+    await postRefund({ originalTxId: 'buy-1', amount: 300 })
+
+    const moved = await moveToTrash([store.transactions.find(t => t.txId === 'buy-1')])
+    expect(moved?.count).toBe(2)
+    expect(store.transactions).toHaveLength(0)
+    expect(store.trash).toHaveLength(1)
+    expect(acct('Maya Savings').balance).toBe(10000)
+    expect(tombstones()).toContain('buy-1')
+
+    const n = await restoreFromTrash(/** @type {number} */ (moved?.id))
+    expect(n).toBe(2)
+    expect(store.transactions.map(t => t.txId).sort()).toEqual(expect.arrayContaining(['buy-1']))
+    expect(store.transactions).toHaveLength(2)
+    expect(acct('Maya Savings').balance).toBe(9300)
+    expect(tombstones()).not.toContain('buy-1')
+    expect(store.trash).toHaveLength(0)
+  })
+
+  it('keeps a split whole: one leg swiped away takes, and brings back, every leg', async () => {
+    const { ids } = await postSplitExpense({
+      account: 'Maya Savings',
+      legs: [{ category: 'Groceries', amount: 600 }, { category: 'Household', amount: 400 }],
+    })
+    const moved = await moveToTrash([store.transactions.find(t => t.id === ids[0])])
+    expect(moved?.count).toBe(2)
+    expect(store.transactions).toHaveLength(0)
+
+    await restoreFromTrash(/** @type {number} */ (moved?.id))
+    expect(store.transactions.map(t => t.category).sort()).toEqual(['Groceries', 'Household'])
+    expect(acct('Maya Savings').balance).toBe(9000)
+  })
+
+  it('brings back the share of a split it removed with the purchase', async () => {
+    store.transactions.push(purchase())
+    store.debts.push({ id: 5, syncId: 'debt-5', name: 'Gelo', amount: 300, amountPaid: 0, type: 'owed_to_me', sourceTxId: 'buy-1' })
+
+    const moved = await moveToTrash([store.transactions[0]])
+    expect(store.debts).toHaveLength(0)
+    // The remote delete is waiting to go out...
+    expect(store.meta.find(m => m.key === 'pendingDeletes')?.value?.length).toBeGreaterThan(0)
+
+    await restoreFromTrash(/** @type {number} */ (moved?.id))
+    expect(store.debts).toHaveLength(1)
+    expect(store.debts[0]).toMatchObject({ syncId: 'debt-5', sourceTxId: 'buy-1', amount: 300 })
+    const pending = store.meta.find(m => m.key === 'pendingDeletes')?.value ?? []
+    // ...and is taken back, or the next sync would delete the share again...
+    expect(pending.filter((/** @type {any} */ p) => p.table === 'debts')).toHaveLength(0)
+    // ...and the tombstones go too, the share's and the purchase's, or the next pull would apply them.
+    expect(pending).toEqual(expect.arrayContaining([
+      { table: 'deletions', match: { table_name: 'debts', row_key: 'debt-5' } },
+      { table: 'deletions', match: { table_name: 'transactions', row_key: 'buy-1' } },
+    ]))
+  })
+
+  it('takes a deletion that went up down again, when it is put back or deleted for good', async () => {
+    store.transactions.push(purchase())
+    const moved = await moveToTrash([store.transactions[0]])
+    // As the push leaves it.
+    Object.assign(store.trash[0], { syncId: 'trash-1', synced: 1 })
+    await restoreFromTrash(/** @type {number} */ (moved?.id))
+    const pending = store.meta.find(m => m.key === 'pendingDeletes')?.value ?? []
+    expect(pending).toEqual(expect.arrayContaining([{ table: 'trash', match: { sync_id: 'trash-1' } }]))
+  })
+
+  it('never asks the server to delete a deletion it never had', async () => {
+    store.transactions.push(purchase())
+    const moved = await moveToTrash([store.transactions[0]])
+    Object.assign(store.trash[0], { syncId: 'trash-2' }) // made, not pushed
+    await deleteForever(/** @type {number} */ (moved?.id))
+    const pending = store.meta.find(m => m.key === 'pendingDeletes')?.value ?? []
+    expect(pending.some((/** @type {any} */ p) => p.table === 'trash')).toBe(false)
+    expect(store.trash).toHaveLength(0)
+  })
+
+  it('hooks a part-paid share back onto the purchase it was cut loose from', async () => {
+    store.transactions.push(purchase())
+    store.debts.push({ id: 6, syncId: 'debt-6', name: 'Gelo', amount: 300, amountPaid: 100, type: 'owed_to_me', sourceTxId: 'buy-1' })
+
+    const moved = await moveToTrash([store.transactions[0]])
+    expect(store.debts[0].sourceTxId).toBeNull()
+
+    await restoreFromTrash(/** @type {number} */ (moved?.id))
+    expect(store.debts[0].sourceTxId).toBe('buy-1')
+    expect(store.debts[0].amountPaid).toBe(100)
+  })
+
+  it('puts back what a deleted settlement had paid off', async () => {
+    store.debts.push({ id: 70, syncId: 'debt-70', contact: 'Gelo', name: 'Gelo', type: 'owed_to_me', amount: 250, amountPaid: 0, createdAt: '2026-08-01' })
+    await settleWithPerson(/** @type {any} */ ({ person: 'Gelo', rows: [store.debts[0]], amount: 100, account: 'Maya Savings', direction: 'owed_to_me' }))
+    expect(store.debts[0].amountPaid).toBe(100)
+
+    const moved = await moveToTrash([store.transactions[0]])
+    expect(store.debts[0].amountPaid).toBe(0)
+
+    await restoreFromTrash(/** @type {number} */ (moved?.id))
+    expect(store.debts[0].amountPaid).toBe(100)
+    expect(acct('Maya Savings').balance).toBe(10100)
+  })
+
+  it('puts back once: a second tap finds nothing to do', async () => {
+    store.transactions.push(purchase())
+    const moved = await moveToTrash([store.transactions[0]])
+    expect(await restoreFromTrash(/** @type {number} */ (moved?.id))).toBe(1)
+    expect(await restoreFromTrash(/** @type {number} */ (moved?.id))).toBe(0)
+    expect(store.transactions).toHaveLength(1)
+  })
+
+  it('forgets what is older than thirty days, and keeps the rest', async () => {
+    store.trash.push({ id: 1, deletedAt: '2026-08-01T00:00:00.000Z', txs: [] }, { id: 2, deletedAt: '2026-09-20T00:00:00.000Z', txs: [] })
+    await purgeTrash(new Date('2026-09-27T12:00:00.000Z'))
+    expect(store.trash.map(e => e.id)).toEqual([2])
+  })
+
+  it('reads a deletion by the row you acted on, and what went with it', () => {
+    const entry = /** @type {any} */ ({
+      id: 1, deletedAt: '2026-09-25T10:00:00.000Z',
+      txs: [
+        { txId: 'a', type: 'expense', amount: 600, splitId: 's1', description: 'Market' },
+        { txId: 'b', type: 'expense', amount: 400, splitId: 's1', description: 'Market' },
+      ],
+      debts: [], unhooked: [], paid: [],
+    })
+    const d = describeEntry(entry, new Date('2026-09-27T12:00:00.000Z'))
+    expect(d.lead.txId).toBe('a')
+    expect(d.total).toBe(1000)
+    expect(d.extra).toBe('With its 1 other part')
+    expect(d.daysLeft).toBe(28)
+  })
+})
+
+describe('recategorize', () => {
+  it('files rows under another category, stamped to sync, and refile puts them back', async () => {
+    store.transactions.push(
+      { id: 1, txId: 'a', type: 'expense', amount: 50, category: 'Food', synced: 1 },
+      { id: 2, txId: 'b', type: 'expense', amount: 50, category: 'Food', synced: 1 },
+    )
+    const before = await recategorize(store.transactions.slice(), 'Coffee')
+    expect(store.transactions.map(t => t.category)).toEqual(['Coffee', 'Coffee'])
+    expect(store.transactions.every(t => t.synced === 0 && typeof t.updatedAt === 'string')).toBe(true)
+
+    await refile(before)
+    expect(store.transactions.map(t => t.category)).toEqual(['Food', 'Food'])
+  })
+
+  it('leaves balances alone: only the filing changed', async () => {
+    store.transactions.push({ id: 1, txId: 'a', type: 'expense', amount: 50, category: 'Food', account: 'Maya Savings' })
+    await recategorize(store.transactions.slice(), 'Coffee')
+    expect(acct('Maya Savings').balance).toBe(10000)
   })
 })

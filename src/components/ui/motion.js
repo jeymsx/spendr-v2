@@ -35,9 +35,62 @@ export const EASE_EXIT = 'cubic-bezier(0.4, 0, 1, 1)'
  */
 export const EASE_MOVE = 'cubic-bezier(0.4, 0, 0.2, 1)'
 
-/** The OS setting, read when it is needed rather than once at load. */
-export function prefersReducedMotion() {
+// ── Reduce motion ────────────────────────────────────────────────────────
+//
+// Two ways to ask for it: the phone's own Reduce Motion, and Spendr's switch
+// in Preferences, which turns it on here whatever the phone says. Either one
+// is enough. The switch is kept on this device (localStorage), and marked on
+// <html> as `reduce-motion` - set before the first paint by index.html, so a
+// launch never plays the animations it is about to stop - where index.css
+// stops what CSS animates and everything below reads it for what script
+// moves.
+
+const REDUCE_KEY = 'spendr-reduce-motion'
+const REDUCE_CLASS = 'reduce-motion'
+const reduceListeners = new Set()
+
+/** Whether the switch in Preferences is on - not the phone's setting. */
+export function reduceMotionChosen() {
+  try { return localStorage.getItem(REDUCE_KEY) === '1' } catch { return false }
+}
+
+/** Turn the switch on or off, now and for next time. @param {boolean} on */
+export function setReduceMotion(on) {
+  try { localStorage.setItem(REDUCE_KEY, on ? '1' : '0') } catch { /* private window: this session only */ }
+  try { document.documentElement.classList.toggle(REDUCE_CLASS, on) } catch { /* no document: tests */ }
+  for (const l of reduceListeners) l()
+}
+
+/** The phone's own Reduce Motion. */
+export function systemReducesMotion() {
   try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches } catch { return false }
+}
+
+/**
+ * Should motion be reduced right now - by the phone or by the switch. Read
+ * when it is needed rather than once at load, so either can change while the
+ * app is open.
+ */
+export function prefersReducedMotion() {
+  let chosen = false
+  try { chosen = document.documentElement.classList.contains(REDUCE_CLASS) } catch { /* no document: tests */ }
+  return chosen || systemReducesMotion()
+}
+
+/**
+ * Hear about either changing. @param {() => void} fn
+ * @returns {() => void} stop listening
+ */
+export function onReducedMotionChange(fn) {
+  reduceListeners.add(fn)
+  /** @type {MediaQueryList|null} */
+  let mq = null
+  try { mq = window.matchMedia('(prefers-reduced-motion: reduce)') } catch { /* no window */ }
+  mq?.addEventListener?.('change', fn)
+  return () => {
+    reduceListeners.delete(fn)
+    mq?.removeEventListener?.('change', fn)
+  }
 }
 
 /**
@@ -63,7 +116,7 @@ export function spring({ from, to, velocity = 0, duration = 0.32, onUpdate, onCo
   const b = velocity + w * x0
   const start = performance.now()
   let raf = 0
-  const step = (now) => {
+  const step = (/** @type {number} */ now) => {
     const t = (now - start) / 1000
     const e = Math.exp(-w * t)
     const x = (x0 + b * t) * e
@@ -94,7 +147,7 @@ export function spring({ from, to, velocity = 0, duration = 0.32, onUpdate, onCo
 export function tween({ from, to, duration = 0.7, onUpdate, onComplete }) {
   const start = performance.now()
   let raf = 0
-  const step = (now) => {
+  const step = (/** @type {number} */ now) => {
     const p = Math.min(1, (now - start) / (duration * 1000))
     // Quint out: close to EASE_OUT, and exact at both ends.
     const e = 1 - (1 - p) ** 5

@@ -8,7 +8,7 @@ import {
   templateToRow, rowToTemplate,
   goalToRow, rowToGoal,
   badgeToRow,
-  challengeToRow, rowToChallenge,
+  challengeToRow, rowToChallenge, trashToRow, rowToTrash,
   isPendingDelete,
   isLocalIdConflict,
   deleteRecurringRemote,
@@ -311,6 +311,49 @@ describe('challenges', () => {
   it('reads a row with no setting as having none', () => {
     const back = rowToChallenge({ sync_id: 'c-2', key: 'log-seven', params: null, start_day: '2026-09-01', end_day: '2026-09-07', status: null })
     expect(back).toMatchObject({ key: 'log-seven', params: {}, status: 'active' })
+  })
+})
+
+/**
+ * Recently deleted, synced (022). A deletion travels without this device's
+ * row numbers: on another device they name somebody else's rows.
+ */
+describe('trash', () => {
+  const local = {
+    id: 7, syncId: 't-1', deletedAt: '2026-09-27T10:00:00.000Z', updatedAt: '2026-09-27T10:00:00.000Z', synced: UNSYNCED,
+    txs: [{ id: 41, txId: 'buy-1', type: 'expense', amount: 1000, recurringId: 3, recurringSyncId: 'bill-9', synced: SYNCED }],
+    debts: [{ id: 5, syncId: 'debt-5', name: 'Gelo', amount: 300 }],
+    unhooked: [{ id: 6, syncId: 'debt-6', sourceTxId: 'buy-1' }],
+    paid: [{ id: 70, syncId: 'debt-70', delta: 100 }],
+  }
+
+  it('goes up whole, known by its sync_id, its moment and what it held', () => {
+    const row = trashToRow(local, UID)
+    expect(row).toMatchObject({ user_id: UID, sync_id: 't-1', deleted_at: '2026-09-27T10:00:00.000Z' })
+    expect(row).not.toHaveProperty('local_id')
+    expect(row.entry.txs[0]).toMatchObject({ txId: 'buy-1', amount: 1000, recurringSyncId: 'bill-9' })
+  })
+
+  it("without any of this device's row numbers", () => {
+    const { entry } = trashToRow(local, UID)
+    expect(entry.txs[0]).not.toHaveProperty('id')
+    expect(entry.txs[0]).not.toHaveProperty('recurringId')
+    expect(entry.txs[0]).not.toHaveProperty('synced')
+    expect(entry.debts[0]).not.toHaveProperty('id')
+    expect(entry.unhooked[0]).toEqual({ syncId: 'debt-6', sourceTxId: 'buy-1' })
+    expect(entry.paid[0]).toEqual({ syncId: 'debt-70', delta: 100 })
+  })
+
+  it('comes down as a deletion this device can put back', () => {
+    const back = rowToTrash(trashToRow(local, UID))
+    expect(back).toMatchObject({ syncId: 't-1', deletedAt: local.deletedAt, synced: SYNCED })
+    expect(back.txs[0].txId).toBe('buy-1')
+    expect(back.debts[0].syncId).toBe('debt-5')
+  })
+
+  it('reads a row with nothing in it as a deletion of nothing, not a crash', () => {
+    expect(rowToTrash({ sync_id: 't-2', deleted_at: '2026-09-27T10:00:00.000Z', entry: null }))
+      .toMatchObject({ txs: [], debts: [], unhooked: [], paid: [] })
   })
 })
 

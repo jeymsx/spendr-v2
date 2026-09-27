@@ -7,6 +7,10 @@ import SubPage from '../../components/SubPage'
 import Segmented from '../../components/ui/Segmented'
 import { setViewMode, getViewPreference } from '../../web/useViewMode'
 import useRates from '../../hooks/useRates'
+import { PauseCircle } from '@untitledui/icons'
+import Switch from '../../components/ui/Switch'
+import { setReduceMotion, systemReducesMotion } from '../../components/ui/motion'
+import { useReduceMotionChosen } from '../../hooks/useReduceMotion'
 import {
   ACCENT_COLORS, IconPalette, RowChevron, RowDivider, RowIcon, SectionCard, SectionHeader, SettingsRow,
 } from './shared'
@@ -80,6 +84,8 @@ export default function Preferences() {
               }
               onTap={() => navigate('/settings/accent')}
             />
+            <RowDivider />
+            <ReduceMotionRow />
           </SectionCard>
         </div>
       </div>
@@ -272,6 +278,30 @@ function ModeSelect({ value, onChange, dark }) {
         <option value="separated">Separate</option>
       </select>
     </span>
+  )
+}
+
+/**
+ * Reduce motion: every animation and transition in Spendr finishes as it
+ * starts - sheets appear rather than slide, cards open without growing,
+ * charts are drawn already drawn. The phone's own Reduce Motion does the
+ * same on its own; with it on, this reads on and cannot be turned off here,
+ * because the phone's answer is the one to respect.
+ *
+ * A real switch (role="switch", its own state announced), not a row that
+ * looks like one: it is the one setting on this page that exists for
+ * accessibility, so it is the one that most has to say what it is.
+ */
+function ReduceMotionRow() {
+  const chosen = useReduceMotionChosen()
+  const system = systemReducesMotion()
+  return (
+    <SettingsRow
+      iconEl={<RowIcon color="slate"><PauseCircle size={18} strokeWidth={1.8} /></RowIcon>}
+      label="Reduce motion"
+      sublabel={system ? "On in your phone's settings" : 'Fewer animations and transitions'}
+      right={<Switch on={chosen || system} onChange={(/** @type {boolean} */ v) => setReduceMotion(v)} label="Reduce motion" disabled={system} />}
+    />
   )
 }
 

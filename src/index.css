@@ -53,6 +53,29 @@ html.dark {
   --surface-lifted: var(--dark-lifted);
 }
 
+/* ── Reduce motion, from Spendr's own switch ──────────────
+   The phone's Reduce Motion reaches every rule in this file written for
+   prefers-reduced-motion. The switch in Preferences cannot be a media query,
+   so it marks <html> instead (components/ui/motion.js), and this stops the
+   rest: every animation and transition finishes the moment it starts,
+   landing where it would have ended, so nothing is left half-way. Spinners
+   keep turning - they say something is still happening, which is not
+   decoration. What script moves reads the same mark. */
+html.reduce-motion *,
+html.reduce-motion *::before,
+html.reduce-motion *::after {
+  animation-duration: 0.01ms !important;
+  animation-delay: 0s !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  transition-delay: 0s !important;
+  scroll-behavior: auto !important;
+}
+html.reduce-motion .animate-spin {
+  animation-duration: 1s !important;
+  animation-iteration-count: infinite !important;
+}
+
 /* ── Base ─────────────────────────────────────────────── */
 *,
 *::before,
@@ -2118,6 +2141,13 @@ html.web.dark input[type="date"] {
   .recap-sway, .recap-nudge, .recap-spin { animation: none; }
   .recap-drop { animation: none; opacity: 0; }
 }
+
+/* A row dragged left to delete (components/ui/SwipeRow.jsx). The bin sits
+   at the strip's right end until the row is far enough to go on letting go;
+   then it jumps to the strip's left edge and rides the row, which is how
+   Mail says "this one is going". */
+.swipe-bin { transition: translate 0.16s var(--ease-out); }
+.swipe-strip[data-armed="true"] .swipe-bin { translate: calc(76px - var(--reveal, 76px)) 0; }
 
 /* An Insights card opening into its page, and closing back into it
    (pages/insights/zoom.js). The surface sits over the page and under the

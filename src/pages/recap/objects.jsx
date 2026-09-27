@@ -1,5 +1,6 @@
 import { useId, useMemo } from 'react'
-import { motion, useReducedMotion } from 'motion/react'
+import { motion } from 'motion/react'
+import { useReduceMotion } from '../../hooks/useReduceMotion'
 import { seeded, seedOf } from './assets'
 import { Logo } from './art'
 import { useBox, useSlide } from './parts'
@@ -249,7 +250,7 @@ const TICKS = 60
  */
 export function SavingsRing({ share, tone = 'good', label, children }) {
   const { pal } = useSlide()
-  const reduce = useReducedMotion()
+  const reduce = useReduceMotion()
   const id = `ring-${useId().replace(/:/g, '')}`
   const fill = Math.min(1, Math.max(0, share))
   const [from, to] = RING_STOPS[tone]
