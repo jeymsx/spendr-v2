@@ -38,11 +38,8 @@ import { clearCrashes, crashReport, readCrashes } from '../lib/crashLog'
 import { shareOrCopy } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { RemindersRow, RemindersSheet, useReminderSettings } from './settings/Reminders'
-
-/* TEMPORARY: the Face ID check (phase 1 of the app lock) is for the owner's
-   own phone, like the Google Sheets row, and for the dev server. Goes with
-   pages/settings/FaceIdTest.jsx and its route when the lock lands. */
-const FACE_ID_TESTER = 'sablayjames@gmail.com'
+import { useAppLock } from '../components/lock/LockGate'
+import { lockSummary } from '../lib/appLock'
 
 // ── Main Settings page ─────────────────────────────────────────────────────────
 
@@ -78,6 +75,7 @@ export default function Settings() {
   const { user, signOut } = useAuth()
   const { status: syncStatus } = useSyncManager()
   const reminders = useReminderSettings(user)
+  const appLock = useAppLock()
 
   const [dedupeOpen, setDedupeOpen] = useState(false)
   const [policyOpen, setPolicyOpen] = useState(/** @type {string|null} */ (null))
@@ -218,6 +216,14 @@ export default function Settings() {
             right={<RowChevron />}
             onTap={() => navigate('/settings/preferences')}
           />
+          <RowDivider />
+          <SettingsRow
+            iconEl={<RowIcon color="green"><IconFaceId /></RowIcon>}
+            label="App lock"
+            sublabel={lockSummary(appLock.config)}
+            right={<RowChevron />}
+            onTap={() => navigate('/settings/app-lock')}
+          />
           {/* Push reminders need the server that sends them. */}
           {isSupabaseConfigured && (
             <>
@@ -233,18 +239,6 @@ export default function Settings() {
             right={<RowChevron />}
             onTap={() => navigate('/settings/sync')}
           />
-          {(import.meta.env.DEV || user?.email === FACE_ID_TESTER) && (
-            <>
-              <RowDivider />
-              <SettingsRow
-                iconEl={<RowIcon color="slate"><IconFaceId /></RowIcon>}
-                label="Test Face ID"
-                sublabel="Temporary, for the app lock"
-                right={<RowChevron />}
-                onTap={() => navigate('/settings/face-id-test')}
-              />
-            </>
-          )}
         </SectionCard>
       </div>
 

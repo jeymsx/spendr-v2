@@ -24,6 +24,17 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.6.0',
+    date: '2026-09-27',
+    items: [
+      { title: 'Achievements', desc: 'Challenges you pick, milestones that keep climbing, and badges for the big moments, all in one place.' },
+      { title: 'A moment for every win', desc: 'Earning something fills the screen, and you can share it as a picture with your name on it.' },
+      { title: 'Clean style and Lights out', desc: 'A flat, quiet look, with true black in dark mode. Find it in Settings, under Preferences.' },
+      { title: 'Wrapped, easier to flip through', desc: 'New 3D art, and a tap anywhere moves on. Hold a chart to explore it.' },
+      { title: 'A tidier Settings', desc: 'Grouped the way you use it, with reports, backups and sync each one tap away.' },
+    ],
+  },
+  {
     version: '0.5.0',
     date: '2026-09-26',
     items: [

@@ -32,28 +32,13 @@ export const RELEASE_DATE = '2026-09-27'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'trophy',
-    title: 'Achievements',
-    desc: 'Challenges you pick, milestones that keep climbing, and badges for the big moments, all in one place.',
+    icon: 'lock',
+    title: 'Lock Spendr with Face ID',
+    desc: "Turn it on in Settings, under App lock. It asks for Face ID when you open Spendr, and a backup PIN gets you in if Face ID can't.",
   },
   {
     icon: 'sparkle',
-    title: 'A moment for every win',
-    desc: 'Earning something fills the screen, and you can share it as a picture with your name on it.',
-  },
-  {
-    icon: 'contrast',
-    title: 'Clean style and Lights out',
-    desc: 'A flat, quiet look, with true black in dark mode. Find it in Settings, under Preferences.',
-  },
-  {
-    icon: 'chart',
-    title: 'Wrapped, easier to flip through',
-    desc: 'New 3D art, and a tap anywhere moves on. Hold a chart to explore it.',
-  },
-  {
-    icon: 'settings',
-    title: 'A tidier Settings',
-    desc: 'Grouped the way you use it, with reports, backups and sync each one tap away.',
+    title: 'Sharper pictures to share',
+    desc: 'Badges and Wrapped slides saved on an iPhone come out crisp, without a grey box behind the art.',
   },
 ]

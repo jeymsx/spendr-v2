@@ -35,6 +35,7 @@ const Recap         = lazy(() => import('../pages/recap/RecapPage'))
    modals under html.web - so it is reused as it is too. */
 const Achievements  = lazy(() => import('../pages/Achievements'))
 const Changelog     = lazy(() => import('../pages/settings/Changelog'))
+const AppLock       = lazy(() => import('../pages/settings/AppLock'))
 
 function LoadingScreen() {
   return (
@@ -81,6 +82,7 @@ export default function WebApp() {
               <Route path="/recap/:month"  element={<WebFormPage><Recap /></WebFormPage>} />
               <Route path="/achievements"  element={<WebFormPage width={640}><Achievements /></WebFormPage>} />
               <Route path="/settings/changelog" element={<WebFormPage width={640}><Changelog /></WebFormPage>} />
+              <Route path="/settings/app-lock" element={<WebFormPage width={640}><AppLock /></WebFormPage>} />
               {/* Addresses only the phone layout has - a notification's link,
                   a bookmark, switching to desktop view while on one - go to
                   where desktop keeps the same thing, and anything else goes

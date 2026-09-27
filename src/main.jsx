@@ -10,6 +10,7 @@ import ErrorBoundary from './components/ErrorBoundary'
 import { recordCrash } from './lib/crashLog'
 import { version as APP_VERSION } from '../package.json'
 import Shell from './Shell'
+import LockGate from './components/lock/LockGate'
 /* Inter, from this origin rather than Google Fonts: the same three weights
    the stylesheet link used to ask for, so nothing renders differently, and
    one fewer third party contacted on every launch. Each weight brings all of
@@ -77,7 +78,9 @@ createRoot(document.getElementById('root')).render(
             <ToastProvider>
               <CurrencyProvider>
                 <FxContextSync />
-                <Shell />
+                <LockGate>
+                  <Shell />
+                </LockGate>
               </CurrencyProvider>
             </ToastProvider>
           </AuthProvider>

@@ -15,7 +15,7 @@ import { fieldFrame } from '../../components/ui/Field'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { IconChevronRight } from '../../components/icons'
 import {
-  Database01, FaceId, FileDownload02, LogOut01, MessageAlertCircle, RefreshCw01, ShieldTick, Sliders04,
+  Database01, FaceId, FileDownload02, LogOut01, MessageAlertCircle, Passcode, RefreshCw01, ShieldTick, Sliders04,
 } from '@untitledui/icons'
 import { toDateInput } from '../../utils/txDate'
 
@@ -253,6 +253,7 @@ export const IconReport   = ui(FileDownload02)
 export const IconFeedback = ui(MessageAlertCircle)
 export const IconDatabase = ui(Database01)
 export const IconFaceId   = ui(FaceId)
+export const IconPasscode = ui(Passcode)
 
 // ── UI primitives ──────────────────────────────────────────────────────────────
 

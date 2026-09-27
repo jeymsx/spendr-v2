@@ -11,6 +11,8 @@ import { downloadBackupJson } from '../../lib/backup'
 import { syncToSheets } from '../../lib/sheetsSync'
 import { setViewMode, getViewPreference } from '../useViewMode'
 import { APP_VERSION } from '../../lib/release'
+import { lockSummary } from '../../lib/appLock'
+import { useAppLock } from '../../components/lock/LockGate'
 import { useAchievements } from '../../context/AchievementContext'
 // Every heavy manager is the mobile sheet, reused — roughly 2,000 lines of
 // category, budget, template, profile, restore and reset logic.
@@ -108,6 +110,7 @@ function Toggle({ on, onChange, label }) {
 
 export default function WebSettings() {
   const navigate = useNavigate()
+  const appLock = useAppLock()
   const [section, setSection] = useState('profile')
   const { theme, toggleTheme, style, setStyle, accentColor, setAccentColor } = useTheme()
   const { user, signOut, signInWithGoogle } = useAuth()
@@ -308,6 +311,9 @@ export default function WebSettings() {
             <WebPanel title="Behaviour">
               <Row label="Skip confirmation" hint="Save transactions instantly, without a review step">
                 <Toggle on={skipConfirm} onChange={toggleSkip} label="Skip confirmation" />
+              </Row>
+              <Row label="App lock" hint={`${lockSummary(appLock.config)} · a lock on the screen, not encryption`}>
+                <Btn onClick={() => navigate('/settings/app-lock')}>Manage</Btn>
               </Row>
               <Row label="Layout" hint={`Currently desktop · preference: ${viewPref}`}>
                 <Btn onClick={() => setViewMode('mobile')}>Switch to mobile</Btn>

@@ -255,6 +255,8 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
   useEffect(() => {
     const onKey = (/** @type {KeyboardEvent} */ e) => {
       if (sharing) return
+      // Under the app lock the keys are the lock's: Space must reach its button.
+      if (document.documentElement.classList.contains('app-locked')) return
       // Alt+Left is the browser's own Back; leave every chord alone.
       if (e.altKey || e.ctrlKey || e.metaKey) return
       const onControl = !!(/** @type {HTMLElement} */ (e.target)).closest?.(OWNS_KEYS)

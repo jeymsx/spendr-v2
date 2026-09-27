@@ -2149,6 +2149,96 @@ html.web.dark input[type="date"] {
   .guide-closing .guide-card, .guide-closing .guide-scrim { animation: none; }
 }
 
+/* ── The app lock ────────────────────────────────────────────────────────────
+   components/lock/. While Spendr is locked, everything in the body but the
+   lock is hidden: the app, and anything it portalled over itself - a
+   celebration, the recap. While it is off screen the same goes, with a plain
+   cover and Spendr's mark in the middle, which is what the app switcher's
+   snapshot should show. The lock sits over even that.
+
+   visibility rather than display, so the app keeps its scroll positions and
+   half-filled forms under the lock; a hidden element cannot be tapped,
+   focused or read out either. */
+.app-lock-layer {
+  position: fixed;
+  inset: 0;
+  z-index: 2147483000;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  background-color: var(--surface-page);
+}
+html.app-locked body > :not(.app-lock-layer),
+html.app-covered body > :not(.app-lock-layer) {
+  visibility: hidden;
+}
+html.app-covered body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 2147482999;
+  background: var(--surface-page) url('/icons/icon-192.png') center / 76px 76px no-repeat;
+}
+
+.lock-screen {
+  min-height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: max(24px, env(safe-area-inset-top, 0px)) 24px max(24px, env(safe-area-inset-bottom, 0px));
+}
+
+/* Unlocked: the lock lifts off the app with a short blur. Switching between
+   Face ID and the PIN swaps its content the same way. No bounce. */
+@keyframes lockLeave { to { opacity: 0; filter: blur(6px); transform: scale(1.03); } }
+@keyframes lockSwap { from { opacity: 0; transform: translateY(8px); filter: blur(5px); } }
+.app-lock-leaving { animation: lockLeave 0.22s ease-in both; pointer-events: none; }
+.lock-swap { animation: lockSwap 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+/* The PIN: dots that fill, and round keys a thumb can find. */
+.pin-dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 9999px;
+  border: 2px solid #cbd5e1;
+  transition: background-color 0.12s ease-out, border-color 0.12s ease-out;
+}
+.dark .pin-dot { border-color: rgba(255, 255, 255, 0.32); }
+.pin-dot-on { background-color: #0f172a; border-color: #0f172a; }
+.dark .pin-dot-on { background-color: #ffffff; border-color: #ffffff; }
+.pin-dot-wrong.pin-dot-on,
+.dark .pin-dot-wrong.pin-dot-on { background-color: #ef4444; border-color: #ef4444; }
+
+.pin-slot { display: flex; align-items: center; justify-content: center; }
+.pin-key {
+  width: 72px;
+  height: 72px;
+  border-radius: 9999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: #0f172a;
+  background-color: #f1f5f9;
+  transition: background-color 0.12s ease-out, transform 0.1s ease-out;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.dark .pin-key { color: #ffffff; background-color: rgba(255, 255, 255, 0.08); }
+.pin-key:active:not(:disabled) { background-color: #e2e8f0; transform: scale(0.96); }
+.dark .pin-key:active:not(:disabled) { background-color: rgba(255, 255, 255, 0.16); }
+.pin-key:disabled { opacity: 0.4; }
+.pin-key:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.pin-key-quiet,
+.dark .pin-key-quiet { background-color: transparent; color: #64748b; }
+.dark .pin-key-quiet { color: #cbd5e1; }
+
+@media (prefers-reduced-motion: reduce) {
+  .app-lock-leaving, .lock-swap { animation: none; }
+  .pin-key:active:not(:disabled) { transform: none; }
+}
+
 /* ══ The clean style: html.flat ═══════════════════════════════════════
    Preferences > Style > Clean. Flat, neutral surfaces with hairline edges -
    the iOS and shadcn look - instead of Spendr's accent glow and tinted

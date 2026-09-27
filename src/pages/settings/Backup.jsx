@@ -10,6 +10,7 @@ import db from '../../db/db'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { inspectBackup, restoreBackup } from '../../lib/backup'
+import { clearLock } from '../../lib/appLock'
 import { IconUpload } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
@@ -263,6 +264,9 @@ export function ResetConfirmModal({ open, onClose }) {
         await db.meta.clear()
         await db.notifications.clear()
       })
+      /* The app lock too: a fresh start behind yesterday's Face ID would be a
+         locked door on an empty room. */
+      clearLock()
       // Sign out so the Onboarding auto-sign-in effect doesn't fire on reload
       await signOut()
       window.location.replace('/')

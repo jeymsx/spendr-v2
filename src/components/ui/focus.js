@@ -26,6 +26,10 @@ const FOCUSABLE = [
  */
 export function keepTabInside(e, container) {
   if (e.key !== 'Tab' || !container) return
+  /* Under the app lock the page is hidden; a sheet left open there must let
+     Tab through to the lock rather than wrap it round controls nobody can
+     see or reach. */
+  if (document.documentElement.classList.contains('app-locked') && !container.closest('.app-lock-layer')) return
   const nodes = [...container.querySelectorAll(FOCUSABLE)]
     .filter(n => !n.hasAttribute('hidden') && !n.closest('[aria-hidden="true"]'))
   if (!nodes.length) { e.preventDefault(); return }

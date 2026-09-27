@@ -88,6 +88,8 @@ export default function Celebration({ item, mode = 'earned', locked = false, how
     const before = /** @type {HTMLElement|null} */ (document.activeElement)
     dialogRef.current?.focus({ preventScroll: true })
     const onKey = (/** @type {KeyboardEvent} */ e) => {
+      // Under the app lock the keys are the lock's.
+      if (document.documentElement.classList.contains('app-locked')) return
       if (e.key === 'Escape') { e.preventDefault(); e.stopPropagation(); closeRef.current() }
       else if (e.key === 'Tab') { keepTabInside(e, dialogRef.current); e.stopPropagation() }
     }
