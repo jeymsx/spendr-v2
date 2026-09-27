@@ -162,7 +162,7 @@ export function SettledSection({ debts, onEdit }) {
       <div className="px-5 mb-2.5">
         <button
           onClick={() => setExpanded(p => !p)}
-          className="w-full flex items-center gap-2 text-left"
+          className="press press-fade active:opacity-60 w-full flex items-center gap-2 text-left"
           aria-expanded={expanded}
         >
           <span className="flex-1 text-13 font-semibold text-slate-700 dark:text-slate-200">

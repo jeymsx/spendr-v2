@@ -243,8 +243,9 @@ export function TxRow({ tx, catMap, onClick }) {
   return (
     <button
       onClick={() => onClick(tx)}
-      className="w-full flex items-center gap-3 px-4 py-3 text-left
-        active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+      /* press-fade: the tint comes in fast and fades out slowly - index.css. */
+      className="press press-fade w-full flex items-center gap-3 px-4 py-3 text-left
+        active:bg-slate-50 dark:active:bg-white/[0.04]"
     >
       <div
         className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"

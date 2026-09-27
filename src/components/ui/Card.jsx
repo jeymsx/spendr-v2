@@ -73,7 +73,8 @@ export default function Card({
         RADIUS[radius] ?? RADIUS['2xl'],
         PAD[padding] ?? PAD.none,
         clip && 'overflow-hidden',
-        interactive && 'active:scale-[0.98] transition-transform duration-100',
+        // The shared press in index.css - the same one Button uses.
+        interactive && 'press',
         Tag === 'button' && 'w-full text-left',
         className,
       )}

@@ -112,7 +112,7 @@ function MonthNav({ monthOffset, onMonth }) {
           <polyline points="15 18 9 12 15 6"/>
         </svg>
       </button>
-      <button onClick={() => !isCurrent && onMonth(0)} className="flex items-center gap-1.5">
+      <button onClick={() => !isCurrent && onMonth(0)} className="press press-fade active:opacity-60 flex items-center gap-1.5">
         <span className="text-13 font-semibold text-slate-600 dark:text-slate-300">{monthLabel}</span>
         {!isCurrent && (
           <span className="text-10 font-bold px-1.5 py-0.5 rounded-full bg-primary/10 text-primary">Now</span>

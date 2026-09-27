@@ -43,6 +43,7 @@ import { TxList, TrendDelta } from './accounts/DetailBits'
 import CardPaymentSheet from './accounts/CardPaymentSheet'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import ProgressBar from '../components/ui/ProgressBar'
+import RollingNumber from '../components/ui/RollingNumber'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import useRates from '../hooks/useRates'
 
@@ -434,7 +435,13 @@ export default function AccountDetail() {
         <p className={`text-38 leading-none font-semibold tracking-tight tabular-nums ${
           isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
         }`}>
-          {acctFmt(totalUsed)}
+          {/* Rolls from what you last saw - ui/RollingNumber. Delete or
+              refund something here and the balance counts to its new self. */}
+          <RollingNumber
+            id={`acct-hero:${account?.id}:${account?.currency}`}
+            value={totalUsed}
+            format={acctFmt}
+          />
         </p>
 
         {isCredit && limit > 0 && (

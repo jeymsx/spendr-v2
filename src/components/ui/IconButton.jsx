@@ -43,7 +43,10 @@ import { cx } from './cx'
  * and stays quiet.
  */
 
-const PRESS = 'active:scale-90 transition-transform duration-75'
+/* A 10% shrink - a chip is small enough that 2% reads as nothing - on the
+   shared press timing in index.css: quick in, slow settle. It was 75ms both
+   ways, which snapped back before the thumb had lifted clear of it. */
+const PRESS = 'press press-icon'
 
 const VARIANT = {
   /** The default: a raised neutral chip, for back and toolbar actions. */

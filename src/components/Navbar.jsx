@@ -64,10 +64,12 @@ function Tab({ path, label, Icon }) {
   return (
     <NavLink
       to={path}
-      className="flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors duration-150"
+      /* nav-tab / nav-tab-icon: the icon gives under the thumb - see
+         index.css. The most-pressed control in the app answered nothing. */
+      className="nav-tab flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors duration-150"
       style={{ color: active ? 'var(--color-primary)' : undefined }}
     >
-      <span className={active ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}>
+      <span className={`nav-tab-icon ${active ? 'text-primary' : 'text-slate-400 dark:text-slate-500'}`}>
         <Icon active={active} />
       </span>
       <span

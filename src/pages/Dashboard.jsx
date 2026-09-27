@@ -1,5 +1,7 @@
 import { useMemo, useState, useCallback, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { AnimatePresence } from 'motion/react'
+import { PresenceItem, useRowMotion } from '../components/ui/Presence'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -22,9 +24,11 @@ import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
 import { fmt, baseSymbol, fmtHidden } from '../lib/money'
 import {
-  ContextHint, getContextHint, getGreeting, monthPrefix, useCountUp,
+  ContextHint, getContextHint, getGreeting, monthPrefix,
   quickActionCounts,
 } from './dashboard/shared'
+import RollingNumber from '../components/ui/RollingNumber'
+import { useSwap } from '../components/ui/useSwap'
 import { useWalletClip } from './dashboard/wallet'
 import DashboardSkeleton from './dashboard/Skeleton'
 import {
@@ -50,6 +54,10 @@ export default function Dashboard() {
   const [balanceHidden,    setBalanceHidden]    = useState(true)
   const [accountsHidden,   setAccountsHidden]   = useState(false)
   const [peek,             setPeek]             = useState(false)
+  /* The wallet's figures swap through a short blur when the eye or a
+     press-and-hold reveals or hides them - see ui/useSwap. The account rail
+     below has its own eye, and its cards answer it themselves. */
+  const swap = useSwap(!balanceHidden || peek)
   // The wallet's tab folds the breakdown away. Remembered, because it is a
   // preference about how much of your own finances you want on screen.
   const [breakdownOpen,    setBreakdownOpen]    = useState(() => {
@@ -204,6 +212,16 @@ export default function Dashboard() {
       // is "does anything here look wrong", and "See all" is right there.
       .slice(0, 5)
   }, [txAll])
+
+  /* Rows that arrive and leave - see components/ui/Presence.jsx. The scope is
+     shared with Transactions: a row seen arriving here has been seen, and
+     does not arrive again there. Above the skeleton's early return, as hooks
+     have to be. */
+  const allTxIds  = useMemo(() => (txAll ?? []).map(t => t.id), [txAll])
+  const recentIds = useMemo(() => recentTx.map(t => t.id), [recentTx])
+  const recentRows = useRowMotion({
+    scope: 'ledger', ready: txAll !== undefined, allIds: allTxIds, visibleIds: recentIds, viewKey: '',
+  })
 
   const monthExpenses = useMemo(() => {
     const pfx = monthPrefix()
@@ -409,8 +427,11 @@ export default function Dashboard() {
   const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
 
-  // ── Animated net worth ────────────────────────────────────────────────────────
-  const animatedNetWorth = useCountUp(netWorth)
+  /* The figures roll from what you last saw - see ui/RollingNumber. This used
+     to count up from zero with a hook that set state every frame, which
+     re-rendered the whole home screen sixty times a second for a second. It
+     also never ran: it fired while the page was still loading, counted 0 to
+     0, and jumped when the real figure arrived. */
 
   // ── Loading skeleton ──────────────────────────────────────────────────────────
   /* The Wrapped card waits with the rest on the days it shows: arriving
@@ -513,11 +534,15 @@ export default function Dashboard() {
 
                 <div className="mt-2">
                   {revealed ? (
-                    <span className="text-4xl font-semibold tracking-tight text-white tabular-nums">
-                      {fmt(animatedNetWorth, shownCurrency)}
+                    <span key="shown" className={`${swap} text-4xl font-semibold tracking-tight text-white tabular-nums`}>
+                      <RollingNumber
+                        id={`home:net:${shownCurrency}`}
+                        value={netWorth}
+                        format={v => fmt(v, shownCurrency)}
+                      />
                     </span>
                   ) : (
-                    <span className="text-4xl font-semibold tracking-tight text-white/80">{fmtHidden(shownCurrency, 6)}</span>
+                    <span key="hidden" className={`${swap} text-4xl font-semibold tracking-tight text-white/80`}>{fmtHidden(shownCurrency, 6)}</span>
                   )}
                 </div>
 
@@ -559,22 +584,28 @@ export default function Dashboard() {
                     <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-5 pb-1.5">
                   <div>
                     <p className="text-white/50 text-11 mb-1">Spending</p>
-                    <p className="text-white font-semibold text-sm tabular-nums">
-                      {revealed ? fmt(spendingBalance, shownCurrency) : '••••'}
+                    <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
+                      {revealed
+                        ? <RollingNumber id={`home:spending:${shownCurrency}`} value={spendingBalance} format={v => fmt(v, shownCurrency)} />
+                        : '••••'}
                     </p>
                     <p className="text-white/35 text-10 mt-0.5">Cash, wallets</p>
                   </div>
                   <div>
                     <p className="text-white/50 text-11 mb-1">Savings</p>
-                    <p className="text-white font-semibold text-sm tabular-nums">
-                      {revealed ? fmt(savingsBalance, shownCurrency) : '••••'}
+                    <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
+                      {revealed
+                        ? <RollingNumber id={`home:savings:${shownCurrency}`} value={savingsBalance} format={v => fmt(v, shownCurrency)} />
+                        : '••••'}
                     </p>
                     <p className="text-white/35 text-10 mt-0.5">Banks, deposits</p>
                   </div>
                   <div>
                     <p className="text-white/50 text-11 mb-1">Credit</p>
-                    <p className="font-semibold text-sm tabular-nums text-white">
-                      {revealed ? fmt(creditOutstanding, shownCurrency) : '••••'}
+                    <p key={revealed ? 's' : 'h'} className={`${swap} font-semibold text-sm tabular-nums text-white`}>
+                      {revealed
+                        ? <RollingNumber id={`home:credit:${shownCurrency}`} value={creditOutstanding} format={v => fmt(v, shownCurrency)} />
+                        : '••••'}
                     </p>
                     <p className="text-white/35 text-10 mt-0.5">
                       {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}
@@ -723,14 +754,17 @@ export default function Dashboard() {
               body={<>Tap <span className="font-semibold">+</span> to add your first entry</>}
             />
           ) : (
-            recentTx.map((tx, i) => (
-              <TxRow
-                key={tx.id}
-                tx={tx}
-                cat={catMap[tx.category]}
-                isLast={i === recentTx.length - 1}
-              />
-            ))
+            <AnimatePresence key={recentRows.epoch} initial={false}>
+              {recentTx.map((tx, i) => (
+                <PresenceItem key={tx.id} appear={recentRows.arrival(tx.id)}>
+                  <TxRow
+                    tx={tx}
+                    cat={catMap[tx.category]}
+                    isLast={i === recentTx.length - 1}
+                  />
+                </PresenceItem>
+              ))}
+            </AnimatePresence>
           )}
         </Card>
       </section>

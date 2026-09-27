@@ -126,7 +126,7 @@ function PersonRow({
         onClick={onToggle}
         aria-pressed={included}
         aria-label={included ? `Leave ${label} out` : `Include ${label}`}
-        className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center
+        className="press press-icon w-9 h-9 rounded-full shrink-0 flex items-center justify-center
           text-11 font-bold text-white relative"
         style={{ background: avatarBg }}
       >

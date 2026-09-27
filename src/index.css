@@ -1274,17 +1274,134 @@ html.dark body {
   overflow: hidden;
 }
 
-/* ── Bottom sheet ─────────────────────────────────────── */
-.sheet-overlay {
-  animation: fadeIn 0.22s ease forwards;
+/* ── Motion: the timings every surface shares ──────────────────────────────
+   Three curves and two durations, and components/ui/motion.js holds the same
+   numbers for what a finger drives. Zero bounce anywhere: things settle, they
+   do not overshoot.
+
+   --ease-settle is the account card's release curve, which was already the
+   best press in the app: it answers a thumb fast and settles back slowly.
+   Equal durations both ways is what makes a press feel rubbery.          */
+:root {
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-settle: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --press-in: 90ms;
+  --press-out: 320ms;
 }
 
+/* ── Press ─────────────────────────────────────────────────────────────────
+   What Button, IconButton and an interactive Card do when touched: a small
+   shrink in 90ms, and a 320ms settle back when the finger lifts. They each
+   had `active:scale-* transition-transform duration-100`, the same 100ms in
+   and out, and an active background that changed instantly beside it.
+
+   The `scale` property, not `transform`, so it composes with any transform
+   the element already has instead of replacing it. And :not(:disabled) in
+   the selector itself: this rule is unlayered, so it outranks Tailwind's
+   `disabled:active:scale-100`, and a disabled button must not answer.    */
+.press {
+  transition:
+    scale var(--press-out) var(--ease-settle),
+    background-color var(--press-out) var(--ease-settle),
+    color var(--press-out) var(--ease-settle),
+    opacity var(--press-out) var(--ease-settle),
+    box-shadow var(--press-out) var(--ease-settle);
+}
+
+.press:active:not(:disabled):not([aria-disabled='true']) {
+  scale: var(--press-scale, 0.98);
+  transition-duration: var(--press-in);
+  transition-timing-function: var(--ease-out);
+}
+
+/* A 36px chip reads a 2% shrink as nothing at all. */
+.press-icon {
+  --press-scale: 0.9;
+}
+
+/* No shrink: the element's own `active:bg-*` or `active:opacity-*` is the
+   answer, on the same quick-in, slow-out timing. For rows inside a card - a
+   row shrinking away from its card's edges reads as the list breaking - and
+   for text actions, which dim the way the platform's do.               */
+.press-fade {
+  --press-scale: 1;
+}
+
+/* A figure turning into its other self - hidden to shown, and back. The
+   dots and the number are two elements, so the new one resolves out of a
+   short blur where the old one was, rather than the text changing under
+   you in a frame. Opacity and filter only: it has to work on an inline
+   span without moving the line it sits on.                             */
+.swap-in {
+  animation: swapIn 0.24s var(--ease-out) both;
+}
+
+@keyframes swapIn {
+  from { opacity: 0; filter: blur(6px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+
+/* The tab bar: the icon gives under the thumb, the label stays put.   */
+.nav-tab-icon {
+  transition: scale var(--press-out) var(--ease-settle);
+}
+
+.nav-tab:active .nav-tab-icon {
+  scale: 0.86;
+  transition-duration: var(--press-in);
+  transition-timing-function: var(--ease-out);
+}
+
+/* ── Bottom sheet ─────────────────────────────────────── */
+
+/* `backwards`, not `forwards`: once the fade in is done the scrim's opacity
+   belongs to the element again, so a drag can write it and the exit can
+   transition it. A forwards fill would hold it at 1 over both.          */
+.sheet-overlay {
+  animation: fadeIn 0.22s ease backwards;
+  transition: opacity 0.24s var(--ease-sheet);
+}
+
+.sheet-overlay.sheet-overlay-out {
+  opacity: 0;
+}
+
+/* The panel travels its own height plus 80px.
+
+   It travelled exactly its own height, which is right for a docked sheet
+   and wrong for a floating one: that stands 12px - or the home indicator's
+   34px - off the bottom edge, so it arrived with a strip already showing
+   and left with the same strip still on screen, which then vanished in a
+   frame. 80px clears the largest gap plus the 32px its shadow reaches
+   above it. A docked sheet spends the extra off screen, a few ms of an
+   animation this front-loaded.                                          */
 .sheet-panel {
-  animation: slideUp 0.30s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  animation: sheetIn 0.32s var(--ease-sheet) forwards;
 }
 
 .sheet-panel-exit {
-  animation: slideDown 0.24s cubic-bezier(0.32, 0.72, 0, 1) forwards;
+  animation: sheetOut 0.24s var(--ease-sheet) forwards;
+}
+
+/* Where a drag can start - see useSheetDrag.js. The grab zone gives the
+   browser nothing, so vertical movement comes to the sheet rather than being
+   claimed as a scroll. A floating panel keeps sideways for its rails and
+   swipe rows, and its body too: touch-action is judged up to the nearest
+   scroll container, and the body is one even when it has nothing to scroll. */
+.sheet-grab {
+  touch-action: none;
+}
+
+.sheet-drag-all,
+.sheet-drag-all [data-sheet-body] {
+  touch-action: pan-x;
+}
+
+/* Reduced motion: the sheet still arrives and leaves, as a dissolve. */
+@media (prefers-reduced-motion: reduce) {
+  .sheet-panel      { animation: fadeIn 0.18s ease forwards; }
+  .sheet-panel-exit { animation: fadeOut 0.16s ease forwards; }
 }
 
 /* ── Where a sheet sits: floating card, or docked to the bottom ─────────
@@ -1337,14 +1454,14 @@ html.dark body {
   to   { opacity: 1; }
 }
 
-@keyframes slideUp {
-  from { transform: translateY(100%); }
+@keyframes sheetIn {
+  from { transform: translateY(calc(100% + 80px)); }
   to   { transform: translateY(0); }
 }
 
-@keyframes slideDown {
+@keyframes sheetOut {
   from { transform: translateY(0); }
-  to   { transform: translateY(100%); }
+  to   { transform: translateY(calc(100% + 80px)); }
 }
 
 /* ── Page enter ───────────────────────────────────────── */
@@ -1573,14 +1690,6 @@ button, a {
 input, textarea, [contenteditable] {
   -webkit-user-select: text;
   user-select: text;
-}
-
-/* ── Haptic press scale ───────────────────────────────── */
-.press-scale {
-  transition: transform 100ms ease;
-}
-.press-scale:active:not(:disabled) {
-  transform: scale(0.97);
 }
 
 /* ── Skeleton shimmer (dark-mode optimised) ───────────── */
