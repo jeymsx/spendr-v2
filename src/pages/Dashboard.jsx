@@ -39,7 +39,10 @@ import UpcomingSection from './dashboard/Upcoming'
 import Rail from '../components/ui/Rail'
 import SectionHeading from '../components/ui/SectionHeading'
 import useRates from '../hooks/useRates'
-import { convert, sumInBase } from '../lib/fx'
+import useNetWorthDebts from '../hooks/useNetWorthDebts'
+import { convert } from '../lib/fx'
+import { netWorthBreakdown } from '../lib/netWorth'
+import { isSpend } from '../lib/flows'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { txBase } from '../lib/fxContext'
 import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
@@ -170,23 +173,6 @@ export default function Dashboard() {
     [separated, baseCurrency],
   )
 
-  const { spendingBalance, savingsBalance, unconverted } = useMemo(() => {
-    const allAccts = accounts || []
-    const roleOf = (a) => {
-      if (a.type === 'credit') return 'credit'
-      if (a.role) return a.role
-      return ['cash', 'ewallet'].includes(a.type) ? 'spending' : 'savings'
-    }
-    // Parents have their own real balance; sum all accounts (no double-counting)
-    const spend = sumInBase(inScope(allAccts.filter(a => roleOf(a) === 'spending'), shownCurrency), shownCurrency, rates)
-    const save  = sumInBase(inScope(allAccts.filter(a => roleOf(a) === 'savings'), shownCurrency),  shownCurrency, rates)
-    return {
-      spendingBalance: spend.total,
-      savingsBalance: save.total,
-      unconverted: [...new Set([...spend.missing, ...save.missing])].sort(),
-    }
-  }, [accounts, shownCurrency, rates, inScope])
-
   const parentCombinedBal = useMemo(() => {
     const allAccts = accounts || []
     const map = {}
@@ -227,7 +213,7 @@ export default function Dashboard() {
     const pfx = monthPrefix()
     const cutoff = scheduledCutoff()
     return (txAll || []).filter(t =>
-      t.type === 'expense' && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
+      isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 
   const budgetCategories = useMemo(() => {
@@ -394,35 +380,55 @@ export default function Dashboard() {
     [recurring, debts, goalRows, accounts, baseCurrency, rates],
   )
 
-  const creditOutstanding = useMemo(() =>
-    sumInBase(
-      inScope((accounts || []).filter(a => a.type === 'credit'), shownCurrency),
-      shownCurrency,
-      rates,
-      a => creditStmtMap[a.name]?.currentBalance ?? 0,
-    ).total,
-    [accounts, creditStmtMap, shownCurrency, rates, inScope],
-  )
+  /* Net worth and its piles, from the one definition every screen uses -
+     lib/netWorth.js. Investments, loans and (when Preferences says so) money
+     between you and other people are in it; separated mode narrows it to the
+     accounts held in the currency on display. */
+  const nwDebts = useNetWorthDebts()
+  const breakdown = useMemo(() => netWorthBreakdown({
+    accounts: accounts || [], transactions: txAll || [],
+    view: shownCurrency, ledger: baseCurrency, rates,
+    creditStatus: creditStmtMap,
+    debts: nwDebts.debts, includeDebts: nwDebts.include,
+    scope: separated ? (accts) => inScope(accts, shownCurrency) : undefined,
+  }), [accounts, txAll, shownCurrency, baseCurrency, rates, creditStmtMap, nwDebts.debts, nwDebts.include, separated, inScope])
 
-  const netWorth = spendingBalance + savingsBalance - creditOutstanding
+  const netWorth = breakdown.total
+  const unconverted = breakdown.missing
 
   /* The OTHER currencies' net worth, at face value, for the lines under the
      headline. Only in separated mode, and only the ones not currently on
      display - the big figure is already saying that one. */
   const otherTotals = useMemo(() => {
     if (!separated) return []
-    const allAccts = accounts || []
     return viewOptions
       .filter(code => code !== shownCurrency)
-      .map(code => {
-        const held = allAccts.filter(a => (a.currency || baseCurrency) === code)
-        const assets = held.filter(a => a.type !== 'credit')
-          .reduce((sum, a) => sum + (a.balance ?? 0), 0)
-        const owed = held.filter(a => a.type === 'credit')
-          .reduce((sum, a) => sum + (creditStmtMap[a.name]?.currentBalance ?? 0), 0)
-        return { code, total: assets - owed }
-      })
-  }, [separated, accounts, viewOptions, shownCurrency, baseCurrency, creditStmtMap])
+      .map(code => ({
+        code,
+        total: netWorthBreakdown({
+          accounts: accounts || [], transactions: txAll || [],
+          view: code, ledger: baseCurrency, rates,
+          creditStatus: creditStmtMap,
+          debts: nwDebts.debts, includeDebts: nwDebts.include,
+          scope: (accts) => accts.filter(a => (a.currency || baseCurrency) === code),
+        }).total,
+      }))
+  }, [separated, accounts, txAll, viewOptions, shownCurrency, baseCurrency, rates, creditStmtMap, nwDebts.debts, nwDebts.include])
+
+  /* The wallet's piles. Spending, Savings and Credit always - they are what
+     everybody has - and the rest only once there is something in them, so a
+     ledger with no investment never grows a tile reading ₱0.00 for one. */
+  const pileTiles = [
+    { key: 'spending', label: 'Spending', value: breakdown.spending, note: 'Cash, wallets' },
+    { key: 'savings', label: 'Savings', value: breakdown.savings, note: 'Banks, deposits' },
+    breakdown.has.invested && { key: 'invested', label: 'Investments', value: breakdown.invested, note: 'At last value' },
+    { key: 'credit', label: 'Credit', value: breakdown.credit, note: breakdown.credit > 0 ? 'Outstanding' : 'Paid off' },
+    breakdown.has.loans && { key: 'loans', label: 'Loans', value: breakdown.loans, note: breakdown.loans > 0.005 ? 'Left to pay' : 'Paid off' },
+    breakdown.has.people && {
+      key: 'people', label: 'People', value: Math.abs(breakdown.people),
+      note: breakdown.people >= 0 ? 'Owed to you' : 'You owe',
+    },
+  ].filter(Boolean)
 
   const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
@@ -437,7 +443,7 @@ export default function Dashboard() {
   /* The Wrapped card waits with the rest on the days it shows: arriving
      after the page had drawn, it pushed the budget and everything under it
      down under a reader's thumb. */
-  if (accounts === undefined || txAll === undefined || (wrappedDays && recapMonth === undefined)) {
+  if (accounts === undefined || txAll === undefined || !nwDebts.ready || (wrappedDays && recapMonth === undefined)) {
     return <DashboardSkeleton />
   }
 
@@ -581,36 +587,18 @@ export default function Dashboard() {
                         row of figures itself. 6px + 18px puts the content
                         14px clear of the stitching, which is exactly the
                         clearance px-6 gives it on the left and right. */}
-                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-5 pb-1.5">
-                  <div>
-                    <p className="text-white/50 text-11 mb-1">Spending</p>
-                    <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
-                      {revealed
-                        ? <RollingNumber id={`home:spending:${shownCurrency}`} value={spendingBalance} format={v => fmt(v, shownCurrency)} />
-                        : '••••'}
-                    </p>
-                    <p className="text-white/35 text-10 mt-0.5">Cash, wallets</p>
-                  </div>
-                  <div>
-                    <p className="text-white/50 text-11 mb-1">Savings</p>
-                    <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
-                      {revealed
-                        ? <RollingNumber id={`home:savings:${shownCurrency}`} value={savingsBalance} format={v => fmt(v, shownCurrency)} />
-                        : '••••'}
-                    </p>
-                    <p className="text-white/35 text-10 mt-0.5">Banks, deposits</p>
-                  </div>
-                  <div>
-                    <p className="text-white/50 text-11 mb-1">Credit</p>
-                    <p key={revealed ? 's' : 'h'} className={`${swap} font-semibold text-sm tabular-nums text-white`}>
-                      {revealed
-                        ? <RollingNumber id={`home:credit:${shownCurrency}`} value={creditOutstanding} format={v => fmt(v, shownCurrency)} />
-                        : '••••'}
-                    </p>
-                    <p className="text-white/35 text-10 mt-0.5">
-                      {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}
-                    </p>
-                      </div>
+                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-x-3 gap-y-4 px-6 pt-5 pb-1.5">
+                      {pileTiles.map(tile => (
+                        <div key={tile.key} className="min-w-0">
+                          <p className="text-white/50 text-11 mb-1 truncate">{tile.label}</p>
+                          <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
+                            {revealed
+                              ? <RollingNumber id={`home:${tile.key}:${shownCurrency}`} value={tile.value} format={v => fmt(v, shownCurrency)} />
+                              : '••••'}
+                          </p>
+                          <p className="text-white/35 text-10 mt-0.5 truncate">{tile.note}</p>
+                        </div>
+                      ))}
                     </div>
                   </div>
                 </div>

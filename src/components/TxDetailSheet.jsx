@@ -23,7 +23,7 @@ import DetailRow from './ui/DetailRow'
 import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
 import { fmt, baseSymbol } from '../lib/money'
-import { currencyOfTx } from '../lib/fxContext'
+import { currencyOfTx, repriceForEdit } from '../lib/fxContext'
 import { impliedRate, rederiveReceived } from '../lib/transferLegs'
 
 const TYPE_CFG = {
@@ -243,6 +243,8 @@ export default function TxDetailSheet({
         patch.toAmount   = leg.toAmount
         patch.toCurrency = leg.toCurrency
       }
+      // The totals read baseAmount first, so it has to follow the new amount.
+      Object.assign(patch, repriceForEdit(tx, patch))
 
       await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
         await reverseBalanceEffect(tx)

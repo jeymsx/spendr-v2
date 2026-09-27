@@ -42,8 +42,10 @@ export default function NetWorthPage() {
   const { data, current, range } = nw
 
   const months = useMemo(
-    () => (current == null ? [] : monthEnds({ txs: nw.txs, current })),
-    [nw.txs, current],
+    () => (current == null ? [] : monthEnds({
+      txs: nw.txs, current, debts: nw.debts, includeDebts: nw.includeDebts,
+    })),
+    [nw.txs, nw.debts, nw.includeDebts, current],
   )
 
   const delta = data.length > 1 ? data.at(-1).value - data[0].value : 0
@@ -125,7 +127,7 @@ export default function NetWorthPage() {
                 </Card>
                 <div className="mt-2">
                   <SectionLabel inset="gutter" gap="none">
-                    What came in, less what went out. Moving money between your own accounts doesn&apos;t change it.
+                    What came in, less what went out, plus any change in your investments&apos; value. Moving money between your own accounts doesn&apos;t change it.
                   </SectionLabel>
                 </div>
               </section>

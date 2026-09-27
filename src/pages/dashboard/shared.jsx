@@ -3,6 +3,7 @@ import { IconBank, IconCard, IconPhone, IconWallet, IconWarning, IconBell } from
 import CategoryGlyph from '../../components/CategoryGlyph'
 import { baseSymbol } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
+import { isSpend } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -64,7 +65,7 @@ export function getContextHint(txAll, budgetCategories, upcomingRecurring) {
 
   // Today's spending
   const todayTotal = (txAll ?? [])
-    .filter(t => t.type === 'expense' && isoToDateInput(t.date) === today)
+    .filter(t => isSpend(t) && isoToDateInput(t.date) === today)
     .reduce((s, t) => s + txBase(t), 0)
   if (todayTotal > 0) {
     const compact = todayTotal >= 1000

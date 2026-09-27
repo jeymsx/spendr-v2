@@ -7,6 +7,7 @@ import { challengeDef } from './challenges'
 import { addMonths, monthKeyOf, monthName } from './recap'
 import { parseDateLocal } from '../utils/recurring'
 import { txMonthKey } from '../utils/txDate'
+import { isFlowRow, isSpend } from './flows'
 
 /**
  * What belongs in the notifications list, worked out from the ledger.
@@ -204,8 +205,7 @@ export function collectNotifications({
 
   // ── The monthly recap, from 9 on the 1st ──
   const lastMonth = months[0]
-  const lastHadActivity = posted.some(t =>
-    (t.type === 'expense' || t.type === 'inflow') && txMonthKey(t.date) === lastMonth)
+  const lastHadActivity = posted.some(t => isFlowRow(t) && txMonthKey(t.date) === lastMonth)
   if (lastHadActivity) {
     offer({
       id: `recap:${lastMonth}`, kind: 'recap',
@@ -257,7 +257,7 @@ export function budgetCrossings({ categories, transactions, months, globalRollov
   /** @type {Map<string, Array<Record<string, any>>>} every expense, by category */
   const byCategory = new Map()
   for (const t of transactions) {
-    if (t?.type !== 'expense' || !names.has(t.category)) continue
+    if (!isSpend(t) || !names.has(t.category)) continue
     const list = byCategory.get(t.category) ?? []
     list.push(t)
     byCategory.set(t.category, list)

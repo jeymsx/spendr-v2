@@ -2,13 +2,14 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { localMonthStartIso, txMonthKey } from '../../utils/txDate'
 import { monthKeyOf, parseMonth } from '../../lib/recap'
+import { isFlowRow } from '../../lib/flows'
 
 /* Its own module, and a small one, because Home asks it on every load: kept
    in with the recap's inputs (recapData.js), it brought all of them into
    Home's bundle as well. */
 
 /** Money that came or went - what makes a month worth a recap. @param {Record<string, any>} t */
-const isFlow = (t) => t.type === 'expense' || t.type === 'inflow'
+const isFlow = (t) => isFlowRow(t)
 
 /**
  * The month a recap can be offered for: `preferMonth` when that month is

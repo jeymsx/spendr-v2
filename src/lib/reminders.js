@@ -5,6 +5,7 @@ import { currencyOfAccountName } from './fxContext'
 import { fmt } from './money'
 import { txMonthKey } from '../utils/txDate'
 import { addMonths, monthKeyOf, monthName, parseMonth } from './recap'
+import { isFlowRow } from './flows'
 
 /**
  * The reminders a ledger is owed, worked out on the device.
@@ -218,7 +219,7 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
   const recaps = []
   for (const month of [addMonths(monthKeyOf(now), -1), monthKeyOf(now)]) {
     const logged = transactions.some(t =>
-      (t?.type === 'expense' || t?.type === 'inflow') && (t.date ?? '') <= nowIso && txMonthKey(t.date) === month)
+      isFlowRow(t) && (t.date ?? '') <= nowIso && txMonthKey(t.date) === month)
     if (!logged) continue
     const { year, month: m } = parseMonth(month)
     const fireAt = new Date(year, m + 1, 1, REMINDER_HOUR)

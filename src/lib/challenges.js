@@ -3,6 +3,7 @@ import { isoToDateInput } from '../utils/txDate'
 import { getFxContext, txBase } from './fxContext'
 import { effectiveLimit } from './rollover'
 import { fmt } from './money'
+import { isIncome, isSpend } from './flows'
 
 /**
  * Challenges: something you choose to take on, for a set time.
@@ -130,10 +131,11 @@ export function ledgerByDay(transactions) {
     logged.add(d)
     const m = months.get(d.slice(0, 7)) ?? { inflow: 0, expense: 0 }
     const amt = txBase(t)
-    if (t.type === 'inflow') m.inflow += amt
-    else if (t.type === 'expense') m.expense += amt
+    // A balance correction or an investment's value moving is neither (lib/flows.js).
+    if (isIncome(t)) m.inflow += amt
+    else if (isSpend(t)) m.expense += amt
     months.set(d.slice(0, 7), m)
-    if (t.type !== 'expense' || !(amt > 0)) continue
+    if (!isSpend(t) || !(amt > 0)) continue
     const day = spend.get(d) ?? { total: 0, byCat: new Map() }
     day.total += amt
     day.byCat.set(t.category, (day.byCat.get(t.category) ?? 0) + amt)
@@ -502,7 +504,7 @@ function judgeBudgetMonth(ctx, row) {
   const cats = limited(categories)
   let inside = 0
   for (const cat of cats) {
-    const rows = transactions.filter(t => t?.type === 'expense' && t.category === cat.name)
+    const rows = transactions.filter(t => isSpend(t) && t.category === cat.name)
     const { effective } = effectiveLimit({ cat, txs: rows, month, globalDefault: globalRollover })
     const spent = rows
       .filter(t => (isoToDateInput(t.date ?? '') || '').slice(0, 7) === month && isoToDateInput(t.date ?? '') <= now)

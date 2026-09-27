@@ -147,6 +147,10 @@ export function toSupabaseRow(r, userId) {
        transfer lands as `amount` - see lib/transferLegs.js. */
     to_amount:        r.toAmount ?? null,
     to_currency:      r.toCurrency ?? null,
+    /* 023. A row the app wrote to move a balance rather than money you earned
+       or spent - 'correction' or 'value'. See lib/flows.js. Null on every
+       other row. */
+    adjust:           r.adjust ?? null,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
   })
@@ -180,6 +184,12 @@ export function accountToRow(r, userId) {
     design:          r.design         ?? null,
     custom_color:    r.customColor    ?? null,
     sort_order:      r.sort_order     ?? 0,
+    /* 023. An investment's kind, what had gone into it before Spendr was
+       keeping track, and the day its value was last confirmed - see
+       lib/investments.js. Null on everything else. */
+    kind:            r.kind           ?? null,
+    invested_start:  r.investedStart  ?? null,
+    valued_at:       r.valuedAt       ?? null,
     updated_at:      r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -246,6 +256,9 @@ export function recurringToRow(r, userId) {
     next_date:  r.nextDate,
     active:     r.active,
     split:      r.split ?? null,
+    /* 023. 'inflow' for income that arrives on a schedule - a salary. Null is
+       a bill, which is every row written before the column existed. */
+    type:       r.type ?? null,
     updated_at: r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -416,6 +429,8 @@ export function toDexieRecord(row) {
        received leg this device knows about - the pull spreads this over the
        local row, so an absent key has to stay absent. */
     ...('to_amount' in row ? { toAmount: row.to_amount ?? null, toCurrency: row.to_currency ?? null } : {}),
+    // 023. Only when set - a row is never un-marked - for the same reason as above.
+    ...(row.adjust ? { adjust: row.adjust } : {}),
     synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
@@ -460,6 +475,11 @@ export function rowToAccount(row) {
     design:         row.design ?? null,
     customColor:    row.custom_color ?? false,
     sort_order:     row.sort_order  ?? 0,
+    /* 023. Only when set: none of these is ever cleared back to nothing, and
+       a database without the columns must not blank what this device knows. */
+    ...(row.kind ? { kind: row.kind } : {}),
+    ...(row.invested_start != null ? { investedStart: row.invested_start } : {}),
+    ...(row.valued_at ? { valuedAt: row.valued_at } : {}),
     updatedAt:      row.updated_at,
   }
 }
@@ -509,6 +529,10 @@ export function rowToRecurring(row) {
     nextDate:  row.next_date,
     active:    row.active,
     split:     row.split ?? null,
+    /* 023. Only when there is one: every row written since says 'inflow' or
+       'expense' outright, and a null is a bill from before the column - left
+       absent, so it cannot turn a salary this device knows back into a bill. */
+    ...(row.type ? { type: row.type } : {}),
     updatedAt: row.updated_at,
   }
 }
@@ -890,8 +914,13 @@ async function pullTrash(userId, pending) {
    because a phone running this build can meet a database that has not had 011
    applied, and losing the stable id must cost nothing more than staying on
    local_id for another sync - which is exactly where we already are. */
+/* 023's four are here too. Until it runs, an investment's value updates still
+   sync and still move its balance - they are ordinary rows - but another
+   device counts them as income until the column arrives (unless they carry
+   the description the app gives them, which lib/flows.js also matches), and a
+   salary pulled from the server reads as a bill. */
 const OPTIONAL_COLS = {
-  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id'],
+  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id', 'kind', 'invested_start', 'valued_at'],
   categories: ['sync_id'],
   goals: ['sync_id'],
   /* created_at is declared in 003_schema.sql, so it should be there - but a
@@ -913,14 +942,14 @@ const OPTIONAL_COLS = {
      ends, which is how every transfer read before 019. */
   transactions: [
     'refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id',
-    'currency', 'base_amount', 'base_currency', 'to_amount', 'to_currency',
+    'currency', 'base_amount', 'base_currency', 'to_amount', 'to_currency', 'adjust',
   ],
   user_preferences: ['theme', 'budget_rollover'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another
      device. */
-  recurring: ['split', 'sync_id'],
+  recurring: ['split', 'sync_id', 'type'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,

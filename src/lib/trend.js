@@ -186,6 +186,125 @@ export function netWorthDelta(tx, valueOf) {
 }
 
 /**
+ * Every movement in net worth, oldest-agnostic, as `{t, delta}`.
+ *
+ * With debts left out this is netWorthDelta over the ledger and nothing more.
+ * With "Count debts" on, two things change, and both are needed so that the
+ * line does not simply shift by whatever is owed today:
+ *
+ *   - A debt opening is a movement on the day it was opened: someone owing
+ *     you 1,000 is 1,000 more; you owing them is 1,000 less.
+ *   - A settlement is NOT a movement for the part it settles. Paying back 400
+ *     of what you owe lowers your wallet by 400 and your debt by 400, so net
+ *     worth holds still - the drop happened when you borrowed. Only what goes
+ *     beyond the debt moves it, and that excess opens a new row in the other
+ *     direction on its own (see settleWithPerson), which is the movement that
+ *     cancels it.
+ *
+ * A settlement says what it settled in `settles` (mobile). Rows written
+ * without it - the per-debt sheet - are filed as Debt Payment or Debt
+ * Collection and never overpay, so the whole amount is the settled part.
+ *
+ * @param {object} input
+ * @param {Array<Record<string, any>>} [input.txs]
+ * @param {Array<Record<string, any>>} [input.debts]
+ * @param {boolean} [input.includeDebts]
+ * @param {(tx: Record<string, any>) => number} [input.priceOf]
+ * @returns {Array<{t: number, delta: number}>}
+ */
+export function netWorthMoves({ txs = [], debts = [], includeDebts = false, priceOf = txBase }) {
+  /** @type {Array<{t: number, delta: number}>} */
+  const moves = []
+  /** @type {Map<string, Record<string, any>>} */
+  const bySync = new Map()
+  /** @type {Map<any, Record<string, any>>} */
+  const byId = new Map()
+  if (includeDebts) {
+    for (const d of debts ?? []) {
+      if (d?.syncId) bySync.set(d.syncId, d)
+      if (d?.id != null) byId.set(d.id, d)
+    }
+  }
+
+  for (const tx of txs ?? []) {
+    const t = tx.date ? new Date(tx.date).getTime() : NaN
+    if (Number.isNaN(t)) continue
+    let delta = netWorthDelta(tx, priceOf)
+    if (includeDebts) delta += settledOffset(tx, bySync, byId, priceOf)
+    if (Math.abs(delta) < 0.005) continue
+    moves.push({ t, delta })
+  }
+
+  if (includeDebts) {
+    for (const d of debts ?? []) {
+      const t = new Date(d?.createdAt ?? '').getTime()
+      const amount = d?.amount ?? 0
+      if (Number.isNaN(t) || !(amount > 0)) continue
+      moves.push({ t, delta: d.type === 'i_owe' ? -amount : amount })
+    }
+  }
+  return moves
+}
+
+/**
+ * What people owed you, less what you owed them, at one instant - the debts
+ * half of netWorthMoves, summed up to `at`. For a snapshot of a past moment
+ * (the monthly PDF), where today's outstanding figures would be wrong.
+ *
+ * @param {object} input
+ * @param {Array<Record<string, any>>} [input.debts]
+ * @param {Array<Record<string, any>>} [input.txs]
+ * @param {number} input.at  epoch ms
+ * @param {(tx: Record<string, any>) => number} [input.priceOf]
+ */
+export function debtsNetAt({ debts = [], txs = [], at, priceOf = txBase }) {
+  /** @type {Map<string, Record<string, any>>} */
+  const bySync = new Map()
+  /** @type {Map<any, Record<string, any>>} */
+  const byId = new Map()
+  let net = 0
+  for (const d of debts ?? []) {
+    if (d?.syncId) bySync.set(d.syncId, d)
+    if (d?.id != null) byId.set(d.id, d)
+    const t = new Date(d?.createdAt ?? '').getTime()
+    if (Number.isNaN(t) || t > at || !((d?.amount ?? 0) > 0)) continue
+    net += d.type === 'i_owe' ? -d.amount : d.amount
+  }
+  for (const tx of txs ?? []) {
+    const t = tx.date ? new Date(tx.date).getTime() : NaN
+    if (Number.isNaN(t) || t > at) continue
+    net += settledOffset(tx, bySync, byId, priceOf)
+  }
+  return Math.round(net * 100) / 100
+}
+
+/**
+ * The part of a settlement row that only moved money against a debt, signed
+ * so that adding it to the row's own netWorthDelta cancels that part out.
+ * @param {Record<string, any>} tx
+ * @param {Map<string, Record<string, any>>} bySync
+ * @param {Map<any, Record<string, any>>} byId
+ * @param {(tx: Record<string, any>) => number} priceOf
+ */
+function settledOffset(tx, bySync, byId, priceOf) {
+  /* An empty list is still an answer: a payment made when nothing was owed
+     settled nothing, and the credit it opened is its own movement. */
+  if (Array.isArray(tx.settles)) {
+    let s = 0
+    for (const e of tx.settles) {
+      const d = (e?.syncId && bySync.get(e.syncId)) || byId.get(e?.id)
+      if (!d) continue
+      const delta = e.delta ?? 0
+      s += d.type === 'i_owe' ? delta : -delta
+    }
+    return s
+  }
+  if (tx.category === 'Debt Payment' && tx.type === 'expense') return priceOf(tx)
+  if (tx.category === 'Debt Collection' && tx.type === 'inflow') return -priceOf(tx)
+  return 0
+}
+
+/**
  * Net worth over time, as `points` samples ending now.
  *
  * Anchored on `current` - the figure the dashboard's wallet shows - and built
@@ -195,6 +314,8 @@ export function netWorthDelta(tx, valueOf) {
  *
  * @param {object} input
  * @param {Array<Record<string, any>>} [input.txs]
+ * @param {Array<Record<string, any>>} [input.debts]  with includeDebts, see netWorthMoves
+ * @param {boolean} [input.includeDebts]
  * @param {number} input.current  today's net worth, in the ledger's currency
  * @param {{span: number|null, points: number}} input.range
  * @param {(tx: Record<string, any>) => number} [input.priceOf]  a row in the
@@ -204,8 +325,14 @@ export function netWorthDelta(tx, valueOf) {
  * @param {number} [input.now]
  * @returns {Array<{t: number, value: number, day: string}>}
  */
-export function buildNetWorthTrend({ txs = [], current, range, priceOf = txBase, now = Date.now() }) {
-  return sweepBack(collectMoves(txs, tx => netWorthDelta(tx, priceOf)), current, range, now)
+export function buildNetWorthTrend({
+  txs = [], debts = [], includeDebts = false, current, range, priceOf = txBase, now = Date.now(),
+}) {
+  const moves = netWorthMoves({ txs, debts, includeDebts, priceOf })
+  let oldest = Infinity
+  for (const m of moves) if (m.t < oldest) oldest = m.t
+  moves.sort((a, b) => b.t - a.t)   // newest first
+  return sweepBack({ moves, oldest }, current, range, now)
 }
 
 /**

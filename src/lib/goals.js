@@ -57,6 +57,7 @@
  */
 
 import { convert } from './fx'
+import { isLiquid } from './accountMeta'
 
 /** Rank step. Leaves room to insert between two goals without a full rewrite. */
 export const GOAL_RANK_STEP = 100
@@ -69,15 +70,19 @@ export const GOAL_ICONS = [
 /**
  * Can this account fund a goal?
  *
- * Assets only. A credit card's "balance" is a debt, so pouring it into a goal
- * would count money you owe as money you have - the sign is not merely
- * inconvenient, it is the opposite of the truth.
+ * Money you hold, only. A credit card's "balance" is a debt, so pouring it
+ * into a goal would count money you owe as money you have - the sign is not
+ * merely inconvenient, it is the opposite of the truth. A loan is the same
+ * mistake with a bigger number. An investment is yours but not money you
+ * hold: its value is a figure you typed, it moves with a market, and a goal
+ * that flips between funded and not every time you update it is a goal you
+ * cannot trust.
  *
  * @param {Account} [acct]
  */
 export function isFundable(acct) {
   if (!acct) return false
-  return acct.type !== 'credit' && (acct.role ?? '') !== 'credit'
+  return isLiquid(acct) && (acct.role ?? '') !== 'credit'
 }
 
 /** Rank order, with `id` as the tiebreak so the sort is total, not partial.

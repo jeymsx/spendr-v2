@@ -27,6 +27,7 @@
  */
 
 import { txBase } from './fxContext'
+import { isSpend } from './flows'
 
 /** "2026-09" for a Date or a month key.
  *  @param {Date|string|number} d */
@@ -70,7 +71,7 @@ export function spendByMonth(txs, categoryName) {
   /** @type {Record<string, number>} */
   const out = {}
   for (const tx of txs ?? []) {
-    if (tx.type !== 'expense' || tx.category !== categoryName) continue
+    if (!isSpend(tx) || tx.category !== categoryName) continue
     const k = monthKey(tx.date)
     out[k] = Math.round(((out[k] ?? 0) + txBase(tx)) * 100) / 100
   }

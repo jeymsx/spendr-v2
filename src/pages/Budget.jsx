@@ -27,6 +27,7 @@ import { effectiveLimit, monthKey, prevMonth, sweepable } from '../lib/rollover'
 import SweepSheet from './budget/SweepSheet'
 import { postCardPayment } from '../db/txHelpers'
 import { txBase } from '../lib/fxContext'
+import { isSpend } from '../lib/flows'
 
 /**
  * The month's budget, in full.
@@ -297,7 +298,7 @@ export default function Budget() {
     const pfx = monthPrefix(now)
     const cutoff = scheduledCutoff()
     return (transactions ?? []).filter(t =>
-      t.type === 'expense' && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
+      isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [transactions, now])
 
   const spentByCat = useMemo(() => {

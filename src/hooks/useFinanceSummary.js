@@ -8,6 +8,10 @@ import { sumInBase } from '../lib/fx'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { useRates } from './useRates'
 import { txBase } from '../lib/fxContext'
+import { isSpend } from '../lib/flows'
+import { bucketOf } from '../lib/accountMeta'
+import { netWorthBreakdown } from '../lib/netWorth'
+import useNetWorthDebts from './useNetWorthDebts'
 
 /**
  * The figures every overview screen needs, derived once.
@@ -30,16 +34,13 @@ export function useFinanceSummary() {
   const nameMeta   = useLiveQuery(() => db.meta.get('displayName'), [], null)
   const baseCurrency = useBaseCurrency()
   const { table: rates } = useRates()
+  const nwDebts = useNetWorthDebts()
 
   const loading = accounts === undefined || txAll === undefined
 
-  // Credit accounts are neither spending nor savings — they're a liability.
+  // Which pile an account is in - lib/accountMeta.js decides, for every screen.
   /** @param {Account} a */
-  const roleOf = (a) => {
-    if (a.type === 'credit') return 'credit'
-    if (a.role) return a.role
-    return ['cash', 'ewallet'].includes(a.type) ? 'spending' : 'savings'
-  }
+  const roleOf = (a) => bucketOf(a)
 
   /* In the ledger's currency, not in each account's. A dollar account adds
      what it is worth today, and an account whose rate is missing is reported
@@ -64,7 +65,7 @@ export function useFinanceSummary() {
     const pfx = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
     const cutoff = scheduledCutoff()
     return (txAll ?? []).filter(t =>
-      t.type === 'expense' && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
+      isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 
   const creditStatus = useMemo(() => {
@@ -121,6 +122,13 @@ export function useFinanceSummary() {
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
 
+  /* The same net worth Home and Insights show, investments, loans and (when
+     counted) debts included - lib/netWorth.js. */
+  const breakdown = useMemo(() => netWorthBreakdown({
+    accounts: accounts ?? [], transactions: txAll ?? [], view: baseCurrency, rates,
+    creditStatus, debts: nwDebts.debts, includeDebts: nwDebts.include,
+  }), [accounts, txAll, baseCurrency, rates, creditStatus, nwDebts.debts, nwDebts.include])
+
   return {
     loading,
     userName: nameMeta?.value || 'there',
@@ -131,7 +139,8 @@ export function useFinanceSummary() {
     balances,
     creditStatus,
     creditOutstanding,
-    netWorth: balances.spending + balances.savings - creditOutstanding,
+    netWorth: breakdown.total,
+    breakdown,
     monthExpenses,
     monthSpent: monthExpenses.reduce((s, t) => s + txBase(t), 0),
     budgets,

@@ -337,9 +337,23 @@ describe('what counts as a purchase', () => {
     ]
     const r = recap(rows)
     expect(r.purchaseCount).toBe(2)
-    // The balance correction is spending, but not the biggest thing bought.
     expect(r.biggest).toMatchObject({ description: 'SM', amount: 3500 })
-    expect(r.spent).toBe(900 + 3500 - 300 + 15 + 8000 + 5000 + 700)
+    /* The balance correction is NOT spending (lib/flows.js): it moved the
+       balance to match reality, and counting it made a month you spent
+       nothing extra in look 8,000 heavier. */
+    expect(r.spent).toBe(900 + 3500 - 300 + 15 + 5000 + 700)
+  })
+
+  it('leaves corrections and investment value changes out of spent and income', () => {
+    const rows = [
+      ...HISTORY,
+      spend(9, 3, 900, 'Food', { description: 'Market' }),
+      spend(9, 7, 4000, 'Investment', { description: 'Value update', adjust: 'value' }),
+      spend(9, 8, 2500, 'Income', { type: 'inflow', description: 'Balance adjustment', adjust: 'correction' }),
+    ]
+    const r = recap(rows)
+    expect(r.spent).toBe(900)
+    expect(r.income).toBe(0)
   })
 
   it('names a split nobody described by what it was split into', () => {

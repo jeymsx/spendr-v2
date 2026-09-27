@@ -4,7 +4,7 @@ import { advanceNextDate } from '../utils/recurring'
 import { resolveBillShares } from '../lib/splitModes'
 import { applyPayment } from '../lib/people'
 import { deleteDebtRemote } from '../lib/sync'
-import { currencyOfAccountName } from '../lib/fxContext'
+import { currencyOfAccountName, repriceForEdit } from '../lib/fxContext'
 import { estimateConversion } from '../lib/transferLegs'
 
 /* Re-exported: they used to live here and ten files import them from
@@ -26,7 +26,9 @@ export class OverdrawError extends Error {
 /**
  * Returns the account row when spending `amount` from it would overdraw it,
  * otherwise null. Credit accounts are exempt — they're bounded by their limit,
- * which getCreditStatus tracks, not by a stored balance.
+ * which getCreditStatus tracks, not by a stored balance. So are loans: their
+ * balance is what you owe, stored negative, and drawing on one is borrowing
+ * more, not overdrawing.
  *
  * @param {string} accountName
  * @param {number} amount
@@ -34,7 +36,7 @@ export class OverdrawError extends Error {
 export async function checkOverdraw(accountName, amount) {
   if (!accountName || !(amount > 0)) return null
   const acct = await db.accounts.where('name').equals(accountName).first()
-  if (!acct || acct.type === 'credit') return null
+  if (!acct || acct.type === 'credit' || acct.type === 'loan') return null
   if (amount <= (acct.balance ?? 0)) return null
   return acct
 }
@@ -156,7 +158,9 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
  */
 export async function updateTransaction(tx, patch) {
   if (!tx?.id) throw new Error('There is nothing to update.')
-  const next = { ...patch, updatedAt: new Date().toISOString(), synced: UNSYNCED }
+  /* With its pricing refreshed: the totals read baseAmount first, and an edit
+     that left it at the old figure went on counting the old amount. */
+  const next = { ...patch, ...repriceForEdit(tx, patch), updatedAt: new Date().toISOString(), synced: UNSYNCED }
 
   await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
     await reverseBalanceEffect(/** @type {any} */ (tx))

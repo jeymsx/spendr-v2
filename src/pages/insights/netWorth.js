@@ -2,8 +2,9 @@ import { useMemo } from 'react'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import useNetWorthNow from '../../hooks/useNetWorthNow'
+import useNetWorthDebts from '../../hooks/useNetWorthDebts'
 import { txBase } from '../../lib/fxContext'
-import { TREND_RANGES, buildNetWorthTrend, netWorthDelta } from '../../lib/trend'
+import { TREND_RANGES, buildNetWorthTrend, netWorthMoves } from '../../lib/trend'
 import { monthKeyOf } from '../../lib/recap'
 
 /**
@@ -31,15 +32,19 @@ export const NET_RANGE_WORDS = {
 export function useNetWorthSeries(key) {
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
   const txs = useLiveQuery(() => db.transactions.toArray(), [], undefined)
+  const { include, debts } = useNetWorthDebts()
   const range = NET_RANGES.find(r => r.key === key) ?? NET_RANGES[2]
   /* Today's figure, read the way the wallet reads it - so the right-hand
      end of this line and the big number on Home are the same number. */
   const current = useNetWorthNow(accounts, txs)
   const data = useMemo(() => {
     if (current == null || !txs) return []
-    return buildNetWorthTrend({ txs, current, range, priceOf: txBase })
-  }, [txs, current, range])
-  return { loading: !accounts || !txs, accounts: accounts ?? [], txs: txs ?? [], current, range, data }
+    return buildNetWorthTrend({ txs, debts, includeDebts: include, current, range, priceOf: txBase })
+  }, [txs, debts, include, current, range])
+  return {
+    loading: !accounts || !txs || current == null,
+    accounts: accounts ?? [], txs: txs ?? [], debts, includeDebts: include, current, range, data,
+  }
 }
 
 /**
@@ -58,12 +63,14 @@ export function useNetWorthSeries(key) {
  * @param {number} [input.months]
  * @param {Date} [input.now]
  * @param {(tx: Record<string, any>) => number} [input.priceOf]
+ * @param {Array<Record<string, any>>} [input.debts]
+ * @param {boolean} [input.includeDebts]
  * @returns {Array<{key: string, value: number, change: number|null}>}
  */
-export function monthEnds({ txs, current, months = 6, now = new Date(), priceOf = txBase }) {
-  const moves = txs
-    .map(t => ({ t: Date.parse(t.date), delta: netWorthDelta(t, priceOf) }))
-    .filter(m => Number.isFinite(m.t) && m.delta)
+export function monthEnds({
+  txs, current, months = 6, now = new Date(), priceOf = txBase, debts = [], includeDebts = false,
+}) {
+  const moves = netWorthMoves({ txs, debts, includeDebts, priceOf })
     .sort((a, b) => b.t - a.t)
   if (!moves.length) return []
   const first = monthKeyOf(new Date(moves[moves.length - 1].t))

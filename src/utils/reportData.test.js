@@ -14,7 +14,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  * @typedef {Record<string, any>} Row
  */
 
-/** @type {{transactions: Row[], accounts: Row[], categories: Row[], meta: Row[]}} */
+/** @type {{transactions: Row[], accounts: Row[], categories: Row[], meta: Row[], debts: Row[]}} */
 let store
 
 const listTable = (/** @type {() => Row[]} */ rows) => ({
@@ -28,6 +28,7 @@ const db = {
   accounts:     listTable(() => store.accounts),
   categories:   listTable(() => store.categories),
   meta:         listTable(() => store.meta),
+  debts:        listTable(() => store.debts),
 }
 
 vi.mock('../db/db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1 }))
@@ -59,6 +60,7 @@ beforeEach(() => {
     accounts: [card, wallet],
     categories: [{ name: 'Groceries', type: 'expense' }],
     meta: [{ key: 'displayName', value: 'James' }],
+    debts: [],
   }
 })
 
@@ -169,5 +171,61 @@ describe('the month in progress', () => {
 
     expect(data.summary.totalExpenses).toBe(100)
     expect(data.transactions).toHaveLength(1)
+  })
+})
+
+describe('loans, people and value updates', () => {
+  it('counts a loan with what is owed, not netted out of the assets', async () => {
+    store.accounts.push({ id: 3, name: 'Car Loan', type: 'loan', balance: -500000 })
+
+    const data = await fetchReportData(2026, 8)
+
+    expect(data.totalAssets).toBe(10000)
+    expect(data.totalLoans).toBe(500000)
+    expect(data.totalOwed).toBe(503200)
+    expect(data.netWorth).toBe(10000 - 503200)
+  })
+
+  it('adds what people owe you when debts are counted, as of the month', async () => {
+    store.debts.push({
+      id: 1, name: 'Gelo', type: 'owed_to_me', amount: 1000, amountPaid: 0,
+      createdAt: '2026-07-01T08:00:00+08:00',
+    })
+    // Lent in September: not yet owed at the end of August.
+    store.debts.push({
+      id: 2, name: 'Ana', type: 'owed_to_me', amount: 500, amountPaid: 0,
+      createdAt: '2026-09-03T08:00:00+08:00',
+    })
+
+    const august = await fetchReportData(2026, 8)
+    expect(august.people).toBe(1000)
+    expect(august.totalAssets).toBe(11000)
+  })
+
+  it('leaves debts out when Count debts is off', async () => {
+    store.meta.push({ key: 'netWorthDebts', value: false })
+    store.debts.push({
+      id: 1, name: 'Gelo', type: 'i_owe', amount: 1000, amountPaid: 0,
+      createdAt: '2026-07-01T08:00:00+08:00',
+    })
+
+    const data = await fetchReportData(2026, 8)
+    expect(data.people).toBe(0)
+    expect(data.netWorth).toBe(6800)
+  })
+
+  it('does not count a correction or a value update as income or spending', async () => {
+    store.transactions.push(
+      { type: 'inflow', account: 'Wallet', amount: 700, description: 'Balance adjustment',
+        category: 'Income', date: '2026-08-10T08:00:00+08:00' },
+      { type: 'expense', account: 'Wallet', amount: 300, adjust: 'value',
+        category: 'Investment', date: '2026-08-11T08:00:00+08:00' },
+      { type: 'inflow', account: 'Wallet', amount: 20000, category: 'Salary',
+        date: '2026-08-15T08:00:00+08:00' },
+    )
+
+    const data = await fetchReportData(2026, 8)
+    expect(data.summary.totalIncome).toBe(20000)
+    expect(data.summary.totalExpenses).toBe(0)
   })
 })
