@@ -5,7 +5,11 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { GRADIENT_PRESETS } from '../lib/accountBrands'
 import { CARD_DESIGNS } from '../lib/cardDesigns'
-import { PH_ACCOUNTS } from '../lib/phAccounts'
+import { PH_ACCOUNTS, PH_HOLDINGS } from '../lib/phAccounts'
+import { INVESTMENT_KINDS } from '../lib/accountMeta'
+import { monthsToClear, solveMonthlyRate } from '../lib/loans'
+import { createInvestment } from '../db/accountWrites'
+import Field from '../components/ui/Field'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
 import {
   PreviewCard,
@@ -57,7 +61,15 @@ const FILTERS = [
   { value: 'E-Wallets',         label: 'Wallets' },
   { value: 'Traditional Banks', label: 'Banks' },
   { value: 'Digital Banks',     label: 'Digital' },
+  { value: 'Investments',       label: 'Investments' },
+  { value: 'Loans',             label: 'Loans' },
 ]
+
+/* Every tile the grid can offer. The investments and loans come last, and
+   "All" leaves them out: most accounts added here are wallets and banks,
+   and forty bank logos followed by a loan agreement reads as a mistake.
+   Their own filters - and a search - find them. */
+const ALL_PRESETS = [...PH_ACCOUNTS, ...PH_HOLDINGS]
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
@@ -117,10 +129,33 @@ export default function AccountNew() {
     cutoffDay: '',
     dueDay: '',
     minPayment: '0',
+    // An investment's kind and what went in; a loan's months left and rate.
+    kind: 'fund',
+    investedStart: '',
+    loanMonths: '',
+    interestRate: '',
   })
   const set = useCallback((patch) => setDraft(d => ({ ...d, ...patch })), [])
 
   const isCredit = draft.type === 'credit'
+  const isLoan = draft.type === 'loan'
+  const isInvestment = draft.type === 'investment'
+
+  /* A loan's monthly rate: typed, or worked out from the months left - the
+     way a lender quotes it. See lib/loans.js. */
+  const loanOwed = isLoan ? (parseMoney(draft.startingBal) || 0) : 0
+  const loanPayment = isLoan ? (parseMoney(draft.minPayment) || 0) : 0
+  const loanRate = (() => {
+    if (!isLoan) return ''
+    if (String(draft.interestRate).trim()) return draft.interestRate
+    const n = parseInt(draft.loanMonths)
+    if (!(n > 0) || !(loanPayment > 0) || !(loanOwed > 0)) return ''
+    const r = solveMonthlyRate(loanOwed, loanPayment, n)
+    return r > 0 ? String(Math.round(r * 100 * 10000) / 10000) : ''
+  })()
+  const loanMonthsLeft = isLoan && loanPayment > 0 && loanOwed > 0
+    ? monthsToClear(loanOwed, loanPayment, (parseFloat(loanRate) || 0) / 100)
+    : null
 
   // The credit step is skipped for anything that cannot carry a statement,
   // rather than shown with its four fields disabled.
@@ -130,8 +165,8 @@ export default function AccountNew() {
   // have to be asked for somewhere and they are not something to interrupt
   // the visual step with.
   const steps = useMemo(
-    () => ['institution', 'details', ...(isCredit ? ['credit'] : []), 'style'],
-    [isCredit],
+    () => ['institution', 'details', ...(isCredit ? ['credit'] : []), ...(isLoan ? ['loan'] : []), 'style'],
+    [isCredit, isLoan],
   )
   // Changing type away from credit can strand the index past the end.
   const current = steps[Math.min(step, steps.length - 1)]
@@ -155,9 +190,9 @@ export default function AccountNew() {
   // is the kind of thing that makes a search box feel broken.
   const visiblePresets = useMemo(() => {
     const q = draft.name.trim().toLowerCase()
-    if (q) return PH_ACCOUNTS.filter(a => a.name.toLowerCase().includes(q))
+    if (q) return ALL_PRESETS.filter(a => a.name.toLowerCase().includes(q))
     if (filter === 'all') return PH_ACCOUNTS
-    return PH_ACCOUNTS.filter(a => a.group === filter)
+    return ALL_PRESETS.filter(a => a.group === filter)
   }, [draft.name, filter])
 
   function pickPreset(preset) {
@@ -197,6 +232,8 @@ export default function AccountNew() {
       name: preset.name,
       type: preset.type,
       role: defaultRole(preset.type),
+      // An investment preset knows what kind it is - MP2, a fund, stocks.
+      ...(preset.kind ? { kind: preset.kind } : {}),
       color: preset.color,
       // Switching institution drops any earlier override, so the new one
       // arrives in its own colours rather than inheriting the last pick.
@@ -266,12 +303,21 @@ export default function AccountNew() {
         dueDay: draft.dueDay,
         cutoffDay: draft.cutoffDay,
         minPayment: draft.minPayment,
+        interestRate: isLoan ? loanRate : '',
         scheme: draft.scheme,
         design: draft.design,
         customColor: draft.customColor,
         currency: draft.currency,
+        kind: draft.kind,
+        // Blank means everything in it so far is what went in.
+        investedStart: isInvestment && !draft.investedStart.trim() ? draft.startingBal : draft.investedStart,
       })
-      await createAccount(row, isCredit ? 0 : parseMoney(draft.startingBal))
+      /* An investment's opening value is written as a dated value row, so
+         the net-worth line steps on the day it was added; a loan's balance is
+         what you owe, stored negative; a card starts at zero and fills in
+         from its charges. */
+      if (isInvestment) await createInvestment(row, parseMoney(draft.startingBal) || 0)
+      else await createAccount(row, isCredit ? 0 : isLoan ? -(parseMoney(draft.startingBal) || 0) : parseMoney(draft.startingBal))
       /* No toast, and no navigation. The next screen IS the confirmation,
          and a toast sliding over it would be the same news twice. */
       setCreated(true)
@@ -346,7 +392,9 @@ export default function AccountNew() {
         <CreatedStep
           draft={draft}
           onDone={() => navigate('/accounts', { replace: true })}
-          onAddTransaction={() => navigate('/expense', { replace: true })}
+          onAddTransaction={() => (isInvestment || isLoan
+            ? navigate('/transfer', { replace: true, state: { prefill: { toAccount: draft.name.trim() } } })
+            : navigate('/expense', { replace: true }))}
         />
       </div>
     )
@@ -576,7 +624,35 @@ export default function AccountNew() {
             </div>
           </div>
 
-          {!isCredit && (
+          {/* What kind of investment - a label and a glyph. Every kind is
+              valued the same way: by typing what the provider shows you. */}
+          {isInvestment && (
+            <div>
+              <SectionLabel>Kind</SectionLabel>
+              <Rail className="gap-2 px-5 -mx-5 pb-1">
+                {INVESTMENT_KINDS.map(k => (
+                  <button
+                    key={k.value}
+                    type="button"
+                    onClick={() => set({ kind: k.value })}
+                    aria-pressed={draft.kind === k.value}
+                    className={`shrink-0 px-3.5 py-1.5 rounded-full text-12 font-semibold border
+                      transition-colors active:scale-[0.97] ${
+                        draft.kind === k.value
+                          ? 'bg-primary/[0.14] border-primary/45 text-primary'
+                          : 'bg-white dark:bg-white/[0.05] border-slate-200 dark:border-white/[0.09] text-slate-600 dark:text-slate-300'
+                      }`}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </Rail>
+            </div>
+          )}
+
+          {/* Counts as: fixed for the kinds whose answer never changes - a card
+              is credit, an investment is invested, a loan is owed. */}
+          {!isCredit && !isInvestment && !isLoan && (
             <div>
               <SectionLabel>Counts as</SectionLabel>
               <Segmented options={ROLE_OPTIONS} value={draft.role} onChange={(v) => set({ role: v })} />
@@ -588,7 +664,9 @@ export default function AccountNew() {
 
           {!isCredit && (
             <div>
-              <SectionLabel hint="What is in it right now.">Opening balance</SectionLabel>
+              <SectionLabel hint={isLoan ? 'What you still owe on it.' : isInvestment ? 'What it is worth today.' : 'What is in it right now.'}>
+                {isLoan ? 'Amount owed' : isInvestment ? 'Value now' : 'Opening balance'}
+              </SectionLabel>
               {/* The edit page's field, currency mark and all. This was the
                   frame with a peso absolutely positioned over its left
                   padding - the same control, built twice, looking different
@@ -622,7 +700,20 @@ export default function AccountNew() {
             </div>
           )}
 
-          {draft.type !== 'cash' && (
+          {/* What went in, so "Paid in" and the gain are right from the
+              first day. Money moved in later is a transfer, added on top. */}
+          {isInvestment && (
+            <div>
+              <SectionLabel hint="Leave it blank if it is the same as the value.">Paid in so far</SectionLabel>
+              <MoneyField
+                value={draft.investedStart}
+                onChange={moneyChangeHandler(v => set({ investedStart: v }))}
+                currency={draft.currency}
+              />
+            </div>
+          )}
+
+          {!['cash', 'investment', 'loan'].includes(draft.type) && (
             <div>
               <SectionLabel>Card network</SectionLabel>
               {/* The marks themselves, in a row you swipe - the same control
@@ -688,6 +779,66 @@ export default function AccountNew() {
           <p className="text-11 text-slate-500 dark:text-slate-400">
             A credit card's balance comes from its charges, so it starts at zero
             and fills in as you record spending.
+          </p>
+        </div>
+      )}
+
+      {/* ── Step: loan ──
+          What the lender's statement shows: the monthly payment, the day it
+          is due, and how many are left. The rate is optional - left blank,
+          it is the one at which those payments clear what is owed. */}
+      {current === 'loan' && (
+        <div className="px-5 mt-4 space-y-6">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <SectionLabel>Monthly payment</SectionLabel>
+              <MoneyField
+                value={draft.minPayment === '0' ? '' : draft.minPayment}
+                onChange={moneyChangeHandler(v => set({ minPayment: v }))}
+                currency={draft.currency}
+              />
+            </div>
+            <div>
+              <SectionLabel hint="Day it is due.">Due day</SectionLabel>
+              <input
+                inputMode="numeric"
+                value={draft.dueDay}
+                onChange={e => set({ dueDay: e.target.value.replace(/\D/g, '').slice(0, 2) })}
+                placeholder="e.g. 15"
+                className={inputClass()}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <SectionLabel>Months left</SectionLabel>
+              <input
+                inputMode="numeric"
+                value={draft.loanMonths}
+                onChange={e => set({ loanMonths: e.target.value.replace(/\D/g, '').slice(0, 3) })}
+                placeholder="e.g. 48"
+                className={inputClass()}
+              />
+            </div>
+            <div>
+              <SectionLabel>Interest / mo</SectionLabel>
+              <Field
+                value={draft.interestRate}
+                onChange={e => set({ interestRate: e.target.value.replace(/[^0-9.]/g, '') })}
+                inputMode="decimal"
+                placeholder={loanRate ? String(loanRate) : 'Optional'}
+                right={<span className="text-sm">%</span>}
+              />
+            </div>
+          </div>
+
+          <p className="text-11 text-slate-500 dark:text-slate-400">
+            {loanMonthsLeft != null && Number.isFinite(loanMonthsLeft)
+              ? `About ${loanMonthsLeft} ${loanMonthsLeft === 1 ? 'payment' : 'payments'} left${loanRate ? ` at ${loanRate}% a month` : ''}. Each payment you make is split: only the interest counts as spending.`
+              : loanMonthsLeft === Infinity
+                ? 'That payment does not cover the interest. Check the monthly payment or the rate.'
+                : 'Leave the rate blank and it is worked out from the months left.'}
           </p>
         </div>
       )}

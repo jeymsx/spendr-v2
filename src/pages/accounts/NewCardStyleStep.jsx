@@ -99,16 +99,24 @@ export function CreatedStep({ draft, onDone, onAddTransaction }) {
       <p className="mt-5 text-13 leading-relaxed text-slate-400 dark:text-slate-500 max-w-[300px]">
         {isCredit
           ? 'Charges you log to it count against the limit, and installments spread across the statements they will land on.'
-          : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}
+          : draft.type === 'investment'
+            ? 'Move money in with a transfer, and update its value from its page whenever you check it.'
+            : draft.type === 'loan'
+              ? 'Pay it from its page: the payment is split, and only the interest counts as spending.'
+              : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}
       </p>
 
       <div className="w-full mt-8 flex flex-col gap-2.5" style={{ animation: 'pageFadeIn 0.5s 0.3s ease both' }}>
         <Button block onClick={onDone}>
           Done
         </Button>
-        <Button variant="secondary" size="sm" block onClick={onAddTransaction}>
-          Add a transaction
-        </Button>
+        {/* An investment or a loan never takes an expense; the next thing to
+            do with one is move money to it, which is a transfer. */}
+        {onAddTransaction && (
+          <Button variant="secondary" size="sm" block onClick={onAddTransaction}>
+            {draft.type === 'investment' || draft.type === 'loan' ? 'Add a transfer' : 'Add a transaction'}
+          </Button>
+        )}
       </div>
     </section>
   )

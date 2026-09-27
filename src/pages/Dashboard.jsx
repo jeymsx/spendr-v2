@@ -5,16 +5,13 @@ import { PresenceItem, useRowMotion } from '../components/ui/Presence'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
+import { getCreditStatus } from '../utils/creditCycle'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 import {
-  IconCardUI,
-  IconReceipt,
   IconTransferUI,
   IconEmptyLedger,
 } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
-import BillMark from '../components/BillMark'
 import { scheduledCutoff } from '../utils/scheduled'
 import { txMonthKey } from '../utils/txDate'
 import { cardGradient } from '../lib/accentTheme'
@@ -35,11 +32,12 @@ import {
   AccountCard, BudgetSummaryTile, EmptyPill, IconEye, IconEyeOff, IconSettings, TxRow,
 } from './dashboard/Tiles'
 import QuickActions from './dashboard/QuickActions'
-import UpcomingSection from './dashboard/Upcoming'
+import UpcomingSection, { toUpcomingItem } from './dashboard/Upcoming'
 import Rail from '../components/ui/Rail'
 import SectionHeading from '../components/ui/SectionHeading'
 import useRates from '../hooks/useRates'
 import useNetWorthDebts from '../hooks/useNetWorthDebts'
+import useForecast from '../hooks/useForecast'
 import { convert } from '../lib/fx'
 import { netWorthBreakdown } from '../lib/netWorth'
 import { isSpend } from '../lib/flows'
@@ -236,7 +234,7 @@ export default function Dashboard() {
 
   const upcomingRecurring = useMemo(() =>
     (recurring || [])
-      .filter(r => r.active && r.nextDate)
+      .filter(r => r.active && r.nextDate && r.type !== 'inflow')
       .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? ''))
       .slice(0, 3),
     [recurring],
@@ -256,99 +254,25 @@ export default function Dashboard() {
   }, [accounts, txAll])
 
   /**
-   * What is about to leave the account, soonest first.
+   * What lands next, soonest first - from the forecast, so this list and the
+   * "Safe to spend" above it are one reading of the same walk.
    *
-   * Two sources, one list. A subscription renewing and a card statement
-   * falling due are the same fact to whoever is looking - money committed but
-   * not yet gone - so splitting them across two sections would make you check
-   * twice to answer one question.
+   * Everything the forecast lays out: bills and paydays from Recurring, card
+   * statements (already counted, and listed as the reminder they are), loan
+   * payments, and debts you owe with a date. It replaced a list built here
+   * that used its own rule for a card's due date - not the one the bills page,
+   * the reminders and the PDF use.
    *
-   * Capped at two. This sits above Recent, and Recent is what the home screen
-   * is for; a bill list long enough to scroll would bury it, which is the
-   * mistake the old Upcoming section made.
+   * Three. This sits above Recent, and Recent is what the home screen is for;
+   * the whole list is a tap away on the Forecast page.
    */
-  const upcomingItems = useMemo(() => {
-    const out = []
-
-    for (const r of recurring ?? []) {
-      if (!r.active || !r.nextDate) continue
-      const d = new Date(`${r.nextDate}T00:00:00`)
-      if (Number.isNaN(d.getTime())) continue
-      const cat = catMap[r.category]
-      out.push({
-        key: `rec-${r.id}`, kind: 'recurring', date: d,
-        name: r.name || r.category || 'Recurring',
-        amount: r.amount ?? 0,
-        meta: r.account ?? '',
-        // A node, not a string. The three kinds of upcoming row want three
-        // different glyphs and only the recurring one has a category to look
-        // up, so resolving here keeps UpcomingRow from having to know.
-        icon: <CategoryGlyph cat={cat} size={17} emoji="🔁" />,
-        /* And the brand's own logo where there is one, which is the same
-           mark the bills list and the bill's page draw. A bill was the one
-           place showing Spotify as a grey category tile on the home screen
-           and as the Spotify logo everywhere else. BillMark falls back to
-           exactly the tile above when the name is not one we have art for,
-           so nothing changes for a bill called "Gym". */
-        mark: (
-          <BillMark name={r.name} cat={cat} size={20} boxClass="w-10 h-10 rounded-2xl" />
-        ),
-        color: cat?.color ?? null,
-        // Straight to the bill, not to the list. Tapping "Internet, overdue"
-        // and landing on a page of every bill you own makes you find the one
-        // you just pointed at - and the statement rows beside it already go
-        // to their own account, so the list was the odd one out.
-        to: `/recurring/${r.id}`,
-      })
-    }
-
-    for (const a of accounts ?? []) {
-      if (a.type !== 'credit') continue
-      const st = creditStmtMap[a.name]
-      if (!st) continue
-      // What is actually billed and still unpaid. `currentBalance` would be
-      // wrong here: it also carries charges from the cycle still open, which
-      // are not on this statement and are not due on this date.
-      const owed = Math.max(0, (st.thisTotal ?? 0) - (st.totalPayments ?? 0))
-      if (owed <= 0) continue          // nothing billed, or already settled
-      const d = nextDueDate(a.dueDate)
-      if (!d) continue
-      out.push({
-        key: `card-${a.id}`, kind: 'statement', date: d,
-        name: a.name,
-        amount: owed,
-        meta: 'Statement balance',
-        icon: <IconCardUI size={17} />,
-        color: a.color ?? null,
-        to: `/accounts/${a.id}`,
-      })
-    }
-
-    // Debts you owe, where a date was actually set. A dated debt is the same
-    // object as a bill: money committed, to a deadline.
-    //
-    // Only `i_owe`. Money owed TO you is not "about to leave", and netting an
-    // inflow into this section's total would make one figure answer two
-    // questions. It stays on the Debts page, where the distinction is the
-    // whole point.
-    for (const d of debts ?? []) {
-      const owed = Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0))
-      if (d.type !== 'i_owe' || owed <= 0 || !d.dueDate) continue
-      const when = new Date(`${String(d.dueDate).slice(0, 10)}T00:00:00`)
-      if (Number.isNaN(when.getTime())) continue
-      out.push({
-        key: `debt-${d.id}`, kind: 'debt', date: when,
-        name: d.name || d.contact || 'Debt',
-        amount: owed,
-        meta: d.contact && d.name !== d.contact ? d.contact : 'You owe',
-        icon: <IconReceipt size={17} />,
-        color: null,
-        to: '/debts?tab=i_owe',
-      })
-    }
-
-    return out.sort((x, y) => x.date - y.date).slice(0, 2)
-  }, [recurring, accounts, creditStmtMap, catMap, debts])
+  const { forecast } = useForecast(30)
+  const acctByName = useMemo(
+    () => Object.fromEntries((accounts || []).map(a => [a.name, a])), [accounts])
+  const upcomingItems = useMemo(
+    () => (forecast ? forecast.events.slice(0, 3).map(e => toUpcomingItem(e, catMap, acctByName)) : []),
+    [forecast, catMap, acctByName],
+  )
 
   /**
    * What is waiting for you behind Goals, Debts and Bills.
@@ -443,7 +367,10 @@ export default function Dashboard() {
   /* The Wrapped card waits with the rest on the days it shows: arriving
      after the page had drawn, it pushed the budget and everything under it
      down under a reader's thumb. */
-  if (accounts === undefined || txAll === undefined || !nwDebts.ready || (wrappedDays && recapMonth === undefined)) {
+  /* The forecast and the counted debts wait with the rest: arriving a frame
+     later they moved the net worth and pushed Recent down under a thumb. */
+  if (accounts === undefined || txAll === undefined || !nwDebts.ready || !forecast
+    || (wrappedDays && recapMonth === undefined)) {
     return <DashboardSkeleton />
   }
 
@@ -729,7 +656,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Recent Transactions ──────────────────────────────────────────────── */}
-      <UpcomingSection items={upcomingItems} />
+      <UpcomingSection forecast={forecast} items={upcomingItems} />
 
       <section className="px-5 mt-8 pb-nav">
         <SectionHeading inset="none" gap="none" actionLabel="See all" actionTo="/transactions">Recent</SectionHeading>

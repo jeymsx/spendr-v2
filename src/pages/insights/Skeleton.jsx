@@ -73,13 +73,14 @@ export function HighlightsSkeleton() {
   )
 }
 
-/** Explore: its heading and the four 132px cards. */
+/** Explore: its heading, the four 132px cards, and Next 30 days under them. */
 export function ExploreSkeleton() {
   return (
     <div aria-hidden="true">
       <HeadingSkeleton />
       <div className="px-5 grid grid-cols-2 gap-3">
         {Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[132px] rounded-2xl" />)}
+        <Skeleton className="h-[132px] rounded-2xl col-span-2" />
       </div>
     </div>
   )

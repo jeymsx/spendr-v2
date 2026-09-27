@@ -38,7 +38,9 @@ refunds already are (see `lib/txMoney.js` header):
   `semimonthly` (the 15th and the last day of the month).
 - **Settings live in `db.meta`:** `netWorthDebts` (default true) and `forecastFloor` (default 0).
 - **Dexie needs no schema bump**: the new fields are unindexed. Supabase needs migration 023, adding
-  `transactions.adjust`, `accounts.kind`, `accounts.invested_start` and `recurring.type`.
+  `transactions.adjust`, `accounts.kind`, `accounts.invested_start`, `accounts.valued_at` and `recurring.type`.
+- **Value rows** use the category 'Investment' (it already has a chart glyph).
+- **Loan interest** goes in the category 'Loan interest', created on first use like Transfer Fee.
 
 ## Phases (tick as done; the commit hash goes in the log)
 
@@ -118,3 +120,12 @@ refunds already are (see `lib/txMoney.js` header):
 - Switch importers first and delete old exports last (the user's tab is on :5174 against main, not this worktree).
 
 ## Log
+- **7640099** Phase 0 done:
+  - flows.js wired into every total (Insights, Budget, Home, recap, PDF, badges, challenges, achievements, rollover, notifications, reminders).
+  - netWorthBreakdown is used by Dashboard, useFinanceSummary, Insights, recap and the PDF.
+  - The history sweep handles debts (netWorthMoves / debtsNetAt).
+  - loans.js, investments.js and db/accountWrites.js (recordValue, createInvestment, payLoan).
+  - AccountForm handles investment/loan create and edit.
+  - repriceForEdit fixes the stale baseAmount bug.
+  - Sync mappers and OPTIONAL_COLS updated. Accounts gain a third column, `valued_at`.
+  - Tests added: flows, netWorth, loans, investments, netWorthMoves, repriceForEdit, and reportData loans/people.

@@ -37,6 +37,29 @@ export const PH_ACCOUNTS = [
 
 export const PH_GROUPS = ['E-Wallets', 'Traditional Banks', 'Digital Banks']
 
+/**
+ * Investments and loans people in the Philippines commonly hold, for the new
+ * account page's grid. A list of its own rather than more rows above: the
+ * onboarding and quick-add pickers read PH_ACCOUNTS and create accounts from
+ * a single opening balance, which is not how either of these starts - an
+ * investment is valued, and a loan is owed. Only AccountNew offers them,
+ * through its Investments and Loans filters.
+ */
+export const PH_HOLDINGS = [
+  { name: 'Pag-IBIG MP2',          type: 'investment', kind: 'mp2',     color: '#0ea5e9', group: 'Investments' },
+  { name: 'BPI UITF',              type: 'investment', kind: 'fund',    color: '#ef4444', group: 'Investments' },
+  { name: 'BDO UITF',              type: 'investment', kind: 'fund',    color: '#2D9DFF', group: 'Investments' },
+  { name: 'GInvest',               type: 'investment', kind: 'fund',    color: '#2D9DFF', group: 'Investments' },
+  { name: 'COL Financial',         type: 'investment', kind: 'stocks',  color: '#1d4ed8', group: 'Investments' },
+  { name: 'Time Deposit',          type: 'investment', kind: 'deposit', color: '#10b981', group: 'Investments' },
+  { name: 'VUL',                   type: 'investment', kind: 'vul',     color: '#8b5cf6', group: 'Investments' },
+  { name: 'Pag-IBIG Housing Loan', type: 'loan',                        color: '#0ea5e9', group: 'Loans' },
+  { name: 'Pag-IBIG Salary Loan',  type: 'loan',                        color: '#0284c7', group: 'Loans' },
+  { name: 'SSS Salary Loan',       type: 'loan',                        color: '#1e40af', group: 'Loans' },
+  { name: 'Car Loan',              type: 'loan',                        color: '#64748b', group: 'Loans' },
+  { name: 'Personal Loan',         type: 'loan',                        color: '#f97316', group: 'Loans' },
+]
+
 export const POPULAR_ACCOUNTS = PH_ACCOUNTS.filter(a => a.popular)
 
 // TYPE_ICON moved to components/icons.jsx as ACCOUNT_TYPE_ICON. Which glyph

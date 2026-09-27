@@ -8,6 +8,8 @@ import { addMonths, monthKeyOf, monthName } from './recap'
 import { parseDateLocal } from '../utils/recurring'
 import { txMonthKey } from '../utils/txDate'
 import { isFlowRow, isSpend } from './flows'
+import { loanStatus } from './loans'
+import { investmentStatus, STALE_AFTER_DAYS } from './investments'
 
 /**
  * What belongs in the notifications list, worked out from the ledger.
@@ -52,7 +54,7 @@ export const BUDGET_WARN_AT = 0.8
 const DAY_MS = 864e5
 
 /**
- * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'milestone'|'challenge'|'recap'|'whats-new'} NotificationKind
+ * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'milestone'|'challenge'|'recap'|'whats-new'|'loan-due'|'investment-stale'|'forecast-floor'|'forecast-short'} NotificationKind
  *
  * @typedef {object} FeedItem
  * @property {string} id
@@ -100,12 +102,15 @@ function latest(stages, nowMs) {
  * @param {{version: string, headline: string, at: string}|null} [input.whatsNew]
  *   this release, dated when this device first had it - null when there is
  *   nothing to announce (see releaseSeenAt)
+ * @param {ReturnType<typeof import('./forecast').buildForecast>|null} [input.forecast]
+ *   the next 30 days, when the caller has worked it out - for the warning
+ *   that money runs short, or under the floor
  * @param {Date} [input.now]
  * @returns {FeedItem[]}  newest first
  */
 export function collectNotifications({
   accounts = [], transactions = [], recurring = [], categories = [], badges = [], challenges = [],
-  globalRollover = false, whatsNew = null, now = new Date(),
+  globalRollover = false, whatsNew = null, forecast = null, now = new Date(),
 } = {}) {
   const nowMs = now.getTime()
   const floor = nowMs - FEED_WINDOW_DAYS * DAY_MS
@@ -142,7 +147,8 @@ export function collectNotifications({
 
   // ── Bills ──
   for (const bill of recurring) {
-    if (!bill || bill.active === false || !bill.nextDate) continue
+    // Bills only: a salary is not "due", and nobody needs telling it is late.
+    if (!bill || bill.active === false || !bill.nextDate || bill.type === 'inflow') continue
     const date = String(bill.nextDate).slice(0, 10)
     const d = parseDateLocal(date)
     if (!d) continue
@@ -156,6 +162,61 @@ export function collectNotifications({
       // Still not posted the day after: nextDate only moves once it is.
       { id: `bill:${key}:${date}:overdue`, kind: 'bill-overdue', at: at9(d, 1).toISOString(), title: `${bill.name} is overdue`, body: `Due ${shortDate(d)}. Post it once it's paid.`, url: '/recurring' },
     ], nowMs))
+  }
+
+  // ── Loans: three days before the payment and on the day, until it is paid ──
+  for (const acct of accounts) {
+    if (acct?.type !== 'loan' || !acct.dueDate || !(acct.minimumPayment > 0)) continue
+    const s = loanStatus(acct, transactions, now)
+    if (!s.nextDue || !(s.owed > 0.005) || !s.next) continue
+    const key = stableKey(acct)
+    const id = `loan:${key}:${ymd(s.nextDue)}`
+    const body = `${fmt(s.next.amount, acct.currency || currencyOfAccountName(acct.name))} to pay`
+    const url = acct.id != null ? `/accounts/${acct.id}` : '/accounts'
+    offer(latest([
+      { id: `${id}:early`, kind: 'loan-due', at: at9(s.nextDue, -CARD_LEAD_DAYS).toISOString(), title: `${acct.name} due in ${CARD_LEAD_DAYS} days`, body, url },
+      { id: `${id}:due`, kind: 'loan-due', at: at9(s.nextDue).toISOString(), title: `${acct.name} due today`, body, url },
+    ], nowMs))
+  }
+
+  // ── Investments: once a value is old, say so - once per value ──
+  for (const acct of accounts) {
+    if (acct?.type !== 'investment') continue
+    const s = investmentStatus(acct, transactions, now)
+    if (!s.valuedAt) continue
+    const staleAt = at9(s.valuedAt, STALE_AFTER_DAYS + 1)
+    offer({
+      id: `invest:${stableKey(acct)}:${ymd(s.valuedAt)}`, kind: 'investment-stale',
+      at: staleAt.toISOString(),
+      title: `Time to update ${acct.name}`,
+      body: `Its value is from ${shortDate(s.valuedAt)}.`,
+      url: acct.id != null ? `/accounts/${acct.id}` : '/accounts',
+    })
+  }
+
+  // ── The forecast: money running short, or under the floor, in the next 30 days ──
+  /* Once a month per warning, not once per date: the tightest day moves a
+     little every time something is logged, and a new notification each time
+     it did would be noise about the same fact. */
+  if (forecast) {
+    const month = monthKeyOf(now)
+    // Dated 9 this morning, or now if that is still to come.
+    const at = new Date(Math.min(nowMs, at9(now).getTime())).toISOString()
+    if (forecast.firstNegative) {
+      offer({
+        id: `forecast:short:${month}`, kind: 'forecast-short', at,
+        title: `Money could run short on ${shortDate(forecast.firstNegative.date)}`,
+        body: 'See what is coming up.',
+        url: '/insights/forecast',
+      })
+    } else if (forecast.firstBelowFloor) {
+      offer({
+        id: `forecast:floor:${month}`, kind: 'forecast-floor', at,
+        title: `Below your floor on ${shortDate(forecast.firstBelowFloor.date)}`,
+        body: 'See what is coming up.',
+        url: '/insights/forecast',
+      })
+    }
   }
 
   // ── Budgets: this month and last, so a crossing late on the 31st survives the 1st ──

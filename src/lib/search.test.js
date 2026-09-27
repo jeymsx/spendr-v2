@@ -90,7 +90,8 @@ describe('searchEverything', () => {
 
   it('finds a bill by its amount', () => {
     const groups = searchEverything('549', data)
-    expect(groups.find(g => g.group === 'Bills').items[0].label).toBe('Netflix')
+    // The group is named after the page it opens, which is Recurring now.
+    expect(groups.find(g => g.group === 'Recurring').items[0].label).toBe('Netflix')
   })
 
   it('percent-encodes a category name for its route', () => {

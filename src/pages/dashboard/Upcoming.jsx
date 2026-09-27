@@ -1,10 +1,62 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
+import RollingNumber from '../../components/ui/RollingNumber'
+import CategoryGlyph from '../../components/CategoryGlyph'
+import BillMark from '../../components/BillMark'
+import { IconCardUI, IconReceipt } from '../../components/icons'
 import { fmt, fmtCompact } from '../../lib/money'
 import SectionHeading from '../../components/ui/SectionHeading'
 
-// ── Upcoming ───────────────────────────────────────────────────────────────────
+/**
+ * A forecast event, as the row below draws it - one mapping for Home and the
+ * Forecast page, so an item looks the same in both.
+ *
+ * @param {import('../../lib/forecast').ForecastEvent} e
+ * @param {Record<string, any>} catMap       categories by name
+ * @param {Record<string, any>} acctByName   accounts by name
+ */
+export function toUpcomingItem(e, catMap, acctByName) {
+  const common = {
+    key: e.key, date: e.date, name: e.name, amount: e.amount, sign: e.sign,
+    to: e.to, kind: e.repeats ? 'recurring' : 'statement', counted: e.counted,
+  }
+  if (e.kind === 'bill' || e.kind === 'income') {
+    const cat = e.category ? catMap[e.category] : null
+    return {
+      ...common,
+      meta: e.account ?? '',
+      icon: <CategoryGlyph cat={cat} size={17} emoji="🔁" />,
+      /* The brand's own logo where there is one - the same mark the
+         Recurring list and the item's page draw. BillMark falls back to the
+         tile above for a name it has no art for. */
+      mark: <BillMark name={e.name} cat={cat} size={20} boxClass="w-10 h-10 rounded-2xl" />,
+      color: cat?.color ?? null,
+      ...(e.overdue
+        ? (e.kind === 'income' ? { status: 'Not marked yet', late: false } : { status: 'Overdue', late: true })
+        : {}),
+    }
+  }
+  if (e.kind === 'card') {
+    return {
+      ...common, meta: 'Statement, already counted', icon: <IconCardUI size={17} />,
+      color: acctByName[e.name]?.color ?? null,
+      ...(e.overdue ? { status: 'Overdue', late: true } : {}),
+    }
+  }
+  if (e.kind === 'loan') {
+    return {
+      ...common, meta: 'Loan payment', icon: <IconReceipt size={17} />,
+      color: acctByName[e.name]?.color ?? null,
+    }
+  }
+  return {
+    ...common, meta: 'You owe', icon: <IconReceipt size={17} />, color: null,
+    ...(e.overdue ? { status: 'Overdue', late: true } : {}),
+  }
+}
+
+// ── Next 30 days ───────────────────────────────────────────────────────────────
 
 /**
  * "Tomorrow", "Today", or a date. Relative wording only where it is genuinely
@@ -45,26 +97,31 @@ export function IconDueBadge() {
 }
 
 /**
- * One committed-but-not-yet-real charge.
+ * One committed-but-not-yet-real movement.
  *
  * Same metrics as TxRow - 40px icon, same paddings, same type scale - so it
  * reads as the same kind of object. What differs is the weight: the name is
  * slate-600 where a real transaction is slate-800, and the amount is neutral
- * rather than red, because nothing has left the account yet. Colouring an
+ * rather than red or green, because nothing has moved yet. Colouring an
  * unspent peso red would be the same lie as counting it.
  *
  * The fade is done with muted COLOURS rather than a container opacity on
  * purpose. `opacity-60` over white drops slate-800 to about 4.3:1, under the
  * 4.5:1 floor; slate-600 and slate-500 are 7.6:1 and 4.8:1 and look just as
  * recessive next to full-strength rows.
+ *
+ * `sign` is +1 for money coming in (a payday) and -1 otherwise. `status`
+ * replaces the date word when the item has one of its own - "Overdue" for a
+ * bill that should have posted, "Not marked yet" for pay that has not.
  */
 export function UpcomingRow({ item, isLast }) {
   const navigate = useNavigate()
-  const overdue = fmtUpcoming(item.date) === 'Overdue'
+  const status = item.status ?? fmtUpcoming(item.date)
+  const late = item.status ? item.late : status === 'Overdue'
   return (
     <>
     <button
-      onClick={() => navigate(item.to)}
+      onClick={() => item.to && navigate(item.to)}
       className="w-full text-left flex items-center gap-3 px-4 py-3.5
         active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
     >
@@ -100,15 +157,15 @@ export function UpcomingRow({ item, isLast }) {
           {item.name}
         </span>
         <span className="block text-xs text-slate-500 dark:text-slate-400 truncate mt-0.5">
-          <span className={overdue ? 'text-red-500 dark:text-red-400 font-semibold' : ''}>
-            {fmtUpcoming(item.date)}
+          <span className={late ? 'text-red-500 dark:text-red-400 font-semibold' : ''}>
+            {status}
           </span>
           {item.meta ? ` · ${item.meta}` : ''}
         </span>
       </span>
 
       <span className="text-sm font-semibold tabular-nums shrink-0 text-slate-500 dark:text-slate-400">
-        −{fmt(item.amount)}
+        {item.sign > 0 ? '+' : '−'}{fmt(item.amount)}
       </span>
     </button>
     {!isLast && <Divider inset="glyph" />}
@@ -117,38 +174,64 @@ export function UpcomingRow({ item, isLast }) {
 }
 
 /**
- * Renders nothing when there is nothing coming.
+ * What the next month holds: the one figure that answers "can I spend
+ * today?", and the next few things that land.
  *
- * A home screen carrying an empty "Upcoming — no upcoming payments" panel
- * spends a section's worth of space saying that a section is not needed.
+ * It replaces a list capped at two upcoming bills, which said what was due
+ * but not whether you could cover it. The figure is Latr's "safe to spend":
+ * the lowest your money gets before the next payday, less the floor you set
+ * on the forecast - so a salary on the 15th and rent on the 12th are read in
+ * the right order. The whole walk is a tap away on the Forecast page.
+ *
+ * Without a payday on the Recurring list the forecast is guessing, so it
+ * says so and offers the one thing that fixes it.
  */
-export default function UpcomingSection({ items }) {
-  if (!items?.length) return null
-  const total = items.reduce((sum, i) => sum + (i.amount ?? 0), 0)
+export default function UpcomingSection({ forecast, items }) {
+  const navigate = useNavigate()
+  if (!forecast) return null
+  const noIncome = !forecast.hasIncome
+  const short = forecast.firstNegative
+  const until = forecast.safeUntil
+    ? `Until payday, ${forecast.safeUntil.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`
+    : 'For the next 2 weeks'
+
   return (
     <section className="px-5 mt-8">
-      {/* Headed like Accounts, Budget and Recent, because it is the same kind
-          of thing: a top-level block of this screen.
- 
-          It started as small caps, copied from the reference app -
-          but there, "UPCOMING" is a group divider INSIDE one continuous
-          transaction list, a peer of "THU, 20 JUL". Borrowing that
-          typography for a standalone card borrowed the wrong hierarchy, and
-          sitting directly under the Budget block it read as a sub-part of
-          it rather than a section in its own right. */}
       <SectionHeading
         inset="none"
         gap="none"
-        action={
-          /* The total covers the rows on screen, not every future bill - a
-             figure that disagreed with the two rows under it would be worse
-             than no figure at all. */
-          <span className="text-13 font-semibold tabular-nums text-slate-500 dark:text-slate-400">
-            −{fmtCompact(total)}
-          </span>
-        }
-      >Upcoming</SectionHeading>
+        actionLabel="Forecast"
+        actionTo="/insights/forecast"
+      >Next 30 days</SectionHeading>
       <Card clip className="mt-3">
+        <Link
+          to="/insights/forecast"
+          className="block px-4 pt-4 pb-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+        >
+          <span className="block text-11 font-semibold text-slate-500 dark:text-slate-400">Safe to spend</span>
+          <span className="block mt-1 text-22 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+            <RollingNumber id="home:safe" value={forecast.safeToSpend} format={v => fmt(v)} />
+          </span>
+          <span className={`block mt-1.5 text-12 ${short ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+            {short
+              ? `Runs short on ${short.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`
+              : forecast.floor > 0 ? `${until}, above your ${fmtCompact(forecast.floor)} floor` : until}
+          </span>
+        </Link>
+        {noIncome && (
+          <>
+            <Divider inset="row" />
+            <button
+              type="button"
+              onClick={() => navigate('/recurring/new?type=income')}
+              className="w-full text-left px-4 py-3 text-xs font-semibold text-primary
+                active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+            >
+              Add your payday to see what&apos;s ahead
+            </button>
+          </>
+        )}
+        {items.length > 0 && <Divider />}
         {items.map((item, i) => (
           <UpcomingRow key={item.key} item={item} isLast={i === items.length - 1} />
         ))}

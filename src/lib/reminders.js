@@ -6,6 +6,7 @@ import { fmt } from './money'
 import { txMonthKey } from '../utils/txDate'
 import { addMonths, monthKeyOf, monthName, parseMonth } from './recap'
 import { isFlowRow } from './flows'
+import { loanStatus } from './loans'
 
 /**
  * The reminders a ledger is owed, worked out on the device.
@@ -31,6 +32,9 @@ import { isFlowRow } from './flows'
  *   hears about next month's.
  *
  *   A bill, on the day it is due, for every occurrence inside the horizon.
+ *   Income that arrives on a schedule is not reminded - there is nothing to do.
+ *
+ *   A loan's payment, three days before and on the day, until it is paid.
  *
  *   The month's recap, on the 1st - once there is anything in the month to
  *   look back on.
@@ -182,8 +186,22 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
     }
   }
 
+  /* A loan's payment, three days before and on the day - the same two a card
+     gets, worded the same way, until this month's is paid. */
+  for (const acct of accounts) {
+    if (acct?.type !== 'loan' || !acct.dueDate || !(acct.minimumPayment > 0)) continue
+    const s = loanStatus(acct, transactions, now)
+    if (!s.nextDue || !(s.owed > 0.005) || !s.next) continue
+    const key = stableKey(acct)
+    const body = `${fmt(s.next.amount, acct.currency || currencyOfAccountName(acct.name))} to pay`
+    const url = acct.id != null ? `/accounts/${acct.id}` : '/accounts'
+    push({ tag: `loan:${key}:${ymd(s.nextDue)}:early`, fireAt: at9(s.nextDue, -CARD_LEAD_DAYS).toISOString(), title: `${acct.name} due in ${CARD_LEAD_DAYS} days`, body, url })
+    push({ tag: `loan:${key}:${ymd(s.nextDue)}:due`, fireAt: at9(s.nextDue).toISOString(), title: `${acct.name} due today`, body, url })
+  }
+
   for (const bill of recurring) {
-    if (!bill || bill.active === false || !bill.nextDate) continue
+    // Bills only - income that arrives on a schedule has nothing to remind.
+    if (!bill || bill.active === false || !bill.nextDate || bill.type === 'inflow') continue
     const key = stableKey(bill)
     const cur = currencyOfAccountName(bill.account)
     const body = [

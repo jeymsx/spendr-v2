@@ -22,8 +22,10 @@ import { IconPlus } from '../components/icons'
    thing - a tappable name-and-dot chip in the quick-add sheet. This one
    is the account's card face at row size. */
 import {
-  PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole,
+  PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole, bucketOf,
 } from '../lib/accountMeta'
+import { netWorthBreakdown } from '../lib/netWorth'
+import useNetWorthDebts from '../hooks/useNetWorthDebts'
 import { fmt } from '../lib/money'
 import IconButton from '../components/ui/IconButton'
 import Divider from '../components/ui/Divider'
@@ -69,21 +71,28 @@ export { CreditTxSection, DetailTxRow }
  * costing a whole header, and the split honours the form's own "Counts as"
  * field - so moving GCash to Savings actually moves it.
  */
+/* Investments and Loans are groups of their own, filled by lib/accountMeta's
+   bucketOf - which is what decides the piles on Home too, so the subtotals
+   here still tie back to the wallet. A group with nothing in it is not drawn,
+   so a ledger with no loan never sees a Loans header. */
 const ACCOUNT_GROUPS = [
-  { label: 'Spending', roles: ['spending'] },
-  { label: 'Savings',  roles: ['savings']  },
-  { label: 'Credit',   roles: ['credit']   },
+  { label: 'Spending',    roles: ['spending'] },
+  { label: 'Savings',     roles: ['savings']  },
+  { label: 'Investments', roles: ['invested'] },
+  { label: 'Credit',      roles: ['credit']   },
+  { label: 'Loans',       roles: ['loan']     },
 ]
 
 /**
  * What an account contributes to a group total. A credit card's `balance`
  * column stays 0 - what it owes is derived from its statement - so summing
- * `balance` across a mixed group quietly undercounts.
+ * `balance` across a mixed group quietly undercounts. A loan's is stored
+ * negative, and its group reads what is owed, as the credit group does.
  */
 function acctTotal(a, creditStmtMap) {
-  return a.type === 'credit'
-    ? (creditStmtMap[a.name]?.currentBalance ?? 0)
-    : (a.balance ?? 0)
+  if (a.type === 'credit') return creditStmtMap[a.name]?.currentBalance ?? 0
+  if (a.type === 'loan') return -(a.balance ?? 0)
+  return a.balance ?? 0
 }
 
 /**
@@ -161,7 +170,8 @@ export default function Accounts() {
   const baseCurrency = useBaseCurrency()
   const { table: rates } = useRates()
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], undefined)
-  const loading      = accounts === undefined || transactions === undefined
+  const nwDebts      = useNetWorthDebts()
+  const loading      = accounts === undefined || transactions === undefined || !nwDebts.ready
 
   const creditStmtMap = useMemo(() => {
     const map = {}
@@ -190,24 +200,30 @@ export default function Accounts() {
     [accounts, parentNames],
   )
 
+  /* The same net worth Home shows - lib/netWorth.js - converted into the
+     ledger's currency. It used to add every balance at face value, so a
+     dollar account counted its dollars as pesos here and nowhere else. */
   const summary = useMemo(() => {
-    // Parents have their own real balance; sum all accounts (no double-counting)
-    const allAccts   = accounts ?? []
-    const assets     = allAccts.filter(a => a.type !== 'credit').reduce((s, a) => s + (a.balance ?? 0), 0)
-    const creditUsed = allAccts.filter(a => a.type === 'credit').reduce((s, a) => {
-      const stmt = creditStmtMap[a.name]
-      return s + (stmt?.currentBalance ?? 0)
-    }, 0)
-    return { assets, creditUsed, net: assets - creditUsed }
-  }, [accounts, creditStmtMap])
+    const b = netWorthBreakdown({
+      accounts: accounts ?? [], transactions: transactions ?? [], view: baseCurrency, rates,
+      creditStatus: creditStmtMap, debts: nwDebts.debts, includeDebts: nwDebts.include,
+    })
+    return {
+      net: b.total,
+      assets: b.spending + b.savings + b.invested + b.owedToYou,
+      creditUsed: b.credit,
+      owed: b.credit + b.loans + b.youOwe,
+    }
+  }, [accounts, transactions, baseCurrency, rates, creditStmtMap, nwDebts.debts, nwDebts.include])
 
   const groups = useMemo(() =>
     ACCOUNT_GROUPS
       .map(g => ({
         ...g,
-        // `role` is user-editable and may be unset on older rows, so fall back
-        // to what the type implies.
-        accounts: flatAccts.filter(a => g.roles.includes(a.role ?? defaultRole(a.type))),
+        // `role` is user-editable and may be unset on older rows - bucketOf
+        // falls back to what the type implies, and fixes the three kinds whose
+        // meaning never changes.
+        accounts: flatAccts.filter(a => g.roles.includes(bucketOf(a))),
       }))
       .filter(g => g.accounts.length > 0),
     [flatAccts],

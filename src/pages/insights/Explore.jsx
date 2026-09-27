@@ -109,7 +109,7 @@ function StackBar({ parts }) {
  * @param {{to: string, zoom: string, title: string, caption: import('react').ReactNode, label: string,
  *          children: import('react').ReactNode}} props
  */
-function Tile({ to, zoom, title, caption, label, children }) {
+function Tile({ to, zoom, title, caption, label, children, wide = false }) {
   const navigate = useNavigate()
   return (
     <Card
@@ -123,7 +123,7 @@ function Tile({ to, zoom, title, caption, label, children }) {
         e.preventDefault()
         openFrom(e.currentTarget, () => navigate(to), zoom)
       }}
-      className="h-[132px] flex flex-col px-3 pt-3 pb-3 min-w-0"
+      className={`h-[132px] flex flex-col px-3 pt-3 pb-3 min-w-0${wide ? ' col-span-2' : ''}`}
     >
       <span className="flex items-center justify-between gap-2">
         <span className="text-13 font-semibold text-slate-800 dark:text-white truncate">{title}</span>
@@ -137,9 +137,10 @@ function Tile({ to, zoom, title, caption, label, children }) {
 
 /**
  * @param {{data: ReturnType<typeof import('./useInsightsData').useInsightsData>, range: string,
- *          netWorth: ReturnType<typeof import('./netWorth').useNetWorthSeries>}} props
+ *          netWorth: ReturnType<typeof import('./netWorth').useNetWorthSeries>,
+ *          forecast?: ReturnType<typeof import('../../lib/forecast').buildForecast>|null}} props
  */
-export default function Explore({ data, range, netWorth }) {
+export default function Explore({ data, range, netWorth, forecast = null }) {
   const { daily, multiBarData, rankedExpenses, accountBreakdown, catMap } = data
 
   // ── Trend: the spending's shape, and its busiest day or month ──
@@ -233,6 +234,40 @@ export default function Explore({ data, range, netWorth }) {
             <Sparkline values={nw.map(p => p.value)} color={rising ? '#10b981' : '#ef4444'} zero={false} />
           </span>
         </Tile>
+
+        {/* The one card that looks forward, full width under the four that
+            look back - it is a different question, and it keeps its own
+            range, as Net worth does. */}
+        {forecast && (
+          <Tile
+            to="/insights/forecast"
+            zoom="forecast"
+            title="Next 30 days"
+            wide
+            label={`Next 30 days. Safe to spend ${fmt(forecast.safeToSpend)}`}
+            caption={forecast.firstNegative ? (
+              <span className="text-red-500 dark:text-red-400">
+                Runs short {forecast.firstNegative.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+              </span>
+            ) : `Tightest ${forecast.lowest.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })} · ${fmtCompact(forecast.lowest.balance)}`}
+          >
+            <span className="flex items-end gap-4">
+              <span className="flex flex-col shrink-0">
+                <span className="text-11 text-slate-500 dark:text-slate-400">Safe to spend</span>
+                <span className="text-17 font-semibold text-slate-900 dark:text-white tabular-nums">
+                  {fmtCompact(forecast.safeToSpend)}
+                </span>
+              </span>
+              <span className="flex-1 min-w-0">
+                <Sparkline
+                  values={forecast.days.map(d => d.balance)}
+                  color={forecast.firstNegative ? '#ef4444' : '#10b981'}
+                  zero={false}
+                />
+              </span>
+            </span>
+          </Tile>
+        )}
       </div>
     </section>
   )

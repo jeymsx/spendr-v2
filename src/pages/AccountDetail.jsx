@@ -46,6 +46,13 @@ import ProgressBar from '../components/ui/ProgressBar'
 import RollingNumber from '../components/ui/RollingNumber'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import useRates from '../hooks/useRates'
+import { INVESTMENT_KIND_LABEL } from '../lib/accountMeta'
+import { investmentStatus, valuedAgo } from '../lib/investments'
+import { loanStatus } from '../lib/loans'
+import { ordinal } from '../utils/recurring'
+import { payLoan, recordValue } from '../db/accountWrites'
+import UpdateValueSheet from './accounts/UpdateValueSheet'
+import LoanPaySheet from './accounts/LoanPaySheet'
 
 /**
  * One account, as a page rather than a sheet.
@@ -328,7 +335,26 @@ export default function AccountDetail() {
   }, [creditData])
 
   const isCredit  = account?.type === 'credit'
-  const totalUsed = isCredit ? (creditData?.currentBalance ?? 0) : (account?.balance ?? 0)
+  /* A loan is read the way a card is - by what you owe, which goes DOWN as
+     you pay - so its trend runs through buildTrend's owed branch and its
+     figure is the stored balance turned positive. An investment is read by
+     its value, like any balance. */
+  const isLoan       = account?.type === 'loan'
+  const isInvestment = account?.type === 'investment'
+  const isOwed       = isCredit || isLoan
+
+  const invStatus = useMemo(
+    () => (isInvestment ? investmentStatus(account, transactions ?? []) : null),
+    [isInvestment, account, transactions],
+  )
+  const loanInfo = useMemo(
+    () => (isLoan ? loanStatus(account, transactions ?? []) : null),
+    [isLoan, account, transactions],
+  )
+
+  const totalUsed = isCredit ? (creditData?.currentBalance ?? 0)
+    : isLoan ? (loanInfo?.owed ?? 0)
+    : (account?.balance ?? 0)
 
   const range = useMemo(
     () => TREND_RANGES.find(r => r.key === trendRange) ?? TREND_RANGES[3],
@@ -336,8 +362,47 @@ export default function AccountDetail() {
   )
   const trend = useMemo(() => {
     if (!accountName) return []
-    return buildTrend(acctTxs, accountName, isCredit, totalUsed, range)
-  }, [acctTxs, accountName, isCredit, totalUsed, range])
+    return buildTrend(acctTxs, accountName, isOwed, totalUsed, range)
+  }, [acctTxs, accountName, isOwed, totalUsed, range])
+
+  const [valueOpen,   setValueOpen]   = useState(false)
+  const [valueSaving, setValueSaving] = useState(false)
+  const [loanPayOpen, setLoanPayOpen] = useState(false)
+  const [loanPaying,  setLoanPaying]  = useState(false)
+
+  const saveValue = useCallback(async (/** @type {number} */ value) => {
+    if (!account) return
+    setValueSaving(true)
+    try {
+      const { delta } = await recordValue(account, value, new Date().toISOString())
+      setValueOpen(false)
+      showToast(Math.abs(delta) < 0.005
+        ? 'Value confirmed'
+        : `Value updated, ${delta > 0 ? 'up' : 'down'} ${fmt(Math.abs(delta), account.currency)}`)
+    } catch (e) {
+      console.error('[AccountDetail] value update failed:', e)
+      showToast('Could not save the value', 'error')
+    } finally {
+      setValueSaving(false)
+    }
+  }, [account, showToast])
+
+  const handleLoanPay = useCallback(async ({ amount, from }) => {
+    if (!account || !from || !(amount > 0)) return
+    setLoanPaying(true)
+    try {
+      const { interest } = await payLoan({ loan: account, from: from.name, amount, dateIso: new Date().toISOString() })
+      setLoanPayOpen(false)
+      showToast(interest > 0.005
+        ? `Paid ${fmt(amount, account.currency)}, ${fmt(interest, account.currency)} of it interest`
+        : `Paid ${fmt(amount, account.currency)} to ${account.name}`)
+    } catch (e) {
+      console.error('[AccountDetail] loan payment failed:', e)
+      showToast('Could not record the payment', 'error')
+    } finally {
+      setLoanPaying(false)
+    }
+  }, [account, showToast])
 
   // What this balance is already promised to. Every goal is passed in, not
   // just this account's: a higher-ranked goal can drain the balance before the
@@ -385,11 +450,13 @@ export default function AccountDetail() {
   const children  = (accounts ?? []).filter(a => a.parentName === account.name)
   const isParent  = children.length > 0
   const isChild   = !!account.parentName
-  const trendColor = isCredit ? '#ef4444' : brand.from
+  const trendColor = isOwed ? '#ef4444' : brand.from
 
   // An account named after its own type - "Cash" - would otherwise label
   // itself twice on the card face. Declared after isChild, which it reads.
-  const typeLabel = TYPE_LABEL[account.type]
+  const typeLabel = isInvestment
+    ? (INVESTMENT_KIND_LABEL[account.kind] ?? TYPE_LABEL.investment)
+    : TYPE_LABEL[account.type]
   const cardSubtitle = isChild
     ? `Part of ${account.parentName}`
     : (typeLabel && typeLabel.toLowerCase() !== (account.name ?? '').trim().toLowerCase() ? typeLabel : null)
@@ -430,10 +497,10 @@ export default function AccountDetail() {
       {/* ── The one number, leading the page ── */}
       <section className="px-5 mt-1 text-center">
         <SectionLabel>
-          {isCredit ? 'Balance used' : 'Current balance'}
+          {isCredit ? 'Balance used' : isLoan ? 'Owed' : isInvestment ? 'Value' : 'Current balance'}
         </SectionLabel>
         <p className={`text-38 leading-none font-semibold tracking-tight tabular-nums ${
-          isCredit ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
+          isOwed ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'
         }`}>
           {/* Rolls from what you last saw - ui/RollingNumber. Delete or
               refund something here and the balance counts to its new self. */}
@@ -462,6 +529,66 @@ export default function AccountDetail() {
               used={acctFmt(totalUsed)}
               total={acctFmt(limit)}
             />
+          </div>
+        )}
+
+        {/* An investment: how old the figure is, what went in, and the
+            difference - then the two things you do with one. The age comes
+            first because a value is only as good as its date. */}
+        {isInvestment && invStatus && (
+          <>
+            <p className="mt-2 text-13 text-slate-500 dark:text-slate-400">
+              {valuedAgo(invStatus.valuedAt)}
+              {invStatus.stale && (
+                <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded-full text-11 font-semibold
+                  bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300 align-middle">
+                  Old value
+                </span>
+              )}
+            </p>
+            {invStatus.paidIn > 0.005 && (
+              <p className="mt-1.5 text-13 tabular-nums">
+                <span className={`font-semibold ${
+                  Math.abs(invStatus.gain) < 0.005 ? 'text-slate-500 dark:text-slate-400'
+                    : invStatus.gain > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+                }`}>
+                  {Math.abs(invStatus.gain) < 0.005 ? 'No change'
+                    : `${invStatus.gain > 0 ? '+' : '−'}${acctFmt(Math.abs(invStatus.gain))}`}
+                  {invStatus.gainPct != null && Math.abs(invStatus.gain) >= 0.005 &&
+                    ` (${Math.abs(invStatus.gainPct * 100).toFixed(1)}%)`}
+                </span>
+                <span className="text-slate-500 dark:text-slate-400"> on {acctFmt(invStatus.paidIn)} paid in</span>
+              </p>
+            )}
+            <div className="mt-5 flex gap-3 max-w-[320px] mx-auto">
+              <Button className="flex-1" onClick={() => setValueOpen(true)}>Update value</Button>
+              <Button
+                variant="tint"
+                className="flex-1"
+                onClick={() => navigate('/transfer', { state: { prefill: { toAccount: account.name } } })}
+              >
+                Add money
+              </Button>
+            </div>
+          </>
+        )}
+
+        {/* A loan: how far along, and when it ends. The next payment has its
+            own card below, with the button. */}
+        {isLoan && loanInfo && (
+          <div className="mt-5 max-w-[320px] mx-auto text-left">
+            <ProgressBar value={loanInfo.progress * 100} fillClass="bg-primary" />
+            <div className="mt-1.5 flex items-baseline justify-between gap-3">
+              <span className="text-11 text-slate-400 dark:text-slate-500">
+                {acctFmt(loanInfo.paidIn)} paid
+              </span>
+              <span className="text-11 text-slate-400 dark:text-slate-500 text-right">
+                {loanInfo.owed <= 0.005 ? 'Paid off'
+                  : loanInfo.paidOffBy
+                    ? `Done by ${loanInfo.paidOffBy.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}`
+                    : Number.isFinite(loanInfo.monthsLeft) ? '' : 'Payment only covers interest'}
+              </span>
+            </div>
           </div>
         )}
       </section>
@@ -871,6 +998,57 @@ export default function AccountDetail() {
           </>
         ) : (
           <>
+            {/* ── A loan's next payment, as one card ──
+                The same card the credit page leads with - what is due, when,
+                and the verb - so the two things you owe on read alike. */}
+            {isLoan && loanInfo && loanInfo.owed > 0.005 && (
+              <Card padding="md" className="mb-5">
+                <div className="flex items-baseline justify-between gap-3">
+                  <SectionLabel inset="none" gap="none">Next payment</SectionLabel>
+                  {loanInfo.nextDue && (
+                    <span className="text-11 tabular-nums text-slate-400 dark:text-slate-500">
+                      {fmtDueDate(loanInfo.nextDue)}
+                    </span>
+                  )}
+                </div>
+                {loanInfo.next ? (
+                  <>
+                    <div className="mt-2.5 flex items-baseline justify-between gap-3">
+                      <span className="text-13 text-slate-500 dark:text-slate-400">Amount</span>
+                      <span className="text-22 font-bold tabular-nums text-slate-900 dark:text-white">
+                        {acctFmt(loanInfo.next.amount)}
+                      </span>
+                    </div>
+                    <p className="mt-1 text-12 text-slate-500 dark:text-slate-400 tabular-nums">
+                      {acctFmt(loanInfo.next.principal)} off what you owe · {acctFmt(loanInfo.next.interest)} interest
+                    </p>
+                    {loanInfo.paidThisCycle && (
+                      <p className="mt-2 text-12 font-semibold text-emerald-600 dark:text-emerald-400">
+                        This month is paid
+                      </p>
+                    )}
+                  </>
+                ) : (
+                  <p className="mt-3 text-13 text-slate-500 dark:text-slate-400">
+                    Add the monthly payment in Edit to see what is due.
+                  </p>
+                )}
+                {!account.dueDate && loanInfo.next && (
+                  <p className="mt-2 text-12 text-slate-500 dark:text-slate-400">
+                    Add a due day in Edit to be reminded.
+                  </p>
+                )}
+                <Button block className="mt-3" onClick={() => setLoanPayOpen(true)}>
+                  Make a payment
+                </Button>
+                {account.dueDate ? (
+                  <p className="mt-2 text-center text-11 text-slate-400 dark:text-slate-500">
+                    Due on the {ordinal(account.dueDate)} of every month
+                  </p>
+                ) : null}
+              </Card>
+            )}
+
             <SectionLabel gap="loose">
               Transactions · {acctTxs.length}
             </SectionLabel>
@@ -878,7 +1056,9 @@ export default function AccountDetail() {
               <EmptyState
                 icon={<IconEmptyLedger />}
                 title="No transactions yet"
-                body="Anything you spend or receive here will show up"
+                body={isInvestment ? 'Money you move in, and each value you save, shows up here'
+                  : isLoan ? 'Payments you make show up here'
+                  : 'Anything you spend or receive here will show up'}
               />
             ) : (
               <TxList txs={txsWithRunning} accountName={account.name} onSelect={setSelectedTx} catMap={catMap} />
@@ -923,6 +1103,29 @@ export default function AccountDetail() {
         balance={payOverdraw?.balance}
         amount={payOverdraw?.shortAmount}
       />
+
+      {isInvestment && (
+        <UpdateValueSheet
+          open={valueOpen}
+          onClose={() => setValueOpen(false)}
+          account={account}
+          status={invStatus}
+          saving={valueSaving}
+          onSave={saveValue}
+        />
+      )}
+
+      {isLoan && (
+        <LoanPaySheet
+          open={loanPayOpen}
+          onClose={() => setLoanPayOpen(false)}
+          loan={account}
+          accounts={accounts ?? []}
+          status={loanInfo}
+          saving={loanPaying}
+          onPay={handleLoanPay}
+        />
+      )}
 
       <TxDetailSheet
         /* Editing opens the form that created it, not five rows in a

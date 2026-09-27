@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -8,6 +8,8 @@ import { deleteRecurringRemote } from '../lib/sync'
 import { moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { validateRecurring, saveRecurring } from '../lib/recurringWrite'
 import { FREQ_OPTIONS } from '../utils/recurring'
+import { isEverydayAccount } from '../lib/accountMeta'
+import Segmented from '../components/ui/Segmented'
 import { IconChevronLeft, IconChevronRight } from '../components/icons'
 import CategoryRail from '../components/CategoryRail'
 import AccountSelectRow from '../components/AccountSelectRow'
@@ -71,7 +73,8 @@ export default function RecurringForm() {
   const isEdit = id != null
   const recs = useLiveQuery(() => db.recurring.toArray(), [], null)
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
-  const accounts = useLiveQuery(() => db.accounts.toArray(), [], [])
+  // Bills and income land on everyday accounts, not on investments or loans.
+  const accounts = useLiveQuery(async () => (await db.accounts.toArray()).filter(isEverydayAccount), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
 
   const editRec = useMemo(
@@ -79,11 +82,20 @@ export default function RecurringForm() {
     [isEdit, recs, id],
   )
 
+  /* A bill, or income that arrives on a schedule - a salary. One form for
+     both, because they are the same record facing opposite ways; the
+     forecast needs both to say what is coming. */
+  /* ?type=income opens it as income - the forecast's "Add your payday" -
+     and on the payroll cut-offs, since that is how pay lands here. */
+  const [searchParams] = useSearchParams()
+  const askedIncome = !isEdit && searchParams.get('type') === 'income'
+  const [kind, setKind] = useState(/** @type {'expense'|'inflow'} */ (askedIncome ? 'inflow' : 'expense'))
+  const isIncome = kind === 'inflow'
   const [name, setName] = useState(DRAFT_DEFAULTS.name)
   const [amountStr, setAmountStr] = useState(DRAFT_DEFAULTS.amountStr)
   const [category, setCategory] = useState(null)
   const [account, setAccount] = useState(null)
-  const [frequency, setFrequency] = useState(DRAFT_DEFAULTS.frequency)
+  const [frequency, setFrequency] = useState(askedIncome ? 'semimonthly' : DRAFT_DEFAULTS.frequency)
   const [nextDate, setNextDate] = useState(() => toDateInput())
   const [active, setActive] = useState(DRAFT_DEFAULTS.active)
   const [split, setSplit] = useState(/** @type {any} */ (null))
@@ -109,6 +121,7 @@ export default function RecurringForm() {
   useEffect(() => {
     if (!isEdit || hydrated.current || !editRec) return
     hydrated.current = true
+    setKind(editRec.type === 'inflow' ? 'inflow' : 'expense')
     setName(editRec.name ?? '')
     setAmountStr(editRec.amount != null ? numToMoneyStr(editRec.amount) : '')
     setFrequency(editRec.frequency ?? 'monthly')
@@ -130,24 +143,34 @@ export default function RecurringForm() {
     setAccount(accounts.find(a => a.name === editRec.account) ?? null)
   }, [isEdit, editRec, categories, accounts])
 
-  const expenseCategories = useMemo(
+  const kindCategories = useMemo(
     () => (categories ?? [])
-      .filter(c => c.type === 'expense')
+      .filter(c => c.type === kind)
       .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name)),
-    [categories],
+    [categories, kind],
   )
 
+  /* Switching sides drops a category from the other side - Salary is not a
+     bill - and a division, which income never has. */
+  const switchKind = (/** @type {string} */ k) => {
+    const next = k === 'inflow' ? 'inflow' : 'expense'
+    setKind(next)
+    if (category && category.type !== next) setCategory(null)
+    if (next === 'inflow') setSplit(null)
+  }
+
+  const noun = isIncome ? 'Income' : 'Bill'
   const back = () => navigate(-1)
 
   async function handleSave() {
-    const draft = { name, amountStr, category, account, frequency, nextDate, active, split }
+    const draft = { name, amountStr, category, account, frequency, nextDate, active, split, type: kind }
     const errs = validateRecurring(draft)
     if (Object.keys(errs).length) { setErrors(errs); return }
 
     setSaving(true)
     try {
       const what = await saveRecurring(draft, editRec)
-      showToast(what === 'created' ? 'Bill added' : 'Bill updated')
+      showToast(`${noun} ${what === 'created' ? 'added' : 'updated'}`)
       back()
     } catch (e) {
       console.error('[RecurringForm] save failed:', e)
@@ -162,7 +185,7 @@ export default function RecurringForm() {
     try {
       await db.recurring.delete(editRec.id)
       await deleteRecurringRemote(editRec.id, editRec.name, editRec.syncId)
-      showToast('Bill deleted')
+      showToast(`${noun} deleted`)
       /* Back twice: the detail page for a bill that no longer exists is
          behind this one, and returning to it would land on an empty record. */
       navigate('/recurring', { replace: true })
@@ -217,7 +240,7 @@ export default function RecurringForm() {
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          {isEdit ? 'Edit Bill' : 'New Bill'}
+          {isEdit ? `Edit ${noun}` : `New ${noun}`}
         </h1>
         {isEdit && editRec ? (
           <Button
@@ -236,12 +259,22 @@ export default function RecurringForm() {
 
       {waiting ? (
         <p className="px-5 pt-12 text-center text-sm text-slate-400 dark:text-slate-500">
-          That bill no longer exists.
+          That no longer exists.
         </p>
       ) : (
         <>
+          {/* Which way it goes. The same segmented track the account form
+              uses for "Counts as" - one question, one control. */}
+          <div className="px-5 pt-3 shrink-0">
+            <Segmented
+              options={[{ value: 'expense', label: 'Bill' }, { value: 'inflow', label: 'Income' }]}
+              value={kind}
+              onChange={switchKind}
+            />
+          </div>
+
           {/* ── The amount, leading ── */}
-          <div className="flex flex-col items-center px-6 pt-10 pb-10 shrink-0">
+          <div className="flex flex-col items-center px-6 pt-8 pb-10 shrink-0">
             <input
               type="text"
               inputMode="decimal"
@@ -292,7 +325,7 @@ export default function RecurringForm() {
                   type="text"
                   value={name}
                   onChange={e => { setName(e.target.value); setErrors(p => ({ ...p, name: null })) }}
-                  placeholder="Netflix, rent, gym"
+                  placeholder={isIncome ? 'Salary, allowance' : 'Netflix, rent, gym'}
                   maxLength={60}
                   className="flex-1 min-w-0 bg-transparent outline-none
                     text-sm font-medium text-slate-800 dark:text-white
@@ -312,7 +345,7 @@ export default function RecurringForm() {
                 )}
               </div>
               <CategoryRail
-                categories={expenseCategories}
+                categories={kindCategories}
                 selected={category}
                 onSelect={cat => { setCategory(cat); setErrors(p => ({ ...p, category: null })) }}
               />
@@ -327,7 +360,7 @@ export default function RecurringForm() {
                 thing and looks like this: most bills are not shared, and a
                 bordered field with a label above it makes an exception look
                 like one more thing to fill in. */}
-            {amount > 0 && (
+            {amount > 0 && !isIncome && (
               <button
                 type="button"
                 onClick={() => setDividing(true)}
@@ -429,6 +462,11 @@ export default function RecurringForm() {
                     [color-scheme:light] dark:[color-scheme:dark]"
                 />
               </div>
+              {frequency === 'semimonthly' && (
+                <p className="mt-2 px-1 text-12 text-slate-500 dark:text-slate-400">
+                  On the 15th and the last day of each month.
+                </p>
+              )}
             </div>
 
             {/* ── Active ── */}
@@ -459,7 +497,7 @@ export default function RecurringForm() {
             </Card>
 
             <Button size="lg" block onClick={handleSave} disabled={saving}>
-              {saving ? 'Saving…' : isEdit ? 'Save changes' : 'Add bill'}
+              {saving ? 'Saving…' : isEdit ? 'Save changes' : `Add ${noun.toLowerCase()}`}
             </Button>
           </div>
         </>

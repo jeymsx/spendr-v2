@@ -59,12 +59,17 @@ export async function checkOverdraw(accountName, amount) {
  * @param {{allowOverdraw?: boolean}} [opts]
  */
 export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
+  /* Income that arrives on a schedule - a salary - posts as an inflow, and
+     has nothing to overdraw and nobody to split it with. */
+  const income = rec?.type === 'inflow'
+  const kind = income ? 'inflow' : 'expense'
+
   /* The overdraw check lives here rather than in the caller because it has to
      happen inside the same decision as the write. There IS a review sheet in
      front of this now, but it shows what the charge is, not whether the
      account can take it - and a balance can change between the two. Callers
      surface OverdrawError as a sheet and retry with allowOverdraw. */
-  if (!allowOverdraw) {
+  if (!allowOverdraw && !income) {
     const over = await checkOverdraw(rec.account, rec.amount)
     if (over) throw new OverdrawError(over.name, over.balance ?? 0, rec.amount)
   }
@@ -81,7 +86,7 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
   await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
     addedId = await db.transactions.add({
       txId:              crypto.randomUUID(),
-      type:              'expense',
+      type:              kind,
       amount:            rec.amount,
       description:       rec.name,
       category:          rec.category,
@@ -99,11 +104,12 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
       recurringPrevDate: rec.nextDate,
     })
     await applyBalanceEffect(/** @type {Transaction} */ (
-      { type: 'expense', amount: rec.amount, account: rec.account, date: nowISO }))
+      { type: kind, amount: rec.amount, account: rec.account, date: nowISO }))
     await db.recurring.update(rec.id, { nextDate: newNextDate })
   })
 
   const tx = addedId ? await db.transactions.get(addedId) : null
+  if (income) return { nextDate: newNextDate, tx }
 
   /* A bill that is shared opens its receivables the moment it posts.
  

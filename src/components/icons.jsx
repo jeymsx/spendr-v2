@@ -249,6 +249,8 @@ export const ACCOUNT_TYPE_ICON = {
   bank:    IconBankUI,
   savings: IconBankUI,
   credit:  IconCardUI,
+  investment: IconBankUI,
+  loan:    IconBankUI,
 }
 
 /* Insight watermarks.

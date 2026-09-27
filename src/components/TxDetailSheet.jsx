@@ -24,6 +24,7 @@ import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
 import { fmt, baseSymbol } from '../lib/money'
 import { currencyOfTx, repriceForEdit } from '../lib/fxContext'
+import { isAdjustment } from '../lib/flows'
 import { impliedRate, rederiveReceived } from '../lib/transferLegs'
 
 const TYPE_CFG = {
@@ -108,7 +109,12 @@ export default function TxDetailSheet({
   /* Every transaction, for the refund maths. Only fetched for a purchase that
      could have one - a transfer, an inflow or a refund itself never can, and
      the sheet opens on every row in the app. */
-  const canRefund = tx?.type === 'expense' && !!tx?.txId && !isRefund(tx)
+  /* A correction or an investment's value moving is a row the app wrote to
+     match a balance, not a purchase: nothing to refund, and editing it as an
+     expense or an inflow would dress it up as one. Delete it and record the
+     value again instead. */
+  const adjustment = isAdjustment(tx)
+  const canRefund = tx?.type === 'expense' && !!tx?.txId && !isRefund(tx) && !adjustment
   /* Also when this is a leg of a split, which needs its siblings to say what
      the whole purchase came to. */
   const needsAll = canRefund || !!tx?.splitId
@@ -341,9 +347,11 @@ export default function TxDetailSheet({
             Refund
           </Button>
         )}
-        <Button className="flex-[2]" onClick={enterEdit}>
-          Edit
-        </Button>
+        {!adjustment && (
+          <Button className="flex-[2]" onClick={enterEdit}>
+            Edit
+          </Button>
+        )}
       </div>
     ),
     edit: (

@@ -8,7 +8,7 @@ import { useToast } from '../../context/ToastContext'
 import { surveyDuplicates, applyDedupe } from '../../lib/dedupeWrite'
 import { fmt } from '../../lib/money'
 
-const LABEL = { debts: 'Debts', recurring: 'Bills', templates: 'Templates' }
+const LABEL = { debts: 'Debts', recurring: 'Recurring', templates: 'Templates' }
 
 /**
  * Merging rows that are the same row.

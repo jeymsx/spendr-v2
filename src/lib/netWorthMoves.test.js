@@ -33,7 +33,7 @@ describe('net worth movements with debts counted', () => {
 
   it('a payment made when nothing was owed settles nothing', () => {
     const credit = { id: 2, syncId: 'd2', type: 'owed_to_me', amount: 500, amountPaid: 0, createdAt: d(6) }
-    const pay = { type: 'expense', account: 'BPI', amount: 500, category: 'Debt Payment', date: d(6), settles: [] }
+    const pay = { type: 'expense', account: 'BPI', amount: 500, category: 'Debt Payment', date: d(6), settles: /** @type {any[]} */ ([]) }
     expect(sum(netWorthMoves({ txs: [pay], debts: [credit], includeDebts: true, priceOf: face }))).toBe(0)
   })
 

@@ -9,7 +9,7 @@ import AccountPickerSheet from '../components/AccountPickerSheet'
 import { deleteRecurringRemote } from '../lib/sync'
 import { IconChevronRight, IconChevronLeft, IconPlus } from '../components/icons'
 import SegTabs from '../components/SegTabs'
-import { validateRecurring, saveRecurring } from '../lib/recurringWrite'
+import { validateRecurring, saveRecurring, isIncomeRecurring } from '../lib/recurringWrite'
 import {
   FREQ_OPTIONS, FREQ_ORDER, FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, parseDateLocal, daysUntil, dueStatus, DUE_TONE,
@@ -73,6 +73,9 @@ import { toDateInput } from '../utils/txDate'
  * GCash"), so a bill looks like the same object in both places.
  */
 function BillRow({ rec, onOpen, isLast }) {
+  const income = isIncomeRecurring(rec)
+  /* Income is not "due": a salary two days out is coming in, not owed, and
+     its date carries no warning colour. */
   const due = rec.active ? dueStatus(rec.nextDate) : null
   const dim = !rec.active
 
@@ -108,8 +111,8 @@ function BillRow({ rec, onOpen, isLast }) {
               <span className="text-slate-500 dark:text-slate-400">{rec.account} · Paused</span>
             ) : (
               <>
-                <span className={DUE_TONE[due?.tone] ?? 'text-slate-500 dark:text-slate-400'}>
-                  {due?.label ?? 'No date'}
+                <span className={income ? 'text-slate-500 dark:text-slate-400' : (DUE_TONE[due?.tone] ?? 'text-slate-500 dark:text-slate-400')}>
+                  {income && due?.tone === 'late' && due.days < 0 ? 'Not marked yet' : (due?.label ?? 'No date')}
                 </span>
                 {/* The account, and not the frequency. "Monthly" here
                     duplicated the /mo already sitting under the amount on
@@ -126,9 +129,10 @@ function BillRow({ rec, onOpen, isLast }) {
 
         <span className="shrink-0 text-right">
           <span className={`block text-14 font-semibold tabular-nums ${
-            dim ? 'text-slate-400 dark:text-slate-500' : 'text-slate-800 dark:text-white'
+            dim ? 'text-slate-400 dark:text-slate-500'
+              : income ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-800 dark:text-white'
           }`}>
-            {fmt(rec.amount, currencyOfAccountName(rec.account))}
+            {income ? '+' : ''}{fmt(rec.amount, currencyOfAccountName(rec.account))}
           </span>
           <span className="block text-11 text-slate-400 dark:text-slate-500 mt-0.5">
             /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
@@ -611,6 +615,14 @@ export default function Recurring() {
   }, [allRec, categories])
 
   const active = useMemo(() => enriched.filter(r => r.active), [enriched])
+  /* Bills and income side by side in the lists, but never in one total: a
+     salary is not a negative bill, and adding the two would answer neither
+     "what do my bills cost" nor "what comes in". */
+  const activeBills = useMemo(() => active.filter(r => !isIncomeRecurring(r)), [active])
+  const monthlyIncome = useMemo(
+    () => active.filter(isIncomeRecurring).reduce((s, r) => s + toMonthlyAmount(r.amount, r.frequency), 0),
+    [active],
+  )
 
   /**
    * Credit card statements, as bills.
@@ -655,17 +667,17 @@ export default function Recurring() {
    * attention is worse than either number being slightly off.
    */
   const stats = useMemo(() => {
-    const dueNow  = active.filter(r => (daysUntil(r.nextDate) ?? 99) <= 0).length
-    const thisWeek = active.filter(r => {
+    const dueNow  = activeBills.filter(r => (daysUntil(r.nextDate) ?? 99) <= 0).length
+    const thisWeek = activeBills.filter(r => {
       const n = daysUntil(r.nextDate)
       return n != null && n > 0 && n <= 7
     }).length
     return { dueNow, thisWeek, paused: enriched.length - active.length }
-  }, [active, enriched])
+  }, [activeBills, active, enriched])
 
   const totalMonthly = useMemo(
-    () => active.reduce((s, r) => s + toMonthlyAmount(r.amount, r.frequency), 0),
-    [active],
+    () => activeBills.reduce((s, r) => s + toMonthlyAmount(r.amount, r.frequency), 0),
+    [activeBills],
   )
 
   /** The All tab, grouped by how often each bill repeats. */
@@ -697,18 +709,18 @@ export default function Recurring() {
           which is the point: all three are reached from a quick-action disc
           rather than the navbar, so all three need the same way out.
 
-          Titled "Bills" because that is what the disc you tapped says. It was
-          "Recurring", and a door labelled one thing opening onto a page
-          labelled another is a small break you feel without being able to
-          name. */}
+          Titled "Recurring" because that is what the disc you tapped says -
+          a door labelled one thing opening onto a page labelled another is a
+          small break you feel without being able to name. It was "Bills"
+          while bills were all it held; your pay lives here too now. */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         <IconButton label="Back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          Bills
+          Recurring
         </h1>
-        <IconButton label="New bill" variant="primary" onClick={() => navigate('/recurring/new')}>
+        <IconButton label="Add recurring" variant="primary" onClick={() => navigate('/recurring/new')}>
           <IconPlus />
         </IconButton>
       </header>
@@ -725,11 +737,11 @@ export default function Recurring() {
       ) : enriched.length === 0 ? (
         <EmptyState
           icon={<IconNoBills />}
-          title="No bills yet"
-          body="Subscriptions, rent, utilities: anything that repeats."
+          title="Nothing recurring yet"
+          body="Bills, subscriptions and your pay: anything that repeats."
           action={
             <Button onClick={() => navigate('/recurring/new')} className="px-5">
-              Add your first bill
+              Add the first one
             </Button>
           }
         />
@@ -742,12 +754,13 @@ export default function Recurring() {
               the only violet surface in the app, and a second accent nothing
               else answered to. */}
           <section className="px-5">
-            <SectionLabel className="text-center">Monthly cost</SectionLabel>
+            <SectionLabel className="text-center">Bills a month</SectionLabel>
             <p className="mt-0.5 text-center text-38 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
               {fmt(totalMonthly)}
             </p>
-            <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400">
-              {active.length} active {active.length === 1 ? 'bill' : 'bills'}
+            <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums">
+              {activeBills.length} active {activeBills.length === 1 ? 'bill' : 'bills'}
+              {monthlyIncome > 0 && ` · ${fmtCompact(monthlyIncome)} income a month`}
             </p>
 
             {/* The tiles are gone. They were here because three small labels
@@ -837,9 +850,14 @@ export default function Recurring() {
                     inset="gutter"
                     gap="tight"
                     action={<span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">
-                      {fmtCompact(
-                        items.filter(r => r.active).reduce((s, r) => s + (r.amount ?? 0), 0),
-                      )}
+                      {(() => {
+                        /* The group's bills, or - for a group of nothing but
+                           income, a payday on the cut-offs - what comes in. */
+                        const live = items.filter(r => r.active)
+                        const bills = live.filter(r => !isIncomeRecurring(r)).reduce((s, r) => s + (r.amount ?? 0), 0)
+                        const inc = live.filter(isIncomeRecurring).reduce((s, r) => s + (r.amount ?? 0), 0)
+                        return bills > 0 || inc <= 0 ? fmtCompact(bills) : `+${fmtCompact(inc)}`
+                      })()}
                     </span>}
                   >
                     {label}

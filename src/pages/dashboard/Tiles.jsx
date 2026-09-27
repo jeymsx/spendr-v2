@@ -12,6 +12,7 @@ import { useSwap } from '../../components/ui/useSwap'
 import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 import { currencyOfTx } from '../../lib/fxContext'
+import { INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
 
 // ── Account card ───────────────────────────────────────────────────────────────
 
@@ -25,8 +26,15 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
   const available = isCredit
     ? (acct.creditLimit ?? 0) - (stmt?.currentBalance ?? 0)
     : null
+  /* A loan reads what is owed (its balance is stored negative); an
+     investment reads its value, labelled with what kind it is. */
+  const isLoan = acct.type === 'loan'
+  const isInvestment = acct.type === 'investment'
+  const figure = isCredit ? available : isLoan ? -(acct.balance ?? 0) : (acct.balance ?? 0)
+  const figureLabel = isCredit ? 'Available' : isLoan ? 'Owed' : isInvestment ? 'Value' : 'Balance'
 
   const meta  = ACCOUNT_ICON[acct.type] ?? ACCOUNT_ICON.bank
+  const kindLabel = isInvestment ? (INVESTMENT_KIND_LABEL[acct.kind] ?? meta.label) : meta.label
   const brand = accountBrand(acct)
   // The rail's eye button: the figure swaps through a blur - ui/useSwap.
   const swap  = useSwap(hidden)
@@ -51,14 +59,14 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
 
       <div className="flex items-center gap-2">
         <BrandMark mark={brand.mark} size={18} className="shrink-0" />
-        <p className="text-10 font-medium text-white/65 truncate">{meta.label}</p>
+        <p className="text-10 font-medium text-white/65 truncate">{kindLabel}</p>
       </div>
 
       <p className="text-13 font-semibold truncate mt-2">{acct.name}</p>
 
       <div className="mt-auto pt-1">
         <p className="text-10 font-semibold text-white/60 mb-0.5">
-          {isCredit ? 'Available' : 'Balance'}
+          {figureLabel}
         </p>
         <p key={hidden ? 'h' : 's'} className={`${swap} text-17 font-bold tabular-nums leading-none`}>
           {/* Its own id: this face shows what is AVAILABLE on a card, the
@@ -66,7 +74,7 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
           {hidden ? fmtHidden(acct.currency) : (
             <RollingNumber
               id={`home-card:${acct.id}:${acct.currency}`}
-              value={isCredit ? available : (acct.balance ?? 0)}
+              value={figure}
               format={v => fmt(v, acct.currency)}
             />
           )}

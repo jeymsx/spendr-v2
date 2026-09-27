@@ -1,4 +1,5 @@
 import { amountDisplay, TONE_CLASS } from '../../lib/txMoney'
+import { isAdjustment } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
 
 /** "12:30 PM". The time under a transaction's description. */
@@ -91,7 +92,7 @@ const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collec
  */
 export function canRecategorize(tx) {
   return (tx?.type === 'expense' || tx?.type === 'inflow') && !tx.refundOf && !tx.settles
-    && !MACHINE_CATEGORIES.has(tx.category) && tx.description !== 'Balance adjustment'
+    && !MACHINE_CATEGORIES.has(tx.category) && !isAdjustment(tx)
 }
 
 export const TYPE_OPTS = [

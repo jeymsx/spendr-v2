@@ -132,7 +132,7 @@ export function searchEverything(rawQuery, data = {}, limit = 3) {
     c => ({ id: c.id, label: c.name, meta: c.type,
             to: `/categories/${encodeURIComponent(c.name)}` }))
 
-  add('Bills', data.recurring,
+  add('Recurring', data.recurring,
     r => Math.max(scoreAny([r.name, r.category, r.account], q), scoreAmount(r.amount, q)),
     r => ({ id: r.id, label: r.name, meta: r.category, to: `/recurring/${r.id}` }))
 

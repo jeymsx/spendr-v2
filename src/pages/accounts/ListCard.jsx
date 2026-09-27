@@ -4,7 +4,8 @@ import { normalizeDesign } from '../../lib/cardDesigns'
 import BrandMark from '../../components/BrandMark'
 import BrandWatermark from '../../components/BrandWatermark'
 import SchemeMark from '../../components/SchemeMark'
-import { TYPE_LABEL } from '../../lib/accountMeta'
+import { INVESTMENT_KIND_LABEL, TYPE_LABEL } from '../../lib/accountMeta'
+import { ordinal } from '../../utils/recurring'
 import { fmt, fmtCompact, fmtHidden } from '../../lib/money'
 import SectionLabel from '../../components/ui/SectionLabel'
 import RollingNumber from '../../components/ui/RollingNumber'
@@ -41,11 +42,15 @@ export function SummaryBar({ summary, hidden }) {
         {/* Rolls from what you last saw - ui/RollingNumber. */}
         {hidden ? fmtHidden() : <RollingNumber id="accounts:net" value={summary.net} format={fmtCompact} />}
       </p>
+      {/* "credit used" while cards are the only thing owed, as it always
+          read; "owed" once a loan or a debt to someone is in it too. */}
       <p key={`parts-${k}`} className={`${swap} mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums`}>
         {hidden ? '•••• assets' : `${fmtCompact(summary.assets)} assets`}
-        {summary.creditUsed > 0 && (
-          hidden ? ' · •••• credit used' : ` · ${fmtCompact(summary.creditUsed)} credit used`
-        )}
+        {(summary.owed ?? summary.creditUsed) > 0 && (() => {
+          const onlyCards = (summary.owed ?? summary.creditUsed) - summary.creditUsed < 0.005
+          const word = onlyCards ? 'credit used' : 'owed'
+          return hidden ? ` · •••• ${word}` : ` · ${fmtCompact(onlyCards ? summary.creditUsed : summary.owed)} ${word}`
+        })()}
       </p>
     </section>
   )
@@ -97,6 +102,10 @@ export const AccountCard = forwardRef(function AccountCard({
   dragProps, dragStyle, isDragging = false, isSorting = false,
 }, ref) {
   const isCredit       = acct.type === 'credit'
+  /* A loan's balance is stored negative; the card reads what is owed. An
+     investment reads its value, and says what kind it is. */
+  const isLoan         = acct.type === 'loan'
+  const isInvestment   = acct.type === 'investment'
   const currentBalance = stmt?.currentBalance ?? 0
   const limit          = acct.creditLimit ?? 0
   const available      = isCredit ? limit - currentBalance : null
@@ -110,13 +119,19 @@ export const AccountCard = forwardRef(function AccountCard({
 
   // An account named after its own type - "Cash" - would otherwise label
   // itself twice, reading "Cash" over "Cash".
-  const typeLabel = TYPE_LABEL[acct.type]
+  const typeLabel = isInvestment
+    ? (INVESTMENT_KIND_LABEL[acct.kind] ?? TYPE_LABEL.investment)
+    : TYPE_LABEL[acct.type]
   const subtitle = [
     isCredit
       ? (nextDue ? `Due ${nextDue}` : 'Credit card')
-      : (typeLabel && typeLabel.toLowerCase() !== (acct.name ?? '').trim().toLowerCase() ? typeLabel : ''),
+      : isLoan && acct.dueDate
+        ? `Due on the ${ordinal(acct.dueDate)}`
+        : (typeLabel && typeLabel.toLowerCase() !== (acct.name ?? '').trim().toLowerCase() ? typeLabel : ''),
     indent ? 'sub-account' : '',
   ].filter(Boolean).join(' · ')
+  const figure = isCredit ? currentBalance : isLoan ? -(acct.balance ?? 0) : (acct.balance ?? 0)
+  const figureLabel = isLoan ? 'Owed' : isInvestment ? 'Value' : 'Balance'
 
   const pullUp = `calc(${STACK_STRIP}px - ${(100 / CARD_RATIO).toFixed(2)}%)`
 
@@ -174,7 +189,7 @@ export const AccountCard = forwardRef(function AccountCard({
             {hidden ? fmtHidden(acct.currency) : (
               <RollingNumber
                 id={`card:${acct.id}:${acct.currency}`}
-                value={isCredit ? currentBalance : (acct.balance ?? 0)}
+                value={figure}
                 format={v => fmt(v, acct.currency)}
               />
             )}
@@ -183,7 +198,7 @@ export const AccountCard = forwardRef(function AccountCard({
           <span key={isCredit ? `left-${k}` : 'label'} className={`${isCredit ? swap : ''} block text-10 text-white/65`}>
             {isCredit
               ? `${hidden ? '••••' : fmtCompact(available ?? 0, acct.currency)} left`
-              : 'Balance'}
+              : figureLabel}
           </span>
         </span>
       </div>
@@ -207,8 +222,10 @@ export const AccountCard = forwardRef(function AccountCard({
           </>
         ) : (
           <div className="flex items-end justify-between gap-2">
-            <span className="text-10 text-white/50">
-              {acct.currency ?? 'PHP'}
+            <span key={isLoan ? `pay-${k}` : 'cur'} className={`${isLoan ? swap : ''} text-10 text-white/50`}>
+              {isLoan && acct.minimumPayment > 0
+                ? `${hidden ? '••••' : fmtCompact(acct.minimumPayment, acct.currency)} a month`
+                : (acct.currency ?? 'PHP')}
             </span>
             <SchemeMark scheme={acct.scheme} className="h-[34px]" />
           </div>
