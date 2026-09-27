@@ -651,25 +651,13 @@ async function pushPreferences(userId) {
     .upsert(row, { onConflict: 'user_id' })
   if (!error) return
 
-  /* Drop the columns 015 adds and try once more, the same net every other
-     push has. A database that has not had the migration would otherwise
-     fail the whole preferences push - and take the display name, the
-     currency and the accent down with the two new fields. Degraded means
+  /* Leave out the column the database does not have yet and try again, the
+     same net every other push has. A database that has not had 015 would
+     otherwise fail the whole preferences push - and take the display name,
+     the currency and the accent down with the two new fields. Degraded means
      theme and the carry-over switch stay on this device. */
-  if (UNKNOWN_COLUMN.test(error.message ?? '')) {
-    const retry = /** @type {Record<string, any>} */ ({ ...row })
-    for (const col of OPTIONAL_COLS.user_preferences ?? []) delete retry[col]
-    const { error: again } = await supabase
-      .from('user_preferences')
-      .upsert(retry, { onConflict: 'user_id' })
-    if (!again) {
-      console.warn('[sync] user_preferences: run migration 015 for theme and carry-over')
-      return
-    }
-    throw new Error(`user_preferences push: ${again.message}`)
-  }
-
-  throw new Error(`user_preferences push: ${error.message}`)
+  const { error: again } = await upsertWithoutUnknown('user_preferences', [row], { onConflict: 'user_id' }, error)
+  if (again) throw new Error(`user_preferences push: ${again.message}`)
 }
 
 /** @param {string} userId */
@@ -800,23 +788,8 @@ export async function syncToSupabase(userId) {
            Same retry, same reasoning: drop what the table does not know
            about and push the rows, so the ledger still syncs on a database
            that is a migration behind. */
-        const optional = OPTIONAL_COLS.transactions ?? []
-        if (optional.length && UNKNOWN_COLUMN.test(error.message ?? '')) {
-          const trimmed = rows.map(row => {
-            const copy = { ...row }
-            for (const col of optional) delete copy[col]
-            return copy
-          })
-          const retry = await supabase.from('transactions').upsert(trimmed, opts)
-          if (retry.error) throw new Error(`transactions push: ${retry.error.message}`)
-          console.warn(
-            '[sync] transactions: dropping %s and retrying.'
-            + ' Run 009_refunds_splits_shared.sql to sync them: %s',
-            optional.join(', '), error.message,
-          )
-        } else {
-          throw new Error(`transactions push: ${error.message}`)
-        }
+        const { error: again } = await upsertWithoutUnknown('transactions', rows, opts, error)
+        if (again) throw new Error(`transactions push: ${again.message}`)
       }
     }
 
@@ -958,6 +931,91 @@ const OPTIONAL_COLS = {
 const UNKNOWN_COLUMN = /could not find the '.*' column|does not exist|42703|PGRST204/i
 
 /**
+ * The column a push was refused for, when the refusal names one.
+ *
+ *   PostgREST  "Could not find the 'adjust' column of 'transactions' in the schema cache"
+ *   Postgres   'column "adjust" of relation "transactions" does not exist'
+ *              'column transactions.adjust does not exist'
+ *
+ * @param {string|undefined|null} message
+ * @returns {string|null}
+ */
+export function unknownColumnOf(message) {
+  const m = String(message ?? '')
+  const hit = /could not find the '([^']+)' column/i.exec(m)
+    ?? /column "([^"]+)"/i.exec(m)
+    ?? /column (?:\w+\.)?(\w+) does not exist/i.exec(m)
+  return hit ? hit[1] : null
+}
+
+/**
+ * What to leave out of the next attempt, after a push was refused for an
+ * unknown column.
+ *
+ * ── Only the one it named ──
+ *
+ * The first version of this net dropped EVERY optional column at once. That
+ * was harmless while the list only held columns the live database had long
+ * since gained - but the moment one new column is added ahead of its
+ * migration, one refusal took refund links, split ids, currencies and
+ * sync_id down with it, on every row pushed until the migration ran. So:
+ * the column the refusal names, if it is optional; the whole optional list
+ * only when the message names nothing (the old net, for a message this
+ * cannot read); and never a column the upsert matches on, because a push
+ * without its conflict target is an INSERT that collides with the row it
+ * meant to update.
+ *
+ * @param {string} message
+ * @param {string[]} optional     the table's OPTIONAL_COLS
+ * @param {string[]} dropped      already left out on an earlier attempt
+ * @param {string[]} keep         the conflict target
+ * @returns {string[]}
+ */
+export function columnsToDrop(message, optional, dropped = [], keep = []) {
+  const candidates = optional.filter(c => !dropped.includes(c) && !keep.includes(c))
+  const named = unknownColumnOf(message)
+  if (named) return candidates.includes(named) ? [named] : []
+  return candidates
+}
+
+/**
+ * Retry an upsert that was refused for an unknown column, leaving out one
+ * missing column at a time until it goes through or there is nothing left
+ * that may be dropped. Returns the last error, or null.
+ *
+ * @param {string} table
+ * @param {Array<Record<string, any>>} rows
+ * @param {{onConflict: string, ignoreDuplicates?: boolean}} opts
+ * @param {{message?: string}} firstError
+ * @returns {Promise<{error: any, dropped: string[]}>}
+ */
+async function upsertWithoutUnknown(table, rows, opts, firstError) {
+  const optional = OPTIONAL_COLS[table] ?? []
+  const keep = String(opts.onConflict ?? '').split(',').map(s => s.trim())
+  /** @type {any} */
+  let error = firstError
+  let current = rows
+  /** @type {string[]} */
+  const dropped = []
+  for (let i = 0; i <= optional.length && error; i++) {
+    if (!UNKNOWN_COLUMN.test(error.message ?? '')) break
+    const drop = columnsToDrop(error.message ?? '', optional, dropped, keep)
+    if (!drop.length) break
+    dropped.push(...drop)
+    current = current.map(row => {
+      const copy = { ...row }
+      for (const col of drop) delete copy[col]
+      return copy
+    })
+    ;({ error } = await supabase.from(table).upsert(current, opts))
+  }
+  if (!error && dropped.length) {
+    console.warn('[sync] %s: pushed without %s. Run the migration that adds them.', table, dropped.join(', '))
+  }
+  return { error, dropped }
+}
+
+/**
  * A push rejected by a unique constraint on local_id, which is never the
  * conflict target for the tables that hit this.
  *
@@ -1059,23 +1117,8 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
     }
   }
 
-  const optional = OPTIONAL_COLS[tableName] ?? []
-  if (optional.length && UNKNOWN_COLUMN.test(error.message ?? '')) {
-    console.warn(
-      '[sync] %s: dropping %s and retrying - run the migration to sync it:',
-      tableName, optional.join(', '), error.message,
-    )
-    const trimmed = rows.map(row => {
-      const copy = { ...row }
-      for (const col of optional) delete copy[col]
-      return copy
-    })
-    const retry = await supabase.from(tableName).upsert(trimmed, opts)
-    if (retry.error) throw new Error(`${tableName} push: ${retry.error.message}`)
-    return
-  }
-
-  throw new Error(`${tableName} push: ${error.message}`)
+  const { error: again } = await upsertWithoutUnknown(tableName, rows, opts, error)
+  if (again) throw new Error(`${tableName} push: ${again.message}`)
 }
 
 // ── Pull from Supabase ────────────────────────────────────────────────────────

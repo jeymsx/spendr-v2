@@ -126,3 +126,23 @@ describe('everyday spending', () => {
 })
 
 function round(/** @type {number} */ n) { return Math.round(n * 100) / 100 }
+
+/* Found in review: safe to spend looked for payday only as far as the chart
+   did, so Home (30 days) and the Forecast page on 3M disagreed about today. */
+describe('safe to spend does not depend on the range shown', () => {
+  it('finds a payday 40 days out on every range, and says the same figure', () => {
+    const recurring = [
+      { id: 1, name: 'Rent', amount: 15000, frequency: 'monthly', nextDate: iso(10, 5), active: true, account: 'BPI' },
+      { id: 2, name: 'Bonus pay', type: 'inflow', amount: 30000, frequency: 'quarterly', nextDate: iso(10, 20), active: true, account: 'BPI' },
+    ]
+    const month = run({ recurring, horizonDays: 30 })
+    const quarter = run({ recurring, horizonDays: 90 })
+    expect(month.safeUntil?.getDate()).toBe(20)
+    expect(quarter.safeUntil?.getDate()).toBe(20)
+    expect(month.safeToSpend).toBe(quarter.safeToSpend)
+    expect(month.safeToSpend).toBe(5000)
+    // What is drawn still stops at the range: 31 days, and nothing after them.
+    expect(month.days).toHaveLength(31)
+    expect(month.events.every(e => e.date <= month.days.at(-1).date)).toBe(true)
+  })
+})

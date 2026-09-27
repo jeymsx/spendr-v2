@@ -16,9 +16,10 @@ import { deleteAccountRemote } from '../../lib/sync'
 import {
   PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, INVESTMENT_KINDS, defaultRole,
 } from '../../lib/accountMeta'
-import { CORRECTION_DESC } from '../../lib/flows'
+import { CORRECTION_DESC, isAdjustment } from '../../lib/flows'
 import { monthsToClear, rateLabel, solveMonthlyRate } from '../../lib/loans'
 import { createInvestment } from '../../db/accountWrites'
+import { deleteTxGroup } from '../../db/txHelpers'
 import { fmt, getBaseCurrency } from '../../lib/money'
 import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
@@ -41,6 +42,15 @@ import Rail from '../../components/ui/Rail'
 import Segmented from '../../components/ui/Segmented'
 
 // ── Account form sheet ─────────────────────────────────────────────────────────
+
+/** Whether this is the desktop layout (src/web), which marks <html> with `web`. */
+const onDesktop = () => typeof document !== 'undefined' && document.documentElement.classList.contains('web')
+
+/** A typed due day, held to a day a month can have; null when there is none. @param {string|number} v */
+const dayOfMonth = (v) => {
+  const n = parseInt(String(v ?? ''))
+  return n >= 1 ? Math.min(31, n) : null
+}
 
 /**
  * Form values to an accounts row.
@@ -78,7 +88,8 @@ export function buildAccountRow({
     currency,
     creditLimit:    isCredit ? (parseMoney(creditLimit) || 0)   : null,
     statementDate:  isCredit ? (parseInt(statementDay) || null) : null,
-    dueDate:        isCredit || isLoan ? (parseInt(dueDay) || null) : null,
+    // A day of the month: "45" is a typo for a day that exists, not a date to store.
+    dueDate:        isCredit || isLoan ? dayOfMonth(dueDay) : null,
     cutoffDate:     isCredit ? (parseInt(cutoffDay)    || null) : null,
     minimumPayment: isCredit || isLoan ? (parseMoney(minPayment) || 0) : null,
     /* What the bank charges for paying late. Both optional: a card carrying
@@ -409,8 +420,16 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
     }
   }
 
+  /* An investment's value updates only mean something while it exists - its
+     opening value is one, so without this a new investment could never be
+     deleted at all. They go with it; anything else still blocks. */
+  const valueRowsOf = async () => (account?.type === 'investment'
+    ? (await db.transactions.where('account').equals(account.name).toArray()).filter(isAdjustment)
+    : [])
+
   async function handleDeleteCheck() {
     const byAcct = await db.transactions.where('account').equals(account.name).count()
+      - (await valueRowsOf()).length
     const byFrom = await db.transactions.where('fromAccount').equals(account.name).count()
     const byTo   = await db.transactions.where('toAccount').equals(account.name).count()
     const txTotal = byAcct + byFrom + byTo
@@ -424,6 +443,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
     if (deleteBlocked) return
     setSaving(true)
     try {
+      const valueRows = await valueRowsOf()
+      if (valueRows.length) await deleteTxGroup(valueRows)
       await db.transaction('rw', [db.accounts, db.balances, db.goals], async () => {
         await db.accounts.delete(account.id)
         // Unhook it from any goal it was funding, so no goal is left
@@ -619,7 +640,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {TYPE_OPTIONS.map(o => (
+                  {/* Not investments or loans on desktop yet: its Accounts
+                      page has no section for them, so one made there would
+                      vanish from the list it was made on. */}
+                  {TYPE_OPTIONS.filter(o => !(onDesktop() && (o.value === 'investment' || o.value === 'loan'))).map(o => (
                     <button
                       key={o.value}
                       onClick={() => { setType(o.value); setRole(defaultRole(o.value)) }}
@@ -658,6 +682,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                       key={k.value}
                       type="button"
                       onClick={() => setKind(k.value)}
+                      aria-pressed={kind === k.value}
                       className={chipClass(kind === k.value)}
                     >
                       {k.label}
@@ -887,7 +912,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     ? `About ${loanMonthsLeft} ${loanMonthsLeft === 1 ? 'payment' : 'payments'} left${loanRate ? ` at ${rateLabel(loanRate)}% a month` : ''}`
                     : loanMonthsLeft === Infinity
                       ? 'The payment does not cover the interest'
-                      : 'Leave the rate blank and it is worked out from the months left'}
+                      : isEdit
+                        ? 'Add the monthly payment to see how many are left'
+                        : 'Leave the rate blank and it is worked out from the months left'}
                 </p>
               </div>
             )}

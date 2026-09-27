@@ -5,6 +5,7 @@ import { effectiveLimit } from './rollover'
 import { netWorthMoves } from './trend'
 import { achievementDef } from './achievements'
 import { isAdjustment, isFlowRow, isIncome, isSpend } from './flows'
+import { LOAN_INTEREST } from './loans'
 
 /**
  * A month, looked back on: every figure the monthly recap shows.
@@ -111,7 +112,7 @@ const dayOf = (tx) => Number(isoToDateInput(tx.date).slice(8, 10)) || 0
 const foldLabel = (s) => String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 
 /** Categories the app files its own rows under. */
-const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collection'])
+const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collection', LOAN_INTEREST])
 
 /**
  * Something someone bought: an expense with a price, that is not a refund

@@ -6,6 +6,7 @@ import { applyPayment } from '../lib/people'
 import { deleteDebtRemote } from '../lib/sync'
 import { currencyOfAccountName, repriceForEdit } from '../lib/fxContext'
 import { estimateConversion } from '../lib/transferLegs'
+import { loanPairOf } from '../lib/loans'
 
 /* Re-exported: they used to live here and ten files import them from
    here. See db/balances.js for why they moved. */
@@ -491,7 +492,7 @@ export function newJournal() {
  *
  * ── Why this is not the caller's job ──
  *
- * Two rows in this app are meaningless on their own, and both were being left
+ * Some rows in this app are meaningless on their own, and they were being left
  * behind. Found by trying to break it rather than by using it:
  *
  *   A REFUND of a purchase that no longer exists is not a transaction, it is
@@ -529,6 +530,9 @@ async function expandDeletion(list) {
         if (leg.splitId === tx.splitId && !byId.has(leg.id)) byId.set(leg.id, leg)
       }
     }
+    // A loan payment's principal and its interest: one payment, two rows.
+    const pair = loanPairOf(tx, all)
+    if (pair && !byId.has(pair.id)) byId.set(pair.id, /** @type {Transaction} */ (pair))
   }
 
   return [...byId.values()]

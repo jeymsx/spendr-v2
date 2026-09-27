@@ -110,11 +110,12 @@ export function CreatedStep({ draft, onDone, onAddTransaction }) {
         <Button block onClick={onDone}>
           Done
         </Button>
-        {/* An investment or a loan never takes an expense; the next thing to
-            do with one is move money to it, which is a transfer. */}
+        {/* An investment never takes an expense; the next thing to do with
+            one is move money into it - "Add money", as its page says. A loan
+            passes no handler: it is paid from its own page. */}
         {onAddTransaction && (
           <Button variant="secondary" size="sm" block onClick={onAddTransaction}>
-            {draft.type === 'investment' || draft.type === 'loan' ? 'Add a transfer' : 'Add a transaction'}
+            {draft.type === 'investment' ? 'Add money' : 'Add a transaction'}
           </Button>
         )}
       </div>

@@ -105,9 +105,11 @@ export function useFinanceSummary() {
       .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
   }, [txAll])
 
+  /* Bills. The desktop dashboard - this hook's one reader - lists these
+     under "Upcoming bills", and a salary is not one. */
   const upcoming = useMemo(() =>
     (recurring ?? [])
-      .filter(r => r.active && r.nextDate)
+      .filter(r => r.active && r.nextDate && r.type !== 'inflow')
       .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? '')),
     [recurring])
 

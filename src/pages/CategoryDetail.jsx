@@ -23,6 +23,7 @@ import {
 import { DetailTxRow } from './accounts/DetailParts'
 import { fmt, fmtCompact } from '../lib/money'
 import { txBase } from '../lib/fxContext'
+import { isAdjustment, isIncome, isSpend } from '../lib/flows'
 import { effectiveLimit } from '../lib/rollover'
 
 /**
@@ -105,14 +106,20 @@ export default function CategoryDetail() {
   /* This month's figure is the Budget row's figure: only the rows that are
      this category's kind of money. A debt repaid into Food is an inflow filed
      under Food - it belongs in the list below, and it is not spending. */
-  const flow = isInflow ? 'inflow' : 'expense'
+  const counts = isInflow ? isIncome : isSpend
   const monthKeyNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const monthTotal = useMemo(() => {
     if (!catTxs) return 0
     return catTxs
-      .filter(t => t.type === flow && txMonthKey(t.date) === monthKeyNow)
+      .filter(t => counts(t) && txMonthKey(t.date) === monthKeyNow)
       .reduce((sum, t) => sum + txBase(t), 0)
-  }, [catTxs, flow, monthKeyNow])
+  }, [catTxs, counts, monthKeyNow])
+
+  /* What the chart and its "usual" line are drawn from: the same rows less
+     balance corrections and investment value updates, which are filed under a
+     category but are neither income nor spending (lib/flows.js). They stay in
+     the list below, where they explain a balance. */
+  const flowTxs = useMemo(() => (catTxs ?? []).filter(t => !isAdjustment(t)), [catTxs])
 
   const range = useMemo(
     () => SPEND_TREND_RANGES.find(r => r.key === trendRange) ?? SPEND_TREND_RANGES[1],
@@ -124,21 +131,21 @@ export default function CategoryDetail() {
      and null on ALL always, because a window that is your whole history has
      nothing left over to be compared against. See lib/trend.js. */
   const span = useMemo(
-    () => spendSpan({ txs: catTxs ?? [], range, now: now.getTime() }),
-    [catTxs, range, now],
+    () => spendSpan({ txs: flowTxs, range, now: now.getTime() }),
+    [flowTxs, range, now],
   )
   const baseline = useMemo(
-    () => spendBaseline({ txs: catTxs ?? [], span, now: now.getTime() }),
-    [catTxs, span, now],
+    () => spendBaseline({ txs: flowTxs, span, now: now.getTime() }),
+    [flowTxs, span, now],
   )
   const usualTotal = baseline ? baseline.dailyRate * (span / DAY_MS) : null
 
   const trend = useMemo(
     () => buildSpendTrend({
-      txs: catTxs ?? [], range, now: now.getTime(),
+      txs: flowTxs, range, now: now.getTime(),
       usualPerDay: baseline?.dailyRate ?? null,
     }),
-    [catTxs, range, now, baseline],
+    [flowTxs, range, now, baseline],
   )
   const rangeTotal = trend.length ? trend[trend.length - 1].value : 0
 

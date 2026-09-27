@@ -225,6 +225,16 @@ describe('income, loans, investments and the forecast', () => {
     expect(feed.map(f => f.id)).toEqual(['loan:loan-1:2026-09-28:due'])
   })
 
+  /* August's was paid, so Spendr knows this loan is being paid through it -
+     a loan it has never seen a payment for is never opened as overdue. */
+  it('says it is overdue the day after, while it still is', () => {
+    const aug = { type: 'transfer', fromAccount: 'BPI', toAccount: 'Car Loan', amount: 4000, date: at(8, 27) }
+    const feed = loansIn(collectNotifications({ accounts: [LOAN], transactions: [aug], now: new Date(2026, 8, 29, 10) }))
+    expect(feed.map(f => [f.id, f.title, f.body])).toEqual([
+      ['loan:loan-1:2026-09-28:overdue', 'Car Loan is overdue', '₱5,000.00 left to pay'],
+    ])
+  })
+
   it('goes quiet once this month is paid', () => {
     const paid = { type: 'transfer', fromAccount: 'BPI', toAccount: 'Car Loan', amount: 4000, date: at(9, 20) }
     expect(loansIn(collectNotifications({ accounts: [LOAN], transactions: [paid], now: NOW }))).toEqual([])

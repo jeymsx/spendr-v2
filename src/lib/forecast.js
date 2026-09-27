@@ -44,7 +44,7 @@ import { creditCardBills } from './creditBills'
 import { netWorthBreakdown } from './netWorth'
 import { isSpend } from './flows'
 import { isLoan } from './accountMeta'
-import { upcomingLoanPayments } from './loans'
+import { LOAN_INTEREST, upcomingLoanPayments } from './loans'
 import { txBase } from './fxContext'
 import { convert } from './fx'
 
@@ -54,6 +54,14 @@ const LOOKBACK_WEEKS = 12
 const MIN_WEEKS = 3
 /** How far "safe to spend" looks when there is no payday to look to. */
 export const SAFE_WINDOW_DAYS = 14
+/**
+ * How far ahead "safe to spend" looks for the next payday - fixed, whatever
+ * range the chart shows. Found in review: it looked as far as the chart did,
+ * so a payday 40 days out made Home (30 days) and the Forecast page on 3M
+ * give two different figures for the same today. 45 covers a monthly pay
+ * that lands a day after a 31-day month, with room to spare.
+ */
+export const PAYDAY_LOOKAHEAD_DAYS = 45
 
 const round2 = (/** @type {number} */ n) => Math.round(n * 100) / 100
 /** @param {Date} d */
@@ -95,7 +103,12 @@ export function buildForecast({
   horizonDays = 30, floor = 0, now = new Date(), priceOf = txBase,
 }) {
   const today = startOfDay(now)
-  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + horizonDays)
+  /* The walk runs at least as far as the payday lookahead, so safe to spend
+     is worked out over the same days whatever the chart shows; what is
+     returned is trimmed to the chart's horizon. */
+  const walkDays = Math.max(horizonDays, PAYDAY_LOOKAHEAD_DAYS)
+  const end = new Date(today.getFullYear(), today.getMonth(), today.getDate() + walkDays)
+  const shownEnd = new Date(today.getFullYear(), today.getMonth(), today.getDate() + horizonDays)
   const toBase = (/** @type {number} */ v, /** @type {string|undefined|null} */ cur) =>
     convert(v, cur || base, base, rates) ?? v
   const curOf = (/** @type {string|null|undefined} */ name) =>
@@ -149,7 +162,7 @@ export function buildForecast({
       events.push({
         key: `loan:${a.id ?? a.name}:${isoDay(p.date)}`, date: p.date < today ? today : p.date,
         name: a.name, amount: round2(toBase(p.amount, a.currency)), sign: -1, kind: 'loan',
-        counted: true, overdue: false, category: null, account: a.name,
+        counted: true, overdue: p.overdue, category: null, account: a.name,
         to: a.id != null ? `/accounts/${a.id}` : null,
       })
     }
@@ -196,7 +209,7 @@ export function buildForecast({
   /** @type {Array<{date: Date, iso: string, balance: number}>} */
   const days = []
   let running = start
-  for (let i = 0; i <= horizonDays; i++) {
+  for (let i = 0; i <= walkDays; i++) {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + i)
     const iso = isoDay(date)
     running += byDay.get(iso) ?? 0
@@ -205,14 +218,16 @@ export function buildForecast({
     days.push({ date, iso, balance: round2(running) })
   }
 
-  const lowest = days.reduce((lo, d) => (d.balance < lo.balance ? d : lo), days[0])
-  const firstNegative = days.find(d => d.balance < 0) ?? null
-  const firstBelowFloor = floor > 0 ? (days.find(d => d.balance < floor) ?? null) : null
+  const shown = days.slice(0, horizonDays + 1)
+  const lowest = shown.reduce((lo, d) => (d.balance < lo.balance ? d : lo), shown[0])
+  const firstNegative = shown.find(d => d.balance < 0) ?? null
+  const firstBelowFloor = floor > 0 ? (shown.find(d => d.balance < floor) ?? null) : null
 
   /* Safe to spend: the most you could spend today and still not dip below
      your floor before the next pay arrives - so the lowest point BEFORE
      payday, less the floor. Without a payday, the next two weeks. */
-  const nextPay = events.find(e => e.kind === 'income' && e.counted && e.date > today) ?? null
+  const payLimit = new Date(today.getFullYear(), today.getMonth(), today.getDate() + PAYDAY_LOOKAHEAD_DAYS)
+  const nextPay = events.find(e => e.kind === 'income' && e.counted && e.date > today && e.date <= payLimit) ?? null
   const windowEnd = nextPay
     ? Math.round((startOfDay(nextPay.date).getTime() - today.getTime()) / DAY_MS) - 1
     : SAFE_WINDOW_DAYS
@@ -222,8 +237,8 @@ export function buildForecast({
 
   return {
     start,
-    days,
-    events,
+    days: shown,
+    events: events.filter(e => e.date <= shownEnd),
     lowest,
     firstNegative,
     firstBelowFloor,
@@ -283,6 +298,6 @@ function isEverydaySpend(t) {
   if (t.recurringId != null || t.recurringSyncId) return false   // a bill, projected as one
   if (isInstallmentRow(t)) return false                         // on the card already
   if (Array.isArray(t.settles) || t.category === 'Debt Payment') return false
-  if (t.category === 'Loan interest') return false              // part of a loan payment
+  if (t.category === LOAN_INTEREST) return false              // part of a loan payment
   return true
 }

@@ -20,7 +20,8 @@ export function TxList({ txs, accountName, onSelect, catMap }) {
 
 /**
  * Net change across the window, which is the question the chart's shape
- * prompts. For a credit card a rise is money owed, so the colours invert.
+ * prompts. For a credit card or a loan a rise is money owed, so the colours
+ * invert - the prop is named for the card, which came first.
  */
 export function TrendDelta({ data, isCredit, currency }) {
   if (data.length < 2) return null

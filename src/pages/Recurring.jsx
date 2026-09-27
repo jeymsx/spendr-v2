@@ -31,6 +31,7 @@ import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import { currencyOfAccountName } from '../lib/fxContext'
+import { isEverydayAccount } from '../lib/accountMeta'
 import { toDateInput } from '../utils/txDate'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -331,7 +332,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     setSaving(true)
     try {
       const what = await saveRecurring(draft, editRec)
-      showToast(what === 'created' ? 'Bill added' : 'Bill updated')
+      showToast(what === 'created' ? 'Bill added' : `${noun} updated`)
       onClose()
     } catch (e) {
       console.error('[RecurringForm] save failed:', e)
@@ -355,11 +356,19 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
     }
   }
 
+  /* The desktop table opens this for income too. It never CREATES income -
+     the draft carries no type, so a new row is a bill and an edited salary
+     stays a salary (toRecurringRow) - but editing one should say what it is
+     and offer income categories, not bill ones. */
+  const income = isIncomeRecurring(editRec)
+  const noun = income ? 'Income' : 'Bill'
   const expenseCategories = useMemo(
-    () => (categories ?? []).filter(c => c.type === 'expense')
+    () => (categories ?? []).filter(c => c.type === (income ? 'inflow' : 'expense'))
       .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999) || a.name.localeCompare(b.name)),
-    [categories],
+    [categories, income],
   )
+  // Money you hold: a bill is not paid from an investment, nor pay received into a loan.
+  const payAccounts = useMemo(() => (accounts ?? []).filter(isEverydayAccount), [accounts])
 
   /* Sheet owns the overlay, the panel, the grab handle, the 92dvh cap, the
      scroll lock, Escape, the focus trap and the exit animation. The Delete
@@ -373,7 +382,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
         onClose={onClose}
         scrim={40}
         maxHeight="92dvh"
-        title={editRec ? 'Edit Bill' : 'New Bill'}
+        title={editRec ? `Edit ${noun}` : 'New Bill'}
         titleAction={editRec && showDelete && (
           <Button
             variant={confirmDel ? 'danger' : 'dangerTint'}
@@ -578,7 +587,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
       <AccountPickerSheet
         open={showAcctPick}
         onClose={() => setShowAcctPick(false)}
-        accounts={accounts ?? []}
+        accounts={payAccounts}
         selected={account}
         onSelect={acct => { setAccount(acct); setErrors(p => ({ ...p, account: null })) }}
       />

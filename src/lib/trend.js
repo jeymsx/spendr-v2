@@ -201,9 +201,7 @@ export function netWorthDelta(tx, valueOf) {
  *     direction on its own (see settleWithPerson), which is the movement that
  *     cancels it.
  *
- * A settlement says what it settled in `settles` (mobile). Rows written
- * without it - the per-debt sheet - are filed as Debt Payment or Debt
- * Collection and never overpay, so the whole amount is the settled part.
+ * What counts as a settlement, and what a debt opens at, is debtBook's job.
  *
  * @param {object} input
  * @param {Array<Record<string, any>>} [input.txs]
@@ -215,33 +213,19 @@ export function netWorthDelta(tx, valueOf) {
 export function netWorthMoves({ txs = [], debts = [], includeDebts = false, priceOf = txBase }) {
   /** @type {Array<{t: number, delta: number}>} */
   const moves = []
-  /** @type {Map<string, Record<string, any>>} */
-  const bySync = new Map()
-  /** @type {Map<any, Record<string, any>>} */
-  const byId = new Map()
-  if (includeDebts) {
-    for (const d of debts ?? []) {
-      if (d?.syncId) bySync.set(d.syncId, d)
-      if (d?.id != null) byId.set(d.id, d)
-    }
-  }
+  const book = includeDebts ? debtBook(debts, txs, priceOf) : null
 
   for (const tx of txs ?? []) {
     const t = tx.date ? new Date(tx.date).getTime() : NaN
     if (Number.isNaN(t)) continue
     let delta = netWorthDelta(tx, priceOf)
-    if (includeDebts) delta += settledOffset(tx, bySync, byId, priceOf)
+    if (book) delta += book.offsetOf(tx)
     if (Math.abs(delta) < 0.005) continue
     moves.push({ t, delta })
   }
 
-  if (includeDebts) {
-    for (const d of debts ?? []) {
-      const t = new Date(d?.createdAt ?? '').getTime()
-      const amount = d?.amount ?? 0
-      if (Number.isNaN(t) || !(amount > 0)) continue
-      moves.push({ t, delta: d.type === 'i_owe' ? -amount : amount })
-    }
+  if (book) {
+    for (const { t, delta } of book.openings) moves.push({ t, delta })
   }
   return moves
 }
@@ -258,50 +242,144 @@ export function netWorthMoves({ txs = [], debts = [], includeDebts = false, pric
  * @param {(tx: Record<string, any>) => number} [input.priceOf]
  */
 export function debtsNetAt({ debts = [], txs = [], at, priceOf = txBase }) {
-  /** @type {Map<string, Record<string, any>>} */
-  const bySync = new Map()
-  /** @type {Map<any, Record<string, any>>} */
-  const byId = new Map()
+  const book = debtBook(debts, txs, priceOf)
   let net = 0
-  for (const d of debts ?? []) {
-    if (d?.syncId) bySync.set(d.syncId, d)
-    if (d?.id != null) byId.set(d.id, d)
-    const t = new Date(d?.createdAt ?? '').getTime()
-    if (Number.isNaN(t) || t > at || !((d?.amount ?? 0) > 0)) continue
-    net += d.type === 'i_owe' ? -d.amount : d.amount
-  }
+  for (const o of book.openings) if (o.t <= at) net += o.delta
   for (const tx of txs ?? []) {
     const t = tx.date ? new Date(tx.date).getTime() : NaN
     if (Number.isNaN(t) || t > at) continue
-    net += settledOffset(tx, bySync, byId, priceOf)
+    net += book.offsetOf(tx)
   }
   return Math.round(net * 100) / 100
 }
 
 /**
- * The part of a settlement row that only moved money against a debt, signed
- * so that adding it to the row's own netWorthDelta cancels that part out.
- * @param {Record<string, any>} tx
- * @param {Map<string, Record<string, any>>} bySync
- * @param {Map<any, Record<string, any>>} byId
+ * The debts, read against the ledger: when each one opens and at how much,
+ * and which rows only moved money against one.
+ *
+ * ── The rule the history has to keep ──
+ *
+ * The line is built backwards from today's figure, so every peso a debt has
+ * had paid off must be accounted for exactly once - either by a settlement
+ * row that is neutral (the payment and the debt cancel), or by the debt
+ * opening lower. Counted twice, or not at all, and every point before the
+ * debt existed is out by that much: found in review, a debt of 5,000 with
+ * 2,000 typed in as already paid read -2,000 for all of history before it.
+ *
+ * So, per debt, the paid part the ledger can SEE:
+ *
+ *   - `settles` on a row names the debt and how much (mobile's settlements);
+ *   - a refund of the purchase a shared bill came from (the per-debt sheet's
+ *     "they paid me back" path on desktop and older builds) settles up to
+ *     what is still unexplained on that receivable;
+ *   - Debt Payment / Debt Collection rows (the per-debt sheet) name no debt,
+ *     so they are counted against their side as a whole.
+ *
+ * What is left - paid, but by no row the ledger has - was paid outside it,
+ * typed straight into the debt, and the debt opens lower by that much.
+ *
+ * A receivable split off a purchase opens on the purchase's date, not the
+ * moment it was saved, so a back-dated bill does not draw a dip between the
+ * two.
+ *
+ * @param {Array<Record<string, any>>} debts
+ * @param {Array<Record<string, any>>} txs
  * @param {(tx: Record<string, any>) => number} priceOf
  */
-function settledOffset(tx, bySync, byId, priceOf) {
-  /* An empty list is still an answer: a payment made when nothing was owed
-     settled nothing, and the credit it opened is its own movement. */
-  if (Array.isArray(tx.settles)) {
-    let s = 0
-    for (const e of tx.settles) {
-      const d = (e?.syncId && bySync.get(e.syncId)) || byId.get(e?.id)
-      if (!d) continue
-      const delta = e.delta ?? 0
-      s += d.type === 'i_owe' ? delta : -delta
-    }
-    return s
+function debtBook(debts, txs, priceOf) {
+  /** @type {Map<string, Record<string, any>>} */
+  const bySync = new Map()
+  /** @type {Map<any, Record<string, any>>} */
+  const byId = new Map()
+  /** @type {Map<string, Record<string, any>>} */
+  const bySource = new Map()
+  /** @type {Map<Record<string, any>, number>} */
+  const seen = new Map()
+  for (const d of debts ?? []) {
+    if (!d) continue
+    if (d.syncId) bySync.set(d.syncId, d)
+    if (d.id != null) byId.set(d.id, d)
+    if (d.sourceTxId && d.type !== 'i_owe') bySource.set(d.sourceTxId, d)
+    seen.set(d, 0)
   }
-  if (tx.category === 'Debt Payment' && tx.type === 'expense') return priceOf(tx)
-  if (tx.category === 'Debt Collection' && tx.type === 'inflow') return -priceOf(tx)
-  return 0
+  const find = (/** @type {any} */ e) => (e?.syncId && bySync.get(e.syncId)) || byId.get(e?.id)
+
+  /** @type {Map<string, number>} */
+  const txDate = new Map()
+  let legacyOwe = 0
+  let legacyOwed = 0
+  for (const tx of txs ?? []) {
+    if (tx?.txId && tx.date) txDate.set(tx.txId, new Date(tx.date).getTime())
+    if (Array.isArray(tx?.settles)) {
+      for (const e of tx.settles) {
+        const d = find(e)
+        if (d) seen.set(d, (seen.get(d) ?? 0) + (e.delta ?? 0))
+      }
+    } else if (tx?.category === 'Debt Payment' && tx.type === 'expense') legacyOwe += priceOf(tx)
+    else if (tx?.category === 'Debt Collection' && tx.type === 'inflow') legacyOwed += priceOf(tx)
+  }
+
+  // Refunds of a shared bill's purchase, oldest first, up to what is unexplained.
+  /** @type {Map<Record<string, any>, number>} */
+  const refundOffset = new Map()
+  const refunds = (txs ?? [])
+    .filter(t => t?.refundOf && bySource.has(t.refundOf) && t.type === 'expense' && (t.amount ?? 0) < 0 && !Array.isArray(t.settles))
+    .sort((a, b) => String(a.date ?? '').localeCompare(String(b.date ?? '')))
+  for (const tx of refunds) {
+    const d = /** @type {Record<string, any>} */ (bySource.get(tx.refundOf))
+    const open = Math.max(0, (d.amountPaid ?? 0) - (seen.get(d) ?? 0))
+    const take = Math.min(open, -priceOf(tx))
+    if (!(take > 0.005)) continue
+    seen.set(d, (seen.get(d) ?? 0) + take)
+    refundOffset.set(tx, (refundOffset.get(tx) ?? 0) - take)
+  }
+
+  // Paid by no row: spread the per-debt sheet's rows over each side's gap.
+  const gap = (/** @type {Record<string, any>} */ d) => Math.max(0, (d.amountPaid ?? 0) - (seen.get(d) ?? 0))
+  let gapOwe = 0
+  let gapOwed = 0
+  for (const d of seen.keys()) {
+    if (d.type === 'i_owe') gapOwe += gap(d)
+    else gapOwed += gap(d)
+  }
+  const shareOwe = gapOwe > 0 ? Math.max(0, gapOwe - legacyOwe) / gapOwe : 0
+  const shareOwed = gapOwed > 0 ? Math.max(0, gapOwed - legacyOwed) / gapOwed : 0
+
+  /** @type {Array<{t: number, delta: number}>} */
+  const openings = []
+  for (const d of seen.keys()) {
+    const t = (d.sourceTxId && txDate.get(d.sourceTxId)) || new Date(d.createdAt ?? '').getTime()
+    const owe = d.type === 'i_owe'
+    const opens = (d.amount ?? 0) - gap(d) * (owe ? shareOwe : shareOwed)
+    if (Number.isNaN(t) || !(opens > 0.005)) continue
+    openings.push({ t, delta: owe ? -opens : opens })
+  }
+
+  return {
+    openings,
+    /**
+     * The part of a row that only moved money against a debt, signed so that
+     * adding it to the row's own netWorthDelta cancels that part out.
+     * @param {Record<string, any>} tx
+     */
+    offsetOf(tx) {
+      /* An empty list is still an answer: a payment made when nothing was owed
+         settled nothing, and the credit it opened is its own movement. */
+      if (Array.isArray(tx.settles)) {
+        let s = 0
+        for (const e of tx.settles) {
+          const d = find(e)
+          if (!d) continue
+          const delta = e.delta ?? 0
+          s += d.type === 'i_owe' ? delta : -delta
+        }
+        return s
+      }
+      if (tx.category === 'Debt Payment' && tx.type === 'expense') return priceOf(tx)
+      if (tx.category === 'Debt Collection' && tx.type === 'inflow') return -priceOf(tx)
+      return refundOffset.get(tx) ?? 0
+    },
+  }
 }
 
 /**

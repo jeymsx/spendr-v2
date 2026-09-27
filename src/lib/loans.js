@@ -33,6 +33,45 @@
 
 const round2 = (/** @type {number} */ n) => Math.round(n * 100) / 100
 
+/** The category a loan payment's interest is filed under, created on first use. */
+export const LOAN_INTEREST = 'Loan interest'
+/** @param {string} loan */
+export const loanPaymentNote = (loan) => `Loan payment · ${loan}`
+/** @param {string} loan */
+export const loanInterestNote = (loan) => `Interest · ${loan}`
+
+/**
+ * The other half of a loan payment: the interest for a principal transfer,
+ * or the transfer for an interest row. Null when `tx` is neither, or its
+ * partner is gone.
+ *
+ * A payment is written as two rows in one Dexie transaction, with the same
+ * date to the millisecond, so that date, the paying account and the two notes
+ * are what tie them - no column of their own, so nothing new to sync. A pair
+ * whose loan was renamed afterwards no longer matches, and deleting one half
+ * then leaves the other, as a transfer's fee is left today.
+ *
+ * @param {Record<string, any>} tx
+ * @param {Array<Record<string, any>>} all
+ * @returns {Record<string, any>|null}
+ */
+export function loanPairOf(tx, all) {
+  if (!tx?.date) return null
+  if (tx.type === 'transfer' && tx.toAccount && tx.description === loanPaymentNote(tx.toAccount)) {
+    return all.find(r => r !== tx && r.type === 'expense' && r.category === LOAN_INTEREST
+      && r.date === tx.date && r.account === tx.fromAccount
+      && r.description === loanInterestNote(tx.toAccount)) ?? null
+  }
+  if (tx.type === 'expense' && tx.category === LOAN_INTEREST && typeof tx.description === 'string'
+    && tx.description.startsWith(loanInterestNote(''))) {
+    const loan = tx.description.slice(loanInterestNote('').length)
+    return all.find(r => r !== tx && r.type === 'transfer' && r.toAccount === loan
+      && r.date === tx.date && r.fromAccount === tx.account
+      && r.description === loanPaymentNote(loan)) ?? null
+  }
+  return null
+}
+
 /**
  * The monthly rate (a fraction, 0.01 = 1%) at which `months` payments of
  * `payment` pay off `owed` exactly - the standard annuity, solved by
@@ -109,6 +148,30 @@ export function splitPayment(owed, amount, ratePct) {
 }
 
 /**
+ * How a payment made now splits - what the ledger writes and the pay sheet
+ * previews, so the two cannot disagree.
+ *
+ *   - A month's interest once per installment: `interestDue` is false for a
+ *     second payment before the next due date (matchInstallments), and all
+ *     of that comes off what is owed.
+ *   - Paying it off, whatever is over what is owed is the interest, never
+ *     more than a month's. A lender's payoff figure is the balance plus the
+ *     interest so far, which is rarely a whole month; charging the whole
+ *     month anyway would leave a phantom balance on a loan that is done.
+ *
+ * @param {number} owed
+ * @param {number} amount
+ * @param {number} ratePct
+ * @param {boolean} [interestDue]
+ * @returns {{interest: number, principal: number}}
+ */
+export function splitLoanPayment(owed, amount, ratePct, interestDue = true) {
+  const month = interestDue ? splitPayment(owed, amount, ratePct).interest : 0
+  const interest = amount >= owed - 0.005 ? round2(Math.min(month, Math.max(0, amount - owed))) : month
+  return { interest, principal: round2(Math.max(0, Math.min(amount - interest, Math.max(0, owed)))) }
+}
+
+/**
  * The due date in a given month, clamped to the month's length - a loan due
  * on the 31st falls on the 28th in February, not on the 3rd of March.
  *
@@ -133,13 +196,63 @@ function dueAfter(day, after) {
   return d
 }
 
+/** Midnight at the start of `d`'s local day. @param {Date} d */
+const dayOf = (d) => new Date(d.getFullYear(), d.getMonth(), d.getDate())
+
+/**
+ * Which installment the payments have reached, matched one to one.
+ *
+ * ── Why they are matched rather than "paid since the last due date" ──
+ *
+ * The first version counted any payment after the previous due date as
+ * paying the next one. That cannot tell late from early: September's
+ * installment paid on the 17th, two days late, read as October paid in
+ * advance, so October was never asked for - on the page, in the forecast
+ * or in a reminder. And an installment nobody paid simply vanished once its
+ * date passed.
+ *
+ * So each payment pays the oldest installment still open, provided it came
+ * after the due date before that one. A second payment in the same window
+ * is money off what you owe, not next month paid early; a late one settles
+ * the month it was late for.
+ *
+ * Where the matching starts is the one guess: the first installment is the
+ * first due date on or after the first payment Spendr has seen. Before
+ * that, it has no idea what was paid, and a loan added today must not open
+ * with a year of missed payments.
+ *
+ * @param {number} day            due day of the month, 1-31
+ * @param {Date[]} payments       money paid into the loan, dated up to `now`
+ * @param {Date} now
+ * @returns {{nextDue: Date, overdue: boolean, paidThisCycle: boolean, interestDue: boolean}}
+ */
+export function matchInstallments(day, payments, now) {
+  const today = dayOf(now)
+  const upcoming = dueAfter(day, new Date(today.getTime() - 1))
+  const sorted = payments.map(dayOf).sort((a, b) => a.getTime() - b.getTime())
+  let due = sorted.length ? dueAfter(day, new Date(sorted[0].getTime() - 1)) : upcoming
+  for (const p of sorted) {
+    const before = dueOn(due.getFullYear(), due.getMonth() - 1, day)
+    if (p > before) due = dueOn(due.getFullYear(), due.getMonth() + 1, day)
+  }
+  const before = dueOn(due.getFullYear(), due.getMonth() - 1, day)
+  return {
+    nextDue: due,
+    overdue: due < today,
+    paidThisCycle: due > upcoming,
+    /* Whether a payment made today would pay an installment - and so carry
+       that month's interest - or is extra, which all comes off what is owed. */
+    interestDue: today > before,
+  }
+}
+
 /**
  * Everything the loan's page and the forecast need, from the account and the
  * ledger.
  *
- * `nextDue` skips ahead a month once this cycle is paid: a payment dated
- * after the previous due date counts for the coming one, so paying early
- * does not leave the page asking for it again.
+ * `nextDue` is the oldest installment still open (matchInstallments): the
+ * coming one normally, a month later once that is paid, and a past date when
+ * one was missed - `overdue` says which.
  *
  * @param {Record<string, any>} account  a loan account
  * @param {Array<Record<string, any>>} [transactions]
@@ -155,13 +268,14 @@ export function loanStatus(account, transactions = [], now = new Date()) {
 
   // Money that went into the loan (principal) and out of it (borrowed more).
   let paidIn = 0
-  let lastPaid = null
+  /** @type {Date[]} */
+  const payments = []
   for (const t of transactions ?? []) {
     if (t?.type !== 'transfer') continue
     if (t.toAccount === name) {
       paidIn += Math.abs(t.toAmount ?? t.amount ?? 0)
       const d = new Date(t.date)
-      if (!Number.isNaN(d.getTime()) && d <= now && (!lastPaid || d > lastPaid)) lastPaid = d
+      if (!Number.isNaN(d.getTime()) && d <= now) payments.push(d)
     } else if (t.fromAccount === name) {
       paidIn -= Math.abs(t.amount ?? 0)
     }
@@ -170,14 +284,11 @@ export function loanStatus(account, transactions = [], now = new Date()) {
 
   let nextDue = null
   let paidThisCycle = false
+  let overdue = false
+  // With no due day there are no cycles to tell apart, so every payment carries interest.
+  let interestDue = true
   if (day >= 1 && day <= 31) {
-    const upcoming = dueAfter(day, new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1, 23, 59, 59))
-    const previous = dueOn(upcoming.getFullYear(), upcoming.getMonth() - 1, day)
-    /* Paid on the previous due date itself was paying THAT one; only a
-       payment from the day after it counts for the one coming up. */
-    const cycleStart = new Date(previous.getFullYear(), previous.getMonth(), previous.getDate() + 1)
-    paidThisCycle = !!lastPaid && lastPaid >= cycleStart
-    nextDue = paidThisCycle ? dueOn(upcoming.getFullYear(), upcoming.getMonth() + 1, day) : upcoming
+    ;({ nextDue, paidThisCycle, overdue, interestDue } = matchInstallments(day, payments, now))
   }
 
   const months = owed > 0.005 ? monthsToClear(owed, payment, r) : 0
@@ -196,6 +307,8 @@ export function loanStatus(account, transactions = [], now = new Date()) {
     paidOffBy,
     nextDue,
     paidThisCycle,
+    overdue,
+    interestDue,
     next,
     /** Principal paid since Spendr started tracking this loan. */
     paidIn,
@@ -212,8 +325,12 @@ export function loanStatus(account, transactions = [], now = new Date()) {
  * @param {Record<string, any>} account
  * @param {Array<Record<string, any>>} transactions
  * @param {Date} now
+ * A missed installment comes first, once, marked overdue - the way a bill
+ * that should have posted is - and the walk carries on from the next due
+ * date ahead rather than listing every month that was missed.
+ *
  * @param {Date} until
- * @returns {Array<{date: Date, amount: number}>}
+ * @returns {Array<{date: Date, amount: number, overdue: boolean}>}
  */
 export function upcomingLoanPayments(account, transactions, now, until) {
   const s = loanStatus(account, transactions, now)
@@ -223,10 +340,17 @@ export function upcomingLoanPayments(account, transactions, now, until) {
   const out = []
   let owed = s.owed
   let d = s.nextDue
-  for (let i = 0; i < 600 && owed > 0.005 && d <= until; i++) {
+  const pay = () => {
     const amount = round2(Math.min(s.payment, owed * (1 + r)))
-    out.push({ date: d, amount })
     owed = round2(owed * (1 + r) - amount)
+    return amount
+  }
+  if (s.overdue) {
+    out.push({ date: d, amount: pay(), overdue: true })
+    d = dueAfter(day, new Date(dayOf(now).getTime() - 1))
+  }
+  for (let i = 0; i < 600 && owed > 0.005 && d <= until; i++) {
+    out.push({ date: d, amount: pay(), overdue: false })
     d = dueOn(d.getFullYear(), d.getMonth() + 1, day)
   }
   return out

@@ -63,3 +63,44 @@ describe('net worth movements with debts counted', () => {
     expect(line[0].value).toBe(10000)
   })
 })
+
+/**
+ * Found in review: every peso paid off a debt has to be accounted for exactly
+ * once - by a neutral settlement row, or by the debt opening lower - or the
+ * whole history before the debt is out by it.
+ */
+describe('paid off by no row the ledger has', () => {
+  it('opens lower by what was typed in as already paid', () => {
+    const debt = { id: 1, syncId: 'd1', type: 'owed_to_me', amount: 5000, amountPaid: 2000, createdAt: d(3) }
+    const moves = netWorthMoves({ txs: [], debts: [debt], includeDebts: true, priceOf: face })
+    // Today the debt is worth 3,000, so before the 3rd it must add up to 0.
+    expect(moves).toEqual([{ t: Date.parse(d(3)), delta: 3000 }])
+    expect(debtsNetAt({ debts: [debt], txs: [], at: Date.parse(d(10)), priceOf: face })).toBe(3000)
+    expect(debtsNetAt({ debts: [debt], txs: [], at: Date.parse(d(1)), priceOf: face })).toBe(0)
+  })
+
+  it('treats a friend paying back through a refund of the shared purchase as a settlement', () => {
+    const buy = { txId: 'buy', type: 'expense', account: 'BPI', amount: 1000, category: 'Food', date: d(2) }
+    const back = { txId: 'r1', type: 'expense', account: 'BPI', amount: -500, category: 'Food', refundOf: 'buy', date: d(8) }
+    const debt = { id: 4, syncId: 'd4', type: 'owed_to_me', amount: 500, amountPaid: 500, sourceTxId: 'buy', createdAt: d(2) }
+    const moves = netWorthMoves({ txs: [buy, back], debts: [debt], includeDebts: true, priceOf: face })
+    // -1000 bought, +500 owed back the same day; the refund itself holds still.
+    expect(moves.filter(m => m.t === Date.parse(d(8)))).toEqual([])
+    expect(sum(moves)).toBe(-500)
+    expect(debtsNetAt({ debts: [debt], txs: [buy, back], at: Date.parse(d(10)), priceOf: face })).toBe(0)
+  })
+
+  it('does not count the per-debt sheet\'s payments twice', () => {
+    const debt = { id: 1, syncId: 'd1', type: 'i_owe', amount: 1000, amountPaid: 400, createdAt: d(1) }
+    const legacy = { type: 'expense', account: 'BPI', amount: 400, category: 'Debt Payment', date: d(5) }
+    const moves = netWorthMoves({ txs: [legacy], debts: [debt], includeDebts: true, priceOf: face })
+    expect(moves).toEqual([{ t: Date.parse(d(1)), delta: -1000 }])
+  })
+
+  it('opens a shared bill\'s receivable on the purchase\'s date, not when it was saved', () => {
+    const buy = { txId: 'buy', type: 'expense', account: 'BPI', amount: 900, category: 'Food', date: d(2) }
+    const debt = { id: 5, syncId: 'd5', type: 'owed_to_me', amount: 300, amountPaid: 0, sourceTxId: 'buy', createdAt: d(9) }
+    const moves = netWorthMoves({ txs: [buy], debts: [debt], includeDebts: true, priceOf: face })
+    expect(moves.filter(m => m.t === Date.parse(d(2))).map(m => m.delta).sort((a, b) => a - b)).toEqual([-900, 300])
+  })
+})

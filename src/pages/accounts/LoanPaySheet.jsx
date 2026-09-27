@@ -12,7 +12,7 @@ import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
 import { chipClass } from './shared'
 import { fmt } from '../../lib/money'
 import { isLiquid } from '../../lib/accountMeta'
-import { rateLabel, splitPayment } from '../../lib/loans'
+import { rateLabel, splitLoanPayment } from '../../lib/loans'
 
 /** The accent the app paints money leaving an account. */
 const PAY_COLOR = '#10b981'
@@ -44,7 +44,10 @@ export default function LoanPaySheet({ open, onClose, loan, accounts = [], statu
 
   const owed = status?.owed ?? 0
   const monthly = status?.next?.amount ?? 0
-  const payoff = owed > 0 ? owed + (status?.next?.interest ?? 0) : 0
+  /* Interest is a month's, once per installment (lib/loans.js). Once this
+     month's is paid, anything more is extra and all of it comes off. */
+  const interestDue = status?.interestDue !== false
+  const payoff = owed > 0 ? owed + (interestDue ? (status?.next?.interest ?? 0) : 0) : 0
 
   const presets = useMemo(() => {
     const out = []
@@ -65,7 +68,7 @@ export default function LoanPaySheet({ open, onClose, loan, accounts = [], statu
   }, [open, monthly, payable])
 
   const value = parseMoney(amount)
-  const split = value > 0 ? splitPayment(owed, value, loan?.interestRate) : { interest: 0, principal: 0 }
+  const split = value > 0 ? splitLoanPayment(owed, value, loan?.interestRate, interestDue) : { interest: 0, principal: 0 }
   const short = from ? value - (from.balance ?? 0) : 0
   const ready = value > 0 && !!from && !saving
 
@@ -130,7 +133,8 @@ export default function LoanPaySheet({ open, onClose, loan, accounts = [], statu
             <DetailRow
               label="Interest"
               value={fmt(split.interest, cur)}
-              sub={loan?.interestRate ? `${rateLabel(loan.interestRate)}% a month` : 'No rate set'}
+              sub={!interestDue ? "Paid with this month's payment"
+                : loan?.interestRate ? `${rateLabel(loan.interestRate)}% a month` : 'No rate set'}
               padded={false}
               isLast
             />

@@ -1,28 +1,32 @@
 -- 023 — Investments, loans, balance corrections and scheduled income.
 --
--- Five nullable columns across three existing tables. Run it in the Supabase
--- SQL editor once this branch ships; until then every one of these fields is
--- stored on the device and synced without, so nothing breaks in the meantime.
+-- Five nullable columns across three existing tables. RUN IT BEFORE ANY
+-- DEVICE OPENS A BUILD WITH THIS WORK IN IT - the app keeps syncing without
+-- it, but what it cannot send in the meantime does not all come back.
 --
--- ── Safe to run, and safe NOT to ─────────────────────────────────────────
+-- ── Safe to run ──────────────────────────────────────────────────────────
 --
 -- ADD COLUMN IF NOT EXISTS only: no DROP, no ALTER of an existing column, no
 -- default to write, no row read or rewritten. Re-runnable.
 --
--- Order does not matter. Every column below is listed in OPTIONAL_COLS
--- (src/lib/sync.js), so a push to a database that has not had this run drops
--- them and retries once, exactly as 007 and 018 describe. Before it runs:
---   - an investment syncs as an account with no kind and no "paid in" figure,
---     and another device shows it under Investments all the same (its type
---     travels in the existing `type` column);
---   - a balance correction or value update syncs without its `adjust` mark.
---     Another device still leaves it out of income and spending, because
---     the app gives both a fixed description it also matches on
---     (src/lib/flows.js);
---   - a salary on Recurring syncs as a bill.
--- Degraded, never wrong in a way that loses data, and all of it heals on the
--- next push after this is applied.
+-- ── If a device syncs first ──────────────────────────────────────────────
 --
+-- Every column below is in OPTIONAL_COLS (src/lib/sync.js). A push refused
+-- for one of them is retried without THAT column - one at a time, never the
+-- conflict target (the net used to drop every optional column at once; see
+-- columnsToDrop). So sync keeps working, and until this runs:
+--   - an investment syncs with no kind, "paid in" or valued date. Its type
+--     travels in the existing `type` column, so other devices still file it
+--     under Investments. Accounts and Recurring are pushed whole on every
+--     sync, so the server has the new fields after the first push once this
+--     has run;
+--   - a balance correction or value update syncs without `adjust`, and a
+--     transaction is only pushed once, so those rows stay without it on the
+--     server. Harmless: the app also recognises both by the fixed
+--     description it gives them (src/lib/flows.js);
+--   - a salary on Recurring reaches other devices as a bill until the next
+--     push after this runs.
+
 -- ── Nothing new in `type` or `frequency` ────────────────────────────────
 --
 -- Two account types are new ('investment', 'loan') and one recurring

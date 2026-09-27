@@ -522,6 +522,20 @@ describe('deleteTxGroup takes the rows that cannot stand alone', () => {
     expect(acct('Maya Savings').balance).toBe(10000)
   })
 
+  /* A loan payment is a principal transfer and an interest expense written
+     together (db/accountWrites.js payLoan). Either half alone is wrong: the
+     interest would stay counted as spending with the payment gone. */
+  it('deletes both halves of a loan payment, whichever was tapped', async () => {
+    const at = '2026-09-28T02:00:00.000Z'
+    store.transactions.push(
+      { id: 70, txId: 'lp-1', type: 'transfer', amount: 9070, fromAccount: 'Maya Savings', toAccount: 'Car Loan', description: 'Loan payment · Car Loan', date: at },
+      { id: 71, txId: 'lp-2', type: 'expense', amount: 3780, account: 'Maya Savings', category: 'Loan interest', description: 'Interest · Car Loan', date: at },
+      { id: 72, txId: 'lunch', type: 'expense', amount: 200, account: 'Maya Savings', category: 'Food', description: 'Lunch', date: at },
+    )
+    await deleteTxGroup(/** @type {any} */ ([store.transactions.find(t => t.id === 71)]))
+    expect(store.transactions.map(t => t.txId)).toEqual(['lunch'])
+  })
+
   /**
    * What happens to a receivable when its purchase is deleted turns on one
    * question: has any money moved against it?

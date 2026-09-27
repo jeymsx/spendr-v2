@@ -349,7 +349,7 @@ export default function Dashboard() {
     { key: 'credit', label: 'Credit', value: breakdown.credit, note: breakdown.credit > 0 ? 'Outstanding' : 'Paid off' },
     breakdown.has.loans && { key: 'loans', label: 'Loans', value: breakdown.loans, note: breakdown.loans > 0.005 ? 'Left to pay' : 'Paid off' },
     breakdown.has.people && {
-      key: 'people', label: 'People', value: Math.abs(breakdown.people),
+      key: 'people', label: 'Debts', value: Math.abs(breakdown.people),
       note: breakdown.people >= 0 ? 'Owed to you' : 'You owe',
     },
   ].filter(Boolean)

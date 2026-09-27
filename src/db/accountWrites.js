@@ -1,7 +1,8 @@
 import db, { UNSYNCED } from './db'
 import { applyBalanceEffect } from './balances'
 import { valueRow } from '../lib/investments'
-import { splitPayment } from '../lib/loans'
+import { getFxContext, stampTxCurrency } from '../lib/fxContext'
+import { LOAN_INTEREST, loanInterestNote, loanPaymentNote, loanStatus, splitLoanPayment } from '../lib/loans'
 
 /**
  * The writes an investment and a loan need, each one all-or-nothing.
@@ -10,9 +11,6 @@ import { splitPayment } from '../lib/loans'
  * lib/flows.js for why - so every balance, trend, sync and trash path already
  * knows what to do with what they write.
  */
-
-/** The category a loan's interest is filed under, created the first time. */
-export const LOAN_INTEREST = 'Loan interest'
 
 /**
  * Record what an investment is worth now.
@@ -76,7 +74,14 @@ export async function createInvestment(row, value) {
     await db.balances.put({ account: row.name, balance: 0 })
     const vr = valueRow({ account: row.name, current: 0, value: Number(value) || 0, dateIso: nowIso })
     if (vr) {
-      await db.transactions.add({ ...vr, txId: crypto.randomUUID(), synced: UNSYNCED, updatedAt: nowIso })
+      /* Priced here rather than by the creating hook: the hook's picture of
+         which account holds which currency is refreshed after this commits,
+         so it would take a US$ fund's opening value for pesos. */
+      const fx = getFxContext()
+      const known = new Map(fx.byAccount)
+      known.set(row.name, String(row.currency || fx.base).toUpperCase())
+      const priced = stampTxCurrency({ ...vr }, { ...fx, byAccount: known })
+      await db.transactions.add({ ...priced, txId: crypto.randomUUID(), synced: UNSYNCED, updatedAt: nowIso })
       await applyBalanceEffect(/** @type {any} */ (vr))
     }
     return id
@@ -107,7 +112,12 @@ export async function payLoan({ loan, from, amount, dateIso }) {
     const fresh = await db.accounts.get(loan.id)
     if (!fresh) throw new Error('That loan no longer exists.')
     const owed = Math.max(0, -(fresh.balance ?? 0))
-    const { interest, principal } = splitPayment(owed, amount, fresh.interestRate)
+    /* Interest once per installment, and a payoff never leaves a phantom
+       balance - see splitLoanPayment. Whether this payment pays an
+       installment turns on the payments already in (matchInstallments). */
+    const paidInto = await db.transactions.where('toAccount').equals(fresh.name).toArray()
+    const { interestDue } = loanStatus(fresh, paidInto, new Date(dateIso))
+    const { interest, principal } = splitLoanPayment(owed, amount, fresh.interestRate, interestDue)
     // Anything past what is owed and its interest still goes to the loan -
     // an overpayment is money the lender holds for you.
     const toLoan = Math.round((amount - interest) * 100) / 100
@@ -115,7 +125,7 @@ export async function payLoan({ loan, from, amount, dateIso }) {
     if (toLoan > 0.005) {
       const t = {
         type: 'transfer', amount: toLoan, fromAccount: from, toAccount: fresh.name,
-        description: `Loan payment · ${fresh.name}`,
+        description: loanPaymentNote(fresh.name),
       }
       await db.transactions.add({ ...t, txId: crypto.randomUUID(), date: dateIso, synced: UNSYNCED, updatedAt: nowIso })
       await applyBalanceEffect(/** @type {any} */ (t))
@@ -127,7 +137,7 @@ export async function payLoan({ loan, from, amount, dateIso }) {
       }
       const e = {
         type: 'expense', amount: interest, account: from, category: LOAN_INTEREST,
-        description: `Interest · ${fresh.name}`,
+        description: loanInterestNote(fresh.name),
       }
       await db.transactions.add({ ...e, txId: crypto.randomUUID(), date: dateIso, synced: UNSYNCED, updatedAt: nowIso })
       await applyBalanceEffect(/** @type {any} */ (e))

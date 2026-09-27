@@ -580,13 +580,13 @@ export default function AccountDetail() {
             <ProgressBar value={loanInfo.progress * 100} fillClass="bg-primary" />
             <div className="mt-1.5 flex items-baseline justify-between gap-3">
               <span className="text-11 text-slate-400 dark:text-slate-500">
-                {acctFmt(loanInfo.paidIn)} paid
+                {acctFmt(loanInfo.paidIn)} paid off
               </span>
               <span className="text-11 text-slate-400 dark:text-slate-500 text-right">
                 {loanInfo.owed <= 0.005 ? 'Paid off'
                   : loanInfo.paidOffBy
                     ? `Done by ${loanInfo.paidOffBy.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}`
-                    : Number.isFinite(loanInfo.monthsLeft) ? '' : 'Payment only covers interest'}
+                    : loanInfo.payment > 0 && !Number.isFinite(loanInfo.monthsLeft) ? 'Payment only covers interest' : ''}
               </span>
             </div>
           </div>
@@ -692,12 +692,13 @@ export default function AccountDetail() {
       <section className="mt-7">
         <div className="flex items-baseline justify-between px-5">
           <SectionLabel>{RANGE_TITLE[range.key]}</SectionLabel>
-          <TrendDelta data={trend} isCredit={isCredit} currency={account?.currency} />
+          <TrendDelta data={trend} isCredit={isOwed} currency={account?.currency} />
         </div>
         <BalanceTrend
           data={trend}
           color={trendColor}
-          isCredit={isCredit}
+          isCredit={isOwed}
+          {...(isInvestment ? { valueLabel: 'Value' } : {})}
           currency={account?.currency}
           rangeKey={range.key}
           rangeTitle={RANGE_TITLE[range.key]}
@@ -1022,11 +1023,15 @@ export default function AccountDetail() {
                     <p className="mt-1 text-12 text-slate-500 dark:text-slate-400 tabular-nums">
                       {acctFmt(loanInfo.next.principal)} off what you owe · {acctFmt(loanInfo.next.interest)} interest
                     </p>
-                    {loanInfo.paidThisCycle && (
+                    {loanInfo.overdue ? (
+                      <p className="mt-2 text-12 font-semibold text-red-500 dark:text-red-400">
+                        Overdue since {fmtDueDate(loanInfo.nextDue)}
+                      </p>
+                    ) : loanInfo.paidThisCycle ? (
                       <p className="mt-2 text-12 font-semibold text-emerald-600 dark:text-emerald-400">
                         This month is paid
                       </p>
-                    )}
+                    ) : null}
                   </>
                 ) : (
                   <p className="mt-3 text-13 text-slate-500 dark:text-slate-400">

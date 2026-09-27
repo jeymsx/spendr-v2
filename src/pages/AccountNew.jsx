@@ -392,7 +392,10 @@ export default function AccountNew() {
         <CreatedStep
           draft={draft}
           onDone={() => navigate('/accounts', { replace: true })}
-          onAddTransaction={() => (isInvestment || isLoan
+          /* A loan is paid from its own page, where the payment is split into
+             principal and interest; a plain transfer would put all of it on
+             the principal. So a loan offers no second step here. */
+          onAddTransaction={isLoan ? undefined : () => (isInvestment
             ? navigate('/transfer', { replace: true, state: { prefill: { toAccount: draft.name.trim() } } })
             : navigate('/expense', { replace: true }))}
         />

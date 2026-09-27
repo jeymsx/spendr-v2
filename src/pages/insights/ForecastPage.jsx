@@ -147,7 +147,7 @@ export default function ForecastPage() {
             <DetailRow
               label="Everyday spending"
               value={forecast.dailySpend ? `${fmt(forecast.dailySpend, base)} a day` : 'Not yet'}
-              sub={forecast.dailySpend ? 'Your usual week, per day' : 'Needs 3 weeks of history'}
+              sub={forecast.dailySpend ? 'Your usual week, per day' : 'Needs a few weeks of spending'}
             />
             <button
               type="button"

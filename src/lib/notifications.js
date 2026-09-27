@@ -164,18 +164,21 @@ export function collectNotifications({
     ], nowMs))
   }
 
-  // ── Loans: three days before the payment and on the day, until it is paid ──
+  // ── Loans: three days before, on the day, and the day after if still open ──
   for (const acct of accounts) {
     if (acct?.type !== 'loan' || !acct.dueDate || !(acct.minimumPayment > 0)) continue
     const s = loanStatus(acct, transactions, now)
     if (!s.nextDue || !(s.owed > 0.005) || !s.next) continue
     const key = stableKey(acct)
     const id = `loan:${key}:${ymd(s.nextDue)}`
-    const body = `${fmt(s.next.amount, acct.currency || currencyOfAccountName(acct.name))} to pay`
+    const amount = fmt(s.next.amount, acct.currency || currencyOfAccountName(acct.name))
+    const body = `${amount} to pay`
     const url = acct.id != null ? `/accounts/${acct.id}` : '/accounts'
     offer(latest([
       { id: `${id}:early`, kind: 'loan-due', at: at9(s.nextDue, -CARD_LEAD_DAYS).toISOString(), title: `${acct.name} due in ${CARD_LEAD_DAYS} days`, body, url },
       { id: `${id}:due`, kind: 'loan-due', at: at9(s.nextDue).toISOString(), title: `${acct.name} due today`, body, url },
+      // Still open the day after: loanStatus keeps a missed installment as nextDue until it is paid.
+      { id: `${id}:overdue`, kind: 'loan-due', at: at9(s.nextDue, 1).toISOString(), title: `${acct.name} is overdue`, body: `${amount} left to pay`, url },
     ], nowMs))
   }
 
