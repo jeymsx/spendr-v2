@@ -98,7 +98,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
           <button
             onClick={handleSave}
             disabled={saving || !url.trim()}
-            className="mt-2 text-12 font-medium text-primary disabled:opacity-40"
+            className="press press-fade active:opacity-60 mt-2 text-12 font-medium text-primary disabled:opacity-40"
           >
             {saving ? 'Saving…' : 'Save URL'}
           </button>

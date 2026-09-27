@@ -266,7 +266,7 @@ export default function CardPaymentSheet({
             type="button"
             onClick={onClose}
             disabled={saving}
-            className="w-full mt-3 py-2 text-13 font-semibold
+            className="press press-fade active:opacity-60 w-full mt-3 py-2 text-13 font-semibold
               text-slate-500 dark:text-slate-400 disabled:opacity-40"
           >
             Cancel

@@ -1,5 +1,6 @@
 import { useState, useMemo, useDeferredValue } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnimatePresence } from 'motion/react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import TxDetailSheet from '../components/TxDetailSheet'
@@ -9,6 +10,7 @@ import IconButton from '../components/ui/IconButton'
 import Divider from '../components/ui/Divider'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
+import { PresenceItem, RowDivider, useRowMotion } from '../components/ui/Presence'
 import {
   inDateRange,
   groupByDate,
@@ -159,6 +161,18 @@ export default function Transactions() {
   const groups    = useMemo(() => groupByDate(visibleTx), [visibleTx])
   const hasMore   = filteredTx.length > visibleCount
 
+  /* Rows that arrive and leave - see components/ui/Presence.jsx. The view is
+     everything filteredTx is computed from, with the DEFERRED search: the
+     list changes when that does, and keying on the raw input would let a
+     filtering keystroke read as rows being deleted. */
+  const allIds     = useMemo(() => (txAll ?? []).map(t => t.id), [txAll])
+  const visibleIds = useMemo(() => visibleTx.map(t => t.id), [visibleTx])
+  const viewKey = [
+    deferredSearch, typeFilter, accountFilters.join('\u001f'), categoryFilter,
+    dateRange, customFrom, customTo, amountMin, amountMax, visibleCount,
+  ].join('\u001e')
+  const rows = useRowMotion({ scope: 'ledger', ready: !loading, allIds, visibleIds, viewKey })
+
   // Type is now inline — only count date/account/category as "hidden" filter state
   const activeFilterCount = (dateRange !== 'all' ? 1 : 0) +
     (accountFilters.length ? 1 : 0) +
@@ -264,7 +278,7 @@ export default function Transactions() {
               {DATE_OPTS.find(o => o.value === dateRange)?.label}
               {dateRange === 'custom' && customFrom && ` ${customFrom}`}
               {dateRange === 'custom' && customTo && `–${customTo}`}
-              <button onClick={() => { setDateRange('all'); setCustomFrom(''); setCustomTo('') }} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+              <button onClick={() => { setDateRange('all'); setCustomFrom(''); setCustomTo('') }} className="ml-0.5 opacity-60 hover:opacity-100 active:opacity-100">×</button>
             </span>
           )}
           {accountFilters.map(name => (
@@ -273,7 +287,7 @@ export default function Transactions() {
               {name}
               <button
                 onClick={() => setAccountFilters(prev => prev.filter(n => n !== name))}
-                className="ml-0.5 opacity-60 hover:opacity-100"
+                className="ml-0.5 opacity-60 hover:opacity-100 active:opacity-100"
                 aria-label={`Remove ${name} filter`}
               >×</button>
             </span>
@@ -282,7 +296,7 @@ export default function Transactions() {
             <span className="shrink-0 flex items-center gap-1 px-2.5 py-1 rounded-full text-11 font-semibold
               bg-primary/10 dark:bg-primary/20 text-primary">
               {categoryFilter}
-              <button onClick={() => setCategoryFilter(null)} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+              <button onClick={() => setCategoryFilter(null)} className="ml-0.5 opacity-60 hover:opacity-100 active:opacity-100">×</button>
             </span>
           )}
           {(amountMin != null || amountMax != null) && (
@@ -291,7 +305,7 @@ export default function Transactions() {
               {amountMin != null ? `${baseSymbol()}${amountMin.toLocaleString()}` : `${baseSymbol()}0`}
               {' – '}
               {amountMax != null ? `₱${amountMax.toLocaleString()}` : 'any'}
-              <button onClick={() => { setAmountMin(null); setAmountMax(null) }} className="ml-0.5 opacity-60 hover:opacity-100">×</button>
+              <button onClick={() => { setAmountMin(null); setAmountMax(null) }} className="ml-0.5 opacity-60 hover:opacity-100 active:opacity-100">×</button>
             </span>
           )}
         </Rail>
@@ -326,31 +340,48 @@ export default function Transactions() {
         />
       ) : (
         <>
-          {groups.map(({ date, txs }) => (
-            <div key={date} className="mb-1">
-              <div className="flex items-center gap-3 px-5 py-2">
-                <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                  {fmtGroupDate(date)}
-                </span>
-                <Divider className="flex-1" />
-                <span className="text-11 text-slate-400 dark:text-slate-500 tabular-nums">
-                  {txs.length} {txs.length === 1 ? 'txn' : 'txns'}
-                </span>
-              </div>
-
-              <Card clip className="mx-5">
-                {txs.map((tx, i) => (
-                  <div key={tx.id}>
-                    <TxRow tx={tx} catMap={catMap} onClick={setSelectedTx} />
-                    {/* Under the text, not under the tile: the row is led by a
-                        40px glyph, so the line starts where the row's content
-                        does rather than cutting the card in half. */}
-                    {i < txs.length - 1 && <Divider inset="glyph" />}
+          {/* Keyed by the epoch, so a change of view redraws the list rather
+              than animating every row in and out of it. */}
+          <AnimatePresence key={rows.epoch} initial={false}>
+            {groups.map(({ date, txs }) => {
+              /* A day that is new as a whole arrives as a whole - its heading
+                 and card together - rather than as an empty card whose row
+                 then opens inside it. */
+              const dayArrival = txs.every(t => rows.arrival(t.id) !== 'none')
+                ? rows.arrival(txs[0].id) : 'none'
+              return (
+                // pb-1, not mb-1: padding closes with the day when it leaves.
+                <PresenceItem key={date} appear={dayArrival} className="pb-1">
+                  <div className="flex items-center gap-3 px-5 py-2">
+                    <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                      {fmtGroupDate(date)}
+                    </span>
+                    <Divider className="flex-1" />
+                    <span className="text-11 text-slate-400 dark:text-slate-500 tabular-nums">
+                      {txs.length} {txs.length === 1 ? 'txn' : 'txns'}
+                    </span>
                   </div>
-                ))}
-              </Card>
-            </div>
-          ))}
+
+                  <Card clip className="mx-5">
+                    <AnimatePresence initial={false}>
+                      {txs.map((tx, i) => (
+                        <PresenceItem
+                          key={tx.id}
+                          appear={dayArrival === 'none' ? rows.arrival(tx.id) : 'none'}
+                        >
+                          <TxRow tx={tx} catMap={catMap} onClick={setSelectedTx} />
+                          {/* Under the text, not under the tile: the row is led
+                              by a 40px glyph, so the line starts where the row's
+                              content does rather than cutting the card in half. */}
+                          <RowDivider hidden={i === txs.length - 1} />
+                        </PresenceItem>
+                      ))}
+                    </AnimatePresence>
+                  </Card>
+                </PresenceItem>
+              )
+            })}
+          </AnimatePresence>
 
           {hasMore && (
             <div className="flex justify-center mt-4 px-5">

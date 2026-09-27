@@ -33,8 +33,12 @@ import { cx } from './cx'
 
 /* Every variant gets the same press treatment - a 2% shrink - because that
    is what 35 of the 39 primary buttons already did, and the four that did
-   nothing were an oversight rather than a choice. */
-const PRESS = 'active:scale-[0.98] transition-transform duration-100'
+   nothing were an oversight rather than a choice.
+
+   Its timing is `.press` in index.css: in over 90ms, back over 320ms. It was
+   100ms both ways with the variant's active colour changing instantly beside
+   it; now the fill eases with the shrink, and the release settles. */
+const PRESS = 'press'
 
 const VARIANT = {
   /** The one thing this screen is for. */

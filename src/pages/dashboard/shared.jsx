@@ -1,4 +1,3 @@
-import { useState, useRef, useEffect } from 'react'
 import { allocateGoals } from '../../lib/goals'
 import { IconBank, IconCard, IconPhone, IconWallet, IconWarning, IconBell } from '../../components/icons'
 import CategoryGlyph from '../../components/CategoryGlyph'
@@ -97,32 +96,6 @@ export function ContextHint({ hint }) {
       <span className="truncate">{text}</span>
     </p>
   )
-}
-
-// ── Animated counter ───────────────────────────────────────────────────────────
-
-export function useCountUp(target, duration = 950) {
-  const [value, setValue] = useState(0)
-  const ranRef = useRef(false)
-  const rafRef = useRef(null)
-
-  useEffect(() => {
-    if (target === undefined || target === null) return
-    if (ranRef.current) { setValue(target); return }
-    ranRef.current = true
-
-    const start = performance.now()
-    const step  = (now) => {
-      const p = Math.min((now - start) / duration, 1)
-      const e = 1 - Math.pow(1 - p, 3)          // easeOutCubic
-      setValue(target * e)
-      if (p < 1) rafRef.current = requestAnimationFrame(step)
-    }
-    rafRef.current = requestAnimationFrame(step)
-    return () => rafRef.current && cancelAnimationFrame(rafRef.current)
-  }, [target, duration])
-
-  return value
 }
 
 // ── Account type meta ──────────────────────────────────────────────────────────

@@ -7,6 +7,7 @@ import SchemeMark from '../../components/SchemeMark'
 import { TYPE_LABEL } from '../../lib/accountMeta'
 import { fmt, fmtCompact, fmtHidden } from '../../lib/money'
 import SectionLabel from '../../components/ui/SectionLabel'
+import RollingNumber from '../../components/ui/RollingNumber'
 import { upcomingDueDate } from '../../lib/creditBills'
 
 // ── Summary bar ────────────────────────────────────────────────────────────────
@@ -33,7 +34,8 @@ export function SummaryBar({ summary, hidden }) {
       <SectionLabel inset="none" gap="none" className="text-center">Net worth</SectionLabel>
       <p className="mt-0.5 text-center text-38 leading-none font-semibold tracking-tight
         tabular-nums text-slate-900 dark:text-white">
-        {hidden ? fmtHidden() : fmtCompact(summary.net)}
+        {/* Rolls from what you last saw - ui/RollingNumber. */}
+        {hidden ? fmtHidden() : <RollingNumber id="accounts:net" value={summary.net} format={fmtCompact} />}
       </p>
       <p className="mt-2 text-center text-13 text-slate-500 dark:text-slate-400 tabular-nums">
         {hidden ? '•••• assets' : `${fmtCompact(summary.assets)} assets`}
@@ -160,7 +162,13 @@ export const AccountCard = forwardRef(function AccountCard({
 
         <span className="text-right shrink-0">
           <span className="block text-16 font-bold tabular-nums leading-tight">
-            {hidden ? fmtHidden(acct.currency) : fmt(isCredit ? currentBalance : acct.balance, acct.currency)}
+            {hidden ? fmtHidden(acct.currency) : (
+              <RollingNumber
+                id={`card:${acct.id}:${acct.currency}`}
+                value={isCredit ? currentBalance : (acct.balance ?? 0)}
+                format={v => fmt(v, acct.currency)}
+              />
+            )}
           </span>
           <span className="block text-10 text-white/65">
             {isCredit

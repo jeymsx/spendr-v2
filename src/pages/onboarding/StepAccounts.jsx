@@ -261,7 +261,7 @@ export function StepPickAccounts({ selectedNames, onToggle, customAccounts, onAd
                 <button
                   key={t.value}
                   onClick={() => setCustomType(t.value)}
-                  className={`py-2 rounded-xl text-xs font-semibold transition-all duration-100 ${
+                  className={`py-2 rounded-xl text-xs font-semibold transition-all duration-100 active:scale-95 ${
                     customType === t.value
                       ? 'bg-primary text-white'
                       : 'bg-white/[0.06] text-slate-400 border border-white/[0.08]'

@@ -197,11 +197,12 @@ describe('Card', () => {
   })
 
   it('answers a press only when it is interactive', () => {
+    // `press` is the shared press in index.css - a shrink on a slow settle.
     const { container: quiet } = render(<Card>x</Card>)
-    expect(quiet.firstChild.className).not.toContain('active:scale')
+    expect(quiet.firstChild.className.split(/\s+/)).not.toContain('press')
     cleanup()
     const { container: live } = render(<Card interactive>x</Card>)
-    expect(live.firstChild.className).toContain('active:scale-[0.98]')
+    expect(live.firstChild.className.split(/\s+/)).toContain('press')
   })
 
   it('clips its children only when asked', () => {

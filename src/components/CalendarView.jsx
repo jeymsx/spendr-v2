@@ -147,7 +147,7 @@ export default function CalendarView({
 
           <button
             onClick={() => { if (!isCurrentMonth) onGoToNow?.() }}
-            className="flex items-center gap-1.5"
+            className="press press-fade active:opacity-60 flex items-center gap-1.5"
             style={isCurrentMonth ? { pointerEvents: 'none' } : {}}
           >
             <span className="text-13 font-semibold text-slate-600 dark:text-slate-300">

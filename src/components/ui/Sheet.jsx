@@ -4,6 +4,7 @@ import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 import FadeScroller from '../FadeScroller'
 import { cx } from './cx'
 import { keepTabInside } from './focus'
+import { useSheetDrag } from './useSheetDrag'
 
 /**
  * The bottom sheet, once, instead of 28 times.
@@ -163,6 +164,7 @@ export default function Sheet({
   const [phase, setPhase] = useState(open ? 'open' : 'closed')
   const [docked, setDocked] = useState(false)
   const panelRef = useRef(null)
+  const overlayRef = useRef(null)
   const restoreRef = useRef(null)
   /* Identity in `openSheets`. A ref rather than a value, so the key handler
      closes over something stable. */
@@ -184,6 +186,20 @@ export default function Sheet({
      count and a hard React error rather than a glitch. */
   const kb = useKeyboardInset()
   const keyboardOpen = kb.open
+
+  /* Drag down to dismiss - see useSheetDrag. Anywhere on a floating sheet,
+     because a floating sheet is one whose contents fit; only by the grab zone
+     on a docked one, whose body scrolls. The keyboard turns the anywhere off:
+     it shrinks the screen under the sheet, and a form that fitted a moment
+     ago may now need to scroll to reach its next field. */
+  const dragAll = !isDocked && !keyboardOpen
+  useSheetDrag({
+    panelRef, overlayRef,
+    enabled: open && phase === 'open',
+    dismissible,
+    dragAll,
+    onDismiss: onClose,
+  })
 
   useEffect(() => {
     if (open) {
@@ -345,8 +361,13 @@ export default function Sheet({
         ? { zIndex: z, top: kb.top, height: kb.height, bottom: 'auto' }
         : { zIndex: z }}
     >
+      {/* The scrim fades out with the panel. It used to hold at full
+          strength for the whole exit and vanish in one frame when the sheet
+          unmounted - the page behind snapped from dimmed and blurred to
+          sharp just as the panel finished leaving. */}
       <div
-        className="sheet-overlay absolute inset-0 backdrop-blur-sm"
+        ref={overlayRef}
+        className={cx('sheet-overlay absolute inset-0 backdrop-blur-sm', closing && 'sheet-overlay-out')}
         style={{ backgroundColor: `rgba(0,0,0,${scrim / 100})` }}
         onClick={dismissible ? onClose : undefined}
       />
@@ -362,6 +383,7 @@ export default function Sheet({
         className={cx(
           closing ? 'sheet-panel-exit' : 'sheet-panel',
           isDocked ? 'sheet-dock' : 'sheet-float',
+          dragAll && 'sheet-drag-all',
           'absolute flex flex-col outline-none',
           surface,
           isDocked
@@ -370,17 +392,23 @@ export default function Sheet({
           className,
         )}
       >
-        {handle && (
-          /* w-10 h-1 exactly: html.web hides the handle by that selector. */
-          <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mt-4 mb-3 shrink-0" />
-        )}
+        {/* The grab zone: handle and title, full width, where a drag can
+            start on any sheet - see useSheetDrag. */}
+        {(handle || shown.title) && (
+          <div data-sheet-grab="" className="sheet-grab shrink-0">
+            {handle && (
+              /* w-10 h-1 exactly: html.web hides the handle by that selector. */
+              <div className="w-10 h-1 rounded-full bg-slate-200 dark:bg-white/10 mx-auto mt-4 mb-3 shrink-0" />
+            )}
 
-        {shown.title && (
-          <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-3">
-            <h3 id={titleId} className="text-17 font-semibold text-slate-900 dark:text-white">
-              {shown.title}
-            </h3>
-            {shown.titleAction}
+            {shown.title && (
+              <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-3">
+                <h3 id={titleId} className="text-17 font-semibold text-slate-900 dark:text-white">
+                  {shown.title}
+                </h3>
+                {shown.titleAction}
+              </div>
+            )}
           </div>
         )}
 

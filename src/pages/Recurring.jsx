@@ -443,7 +443,8 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                   key={opt.value}
                   onClick={() => setFrequency(opt.value)}
                   className={[
-                    'h-9 px-4 rounded-full border text-13 font-semibold transition-all duration-150',
+                    // active:scale-95 - the shrink every other chip row has.
+                    'h-9 px-4 rounded-full border text-13 font-semibold transition-all duration-150 active:scale-95',
                     frequency === opt.value
                       /* seg-active, not text-primary. Measured, the accent
                          as text is 2.63:1 on its own 8% tint - worse than

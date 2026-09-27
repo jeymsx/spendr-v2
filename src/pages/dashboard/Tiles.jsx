@@ -6,7 +6,8 @@ import BrandWatermark from '../../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../../components/BudgetMeter'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import Card from '../../components/ui/Card'
-import Divider from '../../components/ui/Divider'
+import { RowDivider } from '../../components/ui/Presence'
+import RollingNumber from '../../components/ui/RollingNumber'
 import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 import { currencyOfTx } from '../../lib/fxContext'
@@ -57,7 +58,15 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
           {isCredit ? 'Available' : 'Balance'}
         </p>
         <p className="text-17 font-bold tabular-nums leading-none">
-          {hidden ? fmtHidden(acct.currency) : fmt(isCredit ? available : acct.balance, acct.currency)}
+          {/* Its own id: this face shows what is AVAILABLE on a card, the
+              Accounts face what is owed, so the two are different figures. */}
+          {hidden ? fmtHidden(acct.currency) : (
+            <RollingNumber
+              id={`home-card:${acct.id}:${acct.currency}`}
+              value={isCredit ? available : (acct.balance ?? 0)}
+              format={v => fmt(v, acct.currency)}
+            />
+          )}
         </p>
       </div>
     </button>
@@ -177,7 +186,9 @@ export function TxRow({ tx, cat, isLast }) {
         </p>
       </div>
     </div>
-    {!isLast && <Divider inset="glyph" />}
+    {/* A slot rather than a condition: when the last row leaves, the one
+        above it loses its line with the same motion - ui/Presence.jsx. */}
+    <RowDivider hidden={isLast} />
     </>
   )
 }

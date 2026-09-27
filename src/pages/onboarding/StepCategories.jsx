@@ -97,7 +97,7 @@ export function StepPickCategories({ type, stepNum, locked, presets, selectedNam
                   <button
                     onClick={() => onRemoveCustom(cat.name)}
                     className="ml-0.5 w-4 h-4 rounded-full flex items-center justify-center
-                      text-primary/60 hover:text-primary hover:bg-primary/20 transition-colors shrink-0"
+                      text-primary/60 hover:text-primary hover:bg-primary/20 active:text-primary active:bg-primary/20 transition-colors shrink-0"
                     aria-label={`Remove ${cat.name}`}
                   >
                     <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">

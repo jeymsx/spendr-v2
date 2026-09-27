@@ -284,7 +284,7 @@ export default function DivideScreen({
               type="button"
               onClick={addLeg}
               disabled={freeCats.length === 0}
-              className="w-full py-3 text-left text-14 font-semibold text-primary
+              className="press press-fade active:opacity-60 w-full py-3 text-left text-14 font-semibold text-primary
                 disabled:opacity-40 disabled:text-slate-400"
             >
               + Add category
