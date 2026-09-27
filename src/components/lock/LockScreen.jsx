@@ -182,7 +182,7 @@ export default function LockScreen({ config, onUnlock, note = '', active = true 
               left={(
                 <button
                   type="button"
-                  className="pin-key pin-key-quiet"
+                  className="pin-key pin-key-quiet press"
                   aria-label={`Use ${name}`}
                   onClick={() => { stop(); setView('faceid'); ask() }}
                 >

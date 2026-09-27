@@ -2303,7 +2303,8 @@ html.app-covered body::after {
 .app-lock-leaving { animation: lockLeave 0.22s ease-in both; pointer-events: none; }
 .lock-swap { animation: lockSwap 0.32s cubic-bezier(0.22, 1, 0.36, 1) both; }
 
-/* The PIN: dots that fill, and round keys a thumb can find. */
+/* The PIN: dots that fill, and round keys a thumb can find. The keys press
+   the way every control does (.press), a little deeper for their size. */
 .pin-dot {
   width: 14px;
   height: 14px;
@@ -2330,12 +2331,12 @@ html.app-covered body::after {
   font-variant-numeric: tabular-nums;
   color: #0f172a;
   background-color: #f1f5f9;
-  transition: background-color 0.12s ease-out, transform 0.1s ease-out;
+  --press-scale: 0.94;
   -webkit-user-select: none;
   user-select: none;
 }
 .dark .pin-key { color: #ffffff; background-color: rgba(255, 255, 255, 0.08); }
-.pin-key:active:not(:disabled) { background-color: #e2e8f0; transform: scale(0.96); }
+.pin-key:active:not(:disabled) { background-color: #e2e8f0; }
 .dark .pin-key:active:not(:disabled) { background-color: rgba(255, 255, 255, 0.16); }
 .pin-key:disabled { opacity: 0.4; }
 .pin-key:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
@@ -2345,7 +2346,6 @@ html.app-covered body::after {
 
 @media (prefers-reduced-motion: reduce) {
   .app-lock-leaving, .lock-swap { animation: none; }
-  .pin-key:active:not(:disabled) { transform: none; }
 }
 
 /* ══ The clean style: html.flat ═══════════════════════════════════════

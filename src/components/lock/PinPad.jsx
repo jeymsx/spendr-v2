@@ -72,14 +72,14 @@ export default function PinPad({ onComplete, disabled = false, invalid = false, 
 
       <div className="mt-6 grid grid-cols-3 gap-x-6 gap-y-3.5">
         {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
-          <button key={d} type="button" className="pin-key" disabled={locked} onClick={() => press(d)}>{d}</button>
+          <button key={d} type="button" className="pin-key press" disabled={locked} onClick={() => press(d)}>{d}</button>
         ))}
         <span className="pin-slot">{left}</span>
-        <button type="button" className="pin-key" disabled={locked} onClick={() => press('0')}>0</button>
+        <button type="button" className="pin-key press" disabled={locked} onClick={() => press('0')}>0</button>
         <span className="pin-slot">
           <button
             type="button"
-            className="pin-key pin-key-quiet"
+            className="pin-key pin-key-quiet press"
             aria-label="Delete"
             disabled={locked || !digits.length}
             onClick={back}
