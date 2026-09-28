@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useLayoutEffect, Suspense } from 'react'
-import { Outlet, useLocation, useNavigate } from 'react-router-dom'
+import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ErrorBoundary from '../components/ErrorBoundary'
 import AddActionSheet from '../components/AddActionSheet'
@@ -92,12 +92,59 @@ export default function AppLayout() {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual'
   }, [])
 
+  /* ── Where each page was scrolled to ──
+     Every entry in the history remembers how far down it was, so Back lands
+     where you left it - scroll a long Transactions list, open one, come back,
+     and you are still at the row you tapped, as in any native app. It used
+     to reset to the top on every navigation, Back included. Kept per history
+     entry (location.key), so the same page opened twice keeps two places. */
+  const navType = useNavigationType()
+  const positions = useRef(/** @type {Map<string, number>} */ (new Map()))
+  const shownKey = useRef(location.key)
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el) return
+    let frame = 0
+    const onScroll = () => {
+      if (frame) return
+      frame = requestAnimationFrame(() => { frame = 0; positions.current.set(shownKey.current, el.scrollTop) })
+    }
+    el.addEventListener('scroll', onScroll, { passive: true })
+    return () => { el.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame) }
+  }, [])
+
   // Reset scroll to top on every navigation — useLayoutEffect fires before paint
   // so iOS Safari cannot restore the previous scroll position after the reset.
   useLayoutEffect(() => {
-    if (mainRef.current) mainRef.current.scrollTop = 0
+    const el = mainRef.current
+    shownKey.current = location.key
+    const saved = navType === 'POP' ? positions.current.get(location.key) : undefined
+    if (el) el.scrollTop = 0
     window.scrollTo(0, 0)
-  }, [location.key])
+    /* Back to a page you had scrolled: put it back as soon as there is enough
+       page to put it back on - a lazy page and its live queries arrive a few
+       frames after the route does. Insights keeps its own place, with its own
+       zoom back into the card (pages/Insights.jsx). A touch or a wheel in the
+       meantime wins: never fight the thumb. */
+    if (!el || !saved || location.pathname === '/insights') return
+    let gaveUp = false
+    let raf = 0
+    let tries = 0
+    const stop = () => { gaveUp = true }
+    el.addEventListener('touchstart', stop, { passive: true })
+    el.addEventListener('wheel', stop, { passive: true })
+    const place = () => {
+      if (gaveUp) return
+      if (el.scrollHeight - el.clientHeight >= saved - 1 || ++tries > 90) el.scrollTop = saved
+      else raf = requestAnimationFrame(place)
+    }
+    place()
+    return () => {
+      cancelAnimationFrame(raf)
+      el.removeEventListener('touchstart', stop)
+      el.removeEventListener('wheel', stop)
+    }
+  }, [location.key]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const el = mainRef.current

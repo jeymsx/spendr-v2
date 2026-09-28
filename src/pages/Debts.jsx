@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback, useEffect } from 'react'
+import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -87,11 +87,6 @@ export default function Debts() {
 
   const [showForm,    setShowForm]    = useState(false)
   const [editDebt,    setEditDebt]    = useState(null)
-
-  useEffect(() => {
-    const el = document.getElementById('app-main')
-    if (el) el.scrollTop = 0
-  }, [])
 
   const allDebts = useLiveQuery(() => db.debts.orderBy('createdAt').reverse().toArray(), [], undefined)
 

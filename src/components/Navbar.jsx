@@ -1,6 +1,7 @@
 import { useRef, useCallback, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useKeyboardInset } from '../hooks/useKeyboardInset'
+import { prefersReducedMotion } from './ui/motion'
 
 /* ── SVG icon primitives ───────────────────────────────── */
 function IconHome({ active }) {
@@ -61,9 +62,20 @@ function Tab({ path, label, Icon }) {
     ? location.pathname === '/' || HOME_SECONDARY.some(p => location.pathname.startsWith(p))
     : location.pathname.startsWith(path)
 
+  /* The tab you are already on, tapped again: back to the top, smoothly, as
+     the platform's tab bars do. Deeper in the tab (an account from
+     Accounts) the tap is a way back to the tab's first page, which the link
+     does on its own. */
+  const onClick = (/** @type {import('react').MouseEvent} */ e) => {
+    if (location.pathname !== path) return
+    e.preventDefault()
+    document.getElementById('app-main')?.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
+  }
+
   return (
     <NavLink
       to={path}
+      onClick={onClick}
       /* nav-tab / nav-tab-icon: the icon gives under the thumb - see
          index.css. The most-pressed control in the app answered nothing. */
       className="nav-tab flex flex-col items-center gap-0.5 flex-1 py-2 transition-colors duration-150"
