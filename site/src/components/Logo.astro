@@ -1,0 +1,29 @@
+---
+/** Spendr's mark on its white tile, the way the home screen shows it. */
+import { Image } from 'astro:assets'
+import mark from '../assets/brand/logo-512.png'
+
+interface Props {
+  size?: number
+  wordmark?: boolean
+  class?: string
+}
+const { size = 36, wordmark = true, class: cls = '' } = Astro.props
+---
+<span class:list={['inline-flex items-center gap-2.5', cls]}>
+  <span
+    class="grid place-items-center rounded-[28%] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.12),inset_0_0_0_1px_rgba(15,23,42,0.06)] dark:shadow-[0_1px_2px_rgba(0,0,0,0.4)]"
+    style={`width:${size}px;height:${size}px`}
+  >
+    <Image
+      src={mark}
+      alt=""
+      width={Math.round(size * 0.82)}
+      height={Math.round(size * 0.82)}
+      densities={[1, 2, 3]}
+      format="webp"
+      loading="eager"
+    />
+  </span>
+  {wordmark && <span class="text-[1.1875rem] font-bold tracking-[-0.02em]">Spendr</span>}
+</span>

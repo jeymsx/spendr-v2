@@ -1,0 +1,157 @@
+---
+/**
+ * Achievements, with the app's own medallions: the same glass drawings, the
+ * same tones, the same names. Three kinds, as the app files them.
+ */
+import Icon from '../Icon.astro'
+import { achievements, badges, challenges, tracks, artFor, hueOf, milestones } from '../../data/app'
+import { medallion } from '../../data/glass'
+
+const badgeArt = badges.map(b => {
+  const a = artFor(b.key)!
+  return { name: b.name, blurb: b.blurb, svg: medallion({ glyph: a.glyph, hue: a.hue, shape: 'hex' }) }
+})
+// The two tabs that start hidden draw their medallions as files
+// (pages/art), not inline: nobody sees them until they ask to.
+const challengeArt = challenges.map(c => ({ name: c.name, blurb: c.blurb, length: c.length, src: `/art/challenge-${c.key}.svg` }))
+const trackArt = tracks.map(t => ({
+  name: t.name, about: t.about, levels: t.levels.map(l => l.label), src: `/art/track-${t.key}.svg`, hue: hueOf(t.tone),
+}))
+const TABS = [
+  { id: 'badges', label: 'Badges' },
+  { id: 'milestones', label: 'Milestones' },
+  { id: 'challenges', label: 'Challenges' },
+]
+---
+<section class="achievements py-20 sm:py-28" aria-labelledby="ach-title" data-ach>
+  <div class="container-site">
+    <div class="mx-auto max-w-[44rem] text-center">
+      <p class="eyebrow" data-reveal>Achievements</p>
+      <h2 id="ach-title" class="h-section mt-4" data-reveal style="--d:60ms">Every good habit, counted.</h2>
+      <p class="lede mx-auto mt-5 max-w-[36rem]" data-reveal style="--d:120ms">
+        Challenges you pick, milestones that keep climbing, and badges for the big moments.
+        All {achievements.length} are earned from what you actually log, never by saying so.
+      </p>
+    </div>
+
+    <div class="mt-10 flex justify-center" data-reveal style="--d:180ms">
+      <div class="seg" role="tablist" aria-label="Kinds of achievement">
+        <span class="seg-pill" aria-hidden="true"></span>
+        {TABS.map((t, i) => (
+          <button type="button" role="tab" id={`ach-tab-${t.id}`} aria-controls={`ach-${t.id}`} aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} class="seg-tab">
+            {t.label}
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <div class="ach-panels mt-10">
+      <div id="ach-badges" role="tabpanel" aria-labelledby="ach-tab-badges" class="ach-panel is-on">
+        <ul class="medal-grid" aria-label={`${badges.length} badges`}>
+          {badgeArt.map((b, i) => (
+            <li class="medal" data-reveal="scale" style={`--d:${(i % 5) * 50}ms`}>
+              <span class="glass-live glass-enter lift-on-hover medal-art" style={`--gx-delay:${120 + i * 40}ms`} set:html={b.svg} />
+              <span class="medal-name">{b.name}</span>
+              <span class="medal-blurb">{b.blurb}</span>
+            </li>
+          ))}
+        </ul>
+      </div>
+
+      <div id="ach-milestones" role="tabpanel" aria-labelledby="ach-tab-milestones" class="ach-panel" hidden>
+        <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {trackArt.map(t => (
+            <li class="surface track rounded-[var(--radius-card)] p-5">
+              <div class="flex items-center gap-4">
+                <img src={t.src} alt="" width="64" height="64" loading="lazy" decoding="async" class="size-16 shrink-0" />
+                <div class="min-w-0">
+                  <p class="font-semibold leading-snug">{t.name}</p>
+                  <p class="mt-0.5 text-[0.8125rem] leading-snug text-muted">{t.about}</p>
+                </div>
+              </div>
+              <ul class="mt-4 flex flex-wrap gap-1.5" aria-label="Levels">
+                {t.levels.map((l, i) => (
+                  <li class="level tabular" style={`--tone:${t.hue};--i:${i}`}>{l}</li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-6 text-center text-[0.875rem] text-muted">{milestones.length} levels across {tracks.length} tracks. Reach one and the next appears.</p>
+      </div>
+
+      <div id="ach-challenges" role="tabpanel" aria-labelledby="ach-tab-challenges" class="ach-panel" hidden>
+        <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+          {challengeArt.map(c => (
+            <li class="surface flex items-start gap-4 rounded-[var(--radius-card)] p-5">
+              <img src={c.src} alt="" width="56" height="56" loading="lazy" decoding="async" class="size-14 shrink-0" />
+              <div class="min-w-0">
+                <p class="font-semibold leading-snug">{c.name}</p>
+                <p class="mt-1 text-[0.8125rem] leading-snug text-muted">{c.blurb}</p>
+                <p class="mt-2 inline-flex items-center gap-1 text-[0.75rem] font-semibold text-ink"><Icon name="clock" size={13} stroke={2.2} />{c.length}</p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        <p class="mt-6 text-center text-[0.875rem] text-muted">Take on up to three at once. Win or miss, you can try again.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* The app's segmented control: a pill that slides to the chosen tab. */
+  .seg { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 5px; border-radius: 999px; background: rgba(15, 23, 42, 0.05); box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06); }
+  :global(.dark) .seg { background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+  .seg-tab { position: relative; z-index: 1; min-width: 108px; padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 0.9375rem; color: var(--muted-on-tint); transition: color 0.3s var(--ease-out); }
+  .seg-tab[aria-selected='true'] { color: #fff; }
+  .seg-pill { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: var(--color-primary-deep); box-shadow: 0 6px 16px -8px rgba(26, 115, 217, 0.8); translate: calc(var(--seg, 0) * 100%) 0; transition: translate 0.45s var(--ease-sheet); }
+  @media (max-width: 400px) { .seg-tab { min-width: 0; padding-inline: 12px; } }
+
+  .ach-panel.is-entering { animation: swapIn 0.36s var(--ease-out) both; }
+
+  .medal-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 28px 12px; }
+  @media (min-width: 640px) { .medal-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
+  .medal { display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .medal-art { width: min(26vw, 108px); height: min(26vw, 108px); }
+  .medal-name { margin-top: 10px; font-weight: 650; font-size: 0.9375rem; line-height: 1.25; letter-spacing: -0.01em; }
+  .medal-blurb { margin-top: 4px; font-size: 0.8125rem; line-height: 1.4; color: var(--muted); max-width: 17ch; }
+  @media (max-width: 639px) { .medal-blurb { display: none; } }
+
+  .level { font-size: 0.75rem; font-weight: 700; padding: 3px 9px; border-radius: 999px; color: color-mix(in srgb, var(--tone) 72%, black); background: color-mix(in srgb, var(--tone) 14%, transparent); }
+  :global(.dark) .level { color: color-mix(in srgb, var(--tone) 70%, white); }
+  @media (prefers-reduced-motion: reduce) { .seg-pill { transition: none; } .ach-panel.is-entering { animation: none; } }
+</style>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-ach]')) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+    const panels = tabs.map(t => document.getElementById(t.getAttribute('aria-controls')!)!)
+    const seg = root.querySelector<HTMLElement>('.seg')!
+    let at = 0
+    const show = (i: number, focus = false) => {
+      if (i === at) return
+      tabs[at].setAttribute('aria-selected', 'false'); tabs[at].tabIndex = -1
+      tabs[i].setAttribute('aria-selected', 'true'); tabs[i].tabIndex = 0
+      if (focus) tabs[i].focus()
+      panels[at].hidden = true; panels[at].classList.remove('is-on')
+      const p = panels[i]
+      p.hidden = false
+      p.classList.remove('is-entering'); void p.offsetWidth; p.classList.add('is-entering', 'is-on')
+      // A panel shown for the first time plays its medallions in.
+      for (const g of p.querySelectorAll('.glass-enter:not(.is-in)')) g.classList.add('is-in')
+      seg.style.setProperty('--seg', String(i))
+      at = i
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => show(i))
+      t.addEventListener('keydown', e => {
+        const n = e.key === 'ArrowRight' ? (i + 1) % tabs.length : e.key === 'ArrowLeft' ? (i - 1 + tabs.length) % tabs.length
+          : e.key === 'Home' ? 0 : e.key === 'End' ? tabs.length - 1 : -1
+        if (n < 0) return
+        e.preventDefault()
+        show(n, true)
+      })
+    })
+  }
+</script>

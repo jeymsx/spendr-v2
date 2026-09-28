@@ -1,0 +1,58 @@
+---
+/**
+ * Privacy, in four promises the privacy policy and the code both keep. The
+ * testimonials Tarsi puts here are below them, and appear only once there
+ * are real ones in data/quotes.ts.
+ */
+import Icon from '../Icon.astro'
+import { quotes } from '../../data/quotes'
+
+const ITEMS = [
+  { icon: 'device-mobile', cat: '#2D9DFF', title: 'On your phone', body: 'Everything you enter is stored on your device, and all of it works without a connection.' },
+  { icon: 'eye-off', cat: '#845EF7', title: 'Nothing watching', body: 'No analytics, no usage tracking, no ads. Spendr doesn’t report what you do in it to anyone.' },
+  { icon: 'lock', cat: '#20C997', title: 'Locked with Face ID', body: 'Turn on App lock and Spendr asks for Face ID when it opens, with a backup PIN. Your net worth stays hidden until you tap the eye.' },
+  { icon: 'file-export', cat: '#FFB347', title: 'Yours to take', body: 'Export to CSV, back up everything as one file you can restore, or download a monthly PDF report.' },
+]
+---
+<section class="privacy py-20 sm:py-28" aria-labelledby="privacy-title">
+  <div class="container-site">
+    <div class="grid gap-12 lg:grid-cols-[0.9fr_1.1fr] lg:gap-16">
+      <div class="max-w-[34rem]">
+        <p class="eyebrow" data-reveal>Privacy</p>
+        <h2 id="privacy-title" class="h-section mt-4" data-reveal style="--d:60ms">Your money stays yours.</h2>
+        <p class="lede mt-5" data-reveal style="--d:120ms">
+          There’s nothing to sign up for. Sync is there if you want your computer too, and the
+          policy says exactly what leaves your phone when it does.
+        </p>
+        <a href="/privacy" class="mt-7 inline-flex items-center gap-1.5 font-semibold text-ink hover:underline" data-reveal style="--d:160ms">
+          Read the privacy policy <Icon name="arrow-right" size={17} stroke={2.2} />
+        </a>
+      </div>
+      <ul class="grid gap-3 sm:grid-cols-2">
+        {ITEMS.map((it, i) => (
+          <li class="surface rounded-[var(--radius-card)] p-6" data-reveal style={`--d:${i * 70}ms`}>
+            <span class="cat-tile grid size-11 place-items-center rounded-[14px]" style={`--cat:${it.cat}`}>
+              <Icon name={it.icon} size={22} stroke={1.9} />
+            </span>
+            <h3 class="mt-5 text-[1.0625rem] font-semibold tracking-[-0.01em]">{it.title}</h3>
+            <p class="mt-1.5 text-[0.9375rem] leading-relaxed text-muted">{it.body}</p>
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    {quotes.length > 0 && (
+      <div class="mt-20">
+        <h2 class="h-section text-center" data-reveal>What people are saying.</h2>
+        <ul class="mt-10 columns-1 gap-4 sm:columns-2 lg:columns-3">
+          {quotes.map((q, i) => (
+            <li class="surface mb-4 break-inside-avoid rounded-[var(--radius-card)] p-6" data-reveal style={`--d:${(i % 3) * 70}ms`}>
+              <blockquote class="text-[1rem] leading-relaxed">“{q.text}”</blockquote>
+              <p class="mt-4 text-[0.875rem] font-semibold text-muted">{q.name}{q.where && <span class="font-normal"> · {q.where}</span>}</p>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
+</section>

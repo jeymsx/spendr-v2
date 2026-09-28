@@ -1,5 +1,7 @@
 @import "tailwindcss";
 @config "../tailwind.config.js";
+/* The website (site/) is its own Astro project with its own Tailwind. */
+@source not "../site";
 
 :root {
   --color-primary: #2D9DFF;

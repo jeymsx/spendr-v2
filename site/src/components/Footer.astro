@@ -1,0 +1,68 @@
+---
+import Logo from './Logo.astro'
+import Icon from './Icon.astro'
+import { APP_URL, AUTHOR, CONTACT_EMAIL, TAGLINE } from '../config'
+import { version } from '../data/app'
+
+const COLUMNS = [
+  {
+    title: 'Product',
+    links: [
+      { href: '/features', label: 'Features' },
+      { href: '/install', label: 'Install' },
+      { href: '/changelog', label: 'What’s new' },
+      { href: APP_URL, label: 'Open Spendr', external: true },
+    ],
+  },
+  {
+    title: 'Legal',
+    links: [
+      { href: '/privacy', label: 'Privacy policy' },
+      { href: '/terms', label: 'Terms of use' },
+    ],
+  },
+  {
+    title: 'Contact',
+    links: [{ href: `mailto:${CONTACT_EMAIL}`, label: 'Email' }],
+  },
+]
+const year = new Date().getFullYear()
+---
+<footer class="site-footer mt-8 border-t hairline">
+  <div class="container-site grid gap-12 py-14 md:grid-cols-[1.4fr_2fr] md:py-16">
+    <div class="max-w-sm">
+      <a href="/" class="inline-flex rounded-xl" aria-label="Spendr home"><Logo size={36} /></a>
+      <p class="mt-4 text-[0.9375rem] leading-relaxed text-muted">{TAGLINE}</p>
+      <a href={APP_URL} class="btn btn-neutral press mt-6 min-h-11 px-5">
+        Open Spendr
+        <Icon name="arrow-up-right" size={17} stroke={2} />
+      </a>
+    </div>
+    <div class="grid grid-cols-2 gap-8 sm:grid-cols-3">
+      {COLUMNS.map(col => (
+        <div>
+          <h2 class="text-[0.75rem] font-semibold uppercase tracking-[0.1em] text-muted">{col.title}</h2>
+          <ul class="mt-4 space-y-3">
+            {col.links.map(l => (
+              <li>
+                <a href={l.href} class="footer-link inline-flex items-center gap-1 text-[0.9375rem] font-medium">
+                  {l.label}
+                  {l.external && <Icon name="arrow-up-right" size={14} class="text-muted" />}
+                </a>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
+    </div>
+  </div>
+  <div class="container-site flex flex-col gap-2 border-t hairline py-6 text-[0.8125rem] text-muted sm:flex-row sm:items-center sm:justify-between">
+    <p>© {year} {AUTHOR}. All rights reserved.</p>
+    <p>Spendr {version} · Not affiliated with any bank or e-wallet.</p>
+  </div>
+</footer>
+
+<style>
+  .footer-link { transition: color 0.2s var(--ease-out); }
+  .footer-link:hover { color: var(--ink); }
+</style>

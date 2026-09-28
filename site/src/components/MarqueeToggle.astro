@@ -1,0 +1,38 @@
+---
+/**
+ * Pause and play for a moving row. Anything that moves on its own for more
+ * than five seconds needs a way to stop it (WCAG 2.2.2); hovering pauses it
+ * too, but a touch screen or a keyboard has no hover.
+ */
+import Icon from './Icon.astro'
+
+interface Props { label: string }
+const { label } = Astro.props
+---
+<button type="button" class="icon-btn press marquee-toggle size-9 shrink-0 text-muted" data-marquee-toggle aria-pressed="false" aria-label={`Pause the moving ${label}`}>
+  <span class="mq-glyph mq-pause"><Icon name="player-pause" size={16} stroke={2.2} /></span>
+  <span class="mq-glyph mq-play"><Icon name="player-play" size={16} stroke={2.2} /></span>
+</button>
+
+<style>
+  .marquee-toggle { position: relative; }
+  .mq-glyph { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity 0.2s var(--ease-out), filter 0.2s var(--ease-out); }
+  .mq-play { opacity: 0; filter: blur(3px); }
+  .marquee-toggle[aria-pressed='true'] .mq-play { opacity: 1; filter: none; }
+  .marquee-toggle[aria-pressed='true'] .mq-pause { opacity: 0; filter: blur(3px); }
+  @media (prefers-reduced-motion: reduce) { .marquee-toggle { display: none; } }
+  :global([data-marquee][data-paused] .marquee-track),
+  :global([data-marquee]:has(.marquee-track:hover) .marquee-track) { animation-play-state: paused; }
+</style>
+
+<script>
+  for (const b of document.querySelectorAll<HTMLButtonElement>('[data-marquee-toggle]')) {
+    const host = b.closest<HTMLElement>('[data-marquee]')
+    if (!host || b.dataset.bound) continue
+    b.dataset.bound = '1'
+    // A toggle: the name stays "Pause …" and aria-pressed says whether it is.
+    b.addEventListener('click', () => {
+      b.setAttribute('aria-pressed', String(host.toggleAttribute('data-paused')))
+    })
+  }
+</script>

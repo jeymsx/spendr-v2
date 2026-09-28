@@ -1,0 +1,56 @@
+---
+/** Every release, from the app's own changelog, newest first. */
+import Base from '../layouts/Base.astro'
+import PageHero from '../components/PageHero.astro'
+import { changelog, longDate, version } from '../data/app'
+---
+<Base title="What’s new" description={`Every Spendr release, newest first. The latest is ${version}.`}>
+  <PageHero
+    eyebrow="What’s new"
+    title="Every release."
+    lede="What changed in Spendr, told from your side of the screen. The app shows the newest release when you open it after an update."
+  />
+  <section class="pb-20 sm:pb-28" aria-label="Releases">
+    <div class="container-site">
+      <ol class="timeline">
+        {changelog.map((r, i) => (
+          <li class="release" data-reveal style={`--d:${Math.min(i, 3) * 50}ms`}>
+            <div class="release-head">
+              <span class:list={['release-dot', i === 0 && 'is-latest']} aria-hidden="true"></span>
+              <h2 class="text-[1.625rem] font-bold tracking-[-0.025em]">
+                {r.version}
+                {i === 0 && <span class="latest">Latest</span>}
+              </h2>
+              <p class="mt-1 text-[0.9375rem] text-muted"><time datetime={r.date}>{longDate(r.date)}</time></p>
+            </div>
+            <ul class="surface release-items rounded-[var(--radius-card)]">
+              {r.items.map(it => (
+                <li class="px-5 py-4 sm:px-6">
+                  <h3 class="font-semibold leading-snug tracking-[-0.01em]">{it.title}</h3>
+                  <p class="mt-1 text-[0.9375rem] leading-relaxed text-muted">{it.desc}</p>
+                </li>
+              ))}
+            </ul>
+          </li>
+        ))}
+      </ol>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .timeline { position: relative; display: grid; gap: 40px; }
+  .timeline::before { content: ''; position: absolute; left: 7px; top: 12px; bottom: 12px; width: 2px; border-radius: 2px; background: var(--hairline); }
+  .release { position: relative; display: grid; gap: 16px; padding-left: 36px; }
+  .release-dot { position: absolute; left: 0; top: 10px; width: 16px; height: 16px; border-radius: 999px; background: var(--page); box-shadow: inset 0 0 0 2px var(--muted); }
+  .release-dot.is-latest { box-shadow: inset 0 0 0 2px var(--color-primary), 0 0 0 5px color-mix(in srgb, var(--color-primary) 18%, transparent); background: var(--color-primary); }
+  .latest { display: inline-block; margin-left: 10px; padding: 3px 10px; border-radius: 999px; vertical-align: 4px; font-size: 0.75rem; font-weight: 700; letter-spacing: 0; color: #fff; background: var(--color-primary-deep); }
+  .release-items > li + li { border-top: 1px solid var(--hairline); }
+  @media (min-width: 900px) {
+    .release { grid-template-columns: 220px 1fr; gap: 32px; }
+    /* Sticky makes the head the dot's containing block, so the dot steps
+       back out to the line. */
+    .release-head { position: sticky; top: 96px; align-self: start; }
+    .release-dot { left: -36px; top: 8px; }
+  }
+</style>

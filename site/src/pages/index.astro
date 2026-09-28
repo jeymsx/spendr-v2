@@ -1,0 +1,39 @@
+---
+/**
+ * Home, top to bottom, on Tarsi's plan with Spendr's content (see PLAN.md):
+ * the promise, the reasons, the app screen by screen, each part in turn,
+ * quick log live, Wrapped, achievements, the desktop, privacy, what's new,
+ * the questions, and the call to open it.
+ */
+import Base from '../layouts/Base.astro'
+import Hero from '../components/home/Hero.astro'
+import Names from '../components/home/Names.astro'
+import Benefits from '../components/home/Benefits.astro'
+import Screens from '../components/home/Screens.astro'
+import Showcase from '../components/home/Showcase.astro'
+import QuickLog from '../components/home/QuickLog.astro'
+import Wrapped from '../components/home/Wrapped.astro'
+import Achievements from '../components/home/Achievements.astro'
+import Desktop from '../components/home/Desktop.astro'
+import Privacy from '../components/home/Privacy.astro'
+import WhatsNew from '../components/home/WhatsNew.astro'
+import Faq from '../components/home/Faq.astro'
+import Cta from '../components/home/Cta.astro'
+---
+<Base>
+  <Hero />
+  {/* Everything below the fold is laid out and painted only as it nears the
+      screen (content-visibility), so the first paint is the hero's alone. */}
+  <div class="cv-auto"><Names /></div>
+  <div class="cv-auto"><Benefits /></div>
+  <div class="cv-auto"><Screens /></div>
+  <div class="cv-auto"><Showcase /></div>
+  <div class="cv-auto"><QuickLog /></div>
+  <div class="cv-auto"><Wrapped /></div>
+  <div class="cv-auto"><Achievements /></div>
+  <div class="cv-auto"><Desktop /></div>
+  <div class="cv-auto"><Privacy /></div>
+  <div class="cv-auto"><WhatsNew /></div>
+  <div class="cv-auto"><Faq /></div>
+  <div class="cv-auto"><Cta /></div>
+</Base>

@@ -26,7 +26,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
  * clutter. At zero, the next one fails the build instead of joining a crowd.
  */
 export default [
-  { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'seed-*.js'] },
+  { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'seed-*.js', 'site/**'] },
 
   js.configs.recommended,
 

@@ -1,0 +1,33 @@
+---
+/** Three reasons, each with one of the app's own glass pictures. */
+import { picture } from '../../data/glass'
+
+const ITEMS = [
+  {
+    art: 'chartUp',
+    title: 'See where it goes',
+    body: 'Everything you spend lands in a category, and Insights turns your month into a picture: what went where, your busiest day, and how it compares with the month before.',
+  },
+  {
+    art: 'calendar',
+    title: 'Stay ahead of the month',
+    body: 'Card due dates, bills and paydays in one list, reminders even when the app is closed, and a forecast of what’s safe to spend until payday.',
+  },
+  {
+    art: 'piggy',
+    title: 'Pay off and save up',
+    body: 'Goals funded by what’s really in your accounts, debts with friends kept straight, and loans that tell you when they’ll be done.',
+  },
+]
+---
+<section class="py-16 sm:py-20" aria-label="Why Spendr">
+  <div class="container-site grid gap-4 md:grid-cols-3 md:gap-5">
+    {ITEMS.map((it, i) => (
+      <article class="surface benefit rounded-[var(--radius-panel)] p-7 sm:p-8" data-reveal style={`--d:${i * 90}ms`}>
+        <span class="glass-live glass-enter glass-float size-[92px]" style={`--gx-delay:${150 + i * 90}ms;--gx-float-delay:${-i * 1.3}s`} set:html={picture(it.art)} />
+        <h3 class="h-card mt-6">{it.title}</h3>
+        <p class="mt-2.5 text-[0.9875rem] leading-relaxed text-muted">{it.body}</p>
+      </article>
+    ))}
+  </div>
+</section>

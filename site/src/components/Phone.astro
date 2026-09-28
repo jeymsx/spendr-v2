@@ -1,0 +1,43 @@
+---
+/**
+ * An iPhone showing one of the app's screens, or whatever is slotted into it.
+ * The status bar, the island and the home indicator are drawn over the
+ * capture, into the space the app leaves for them on a real phone.
+ *
+ * `onColor` is for screens that are colour in both themes - Wrapped - where
+ * the status bar is always white.
+ */
+import Shot from './Shot.astro'
+
+interface Props {
+  shot?: string
+  alt?: string
+  /** CSS width of the whole phone, e.g. "300px" or "min(72vw, 300px)". */
+  width?: string
+  sizes?: string
+  eager?: boolean
+  onColor?: boolean
+  class?: string
+  style?: string
+  [key: string]: unknown
+}
+
+const {
+  shot, alt = '', width = '300px', sizes = '300px', eager = false, onColor = false,
+  class: cls = '', style = '', ...rest
+} = Astro.props
+const tone = onColor ? 'light' : undefined
+---
+<div class:list={['phone', cls]} style={`--w:${width};${style}`} {...rest}>
+  <div class="phone-screen">
+    {shot && <Shot name={shot} alt={alt} sizes={sizes} eager={eager} class="phone-shot" />}
+    <slot />
+    <div class="phone-status" data-tone={tone} aria-hidden="true">
+      <span class="phone-time">9:41</span>
+      <span></span>
+      <span class="phone-icons"></span>
+    </div>
+    <div class="phone-island" aria-hidden="true"></div>
+    <div class="phone-home" data-tone={tone} aria-hidden="true"></div>
+  </div>
+</div>

@@ -1,0 +1,88 @@
+---
+/** Spendr on a wide screen: the desktop layout, in a plain window. */
+import Shot from '../Shot.astro'
+import Icon from '../Icon.astro'
+import { APP_HOST } from '../../config'
+
+const VIEWS = [
+  { id: 'home', label: 'Home', shot: 'desktop', alt: 'Spendr’s desktop home: net worth, accounts, credit cards, budgets and recent activity' },
+  { id: 'insights', label: 'Insights', shot: 'desktop-insights', alt: 'Spendr’s desktop Insights' },
+]
+---
+<section class="desktop py-20 sm:py-28" aria-labelledby="desk-title" data-desk>
+  <div class="container-site">
+    <div class="grid items-end gap-8 lg:grid-cols-[1fr_auto]">
+      <div class="max-w-[40rem]">
+        <p class="eyebrow" data-reveal>On your computer, too</p>
+        <h2 id="desk-title" class="h-section mt-4" data-reveal style="--d:60ms">The big picture, on a big screen.</h2>
+        <p class="lede mt-5" data-reveal style="--d:120ms">
+          On a wide screen Spendr spreads out: a sidebar for every section, Home in two columns, and the
+          list on the left with what you picked on the right. Sign in with Google and your phone and
+          computer stay in step.
+        </p>
+      </div>
+      <div class="seg-mini" role="tablist" aria-label="Desktop screens" data-reveal style="--d:160ms">
+        {VIEWS.map((v, i) => (
+          <button type="button" role="tab" aria-selected={i === 0 ? 'true' : 'false'} tabindex={i === 0 ? 0 : -1} aria-controls="desk-window" class="seg-mini-tab press">{v.label}</button>
+        ))}
+      </div>
+    </div>
+
+    <div id="desk-window" role="tabpanel" class="window mt-10" data-reveal="scale" style="--d:120ms">
+      <div class="window-bar" aria-hidden="true">
+        <span class="flex gap-2"><i class="dot bg-[#ff5f57]"></i><i class="dot bg-[#febc2e]"></i><i class="dot bg-[#28c840]"></i></span>
+        <span class="url"><Icon name="lock" size={12} stroke={2.2} />{APP_HOST}</span>
+        <span></span>
+      </div>
+      <div class="desk-screens">
+        {VIEWS.map((v, i) => (
+          <div class:list={['desk-screen', i === 0 && 'is-on']} data-desk-screen={i} aria-hidden={i === 0 ? undefined : 'true'}>
+            <Shot name={v.shot} alt={v.alt} sizes="(min-width: 1200px) 1120px, 94vw" widths={[640, 960, 1280, 1920, 2400]} />
+          </div>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  .dot { display: block; width: 11px; height: 11px; border-radius: 999px; }
+  .url { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; color: var(--muted-on-tint); background: rgba(15, 23, 42, 0.05); }
+  :global(.dark) .url { background: rgba(255, 255, 255, 0.06); }
+  .desk-screens { position: relative; aspect-ratio: 1440 / 900; }
+  .desk-screen { position: absolute; inset: 0; opacity: 0; filter: blur(10px); transition: opacity 0.45s var(--ease-out), filter 0.45s var(--ease-out); }
+  .desk-screen.is-on { opacity: 1; filter: none; }
+  .desk-screen :global(picture), .desk-screen :global(img) { width: 100%; height: 100%; object-fit: cover; }
+
+  .seg-mini { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(15, 23, 42, 0.05); justify-self: start; }
+  :global(.dark) .seg-mini { background: rgba(255, 255, 255, 0.06); }
+  .seg-mini-tab { padding: 8px 16px; border-radius: 999px; font-size: 0.875rem; font-weight: 600; color: var(--muted-on-tint); transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out); }
+  .seg-mini-tab[aria-selected='true'] { color: var(--text); background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
+  :global(.dark) .seg-mini-tab[aria-selected='true'] { background: rgba(40, 60, 95, 0.55); box-shadow: inset 0 0 0 1px rgba(45, 157, 255, 0.2); }
+  @media (prefers-reduced-motion: reduce) { .desk-screen { transition: none; filter: none; } }
+</style>
+
+<script>
+  for (const root of document.querySelectorAll<HTMLElement>('[data-desk]')) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+    const screens = [...root.querySelectorAll<HTMLElement>('[data-desk-screen]')]
+    let at = 0
+    const show = (i: number, focus = false) => {
+      if (i === at) return
+      tabs[at].setAttribute('aria-selected', 'false'); tabs[at].tabIndex = -1
+      tabs[i].setAttribute('aria-selected', 'true'); tabs[i].tabIndex = 0
+      if (focus) tabs[i].focus()
+      screens[at].classList.remove('is-on'); screens[at].setAttribute('aria-hidden', 'true')
+      screens[i].classList.add('is-on'); screens[i].removeAttribute('aria-hidden')
+      at = i
+    }
+    tabs.forEach((t, i) => {
+      t.addEventListener('click', () => show(i))
+      t.addEventListener('keydown', e => {
+        if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return
+        e.preventDefault()
+        show((i + (e.key === 'ArrowRight' ? 1 : -1) + tabs.length) % tabs.length, true)
+      })
+    })
+  }
+</script>

@@ -1,0 +1,221 @@
+---
+/**
+ * The seven parts of the app, one at a time: pick one and the phone's screen
+ * swaps through the app's own blur. It moves on by itself while you watch,
+ * and stops for good the moment you choose one.
+ */
+import Phone from '../Phone.astro'
+import Shot from '../Shot.astro'
+import Icon from '../Icon.astro'
+
+const TABS = [
+  {
+    id: 'log', icon: 'bolt', label: 'Log', shot: 'transactions', cat: '#2D9DFF',
+    title: 'Log it in seconds',
+    body: 'A keypad that’s always ready, categories you pick with your thumb, templates for the usual, and quick log: hold the + and type “185 starbucks”.',
+  },
+  {
+    id: 'cards', icon: 'credit-card', label: 'Cards', shot: 'card', cat: '#FF6B6B',
+    title: 'Credit cards, done properly',
+    body: 'Statement cycles, due dates and installments spread across the months. What you owe is worked out from your transactions, not typed in.',
+  },
+  {
+    id: 'budgets', icon: 'gauge', label: 'Budgets', shot: 'budget', cat: '#FFB347',
+    title: 'Budgets that warn you early',
+    body: 'A monthly limit for each category, a heads-up when one reaches 80% and again if it goes over, and an arc you can read at a glance.',
+  },
+  {
+    id: 'recurring', icon: 'repeat', label: 'Recurring', shot: 'recurring', cat: '#845EF7',
+    title: 'Bills, paydays and loans',
+    body: 'Every bill, payday and loan payment in one list. Post one with a swipe, and get a reminder even when the app is closed.',
+  },
+  {
+    id: 'debts', icon: 'users', label: 'Debts', shot: 'debts', cat: '#20C997',
+    title: 'Who owes whom',
+    body: 'Lend and borrow with friends, log partial payments, and see where you stand with everyone at a glance.',
+  },
+  {
+    id: 'goals', icon: 'target', label: 'Goals', shot: 'goals', cat: '#51CF66',
+    title: 'Save for something real',
+    body: 'Goals are funded by what’s actually in your accounts, in the order you choose, so the progress you see is money you have.',
+  },
+  {
+    id: 'insights', icon: 'chart-donut', label: 'Insights', shot: 'insights', cat: '#F06595',
+    title: 'Where it all went',
+    body: 'Your month by category, highlights worth knowing, the trend over time, and a net worth that counts everything.',
+  },
+]
+---
+<section class="showcase py-20 sm:py-28" aria-labelledby="showcase-title" data-showcase>
+  <div class="container-site grid items-center gap-12 lg:grid-cols-[1fr_auto] lg:gap-20">
+    <div class="min-w-0">
+      <p class="eyebrow" data-reveal>Everything in one place</p>
+      <h2 id="showcase-title" class="h-section mt-4 max-w-[16ch]" data-reveal style="--d:60ms">One app for all of it.</h2>
+      <p class="lede mt-5 max-w-[34rem]" data-reveal style="--d:120ms">
+        Seven parts that share one ledger, so what you log in one shows up everywhere it matters.
+      </p>
+
+      <div class="tabs-scroller mt-9" data-reveal style="--d:180ms">
+        <div role="tablist" aria-label="Parts of Spendr" aria-orientation="vertical" class="tablist">
+          {TABS.map((t, i) => (
+            <button
+              type="button"
+              role="tab"
+              id={`tab-${t.id}`}
+              aria-controls="showcase-panel"
+              aria-selected={i === 0 ? 'true' : 'false'}
+              tabindex={i === 0 ? 0 : -1}
+              data-index={i}
+              class="tab press press-fade"
+            >
+              <span class="cat-tile tab-tile" style={`--cat:${t.cat}`}><Icon name={t.icon} size={19} stroke={2} /></span>
+              <span class="tab-label">{t.label}</span>
+              <span class="tab-progress" aria-hidden="true"><span></span></span>
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div id="showcase-panel" role="tabpanel" aria-labelledby="tab-log" class="panel mt-8" data-reveal style="--d:220ms">
+        <div class="panel-copy" data-panel-copy>
+          <h3 class="h-card" data-panel-title>{TABS[0].title}</h3>
+          <p class="mt-2 max-w-[32rem] text-[1rem] leading-relaxed text-muted" data-panel-body>{TABS[0].body}</p>
+        </div>
+      </div>
+      <template data-panel-texts>{JSON.stringify(TABS.map(t => ({ id: t.id, title: t.title, body: t.body })))}</template>
+    </div>
+
+    <div class="showcase-phone mx-auto" data-reveal="scale" style="--d:120ms">
+      <Phone width="var(--sc-w)">
+        {TABS.map((t, i) => (
+          <div class:list={['sc-screen', i === 0 && 'is-active']} data-screen={i} aria-hidden={i === 0 ? undefined : 'true'}>
+            <Shot name={t.shot} alt={`${t.label}: ${t.title}`} sizes="(min-width: 1024px) 300px, 72vw" class="phone-shot" />
+          </div>
+        ))}
+      </Phone>
+    </div>
+  </div>
+</section>
+
+<style>
+  .showcase-phone { --sc-w: min(72vw, 300px); }
+  @media (min-width: 1024px) { .showcase-phone { --sc-w: 308px; } }
+
+  .sc-screen {
+    position: absolute; inset: 0;
+    opacity: 0; filter: blur(10px); scale: 1.015;
+    transition: opacity 0.42s var(--ease-out), filter 0.42s var(--ease-out), scale 0.6s var(--ease-out);
+  }
+  .sc-screen.is-active { opacity: 1; filter: none; scale: none; }
+  .sc-screen :global(picture), .sc-screen :global(img) { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* The tabs: a row of pills that scrolls on a phone, a column of rows on a wide screen. */
+  .tabs-scroller { margin-inline: -20px; overflow-x: auto; scrollbar-width: none; padding: 4px 20px; }
+  .tabs-scroller::-webkit-scrollbar { display: none; }
+  .tablist { display: flex; gap: 8px; width: max-content; }
+  .tab {
+    position: relative; display: flex; align-items: center; gap: 10px;
+    padding: 7px 16px 7px 7px; border-radius: 999px;
+    font-weight: 600; font-size: 0.9375rem; color: var(--muted-on-tint);
+    background: rgba(15, 23, 42, 0.04);
+    transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+    overflow: hidden;
+  }
+  :global(.dark) .tab { background: rgba(255, 255, 255, 0.05); }
+  .tab[aria-selected='true'] { color: var(--text); background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.06); }
+  :global(.dark) .tab[aria-selected='true'] { background: rgba(40, 60, 95, 0.45); box-shadow: inset 0 0 0 1px rgba(45, 157, 255, 0.22); }
+  .tab-tile { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px; flex: none; }
+  .tab-progress { position: absolute; left: 14px; right: 14px; bottom: 3px; height: 2px; border-radius: 2px; overflow: hidden; opacity: 0; }
+  .tab-progress span { display: block; height: 100%; width: 100%; background: var(--ink); transform-origin: left; scale: 0 1; }
+  .tab[aria-selected='true'] .tab-progress { opacity: 0.55; }
+  [data-showcase][data-auto] .tab[aria-selected='true'] .tab-progress span { animation: tabProgress var(--dwell, 5600ms) linear forwards; }
+  [data-showcase][data-paused] .tab[aria-selected='true'] .tab-progress span { animation-play-state: paused; }
+  [data-showcase]:not([data-auto]) .tab-progress { display: none; }
+  @keyframes tabProgress { from { scale: 0 1; } to { scale: 1 1; } }
+
+  @media (min-width: 1024px) {
+    .tabs-scroller { margin: 0; padding: 0; overflow: visible; }
+    .tablist { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); width: auto; gap: 8px; max-width: 520px; }
+    .tab { border-radius: 18px; padding: 8px 14px 8px 8px; }
+  }
+  .panel-copy { min-height: 7.5rem; }
+  @media (prefers-reduced-motion: reduce) {
+    .sc-screen { transition: none; filter: none; scale: none; }
+  }
+</style>
+
+<script>
+  import { whileVisible, blurSwap, reducedMotion } from '../../scripts/motion'
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-showcase]')) {
+    const tabs = [...root.querySelectorAll<HTMLButtonElement>('[role="tab"]')]
+    const screens = [...root.querySelectorAll<HTMLElement>('[data-screen]')]
+    const panel = root.querySelector<HTMLElement>('[role="tabpanel"]')!
+    const copy = root.querySelector<HTMLElement>('[data-panel-copy]')!
+    const title = root.querySelector<HTMLElement>('[data-panel-title]')!
+    const body = root.querySelector<HTMLElement>('[data-panel-body]')!
+    const texts: { id: string; title: string; body: string }[] = JSON.parse(root.querySelector('template[data-panel-texts]')!.innerHTML)
+    const DWELL = 5600
+    let current = 0
+    let timer = 0
+    let auto = !reducedMotion()
+
+    const show = (i: number, focus = false) => {
+      if (i === current) return
+      tabs[current].setAttribute('aria-selected', 'false')
+      tabs[current].tabIndex = -1
+      tabs[i].setAttribute('aria-selected', 'true')
+      tabs[i].tabIndex = 0
+      if (focus) tabs[i].focus()
+      // Keep the chosen pill in view when the row scrolls sideways.
+      const sc = tabs[i].closest('.tabs-scroller') as HTMLElement
+      if (sc && sc.scrollWidth > sc.clientWidth) {
+        const r = tabs[i].getBoundingClientRect(), s = sc.getBoundingClientRect()
+        if (r.left < s.left || r.right > s.right) sc.scrollBy({ left: r.left - s.left - 20, behavior: reducedMotion() ? 'auto' : 'smooth' })
+      }
+      screens[current].classList.remove('is-active')
+      screens[current].setAttribute('aria-hidden', 'true')
+      screens[i].classList.add('is-active')
+      screens[i].removeAttribute('aria-hidden')
+      panel.setAttribute('aria-labelledby', tabs[i].id)
+      const t = texts[i]
+      blurSwap(copy, () => { title.textContent = t.title; body.textContent = t.body })
+      current = i
+      if (auto) schedule()
+    }
+
+    const schedule = () => {
+      window.clearTimeout(timer)
+      // Restart the pill's progress line from zero.
+      const bar = tabs[current].querySelector<HTMLElement>('.tab-progress span')
+      if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = '' }
+      timer = window.setTimeout(() => show((current + 1) % tabs.length), DWELL)
+    }
+    const stopAuto = () => { auto = false; window.clearTimeout(timer); delete root.dataset.auto }
+
+    tabs.forEach((tab, i) => {
+      tab.addEventListener('click', () => { stopAuto(); show(i) })
+      tab.addEventListener('keydown', e => {
+        const k = e.key
+        let next = -1
+        if (k === 'ArrowRight' || k === 'ArrowDown') next = (i + 1) % tabs.length
+        else if (k === 'ArrowLeft' || k === 'ArrowUp') next = (i - 1 + tabs.length) % tabs.length
+        else if (k === 'Home') next = 0
+        else if (k === 'End') next = tabs.length - 1
+        if (next < 0) return
+        e.preventDefault()
+        stopAuto()
+        show(next, true)
+      })
+    })
+
+    if (auto) {
+      root.style.setProperty('--dwell', `${DWELL}ms`)
+      whileVisible(root, () => { if (!auto) return; root.dataset.auto = ''; delete root.dataset.paused; schedule() },
+        () => { window.clearTimeout(timer); root.dataset.paused = '' }, 0.35)
+      // Resting a pointer on it holds the current part.
+      root.addEventListener('pointerenter', e => { if (auto && e.pointerType === 'mouse') { window.clearTimeout(timer); root.dataset.paused = '' } })
+      root.addEventListener('pointerleave', e => { if (auto && e.pointerType === 'mouse') { delete root.dataset.paused; schedule() } })
+    }
+  }
+</script>

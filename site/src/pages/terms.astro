@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro'
+import PageHero from '../components/PageHero.astro'
+import PolicyBody from '../components/PolicyBody.astro'
+import { terms } from '../data/app'
+---
+<Base title="Terms of use" description="The terms for using Spendr. The same terms the app shows in Settings.">
+  <PageHero
+    eyebrow="Legal"
+    title="Terms of use"
+    lede="The same terms the app shows in Settings, word for word."
+  />
+  <section class="pb-20 sm:pb-28">
+    <div class="container-site max-w-[52rem]">
+      <PolicyBody sections={terms} />
+    </div>
+  </section>
+</Base>
