@@ -131,7 +131,10 @@ function followSignIn(userId) {
   if (afterSignIn?.userId === userId) return afterSignIn.promise
   const promise = (async () => {
     if ((await db.meta.get('onboarded'))?.value) return /** @type {const} */ ('onboarded')
-    await fullSync(userId)
+    /* Nothing on this device is worth keeping yet: setup writes its accounts
+       and categories only at the end. So an account that already has data
+       simply replaces it, without the question SyncManager asks. */
+    await fullSync(userId, { choice: 'account' })
     return (await hasLedger()) ? /** @type {const} */ ('returning') : /** @type {const} */ ('new')
   })()
   afterSignIn = { userId, promise }

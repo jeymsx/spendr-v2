@@ -2,11 +2,12 @@ import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { fullSync } from '../lib/sync'
+import { fullSync, FirstSyncChoiceNeeded } from '../lib/sync'
 import db from '../db/db'
 import { setSyncState } from '../hooks/useSyncState'
 import ReminderSync from './ReminderSync'
 import NotificationSync from './NotificationSync'
+import FirstSyncSheet from './FirstSyncSheet'
 
 // ── Context ───────────────────────────────────────────────────────────────────
 
@@ -103,9 +104,13 @@ let _syncLocked = false
 // context provider. Manages auto-sync on mount and window-focus.
 
 export default function SyncManager() {
-  const { user } = useAuth()
+  const { user, signOut } = useAuth()
   const [status,   setStatus]   = useState('idle') // 'idle' | 'syncing' | 'success' | 'error'
   const [errMsg,   setErrMsg]   = useState('')
+  /* This device meeting an account that already has data: the question, and
+     the answer being carried out. See lib/firstSync.js. */
+  const [firstSync, setFirstSync] = useState(/** @type {import('../lib/sync').FirstSyncInfo|null} */ (null))
+  const [choosing,  setChoosing]  = useState(/** @type {import('../lib/sync').FirstSyncChoice|null} */ (null))
   const syncingRef = useRef(false)
   const dismissRef = useRef(null)
   /** The user the last successful sync in this session was for. */
@@ -119,8 +124,9 @@ export default function SyncManager() {
     setSyncState({ caughtUp: !signedIn || syncedFor.current === user?.id })
   }, [user?.id])
 
-  const runSync = useCallback(async ({ silent = false } = {}) => {
-    if (!user?.id || syncingRef.current || _syncLocked) return
+  /** @returns {Promise<boolean>} whether a sync ran to the end */
+  const runSync = useCallback(async (/** @type {{silent?: boolean, choice?: import('../lib/sync').FirstSyncChoice|null}} */ { silent = false, choice = null } = {}) => {
+    if (!user?.id || syncingRef.current || _syncLocked) return false
 
     syncingRef.current = true
     _syncLocked = true
@@ -137,27 +143,56 @@ export default function SyncManager() {
       const { error: sessionErr } = await supabase.auth.refreshSession()
       if (sessionErr) throw new Error(`Session expired: ${sessionErr.message}`)
 
-      await fullSync(user.id)
+      await fullSync(user.id, { choice })
       await db.meta.put({ key: 'lastSync', value: new Date().toISOString() })
       syncedFor.current = user.id
       setSyncState({ syncing: false, caughtUp: true })
+      setFirstSync(null)
 
       if (!silent) {
         setStatus('success')
         dismissRef.current = setTimeout(() => setStatus('idle'), 3000)
       }
+      return true
     } catch (err) {
+      /* Not a failure: nothing was sent or changed, and nothing will be until
+         the sheet is answered. caughtUp stays false meanwhile, so the readers
+         that wait for it - the reminder upload - wait for the answer too. */
+      if (err instanceof FirstSyncChoiceNeeded) {
+        setFirstSync(err.info)
+        setStatus('idle')
+        return false
+      }
       console.error('[SyncManager]', err)
       const msg = err?.message ?? String(err)
       setErrMsg(msg)
       setStatus('error')
       dismissRef.current = setTimeout(() => setStatus('idle'), 8000)
+      return false
     } finally {
       syncingRef.current = false
       _syncLocked = false
       setSyncState({ syncing: false })
     }
   }, [user?.id])
+
+  /** @param {import('../lib/sync').FirstSyncChoice} choice */
+  async function choose(choice) {
+    setChoosing(choice)
+    // Not silent: the chip is the only word on whether it worked.
+    await runSync({ choice })
+    setChoosing(null)
+  }
+
+  /* The way out that changes nothing, for the wrong Google account. The
+     sheet goes with the user: it only opens for someone signed in. */
+  async function leave() {
+    try {
+      await signOut()
+    } finally {
+      setFirstSync(null)
+    }
+  }
 
   /* Sync on mount / user change (silent - no chip shown unless error).
 
@@ -199,6 +234,7 @@ export default function SyncManager() {
       {/* The notifications list is worked out on the device and needs neither. */}
       <NotificationSync />
       <Outlet />
+      <FirstSyncSheet info={user?.id ? firstSync : null} busy={choosing} onChoose={choose} onSignOut={leave} />
     </SyncContext.Provider>
   )
 }

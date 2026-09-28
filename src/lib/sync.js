@@ -1,6 +1,8 @@
-import db, { dbReady, getUnsyncedTxs, SYNCED, SYNCED_TABLES, TRASH_DAYS } from '../db/db'
+import db, { dbReady, getUnsyncedTxs, SYNCED, SYNCED_TABLES, TRASH_DAYS, UNSYNCED } from '../db/db'
 import { reverseBalanceEffect } from '../db/balances'
 import { supabase } from './supabase'
+import { roundMoney } from './currency'
+import { SYNCED_WITH_KEY, accountHasData, deviceStanding, localOnlyDeltas } from './firstSync'
 // Single definition, shared with onboarding — the two lists used to be
 // separate copies, so a system category added to one was missing from the
 // other and new users ended up with a different set than syncing users.
@@ -666,8 +668,12 @@ async function pushPreferences(userId) {
   if (again) throw new Error(`user_preferences push: ${again.message}`)
 }
 
-/** @param {string} userId */
-export async function pullPreferences(userId) {
+/**
+ * @param {string} userId
+ * @param {{first?: boolean}} [opts]  a device's first sync with an account
+ *   that already has data: the account's settings win, whatever the stamps say
+ */
+export async function pullPreferences(userId, { first = false } = {}) {
   const { data, error } = await supabase
     .from('user_preferences')
     .select('*')
@@ -695,6 +701,10 @@ export async function pullPreferences(userId) {
   const remoteTs = data.updated_at ? new Date(data.updated_at).getTime() : 0
   /** @param {string} key */
   const localIsNewer = async (key) => {
+    /* Setup stamps the name and currency as it saves them, so they beat a
+       new account's defaults. Against an account with a history, those
+       stamps are only the time setup ran. See lib/firstSync.js. */
+    if (first) return false
     const row = await db.meta.get(key)
     const localTs = row?.updatedAt ? new Date(row.updatedAt).getTime() : 0
     return localTs > remoteTs
@@ -868,9 +878,10 @@ async function pushTrash(userId) {
  *
  * @param {string} userId
  * @param {Array<{table: string, match?: Record<string, any>}>} pending
+ * @param {{first?: boolean}} [opts]
  */
-async function pullTrash(userId, pending) {
-  await pullSimpleTable('trash', db.trash, rowToTrash, null, userId, null, pending)
+async function pullTrash(userId, pending, opts = {}) {
+  await pullSimpleTable('trash', db.trash, rowToTrash, null, userId, null, pending, opts)
   const cutoff = new Date(Date.now() - TRASH_DAYS * 86_400_000).toISOString()
   const old = await db.trash.where('deletedAt').below(cutoff).toArray()
   for (const e of old) if (e.syncId) await queueRemoteDelete('trash', { sync_id: e.syncId })
@@ -1282,8 +1293,9 @@ async function pullDeletions(userId) {
  * @param {any} [client]
  * @param {{column: string, after: string}|null} [since]  only rows changed
  *   after this timestamp - see the watermark note on pullTxs
+ * @param {string} [columns]  must include `id`, which the pages are ordered by
  */
-export async function fetchAllRows(tableName, userId, client = supabase, since = null) {
+export async function fetchAllRows(tableName, userId, client = supabase, since = null, columns = '*') {
   /** @type {any[]} */
   const out = []
   let from = 0
@@ -1294,7 +1306,7 @@ export async function fetchAllRows(tableName, userId, client = supabase, since =
   for (let guard = 0; guard < 1000; guard++) {
     let q = client
       .from(tableName)
-      .select('*')
+      .select(columns)
       .eq('user_id', userId)
     if (since) q = q.gt(since.column, since.after)
 
@@ -1322,19 +1334,22 @@ async function ensureSystemCategories() {
   }
 }
 
-/** @param {string} userId */
-export async function syncFromSupabase(userId) {
+/**
+ * @param {string} userId
+ * @param {{first?: boolean}} [opts]  see pullSimpleTable
+ */
+export async function syncFromSupabase(userId, opts = {}) {
   if (!userId) return
 
   // Rows we're still trying to delete must not be re-added by this pull.
   const pending = await getPendingDeletes()
 
-  await pullPreferences(userId)
-  await pullTxs(userId)
-  await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId, null, pending)
+  await pullPreferences(userId, opts)
+  await pullTxs(userId, opts)
+  await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId, null, pending, opts)
   // Categories: match on name+type to avoid confusing same-named categories of different types
   await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
-    row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first(), pending)
+    row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first(), pending, opts)
   await pullSimpleTable('debts', db.debts, rowToDebt, null, userId,
     row => {
       if (row.contact) {
@@ -1346,7 +1361,7 @@ export async function syncFromSupabase(userId) {
           .and(d => d.type === row.type).first()
       }
       return null
-    }, pending)
+    }, pending, opts)
   /* Matched on NAME alone. It used to require the amount to match too, and
      that is what duplicated a bill every time one was edited:
 
@@ -1365,21 +1380,24 @@ export async function syncFromSupabase(userId) {
      is not. */
   await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
     row => (row.name ? db.recurring.where('name').equals(row.name).first() : null),
-    pending)
-  await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending)
+    pending, opts)
+  await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending, opts)
   await optionalSync('goals pull', () =>
-    pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending))
+    pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending, opts))
   await optionalSync('badges pull', () => pullBadges(userId))
   await optionalSync('challenges pull', () =>
-    pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending))
-  await optionalSync('trash pull', () => pullTrash(userId, pending))
+    pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending, opts))
+  await optionalSync('trash pull', () => pullTrash(userId, pending, opts))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()
 }
 
-/** @param {string} userId */
-async function pullTxs(userId) {
+/**
+ * @param {string} userId
+ * @param {{first?: boolean}} [opts]  see pullSimpleTable
+ */
+async function pullTxs(userId, { first = false } = {}) {
   /* Only what has changed since last time.
    *
    * The ledger is the one table that grows without limit, and the only one
@@ -1424,7 +1442,7 @@ async function pullTxs(userId) {
 
     if (!existing) {
       toAdd.push({ ...toDexieRecord(row) })
-    } else if (remotets > localts) {
+    } else if (first || remotets > localts) {
       // Spread `existing` first to mirror Dexie's partial .update(): fields the
       // remote row doesn't carry (recurringId, recurringPrevDate, …) survive.
       toPut.push({ ...existing, ...toDexieRecord(row) })
@@ -1452,8 +1470,13 @@ async function pullTxs(userId) {
  * @param {string} userId
  * @param {((row: Record<string, any>) => Promise<any>)} [findFn]  when a single-key lookup is not enough (categories match on name AND type)
  * @param {Array<{table: string, match?: Record<string, any>}>} [pending]
+ * @param {{first?: boolean}} [opts]  `first`: this device's first sync with
+ *   an account that already has data. The remote copy wins every match,
+ *   whatever the timestamps say, and local_id is not a match at all - it is
+ *   this device's own numbering, and the server's local_ids were written by
+ *   other devices. See lib/firstSync.js.
  */
-async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, findFn, pending = []) {
+async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, findFn, pending = [], { first = false } = {}) {
   const data = await fetchAllRows(tableName, userId)
   if (!data.length) return
 
@@ -1475,7 +1498,7 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
       ? await dexieTable.where('syncId').equals(row.sync_id).first()
       : null
 
-    const localId = row.local_id
+    const localId = first ? null : row.local_id
     const existing = bySync ? null : localId ? await dexieTable.get(localId) : null
 
     // Prefer a custom finder (compound key), fall back to single nameKey
@@ -1553,7 +1576,7 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
            synced from, so the real content could never arrive. */
         await dexieTable.update(target.id, { syncId: row.sync_id })
       }
-      if (remotets > localts) {
+      if (first || remotets > localts) {
         await dexieTable.update(target.id, fromRow(row))
       }
     }
@@ -1690,14 +1713,171 @@ async function deduplicateLocalAccounts() {
   }
 }
 
+// ── A device's first sync with an account ────────────────────────────────────
+//
+// See lib/firstSync.js for the night that made this necessary.
+
+/**
+ * @typedef {{remote: {transactions: number, accounts: number}, local: {transactions: number}}} FirstSyncInfo
+ * @typedef {'account'|'both'} FirstSyncChoice
+ *   account  the account's data replaces this device's
+ *   both     this device's entries are added to the account's; where the
+ *            two share an account or a category, the account's copy stays
+ */
+
+/** Thrown by fullSync when it will not sync until the person has chosen. */
+export class FirstSyncChoiceNeeded extends Error {
+  /** @param {FirstSyncInfo} info */
+  constructor(info) {
+    super('This account already has data')
+    this.name = 'FirstSyncChoiceNeeded'
+    this.info = info
+  }
+}
+
+/** @param {string} tableName @param {string} userId */
+async function countRemote(tableName, userId) {
+  const { count, error } = await supabase
+    .from(tableName)
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId)
+  if (error) throw new Error(`${tableName} count: ${error.message}`)
+  return count ?? 0
+}
+
+/**
+ * Whether this sync is a device meeting an account that already has data,
+ * and if so, what each side holds. Null means sync as always.
+ *
+ * Marks the device as synced with an EMPTY account straight away, before
+ * anything is pushed. If that first push stops part-way, the next sync must
+ * finish it as an ordinary sync, not ask whether the half it managed to
+ * upload should replace the device it came from.
+ *
+ * @param {string} userId
+ * @returns {Promise<FirstSyncInfo|null>}
+ */
+export async function checkFirstSync(userId) {
+  /* lastSync rather than the watermarks as the trace of an earlier sync:
+     SyncManager writes it only once a whole sync has succeeded, while a
+     watermark moves in the middle of one - including a first sync that then
+     failed, which must ask again rather than pass for an old device. */
+  const [mark, last] = await Promise.all([
+    db.meta.get(SYNCED_WITH_KEY),
+    db.meta.get('lastSync'),
+  ])
+  const standing = deviceStanding({
+    userId,
+    mark: mark?.value ?? null,
+    syncedBefore: !!last?.value,
+  })
+  if (standing === 'known') return null
+  if (standing === 'backfill') {
+    await db.meta.put({ key: SYNCED_WITH_KEY, value: userId })
+    return null
+  }
+
+  /* The device last synced with somebody else. Its stream positions are
+     theirs, and a delta pull from them would step over most of this
+     account's history. */
+  if (mark?.value) await resetWatermarks()
+
+  const [transactions, accounts] = await Promise.all([
+    countRemote('transactions', userId),
+    countRemote('accounts', userId),
+  ])
+  if (!accountHasData({ transactions, accounts })) {
+    await db.meta.put({ key: SYNCED_WITH_KEY, value: userId })
+    return null
+  }
+  return {
+    remote: { transactions, accounts },
+    local: { transactions: await db.transactions.count() },
+  }
+}
+
+/**
+ * Deletes this device queued before it ever met the account.
+ *
+ * They are queued by name, and on this device "Food" or "Cash" meant this
+ * device's row. Flushed against the account, they would delete the account's
+ * Food and Cash.
+ */
+async function forgetQueuedDeletes() {
+  await db.meta.bulkDelete([PENDING_KEY, 'deletedTxIds'])
+}
+
+/** "Use my account's data": everything the account will replace, gone first. */
+async function clearLocalLedger() {
+  const tables = [
+    db.transactions, db.balances, db.accounts, db.categories, db.debts,
+    db.recurring, db.templates, db.goals, db.challenges, db.badges, db.trash,
+  ]
+  await db.transaction('rw', tables, async () => {
+    for (const t of tables) await t.clear()
+  })
+  await resetWatermarks()
+}
+
+/**
+ * "Keep both", before the pull: which of this device's entries the server
+ * lacks, and what they did to the accounts the server has. Read before the
+ * pull, which replaces those accounts' balances with the account's.
+ *
+ * @param {string} userId
+ */
+async function planKeepBoth(userId) {
+  const [txs, remoteTxs, remoteAccounts] = await Promise.all([
+    db.transactions.toArray(),
+    fetchAllRows('transactions', userId, supabase, null, 'id,tx_id'),
+    fetchAllRows('accounts', userId, supabase, null, 'id,name'),
+  ])
+  const remoteTxIds = new Set(remoteTxs.map(r => r.tx_id).filter(Boolean))
+  return {
+    deltas: localOnlyDeltas(txs, remoteTxIds, new Set(remoteAccounts.map(r => r.name))),
+    /* Marked as uploaded already when this device last synced with someone
+       else. The push only sends what is not, so these would stay here. */
+    upload: txs.filter(t => t.txId && !remoteTxIds.has(t.txId) && t.synced === SYNCED).map(t => t.id),
+  }
+}
+
+/** @param {{deltas: Map<string, number>, upload: number[]}} plan */
+async function applyKeepBoth({ deltas, upload }) {
+  await db.transaction('rw', [db.accounts, db.balances, db.transactions], async () => {
+    for (const [name, delta] of deltas) {
+      const acct = await db.accounts.where('name').equals(name).first()
+      if (!acct) continue
+      const balance = roundMoney((acct.balance ?? 0) + delta, acct.currency)
+      await db.accounts.update(acct.id, { balance })
+      await db.balances.put({ account: name, balance })
+    }
+    if (upload.length) await db.transactions.where('id').anyOf(upload).modify({ synced: UNSYNCED })
+  })
+}
+
 // ── Full sync ─────────────────────────────────────────────────────────────────
 
-/** @param {string} userId */
-export async function fullSync(userId) {
+/**
+ * @param {string} userId
+ * @param {{choice?: FirstSyncChoice|null}} [opts]  the answer to
+ *   FirstSyncChoiceNeeded; ignored when there is nothing to choose
+ */
+export async function fullSync(userId, { choice = null } = {}) {
   if (!userId) throw new Error('Not authenticated')
   // Wait for the initial seed to complete so the pull doesn't race with it
   // and create duplicate seeded records (e.g. two Cash accounts).
   await dbReady
+
+  /* Before anything touches the server: a device meeting an account that
+     already has data is not merged by timestamp. See lib/firstSync.js. */
+  const first = await checkFirstSync(userId)
+  if (first && choice !== 'account' && choice !== 'both') throw new FirstSyncChoiceNeeded(first)
+  if (first) {
+    await forgetQueuedDeletes()
+    await resetWatermarks()
+    if (choice === 'account') await clearLocalLedger()
+  }
+
   // Land queued deletions first, so the pull below can't resurrect them.
   await flushPendingDeletes(userId)
   /* And the ones somebody else made. Before the content pull rather than
@@ -1705,11 +1885,19 @@ export async function fullSync(userId) {
      doing it first means a device coming back from a long absence sheds what
      is gone before it starts merging what is not. */
   await optionalSync('deletions pull', () => pullDeletions(userId))
+
+  const keepBoth = first && choice === 'both' ? await planKeepBoth(userId) : null
+
   // Pull so a fresh device gets correct remote state before pushing.
-  await syncFromSupabase(userId)
+  await syncFromSupabase(userId, { first: !!first })
+  if (keepBoth) await applyKeepBoth(keepBoth)
   // Clean up any duplicates that seed vs. pull races may have left behind.
   await deduplicateLocalAccounts()
   await syncToSupabase(userId)
+
+  /* Last, so a first sync that fails anywhere above asks again next time
+     rather than carrying on as an ordinary merge. */
+  if (first) await db.meta.put({ key: SYNCED_WITH_KEY, value: userId })
 }
 
 // ── Deletion helpers (call these alongside the local db.delete) ───────────────

@@ -183,7 +183,7 @@ import {
   Contrast01, ZapFast,
   CurrencyDollarCircle, CoinsSwap01, Globe01, Cursor01,
   Trophy01, Target04, CoinsStacked01, TrendUp01, BarChart10, Calculator,
-  AlertCircle, CheckCircle, Lock01, PauseCircle, Monitor01,
+  AlertCircle, CheckCircle, Lock01, PauseCircle, Monitor01, Cloud01,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -200,6 +200,7 @@ export const IconMotion    = uui(PauseCircle)    // Reduce motion, in What's New
 export const IconX         = uui(XClose)         // dismiss, and the error toast
 export const IconTick      = uui(Check)          // distinct from IconCheck above, hand-drawn
 export const IconTrash     = uui(Trash01)
+export const IconCloud     = uui(Cloud01)        // an account's data, when a device first meets it
 export const IconImport    = uui(Download01)     // the import wizard's own affordance
 export const IconBalance   = uui(Scales02)       // reconciling two sides, in the import wizard
 export const IconSparkle   = uui(Stars01)        // "this row is new / unmatched", and celebrate
