@@ -19,7 +19,7 @@ import IconButton from '../components/ui/IconButton'
 import BellButton from '../components/BellButton'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
-import { fmt, baseSymbol, fmtHidden } from '../lib/money'
+import { fmt, fmtCompact, baseSymbol, fmtHidden } from '../lib/money'
 import {
   ContextHint, getContextHint, getGreeting, monthPrefix,
   quickActionCounts,
@@ -29,7 +29,7 @@ import { useSwap } from '../components/ui/useSwap'
 import { useWalletClip } from './dashboard/wallet'
 import DashboardSkeleton from './dashboard/Skeleton'
 import {
-  AccountCard, BudgetSummaryTile, EmptyPill, IconEye, IconEyeOff, IconSettings, TxRow,
+  AccountCard, BudgetSummaryTile, EmptyPill, IconEye, IconEyeOff, IconFlipSides, IconSettings, TxRow,
 } from './dashboard/Tiles'
 import QuickActions from './dashboard/QuickActions'
 import UpcomingSection, { toUpcomingItem } from './dashboard/Upcoming'
@@ -66,6 +66,13 @@ export default function Dashboard() {
     try { return localStorage.getItem('netWorthBreakdown') !== 'closed' }
     catch { return true }
   })
+  /* Which half of the breakdown the wallet shows: what you have, or what you
+     owe - three tiles either way. Remembered, like the fold. */
+  const [walletSide, setWalletSide] = useState(() => {
+    try { return localStorage.getItem('netWorthSide') === 'owe' ? 'owe' : 'have' }
+    catch { return 'have' }
+  })
+  const sideSwap = useSwap(walletSide)
   const [walletRef, walletClip] = useWalletClip()
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
@@ -340,13 +347,20 @@ export default function Dashboard() {
       }))
   }, [separated, accounts, txAll, viewOptions, shownCurrency, baseCurrency, rates, creditStmtMap, nwDebts.debts, nwDebts.include])
 
-  /* The wallet's piles. Spending, Savings and Credit always - they are what
-     everybody has - and the rest only once there is something in them, so a
-     ledger with no investment never grows a tile reading ₱0.00 for one. */
-  const pileTiles = [
+  /* The wallet's piles, in two halves of three: what you have, and what you
+     owe. Six tiles at once made a two-row table of the one card that is meant
+     to be read at a glance, so the wallet shows one half and a switch flips
+     it. Spending, Savings and Credit always - they are what everybody has -
+     and the rest only once there is something in them, so a ledger with no
+     investment never grows a tile reading ₱0.00 for one. Debts - money
+     between you and other people - sits with what you owe even when the net
+     is in your favour; its note says which way it runs. */
+  const haveTiles = [
     { key: 'spending', label: 'Spending', value: breakdown.spending, note: 'Cash, wallets' },
     { key: 'savings', label: 'Savings', value: breakdown.savings, note: 'Banks, deposits' },
     breakdown.has.invested && { key: 'invested', label: 'Investments', value: breakdown.invested, note: 'At last value' },
+  ].filter(Boolean)
+  const oweTiles = [
     { key: 'credit', label: 'Credit', value: breakdown.credit, note: breakdown.credit > 0 ? 'Outstanding' : 'Paid off' },
     breakdown.has.loans && { key: 'loans', label: 'Loans', value: breakdown.loans, note: breakdown.loans > 0.005 ? 'Left to pay' : 'Paid off' },
     breakdown.has.people && {
@@ -354,6 +368,11 @@ export default function Dashboard() {
       note: breakdown.people >= 0 ? 'Owed to you' : 'You owe',
     },
   ].filter(Boolean)
+  const pileTiles = walletSide === 'owe' ? oweTiles : haveTiles
+  const pickSide = (/** @type {'have'|'owe'} */ side) => {
+    setWalletSide(side)
+    try { localStorage.setItem('netWorthSide', side) } catch { /* private mode */ }
+  }
 
   const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
@@ -456,14 +475,37 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <button
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={() => setBalanceHidden(h => !h)}
-                    className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
-                    aria-label={balanceHidden ? 'Show balance' : 'Hide balance'}
-                  >
-                    {balanceHidden ? <IconEyeOff /> : <IconEye />}
-                  </button>
+                  <div className="flex items-center gap-3.5">
+                    {/* What you have, or what you owe - the breakdown shows
+                        one half. Only while the breakdown is out: folded away,
+                        there is nothing for it to flip. The arrows turn over
+                        with the side, so the button shows it has two states. */}
+                    {breakdownOpen && (
+                      <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={() => pickSide(walletSide === 'have' ? 'owe' : 'have')}
+                        className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
+                        aria-label={walletSide === 'have'
+                          ? 'Showing what you have. Show what you owe.'
+                          : 'Showing what you owe. Show what you have.'}
+                      >
+                        <span
+                          className="block transition-transform duration-300 ease-[cubic-bezier(0.2,0.7,0.3,1)]"
+                          style={{ transform: walletSide === 'owe' ? 'scaleY(-1)' : 'none' }}
+                        >
+                          <IconFlipSides />
+                        </span>
+                      </button>
+                    )}
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={() => setBalanceHidden(h => !h)}
+                      className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
+                      aria-label={balanceHidden ? 'Show balance' : 'Hide balance'}
+                    >
+                      {balanceHidden ? <IconEyeOff /> : <IconEye />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-2">
@@ -515,18 +557,27 @@ export default function Dashboard() {
                         row of figures itself. 6px + 18px puts the content
                         14px clear of the stitching, which is exactly the
                         clearance px-6 gives it on the left and right. */}
-                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-x-3 gap-y-4 px-6 pt-5 pb-1.5">
-                      {pileTiles.map(tile => (
-                        <div key={tile.key} className="min-w-0">
-                          <p className="text-white/50 text-11 mb-1 truncate">{tile.label}</p>
-                          <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
-                            {revealed
-                              ? <RollingNumber id={`home:${tile.key}:${shownCurrency}`} value={tile.value} format={v => fmt(v, shownCurrency)} />
-                              : '••••'}
-                          </p>
-                          <p className="text-white/35 text-10 mt-0.5 truncate">{tile.note}</p>
-                        </div>
-                      ))}
+                    <div id="net-worth-breakdown" className="wallet-pocket px-6 pt-5 pb-1.5">
+                      {/* One half at a time - see haveTiles. The flip button
+                          beside the eye chooses which; the tiles say which it
+                          is by what they are called. */}
+                      <div key={walletSide} className={`${sideSwap} grid grid-cols-3 gap-x-3`}>
+                        {pileTiles.map(tile => (
+                          <div key={tile.key} className="min-w-0">
+                            <p className="text-white/50 text-11 mb-1 truncate">{tile.label}</p>
+                            <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
+                              {/* Compact from ₱100K: a loan's ₱420,000.00 ran into
+                                  the next column on a 360px phone, and three
+                                  columns have no room for seven digits. The
+                                  exact figure is one tap away, on Accounts. */}
+                              {revealed
+                                ? <RollingNumber id={`home:${tile.key}:${shownCurrency}`} value={tile.value} format={v => (Math.abs(v) >= 1e5 ? fmtCompact(v, shownCurrency) : fmt(v, shownCurrency))} />
+                                : '••••'}
+                            </p>
+                            <p className="text-white/35 text-10 mt-0.5 truncate">{tile.note}</p>
+                          </div>
+                        ))}
+                      </div>
                     </div>
                   </div>
                 </div>

@@ -232,6 +232,18 @@ export function IconEye({ size = 18 }) {
   )
 }
 
+/** Two arrows passing: the wallet's switch between what you have and what you owe. */
+export function IconFlipSides({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 20V4" />
+      <path d="M3 8l4-4 4 4" />
+      <path d="M17 4v16" />
+      <path d="M13 16l4 4 4-4" />
+    </svg>
+  )
+}
+
 export function IconEyeOff({ size = 18 }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
