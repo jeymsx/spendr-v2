@@ -189,12 +189,13 @@ export function UpcomingRow({ item, isLast }) {
  * Without a payday on the Recurring list the forecast is guessing, so it
  * says so and offers the one thing that fixes it.
  */
-/* The Safe to spend wallet. About as small as it can be while the band's
-   bottom edge still cuts through its rounded base and its top still stands
-   clear of the card - the frame starts a little under a quarter of its size
-   above the card. A little smaller again on a narrow phone. */
-const WALLET_SIZE = 'min(170px, 46vw)'
-const WALLET_RISE = 'calc(min(170px, 46vw) * -0.18)'
+/* The Safe to spend coins: a stack with a ₱ coin leaning on it. The band's
+   bottom edge cuts through the stack, and the frame starts far enough above
+   the card for the coin to stand clear of it. Coins rather than the wallet
+   it was: money to spend, just as plainly, in a shape compact enough to do
+   both at this size - the wallet's tall box had to be half again as big. */
+const WALLET_SIZE = 'min(144px, 40vw)'
+const WALLET_RISE = 'calc(min(144px, 40vw) * -0.12)'
 
 export default function UpcomingSection({ forecast, items }) {
   const navigate = useNavigate()
@@ -214,7 +215,7 @@ export default function UpcomingSection({ forecast, items }) {
         actionLabel="Forecast"
         actionTo="/insights/forecast"
       >Next 30 days</SectionHeading>
-      {/* Not `clip`: the wallet below stands up out of the card's top edge.
+      {/* Not `clip`: the coins below stand up out of the card's top edge.
           The band and the last row round their own corners instead, so a
           pressed tint still keeps to the card's shape. */}
       <Card className="mt-3">
@@ -222,18 +223,18 @@ export default function UpcomingSection({ forecast, items }) {
           to="/insights/forecast"
           className="relative block rounded-t-2xl px-4 pt-4 pb-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
         >
-          {/* A glass wallet, large, standing up out of the card and cut off
-              only by the band's bottom edge - so the figure is not a lone
-              number on an empty band. In the accent, or red when the money
-              runs out. The frame is what clips it: it starts above the card
-              and ends where the band does. Decoration: no taps, nothing read. */}
+          {/* Glass coins, standing up out of the card and cut off only by the
+              band's bottom edge - so the figure is not a lone number on an
+              empty band. In the accent, or red when the money runs out. The
+              frame is what clips it: it starts above the card and ends where
+              the band does. Decoration: no taps, nothing read. */}
           <span
             className="pointer-events-none absolute right-1.5 bottom-0 overflow-hidden"
             style={{ top: WALLET_RISE, width: WALLET_SIZE }}
             aria-hidden="true"
           >
             <GlassArt
-              name="wallet"
+              name="coins"
               hue={short ? '#ef4444' : accentColor}
               size={200}
               style={{ width: WALLET_SIZE, height: WALLET_SIZE }}
