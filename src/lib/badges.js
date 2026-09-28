@@ -1,6 +1,8 @@
 import { allocateGoals } from './goals'
 import { isoToDateInput } from '../utils/txDate'
 import { txBase } from './fxContext'
+import { isIncome, isSpend } from './flows'
+import { isLiquid } from './accountMeta'
 
 /**
  * What the app is willing to call an achievement.
@@ -191,8 +193,9 @@ export function monthStats(transactions, today) {
     const row = stats.get(monthKey(t.date))
     if (!row) continue
     const amt = txBase(t)
-    if (t.type === 'inflow') row.inflow += amt
-    else if (t.type === 'expense') {
+    // A balance correction or an investment's value moving is neither (lib/flows.js).
+    if (isIncome(t)) row.inflow += amt
+    else if (isSpend(t)) {
       row.expense += amt
       row.byCategory[t.category] = (row.byCategory[t.category] ?? 0) + amt
     }
@@ -243,17 +246,19 @@ export function inTheGreen(month) {
 /**
  * Money you hold.
  *
- * Credit lines are not balances you own, so they are out. This is deliberately
- * not net worth: that needs the credit-statement machinery, and a badge whose
- * arithmetic you cannot check by looking at the accounts screen is a badge you
- * cannot trust.
+ * Credit lines are not balances you own, so they are out - and so are loans
+ * (a negative balance, owed) and investments (yours, but not money you
+ * hold: their value is a figure you typed and it moves with a market). This
+ * is deliberately not net worth: that needs the credit-statement machinery,
+ * and a badge whose arithmetic you cannot check by looking at the accounts
+ * screen is a badge you cannot trust.
  *
  * @param {Account[]} accounts
  * @returns {number}
  */
 export function liquidTotal(accounts) {
   return (accounts ?? [])
-    .filter(a => a.type !== 'credit' && (a.role ?? '') !== 'credit')
+    .filter(a => isLiquid(a) && (a.role ?? '') !== 'credit')
     .reduce((s, a) => s + (a.balance ?? 0), 0)
 }
 
@@ -370,7 +375,8 @@ export const BADGES = [
     tone: 'cyan',
     glyph: 'cards',
     test: ({ accounts }) =>
-      new Set((accounts ?? []).map(a => a.type).filter(Boolean)).size >= 4,
+      // A loan is somewhere money is owed, not somewhere it lives.
+      new Set((accounts ?? []).map(a => a.type).filter(t => t && t !== 'loan')).size >= 4,
   },
   {
     key: 'six-figures',
@@ -463,7 +469,7 @@ export const BADGES = [
        did not spend. */
     test: ({ transactions }) => {
       const days = [...new Set(
-        transactions.filter(t => t.type === 'expense')
+        transactions.filter(isSpend)
           .map(t => isoToDateInput(t.date)).filter(Boolean),
       )].sort()
       for (let i = 1; i < days.length; i++) {

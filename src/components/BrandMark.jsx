@@ -35,6 +35,19 @@ const PATHS = {
     'M4 5h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z' +
     'M2 8.9h20v2.6H2Z',
 
+  // Investment — three rising bars on a baseline: something that grows.
+  growth:
+    'M3.2 13.4h3.8V20H3.2Z' +
+    'M10.1 9.2h3.8V20h-3.8Z' +
+    'M17 4.4h3.8V20H17Z' +
+    'M2 20h20v2H2Z',
+
+  // Loan — the agreement: a page with two lines of terms punched through.
+  loan:
+    'M6.2 2h8.6L20 7.2v12.6A2.2 2.2 0 0 1 17.8 22H6.2A2.2 2.2 0 0 1 4 19.8V4.2A2.2 2.2 0 0 1 6.2 2Z' +
+    'M7.4 11.2h9.2v2.6H7.4Z' +
+    'M7.4 15.6h6.2v2.6H7.4Z',
+
   // Buy-now-pay-later — a card with a clock, i.e. spend now, settle on a date.
   bnpl:
     'M4 5h16a2 2 0 0 1 2 2v3.6a6.4 6.4 0 0 0-8.86 8.4H4a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z' +

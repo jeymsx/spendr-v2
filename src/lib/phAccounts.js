@@ -37,6 +37,64 @@ export const PH_ACCOUNTS = [
 
 export const PH_GROUPS = ['E-Wallets', 'Traditional Banks', 'Digital Banks']
 
+/**
+ * Investments and loans people in the Philippines commonly hold, for the new
+ * account page's grid. A list of its own rather than more rows above: the
+ * onboarding and quick-add pickers read PH_ACCOUNTS and create accounts from
+ * a single opening balance, which is not how either of these starts - an
+ * investment is valued, and a loan is owed. Only AccountNew offers them,
+ * through its Investments and Loans filters.
+ */
+/* A bank's fund or loan takes the bank's colour from PH_ACCOUNTS above, and
+   its logo comes through accountBrands' name lookup ("Metrobank UITF" finds
+   metrobank.svg), so the tile is recognisably that bank's. No crypto, by the
+   owner's call. */
+export const PH_HOLDINGS = [
+  // Government and pooled funds
+  { name: 'Pag-IBIG MP2',           type: 'investment', kind: 'mp2',      color: '#0ea5e9', group: 'Investments' },
+  { name: 'BPI UITF',               type: 'investment', kind: 'fund',     color: '#ef4444', group: 'Investments' },
+  { name: 'BDO UITF',               type: 'investment', kind: 'fund',     color: '#2D9DFF', group: 'Investments' },
+  { name: 'Metrobank UITF',         type: 'investment', kind: 'fund',     color: '#f59e0b', group: 'Investments' },
+  { name: 'Security Bank UITF',     type: 'investment', kind: 'fund',     color: '#10b981', group: 'Investments' },
+  { name: 'Landbank UITF',          type: 'investment', kind: 'fund',     color: '#22c55e', group: 'Investments' },
+  { name: 'RCBC UITF',              type: 'investment', kind: 'fund',     color: '#ec4899', group: 'Investments' },
+  { name: 'Sun Life Funds',         type: 'investment', kind: 'fund',     color: '#f59e0b', group: 'Investments' },
+  { name: 'GInvest',                type: 'investment', kind: 'fund',     color: '#2D9DFF', group: 'Investments' },
+  // Stocks, through a broker
+  { name: 'COL Financial',          type: 'investment', kind: 'stocks',   color: '#1d4ed8', group: 'Investments' },
+  { name: 'BPI Trade',              type: 'investment', kind: 'stocks',   color: '#ef4444', group: 'Investments' },
+  { name: 'FirstMetroSec',          type: 'investment', kind: 'stocks',   color: '#1e3a8a', group: 'Investments' },
+  { name: 'Philstocks',             type: 'investment', kind: 'stocks',   color: '#0891b2', group: 'Investments' },
+  // Fixed income and retirement
+  { name: 'Retail Treasury Bonds',  type: 'investment', kind: 'bonds',    color: '#0f766e', group: 'Investments' },
+  { name: 'Time Deposit',           type: 'investment', kind: 'deposit',  color: '#10b981', group: 'Investments' },
+  { name: 'PERA',                   type: 'investment', kind: 'pera',     color: '#7c3aed', group: 'Investments' },
+  { name: 'VUL',                    type: 'investment', kind: 'vul',      color: '#8b5cf6', group: 'Investments' },
+  // Things you own
+  { name: 'Gold',                   type: 'investment', kind: 'gold',     color: '#ca8a04', group: 'Investments' },
+  { name: 'Real Estate',            type: 'investment', kind: 'property', color: '#b45309', group: 'Investments' },
+  { name: 'Business',               type: 'investment', kind: 'business', color: '#475569', group: 'Investments' },
+
+  // Government
+  { name: 'Pag-IBIG Housing Loan',  type: 'loan', color: '#0ea5e9', group: 'Loans' },
+  { name: 'Pag-IBIG Salary Loan',   type: 'loan', color: '#0284c7', group: 'Loans' },
+  { name: 'Pag-IBIG Calamity Loan', type: 'loan', color: '#0369a1', group: 'Loans' },
+  { name: 'SSS Salary Loan',        type: 'loan', color: '#1e40af', group: 'Loans' },
+  { name: 'SSS Calamity Loan',      type: 'loan', color: '#1e3a8a', group: 'Loans' },
+  { name: 'GSIS Loan',              type: 'loan', color: '#0f766e', group: 'Loans' },
+  // Banks and lenders
+  { name: 'Home Loan',              type: 'loan', color: '#b45309', group: 'Loans' },
+  { name: 'Car Loan',               type: 'loan', color: '#64748b', group: 'Loans' },
+  { name: 'Motorcycle Loan',        type: 'loan', color: '#dc2626', group: 'Loans' },
+  { name: 'Personal Loan',          type: 'loan', color: '#f97316', group: 'Loans' },
+  { name: 'GCash GLoan',            type: 'loan', color: '#2D9DFF', group: 'Loans' },
+  { name: 'Maya Personal Loan',     type: 'loan', color: '#06b6d4', group: 'Loans' },
+  { name: 'Home Credit',            type: 'loan', color: '#e11d48', group: 'Loans' },
+  // Money owed on a schedule to someone who is not a lender
+  { name: 'Company Loan',           type: 'loan', color: '#475569', group: 'Loans' },
+  { name: 'Student Loan',           type: 'loan', color: '#7c3aed', group: 'Loans' },
+]
+
 export const POPULAR_ACCOUNTS = PH_ACCOUNTS.filter(a => a.popular)
 
 // TYPE_ICON moved to components/icons.jsx as ACCOUNT_TYPE_ICON. Which glyph

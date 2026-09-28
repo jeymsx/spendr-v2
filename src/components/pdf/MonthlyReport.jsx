@@ -23,6 +23,8 @@ import { currencyOfTx } from '../../lib/fxContext'
  * @property {number} [totalAssets]
  * @property {number} [totalCreditUsed]
  * @property {number} [totalCreditLimit]
+ * @property {number} [totalLoans]
+ * @property {number} [totalOwed]
  * @property {number} [netWorth]
  * @property {Array<Record<string, any>>} [categoryBreakdown]
  * @property {Transaction[]} [transactions]
@@ -337,7 +339,12 @@ function HeaderBar({ subtitle, colors }) {
 // ── Page 1: Cover & Summary ────────────────────────────────────────────────────
 
 /** @param {ReportProps} props */
-function CoverPage({ year, month, userName, summary, accounts, endingBalances, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, netWorth, generatedAt, asOfLabel, colors }) {
+function CoverPage({ year, month, userName, summary, accounts, endingBalances, creditDetailMap, totalAssets, totalCreditUsed, totalCreditLimit, totalLoans = 0, totalOwed, netWorth, generatedAt, asOfLabel, colors }) {
+  /* Cards were the only thing you could owe on, so this card said "Credit
+     Used". With a loan or a debt to a person in the picture, the figure that
+     balances Total Assets is everything owed, and it is labelled so. */
+  const owed = totalOwed ?? totalCreditUsed
+  const owesMore = owed - totalCreditUsed > 0.005
   const monthName = MONTH_NAMES[month - 1]
   const { totalIncome, totalExpenses, netSavings, savingsRate } = summary
 
@@ -489,9 +496,13 @@ function CoverPage({ year, month, userName, summary, accounts, endingBalances, c
           <Text style={[styles.netWorthValue, { color: GREEN }]}>{fmt(totalAssets)}</Text>
         </View>
         <View style={[styles.netWorthCard, { backgroundColor: '#fef2f2', borderWidth: 1, borderColor: '#fecaca' }]}>
-          <Text style={[styles.netWorthLabel, { color: RED }]}>Credit Used</Text>
-          <Text style={[styles.netWorthValue, { color: RED }]}>{fmt(totalCreditUsed)}</Text>
-          {totalCreditLimit > 0 && (
+          <Text style={[styles.netWorthLabel, { color: RED }]}>{owesMore ? 'Owed' : 'Credit Used'}</Text>
+          <Text style={[styles.netWorthValue, { color: RED }]}>{fmt(owesMore ? owed : totalCreditUsed)}</Text>
+          {owesMore ? (
+            <Text style={[{ fontSize: 7, color: MUTED, marginTop: 2 }]}>
+              Cards {fmt(totalCreditUsed)}{totalLoans > 0.005 ? `  ·  Loans ${fmt(totalLoans)}` : ''}
+            </Text>
+          ) : totalCreditLimit > 0 && (
             <Text style={[{ fontSize: 7, color: MUTED, marginTop: 2 }]}>of {fmt(totalCreditLimit)} limit</Text>
           )}
         </View>
@@ -730,6 +741,8 @@ export default function MonthlyReport(props) {
     totalAssets,
     totalCreditUsed,
     totalCreditLimit,
+    totalLoans,
+    totalOwed,
     netWorth,
     categoryBreakdown,
     transactions,
@@ -757,6 +770,8 @@ export default function MonthlyReport(props) {
         totalAssets={totalAssets}
         totalCreditUsed={totalCreditUsed}
         totalCreditLimit={totalCreditLimit}
+        totalLoans={totalLoans}
+        totalOwed={totalOwed}
         netWorth={netWorth}
         generatedAt={generatedAt}
         asOfLabel={asOf

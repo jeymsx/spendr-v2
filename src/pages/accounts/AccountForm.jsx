@@ -13,15 +13,23 @@ import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
 import { PH_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
-import { PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, defaultRole } from '../../lib/accountMeta'
+import {
+  PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, INVESTMENT_KINDS, defaultRole,
+} from '../../lib/accountMeta'
+import { CORRECTION_DESC, isAdjustment } from '../../lib/flows'
+import { monthsToClear, rateLabel, solveMonthlyRate } from '../../lib/loans'
+import { createInvestment } from '../../db/accountWrites'
+import { deleteTxGroup } from '../../db/txHelpers'
 import { fmt, getBaseCurrency } from '../../lib/money'
 import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
 import SubPage from '../../components/SubPage'
 import {
+  ColorRail,
   PreviewCard,
   SchemeRail,
 } from '../../components/CardStyle'
+import { HoldingTile } from './HoldingTile'
 import { IconCard, IconTrash } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
@@ -36,6 +44,15 @@ import Rail from '../../components/ui/Rail'
 import Segmented from '../../components/ui/Segmented'
 
 // ── Account form sheet ─────────────────────────────────────────────────────────
+
+/** Whether this is the desktop layout (src/web), which marks <html> with `web`. */
+const onDesktop = () => typeof document !== 'undefined' && document.documentElement.classList.contains('web')
+
+/** A typed due day, held to a day a month can have; null when there is none. @param {string|number} v */
+const dayOfMonth = (v) => {
+  const n = parseInt(String(v ?? ''))
+  return n >= 1 ? Math.min(31, n) : null
+}
 
 /**
  * Form values to an accounts row.
@@ -58,25 +75,35 @@ export function buildAccountRow({
   qrImage = null, parentName = null, scheme = '',
   design, customColor,
   currency = getBaseCurrency(),
+  kind = null, investedStart = null,
 }) {
   const isCredit = type === 'credit'
+  /* A loan borrows three of a card's columns rather than adding its own -
+     the monthly payment, the due day and the monthly rate. See lib/loans.js. */
+  const isLoan = type === 'loan'
+  const isInvestment = type === 'investment'
   return {
     name:           String(name ?? '').trim(),
     type,
-    role:           isCredit ? 'credit' : role,
+    role:           isCredit ? 'credit' : isLoan ? 'loan' : isInvestment ? 'invested' : role,
     color,
     currency,
     creditLimit:    isCredit ? (parseMoney(creditLimit) || 0)   : null,
     statementDate:  isCredit ? (parseInt(statementDay) || null) : null,
-    dueDate:        isCredit ? (parseInt(dueDay)       || null) : null,
+    // A day of the month: "45" is a typo for a day that exists, not a date to store.
+    dueDate:        isCredit || isLoan ? dayOfMonth(dueDay) : null,
     cutoffDate:     isCredit ? (parseInt(cutoffDay)    || null) : null,
-    minimumPayment: isCredit ? (parseMoney(minPayment) || 0)    : null,
+    minimumPayment: isCredit || isLoan ? (parseMoney(minPayment) || 0) : null,
     /* What the bank charges for paying late. Both optional: a card carrying
        neither cannot be estimated for, and financeCharge.js says so rather
        than showing a confident zero. Null on an asset account, like every
        other credit-only column. */
-    interestRate:   isCredit ? (parseFloat(interestRate) || null)  : null,
+    interestRate:   isCredit || isLoan ? (parseFloat(interestRate) || null) : null,
     lateFee:        isCredit ? (parseMoney(lateFee) || 0)          : null,
+    /* An investment's kind, and what had gone into it before it was added
+       here - the start of "Paid in". Null on everything else. */
+    kind:           isInvestment ? (kind || 'other') : null,
+    investedStart:  isInvestment ? (parseMoney(investedStart ?? '') || 0) : null,
     qrImage:        qrImage ?? null,
     updatedAt:      new Date().toISOString(),
     parentName:     parentName ?? null,
@@ -150,6 +177,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const [minPayment,     setMinPayment]     = useState('0')
   const [interestRate,   setInterestRate]   = useState('')
   const [lateFee,        setLateFee]        = useState('0')
+  // An investment's kind and what went in before it was added; a loan's months left.
+  const [kind,           setKind]           = useState('fund')
+  const [investedStart,  setInvestedStart]  = useState('')
+  const [loanMonths,     setLoanMonths]     = useState('')
   const [nameError,      setNameError]      = useState(false)
   const [qrImage,        setQrImage]        = useState(null)
   const [qrCropOpen,     setQrCropOpen]     = useState(false)
@@ -211,7 +242,11 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setType(t)
       setRole(account.role ?? defaultRole(t))
       setColor(account.color ?? PALETTE[0])
-      setStartingBal(numToMoneyStr(account.balance ?? 0))
+      // A loan's balance is stored negative; the field is what you owe.
+      setStartingBal(numToMoneyStr(t === 'loan' ? -(account.balance ?? 0) : (account.balance ?? 0)))
+      setKind(account.kind ?? 'other')
+      setInvestedStart(account.investedStart ? numToMoneyStr(account.investedStart) : '')
+      setLoanMonths('')
       /* Rows written before the picker existed all say PHP, which was the
          literal, not a choice - but it is still what their figures are in,
          so it is honoured rather than second-guessed. */
@@ -241,6 +276,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setDueDay('')
       setCutoffDay('')
       setMinPayment('0')
+      setInterestRate('')
+      setKind(prefill?.kind ?? 'fund')
+      setInvestedStart('')
+      setLoanMonths('')
       setQrImage(null)
       setParentName(prefill?.parentName ?? null)
       setScheme('')
@@ -289,8 +328,13 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       const cleanName = name.trim()
       const data = buildAccountRow({
         name: cleanName, type, role, color, creditLimit,
-        statementDay, dueDay, cutoffDay, minPayment, interestRate, lateFee,
+        statementDay, dueDay, cutoffDay, minPayment, lateFee,
+        interestRate: type === 'loan' ? loanRate : interestRate,
         qrImage, parentName, scheme, design, customColor, currency,
+        kind,
+        // Blank means everything in it so far is what went in.
+        investedStart: type === 'investment' && !isEdit && !investedStart.trim()
+          ? startingBal : investedStart,
       })
 
       if (isEdit) {
@@ -336,7 +380,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
              The row is an ordinary inflow or expense, not a special kind:
              the balance IS the ledger, so the only honest way to change it is
-             to add the movement that explains the difference. */
+             to add the movement that explains the difference. `adjust` says
+             it is a correction, which keeps it out of income and spending
+             (lib/flows.js) while it still moves the balance and net worth. */
           if (adjustDiff !== 0) {
             const now = new Date()
             const nowISO = now.toISOString()
@@ -344,24 +390,28 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               txId:        crypto.randomUUID(),
               type:        adjustDiff > 0 ? 'inflow' : 'expense',
               date:        nowISO,
-              description: 'Balance adjustment',
+              description: CORRECTION_DESC,
               category:    adjustDiff > 0 ? 'Income' : 'Others',
               account:     cleanName,
               amount:      Math.abs(adjustDiff),
+              adjust:      'correction',
               synced:      UNSYNCED,
               updatedAt:   nowISO,
             })
-            const newBal = parseMoney(startingBal)
+            const newBal = balanceFromField(startingBal)
             await db.accounts.update(account.id, { balance: newBal, updatedAt: nowISO })
             await db.balances.put({ account: cleanName, balance: newBal })
           }
         })
+      } else if (type === 'investment') {
+        await createInvestment(data, parseMoney(startingBal) || 0)
       } else {
-        await createAccount(data, parseMoney(startingBal))
+        await createAccount(data, balanceFromField(startingBal))
       }
       showToast(
         !isEdit ? 'Account created'
-        : adjustDiff !== 0 ? `Balance corrected to ${fmt(parseMoney(startingBal), currency)}`
+        : adjustDiff !== 0
+          ? `${type === 'loan' ? 'Owed' : 'Balance'} corrected to ${fmt(parseMoney(startingBal), currency)}`
         : 'Account updated',
       )
       close()
@@ -372,8 +422,16 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
     }
   }
 
+  /* An investment's value updates only mean something while it exists - its
+     opening value is one, so without this a new investment could never be
+     deleted at all. They go with it; anything else still blocks. */
+  const valueRowsOf = async () => (account?.type === 'investment'
+    ? (await db.transactions.where('account').equals(account.name).toArray()).filter(isAdjustment)
+    : [])
+
   async function handleDeleteCheck() {
     const byAcct = await db.transactions.where('account').equals(account.name).count()
+      - (await valueRowsOf()).length
     const byFrom = await db.transactions.where('fromAccount').equals(account.name).count()
     const byTo   = await db.transactions.where('toAccount').equals(account.name).count()
     const txTotal = byAcct + byFrom + byTo
@@ -387,6 +445,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
     if (deleteBlocked) return
     setSaving(true)
     try {
+      const valueRows = await valueRowsOf()
+      if (valueRows.length) await deleteTxGroup(valueRows)
       await db.transaction('rw', [db.accounts, db.balances, db.goals], async () => {
         await db.accounts.delete(account.id)
         // Unhook it from any goal it was funding, so no goal is left
@@ -412,9 +472,35 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   }
 
   const isParentItself = (allAccounts ?? []).some(a => a.parentName === account?.name)
+  /* Grouping is for money you spend and save - a GSave under GCash. An
+     investment or a loan has its own section on Accounts, so it neither
+     groups under anything nor has anything grouped under it. */
   const potentialParents = (allAccounts ?? []).filter(a =>
-    !a.parentName && a.type !== 'credit' && a.name !== name
+    !a.parentName && !['credit', 'loan', 'investment'].includes(a.type) && a.name !== name
   )
+
+  const isLoanType = type === 'loan'
+  const isInvestmentType = type === 'investment'
+  /* The field is what you OWE on a loan, a positive figure; the account
+     stores it negative so every balance sum treats it as a debt. */
+  const balanceFromField = (/** @type {string} */ s) => (isLoanType ? -parseMoney(s) : parseMoney(s))
+
+  /* A loan's monthly rate: the one typed in, or - left blank - the rate at
+     which the monthly payment clears what is owed in the months left. That
+     is how lenders quote a loan, and few people know their effective rate. */
+  const loanOwed = isLoanType ? (parseMoney(startingBal) || 0) : 0
+  const loanPayment = isLoanType ? (parseMoney(minPayment) || 0) : 0
+  const loanRate = (() => {
+    if (!isLoanType) return interestRate
+    if (String(interestRate).trim()) return interestRate
+    const n = parseInt(loanMonths)
+    if (!(n > 0) || !(loanPayment > 0) || !(loanOwed > 0)) return ''
+    const r = solveMonthlyRate(loanOwed, loanPayment, n)
+    return r > 0 ? String(Math.round(r * 100 * 10000) / 10000) : ''
+  })()
+  const loanMonthsLeft = isLoanType && loanPayment > 0 && loanOwed > 0
+    ? monthsToClear(loanOwed, loanPayment, (parseFloat(loanRate) || 0) / 100)
+    : null
 
   /* The page can bail the moment it is closed; the sheet must not. Sheet
      keeps rendering its children for the 240ms its exit animation takes, and
@@ -431,8 +517,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
      before rounding existed - 140.0000000123. Compared raw, opening an
      account and pressing Save without touching anything would write a
      "Balance adjustment" transaction for P0.0000000123 and sync it. */
-  const adjustDiff = isEdit && type !== 'credit'
-    ? roundMoney(parseMoney(startingBal) - (account?.balance ?? 0), currency)
+  /* Not for an investment either: its value is updated from its own page,
+     which dates the figure - see UpdateValueSheet. */
+  const adjustDiff = isEdit && type !== 'credit' && type !== 'investment'
+    ? roundMoney(balanceFromField(startingBal) - (account?.balance ?? 0), currency)
     : 0
 
   /* The delete confirmation's content, defined once.
@@ -510,6 +598,24 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 Flat rather than upright because this is a preview, not a
                 choice - the card only stands up in Customise card, where the
                 thing being chosen IS how it looks. */}
+            {/* An investment or a loan is not drawn as a card, so it has no
+                card to design: its tile, and the one thing of the card's
+                style it keeps - the colour on its logo square. */}
+            {(isInvestmentType || isLoanType) ? (
+            <div className="pt-1 pb-1">
+              <div className="mx-auto max-w-[184px]">
+                <HoldingTile
+                  acct={{ ...(account ?? {}), name, type, kind, color, customColor, presetColor, currency,
+                    balance: isEdit ? account?.balance : balanceFromField(startingBal) }}
+                  preview
+                />
+              </div>
+              <div className="mt-4">
+                <SectionLabel>Colour</SectionLabel>
+                <ColorRail draft={draft} set={setDraft} />
+              </div>
+            </div>
+            ) : (
             <div className="pt-1 pb-1">
               <PreviewCard draft={draft} large />
 
@@ -529,6 +635,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 Customise card
               </button>
             </div>
+            )}
 
             {/* Name */}
             <div>
@@ -554,7 +661,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </p>
               ) : (
                 <div className="flex flex-wrap gap-2">
-                  {TYPE_OPTIONS.map(o => (
+                  {/* Not investments or loans on desktop yet: its Accounts
+                      page has no section for them, so one made there would
+                      vanish from the list it was made on. */}
+                  {TYPE_OPTIONS.filter(o => !(onDesktop() && (o.value === 'investment' || o.value === 'loan'))).map(o => (
                     <button
                       key={o.value}
                       onClick={() => { setType(o.value); setRole(defaultRole(o.value)) }}
@@ -574,15 +684,38 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 The marks themselves, not their names in chips: the mark IS
                 the name on a real card, and it is what you look at to check
                 which network yours is on. Same control as the create flow. */}
-            {type !== 'cash' && (
+            {!['cash', 'investment', 'loan'].includes(type) && (
               <div>
                 <SectionLabel>Card network</SectionLabel>
                 <SchemeRail value={scheme} onChange={v => setScheme(v)} />
               </div>
             )}
 
-            {/* Counts as — hidden for credit */}
-            {type !== 'credit' && (
+            {/* What kind of investment. A label and a glyph, nothing more -
+                every kind is valued the same way, by typing what the
+                provider shows you. */}
+            {isInvestmentType && (
+              <div>
+                <SectionLabel>Invested in</SectionLabel>
+                <Rail className="items-center gap-2 px-5 -mx-5 py-0.5">
+                  {INVESTMENT_KINDS.map(k => (
+                    <button
+                      key={k.value}
+                      type="button"
+                      onClick={() => setKind(k.value)}
+                      aria-pressed={kind === k.value}
+                      className={chipClass(kind === k.value)}
+                    >
+                      {k.label}
+                    </button>
+                  ))}
+                </Rail>
+              </div>
+            )}
+
+            {/* Counts as — hidden for credit, and for the two kinds whose
+                answer is fixed: an investment is invested, a loan is owed. */}
+            {!['credit', 'investment', 'loan'].includes(type) && (
               <div>
                 <SectionLabel>Counts as</SectionLabel>
                 {/* The create flow's control, not a second one.
@@ -610,7 +743,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 this page is the account's facts. */}
 
             {/* Group under parent */}
-            {type !== 'credit' && !isParentItself && potentialParents.length > 0 && (
+            {!['credit', 'loan', 'investment'].includes(type) && !isParentItself && potentialParents.length > 0 && (
               <div>
                 <SectionLabel>Group under</SectionLabel>
                 {/* One line that scrolls, not a wrapping block.
@@ -665,23 +798,34 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 Not for credit cards: what they owe comes off the statement
                 and the ledger, and typing over it would be a fiction. The
                 old pill was hidden for them too. */}
-            {(!isEdit || type !== 'credit') && (
+            {/* An investment's value is changed from its own page, where it
+                is dated; here it only says so. */}
+            {isEdit && isInvestmentType && (
+              <p className="px-1 text-12 text-slate-500 dark:text-slate-400">
+                To change what it is worth, use Update value on its page.
+              </p>
+            )}
+
+            {(!isEdit || (type !== 'credit' && !isInvestmentType)) && (
               <div>
-                <SectionLabel>{isEdit ? 'Balance' : 'Starting balance'}</SectionLabel>
+                <SectionLabel>
+                  {isLoanType ? (isEdit ? 'Owed' : 'Amount owed')
+                    : isInvestmentType ? 'Value now'
+                    : isEdit ? 'Balance' : 'Starting balance'}
+                </SectionLabel>
                 <MoneyField
                   value={startingBal === '0' ? '' : startingBal}
                   onChange={moneyChangeHandler(setStartingBal)}
                   currency={currency}
                 />
+                {/* A correction moves the balance and net worth, and is not
+                    counted as income or spending - so the line says that,
+                    rather than calling it one. */}
                 {isEdit && adjustDiff !== 0 && (
-                  <p className={`mt-2 px-1 text-12 font-medium ${
-                    adjustDiff > 0
-                      ? 'text-emerald-600 dark:text-emerald-400'
-                      : 'text-red-500 dark:text-red-400'
-                  }`}>
-                    {adjustDiff > 0
-                      ? `Records a ${fmt(adjustDiff, currency)} inflow to correct the balance`
-                      : `Records a ${fmt(Math.abs(adjustDiff), currency)} expense to correct the balance`}
+                  <p className="mt-2 px-1 text-12 font-medium text-slate-500 dark:text-slate-400">
+                    {isLoanType
+                      ? `Records a ${fmt(Math.abs(adjustDiff), currency)} correction to what you owe`
+                      : `Records a ${adjustDiff > 0 ? '+' : '−'}${fmt(Math.abs(adjustDiff), currency)} correction. It won't count as ${adjustDiff > 0 ? 'income' : 'spending'}.`}
                   </p>
                 )}
 
@@ -706,6 +850,93 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     <polyline points="5,2 9,7 5,12" />
                   </svg>
                 </button>
+              </div>
+            )}
+
+            {/* What went in, so "Paid in" and the gain beside it are right
+                from the first day. Money added later is a transfer, and is
+                counted on its own. */}
+            {isInvestmentType && (
+              <div>
+                <SectionLabel>{isEdit ? 'Paid in before you added it' : 'Paid in so far'}</SectionLabel>
+                <MoneyField
+                  value={investedStart}
+                  onChange={moneyChangeHandler(setInvestedStart)}
+                  currency={currency}
+                />
+                <p className="mt-2 px-1 text-12 text-slate-500 dark:text-slate-400">
+                  {isEdit
+                    ? 'Money you move into it here is added on top.'
+                    : 'Leave it blank if it is the same as the value.'}
+                </p>
+              </div>
+            )}
+
+            {/* Loan fields: what the lender's statement shows. The rate is
+                optional and worked out from the months left when blank. */}
+            {isLoanType && (
+              <div className="flex flex-col gap-4 pt-1">
+                <Divider />
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <SectionLabel>Monthly payment</SectionLabel>
+                    <MoneyField
+                      value={minPayment === '0' ? '' : minPayment}
+                      onChange={moneyChangeHandler(setMinPayment)}
+                      currency={currency}
+                    />
+                  </div>
+                  <div>
+                    <SectionLabel>Due day</SectionLabel>
+                    <input
+                      type="number"
+                      inputMode="numeric"
+                      min="1" max="31"
+                      value={dueDay}
+                      onChange={e => setDueDay(e.target.value)}
+                      placeholder="1–31"
+                      className={inputClass(false)}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  {!isEdit && (
+                    <div>
+                      <SectionLabel>Months left</SectionLabel>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="1" max="600"
+                        value={loanMonths}
+                        onChange={e => setLoanMonths(e.target.value)}
+                        placeholder="e.g. 48"
+                        className={inputClass(false)}
+                      />
+                    </div>
+                  )}
+                  <div>
+                    <SectionLabel>Interest / mo</SectionLabel>
+                    <Field
+                      value={interestRate}
+                      onChange={e => setInterestRate(e.target.value.replace(/[^0-9.]/g, ''))}
+                      inputMode="decimal"
+                      placeholder={!isEdit && loanRate ? rateLabel(loanRate) : 'Optional'}
+                      right={<span className="text-sm">%</span>}
+                    />
+                  </div>
+                </div>
+
+                <p className="text-11 text-slate-400 dark:text-slate-500 px-1 -mt-2">
+                  {loanMonthsLeft != null && Number.isFinite(loanMonthsLeft)
+                    ? `About ${loanMonthsLeft} ${loanMonthsLeft === 1 ? 'payment' : 'payments'} left${loanRate ? ` at ${rateLabel(loanRate)}% a month` : ''}`
+                    : loanMonthsLeft === Infinity
+                      ? 'The payment does not cover the interest'
+                      : isEdit
+                        ? 'Add the monthly payment to see how many are left'
+                        : 'Leave the rate blank and it is worked out from the months left'}
+                </p>
               </div>
             )}
 
@@ -808,6 +1039,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 The preview is bigger and it is a button - tapping the QR you
                 are looking at to replace it is the obvious move, and the two
                 pills beside it were the only way to do anything. */}
+            {/* Nobody pays you into a loan or an investment. */}
+            {!isLoanType && !isInvestmentType && (
             <div>
               <SectionLabel>Payment QR <span className="font-normal text-slate-400 normal-case">(optional)</span></SectionLabel>
               {qrImage ? (
@@ -876,6 +1109,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 onChange={onQrFileChange}
               />
             </div>
+            )}
 
             {/* Save, on the page only.
 

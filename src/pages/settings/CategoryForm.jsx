@@ -396,7 +396,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               ].join(' ')}>
                 {reassignTarget ? (
                   <>
-                    <span className="text-base shrink-0">{reassignTarget.icon}</span>
+                    <span className="shrink-0 leading-none"><CategoryGlyph cat={reassignTarget} size={16} /></span>
                     <p className="text-xs font-semibold text-emerald-700 dark:text-emerald-400 truncate">{reassignTarget.name}</p>
                   </>
                 ) : (

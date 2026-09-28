@@ -1,5 +1,6 @@
 import db from '../db/db'
 import { parseMoney } from '../utils/moneyInput'
+import { snapToCutoff } from '../utils/recurring'
 
 /**
  * Validating and writing a bill, in one place, for two very different screens.
@@ -39,22 +40,32 @@ export function validateRecurring({ name, amountStr, category, account, nextDate
  *
  * @param {Record<string, any>} input
  */
-export function toRecurringRow({ name, amountStr, category, account, frequency, nextDate, active, split }) {
+export function toRecurringRow({ name, amountStr, category, account, frequency, nextDate, active, split, type }) {
+  const income = type === 'inflow'
   return {
     name: name.trim(),
     amount: parseMoney(amountStr),
     category: category.name,
     account: account.name,
     frequency,
-    nextDate,
+    // Twice a month lands on the cut-offs, whatever day was picked.
+    nextDate: frequency === 'semimonthly' ? snapToCutoff(nextDate) : nextDate,
     active,
     /* A standing division, stored as TYPED rather than resolved, so it
        re-divides whatever the bill charges this month. null rather than an
        empty object for a bill nobody shares - the write path checks
-       `people.length` and an empty shape would be a lie about intent. */
-    split: split?.people?.length ? split : null,
+       `people.length` and an empty shape would be a lie about intent. Income
+       is never divided. */
+    split: !income && split?.people?.length ? split : null,
+    /* 'inflow' for income that arrives on a schedule, 'expense' for a bill.
+       Left out when the caller does not say - the desktop sheet predates
+       income - so editing a salary there cannot turn it into a bill. */
+    ...(type ? { type: income ? 'inflow' : 'expense' } : {}),
   }
 }
+
+/** Income that arrives on a schedule, rather than a bill. @param {Record<string, any>|null|undefined} rec */
+export const isIncomeRecurring = (rec) => rec?.type === 'inflow'
 
 /**
  * Write it, and say which of the two things happened.

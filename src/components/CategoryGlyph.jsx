@@ -12,6 +12,8 @@ import {
   IconBuildingHospital, IconPizza, IconSoup, IconGasStation, IconTrain,
   IconHeart, IconMoodKid, IconPlant2, IconSpray, IconScissors, IconTent,
   IconSalad, IconSparkles,
+  // The app's own rows, and the fallbacks callers pass.
+  IconBuildingBank, IconUserDollar, IconAdjustmentsDollar, IconBolt,
 } from '@tabler/icons-react'
 
 /**
@@ -53,7 +55,11 @@ import {
  * caps and joins - so at a shared 1.8 they sit together. The boundary is also
  * meaningful rather than arbitrary: Untitled UI draws interface, Tabler draws
  * objects.
+ *
+ * @typedef {import('react').ComponentType<any>} Glyph
+ * @typedef {{name?: string, icon?: string, color?: string}} GlyphCat
  */
+/** @type {Record<string, Glyph>} */
 const CATEGORY_ICON = {
   // ── Expense presets ──
   'Food':           IconToolsKitchen2,
@@ -104,6 +110,22 @@ const CATEGORY_ICON = {
   'Income':         IconTrendingUp,
   'Transfer':       IconArrowsExchange,
   'Transfer Fee':   IconReceiptTax,
+
+  // ── Written by the app, never picked ──
+  /* The categories the app files rows under by itself - a loan payment's
+     interest, a debt settled up - and two names a row's tile is given for
+     what it is rather than a category it has (lib/txRow.js): the part of a
+     loan payment that goes to the loan, which is a transfer, and a balance
+     correction. None of them had a glyph, so each drew the emoji it was
+     created with, or a flying banknote.
+
+     The two debt rows share one: the sign and the colour of the amount say
+     which way it went, the way one pair of arrows serves every transfer. */
+  'Loan interest':      IconPercentage,
+  'Loan payment':       IconBuildingBank,
+  'Debt Payment':       IconUserDollar,
+  'Debt Collection':    IconUserDollar,
+  'Balance adjustment': IconAdjustmentsDollar,
 }
 
 /**
@@ -131,7 +153,13 @@ const CATEGORY_ICON = {
  * Two of the forty have no honest glyph in Tabler (the teddy bear and the
  * broom), so they get the nearest object rather than a wrong one: a child's
  * face and a spray bottle.
+ *
+ * The last row is not the picker's. It is the emoji the app itself stores on
+ * the categories it makes (the bank on Loan interest, the arrows on
+ * Transfer) and the ones callers pass as a fallback for a row with no
+ * category - so neither ever reaches the screen as an emoji.
  */
+/** @type {Record<string, Glyph>} */
 const EMOJI_ICON = {
   '🍔': IconToolsKitchen2,  '🛍️': IconShoppingBag,     '🚗': IconCar,
   '🎮': IconDeviceGamepad2, '💆': IconMassage,          '🧾': IconReceipt2,
@@ -147,6 +175,9 @@ const EMOJI_ICON = {
   '💳': IconCreditCard,     '🎀': IconHeart,            '🧸': IconMoodKid,
   '🪴': IconPlant2,         '🧹': IconSpray,            '💈': IconScissors,
   '🎪': IconTent,
+  '🏦': IconBuildingBank,   '🔄': IconArrowsExchange,   '💸': IconCash,
+  '🔁': IconRepeat,         '🏷️': IconTag,              '⚡': IconBolt,
+  '📈': IconChartLine,
 }
 
 /**
@@ -157,6 +188,9 @@ const EMOJI_ICON = {
  * burger emoji and has always drawn a fork and knife, and that stays true.
  * The emoji only decides for a category the name map does not cover - which
  * is precisely the case that used to fall out of the icon set.
+ *
+ * @param {GlyphCat|null|undefined} cat
+ * @returns {Glyph|null}
  */
 export function categoryIcon(cat) {
   return presetCategoryIcon(cat) ?? EMOJI_ICON[cat?.icon] ?? null
@@ -164,7 +198,9 @@ export function categoryIcon(cat) {
 
 /** Only the name-derived one, for callers that need to know a preset has its
  *  own icon regardless of which emoji is stored - the category form says so
- *  next to its picker. */
+ *  next to its picker.
+ *  @param {GlyphCat|null|undefined} cat
+ *  @returns {Glyph|null} */
 export function presetCategoryIcon(cat) {
   return CATEGORY_ICON[cat?.name] ?? null
 }
@@ -174,12 +210,17 @@ export function presetCategoryIcon(cat) {
  *
  * `emoji` overrides the fallback for the handful of places that want something
  * other than a box when there is no category at all - a bill row wants the
- * repeat arrows, a statement row wants a card.
+ * repeat arrows, a statement row wants a card. It is drawn too, through
+ * EMOJI_ICON: a bill with no category shows the arrows as a line icon, not
+ * as the 🔁 emoji it used to print. Only a category's OWN emoji, one this
+ * file has no glyph for, still shows as itself.
  *
  * Tabler's stroke-WIDTH prop is called `stroke` (its colour prop is `color`),
  * which is a trap worth naming: passing strokeWidth here does nothing. 1.8 is
  * the app's weight, set to match the navbar - see LucideProvider's replacement
  * note in components/icons.jsx.
+ *
+ * @param {{cat?: GlyphCat|null, size?: number, emoji?: string, className?: string, color?: boolean}} props
  */
 export default function CategoryGlyph({ cat, size = 20, emoji = '📦', className = '', color = true }) {
   /* static-components fires here and is wrong. It sees a component value
@@ -187,7 +228,7 @@ export default function CategoryGlyph({ cat, size = 20, emoji = '📦', classNam
      remount the subtree. `categoryIcon` is a lookup in CATEGORY_ICON, a
      module-level frozen map, so the same category always yields the same
      identity - there is nothing being constructed. */
-  const Icon = categoryIcon(cat)
+  const Icon = categoryIcon(cat) ?? (cat?.icon ? null : EMOJI_ICON[emoji] ?? null)
   if (Icon) {
     /* The glyph takes the category's colour by default.
     

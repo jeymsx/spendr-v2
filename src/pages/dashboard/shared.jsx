@@ -3,6 +3,7 @@ import { IconBank, IconCard, IconPhone, IconWallet, IconWarning, IconBell } from
 import CategoryGlyph from '../../components/CategoryGlyph'
 import { baseSymbol } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
+import { isSpend } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -51,7 +52,8 @@ export function getContextHint(txAll, budgetCategories, upcomingRecurring) {
   // Overdue bills first, then ones due today or tomorrow. The previous check
   // was `diff <= 1`, which is also true for anything long overdue — so a bill
   // three weeks late still read "due today".
-  const bills = (upcomingRecurring ?? []).filter(r => r.nextDate)
+  // Bills only: a salary is not "due", and never "overdue".
+  const bills = (upcomingRecurring ?? []).filter(r => r.nextDate && r.type !== 'inflow')
   const daysAway = (r) => {
     const [y, mo, d] = String(r.nextDate).slice(0, 10).split('-').map(Number)
     const start = new Date(); start.setHours(0, 0, 0, 0)
@@ -64,7 +66,7 @@ export function getContextHint(txAll, budgetCategories, upcomingRecurring) {
 
   // Today's spending
   const todayTotal = (txAll ?? [])
-    .filter(t => t.type === 'expense' && isoToDateInput(t.date) === today)
+    .filter(t => isSpend(t) && isoToDateInput(t.date) === today)
     .reduce((s, t) => s + txBase(t), 0)
   if (todayTotal > 0) {
     const compact = todayTotal >= 1000
@@ -106,6 +108,8 @@ export const ACCOUNT_ICON = {
   credit:  { icon: <IconCard />,    label: 'Credit'   },
   ewallet: { icon: <IconPhone />,   label: 'E-wallet' },
   bank:    { icon: <IconBank />,    label: 'Bank'     },
+  investment: { icon: <IconBank />, label: 'Investment' },
+  loan:    { icon: <IconBank />,    label: 'Loan'     },
 }
 
 // ── Date helpers ───────────────────────────────────────────────────────────────
@@ -172,7 +176,16 @@ export function quickActionCounts({
     return !Number.isNaN(d.getTime()) && d <= horizon
   }
 
-  const bills = recurring.filter(r => r.active && dueSoon(r.nextDate)).length
+  /* A bill due soon or late. Income only once its day has passed without
+     being marked received - that is something to do; a payday coming up in
+     five days is not. */
+  const passed = (/** @type {string|undefined} */ iso) => {
+    if (!iso) return false
+    const d = new Date(`${String(iso).slice(0, 10)}T00:00:00`)
+    return !Number.isNaN(d.getTime()) && d < start
+  }
+  const bills = recurring.filter(r => r.active
+    && (r.type === 'inflow' ? passed(r.nextDate) : dueSoon(r.nextDate))).length
 
   const debtCount = debts.filter(d =>
     Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0)) > 0 && dueSoon(d.dueDate)).length

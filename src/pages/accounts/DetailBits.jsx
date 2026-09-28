@@ -1,26 +1,37 @@
+import { useMemo } from 'react'
 import Card from '../../components/ui/Card'
+import { foldLoanPayments } from '../../lib/loans'
+import { ListEnd, useInfiniteList } from '../../components/ui/InfiniteList'
 import Divider from '../../components/ui/Divider'
 import { fmtCompact } from '../../lib/money'
 import { DetailTxRow } from './DetailParts'
 
 // ── Bits ───────────────────────────────────────────────────────────────────────
 
+/** An account's history, a page at a time as you scroll (ui/InfiniteList),
+ *  with each loan payment as one row (lib/loans.js foldLoanPayments). */
 export function TxList({ txs, accountName, onSelect, catMap }) {
+  const rows = useMemo(() => foldLoanPayments(txs), [txs])
+  const list = useInfiniteList(rows, { resetKey: accountName })
   return (
-    <Card clip className="mb-4">
-      {txs.map((tx, i) => (
-        <div key={tx.id ?? i}>
-          <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} catMap={catMap} />
-          {i < txs.length - 1 && <Divider inset="row" />}
-        </div>
-      ))}
-    </Card>
+    <div className="mb-4">
+      <Card clip>
+        {list.visible.map((tx, i) => (
+          <div key={tx.id ?? i}>
+            <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} catMap={catMap} />
+            {i < list.visible.length - 1 && <Divider inset="row" />}
+          </div>
+        ))}
+      </Card>
+      <ListEnd list={list} done={`All ${rows.length} transactions`} />
+    </div>
   )
 }
 
 /**
  * Net change across the window, which is the question the chart's shape
- * prompts. For a credit card a rise is money owed, so the colours invert.
+ * prompts. For a credit card or a loan a rise is money owed, so the colours
+ * invert - the prop is named for the card, which came first.
  */
 export function TrendDelta({ data, isCredit, currency }) {
   if (data.length < 2) return null

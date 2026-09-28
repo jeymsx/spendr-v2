@@ -1,5 +1,7 @@
 import { amountDisplay, TONE_CLASS } from '../../lib/txMoney'
+import { isAdjustment } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
+import { LOAN_INTEREST } from '../../lib/loans'
 
 /** "12:30 PM". The time under a transaction's description. */
 export function fmtTime(isoStr) {
@@ -75,8 +77,10 @@ export function groupByDate(txs) {
 
 export const PAGE_SIZE = 50
 
-/** Categories the app files its own rows under - lib/recap.js has the same three. */
-const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collection'])
+/** Categories the app files its own rows under - lib/recap.js has the same four.
+ *  A loan's interest is one: refiled, it would no longer be found as its
+ *  payment's other half (lib/loans.js loanPairOf). */
+const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collection', LOAN_INTEREST])
 
 /**
  * Whether a row's category can be changed from the list with one tap.
@@ -91,7 +95,7 @@ const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collec
  */
 export function canRecategorize(tx) {
   return (tx?.type === 'expense' || tx?.type === 'inflow') && !tx.refundOf && !tx.settles
-    && !MACHINE_CATEGORIES.has(tx.category) && tx.description !== 'Balance adjustment'
+    && !MACHINE_CATEGORIES.has(tx.category) && !isAdjustment(tx)
 }
 
 export const TYPE_OPTS = [

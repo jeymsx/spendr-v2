@@ -2,9 +2,10 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { localMonthStartIso } from '../../utils/txDate'
 import { buildRecap, parseMonth } from '../../lib/recap'
-import { netWorthNow } from '../../lib/netWorth'
+import { debtsCountFrom, netWorthNow } from '../../lib/netWorth'
 import { txBase } from '../../lib/fxContext'
 import { RATES_META_KEY } from '../../lib/fx'
+import { isSpend } from '../../lib/flows'
 
 /**
  * Where a recap's figures come from, once.
@@ -29,11 +30,13 @@ import { RATES_META_KEY } from '../../lib/fx'
  * @property {boolean} rollover
  * @property {string} name       the display name, trimmed; '' when there is none
  * @property {import('../../lib/fx').RateTable|null} rates  the cached exchange rates, if any
+ * @property {Array<Record<string, any>>} debts
+ * @property {boolean} includeDebts  Preferences › Count debts
  */
 
 /** Every table a recap reads, in one go. @returns {Promise<RecapInputs>} */
 export async function readRecapInputs() {
-  const [transactions, categories, accounts, badges, rollover, name, rates] = await Promise.all([
+  const [transactions, categories, accounts, badges, rollover, name, rates, debts, debtPref] = await Promise.all([
     db.transactions.toArray(),
     db.categories.toArray(),
     db.accounts.toArray(),
@@ -41,12 +44,16 @@ export async function readRecapInputs() {
     db.meta.get('budgetRollover'),
     db.meta.get('displayName'),
     db.meta.get(RATES_META_KEY),
+    db.debts.toArray(),
+    db.meta.get('netWorthDebts'),
   ])
   return {
     transactions, categories, accounts, badges,
     rollover: !!rollover?.value,
     name: String(name?.value ?? '').trim(),
     rates: rates?.value ?? null,
+    debts,
+    includeDebts: debtsCountFrom(debtPref),
   }
 }
 
@@ -57,15 +64,19 @@ export async function readRecapInputs() {
  * @param {{month: string, currency: string, now?: Date}} options
  */
 export function recapFrom(inputs, { month, currency, now = new Date() }) {
+  const debts = inputs.includeDebts ? (inputs.debts ?? []) : []
   return buildRecap({
     month,
     transactions: inputs.transactions,
     categories: inputs.categories,
     badges: inputs.badges,
-    netWorthNow: netWorthNow(inputs.accounts, inputs.transactions, currency, inputs.rates),
+    netWorthNow: netWorthNow(inputs.accounts, inputs.transactions, currency, inputs.rates,
+      { debts, includeDebts: !!inputs.includeDebts }),
     currency,
     globalRollover: inputs.rollover,
     now,
+    debts,
+    includeDebts: !!inputs.includeDebts,
   })
 }
 
@@ -85,7 +96,7 @@ export function useMonthIcons(month, count = 3) {
     const [rows, categories] = await Promise.all([
       db.transactions.where('date')
         .between(localMonthStartIso(year, m), localMonthStartIso(year, m + 1), true, false)
-        .filter(t => t.type === 'expense').toArray(),
+        .filter(isSpend).toArray(),
       db.categories.toArray(),
     ])
     const icon = new Map(categories.map(c => [c.name, c.icon]))

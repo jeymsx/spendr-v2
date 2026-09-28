@@ -5,6 +5,8 @@ import { allocateGoals } from './goals'
 import { isoToDateInput } from '../utils/txDate'
 import { getFxContext, txBase } from './fxContext'
 import { toBase } from './fx'
+import { isSpend } from './flows'
+import { isLiquid } from './accountMeta'
 
 /**
  * Achievements: badges, milestones and challenges, under one roof.
@@ -142,7 +144,8 @@ export function noSpendStreak({ transactions, activeDays = [], today }) {
     if (!d || d > now) continue
     logged.add(d)
     if (!first || d < first) first = d
-    if (t.type === 'expense' && txBase(/** @type {any} */ (t)) > 0) spent.add(d)
+    // A balance correction is not spending, so it does not break a streak.
+    if (isSpend(t) && txBase(/** @type {any} */ (t)) > 0) spent.add(d)
   }
   /* Today is a day the app was open - it is, or nothing would be asking -
      whether or not the write recording it has landed yet. */
@@ -345,7 +348,9 @@ const NEW_BADGES = [
     /* Into savings from somewhere that is not savings: shuffling between two
        savings accounts is not setting anything aside. */
     test: ({ transactions, accounts }) => {
-      const savings = new Set((accounts ?? []).filter(a => a?.type === 'savings').map(a => a.name))
+      // An investment counts: putting money into MP2 is setting it aside too.
+      const savings = new Set((accounts ?? [])
+        .filter(a => a?.type === 'savings' || a?.type === 'investment').map(a => a.name))
       return (transactions ?? []).some(t => t?.type === 'transfer' && (t.amount ?? 0) > 0
         && savings.has(t.toAccount) && !savings.has(t.fromAccount))
     },
@@ -425,7 +430,7 @@ const NEW_BADGES = [
     /* Held, not merely opened: an empty dollar account is not money in dollars. */
     test: ({ accounts }) => {
       const base = String(getFxContext().base || 'PHP').toUpperCase()
-      const held = (accounts ?? []).filter(a => a && a.type !== 'credit' && (a.role ?? '') !== 'credit' && (a.balance ?? 0) > 0)
+      const held = (accounts ?? []).filter(a => a && isLiquid(a) && (a.role ?? '') !== 'credit' && (a.balance ?? 0) > 0)
       return new Set(held.map(a => String(a.currency || base).toUpperCase())).size >= 2
     },
   },
@@ -562,7 +567,8 @@ function heldInBase(accounts) {
   const { base, rates } = getFxContext()
   let total = 0
   for (const a of accounts ?? []) {
-    if (!a || a.type === 'credit' || (a.role ?? '') === 'credit') continue
+    // Money you hold: not a card, a loan, or an investment's typed value.
+    if (!a || !isLiquid(a) || (a.role ?? '') === 'credit') continue
     const v = toBase(a.balance ?? 0, String(a.currency || base).toUpperCase(), base, rates)
     if (v != null && Number.isFinite(v)) total += v
   }

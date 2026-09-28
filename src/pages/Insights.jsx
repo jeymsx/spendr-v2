@@ -8,6 +8,7 @@ import { MonthNav, RangeChips } from './insights/PeriodBar'
 import { CategoryLegend, DonutHero, StatPair } from './insights/Summary'
 import Highlights, { shownHighlights } from './insights/Highlights'
 import Explore from './insights/Explore'
+import useForecast from '../hooks/useForecast'
 import WrappedLink from './insights/WrappedLink'
 import { beginReturn, trackScroll } from './insights/zoom'
 import { useRecapMonth } from './recap/useRecapMonth'
@@ -21,6 +22,7 @@ function preloadPages() {
   for (const load of [
     () => import('./insights/TrendPage'), () => import('./insights/ExpensesPage'),
     () => import('./insights/AccountsPage'), () => import('./insights/NetWorthPage'),
+    () => import('./insights/ForecastPage'),
   ]) load().catch(() => { /* offline and not cached yet: the tap will try again */ })
 }
 
@@ -56,10 +58,14 @@ export default function Insights() {
   const kept = useInsightsState()
   const data = useInsightsData(period)
   const netWorth = useNetWorthSeries(kept.net)
+  // The Next 30 days card - the same walk Home's card and the Forecast page read.
+  const { forecast } = useForecast(30)
   const month = period.range === '1m' ? monthOfPeriod(period) : null
   // The Wrapped link follows the month arrows when they point at a finished month.
   const recapMonth = useRecapMonth(month)
-  const { loading } = data
+  /* The forecast card is part of Explore's height, so the page counts as
+     loaded only once it is in - otherwise a restored scroll lands short. */
+  const loading = data.loading || !forecast
 
   /* Recharts restarts a series' animation when its key changes, and the
      gradient ids are namespaced with it so two periods never collide. */
@@ -100,7 +106,10 @@ export default function Insights() {
     returning.current = null
     // Two frames: past the scroll events of the reset and of the restore.
     requestAnimationFrame(() => requestAnimationFrame(() => tracker.current?.ready()))
-    if (landing) requestAnimationFrame(() => landing.land())
+    /* At once, not a frame later: a Back closing through the View Transitions
+       API holds the screen until this names the card, and while it does the
+       browser runs no frames. The surface waits its frame by itself. */
+    if (landing) landing.land()
   }, [settled, kept.scroll])
 
   const showWrapped = !!recapMonth && !(wrappedOnHome() && recapMonth === addMonths(monthKeyOf(new Date()), -1))
@@ -144,7 +153,7 @@ export default function Insights() {
         )}
 
         <div className="mt-8">
-          {loading ? <ExploreSkeleton /> : <Explore data={data} range={period.range} netWorth={netWorth} />}
+          {loading ? <ExploreSkeleton /> : <Explore data={data} range={period.range} netWorth={netWorth} forecast={forecast} />}
         </div>
 
         {!loading && showWrapped && (

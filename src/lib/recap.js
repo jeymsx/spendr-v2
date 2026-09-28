@@ -2,8 +2,10 @@ import { isoToDateInput, txMonthKey } from '../utils/txDate'
 import { txBase } from './fxContext'
 import { roundMoney } from './currency'
 import { effectiveLimit } from './rollover'
-import { netWorthDelta } from './trend'
+import { netWorthMoves } from './trend'
 import { achievementDef } from './achievements'
+import { isAdjustment, isFlowRow, isIncome, isSpend } from './flows'
+import { LOAN_INTEREST } from './loans'
 
 /**
  * A month, looked back on: every figure the monthly recap shows.
@@ -99,8 +101,9 @@ export function monthLabel(key, now = new Date()) {
   return year === now.getFullYear() ? monthName(key) : `${monthName(key)} ${year}`
 }
 
-/** An expense or an inflow: money that actually came or went. @param {Record<string, any>} tx */
-const isFlow = (tx) => tx?.type === 'expense' || tx?.type === 'inflow'
+/** Money that actually came or went - not a balance correction or an
+ *  investment's value moving (lib/flows.js). @param {Record<string, any>} tx */
+const isFlow = (tx) => isFlowRow(tx)
 
 /** The local day of the month a row falls on; 0 for a row with no usable date. @param {Record<string, any>} tx */
 const dayOf = (tx) => Number(isoToDateInput(tx.date).slice(8, 10)) || 0
@@ -109,7 +112,7 @@ const dayOf = (tx) => Number(isoToDateInput(tx.date).slice(8, 10)) || 0
 const foldLabel = (s) => String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ')
 
 /** Categories the app files its own rows under. */
-const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collection'])
+const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collection', LOAN_INTEREST])
 
 /**
  * Something someone bought: an expense with a price, that is not a refund
@@ -120,7 +123,7 @@ const MACHINE_CATEGORIES = new Set(['Transfer Fee', 'Debt Payment', 'Debt Collec
  */
 function isPurchase(t) {
   return t.type === 'expense' && (t.amount ?? 0) > 0 && !t.refundOf && !t.settles
-    && !MACHINE_CATEGORIES.has(t.category) && t.description !== 'Balance adjustment'
+    && !MACHINE_CATEGORIES.has(t.category) && !isAdjustment(t)
 }
 
 /**
@@ -183,11 +186,14 @@ export function recapMonths(transactions, now = new Date()) {
  * @param {(tx: any) => number} [input.priceOf]  a row's value in the ledger's currency
  * @param {boolean} [input.globalRollover]
  * @param {Date} [input.now]
+ * @param {Array<Record<string, any>>} [input.debts]  counted when includeDebts
+ * @param {boolean} [input.includeDebts]
  * @returns {Recap}
  */
 export function buildRecap({
   month, transactions = [], categories = [], badges = [], netWorthNow = null,
   currency = 'PHP', priceOf = txBase, globalRollover = false, now = new Date(),
+  debts = [], includeDebts = false,
 }) {
   /* `priceOf`, not `valueOf`: destructuring a key named valueOf finds
      Object.prototype.valueOf on every object, so its default never applied. */
@@ -202,8 +208,8 @@ export function buildRecap({
     posted.some(t => { const k = isFlow(t) ? txMonthKey(t.date) : ''; return !!k && k < key })
 
   const rows = inMonth(month)
-  const expenses = rows.filter(t => t.type === 'expense')
-  const inflows = rows.filter(t => t.type === 'inflow')
+  const expenses = rows.filter(isSpend)
+  const inflows = rows.filter(isIncome)
 
   const spent = total(expenses)
   const income = total(inflows)
@@ -219,8 +225,8 @@ export function buildRecap({
   const prev = {
     month: prevKey,
     label: monthLabel(prevKey, now),
-    spent: total(prevRows.filter(t => t.type === 'expense')),
-    income: total(prevRows.filter(t => t.type === 'inflow')),
+    spent: total(prevRows.filter(isSpend)),
+    income: total(prevRows.filter(isIncome)),
     hasActivity: prevRows.length > 0,
     partial: prevRows.length > 0 && !startedBefore(prevKey) && firstPurchaseDay(prevRows) > 1,
   }
@@ -299,7 +305,7 @@ export function buildRecap({
     goTo: goToPlace(bought, money, iconOf),
     budgets: budgetSummary({ categories, posted, month, byCat, globalRollover, money }),
     // Every row, scheduled ones too: see netWorthOver.
-    netWorth: netWorthOver({ month, transactions, netWorthNow, priceOf, money }),
+    netWorth: netWorthOver({ month, transactions, netWorthNow, priceOf, money, debts, includeDebts }),
     badges: badgesIn(badges, month),
   }
 }
@@ -497,22 +503,25 @@ function budgetSummary({ categories, posted, month, byCat, globalRollover, money
  * come off first, exactly as the Insights sweep takes them off, or every
  * point of the month would sit lower by their sum.
  *
+ * With "Count debts" on, the same debt movements the Insights chart uses:
+ * see netWorthMoves in lib/trend.js.
+ *
  * @param {object} input
  * @param {string} input.month
  * @param {any[]} input.transactions
  * @param {number|null} input.netWorthNow
  * @param {(tx: any) => number} input.priceOf
  * @param {(v: number) => number} input.money
+ * @param {any[]} [input.debts]
+ * @param {boolean} [input.includeDebts]
  */
-function netWorthOver({ month, transactions, netWorthNow, priceOf, money }) {
+function netWorthOver({ month, transactions, netWorthNow, priceOf, money, debts = [], includeDebts = false }) {
   if (netWorthNow == null || !Number.isFinite(netWorthNow)) return null
   const { year, month: m } = parseMonth(month)
   const days = daysInMonth(month)
 
-  const moves = transactions
-    .filter(Boolean)
-    .map(t => ({ t: Date.parse(t.date), d: netWorthDelta(t, priceOf) }))
-    .filter(x => Number.isFinite(x.t) && x.d !== 0)
+  const moves = netWorthMoves({ txs: transactions.filter(Boolean), debts, includeDebts, priceOf })
+    .map(x => ({ t: x.t, d: x.delta }))
     .sort((a, b) => b.t - a.t)
 
   // Instants to read the figure at, latest first: the end of each day, then

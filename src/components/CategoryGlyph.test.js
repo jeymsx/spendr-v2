@@ -27,6 +27,18 @@ describe('categoryIcon', () => {
     }
   })
 
+  it('knows the categories the app writes by itself', () => {
+    for (const name of ['Loan interest', 'Loan payment', 'Debt Payment', 'Debt Collection', 'Balance adjustment']) {
+      expect(categoryIcon({ name }), name).toBeTruthy()
+    }
+  })
+
+  it('draws the emoji the app stores on the categories it makes', () => {
+    // A renamed Transfer or Loan interest keeps a drawn glyph, not its emoji.
+    expect(categoryIcon({ name: 'Moving money', icon: '🔄' })).toBeTruthy()
+    expect(categoryIcon({ name: 'Bank interest', icon: '🏦' })).toBeTruthy()
+  })
+
   it('falls back to nothing for a category it does not know', () => {
     // Deliberate: an unknown category keeps its own emoji rather than being
     // handed a generic box.

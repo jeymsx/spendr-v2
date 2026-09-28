@@ -46,6 +46,8 @@ export default function Preferences() {
     (meta ?? []).find(m => m.key === key)?.value ?? fallback
   const skipConfirm = !!read('skipConfirm', false)
   const budgetRollover = !!read('budgetRollover', false)
+  // On unless it was turned off - lib/netWorth.js debtsCountFrom.
+  const countDebts = read('netWorthDebts', true) !== false
   const netWorthMode = read('netWorthMode', 'converted') === 'separated' ? 'separated' : 'converted'
   const put = (/** @type {string} */ key, /** @type {any} */ value) =>
     db.meta.put({ key, value, updatedAt: new Date().toISOString() })
@@ -125,6 +127,27 @@ export default function Preferences() {
             sublabel="Unspent rolls into next month"
             right={<ToggleSwitch on={budgetRollover} />}
             onTap={() => put('budgetRollover', !budgetRollover)}
+          />
+
+          <RowDivider />
+          {/* Money between you and other people - the Debts page - as part
+              of net worth: what they owe you adds, what you owe them takes
+              off. On unless turned off. Every net-worth figure reads it,
+              through lib/netWorth.js. */}
+          <SettingsRow
+            iconEl={
+              <RowIcon color="amber">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <circle cx="9" cy="8" r="3" />
+                  <path d="M3 20a6 6 0 0 1 12 0" />
+                  <path d="M16 11h5M18.5 8.5v5" />
+                </svg>
+              </RowIcon>
+            }
+            label="Count debts in net worth"
+            sublabel="Owed to you, less what you owe"
+            right={<ToggleSwitch on={countDebts} />}
+            onTap={() => put('netWorthDebts', !countDebts)}
           />
 
           {/* Only for a ledger that actually holds more than one currency:

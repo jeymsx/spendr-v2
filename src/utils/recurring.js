@@ -13,7 +13,16 @@ export function advanceNextDate(dateStr, frequency) {
   // An unknown frequency stays put - on the same LOCAL day, not the UTC one.
   if (!step) return toDateInput(d)
 
-  if (step.unit === 'day') {
+  if (step.unit === 'semimonth') {
+    /* Twice a month on the Philippine payroll cut-offs: the 15th, then the
+       last day of the month. Not "every 15 days", which drifts off both
+       within a quarter. A date that is on neither - one typed before this
+       existed - lands on the next of the two. */
+    const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+    if (d.getDate() < 15) d.setDate(15)
+    else if (d.getDate() < last) d.setDate(last)
+    else { d.setDate(1); d.setMonth(d.getMonth() + 1); d.setDate(15) }
+  } else if (step.unit === 'day') {
     d.setDate(d.getDate() + step.n)
   } else {
     /* Reset to the 1st before moving, then clamp. Adding a month to Jan 31
@@ -75,6 +84,9 @@ export const FREQ_OPTIONS = [
   { value: 'daily',       label: 'Daily',          short: 'day', every: 'day',      step: { unit: 'day',   n: 1  }, perMonth: 30.44   },
   { value: 'weekly',      label: 'Weekly',         short: 'wk',  every: 'week',     step: { unit: 'day',   n: 7  }, perMonth: 52 / 12 },
   { value: 'fortnightly', label: 'Every 2 weeks',  short: '2wk', every: '2 weeks',  step: { unit: 'day',   n: 14 }, perMonth: 26 / 12 },
+  /* The 15th and the last day - how pay lands in the Philippines. See
+     advanceNextDate, and snapToCutoff for where a new one starts. */
+  { value: 'semimonthly', label: 'Twice a month',  short: '½mo', every: 'half month', step: { unit: 'semimonth', n: 1 }, perMonth: 2 },
   { value: 'monthly',     label: 'Monthly',        short: 'mo',  every: 'month',    step: { unit: 'month', n: 1  }, perMonth: 1       },
   { value: 'quarterly',   label: 'Quarterly',      short: 'qtr', every: 'quarter',  step: { unit: 'month', n: 3  }, perMonth: 1 / 3   },
   { value: 'semiannual',  label: 'Every 6 months', short: '6mo', every: '6 months', step: { unit: 'month', n: 6  }, perMonth: 1 / 6   },
@@ -85,8 +97,31 @@ const FREQ_BY_VALUE = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f]))
 
 /** Commonest first: how the All tab groups, and how a picker should order. */
 export const FREQ_ORDER = [
-  'monthly', 'weekly', 'fortnightly', 'quarterly', 'semiannual', 'yearly', 'daily',
+  'monthly', 'semimonthly', 'weekly', 'fortnightly', 'quarterly', 'semiannual', 'yearly', 'daily',
 ]
+
+/**
+ * Where a twice-a-month item starts: the first cut-off - the 15th or the
+ * last day of the month - on or after the date chosen.
+ *
+ * @param {string} dateStr  YYYY-MM-DD
+ * @returns {string}
+ */
+export function snapToCutoff(dateStr) {
+  const d = parseDateLocal(dateStr)
+  if (!d) return dateStr
+  const last = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
+  if (d.getDate() <= 15) d.setDate(15)
+  else d.setDate(last)
+  return toDateInput(d)
+}
+
+/** "15th", "1st", "22nd". @param {number} n */
+export function ordinal(n) {
+  const s = ['th', 'st', 'nd', 'rd']
+  const v = n % 100
+  return `${n}${s[(v - 20) % 10] || s[v] || s[0]}`
+}
 
 export const FREQ_LABEL = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.label]))
 export const FREQ_SHORT = Object.fromEntries(FREQ_OPTIONS.map(f => [f.value, f.short]))
@@ -160,7 +195,8 @@ export function fmtDateFull(str) {
  *
  * @param {string} [dateStr]
  */
-export function billingLine(dateStr) {
+export function billingLine(dateStr, income = false) {
+  if (income) return incomeLine(dateStr)
   const d = parseDateLocal(dateStr)
   if (!d) return 'No date set'
   const n = daysUntil(dateStr)
@@ -170,4 +206,22 @@ export function billingLine(dateStr) {
   if (n === 1) return `Next billing tomorrow · ${when}`
   if (n <= 7)  return `Next billing in ${n} days · ${when}`
   return `Next billing ${when}`
+}
+
+/**
+ * The same line for income: it arrives rather than bills, and a date that
+ * has passed is not "overdue" - it is waiting to be marked received.
+ *
+ * @param {string} [dateStr]
+ */
+export function incomeLine(dateStr) {
+  const d = parseDateLocal(dateStr)
+  if (!d) return 'No date set'
+  const n = daysUntil(dateStr)
+  const when = fmtDateFull(dateStr)
+  if (n < 0)   return `Expected ${when} · not marked yet`
+  if (n === 0) return `Arrives today · ${when}`
+  if (n === 1) return `Arrives tomorrow · ${when}`
+  if (n <= 7)  return `Arrives in ${n} days · ${when}`
+  return `Next on ${when}`
 }

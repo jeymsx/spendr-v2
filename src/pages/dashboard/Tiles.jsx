@@ -12,6 +12,9 @@ import { useSwap } from '../../components/ui/useSwap'
 import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 import { currencyOfTx } from '../../lib/fxContext'
+import { txRowWords } from '../../lib/txRow'
+import { interestCarried } from '../../lib/loans'
+import { INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
 
 // ── Account card ───────────────────────────────────────────────────────────────
 
@@ -25,8 +28,15 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
   const available = isCredit
     ? (acct.creditLimit ?? 0) - (stmt?.currentBalance ?? 0)
     : null
+  /* A loan reads what is owed (its balance is stored negative); an
+     investment reads its value, labelled with what kind it is. */
+  const isLoan = acct.type === 'loan'
+  const isInvestment = acct.type === 'investment'
+  const figure = isCredit ? available : isLoan ? -(acct.balance ?? 0) : (acct.balance ?? 0)
+  const figureLabel = isCredit ? 'Available' : isLoan ? 'Owed' : isInvestment ? 'Value' : 'Balance'
 
   const meta  = ACCOUNT_ICON[acct.type] ?? ACCOUNT_ICON.bank
+  const kindLabel = isInvestment ? (INVESTMENT_KIND_LABEL[acct.kind] ?? meta.label) : meta.label
   const brand = accountBrand(acct)
   // The rail's eye button: the figure swaps through a blur - ui/useSwap.
   const swap  = useSwap(hidden)
@@ -51,14 +61,14 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
 
       <div className="flex items-center gap-2">
         <BrandMark mark={brand.mark} size={18} className="shrink-0" />
-        <p className="text-10 font-medium text-white/65 truncate">{meta.label}</p>
+        <p className="text-10 font-medium text-white/65 truncate">{kindLabel}</p>
       </div>
 
       <p className="text-13 font-semibold truncate mt-2">{acct.name}</p>
 
       <div className="mt-auto pt-1">
         <p className="text-10 font-semibold text-white/60 mb-0.5">
-          {isCredit ? 'Available' : 'Balance'}
+          {figureLabel}
         </p>
         <p key={hidden ? 'h' : 's'} className={`${swap} text-17 font-bold tabular-nums leading-none`}>
           {/* Its own id: this face shows what is AVAILABLE on a card, the
@@ -66,7 +76,7 @@ export function AccountCard({ acct, hidden, onClick, stmt }) {
           {hidden ? fmtHidden(acct.currency) : (
             <RollingNumber
               id={`home-card:${acct.id}:${acct.currency}`}
-              value={isCredit ? available : (acct.balance ?? 0)}
+              value={figure}
               format={v => fmt(v, acct.currency)}
             />
           )}
@@ -148,7 +158,9 @@ export function BudgetSummaryTile({ totals }) {
 
 // ── Budget chip (compact 2-col grid) ──────────────────────────────────────────
 
-export function TxRow({ tx, cat, isLast }) {
+/** @param {{tx: Record<string, any>, cat?: Record<string, any>, glyph?: Record<string, any>|null, isLast?: boolean}} props */
+export function TxRow({ tx, cat, glyph = cat, isLast }) {
+  const { title, where, kind } = txRowWords(tx, cat)
   const isExpense  = tx.type === 'expense'
   const isInflow   = tx.type === 'inflow'
   const amountCls  = isExpense  ? 'text-red-500 dark:text-red-400'
@@ -162,27 +174,25 @@ export function TxRow({ tx, cat, isLast }) {
       {/* category icon */}
       <div
         className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-        style={{ '--cat-color': cat?.color ?? '#64748b' }}
+        style={{ '--cat-color': glyph?.color ?? '#64748b' }}
       >
-        <CategoryGlyph cat={cat} size={18} emoji="💸" />
+        <CategoryGlyph cat={glyph} size={18} emoji="💸" />
       </div>
 
       {/* description + account */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
-          {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
+          {title}
         </p>
         <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
-          {tx.type === 'transfer'
-            ? `${tx.fromAccount ?? ''} → ${tx.toAccount ?? ''}`
-            : tx.account ?? ''}
+          {where}{kind ? ` · ${kind}` : ''}
         </p>
       </div>
 
       {/* amount + date */}
       <div className="text-right shrink-0">
         <p className={`text-sm font-semibold tabular-nums ${amountCls}`}>
-          {amountSign}{fmt(tx.amount, currencyOfTx(tx))}
+          {amountSign}{fmt((tx.amount ?? 0) + interestCarried(tx), currencyOfTx(tx))}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
           {fmtDate(tx.date)}
@@ -220,6 +230,18 @@ export function IconEye({ size = 18 }) {
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
       <circle cx="12" cy="12" r="3" />
+    </svg>
+  )
+}
+
+/** Two arrows passing: the wallet's switch between what you have and what you owe. */
+export function IconFlipSides({ size = 18 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M7 20V4" />
+      <path d="M3 8l4-4 4 4" />
+      <path d="M17 4v16" />
+      <path d="M13 16l4 4 4-4" />
     </svg>
   )
 }

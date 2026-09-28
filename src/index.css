@@ -1351,6 +1351,20 @@ html.dark body {
   --press-scale: 1;
 }
 
+/* A row made of two buttons - TxRow's category tile and its body. Pressing
+   the body tints the whole row, tile and all, on the same quick-in, slow-out
+   timing; pressing the tile leaves the row alone, since the tile answers
+   with its own shrink. */
+.row-press {
+  transition: background-color var(--press-out) var(--ease-settle);
+}
+.row-press:has(> .row-main:active) {
+  background-color: #f8fafc;
+  transition-duration: var(--press-in);
+  transition-timing-function: var(--ease-out);
+}
+.dark .row-press:has(> .row-main:active) { background-color: rgba(255, 255, 255, 0.04); }
+
 /* A figure turning into its other self - hidden to shown, and back. The
    dots and the number are two elements, so the new one resolves out of a
    short blur where the old one was, rather than the text changing under
@@ -1997,42 +2011,6 @@ html.web.dark input[type="date"] {
   border-radius: 0;
 }
 
-/* ── The insight card's aurora ────────────────────────────────────────────────
-
-   The trivia card was a flat two-stop `from-primary/22 to-primary/8`, which is
-   a tint rather than a surface: on a page of white cards and grey charts it
-   read as a highlighted paragraph.
-
-   Four overlapping radials instead, at different sizes and off-canvas centres,
-   so the light pools rather than ramps. That is the whole difference between
-   an aurora and a gradient - the peaks are somewhere specific and the falloffs
-   overlap unevenly.
-
-   Every stop is the accent. BudgetGauge settled this argument already and its
-   note says why: a hand-picked palette made the one coloured graph on the page
-   the only thing ignoring the accent preset. On Azure this is blue, on Honey
-   it is yellow, and the card is the same object either way.
-
-   The alphas run higher in dark than light. A wash at 0.30 over white is a
-   pastel panel; over #0d1117 it is barely a tint, and the card has to hold its
-   own against a page of cards that all have borders. */
-.insight-aurora {
-  background:
-    radial-gradient(120% 105% at 10% 12%, rgba(var(--color-primary-rgb), 0.26), transparent 58%),
-    radial-gradient(95% 85% at 92% 4%, rgba(var(--color-primary-rgb), 0.14), transparent 60%),
-    radial-gradient(130% 120% at 74% 112%, rgba(var(--color-primary-rgb), 0.20), transparent 64%),
-    linear-gradient(150deg, rgba(var(--color-primary-rgb), 0.10), rgba(var(--color-primary-rgb), 0.03));
-  border: 1px solid rgba(var(--color-primary-rgb), 0.24);
-}
-
-.dark .insight-aurora {
-  background:
-    radial-gradient(120% 105% at 10% 12%, rgba(var(--color-primary-rgb), 0.34), transparent 58%),
-    radial-gradient(95% 85% at 92% 4%, rgba(var(--color-primary-rgb), 0.18), transparent 60%),
-    radial-gradient(130% 120% at 74% 112%, rgba(var(--color-primary-rgb), 0.26), transparent 64%),
-    linear-gradient(150deg, rgba(var(--color-primary-rgb), 0.12), rgba(var(--color-primary-rgb), 0.04));
-  border: 1px solid rgba(var(--color-primary-rgb), 0.22);
-}
 
 /* ── Monthly recap: the card surface and the idle motion ─────────────────────
 
@@ -2142,16 +2120,66 @@ html.web.dark input[type="date"] {
   .recap-drop { animation: none; opacity: 0; }
 }
 
-/* A row dragged left to delete (components/ui/SwipeRow.jsx). The bin sits
-   at the strip's right end until the row is far enough to go on letting go;
-   then it jumps to the strip's left edge and rides the row, which is how
-   Mail says "this one is going". */
-.swipe-bin { transition: translate 0.16s var(--ease-out); }
-.swipe-strip[data-armed="true"] .swipe-bin { translate: calc(76px - var(--reveal, 76px)) 0; }
+/* A row dragged left to delete (components/ui/SwipeRow.jsx).
+
+   Lifted: the moment it moves, the row becomes its own card - rounded,
+   opaque, shadowed - over the gap it leaves in its group. Opaque because the
+   group's card is see-through in dark mode, and the delete disc sits under
+   where the row was.
+
+   The gap behind it: a softened red, not a solid one, inset and rounded like
+   the row so its corners never poke past the card's; it deepens a step, and
+   the bin grows, once letting go would delete. The bin's position, size and
+   fade are set per frame by the row as it moves, so nothing here transitions
+   those - only the change of state. */
+.swipe-face {
+  border-radius: 0;
+  transition:
+    border-radius 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out);
+}
+.swipe-row[data-lifted='true'] > .swipe-face {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16), 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.dark .swipe-row[data-lifted='true'] > .swipe-face {
+  background:
+    linear-gradient(rgba(var(--color-primary-rgb), 0.06), rgba(var(--color-primary-rgb), 0.06)),
+    #121a26;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html.flat .swipe-row[data-lifted='true'] > .swipe-face {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+html.flat.dark .swipe-row[data-lifted='true'] > .swipe-face {
+  background: #1c1c1f;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+}
+.swipe-back {
+  inset: 3px 0 3px 0;
+  border-radius: 16px;
+  opacity: 0;
+  background: rgba(239, 68, 68, 0.13);
+  transition: opacity 0.16s var(--ease-out), background-color 0.16s var(--ease-out);
+}
+.dark .swipe-back { background: rgba(239, 68, 68, 0.2); }
+.swipe-row[data-lifted='true'] .swipe-back { opacity: 1; }
+.swipe-row[data-armed='true'] .swipe-back { background: rgba(239, 68, 68, 0.24); }
+.dark .swipe-row[data-armed='true'] .swipe-back { background: rgba(239, 68, 68, 0.34); }
+.swipe-icon { color: #dc2626; transition: scale 0.2s var(--ease-out); }
+.dark .swipe-icon { color: #f87171; }
+.swipe-row[data-armed='true'] .swipe-icon { scale: 1.15; }
+/* Leaving: the row flies off and the bin goes with the gap, not after it. */
+.swipe-row[data-removing='true'] .swipe-bin { opacity: 0 !important; transition: opacity 0.12s var(--ease-out); }
 
 /* An Insights card opening into its page, and closing back into it
-   (pages/insights/zoom.js). The surface sits over the page and under the
-   tab bar (z-50), is drawn by script, and takes no taps. The page it opens
+   (pages/insights/zoom.js), where the browser has no View Transitions -
+   those rules follow. The surface sits over the page and under the tab bar
+   (z-50), is drawn by script, and takes no taps. The page it opens
    resolves out of a short blur as the surface fades off it. */
 .zoom-surface {
   position: fixed;
@@ -2168,6 +2196,78 @@ html.web.dark input[type="date"] {
 @media (prefers-reduced-motion: reduce) {
   .zoom-arrive { animation: none; }
 }
+
+/* The same trip through the View Transitions API, where there is one: the
+   card itself grows into its page, with the page in it the whole way. The
+   card is `insight-zoom` before the route changes and the page's scroll
+   area after it (zoom.js), and <html> says which way it is going.
+
+   The box: its size and place are the browser's own animation, slowed to
+   the app's pace. The pictures in it are clipped to its corners, which
+   round off as it grows and back as it shrinks - the card's own radius at
+   the card's end. Both pictures keep their width to the box and their
+   height to scale, pinned to the top, so the page shows through from its
+   header down rather than squashed to the card's shape. */
+::view-transition-group(insight-zoom) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-image-pair(insight-zoom) {
+  overflow: clip;
+  animation: zoomBoxOpen 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-zoom='close']::view-transition-image-pair(insight-zoom) { animation-name: zoomBoxClose; }
+/* The box is painted, turning from the card's colour to the page's: the
+   page's picture has no ground of its own (zoom.js surfaceOf). */
+@keyframes zoomBoxOpen {
+  from { border-radius: var(--zoom-radius, 16px); background-color: var(--zoom-card, transparent); }
+  to   { border-radius: 0; background-color: var(--zoom-page, transparent); }
+}
+@keyframes zoomBoxClose {
+  from { border-radius: 0; background-color: var(--zoom-page, transparent); }
+  to   { border-radius: var(--zoom-radius, 16px); background-color: var(--zoom-card, transparent); }
+}
+
+/* Opening: the card's face goes first, and the page comes up under it
+   straight after - never a moment of empty box between them. The face keeps
+   its own size as it goes: stretched to the growing box, a half-width card
+   was its own words at twice their size for a moment. */
+:root[data-zoom='open']::view-transition-old(insight-zoom) {
+  inline-size: auto;
+  animation: zoomFaceOut 0.12s linear both;
+}
+:root[data-zoom='open']::view-transition-new(insight-zoom) { animation: zoomFaceIn 0.2s linear 0.04s both; }
+/* Closing: the page holds until it is nearly card-sized, then the card's
+   face takes over. */
+:root[data-zoom='close']::view-transition-old(insight-zoom) { animation: zoomFaceOut 0.18s linear 0.2s both; }
+:root[data-zoom='close']::view-transition-new(insight-zoom) { animation: zoomFaceIn 0.16s linear 0.18s both; }
+@keyframes zoomFaceOut { to { opacity: 0; } }
+@keyframes zoomFaceIn  { from { opacity: 0; } }
+
+/* Behind it, the overview sinks back and dims as the page grows over it,
+   and rises out of the dim as the page closes into it. What is behind on
+   the page's side is only the ground. Opening, that ground still fades in
+   under the overview: the new picture is drawn over the old one, so a
+   ground there from the start would hide the overview at once. */
+:root[data-zoom='open']::view-transition-old(root) { animation: zoomUnder 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+:root[data-zoom='open']::view-transition-new(root) { animation: zoomFaceIn 0.42s linear both; }
+:root[data-zoom='close']::view-transition-old(root) { animation: none; }
+:root[data-zoom='close']::view-transition-new(root) { animation: zoomOver 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes zoomUnder { to   { opacity: 0; transform: scale(0.96); } }
+@keyframes zoomOver  { from { opacity: 0; transform: scale(0.96); } }
+
+/* The tab bar is the same on both sides, so it sits still above it all -
+   in the root picture it would sink and dim with the overview. */
+:root[data-zoom] #app-main ~ nav { view-transition-name: zoom-nav; }
+::view-transition-group(zoom-nav),
+::view-transition-new(zoom-nav) { animation: none; }
+::view-transition-old(zoom-nav) { animation: none; opacity: 0; }
+
+/* A new route fades up into place (.page-enter). Inside the growing box
+   that fade would be the blank this replaced, so here it takes no time at
+   all. A duration of nought rather than no animation: taking the animation
+   away and giving it back when the trip ends would start the fade then. */
+:root[data-zoom] .page-enter { animation-duration: 0s; }
 
 /* The share sheet's rail of looks for the summary (ShareSheet.jsx). A card's
    size and dimness follow the scroll, set from script frame by frame, so
@@ -2233,10 +2333,37 @@ html.web.dark input[type="date"] {
   38%, 100% { transform: rotate(24deg) translateX(260px); }
 }
 
+/* A highlight's picture on a tap (insights/Highlights.jsx): it lifts and
+   tilts while its layers come together again, and settles - an ease-out
+   with no overshoot, the way everything outside the Wrapped story moves. */
+.highlight-lift {
+  transform-origin: 70% 85%;
+  animation: highlightLift 0.62s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes highlightLift {
+  0%   { transform: none; }
+  32%  { transform: translate(-3px, -9px) rotate(-7deg) scale(1.05); }
+  100% { transform: none; }
+}
+
+/* Net worth's bars (insights/NetWorthPage.jsx). The piles grow in from the
+   left, the months rise from their zero line, and only then does the short
+   side's difference fade in - the dashed stretch is the answer, so it comes
+   last. */
+.grow-x {
+  transform-origin: left center;
+  animation: growX 0.7s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+.grow-y { animation: growY 0.55s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.balance-short { animation: fadeIn 0.35s ease-out 0.45s both; }
+@keyframes growX { from { transform: scaleX(0); } }
+@keyframes growY { from { transform: scaleY(0); } }
+
 @media (prefers-reduced-motion: reduce) {
   .glass-enter .gx-s, .glass-enter .gx-g,
   .glass-enter .gx-y, .glass-enter .gx-p,
-  .glass-float > svg, .glass-shine .gx-shine { animation: none; }
+  .glass-float > svg, .glass-shine .gx-shine,
+  .highlight-lift, .grow-x, .grow-y, .balance-short { animation: none; }
 }
 
 /* ── The celebration screen ──────────────────────────────────────────
@@ -2486,14 +2613,6 @@ html.flat.dark .cat-tile:not([data-on='true']) {
 }
 
 /* The insight hero's aurora of accent light: a plain card in this style. */
-html.flat .insight-aurora {
-  background: #ffffff;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-}
-html.flat.dark .insight-aurora {
-  background: #111113;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
 
 /* Accent-tinted surfaces spelled into components - fields, header chips,
    the profile card - go neutral. Their borders follow. */

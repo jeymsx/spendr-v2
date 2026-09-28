@@ -25,6 +25,7 @@ import {
   PAGE_SIZE,
   DATE_OPTS,
 } from './transactions/shared'
+import { ListEnd, useInfiniteList } from '../components/ui/InfiniteList'
 import { QuickTypeFilter } from './transactions/QuickFilter'
 import { FilterModal, TxRow, IconNoTransactions } from './transactions/FilterSheet'
 import Rail from '../components/ui/Rail'
@@ -32,6 +33,7 @@ import SearchField from '../components/ui/SearchField'
 import SearchResults from './transactions/SearchResults'
 import LedgerSkeleton from './transactions/ListSkeleton'
 import { searchEverything, txMatches } from '../lib/search'
+import { foldLoanPayments, unfoldLoanPayment } from '../lib/loans'
 import { baseSymbol } from '../lib/money'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -73,7 +75,6 @@ export default function Transactions() {
   const [customFrom,     setCustomFrom]     = useState('')
   const [customTo,       setCustomTo]       = useState('')
   const [filterOpen,     setFilterOpen]     = useState(false)
-  const [visibleCount,   setVisibleCount]   = useState(PAGE_SIZE)
   const [selectedTx,     setSelectedTx]     = useState(null)
   // Opened from a swipe on a plan's payment: straight to the delete confirmation.
   const [detailIntent,   setDetailIntent]   = useState('detail')
@@ -86,23 +87,15 @@ export default function Transactions() {
   const [calMonth,       setCalMonth]       = useState(() => new Date().getMonth())
   const [calSelected,    setCalSelected]    = useState(null)
 
-  /* Back to the first page whenever the filters change.
-
-     Adjusted during render rather than in an effect. The effect committed
-     one paint with the NEW filter and the OLD count, so changing a filter
-     after several rounds of "Load more" rendered hundreds of rows purely to
-     throw all but the first page away on the next pass. Comparing a
-     signature is content-based too, where the effect re-ran whenever
-     `accountFilters` was rebuilt with the same names in it. */
+  /* Back to the first page whenever the filters change - ui/InfiniteList
+     resets on this signature in the same render, so a new filter never
+     draws once with the old list's hundreds of rows. A signature rather
+     than the arrays themselves: `accountFilters` is rebuilt with the same
+     names in it often. */
   const filterSig = [
     search, typeFilter, accountFilters.join('\u001f'), categoryFilter,
     dateRange, customFrom, customTo, amountMin, amountMax,
   ].join('\u001e')
-  const [prevFilterSig, setPrevFilterSig] = useState(filterSig)
-  if (prevFilterSig !== filterSig) {
-    setPrevFilterSig(filterSig)
-    setVisibleCount(PAGE_SIZE)
-  }
 
   const catMap = useMemo(() =>
     Object.fromEntries((categories ?? []).map(c => [c.name, c])),
@@ -170,19 +163,29 @@ export default function Transactions() {
     })
   }, [txAll, deferredSearch, typeFilter, accountFilters, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
-  const visibleTx = useMemo(() => filteredTx.slice(0, visibleCount), [filteredTx, visibleCount])
+  /* Each loan payment as the one row it was, not its two halves - see
+     lib/loans.js foldLoanPayments. Only what the list draws: the calendar,
+     the filter's count and every total still read filteredTx. */
+  const shownTx = useMemo(() => foldLoanPayments(filteredTx), [filteredTx])
+
+  /* A page at a time, the next one added before you reach the end - no
+     "Load more" to tap. See components/ui/InfiniteList. */
+  const list      = useInfiniteList(shownTx, { page: PAGE_SIZE, resetKey: filterSig })
+  const visibleTx = list.visible
   const groups    = useMemo(() => groupByDate(visibleTx), [visibleTx])
-  const hasMore   = filteredTx.length > visibleCount
 
   /* Rows that arrive and leave - see components/ui/Presence.jsx. The view is
      everything filteredTx is computed from, with the DEFERRED search: the
      list changes when that does, and keying on the raw input would let a
      filtering keystroke read as rows being deleted. */
+  /* The whole filtered list, not the page on screen: scrolling another page
+     in is not fifty rows arriving, and counted as that it redrew the list
+     every time the end came near. */
   const allIds     = useMemo(() => (txAll ?? []).map(t => t.id), [txAll])
-  const visibleIds = useMemo(() => visibleTx.map(t => t.id), [visibleTx])
+  const visibleIds = useMemo(() => filteredTx.map(t => t.id), [filteredTx])
   const viewKey = [
     deferredSearch, typeFilter, accountFilters.join('\u001f'), categoryFilter,
-    dateRange, customFrom, customTo, amountMin, amountMax, visibleCount,
+    dateRange, customFrom, customTo, amountMin, amountMax,
   ].join('\u001e')
   const rows = useRowMotion({ scope: 'ledger', ready: !loading, allIds, visibleIds, viewKey })
 
@@ -434,7 +437,7 @@ export default function Transactions() {
                         >
                           <SwipeRow
                             label={`Delete ${tx.description || tx.category || 'transaction'}`}
-                            onDelete={() => swipeDelete(tx)}
+                            onDelete={() => swipeDelete(unfoldLoanPayment(tx))}
                           >
                             <TxRow tx={tx} catMap={catMap} onClick={(t) => { setDetailIntent('detail'); setSelectedTx(t) }} onCategory={setQuickCatTx} />
                           </SwipeRow>
@@ -451,19 +454,7 @@ export default function Transactions() {
             })}
           </AnimatePresence>
 
-          {hasMore && (
-            <div className="flex justify-center mt-4 px-5">
-              <button
-                onClick={() => setVisibleCount(c => c + PAGE_SIZE)}
-                className="px-6 py-2.5 rounded-2xl text-sm font-semibold
-                  text-primary bg-primary/8 dark:bg-primary/12
-                  border border-primary/20
-                  active:scale-95 transition-transform duration-75"
-              >
-                Load more · {filteredTx.length - visibleCount} remaining
-              </button>
-            </div>
-          )}
+          <ListEnd list={list} done={`All ${shownTx.length} transactions`} />
         </>
       )}
 

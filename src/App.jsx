@@ -22,6 +22,7 @@ const InsightsTrend    = lazy(() => import('./pages/insights/TrendPage'))
 const InsightsExpenses = lazy(() => import('./pages/insights/ExpensesPage'))
 const InsightsAccounts = lazy(() => import('./pages/insights/AccountsPage'))
 const InsightsNetWorth = lazy(() => import('./pages/insights/NetWorthPage'))
+const InsightsForecast = lazy(() => import('./pages/insights/ForecastPage'))
 const Accounts     = lazy(() => import('./pages/Accounts'))
 const AccountDetail = lazy(() => import('./pages/AccountDetail'))
 const AccountNew    = lazy(() => import('./pages/AccountNew'))
@@ -113,6 +114,7 @@ export default function App() {
               <Route path="/insights/expenses"  element={<InsightsExpenses />} />
               <Route path="/insights/accounts"  element={<InsightsAccounts />} />
               <Route path="/insights/net-worth" element={<InsightsNetWorth />} />
+              <Route path="/insights/forecast"  element={<InsightsForecast />} />
               <Route path="/budget"       element={<Budget />} />
               {/* The name, not an id. A transaction stores its category as a
                   string, so the name is the key the whole app already joins

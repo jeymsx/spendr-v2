@@ -4,8 +4,9 @@ import { advanceNextDate } from '../utils/recurring'
 import { resolveBillShares } from '../lib/splitModes'
 import { applyPayment } from '../lib/people'
 import { deleteDebtRemote } from '../lib/sync'
-import { currencyOfAccountName } from '../lib/fxContext'
+import { currencyOfAccountName, repriceForEdit } from '../lib/fxContext'
 import { estimateConversion } from '../lib/transferLegs'
+import { loanPairOf } from '../lib/loans'
 
 /* Re-exported: they used to live here and ten files import them from
    here. See db/balances.js for why they moved. */
@@ -26,7 +27,9 @@ export class OverdrawError extends Error {
 /**
  * Returns the account row when spending `amount` from it would overdraw it,
  * otherwise null. Credit accounts are exempt — they're bounded by their limit,
- * which getCreditStatus tracks, not by a stored balance.
+ * which getCreditStatus tracks, not by a stored balance. So are loans: their
+ * balance is what you owe, stored negative, and drawing on one is borrowing
+ * more, not overdrawing.
  *
  * @param {string} accountName
  * @param {number} amount
@@ -34,7 +37,7 @@ export class OverdrawError extends Error {
 export async function checkOverdraw(accountName, amount) {
   if (!accountName || !(amount > 0)) return null
   const acct = await db.accounts.where('name').equals(accountName).first()
-  if (!acct || acct.type === 'credit') return null
+  if (!acct || acct.type === 'credit' || acct.type === 'loan') return null
   if (amount <= (acct.balance ?? 0)) return null
   return acct
 }
@@ -57,12 +60,17 @@ export async function checkOverdraw(accountName, amount) {
  * @param {{allowOverdraw?: boolean}} [opts]
  */
 export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
+  /* Income that arrives on a schedule - a salary - posts as an inflow, and
+     has nothing to overdraw and nobody to split it with. */
+  const income = rec?.type === 'inflow'
+  const kind = income ? 'inflow' : 'expense'
+
   /* The overdraw check lives here rather than in the caller because it has to
      happen inside the same decision as the write. There IS a review sheet in
      front of this now, but it shows what the charge is, not whether the
      account can take it - and a balance can change between the two. Callers
      surface OverdrawError as a sheet and retry with allowOverdraw. */
-  if (!allowOverdraw) {
+  if (!allowOverdraw && !income) {
     const over = await checkOverdraw(rec.account, rec.amount)
     if (over) throw new OverdrawError(over.name, over.balance ?? 0, rec.amount)
   }
@@ -79,7 +87,7 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
   await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
     addedId = await db.transactions.add({
       txId:              crypto.randomUUID(),
-      type:              'expense',
+      type:              kind,
       amount:            rec.amount,
       description:       rec.name,
       category:          rec.category,
@@ -97,11 +105,12 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
       recurringPrevDate: rec.nextDate,
     })
     await applyBalanceEffect(/** @type {Transaction} */ (
-      { type: 'expense', amount: rec.amount, account: rec.account, date: nowISO }))
+      { type: kind, amount: rec.amount, account: rec.account, date: nowISO }))
     await db.recurring.update(rec.id, { nextDate: newNextDate })
   })
 
   const tx = addedId ? await db.transactions.get(addedId) : null
+  if (income) return { nextDate: newNextDate, tx }
 
   /* A bill that is shared opens its receivables the moment it posts.
  
@@ -156,7 +165,9 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
  */
 export async function updateTransaction(tx, patch) {
   if (!tx?.id) throw new Error('There is nothing to update.')
-  const next = { ...patch, updatedAt: new Date().toISOString(), synced: UNSYNCED }
+  /* With its pricing refreshed: the totals read baseAmount first, and an edit
+     that left it at the old figure went on counting the old amount. */
+  const next = { ...patch, ...repriceForEdit(tx, patch), updatedAt: new Date().toISOString(), synced: UNSYNCED }
 
   await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
     await reverseBalanceEffect(/** @type {any} */ (tx))
@@ -481,7 +492,7 @@ export function newJournal() {
  *
  * ── Why this is not the caller's job ──
  *
- * Two rows in this app are meaningless on their own, and both were being left
+ * Some rows in this app are meaningless on their own, and they were being left
  * behind. Found by trying to break it rather than by using it:
  *
  *   A REFUND of a purchase that no longer exists is not a transaction, it is
@@ -519,6 +530,9 @@ async function expandDeletion(list) {
         if (leg.splitId === tx.splitId && !byId.has(leg.id)) byId.set(leg.id, leg)
       }
     }
+    // A loan payment's principal and its interest: one payment, two rows.
+    const pair = loanPairOf(tx, all)
+    if (pair && !byId.has(pair.id)) byId.set(pair.id, /** @type {Transaction} */ (pair))
   }
 
   return [...byId.values()]

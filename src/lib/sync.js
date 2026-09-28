@@ -147,6 +147,10 @@ export function toSupabaseRow(r, userId) {
        transfer lands as `amount` - see lib/transferLegs.js. */
     to_amount:        r.toAmount ?? null,
     to_currency:      r.toCurrency ?? null,
+    /* 023. A row the app wrote to move a balance rather than money you earned
+       or spent - 'correction' or 'value'. See lib/flows.js. Null on every
+       other row. */
+    adjust:           r.adjust ?? null,
     synced:           true,
     updated_at:       r.updatedAt ?? new Date().toISOString(),
   })
@@ -180,6 +184,12 @@ export function accountToRow(r, userId) {
     design:          r.design         ?? null,
     custom_color:    r.customColor    ?? null,
     sort_order:      r.sort_order     ?? 0,
+    /* 023. An investment's kind, what had gone into it before Spendr was
+       keeping track, and the day its value was last confirmed - see
+       lib/investments.js. Null on everything else. */
+    kind:            r.kind           ?? null,
+    invested_start:  r.investedStart  ?? null,
+    valued_at:       r.valuedAt       ?? null,
     updated_at:      r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -246,6 +256,9 @@ export function recurringToRow(r, userId) {
     next_date:  r.nextDate,
     active:     r.active,
     split:      r.split ?? null,
+    /* 023. 'inflow' for income that arrives on a schedule - a salary. Null is
+       a bill, which is every row written before the column existed. */
+    type:       r.type ?? null,
     updated_at: r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -416,6 +429,8 @@ export function toDexieRecord(row) {
        received leg this device knows about - the pull spreads this over the
        local row, so an absent key has to stay absent. */
     ...('to_amount' in row ? { toAmount: row.to_amount ?? null, toCurrency: row.to_currency ?? null } : {}),
+    // 023. Only when set - a row is never un-marked - for the same reason as above.
+    ...(row.adjust ? { adjust: row.adjust } : {}),
     synced:      SYNCED,
     updatedAt:   row.updated_at,
   }
@@ -460,6 +475,11 @@ export function rowToAccount(row) {
     design:         row.design ?? null,
     customColor:    row.custom_color ?? false,
     sort_order:     row.sort_order  ?? 0,
+    /* 023. Only when set: none of these is ever cleared back to nothing, and
+       a database without the columns must not blank what this device knows. */
+    ...(row.kind ? { kind: row.kind } : {}),
+    ...(row.invested_start != null ? { investedStart: row.invested_start } : {}),
+    ...(row.valued_at ? { valuedAt: row.valued_at } : {}),
     updatedAt:      row.updated_at,
   }
 }
@@ -509,6 +529,10 @@ export function rowToRecurring(row) {
     nextDate:  row.next_date,
     active:    row.active,
     split:     row.split ?? null,
+    /* 023. Only when there is one: every row written since says 'inflow' or
+       'expense' outright, and a null is a bill from before the column - left
+       absent, so it cannot turn a salary this device knows back into a bill. */
+    ...(row.type ? { type: row.type } : {}),
     updatedAt: row.updated_at,
   }
 }
@@ -627,25 +651,13 @@ async function pushPreferences(userId) {
     .upsert(row, { onConflict: 'user_id' })
   if (!error) return
 
-  /* Drop the columns 015 adds and try once more, the same net every other
-     push has. A database that has not had the migration would otherwise
-     fail the whole preferences push - and take the display name, the
-     currency and the accent down with the two new fields. Degraded means
+  /* Leave out the column the database does not have yet and try again, the
+     same net every other push has. A database that has not had 015 would
+     otherwise fail the whole preferences push - and take the display name,
+     the currency and the accent down with the two new fields. Degraded means
      theme and the carry-over switch stay on this device. */
-  if (UNKNOWN_COLUMN.test(error.message ?? '')) {
-    const retry = /** @type {Record<string, any>} */ ({ ...row })
-    for (const col of OPTIONAL_COLS.user_preferences ?? []) delete retry[col]
-    const { error: again } = await supabase
-      .from('user_preferences')
-      .upsert(retry, { onConflict: 'user_id' })
-    if (!again) {
-      console.warn('[sync] user_preferences: run migration 015 for theme and carry-over')
-      return
-    }
-    throw new Error(`user_preferences push: ${again.message}`)
-  }
-
-  throw new Error(`user_preferences push: ${error.message}`)
+  const { error: again } = await upsertWithoutUnknown('user_preferences', [row], { onConflict: 'user_id' }, error)
+  if (again) throw new Error(`user_preferences push: ${again.message}`)
 }
 
 /** @param {string} userId */
@@ -776,23 +788,8 @@ export async function syncToSupabase(userId) {
            Same retry, same reasoning: drop what the table does not know
            about and push the rows, so the ledger still syncs on a database
            that is a migration behind. */
-        const optional = OPTIONAL_COLS.transactions ?? []
-        if (optional.length && UNKNOWN_COLUMN.test(error.message ?? '')) {
-          const trimmed = rows.map(row => {
-            const copy = { ...row }
-            for (const col of optional) delete copy[col]
-            return copy
-          })
-          const retry = await supabase.from('transactions').upsert(trimmed, opts)
-          if (retry.error) throw new Error(`transactions push: ${retry.error.message}`)
-          console.warn(
-            '[sync] transactions: dropping %s and retrying.'
-            + ' Run 009_refunds_splits_shared.sql to sync them: %s',
-            optional.join(', '), error.message,
-          )
-        } else {
-          throw new Error(`transactions push: ${error.message}`)
-        }
+        const { error: again } = await upsertWithoutUnknown('transactions', rows, opts, error)
+        if (again) throw new Error(`transactions push: ${again.message}`)
       }
     }
 
@@ -890,8 +887,13 @@ async function pullTrash(userId, pending) {
    because a phone running this build can meet a database that has not had 011
    applied, and losing the stable id must cost nothing more than staying on
    local_id for another sync - which is exactly where we already are. */
+/* 023's four are here too. Until it runs, an investment's value updates still
+   sync and still move its balance - they are ordinary rows - but another
+   device counts them as income until the column arrives (unless they carry
+   the description the app gives them, which lib/flows.js also matches), and a
+   salary pulled from the server reads as a bill. */
 const OPTIONAL_COLS = {
-  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id'],
+  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id', 'kind', 'invested_start', 'valued_at'],
   categories: ['sync_id'],
   goals: ['sync_id'],
   /* created_at is declared in 003_schema.sql, so it should be there - but a
@@ -913,20 +915,105 @@ const OPTIONAL_COLS = {
      ends, which is how every transfer read before 019. */
   transactions: [
     'refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id',
-    'currency', 'base_amount', 'base_currency', 'to_amount', 'to_currency',
+    'currency', 'base_amount', 'base_currency', 'to_amount', 'to_currency', 'adjust',
   ],
   user_preferences: ['theme', 'budget_rollover'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another
      device. */
-  recurring: ['split', 'sync_id'],
+  recurring: ['split', 'sync_id', 'type'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,
 // and Postgres itself as 42703. Matching the text covers both and does not
 // depend on which layer rejected it.
 const UNKNOWN_COLUMN = /could not find the '.*' column|does not exist|42703|PGRST204/i
+
+/**
+ * The column a push was refused for, when the refusal names one.
+ *
+ *   PostgREST  "Could not find the 'adjust' column of 'transactions' in the schema cache"
+ *   Postgres   'column "adjust" of relation "transactions" does not exist'
+ *              'column transactions.adjust does not exist'
+ *
+ * @param {string|undefined|null} message
+ * @returns {string|null}
+ */
+export function unknownColumnOf(message) {
+  const m = String(message ?? '')
+  const hit = /could not find the '([^']+)' column/i.exec(m)
+    ?? /column "([^"]+)"/i.exec(m)
+    ?? /column (?:\w+\.)?(\w+) does not exist/i.exec(m)
+  return hit ? hit[1] : null
+}
+
+/**
+ * What to leave out of the next attempt, after a push was refused for an
+ * unknown column.
+ *
+ * ── Only the one it named ──
+ *
+ * The first version of this net dropped EVERY optional column at once. That
+ * was harmless while the list only held columns the live database had long
+ * since gained - but the moment one new column is added ahead of its
+ * migration, one refusal took refund links, split ids, currencies and
+ * sync_id down with it, on every row pushed until the migration ran. So:
+ * the column the refusal names, if it is optional; the whole optional list
+ * only when the message names nothing (the old net, for a message this
+ * cannot read); and never a column the upsert matches on, because a push
+ * without its conflict target is an INSERT that collides with the row it
+ * meant to update.
+ *
+ * @param {string} message
+ * @param {string[]} optional     the table's OPTIONAL_COLS
+ * @param {string[]} dropped      already left out on an earlier attempt
+ * @param {string[]} keep         the conflict target
+ * @returns {string[]}
+ */
+export function columnsToDrop(message, optional, dropped = [], keep = []) {
+  const candidates = optional.filter(c => !dropped.includes(c) && !keep.includes(c))
+  const named = unknownColumnOf(message)
+  if (named) return candidates.includes(named) ? [named] : []
+  return candidates
+}
+
+/**
+ * Retry an upsert that was refused for an unknown column, leaving out one
+ * missing column at a time until it goes through or there is nothing left
+ * that may be dropped. Returns the last error, or null.
+ *
+ * @param {string} table
+ * @param {Array<Record<string, any>>} rows
+ * @param {{onConflict: string, ignoreDuplicates?: boolean}} opts
+ * @param {{message?: string}} firstError
+ * @returns {Promise<{error: any, dropped: string[]}>}
+ */
+async function upsertWithoutUnknown(table, rows, opts, firstError) {
+  const optional = OPTIONAL_COLS[table] ?? []
+  const keep = String(opts.onConflict ?? '').split(',').map(s => s.trim())
+  /** @type {any} */
+  let error = firstError
+  let current = rows
+  /** @type {string[]} */
+  const dropped = []
+  for (let i = 0; i <= optional.length && error; i++) {
+    if (!UNKNOWN_COLUMN.test(error.message ?? '')) break
+    const drop = columnsToDrop(error.message ?? '', optional, dropped, keep)
+    if (!drop.length) break
+    dropped.push(...drop)
+    current = current.map(row => {
+      const copy = { ...row }
+      for (const col of drop) delete copy[col]
+      return copy
+    })
+    ;({ error } = await supabase.from(table).upsert(current, opts))
+  }
+  if (!error && dropped.length) {
+    console.warn('[sync] %s: pushed without %s. Run the migration that adds them.', table, dropped.join(', '))
+  }
+  return { error, dropped }
+}
 
 /**
  * A push rejected by a unique constraint on local_id, which is never the
@@ -1030,23 +1117,8 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
     }
   }
 
-  const optional = OPTIONAL_COLS[tableName] ?? []
-  if (optional.length && UNKNOWN_COLUMN.test(error.message ?? '')) {
-    console.warn(
-      '[sync] %s: dropping %s and retrying - run the migration to sync it:',
-      tableName, optional.join(', '), error.message,
-    )
-    const trimmed = rows.map(row => {
-      const copy = { ...row }
-      for (const col of optional) delete copy[col]
-      return copy
-    })
-    const retry = await supabase.from(tableName).upsert(trimmed, opts)
-    if (retry.error) throw new Error(`${tableName} push: ${retry.error.message}`)
-    return
-  }
-
-  throw new Error(`${tableName} push: ${error.message}`)
+  const { error: again } = await upsertWithoutUnknown(tableName, rows, opts, error)
+  if (again) throw new Error(`${tableName} push: ${again.message}`)
 }
 
 // ── Pull from Supabase ────────────────────────────────────────────────────────

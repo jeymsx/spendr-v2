@@ -1,6 +1,7 @@
 import { CardDesignGallery, ColorRail, PreviewCard } from '../../components/CardStyle'
 import Confetti from '../../components/Confetti'
 import Button from '../../components/ui/Button'
+import { HoldingTile, holdingFromDraft } from './HoldingTile'
 
 // ── Card style step ────────────────────────────────────────────────────────────
 
@@ -93,22 +94,37 @@ export function CreatedStep({ draft, onDone, onAddTransaction }) {
       {/* Rises a little later than the text, so the card arrives rather than
           appearing with it. */}
       <div className="w-full mt-7" style={{ animation: 'quickIn 0.5s 0.12s cubic-bezier(0.32, 0.72, 0, 1) both' }}>
-        <PreviewCard draft={draft} large />
+        {draft.type === 'investment' || draft.type === 'loan' ? (
+          <div className="mx-auto max-w-[184px] text-left">
+            <HoldingTile acct={holdingFromDraft(draft)} preview />
+          </div>
+        ) : (
+          <PreviewCard draft={draft} large />
+        )}
       </div>
 
       <p className="mt-5 text-13 leading-relaxed text-slate-400 dark:text-slate-500 max-w-[300px]">
         {isCredit
           ? 'Charges you log to it count against the limit, and installments spread across the statements they will land on.'
-          : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}
+          : draft.type === 'investment'
+            ? 'Move money in with a transfer, and update its value from its page whenever you check it.'
+            : draft.type === 'loan'
+              ? 'Pay it from its page: the payment is split, and only the interest counts as spending.'
+              : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}
       </p>
 
       <div className="w-full mt-8 flex flex-col gap-2.5" style={{ animation: 'pageFadeIn 0.5s 0.3s ease both' }}>
         <Button block onClick={onDone}>
           Done
         </Button>
-        <Button variant="secondary" size="sm" block onClick={onAddTransaction}>
-          Add a transaction
-        </Button>
+        {/* An investment never takes an expense; the next thing to do with
+            one is move money into it - "Add money", as its page says. A loan
+            passes no handler: it is paid from its own page. */}
+        {onAddTransaction && (
+          <Button variant="secondary" size="sm" block onClick={onAddTransaction}>
+            {draft.type === 'investment' ? 'Add money' : 'Add a transaction'}
+          </Button>
+        )}
       </div>
     </section>
   )

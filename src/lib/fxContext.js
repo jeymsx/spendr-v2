@@ -160,6 +160,49 @@ export function stampTxCurrency(row, context = ctx) {
 }
 
 /**
+ * The pricing fields an EDIT has to write alongside its patch.
+ *
+ * stampTxCurrency only runs when a row is created, so an edit that changed
+ * the amount left `baseAmount` at the old figure - and every total reads
+ * `baseAmount` first. A lunch corrected from 1,500 to 150 went on counting
+ * as 1,500 in the budget, the recap and Insights.
+ *
+ *   Same account, new amount  scale the stored figure by the same ratio, so
+ *                             the rate on the day is kept rather than
+ *                             swapped for today's.
+ *   Account changed           price it afresh, as a new row would be - the
+ *                             currency may be different now.
+ *   Nothing money-related     no fields at all.
+ *
+ * @param {any} tx     the row as stored
+ * @param {any} patch  the fields being changed
+ * @param {FxContext} [context]
+ * @returns {{currency?: string|null, baseAmount?: number|null, baseCurrency?: string|null}}
+ */
+export function repriceForEdit(tx, patch, context = ctx) {
+  if (!tx || !patch) return {}
+  const moved = ['account', 'fromAccount'].some(k => k in patch && patch[k] !== tx[k])
+  const amountChanged = 'amount' in patch && patch.amount !== tx.amount
+  if (!moved && !amountChanged) return {}
+
+  if (!moved && tx.baseAmount != null && tx.baseCurrency && (tx.amount ?? 0) !== 0) {
+    const ratio = (patch.amount ?? 0) / tx.amount
+    return { baseAmount: Math.round(tx.baseAmount * ratio * 100) / 100 }
+  }
+
+  const fresh = { ...tx, ...patch }
+  delete fresh.currency
+  delete fresh.baseAmount
+  delete fresh.baseCurrency
+  stampTxCurrency(fresh, context)
+  return {
+    currency: fresh.currency ?? null,
+    baseAmount: fresh.baseAmount ?? null,
+    baseCurrency: fresh.baseCurrency ?? null,
+  }
+}
+
+/**
  * What a transaction is worth in `target`, best available.
  *
  * Three cases, in the order they should be preferred:

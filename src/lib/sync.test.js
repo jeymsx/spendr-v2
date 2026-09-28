@@ -10,7 +10,7 @@ import {
   badgeToRow,
   challengeToRow, rowToChallenge, trashToRow, rowToTrash,
   isPendingDelete,
-  isLocalIdConflict,
+  isLocalIdConflict, unknownColumnOf, columnsToDrop,
   deleteRecurringRemote,
   fetchAllRows, newest, needsStamping,
 } from './sync'
@@ -393,6 +393,49 @@ describe('isPendingDelete', () => {
  *
  * The regex is the whole risk. Too broad and it swallows real rejections.
  */
+/**
+ * The unknown-column net, after it dropped every optional column at once.
+ *
+ * A column added ahead of its migration (023's `adjust`) made every push fail
+ * once, and the retry then left out refund links, split ids, currencies and,
+ * for bills, the sync_id the upsert matches on - which turned the retry into
+ * an INSERT that collided with the row it meant to update.
+ */
+describe('unknownColumnOf', () => {
+  it('reads the column out of PostgREST and Postgres wording', () => {
+    expect(unknownColumnOf("Could not find the 'adjust' column of 'transactions' in the schema cache")).toBe('adjust')
+    expect(unknownColumnOf('column "valued_at" of relation "accounts" does not exist')).toBe('valued_at')
+    expect(unknownColumnOf('column recurring.type does not exist')).toBe('type')
+  })
+
+  it('says nothing when the message names no column', () => {
+    expect(unknownColumnOf('PGRST204')).toBeNull()
+    expect(unknownColumnOf(undefined)).toBeNull()
+  })
+})
+
+describe('columnsToDrop', () => {
+  const OPT = ['refund_of', 'split_id', 'currency', 'adjust']
+
+  it('drops only the column the refusal names', () => {
+    expect(columnsToDrop("Could not find the 'adjust' column of 'transactions'", OPT)).toEqual(['adjust'])
+  })
+
+  it('never drops what the upsert matches on', () => {
+    const msg = "Could not find the 'sync_id' column of 'recurring'"
+    expect(columnsToDrop(msg, ['split', 'sync_id', 'type'], [], ['user_id', 'sync_id'])).toEqual([])
+  })
+
+  it('does not drop a column that is not optional', () => {
+    expect(columnsToDrop("Could not find the 'amount' column of 'transactions'", OPT)).toEqual([])
+  })
+
+  it('falls back to every optional column still sent when the message names none', () => {
+    expect(columnsToDrop('42703', OPT, ['adjust'])).toEqual(['refund_of', 'split_id', 'currency'])
+    expect(columnsToDrop('42703', OPT, OPT)).toEqual([])
+  })
+})
+
 describe('isLocalIdConflict', () => {
   it('recognises the rejection a rename actually produces', () => {
     expect(isLocalIdConflict(

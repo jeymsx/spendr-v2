@@ -1,7 +1,8 @@
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
-  AreaChart, Area,
+  AreaChart, Area, ReferenceLine, ReferenceDot,
+  ComposedChart, Line,
 } from 'recharts'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import SectionLabel from '../../components/ui/SectionLabel'
@@ -141,6 +142,18 @@ function compactTick(v) {
 }
 
 /**
+ * How wide the figure axis has to be for its longest label. A fixed 40px cut
+ * the minus sign off a net worth below zero - "−450K" read as "450K" - and
+ * Recharts, finding labels it thought would collide, dropped one of them.
+ *
+ * @param {number[]} ticks
+ */
+function axisWidth(ticks) {
+  const longest = Math.max(...ticks.map(t => compactTick(t).length))
+  return Math.max(40, longest * 6 + 18)
+}
+
+/**
  * Round figures for the side of the chart: 0, 40K, 80K, 120K rather than
  * wherever the data happened to start and stop. About four steps, each 1, 2,
  * 2.5 or 5 times a power of ten, with the ends pushed out to the next step
@@ -208,12 +221,15 @@ export function NetWorthChart({ data, color, currency, rangeKey }) {
           <YAxis
             domain={[floor, ceil]}
             ticks={ticks}
+            interval={0}
             tickFormatter={compactTick}
             tick={{ fontSize: 10, fill: '#94a3b8' }}
             axisLine={false}
             tickLine={false}
-            width={40}
+            width={axisWidth(ticks)}
           />
+          {/* Where it crosses from owing to owning, when the line goes near it. */}
+          {floor < 0 && ceil > 0 && <ReferenceLine y={0} stroke="rgba(148,163,184,0.45)" strokeWidth={1} />}
           <Tooltip
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null
@@ -234,6 +250,140 @@ export function NetWorthChart({ data, color, currency, rangeKey }) {
           />
         </AreaChart>
       </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ── Chart: The forecast ────────────────────────────────────────────────────────
+
+/**
+ * The forecast as a projection: what happened, then what is likely.
+ *
+ * Solid up to today - the money as it actually was, from the ledger - then
+ * dashed from today on, because a forecast is a guess and should look like
+ * one. Around the dashed line, a band: where it lands with a quieter week's
+ * spending and with a busier one (lib/forecast spendRange). The bills, pay
+ * and loan payments are fixed, so the band is narrow near today and opens up
+ * the further out it looks - which is exactly how sure the forecast is.
+ *
+ * The floor and zero lines, and the dot on the tightest day, are the ones
+ * the single line had. Stepped, because money moves in steps: a payday is a
+ * jump, not a slope.
+ *
+ * @param {{data: Array<{day: string, iso: string, past?: number, value?: number, band?: [number, number]}>,
+ *          todayIndex: number, color: string, currency: string, rangeKey: string,
+ *          floor?: number, lowest?: {iso: string}|null}} props
+ */
+export function ForecastChart({ data, todayIndex, color, currency, rangeKey, floor = 0, lowest = null }) {
+  const values = data.flatMap(d => [d.past, d.value, ...(d.band ?? [])]).filter(v => Number.isFinite(v))
+  const lo = Math.min(...values, floor > 0 ? floor : Infinity)
+  const hi = Math.max(...values)
+  const nearZero = lo < Math.max(1, hi * 0.15)
+  const axis = niceAxis(Math.min(lo, nearZero ? 0 : lo), hi)
+  const last = data.length - 1
+  /* The first day, today, and three more after it - today always labelled,
+     since it is where the line changes from fact to guess. */
+  const ahead = last - todayIndex
+  const marks = new Set([0, todayIndex, ...[1 / 3, 2 / 3, 1].map(f => todayIndex + Math.round(f * ahead))])
+  const xTick = ({ x, y, payload }) => {
+    const i = payload.index
+    if (!marks.has(i)) return null
+    if (i !== todayIndex && Math.abs(i - todayIndex) < Math.max(3, last * 0.12)) return null
+    const anchor = i === 0 ? 'start' : i === last ? 'end' : 'middle'
+    return <text x={x} y={y + 12} textAnchor={anchor} fontSize={10} fill="#94a3b8" fontWeight={i === todayIndex ? 600 : 400}>{payload.value}</text>
+  }
+  const bandId = `forecastBand-${rangeKey}`
+  const pastId = `forecastPast-${rangeKey}`
+  const low = lowest ? data.find(d => d.iso === lowest.iso && d.value != null) : null
+  const today = data[todayIndex]
+  return (
+    <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
+      <ResponsiveContainer width="100%" height={196}>
+        <ComposedChart key={rangeKey} data={data} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
+          <defs>
+            <linearGradient id={bandId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.12} />
+            </linearGradient>
+            <linearGradient id={pastId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.16} />
+              <stop offset="100%" stopColor={color} stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <CartesianGrid strokeDasharray="4 3" vertical={false} stroke="rgba(148,163,184,0.12)" />
+          <XAxis dataKey="day" tick={xTick} axisLine={false} tickLine={false} interval={0} />
+          <YAxis
+            domain={[axis.floor, axis.ceil]}
+            ticks={axis.ticks}
+            interval={0}
+            tickFormatter={compactTick}
+            tick={{ fontSize: 10, fill: '#94a3b8' }}
+            axisLine={false}
+            tickLine={false}
+            width={axisWidth(axis.ticks)}
+          />
+          {floor > 0 && (
+            <ReferenceLine y={floor} stroke="#f59e0b" strokeDasharray="5 4" strokeWidth={1.5} ifOverflow="extendDomain" />
+          )}
+          {nearZero && <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="5 4" strokeWidth={1.25} />}
+          {/* Where the ledger stops and the guess begins. */}
+          {today && todayIndex > 0 && (
+            <ReferenceLine x={today.day} stroke="rgba(148,163,184,0.45)" strokeDasharray="2 3" strokeWidth={1} />
+          )}
+          <Tooltip
+            content={({ active, payload, label }) => {
+              if (!active || !payload?.length) return null
+              const p = payload[0].payload
+              const isPast = p.value == null
+              return (
+                <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
+                  <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
+                  <p className="font-medium text-slate-700 dark:text-white tabular-nums">
+                    {isPast ? fmt(p.past, currency) : `About ${fmt(p.value, currency)}`}
+                  </p>
+                  {!isPast && p.band && p.band[1] - p.band[0] > 0.5 && (
+                    <p className="text-slate-500 dark:text-slate-400 tabular-nums">
+                      Likely {fmtCompact(p.band[0], currency)} to {fmtCompact(p.band[1], currency)}
+                    </p>
+                  )}
+                </div>
+              )
+            }}
+            cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '4 2' }}
+          />
+          <Area type="stepAfter" dataKey="band" stroke="none" fill={`url(#${bandId})`}
+            isAnimationActive={!prefersReducedMotion()} animationDuration={700} activeDot={false} />
+          <Area type="stepAfter" dataKey="past" stroke={color} strokeWidth={2.25} fill={`url(#${pastId})`}
+            baseValue={axis.floor} dot={false} connectNulls={false}
+            activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
+            isAnimationActive={!prefersReducedMotion()} animationDuration={700} />
+          <Line type="stepAfter" dataKey="value" stroke={color} strokeWidth={2.25} strokeDasharray="6 5"
+            dot={false} connectNulls={false}
+            activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
+            isAnimationActive={!prefersReducedMotion()} animationDuration={700} />
+          {low && (
+            <ReferenceDot x={low.day} y={low.value} r={4.5}
+              fill={low.value < 0 ? '#ef4444' : low.value < floor ? '#f59e0b' : color}
+              stroke="white" strokeWidth={2} ifOverflow="visible" />
+          )}
+        </ComposedChart>
+      </ResponsiveContainer>
+      {/* What the three marks mean, once - the dashes and the band are the
+          whole difference between this and a statement of fact. */}
+      <div className="mt-1 flex items-center justify-center gap-4 text-11 text-slate-500 dark:text-slate-400" aria-hidden="true">
+        <span className="flex items-center gap-1.5">
+          <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2.25" /></svg>
+          So far
+        </span>
+        <span className="flex items-center gap-1.5">
+          <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2.25" strokeDasharray="4 3" /></svg>
+          Projected
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3.5 h-2.5 rounded-sm" style={{ background: color, opacity: 0.22 }} />
+          Likely range
+        </span>
+      </div>
     </div>
   )
 }

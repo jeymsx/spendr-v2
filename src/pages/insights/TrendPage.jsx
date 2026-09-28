@@ -5,7 +5,6 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import SectionHeading from '../../components/ui/SectionHeading'
 import SectionLabel from '../../components/ui/SectionLabel'
-import { useBack } from '../../hooks/useBack'
 import { fmtCompact } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
 import { PeriodControls } from './PeriodBar'
@@ -13,7 +12,7 @@ import { changeOf, periodName, usePeriod } from './period'
 import { SpendingTrend } from './Trend'
 import { TrendSkeleton } from './Skeleton'
 import { dailySeries, useInsightsData } from './useInsightsData'
-import { useArrival } from './zoom'
+import { useArrival, useZoomBack } from './zoom'
 
 /**
  * How the period's money moved: the chart the overview used to carry, with
@@ -75,11 +74,12 @@ function Fact({ label, value }) {
 }
 
 export default function TrendPage() {
-  const arrival = useArrival()
-  const back = useBack('/insights')
+  const back = useZoomBack('/insights')
   const [params] = useSearchParams()
   const { period } = usePeriod()
   const data = useInsightsData(period)
+  // Grown out of its card once its figures are in (zoom.js).
+  const arrival = useArrival(!data.loading)
   const series = useMemo(() => dailySeries(data.daily), [data.daily])
   const isArea = period.range === '1m' || period.range === '7d'
   const title = period.range === '7d' ? 'Last 7 days'

@@ -276,7 +276,7 @@ export function RemindersSheet({ r }) {
         )}
 
         <p className="mt-4 text-center text-12 leading-snug text-slate-500 dark:text-slate-400">
-          Cards: 3 days before and on the day. Bills: on the day.
+          Cards and loans: 3 days before and on the day. Bills: on the day.
         </p>
       </div>
     </Sheet>

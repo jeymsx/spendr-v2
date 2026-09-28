@@ -8,6 +8,10 @@ import { txBase } from '../lib/fxContext'
 import { statementDueDate } from '../lib/creditBills'
 import { receivedAmount } from '../lib/transferLegs'
 import { saveFile } from '../lib/share'
+import { isIncome, isSpend } from '../lib/flows'
+import { bucketOf } from '../lib/accountMeta'
+import { debtsNetAt } from '../lib/trend'
+import { debtsCountFrom } from '../lib/netWorth'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
@@ -59,11 +63,15 @@ export async function fetchReportData(year, month, base = '', rates = null) {
   const categories = await db.categories.toArray()
   const nameMeta   = await db.meta.get('displayName')
   const userName   = nameMeta?.value ?? 'Spendr User'
+  const debts      = await db.debts.toArray()
+  const includeDebts = debtsCountFrom(await db.meta.get('netWorthDebts'))
 
   const catMap = Object.fromEntries(categories.map(c => [c.name, c]))
 
-  const expenses = monthTxs.filter(tx => tx.type === 'expense')
-  const inflows  = monthTxs.filter(tx => tx.type === 'inflow')
+  // Income and spending as lib/flows.js defines them - a balance correction
+  // or an investment's value moving is neither.
+  const expenses = monthTxs.filter(isSpend)
+  const inflows  = monthTxs.filter(isIncome)
 
   /** @param {number} v */
   const r2 = (v) => Math.round(v * 100) / 100
@@ -101,9 +109,12 @@ export async function fetchReportData(year, month, base = '', rates = null) {
     })
     .sort((a, b) => b.total - a.total)
 
-  // Account totals
-  const creditAccounts    = accounts.filter(a => a.type === 'credit')
-  const nonCreditAccounts = accounts.filter(a => a.type !== 'credit')
+  // Account totals. Loans are owed, not owned: their balance is stored
+  // negative, and they are counted with what you owe rather than netted
+  // silently out of "Total Assets".
+  const creditAccounts    = accounts.filter(a => bucketOf(a) === 'credit')
+  const loanAccounts      = accounts.filter(a => bucketOf(a) === 'loan')
+  const assetAccounts     = accounts.filter(a => !['credit', 'loan'].includes(bucketOf(a)))
 
   // Credit detail: uses current billing cycle (same logic as Dashboard / account modal)
   /** @param {Date|null} [d] */
@@ -189,15 +200,25 @@ export async function fetchReportData(year, month, base = '', rates = null) {
      the totals and named in `unconverted`, rather than being added at face
      value - a dollar counted as a peso is a wrong net worth, where an
      acknowledged omission is only an incomplete one. */
-  const assets      = sumInBase(nonCreditAccounts, base, rates, a => endingBalances[a.name] ?? 0)
+  const assets      = sumInBase(assetAccounts, base, rates, a => endingBalances[a.name] ?? 0)
   const creditUsed  = sumInBase(creditAccounts, base, rates, a => creditDetailMap[a.name]?.balanceUsed ?? 0)
   const creditLimit = sumInBase(creditAccounts, base, rates, a => a.creditLimit ?? 0)
+  const loansOwed   = sumInBase(loanAccounts, base, rates, a => -(endingBalances[a.name] ?? 0))
 
-  const totalAssets      = assets.total
+  /* People, as of the same instant - Preferences › Count debts. Worked back
+     from the ledger rather than read off today's rows, since a July report
+     must not know what was repaid in August. */
+  const people = includeDebts ? debtsNetAt({ debts, txs: allTxs, at: asOf.getTime() }) : 0
+
+  const totalAssets      = assets.total + Math.max(0, people)
   const totalCreditUsed  = creditUsed.total
   const totalCreditLimit = creditLimit.total
-  const netWorth         = totalAssets - totalCreditUsed
-  const unconverted      = [...new Set([...assets.missing, ...creditUsed.missing, ...creditLimit.missing])].sort()
+  const totalLoans       = loansOwed.total
+  const totalOwed        = totalCreditUsed + totalLoans + Math.max(0, -people)
+  const netWorth         = totalAssets - totalOwed
+  const unconverted      = [...new Set([
+    ...assets.missing, ...creditUsed.missing, ...creditLimit.missing, ...loansOwed.missing,
+  ])].sort()
 
   // Transactions sorted ascending by date
   const transactions = [...monthTxs].sort((a, b) => {
@@ -218,6 +239,9 @@ export async function fetchReportData(year, month, base = '', rates = null) {
     totalAssets,
     totalCreditUsed,
     totalCreditLimit,
+    totalLoans,
+    totalOwed,
+    people,
     netWorth,
     unconverted,
     categoryBreakdown,

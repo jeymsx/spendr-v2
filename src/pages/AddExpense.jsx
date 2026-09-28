@@ -29,6 +29,7 @@ import { fmt } from '../lib/money'
 import Rail from '../components/ui/Rail'
 import AmountInput from '../components/ui/AmountInput'
 import ConversionChip from '../components/ConversionChip'
+import { isEverydayAccount } from '../lib/accountMeta'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -121,7 +122,8 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     return parts.length ? parts.join(' · ') : null
   }, [splitLegs, people, account?.currency])
 
-  const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
+  // Not investments or loans: money reaches those by a transfer, never a purchase.
+  const accounts       = useLiveQuery(async () => (await db.accounts.toArray()).filter(isEverydayAccount), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
   const categories = useLiveQuery(
     () => db.categories.where('type').equals('expense').toArray()

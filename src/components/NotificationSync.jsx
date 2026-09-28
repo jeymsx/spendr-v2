@@ -5,6 +5,7 @@ import { useToast } from '../context/ToastContext'
 import { collectNotifications } from '../lib/notifications'
 import { recordNotifications, releaseSeenAt } from '../db/notifications'
 import { CURRENT_VERSION, WHATS_NEW_HEADLINE } from './WhatsNewModal'
+import useForecast from '../hooks/useForecast'
 
 /** How often to look again while the app stays open, for the 9am items. */
 const TICK_MS = 5 * 60 * 1000
@@ -45,6 +46,8 @@ export default function NotificationSync() {
   const badges       = useLiveQuery(() => db.badges.toArray(), [], undefined)
   const challenges   = useLiveQuery(() => db.challenges.toArray(), [], undefined)
   const rollover     = useLiveQuery(async () => (await db.meta.get('budgetRollover'))?.value ?? false, [], undefined)
+  // The next 30 days, for the warning that money runs short or under the floor.
+  const { forecast } = useForecast(30)
   const [tick, setTick] = useState(0)
 
   useEffect(() => {
@@ -56,6 +59,7 @@ export default function NotificationSync() {
 
   useEffect(() => {
     if ([accounts, transactions, recurring, categories, badges, challenges, rollover].some(v => v === undefined)) return
+    if (!forecast) return
     const t = setTimeout(async () => {
       const now = new Date()
       try {
@@ -64,6 +68,7 @@ export default function NotificationSync() {
           accounts, transactions, recurring, categories, badges, challenges,
           globalRollover: !!rollover,
           whatsNew: seenAt ? { version: CURRENT_VERSION, headline: WHATS_NEW_HEADLINE, at: seenAt } : null,
+          forecast,
           now,
         })
         const fresh = await recordNotifications(candidates, now)
@@ -81,7 +86,7 @@ export default function NotificationSync() {
       }
     }, SETTLE_MS)
     return () => clearTimeout(t)
-  }, [accounts, transactions, recurring, categories, badges, challenges, rollover, tick])
+  }, [accounts, transactions, recurring, categories, badges, challenges, rollover, forecast, tick])
 
   return null
 }

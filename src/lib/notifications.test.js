@@ -203,6 +203,98 @@ describe('badges, the recap and this release', () => {
   })
 })
 
+describe('income, loans, investments and the forecast', () => {
+  it('never says a salary is due or late', () => {
+    const pay = { name: 'Salary', syncId: 'pay-1', type: 'inflow', amount: 25000, account: 'BPI', frequency: 'semimonthly', active: true }
+    expect(collectNotifications({ recurring: [{ ...pay, nextDate: '2026-09-25' }], now: NOW })).toEqual([])
+    expect(collectNotifications({ recurring: [{ ...pay, nextDate: '2026-09-15' }], now: NOW })).toEqual([])
+  })
+
+  const LOAN = { id: 7, name: 'Car Loan', type: 'loan', syncId: 'loan-1', balance: -100000, minimumPayment: 5000, dueDate: 28, interestRate: 1 }
+  const loansIn = (/** @type {any[]} */ feed) => feed.filter(f => f.kind === 'loan-due')
+
+  it('says a loan payment is coming three days before, with what to pay', () => {
+    const feed = loansIn(collectNotifications({ accounts: [LOAN], now: NOW }))
+    expect(feed.map(f => [f.id, f.title, f.body, f.url])).toEqual([
+      ['loan:loan-1:2026-09-28:early', 'Car Loan due in 3 days', '₱5,000.00 to pay', '/accounts/7'],
+    ])
+  })
+
+  it('says it on the day, and only that', () => {
+    const feed = loansIn(collectNotifications({ accounts: [LOAN], now: new Date(2026, 8, 28, 10) }))
+    expect(feed.map(f => f.id)).toEqual(['loan:loan-1:2026-09-28:due'])
+  })
+
+  /* August's was paid, so Spendr knows this loan is being paid through it -
+     a loan it has never seen a payment for is never opened as overdue. */
+  it('says it is overdue the day after, while it still is', () => {
+    const aug = { type: 'transfer', fromAccount: 'BPI', toAccount: 'Car Loan', amount: 4000, date: at(8, 27) }
+    const feed = loansIn(collectNotifications({ accounts: [LOAN], transactions: [aug], now: new Date(2026, 8, 29, 10) }))
+    expect(feed.map(f => [f.id, f.title, f.body])).toEqual([
+      ['loan:loan-1:2026-09-28:overdue', 'Car Loan is overdue', '₱5,000.00 left to pay'],
+    ])
+  })
+
+  it('goes quiet once this month is paid', () => {
+    const paid = { type: 'transfer', fromAccount: 'BPI', toAccount: 'Car Loan', amount: 4000, date: at(9, 20) }
+    expect(loansIn(collectNotifications({ accounts: [LOAN], transactions: [paid], now: NOW }))).toEqual([])
+  })
+
+  it('says nothing about a loan that is paid off', () => {
+    expect(loansIn(collectNotifications({ accounts: [{ ...LOAN, balance: 0 }], now: NOW }))).toEqual([])
+  })
+
+  const MP2 = { id: 5, name: 'MP2', type: 'investment', syncId: 'inv-1', balance: 52000 }
+
+  it('asks for a new value once the last one is old, dated the day it turned old', () => {
+    const feed = collectNotifications({ accounts: [{ ...MP2, valuedAt: at(8, 1) }], now: NOW })
+    expect(feed).toHaveLength(1)
+    expect(feed[0]).toMatchObject({
+      id: 'invest:inv-1:2026-08-01', kind: 'investment-stale',
+      title: 'Time to update MP2', body: 'Its value is from Aug 1.', url: '/accounts/5',
+    })
+    // Aug 1 plus 46 days, at 9.
+    expect(new Date(feed[0].at)).toEqual(new Date(2026, 8, 16, 9))
+  })
+
+  it('says nothing while the value is recent', () => {
+    expect(collectNotifications({ accounts: [{ ...MP2, valuedAt: at(9, 1) }], now: NOW })).toEqual([])
+  })
+
+  /* A fresh value makes a fresh id, so the old nudge does not linger as
+     unread and the next one, 46 days on, is news again. */
+  it('keys the nudge on the latest value', () => {
+    const row = { type: 'inflow', account: 'MP2', amount: 500, adjust: 'value', description: 'Value update', date: at(9, 24) }
+    const feed = collectNotifications({ accounts: [{ ...MP2, valuedAt: at(8, 1) }], transactions: [row], now: NOW })
+    expect(feed.filter(f => f.kind === 'investment-stale')).toEqual([])
+  })
+
+  const day = (/** @type {number} */ m, /** @type {number} */ d) => ({ date: new Date(2026, m - 1, d), iso: '', balance: 0 })
+
+  it('warns once a month that money runs short, and says when', () => {
+    const feed = collectNotifications({ forecast: /** @type {any} */ ({ firstNegative: day(10, 3), firstBelowFloor: day(9, 30) }), now: NOW })
+    expect(feed.map(f => [f.id, f.kind, f.title, f.url])).toEqual([
+      ['forecast:short:2026-09', 'forecast-short', 'Money could run short on Oct 3', '/insights/forecast'],
+    ])
+    expect(new Date(feed[0].at)).toEqual(new Date(2026, 8, 25, 9))
+  })
+
+  it('warns about the floor when the money itself holds', () => {
+    const feed = collectNotifications({ forecast: /** @type {any} */ ({ firstNegative: null, firstBelowFloor: day(10, 9) }), now: NOW })
+    expect(feed.map(f => [f.id, f.title])).toEqual([['forecast:floor:2026-09', 'Below your floor on Oct 9']])
+  })
+
+  it('says nothing when the next 30 days are fine', () => {
+    expect(collectNotifications({ forecast: /** @type {any} */ ({ firstNegative: null, firstBelowFloor: null }), now: NOW })).toEqual([])
+  })
+
+  it('dates a warning worked out before 9 to now, not to later today', () => {
+    const early = new Date(2026, 8, 25, 7)
+    const feed = collectNotifications({ forecast: /** @type {any} */ ({ firstNegative: day(10, 3), firstBelowFloor: null }), now: early })
+    expect(new Date(feed[0].at)).toEqual(early)
+  })
+})
+
 describe('the list', () => {
   it('heads each day the way people say it', () => {
     expect(dayHeading(new Date(2026, 8, 25, 9), NOW)).toBe('Today')

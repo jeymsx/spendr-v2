@@ -2,7 +2,49 @@ import { describe, it, expect, vi, afterEach } from 'vitest'
 import {
   advanceNextDate, toMonthlyAmount, parseDateLocal, daysUntil,
   dueStatus, billingLine, FREQ_LABEL, FREQ_OPTIONS, FREQ_ORDER,
+  snapToCutoff, incomeLine, ordinal,
 } from './recurring'
+
+describe('twice a month, on the payroll cut-offs', () => {
+  it('goes from the 15th to the last day, and from the last day to the next 15th', () => {
+    expect(advanceNextDate('2026-09-15', 'semimonthly')).toBe('2026-09-30')
+    expect(advanceNextDate('2026-09-30', 'semimonthly')).toBe('2026-10-15')
+    expect(advanceNextDate('2027-02-15', 'semimonthly')).toBe('2027-02-28')
+    expect(advanceNextDate('2026-12-31', 'semimonthly')).toBe('2027-01-15')
+  })
+
+  it('brings a date on neither cut-off onto the next one', () => {
+    expect(advanceNextDate('2026-09-10', 'semimonthly')).toBe('2026-09-15')
+    expect(advanceNextDate('2026-09-20', 'semimonthly')).toBe('2026-09-30')
+  })
+
+  it('starts a new one on the first cut-off on or after the day picked', () => {
+    expect(snapToCutoff('2026-09-03')).toBe('2026-09-15')
+    expect(snapToCutoff('2026-09-15')).toBe('2026-09-15')
+    expect(snapToCutoff('2026-09-16')).toBe('2026-09-30')
+    expect(snapToCutoff('2027-02-20')).toBe('2027-02-28')
+  })
+
+  it('counts as two a month', () => {
+    expect(toMonthlyAmount(25000, 'semimonthly')).toBe(50000)
+    expect(FREQ_LABEL.semimonthly).toBe('Twice a month')
+  })
+
+  it('writes days as ordinals', () => {
+    expect([1, 2, 3, 4, 11, 12, 13, 15, 21, 22, 23, 31].map(ordinal))
+      .toEqual(['1st', '2nd', '3rd', '4th', '11th', '12th', '13th', '15th', '21st', '22nd', '23rd', '31st'])
+  })
+})
+
+describe('the income line', () => {
+  it('says when pay arrives, and that a passed date is waiting to be marked', () => {
+    vi.useFakeTimers(); vi.setSystemTime(new Date('2026-09-10T12:00:00'))
+    expect(incomeLine('2026-09-10')).toMatch(/^Arrives today/)
+    expect(incomeLine('2026-09-11')).toMatch(/^Arrives tomorrow/)
+    expect(incomeLine('2026-09-05')).toMatch(/not marked yet$/)
+    vi.useRealTimers()
+  })
+})
 
 /**
  * Date arithmetic, which is where this app is most likely to be quietly wrong.
@@ -192,7 +234,7 @@ describe('the frequency table is the single source', () => {
     // The failure this stops: a frequency with a label and no arithmetic,
     // which renders as a chip and then never advances.
     for (const f of FREQ_OPTIONS) {
-      expect(f.step?.unit).toMatch(/^(day|month)$/)
+      expect(f.step?.unit).toMatch(/^(day|month|semimonth)$/)
       expect(f.step.n).toBeGreaterThan(0)
       expect(typeof f.perMonth).toBe('number')
       expect(f.perMonth).toBeGreaterThan(0)

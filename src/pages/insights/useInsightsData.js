@@ -4,6 +4,7 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { isoToDateInput, localMonthStartIso } from '../../utils/txDate'
 import { txBase } from '../../lib/fxContext'
+import { isIncome, isSpend } from '../../lib/flows'
 import { MONTHS_SHORT, periodName, periodWindow, previousWindow } from './period'
 import { generateTrivia } from './Trivia'
 
@@ -15,8 +16,11 @@ function monthBounds(year, month) {
   return { start: localMonthStartIso(year, month), end: localMonthStartIso(year, month + 1) }
 }
 
-/** @param {Array<Record<string, any>>} txs @param {string} type */
-const sumOf = (txs, type) => txs.filter(t => t.type === type).reduce((s, t) => s + txBase(t), 0)
+/* Income and spending, as lib/flows.js defines them: a balance correction or
+   an investment's value moving is neither, and would otherwise read as a
+   windfall or a splurge. */
+/** @param {Array<Record<string, any>>} txs @param {'expense'|'inflow'} type */
+const sumOf = (txs, type) => txs.filter(type === 'expense' ? isSpend : isIncome).reduce((s, t) => s + txBase(t), 0)
 
 /**
  * Everything Insights draws for a period, read once and shared by the
@@ -60,8 +64,8 @@ export function useInsightsData(period) {
     return (rangeTxs ?? []).filter(t => (t.date ?? '') <= cutoff)
   }, [rangeTxs])
 
-  const expenses = useMemo(() => posted.filter(t => t.type === 'expense'), [posted])
-  const inflows = useMemo(() => posted.filter(t => t.type === 'inflow'), [posted])
+  const expenses = useMemo(() => posted.filter(isSpend), [posted])
+  const inflows = useMemo(() => posted.filter(isIncome), [posted])
   const totalSpent = useMemo(() => expenses.reduce((s, t) => s + txBase(t), 0), [expenses])
   const totalEarned = useMemo(() => inflows.reduce((s, t) => s + txBase(t), 0), [inflows])
 

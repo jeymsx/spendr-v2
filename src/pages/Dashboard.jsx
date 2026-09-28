@@ -5,16 +5,13 @@ import { PresenceItem, useRowMotion } from '../components/ui/Presence'
 import { useTheme } from '../context/ThemeContext'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
-import { getCreditStatus, nextDueDate } from '../utils/creditCycle'
+import { getCreditStatus } from '../utils/creditCycle'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 import {
-  IconCardUI,
-  IconReceipt,
   IconTransferUI,
   IconEmptyLedger,
 } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
-import BillMark from '../components/BillMark'
 import { scheduledCutoff } from '../utils/scheduled'
 import { txMonthKey } from '../utils/txDate'
 import { cardGradient } from '../lib/accentTheme'
@@ -22,7 +19,7 @@ import IconButton from '../components/ui/IconButton'
 import BellButton from '../components/BellButton'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
-import { fmt, baseSymbol, fmtHidden } from '../lib/money'
+import { fmt, fmtCompact, baseSymbol, fmtHidden } from '../lib/money'
 import {
   ContextHint, getContextHint, getGreeting, monthPrefix,
   quickActionCounts,
@@ -32,19 +29,26 @@ import { useSwap } from '../components/ui/useSwap'
 import { useWalletClip } from './dashboard/wallet'
 import DashboardSkeleton from './dashboard/Skeleton'
 import {
-  AccountCard, BudgetSummaryTile, EmptyPill, IconEye, IconEyeOff, IconSettings, TxRow,
+  AccountCard, BudgetSummaryTile, EmptyPill, IconEye, IconEyeOff, IconFlipSides, IconSettings, TxRow,
 } from './dashboard/Tiles'
 import QuickActions from './dashboard/QuickActions'
-import UpcomingSection from './dashboard/Upcoming'
+import UpcomingSection, { toUpcomingItem } from './dashboard/Upcoming'
 import Rail from '../components/ui/Rail'
 import SectionHeading from '../components/ui/SectionHeading'
 import useRates from '../hooks/useRates'
-import { convert, sumInBase } from '../lib/fx'
+import useNetWorthDebts from '../hooks/useNetWorthDebts'
+import useForecast from '../hooks/useForecast'
+import { convert } from '../lib/fx'
+import { netWorthBreakdown } from '../lib/netWorth'
+import { isSpend } from '../lib/flows'
+import { txGlyphCat } from '../lib/txRow'
+import { foldLoanPayments } from '../lib/loans'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { txBase } from '../lib/fxContext'
 import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
 import { useRecapMonth } from './recap/useRecapMonth'
 import LazyWrappedCard, { preloadWrappedCard } from './recap/LazyWrappedCard'
+import { isEverydayAccount } from '../lib/accountMeta'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -64,6 +68,13 @@ export default function Dashboard() {
     try { return localStorage.getItem('netWorthBreakdown') !== 'closed' }
     catch { return true }
   })
+  /* Which half of the breakdown the wallet shows: what you have, or what you
+     owe - three tiles either way. Remembered, like the fold. */
+  const [walletSide, setWalletSide] = useState(() => {
+    try { return localStorage.getItem('netWorthSide') === 'owe' ? 'owe' : 'have' }
+    catch { return 'have' }
+  })
+  const sideSwap = useSwap(walletSide)
   const [walletRef, walletClip] = useWalletClip()
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
@@ -170,23 +181,6 @@ export default function Dashboard() {
     [separated, baseCurrency],
   )
 
-  const { spendingBalance, savingsBalance, unconverted } = useMemo(() => {
-    const allAccts = accounts || []
-    const roleOf = (a) => {
-      if (a.type === 'credit') return 'credit'
-      if (a.role) return a.role
-      return ['cash', 'ewallet'].includes(a.type) ? 'spending' : 'savings'
-    }
-    // Parents have their own real balance; sum all accounts (no double-counting)
-    const spend = sumInBase(inScope(allAccts.filter(a => roleOf(a) === 'spending'), shownCurrency), shownCurrency, rates)
-    const save  = sumInBase(inScope(allAccts.filter(a => roleOf(a) === 'savings'), shownCurrency),  shownCurrency, rates)
-    return {
-      spendingBalance: spend.total,
-      savingsBalance: save.total,
-      unconverted: [...new Set([...spend.missing, ...save.missing])].sort(),
-    }
-  }, [accounts, shownCurrency, rates, inScope])
-
   const parentCombinedBal = useMemo(() => {
     const allAccts = accounts || []
     const map = {}
@@ -205,9 +199,10 @@ export default function Dashboard() {
   // Without this they'd sort to the top of Recent and sit there for months.
   const recentTx = useMemo(() => {
     const cutoff = scheduledCutoff()
-    return (txAll || [])
+    // A loan payment is one of the five, not two (lib/loans.js).
+    return foldLoanPayments((txAll || [])
       .filter(t => (t.date ?? '') <= cutoff)
-      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')))
       // Five. Ten was half a screen of scrolling for a list whose whole job
       // is "does anything here look wrong", and "See all" is right there.
       .slice(0, 5)
@@ -227,7 +222,7 @@ export default function Dashboard() {
     const pfx = monthPrefix()
     const cutoff = scheduledCutoff()
     return (txAll || []).filter(t =>
-      t.type === 'expense' && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
+      isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 
   const budgetCategories = useMemo(() => {
@@ -250,7 +245,7 @@ export default function Dashboard() {
 
   const upcomingRecurring = useMemo(() =>
     (recurring || [])
-      .filter(r => r.active && r.nextDate)
+      .filter(r => r.active && r.nextDate && r.type !== 'inflow')
       .sort((a, b) => (a.nextDate ?? '').localeCompare(b.nextDate ?? ''))
       .slice(0, 3),
     [recurring],
@@ -270,99 +265,25 @@ export default function Dashboard() {
   }, [accounts, txAll])
 
   /**
-   * What is about to leave the account, soonest first.
+   * What lands next, soonest first - from the forecast, so this list and the
+   * "Safe to spend" above it are one reading of the same walk.
    *
-   * Two sources, one list. A subscription renewing and a card statement
-   * falling due are the same fact to whoever is looking - money committed but
-   * not yet gone - so splitting them across two sections would make you check
-   * twice to answer one question.
+   * Everything the forecast lays out: bills and paydays from Recurring, card
+   * statements (already counted, and listed as the reminder they are), loan
+   * payments, and debts you owe with a date. It replaced a list built here
+   * that used its own rule for a card's due date - not the one the bills page,
+   * the reminders and the PDF use.
    *
-   * Capped at two. This sits above Recent, and Recent is what the home screen
-   * is for; a bill list long enough to scroll would bury it, which is the
-   * mistake the old Upcoming section made.
+   * Three. This sits above Recent, and Recent is what the home screen is for;
+   * the whole list is a tap away on the Forecast page.
    */
-  const upcomingItems = useMemo(() => {
-    const out = []
-
-    for (const r of recurring ?? []) {
-      if (!r.active || !r.nextDate) continue
-      const d = new Date(`${r.nextDate}T00:00:00`)
-      if (Number.isNaN(d.getTime())) continue
-      const cat = catMap[r.category]
-      out.push({
-        key: `rec-${r.id}`, kind: 'recurring', date: d,
-        name: r.name || r.category || 'Recurring',
-        amount: r.amount ?? 0,
-        meta: r.account ?? '',
-        // A node, not a string. The three kinds of upcoming row want three
-        // different glyphs and only the recurring one has a category to look
-        // up, so resolving here keeps UpcomingRow from having to know.
-        icon: <CategoryGlyph cat={cat} size={17} emoji="🔁" />,
-        /* And the brand's own logo where there is one, which is the same
-           mark the bills list and the bill's page draw. A bill was the one
-           place showing Spotify as a grey category tile on the home screen
-           and as the Spotify logo everywhere else. BillMark falls back to
-           exactly the tile above when the name is not one we have art for,
-           so nothing changes for a bill called "Gym". */
-        mark: (
-          <BillMark name={r.name} cat={cat} size={20} boxClass="w-10 h-10 rounded-2xl" />
-        ),
-        color: cat?.color ?? null,
-        // Straight to the bill, not to the list. Tapping "Internet, overdue"
-        // and landing on a page of every bill you own makes you find the one
-        // you just pointed at - and the statement rows beside it already go
-        // to their own account, so the list was the odd one out.
-        to: `/recurring/${r.id}`,
-      })
-    }
-
-    for (const a of accounts ?? []) {
-      if (a.type !== 'credit') continue
-      const st = creditStmtMap[a.name]
-      if (!st) continue
-      // What is actually billed and still unpaid. `currentBalance` would be
-      // wrong here: it also carries charges from the cycle still open, which
-      // are not on this statement and are not due on this date.
-      const owed = Math.max(0, (st.thisTotal ?? 0) - (st.totalPayments ?? 0))
-      if (owed <= 0) continue          // nothing billed, or already settled
-      const d = nextDueDate(a.dueDate)
-      if (!d) continue
-      out.push({
-        key: `card-${a.id}`, kind: 'statement', date: d,
-        name: a.name,
-        amount: owed,
-        meta: 'Statement balance',
-        icon: <IconCardUI size={17} />,
-        color: a.color ?? null,
-        to: `/accounts/${a.id}`,
-      })
-    }
-
-    // Debts you owe, where a date was actually set. A dated debt is the same
-    // object as a bill: money committed, to a deadline.
-    //
-    // Only `i_owe`. Money owed TO you is not "about to leave", and netting an
-    // inflow into this section's total would make one figure answer two
-    // questions. It stays on the Debts page, where the distinction is the
-    // whole point.
-    for (const d of debts ?? []) {
-      const owed = Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0))
-      if (d.type !== 'i_owe' || owed <= 0 || !d.dueDate) continue
-      const when = new Date(`${String(d.dueDate).slice(0, 10)}T00:00:00`)
-      if (Number.isNaN(when.getTime())) continue
-      out.push({
-        key: `debt-${d.id}`, kind: 'debt', date: when,
-        name: d.name || d.contact || 'Debt',
-        amount: owed,
-        meta: d.contact && d.name !== d.contact ? d.contact : 'You owe',
-        icon: <IconReceipt size={17} />,
-        color: null,
-        to: '/debts?tab=i_owe',
-      })
-    }
-
-    return out.sort((x, y) => x.date - y.date).slice(0, 2)
-  }, [recurring, accounts, creditStmtMap, catMap, debts])
+  const { forecast } = useForecast(30)
+  const acctByName = useMemo(
+    () => Object.fromEntries((accounts || []).map(a => [a.name, a])), [accounts])
+  const upcomingItems = useMemo(
+    () => (forecast ? forecast.events.slice(0, 3).map(e => toUpcomingItem(e, catMap, acctByName)) : []),
+    [forecast, catMap, acctByName],
+  )
 
   /**
    * What is waiting for you behind Goals, Debts and Bills.
@@ -394,35 +315,67 @@ export default function Dashboard() {
     [recurring, debts, goalRows, accounts, baseCurrency, rates],
   )
 
-  const creditOutstanding = useMemo(() =>
-    sumInBase(
-      inScope((accounts || []).filter(a => a.type === 'credit'), shownCurrency),
-      shownCurrency,
-      rates,
-      a => creditStmtMap[a.name]?.currentBalance ?? 0,
-    ).total,
-    [accounts, creditStmtMap, shownCurrency, rates, inScope],
-  )
+  /* Net worth and its piles, from the one definition every screen uses -
+     lib/netWorth.js. Investments, loans and (when Preferences says so) money
+     between you and other people are in it; separated mode narrows it to the
+     accounts held in the currency on display. */
+  const nwDebts = useNetWorthDebts()
+  const breakdown = useMemo(() => netWorthBreakdown({
+    accounts: accounts || [], transactions: txAll || [],
+    view: shownCurrency, ledger: baseCurrency, rates,
+    creditStatus: creditStmtMap,
+    debts: nwDebts.debts, includeDebts: nwDebts.include,
+    scope: separated ? (accts) => inScope(accts, shownCurrency) : undefined,
+  }), [accounts, txAll, shownCurrency, baseCurrency, rates, creditStmtMap, nwDebts.debts, nwDebts.include, separated, inScope])
 
-  const netWorth = spendingBalance + savingsBalance - creditOutstanding
+  const netWorth = breakdown.total
+  const unconverted = breakdown.missing
 
   /* The OTHER currencies' net worth, at face value, for the lines under the
      headline. Only in separated mode, and only the ones not currently on
      display - the big figure is already saying that one. */
   const otherTotals = useMemo(() => {
     if (!separated) return []
-    const allAccts = accounts || []
     return viewOptions
       .filter(code => code !== shownCurrency)
-      .map(code => {
-        const held = allAccts.filter(a => (a.currency || baseCurrency) === code)
-        const assets = held.filter(a => a.type !== 'credit')
-          .reduce((sum, a) => sum + (a.balance ?? 0), 0)
-        const owed = held.filter(a => a.type === 'credit')
-          .reduce((sum, a) => sum + (creditStmtMap[a.name]?.currentBalance ?? 0), 0)
-        return { code, total: assets - owed }
-      })
-  }, [separated, accounts, viewOptions, shownCurrency, baseCurrency, creditStmtMap])
+      .map(code => ({
+        code,
+        total: netWorthBreakdown({
+          accounts: accounts || [], transactions: txAll || [],
+          view: code, ledger: baseCurrency, rates,
+          creditStatus: creditStmtMap,
+          debts: nwDebts.debts, includeDebts: nwDebts.include,
+          scope: (accts) => accts.filter(a => (a.currency || baseCurrency) === code),
+        }).total,
+      }))
+  }, [separated, accounts, txAll, viewOptions, shownCurrency, baseCurrency, rates, creditStmtMap, nwDebts.debts, nwDebts.include])
+
+  /* The wallet's piles, in two halves of three: what you have, and what you
+     owe. Six tiles at once made a two-row table of the one card that is meant
+     to be read at a glance, so the wallet shows one half and a switch flips
+     it. Spending, Savings and Credit always - they are what everybody has -
+     and the rest only once there is something in them, so a ledger with no
+     investment never grows a tile reading ₱0.00 for one. Debts - money
+     between you and other people - sits with what you owe even when the net
+     is in your favour; its note says which way it runs. */
+  const haveTiles = [
+    { key: 'spending', label: 'Spending', value: breakdown.spending, note: 'Cash, wallets' },
+    { key: 'savings', label: 'Savings', value: breakdown.savings, note: 'Banks, deposits' },
+    breakdown.has.invested && { key: 'invested', label: 'Investments', value: breakdown.invested, note: 'At last value' },
+  ].filter(Boolean)
+  const oweTiles = [
+    { key: 'credit', label: 'Credit', value: breakdown.credit, note: breakdown.credit > 0 ? 'Outstanding' : 'Paid off' },
+    breakdown.has.loans && { key: 'loans', label: 'Loans', value: breakdown.loans, note: breakdown.loans > 0.005 ? 'Left to pay' : 'Paid off' },
+    breakdown.has.people && {
+      key: 'people', label: 'Debts', value: Math.abs(breakdown.people),
+      note: breakdown.people >= 0 ? 'Owed to you' : 'You owe',
+    },
+  ].filter(Boolean)
+  const pileTiles = walletSide === 'owe' ? oweTiles : haveTiles
+  const pickSide = (/** @type {'have'|'owe'} */ side) => {
+    setWalletSide(side)
+    try { localStorage.setItem('netWorthSide', side) } catch { /* private mode */ }
+  }
 
   const userMetaLoaded = userMeta !== undefined
   const userName = userMeta?.value || 'there'
@@ -437,7 +390,10 @@ export default function Dashboard() {
   /* The Wrapped card waits with the rest on the days it shows: arriving
      after the page had drawn, it pushed the budget and everything under it
      down under a reader's thumb. */
-  if (accounts === undefined || txAll === undefined || (wrappedDays && recapMonth === undefined)) {
+  /* The forecast and the counted debts wait with the rest: arriving a frame
+     later they moved the net worth and pushed Recent down under a thumb. */
+  if (accounts === undefined || txAll === undefined || !nwDebts.ready || !forecast
+    || (wrappedDays && recapMonth === undefined)) {
     return <DashboardSkeleton />
   }
 
@@ -522,14 +478,37 @@ export default function Dashboard() {
                     )}
                   </div>
 
-                  <button
-                    onPointerDown={e => e.stopPropagation()}
-                    onClick={() => setBalanceHidden(h => !h)}
-                    className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
-                    aria-label={balanceHidden ? 'Show balance' : 'Hide balance'}
-                  >
-                    {balanceHidden ? <IconEyeOff /> : <IconEye />}
-                  </button>
+                  <div className="flex items-center gap-3.5">
+                    {/* What you have, or what you owe - the breakdown shows
+                        one half. Only while the breakdown is out: folded away,
+                        there is nothing for it to flip. The arrows turn over
+                        with the side, so the button shows it has two states. */}
+                    {breakdownOpen && (
+                      <button
+                        onPointerDown={e => e.stopPropagation()}
+                        onClick={() => pickSide(walletSide === 'have' ? 'owe' : 'have')}
+                        className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
+                        aria-label={walletSide === 'have'
+                          ? 'Showing what you have. Show what you owe.'
+                          : 'Showing what you owe. Show what you have.'}
+                      >
+                        <span
+                          className="block transition-transform duration-300 ease-[cubic-bezier(0.2,0.7,0.3,1)]"
+                          style={{ transform: walletSide === 'owe' ? 'scaleY(-1)' : 'none' }}
+                        >
+                          <IconFlipSides />
+                        </span>
+                      </button>
+                    )}
+                    <button
+                      onPointerDown={e => e.stopPropagation()}
+                      onClick={() => setBalanceHidden(h => !h)}
+                      className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
+                      aria-label={balanceHidden ? 'Show balance' : 'Hide balance'}
+                    >
+                      {balanceHidden ? <IconEyeOff /> : <IconEye />}
+                    </button>
+                  </div>
                 </div>
 
                 <div className="mt-2">
@@ -581,35 +560,26 @@ export default function Dashboard() {
                         row of figures itself. 6px + 18px puts the content
                         14px clear of the stitching, which is exactly the
                         clearance px-6 gives it on the left and right. */}
-                    <div id="net-worth-breakdown" className="wallet-pocket grid grid-cols-3 gap-3 px-6 pt-5 pb-1.5">
-                  <div>
-                    <p className="text-white/50 text-11 mb-1">Spending</p>
-                    <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
-                      {revealed
-                        ? <RollingNumber id={`home:spending:${shownCurrency}`} value={spendingBalance} format={v => fmt(v, shownCurrency)} />
-                        : '••••'}
-                    </p>
-                    <p className="text-white/35 text-10 mt-0.5">Cash, wallets</p>
-                  </div>
-                  <div>
-                    <p className="text-white/50 text-11 mb-1">Savings</p>
-                    <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
-                      {revealed
-                        ? <RollingNumber id={`home:savings:${shownCurrency}`} value={savingsBalance} format={v => fmt(v, shownCurrency)} />
-                        : '••••'}
-                    </p>
-                    <p className="text-white/35 text-10 mt-0.5">Banks, deposits</p>
-                  </div>
-                  <div>
-                    <p className="text-white/50 text-11 mb-1">Credit</p>
-                    <p key={revealed ? 's' : 'h'} className={`${swap} font-semibold text-sm tabular-nums text-white`}>
-                      {revealed
-                        ? <RollingNumber id={`home:credit:${shownCurrency}`} value={creditOutstanding} format={v => fmt(v, shownCurrency)} />
-                        : '••••'}
-                    </p>
-                    <p className="text-white/35 text-10 mt-0.5">
-                      {creditOutstanding > 0 ? 'Outstanding' : 'Paid off'}
-                    </p>
+                    <div id="net-worth-breakdown" className="wallet-pocket px-6 pt-5 pb-1.5">
+                      {/* One half at a time - see haveTiles. The flip button
+                          beside the eye chooses which; the tiles say which it
+                          is by what they are called. */}
+                      <div key={walletSide} className={`${sideSwap} grid grid-cols-3 gap-x-3`}>
+                        {pileTiles.map(tile => (
+                          <div key={tile.key} className="min-w-0">
+                            <p className="text-white/50 text-11 mb-1 truncate">{tile.label}</p>
+                            <p key={revealed ? 's' : 'h'} className={`${swap} text-white font-semibold text-sm tabular-nums`}>
+                              {/* Compact from ₱100K: a loan's ₱420,000.00 ran into
+                                  the next column on a 360px phone, and three
+                                  columns have no room for seven digits. The
+                                  exact figure is one tap away, on Accounts. */}
+                              {revealed
+                                ? <RollingNumber id={`home:${tile.key}:${shownCurrency}`} value={tile.value} format={v => (Math.abs(v) >= 1e5 ? fmtCompact(v, shownCurrency) : fmt(v, shownCurrency))} />
+                                : '••••'}
+                            </p>
+                            <p className="text-white/35 text-10 mt-0.5 truncate">{tile.note}</p>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
@@ -666,9 +636,11 @@ export default function Dashboard() {
           {(() => {
             const allAccts    = accounts || []
             const parentNames = new Set(allAccts.filter(a => a.parentName).map(a => a.parentName))
-            // Show parent accounts (combined balance) + flat accounts; exclude child accounts
+            // Show parent accounts (combined balance) + flat accounts; exclude child accounts.
+            // Money you spend from only: investments and loans are not cards
+            // (accounts/HoldingTile), and the wallet above already has their tiles.
             const cardAccts   = allAccts
-              .filter(a => parentNames.has(a.name) || !a.parentName)
+              .filter(a => (parentNames.has(a.name) || !a.parentName) && isEverydayAccount(a))
               .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
             return cardAccts.map(acct => {
               const isParent = parentNames.has(acct.name)
@@ -741,7 +713,7 @@ export default function Dashboard() {
       )}
 
       {/* ── Recent Transactions ──────────────────────────────────────────────── */}
-      <UpcomingSection items={upcomingItems} />
+      <UpcomingSection forecast={forecast} items={upcomingItems} />
 
       <section className="px-5 mt-8 pb-nav">
         <SectionHeading inset="none" gap="none" actionLabel="See all" actionTo="/transactions">Recent</SectionHeading>
@@ -760,6 +732,7 @@ export default function Dashboard() {
                   <TxRow
                     tx={tx}
                     cat={catMap[tx.category]}
+                    glyph={txGlyphCat(tx, catMap)}
                     isLast={i === recentTx.length - 1}
                   />
                 </PresenceItem>

@@ -37,6 +37,12 @@ const GLYPHS = {
   bell: <><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></>,
   flag: <><path d="M5.4 20V4" /><path d="M5.4 4.6h13.2l-4.4 4.4 4.4 4.4H5.4" /></>,
   trophy: <><path d="M7 3.6h10v5a5 5 0 0 1-10 0z" /><path d="M7 5.4H4.4v1.4a3 3 0 0 0 3 3M17 5.4h2.6v1.4a3 3 0 0 1-3 3" /><path d="M12 13.6v3.6M8.4 20.4h7.2l-.8-3.2H9.2z" /></>,
+  // A page of terms: a loan's payment.
+  loan: <><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" /><path d="M14 3v5h5M9 13h6M9 17h4" /></>,
+  // A line that rises: an investment whose value wants updating.
+  growth: <><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></>,
+  // A line that drops toward a floor: the forecast warning.
+  dip: <><path d="M3 7l6 6 4-4 8 8" /><path d="M3 21h18" /></>,
 }
 
 /**
@@ -65,6 +71,10 @@ export const NOTIFICATION_KINDS = {
   challenge:      { glyph: 'trophy',   tone: 'good' },
   recap:          { glyph: 'chart',    tone: 'news' },
   'whats-new':    { glyph: 'sparkle',  tone: 'news' },
+  'loan-due':     { glyph: 'loan',     tone: 'soon' },
+  'investment-stale': { glyph: 'growth', tone: 'news' },
+  'forecast-floor':   { glyph: 'dip',    tone: 'soon' },
+  'forecast-short':   { glyph: 'dip',    tone: 'late' },
 }
 
 /** @param {{kind: string}} props */

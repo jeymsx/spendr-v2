@@ -150,6 +150,11 @@ export default function RecurringDetail() {
   /* A bill is charged to an account, so its figure is in that account's
      currency - the whole page is about this one bill. */
   const billCur = currencyOfAccountName(rec?.account)
+  /* Income that arrives on a schedule - a salary - uses this same page: it
+     is marked received rather than posted, and it has a history rather than
+     a bill's. */
+  const income = rec?.type === 'inflow'
+  const noun = income ? 'income' : 'bill'
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const accounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
 
@@ -189,11 +194,11 @@ export default function RecurringDetail() {
         (syncId && t.recurringSyncId === syncId)
         || (Number.isFinite(recId) && t.recurringId === recId)
         || (!t.recurringSyncId && !t.recurringId
-            && t.type === 'expense'
+            && t.type === (rec.type === 'inflow' ? 'inflow' : 'expense')
             && t.description === rec.name
             && t.category === rec.category))
     },
-    [recId, rec?.syncId, rec?.name, rec?.category], undefined,
+    [recId, rec?.syncId, rec?.name, rec?.category, rec?.type], undefined,
   )
 
   const history = useMemo(() => {
@@ -251,12 +256,12 @@ export default function RecurringDetail() {
 
          runAction in ToastContext nulls its own ref and dismisses before
          calling, so this cannot fire twice and double-credit the balance. */
-      showToast(`${rec.name} posted`, 'success', tx ? {
+      showToast(`${rec.name} ${income ? 'received' : 'posted'}`, 'success', tx ? {
         actionLabel: 'Undo',
         onAction: async () => {
           try {
             await deleteTxGroup([tx])
-            showToast('Post undone')
+            showToast('Undone')
           } catch (err) {
             console.error('[RecurringDetail] undo post failed:', err)
             showToast('Could not undo', 'error')
@@ -293,7 +298,7 @@ export default function RecurringDetail() {
     try {
       await db.recurring.delete(recId)
       await deleteRecurringRemote(recId, rec?.name, rec?.syncId)
-      showToast('Bill deleted')
+      showToast(income ? 'Income deleted' : 'Bill deleted')
       back()
     } catch (e) {
       console.error('[RecurringDetail] delete failed:', e)
@@ -319,17 +324,17 @@ export default function RecurringDetail() {
   if (!rec) {
     return (
       <div className="px-5 pt-safe-header">
-        <IconButton label="Back to bills" onClick={back}>
+        <IconButton label="Back to recurring" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         <EmptyState
           className="mt-8"
           icon={<IconNotFound />}
-          title="Bill not found"
+          title="Not found"
           body="It may have been deleted."
           action={
             <Button variant="tint" className="px-5" onClick={back}>
-              Back to bills
+              Back to recurring
             </Button>
           }
         />
@@ -341,7 +346,7 @@ export default function RecurringDetail() {
     <div className="pb-nav">
       {/* ── Header: back, centred name, one door to editing ── */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back to bills" onClick={back}>
+        <IconButton label="Back to recurring" onClick={back}>
           <IconChevronLeft />
         </IconButton>
 
@@ -415,11 +420,11 @@ export default function RecurringDetail() {
               </div>
 
               <p className={`mt-0.5 text-22 leading-tight font-semibold tracking-tight tabular-nums ${
-                rec.active
-                  ? 'text-slate-900 dark:text-white'
-                  : 'text-slate-400 dark:text-slate-500'
+                !rec.active ? 'text-slate-400 dark:text-slate-500'
+                  : income ? 'text-emerald-600 dark:text-emerald-400'
+                  : 'text-slate-900 dark:text-white'
               }`}>
-                {fmt(rec.amount, billCur)}
+                {income ? '+' : ''}{fmt(rec.amount, billCur)}
                 <span className="text-13 font-medium text-slate-500 dark:text-slate-400 ml-1">
                   /{FREQ_SHORT[rec.frequency] ?? rec.frequency}
                 </span>
@@ -432,10 +437,11 @@ export default function RecurringDetail() {
         {/* The billing line, outside the card and centred, so it reads as a
             caption on the whole bill rather than one more field in it. */}
         <p className={`mt-3 text-center text-13 ${
-          rec.active ? (DUE_TONE[due?.tone] ?? 'text-slate-500 dark:text-slate-400')
-                     : 'text-slate-400 dark:text-slate-500'
+          !rec.active ? 'text-slate-400 dark:text-slate-500'
+            : income ? 'text-slate-500 dark:text-slate-400'
+            : (DUE_TONE[due?.tone] ?? 'text-slate-500 dark:text-slate-400')
         }`}>
-          {billingLine(rec.nextDate)}
+          {billingLine(rec.nextDate, income)}
         </p>
       </section>
 
@@ -452,7 +458,7 @@ export default function RecurringDetail() {
         />
         <ActionTile
           icon={<IconBolt />}
-          label={posting ? 'Posting…' : 'Post now'}
+          label={posting ? 'Saving…' : income ? 'Mark received' : 'Post now'}
           onClick={() => setConfirmPost(true)}
           disabled={posting}
           tone="accent"
@@ -486,14 +492,14 @@ export default function RecurringDetail() {
                 the same thing twice - the label is already "Repeats". */}
             <DetailRow label="Repeats" value={FREQ_LABEL[rec.frequency] ?? rec.frequency} />
             <DetailRow
-              label="Next charge"
+              label={income ? 'Next' : 'Next charge'}
               value={rec.nextDate ? fmtDateFull(rec.nextDate) : 'No date set'}
-              tone={rec.active && due?.tone === 'late' ? 'text-red-500 dark:text-red-400' : ''}
+              tone={!income && rec.active && due?.tone === 'late' ? 'text-red-500 dark:text-red-400' : ''}
             />
             {/* Only where it says something the amount above does not. On a
                 monthly bill this row would repeat the hero verbatim. */}
             {rec.frequency !== 'monthly' && (
-              <DetailRow label="Monthly cost" value={`${fmt(monthly, billCur)} /mo`} />
+              <DetailRow label={income ? 'A month' : 'Monthly cost'} value={`${fmt(monthly, billCur)} /mo`} />
             )}
             <DetailRow
               label="Status"
@@ -517,7 +523,7 @@ export default function RecurringDetail() {
             ? <span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">{fmt(paidTotal, billCur)}</span>
             : null}
         >
-          Billing history
+          {income ? 'History' : 'Billing history'}
         </SectionLabel>
         <div className="px-5">
           <Card clip>
@@ -527,8 +533,8 @@ export default function RecurringDetail() {
               <EmptyState
                 size="sm"
                 icon={<IconEmptyReceipt />}
-                title="Nothing charged yet"
-                body="Charges appear here once posted."
+                title={income ? 'Nothing received yet' : 'Nothing charged yet'}
+                body={income ? 'Each one you mark received shows here.' : 'Charges appear here once posted.'}
               />
             ) : (
               /* Six, not all of them. Past half a year the list stops being a
@@ -566,7 +572,7 @@ export default function RecurringDetail() {
           destroy the bill had it backwards. */}
       <section className="px-5 mt-7">
         <Button block variant="dangerTint" onClick={() => setConfirmDel(true)}>
-          Delete this bill
+          Delete this {noun}
         </Button>
       </section>
 
@@ -575,13 +581,15 @@ export default function RecurringDetail() {
         onClose={() => setConfirmDel(false)}
         onConfirm={handleDelete}
         busy={deleting}
-        title="Delete this bill?"
-        body="Charges already posted stay in the ledger. Only the reminder goes."
+        title={`Delete this ${noun}?`}
+        body={income
+          ? 'What you already received stays in the ledger. Only the schedule goes.'
+          : 'Charges already posted stay in the ledger. Only the reminder goes.'}
         amount={fmt(rec.amount ?? 0, billCur)}
       >
-        <DetailRow label="Bill" value={rec.name} padded={false} isLast />
+        <DetailRow label={income ? 'Income' : 'Bill'} value={rec.name} padded={false} isLast />
         {rec.category && <DetailRow label="Category" value={rec.category} padded={false} isLast />}
-        <DetailRow label="Billing" value={FREQ_LABEL[rec.frequency] ?? rec.frequency} padded={false} isLast />
+        <DetailRow label="Repeats" value={FREQ_LABEL[rec.frequency] ?? rec.frequency} padded={false} isLast />
       </DeleteConfirmSheet>
 
 
@@ -599,14 +607,14 @@ export default function RecurringDetail() {
         onClose={() => setConfirmPost(false)}
         onConfirm={() => handlePost()}
         saving={posting}
-        type="expense"
+        type={income ? 'inflow' : 'expense'}
         amount={rec.amount}
         description={rec.name}
         category={cat}
         account={acct}
         swipeToConfirm
-        confirmLabel="Swipe to post bill"
-        savingLabel="Posting…"
+        confirmLabel={income ? 'Swipe to mark received' : 'Swipe to post bill'}
+        savingLabel="Saving…"
       />
 
       <OverdrawWarningSheet

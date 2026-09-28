@@ -21,6 +21,7 @@ import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import AmountInput from '../components/ui/AmountInput'
 import ConversionChip from '../components/ConversionChip'
+import { isEverydayAccount } from '../lib/accountMeta'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -62,7 +63,8 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
   const [saving,         setSaving]         = useState(false)
   const [dupWarning,     setDupWarning]     = useState(false)
 
-  const accounts       = useLiveQuery(() => db.accounts.toArray(), [], [])
+  // Not investments or loans: money reaches those by a transfer, not as income.
+  const accounts       = useLiveQuery(async () => (await db.accounts.toArray()).filter(isEverydayAccount), [], [])
   const creditAvailMap = useCreditAvailMap(accounts)
   const categories = useLiveQuery(
     () => db.categories.where('type').equals('inflow').toArray()

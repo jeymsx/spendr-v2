@@ -138,6 +138,37 @@ describe('bills', () => {
   })
 })
 
+describe('income and loans', () => {
+  it('never reminds about pay arriving', () => {
+    const pay = { id: 9, syncId: 'pay-1', name: 'Salary', type: 'inflow', amount: 25000, account: 'BPI', frequency: 'semimonthly', nextDate: '2026-09-30', active: true }
+    expect(buildReminders({ recurring: [pay], now: NOW })).toEqual([])
+  })
+
+  const LOAN = { id: 4, syncId: 'cccc-3333', name: 'Car Loan', type: 'loan', currency: 'PHP', balance: -100000, minimumPayment: 5000, dueDate: 28, interestRate: 1 }
+
+  it('reminds three days before a loan payment and on the day', () => {
+    // At 8am on the 25th the early one (9am today) is still ahead, so both are kept.
+    const list = buildReminders({ accounts: [LOAN], now: NOW })
+    expect(list.map(r => [r.tag, local(r.fireAt), r.title])).toEqual([
+      ['loan:cccc-3333:2026-09-28:early', '9/25 9:00', 'Car Loan due in 3 days'],
+      ['loan:cccc-3333:2026-09-28:due', '9/28 9:00', 'Car Loan due today'],
+    ])
+    expect(list[0].body).toBe('₱5,000.00 to pay')
+    expect(list[0].url).toBe('/accounts/4')
+  })
+
+  it('drops the early one once its time has gone by', () => {
+    const tags = buildReminders({ accounts: [LOAN], now: new Date(2026, 8, 26, 8) }).map(r => r.tag)
+    expect(tags).toEqual(['loan:cccc-3333:2026-09-28:due'])
+  })
+
+  it('moves on to next month once this one is paid', () => {
+    const paid = { type: 'transfer', fromAccount: 'BPI', toAccount: 'Car Loan', amount: 4000, date: at(9, 20) }
+    const tags = buildReminders({ accounts: [LOAN], transactions: [paid], now: NOW }).map(r => r.tag)
+    expect(tags).toEqual(['loan:cccc-3333:2026-10-28:early', 'loan:cccc-3333:2026-10-28:due'])
+  })
+})
+
 describe('the monthly recap', () => {
   it('is announced at 9 on the 1st, once the month has anything in it', () => {
     const txs = [{ type: 'expense', account: 'BPI', amount: 120, date: at(9, 3) }]

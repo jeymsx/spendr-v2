@@ -72,6 +72,8 @@ const TYPE_MARK = {
   bank:    'bank',
   savings: 'bank',
   credit:  'card',
+  investment: 'growth',
+  loan:    'loan',
 }
 
 /** @param {unknown} s */

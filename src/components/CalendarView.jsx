@@ -1,5 +1,7 @@
 import { useMemo } from 'react'
 import CategoryGlyph from './CategoryGlyph'
+import { txGlyphCat, txRowWords } from '../lib/txRow'
+import { foldLoanPayments, interestCarried, unfoldLoanPayment } from '../lib/loans'
 import { amountDisplay, TONE_CLASS } from '../lib/txMoney'
 import Card from './ui/Card'
 import Divider from './ui/Divider'
@@ -39,8 +41,11 @@ const DOT_COLOR = {
 const MONTH_NAMES_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec']
 const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su']
 
-function TxRow({ tx, catMap, onClick }) {
+function TxRow({ tx: row, catMap, onClick }) {
+  const tx = unfoldLoanPayment(row)
   const cat = catMap[tx.category]
+  const glyph = txGlyphCat(tx, catMap)
+  const { title, where, kind } = txRowWords(tx, cat)
   const { sign, magnitude, tone, currency } = amountDisplay(tx)
   const cls = TONE_CLASS[tone]
   return (
@@ -51,26 +56,24 @@ function TxRow({ tx, catMap, onClick }) {
     >
       <div
         className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-        style={{ '--cat-color': cat?.color ?? '#64748b' }}
+        style={{ '--cat-color': glyph?.color ?? '#64748b' }}
       >
-        <CategoryGlyph cat={cat} size={16} emoji="💸" />
+        <CategoryGlyph cat={glyph} size={16} emoji="💸" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
-          {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
+          {title}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 truncate mt-0.5">
-          {tx.type === 'transfer'
-            ? `${tx.fromAccount ?? ''} → ${tx.toAccount ?? ''}`
-            : (tx.account ?? '')}
-          {cat && tx.type !== 'transfer' && (
-            <span className="ml-1.5 text-slate-300 dark:text-slate-600">· {cat.name}</span>
+          {where}
+          {kind && (
+            <span className="ml-1.5 text-slate-300 dark:text-slate-600">· {kind}</span>
           )}
         </p>
       </div>
       <div className="text-right shrink-0">
         <p className={`text-13 font-bold tabular-nums ${cls}`}>
-          {sign}{fmt(magnitude, currency)}
+          {sign}{fmt(magnitude + interestCarried(row), currency)}
         </p>
         <p className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">{fmtTime(tx.date)}</p>
       </div>
@@ -125,7 +128,8 @@ export default function CalendarView({
 
   const selectedTxs = useMemo(() => {
     if (!selectedDate) return []
-    return [...(dayMap[selectedDate] ?? [])].sort((a, b) => b.date.localeCompare(a.date))
+    // A loan payment as one row; the day's dots still read both halves.
+    return foldLoanPayments([...(dayMap[selectedDate] ?? [])].sort((a, b) => b.date.localeCompare(a.date)))
   }, [selectedDate, dayMap])
 
   return (

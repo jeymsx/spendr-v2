@@ -172,12 +172,20 @@ const KEY = 'spendr-insights'
  * @property {string} range
  * @property {string|null} month   null for this month
  * @property {string} net          the net worth chart's own range
+ * @property {string} ahead        the forecast's own range - forward, so it
+ *   cannot follow the page's period any more than net worth can
  * @property {number} scroll       how far down the overview was when you left it
  */
 
 /** @type {InsightsState} */
-const DEFAULTS = { range: '1m', month: null, net: '6m', scroll: 0 }
+const DEFAULTS = { range: '1m', month: null, net: '6m', ahead: '1m', scroll: 0 }
 const NET_KEYS = ['1m', '3m', '6m', '1y', 'all']
+/** The forecast's ranges, in days - see ForecastPage. */
+export const AHEAD_RANGES = [
+  { key: '1m', label: '30D', days: 30 },
+  { key: '3m', label: '3M', days: 90 },
+  { key: '6m', label: '6M', days: 180 },
+]
 
 /** @returns {InsightsState} */
 function load() {
@@ -188,6 +196,7 @@ function load() {
         range: RANGE_KEYS.includes(raw.range) ? raw.range : DEFAULTS.range,
         month: typeof raw.month === 'string' ? raw.month : null,
         net: NET_KEYS.includes(raw.net) ? raw.net : DEFAULTS.net,
+        ahead: AHEAD_RANGES.some(r => r.key === raw.ahead) ? raw.ahead : DEFAULTS.ahead,
         scroll: Number.isFinite(raw.scroll) ? raw.scroll : 0,
       }
     }
