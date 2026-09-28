@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import { IconChevronLeft } from './icons'
 import IconButton from './ui/IconButton'
 
@@ -22,13 +22,13 @@ import IconButton from './ui/IconButton'
  * under it.
  */
 export default function SubPage({ title, action = null, onBack, children, className = '' }) {
-  const navigate = useNavigate()
+  const back = useBack()
   return (
     <div className={`pb-nav ${className}`}>
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
         {/* subpage-back: an inert hook for the desktop, which hides it where
             the page is the right half of a split view with nothing behind. */}
-        <IconButton label="Back" className="subpage-back" onClick={onBack ?? (() => navigate(-1))}>
+        <IconButton label="Back" className="subpage-back" onClick={onBack ?? back}>
           <IconChevronLeft />
         </IconButton>
 

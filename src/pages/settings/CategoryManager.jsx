@@ -6,7 +6,7 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { useNavigate } from 'react-router-dom'
+import { useBack } from '../../hooks/useBack'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import SubPage from '../../components/SubPage'
@@ -339,6 +339,6 @@ export function CategoryManagerSheet(props) {
 
 /** The mobile route at /settings/categories. */
 export function CategoriesPage() {
-  const navigate = useNavigate()
-  return <CategoryManager open onClose={() => navigate(-1)} variant="page" />
+  const back = useBack()
+  return <CategoryManager open onClose={back} variant="page" />
 }

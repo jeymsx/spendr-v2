@@ -7,7 +7,7 @@
  * accent picker and the privacy policy.
  */
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useBack } from '../../hooks/useBack'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
@@ -556,6 +556,6 @@ export function TemplateManagerSheet(props) {
 
 /** The mobile route at /settings/templates. */
 export function TemplatesPage() {
-  const navigate = useNavigate()
-  return <TemplateManager open onClose={() => navigate(-1)} variant="page" />
+  const back = useBack()
+  return <TemplateManager open onClose={back} variant="page" />
 }

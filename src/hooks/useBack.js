@@ -18,14 +18,41 @@ import { useLocation, useNavigate } from 'react-router-dom'
  * is the one reliable way to know. When that is where we are, go to the
  * fallback and REPLACE, so the back button does not bounce between the two.
  */
-export function useBack(fallback = '/') {
+/** @param {string} [fallback]  where Back goes with nothing behind it; the parent page by default */
+export function useBack(fallback) {
   const navigate = useNavigate()
   const location = useLocation()
+  const to = fallback ?? parentPath(location.pathname)
 
   return useCallback(() => {
-    if (location.key === 'default') navigate(fallback, { replace: true })
+    if (location.key === 'default') navigate(to, { replace: true })
     else navigate(-1)
-  }, [navigate, location.key, fallback])
+  }, [navigate, location.key, to])
+}
+
+/* Where a page's parent is when the URL alone does not say: the one level up
+   is not a page of its own for these. */
+/** @type {Array<[RegExp, string]>} */
+const PARENT = [
+  [/^\/transactions\/[^/]+\/edit$/, '/transactions'],
+  [/^\/debts\/person\/[^/]+$/, '/debts'],
+  [/^\/categories\/[^/]+$/, '/budget'],
+  [/^\/badges$/, '/achievements'],
+]
+
+/**
+ * The page one level up - what Back means with nothing behind it.
+ *
+ * Most pages sit under their parent in the URL (/settings/profile under
+ * /settings, /accounts/4/edit under /accounts/4), so the parent is the path
+ * less its last part. The few whose parent is not in their URL are listed.
+ *
+ * @param {string} pathname
+ */
+export function parentPath(pathname) {
+  for (const [re, to] of PARENT) if (re.test(pathname)) return to
+  const parts = pathname.replace(/\/+$/, '').split('/').filter(Boolean)
+  return parts.length > 1 ? `/${parts.slice(0, -1).join('/')}` : '/'
 }
 
 export default useBack

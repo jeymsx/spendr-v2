@@ -1,5 +1,6 @@
 ﻿import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 
@@ -16,6 +17,7 @@ function GoogleIcon() {
 
 export default function Login() {
   const navigate = useNavigate()
+  const back = useBack()
   const { session, loading, signInWithGoogle } = useAuth()
   const [signingIn, setSigningIn] = useState(false)
   const [error,     setError]     = useState(null)
@@ -123,7 +125,7 @@ export default function Login() {
         </p>
 
         <button
-          onClick={() => navigate(-1)}
+          onClick={back}
           className="mt-5 w-full text-center text-sm text-slate-400 dark:text-slate-500
             active:text-slate-600 dark:active:text-slate-300 transition-colors"
         >

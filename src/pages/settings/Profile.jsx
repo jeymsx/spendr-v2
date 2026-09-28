@@ -4,7 +4,7 @@
  * Lifted out of Settings.jsx unchanged.
  */
 import { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useBack } from '../../hooks/useBack'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import db from '../../db/db'
 import { useToast } from '../../context/ToastContext'
@@ -313,7 +313,7 @@ export function ProfileSheet({
  * breaks on a refresh or a back button.
  */
 export function ProfilePage() {
-  const navigate = useNavigate()
+  const back = useBack()
   const meta = useLiveQuery(() => db.meta.toArray(), [], undefined)
   // Undefined until Dexie answers. Rendering the form against defaults first
   // would flash "PHP" at somebody whose ledger is in dollars.
@@ -326,7 +326,7 @@ export function ProfilePage() {
     <ProfileSheet
       variant="page"
       open
-      onClose={() => navigate(-1)}
+      onClose={back}
       displayName={displayName}
       currency={currency}
     />

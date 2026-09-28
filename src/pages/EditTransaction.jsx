@@ -1,4 +1,5 @@
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { isRefund } from '../lib/txMoney'
@@ -52,7 +53,7 @@ import { IconChevronLeft, IconNotFound } from '../components/icons'
  */
 export default function EditTransaction() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const back = useBack()
 
   /* `?? null` matters: Dexie resolves a MISS to undefined, and undefined is
      also what this starts as while the read is in flight. Without it a
@@ -75,7 +76,7 @@ export default function EditTransaction() {
     return (
       <div className="pb-nav">
         <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-          <IconButton label="Back" className="subpage-back" onClick={() => navigate(-1)}>
+          <IconButton label="Back" className="subpage-back" onClick={back}>
             <IconChevronLeft />
           </IconButton>
         </header>
@@ -86,7 +87,7 @@ export default function EditTransaction() {
           body={gone
             ? 'It may have been deleted.'
             : 'A refund is money coming back, and the form only knows how to record money going out. Delete it and record it again.'}
-          action={<Button className="px-6" onClick={() => navigate(-1)}>Go back</Button>}
+          action={<Button className="px-6" onClick={back}>Go back</Button>}
         />
       </div>
     )
@@ -94,7 +95,7 @@ export default function EditTransaction() {
 
   /* onSaved and onCancel both go back rather than to the dashboard: you came
      here from a row, and that row is where you expect to land. */
-  const done = () => navigate(-1)
+  const done = back
 
   if (tx.type === 'inflow')   return <AddInflow  editTx={tx} onSaved={done} onCancel={done} />
   if (tx.type === 'transfer') return <Transfer   editTx={tx} onSaved={done} onCancel={done} />

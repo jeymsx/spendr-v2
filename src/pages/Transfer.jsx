@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -62,6 +63,7 @@ function fmtRate(r) {
 export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
   const isEdit = !!editTx
   const navigate = useNavigate()
+  const back = useBack()
   const { showToast } = useToast()
 
   const [amountStr,      setAmountStr]      = useState('0')
@@ -248,7 +250,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           date: dateInputToIso(date, editTx.date),
         })
         showToast('Transfer updated')
-        if (onSaved) onSaved(); else navigate(-1)
+        if (onSaved) onSaved(); else back()
         return
       }
 
@@ -318,7 +320,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
 
       {/* ── Header ── */}
       <header className="flex items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
-        <IconButton label="Back" onClick={() => (onCancel ? onCancel() : navigate(-1))}>
+        <IconButton label="Back" onClick={() => (onCancel ? onCancel() : back())}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">

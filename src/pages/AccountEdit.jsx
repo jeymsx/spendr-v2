@@ -1,4 +1,5 @@
-import { Navigate, useNavigate, useParams } from 'react-router-dom'
+import { Navigate, useParams } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { AccountFormSheet } from './Accounts'
@@ -18,7 +19,7 @@ import { AccountFormSheet } from './Accounts'
  */
 export default function AccountEdit() {
   const { id } = useParams()
-  const navigate = useNavigate()
+  const back = useBack()
 
   /* 'loading' as the default, because Dexie returns undefined for a row that
      is not there and useLiveQuery would otherwise report "missing" for the
@@ -37,7 +38,7 @@ export default function AccountEdit() {
       open
       variant="page"
       account={account}
-      onClose={() => navigate(-1)}
+      onClose={back}
     />
   )
 }

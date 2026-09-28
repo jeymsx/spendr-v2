@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -680,6 +681,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
 
 export default function Recurring() {
   const navigate = useNavigate()
+  const back = useBack()
   const [tab,      setTab]      = useState('upcoming')
 
   const allRec     = useLiveQuery(() => db.recurring.toArray(),  [], undefined)
@@ -884,7 +886,7 @@ export default function Recurring() {
           small break you feel without being able to name. It was "Bills"
           while bills were all it held; your pay lives here too now. */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back" className="subpage-back" onClick={() => navigate(-1)}>
+        <IconButton label="Back" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">

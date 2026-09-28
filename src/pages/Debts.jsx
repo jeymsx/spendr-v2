@@ -1,5 +1,6 @@
 import { useState, useMemo, useCallback } from 'react'
 import { useSearchParams, useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import SegTabs from '../components/SegTabs'
@@ -66,6 +67,7 @@ const VIEWS = [
 
 export default function Debts() {
   const navigate = useNavigate()
+  const back = useBack()
   const [searchParams] = useSearchParams()
 
   /**
@@ -198,7 +200,7 @@ export default function Debts() {
           is the widest possible way to say a thing every other page in the app
           says in 36px. */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back" className="subpage-back" onClick={() => navigate(-1)}>
+        <IconButton label="Back" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">

@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -188,7 +189,7 @@ export default function RecurringForm() {
     if (delta) rail.scrollBy({ left: delta, behavior: freqSeen.current ? 'smooth' : 'auto' })
     freqSeen.current = true
   }, [frequency, editRec])
-  const back = () => navigate(-1)
+  const back = useBack()
 
   async function handleSave() {
     const draft = { name, amountStr, category, account, frequency, nextDate, active, split, type: kind }
