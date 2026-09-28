@@ -6,6 +6,7 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
+import EmptyState from '../../components/ui/EmptyState'
 import SectionLabel from '../../components/ui/SectionLabel'
 import SectionHeading from '../../components/ui/SectionHeading'
 import DetailRow from '../../components/ui/DetailRow'
@@ -223,9 +224,12 @@ export default function ForecastPage() {
         <section className="mt-8">
           <SectionHeading>Coming up</SectionHeading>
           {byDay.length === 0 ? (
-            <p className="px-5 text-13 text-slate-500 dark:text-slate-400">
-              Nothing scheduled. Add bills and your pay on Recurring and they show up here.
-            </p>
+            <EmptyState
+              art="calendar"
+              size="sm"
+              title="Nothing scheduled"
+              body="Bills and pay on Recurring show up here."
+            />
           ) : byDay.map(g => (
             <div key={g.key} className="pb-1">
               <div className="flex items-center gap-3 px-5 py-2">
