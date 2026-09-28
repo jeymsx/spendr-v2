@@ -146,7 +146,7 @@ export default function NetWorthPage() {
                 </Card>
                 <div className="mt-2">
                   <SectionLabel inset="gutter" gap="none">
-                    What came in, less what went out, plus any change in your investments&apos; value. Moving money between your own accounts doesn&apos;t change it.
+                    Transfers between your own accounts don&apos;t count.
                   </SectionLabel>
                 </div>
               </section>
