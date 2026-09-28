@@ -375,6 +375,10 @@ export async function buildBackupPayload() {
   }
 }
 
+/** meta: when a backup file was last saved on this device - for the reminder
+ *  in the bell when it is two weeks old (lib/notifications.js). */
+export const LAST_BACKUP_KEY = 'lastBackup'
+
 /** Trigger a browser download of the JSON backup. Returns the row counts. */
 export async function downloadBackupJson() {
   const payload = await buildBackupPayload()
@@ -387,5 +391,6 @@ export async function downloadBackupJson() {
   a.click()
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
+  await db.meta.put({ key: LAST_BACKUP_KEY, value: payload.exportedAt })
   return { transactions: payload.transactions.length, accounts: payload.accounts.length }
 }

@@ -1,11 +1,14 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import db from '../../db/db'
+import { useLiveQuery } from '../../hooks/useLiveQuery'
+import { storageKept } from '../../lib/keepStorage'
 import { useToast } from '../../context/ToastContext'
 import SubPage from '../../components/SubPage'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
 import { IconUpload } from '../../components/icons'
-import { downloadBackupJson } from '../../lib/backup'
+import { downloadBackupJson, LAST_BACKUP_KEY } from '../../lib/backup'
 import { RestoreBackupSheet, ResetConfirmModal } from './Backup'
 import {
   IconDatabase, IconDownload, IconShield, IconTrash, RowChevron, RowDivider, RowIcon, SectionCard, SectionHeader, SettingsRow,
@@ -28,6 +31,13 @@ export default function BackupRestorePage() {
   const [busy, setBusy] = useState(false)
   const [restoreOpen, setRestoreOpen] = useState(false)
   const [resetOpen, setResetOpen] = useState(false)
+  // When the last file was saved here, and whether the browser keeps the data.
+  const lastBackup = useLiveQuery(async () => (await db.meta.get(LAST_BACKUP_KEY))?.value ?? null, [], null)
+  const [kept, setKept] = useState(/** @type {boolean|null} */ (null))
+  useEffect(() => { storageKept().then(setKept) }, [])
+  const lastLine = lastBackup
+    ? `Last one ${new Date(lastBackup).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    : 'None saved on this device yet'
 
   async function backup() {
     if (busy) return
@@ -55,7 +65,7 @@ export default function BackupRestorePage() {
           <SettingsRow
             iconEl={<RowIcon color="teal"><IconShield /></RowIcon>}
             label="Download a backup"
-            sublabel={busy ? 'Preparing download…' : 'Accounts, transactions, goals and more'}
+            sublabel={busy ? 'Preparing download…' : lastLine}
             right={busy ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /> : <RowChevron />}
             onTap={() => setConfirm(true)}
             disabled={busy}
@@ -69,6 +79,13 @@ export default function BackupRestorePage() {
             onTap={() => setRestoreOpen(true)}
           />
         </SectionCard>
+        {kept !== null && (
+          <p className="mx-5 mt-2 text-12 text-slate-500 dark:text-slate-400">
+            {kept
+              ? 'This browser keeps your data unless you clear it.'
+              : 'This browser may clear your data if the phone runs low on space, so keep a backup.'}
+          </p>
+        )}
       </div>
 
       <div className="mb-8">

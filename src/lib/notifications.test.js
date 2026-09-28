@@ -312,3 +312,35 @@ describe('the list', () => {
     expect(timeOf(at(9, 25, 13))).toBe('1:00 PM')
   })
 })
+
+describe('backups', () => {
+  /** @param {number} n */
+  const entries = (n) => Array.from({ length: n }, (_, i) => ({
+    type: 'expense', category: 'Food', account: 'Cash', amount: 100,
+    date: new Date(2026, 7, 1 + i, 12).toISOString(),
+  }))
+  const backups = (/** @type {any} */ lastBackup, over = {}) =>
+    collectNotifications({ transactions: entries(20), lastBackup, now: NOW, ...over }).filter(n => n.kind === 'backup-stale')
+
+  it('asks for one when the last backup is two weeks old', () => {
+    const [n] = backups(new Date(2026, 8, 5, 10).toISOString())
+    expect(n.title).toBe('Time for a backup')
+    expect(n.body).toBe('Your last one was Sep 5.')
+    expect(n.url).toBe('/settings/backup')
+  })
+
+  it('stays quiet about a backup that is recent', () => {
+    expect(backups(new Date(2026, 8, 20, 10).toISOString())).toHaveLength(0)
+  })
+
+  it('asks once a month when there has never been one', () => {
+    const [n] = backups(null)
+    expect(n.body).toBe('You have not saved one yet.')
+    expect(n.id).toBe('backup:never:2026-09')
+  })
+
+  it('says nothing for a ledger too small to back up, or when the caller has no date to give', () => {
+    expect(collectNotifications({ transactions: entries(3), lastBackup: null, now: NOW }).some(n => n.kind === 'backup-stale')).toBe(false)
+    expect(collectNotifications({ transactions: entries(20), now: NOW }).some(n => n.kind === 'backup-stale')).toBe(false)
+  })
+})

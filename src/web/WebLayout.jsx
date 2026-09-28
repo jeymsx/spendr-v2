@@ -1,4 +1,4 @@
-import { Suspense, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -8,6 +8,7 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import { AddFlowProvider } from './AddFlow'
 import { AchievementProvider } from '../context/AchievementContext'
 import Moments from '../components/achievements/Moments'
+import { keepStorage } from '../lib/keepStorage'
 
 function PageFallback() {
   return (
@@ -67,6 +68,8 @@ function Chrome() {
 }
 
 export default function WebLayout() {
+  // As on the phone (layouts/AppLayout.jsx): keep the ledger from being cleared.
+  useEffect(() => { keepStorage() }, [])
   // The providers wrap the chrome so both the sidebar and any page can open
   // the add overlay through useAddFlow(), and so the one achievement
   // evaluation - the same as the phone's, in AppLayout - is shared by every

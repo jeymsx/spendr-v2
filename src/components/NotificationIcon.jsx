@@ -43,6 +43,8 @@ const GLYPHS = {
   growth: <><path d="M3 17l6-6 4 4 8-8" /><path d="M15 7h6v6" /></>,
   // A line that drops toward a floor: the forecast warning.
   dip: <><path d="M3 7l6 6 4-4 8 8" /><path d="M3 21h18" /></>,
+  // Down into a tray: a backup file to save.
+  save: <><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></>,
 }
 
 /**
@@ -75,6 +77,7 @@ export const NOTIFICATION_KINDS = {
   'investment-stale': { glyph: 'growth', tone: 'news' },
   'forecast-floor':   { glyph: 'dip',    tone: 'soon' },
   'forecast-short':   { glyph: 'dip',    tone: 'late' },
+  'backup-stale':     { glyph: 'save',   tone: 'news' },
 }
 
 /** @param {{kind: string}} props */

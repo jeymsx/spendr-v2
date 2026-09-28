@@ -14,6 +14,7 @@ import Moments from '../components/achievements/Moments'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { canPullToSync } from '../lib/pullToSync'
+import { keepStorage } from '../lib/keepStorage'
 
 // Shown while a lazy route chunk loads. Sized to roughly a screen so the
 // navbar and scroll position stay stable instead of collapsing to zero height.
@@ -86,6 +87,11 @@ export default function AppLayout() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setQuickOpen(true)
   }, [location.search, location.pathname, navigate])
+
+  /* Past setup, so the ledger is worth keeping: ask the browser not to clear
+     it when space runs low (lib/keepStorage.js). Once a session; the browser
+     remembers the answer. */
+  useEffect(() => { keepStorage() }, [])
 
   // Disable browser scroll restoration so it can't override our manual reset
   useEffect(() => {

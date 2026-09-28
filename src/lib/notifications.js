@@ -50,11 +50,15 @@ import { investmentStatus, STALE_AFTER_DAYS } from './investments'
 export const FEED_WINDOW_DAYS = 35
 /** Share of a budget that earns the early warning. */
 export const BUDGET_WARN_AT = 0.8
+/** How old the last backup file may get before the bell asks for another. */
+export const BACKUP_STALE_DAYS = 14
+/** Entries a ledger needs before a backup of it is worth asking for. */
+export const BACKUP_MIN_ENTRIES = 10
 
 const DAY_MS = 864e5
 
 /**
- * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'milestone'|'challenge'|'recap'|'whats-new'|'loan-due'|'investment-stale'|'forecast-floor'|'forecast-short'} NotificationKind
+ * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'milestone'|'challenge'|'recap'|'whats-new'|'loan-due'|'investment-stale'|'forecast-floor'|'forecast-short'|'backup-stale'} NotificationKind
  *
  * @typedef {object} FeedItem
  * @property {string} id
@@ -105,12 +109,14 @@ function latest(stages, nowMs) {
  * @param {ReturnType<typeof import('./forecast').buildForecast>|null} [input.forecast]
  *   the next 30 days, when the caller has worked it out - for the warning
  *   that money runs short, or under the floor
+ * @param {string|null} [input.lastBackup]  when a backup file was last saved,
+ *   or null for never; undefined leaves the reminder out
  * @param {Date} [input.now]
  * @returns {FeedItem[]}  newest first
  */
 export function collectNotifications({
   accounts = [], transactions = [], recurring = [], categories = [], badges = [], challenges = [],
-  globalRollover = false, whatsNew = null, forecast = null, now = new Date(),
+  globalRollover = false, whatsNew = null, forecast = null, lastBackup = undefined, now = new Date(),
 } = {}) {
   const nowMs = now.getTime()
   const floor = nowMs - FEED_WINDOW_DAYS * DAY_MS
@@ -218,6 +224,31 @@ export function collectNotifications({
         title: `Below your floor on ${shortDate(forecast.firstBelowFloor.date)}`,
         body: 'See what is coming up.',
         url: '/insights/forecast',
+      })
+    }
+  }
+
+  // ── Backups: a file of your own once the last one is two weeks old ──
+  /* Sync is not a backup: on 2026-09-28 a fresh laptop's sync wrote zeros
+     over three balances and every budget limit, and the newest backup file
+     was two weeks old. So once one is BACKUP_STALE_DAYS old - or, never
+     having saved one, that long after the first entry - the bell says so:
+     once when it goes stale, then once a month while it stays that way.
+     Not for a ledger too small to be worth a file. */
+  if (lastBackup !== undefined && posted.length >= BACKUP_MIN_ENTRIES) {
+    const first = posted.reduce((m, t) => (t.date && t.date < m ? t.date : m), nowIso)
+    const since = lastBackup ? new Date(lastBackup) : new Date(first)
+    const staleAt = at9(since, BACKUP_STALE_DAYS)
+    if (Number.isFinite(staleAt.getTime()) && staleAt.getTime() <= nowMs) {
+      const monthStart = at9(new Date(now.getFullYear(), now.getMonth(), 1))
+      const at = new Date(Math.max(staleAt.getTime(), monthStart.getTime()))
+      offer({
+        id: `backup:${lastBackup ? ymd(since) : 'never'}:${monthKeyOf(at)}`,
+        kind: 'backup-stale',
+        at: at.toISOString(),
+        title: 'Time for a backup',
+        body: lastBackup ? `Your last one was ${shortDate(since)}.` : 'You have not saved one yet.',
+        url: '/settings/backup',
       })
     }
   }
