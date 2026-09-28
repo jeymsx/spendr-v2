@@ -326,9 +326,17 @@ const DEFAULT_ACCOUNTS = [
 async function seed() {
   const already = await db.meta.get('seeded')
   if (already) {
-    // Migration: users who existed before onboarding was added should skip it
+    /* Migration: someone who used Spendr before setup existed has a ledger
+       and no 'onboarded' flag, and skips setup. Someone partway through setup
+       has no flag either - but no ledger, only the Cash seeded below - and a
+       reload, or Google's sign-in redirect, must land them back in setup
+       where they left it (the draft in onboarding/flow.js). This used to mark
+       them set up on any second load, which sent a refresh straight home. */
     const onboarded = await db.meta.get('onboarded')
-    if (!onboarded) await db.meta.put({ key: 'onboarded', value: true })
+    if (!onboarded) {
+      const [txs, accounts] = await Promise.all([db.transactions.count(), db.accounts.count()])
+      if (txs > 0 || accounts > 1) await db.meta.put({ key: 'onboarded', value: true })
+    }
     return
   }
 
