@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { ClockRewind, CoinsHand, Flag05, LineChartUp01, PiggyBank01 } from '@untitledui/icons'
 import SubPage from '../../components/SubPage'
 import Card from '../../components/ui/Card'
+import Button from '../../components/ui/Button'
+import Sheet from '../../components/ui/Sheet'
 import Segmented from '../../components/ui/Segmented'
 import Switch from '../../components/ui/Switch'
 import MoneyField from '../../components/ui/MoneyField'
@@ -49,6 +51,8 @@ export default function ForecastSettings() {
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const catMap = useMemo(() => Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
   const [floorOpen, setFloorOpen] = useState(false)
+  // A found pay, opened: what it is, and the way to say it is not pay.
+  const [picked, setPicked] = useState(/** @type {import('../../lib/incomeStreams').IncomeStream|null} */ (null))
 
   /* The set figure is typed, so it is kept here as text and saved a moment
      after the typing stops, and when the field is left - not per keystroke,
@@ -139,11 +143,34 @@ export default function ForecastSettings() {
                   {i > 0 && <RowDivider />}
                   <StreamRow
                     stream={s} cat={s.category ? catMap[s.category] : null} currency={base} today={today}
-                    onOpen={s.category ? () => navigate(`/categories/${encodeURIComponent(s.category ?? '')}`) : null}
+                    onOpen={() => setPicked(s)}
                   />
                 </div>
               ))}
             </SectionCard>
+            {/* Found pay you said is not pay: listed apart, one tap from counting again. */}
+            {forecast.hiddenStreams.length > 0 && (
+              <>
+                <p className="mt-4 mb-2 px-5 text-12 font-semibold text-slate-500 dark:text-slate-400">Not counted</p>
+                <SectionCard>
+                  {forecast.hiddenStreams.map((s, i) => (
+                    <div key={s.key}>
+                      {i > 0 && <RowDivider />}
+                      <SettingsRow
+                        label={s.name}
+                        sublabel={`${rhythmLabel(s)}, ${fmt(s.amount, base)}`}
+                        right={
+                          <Button variant="tint" size="xs" className="px-3.5"
+                            onClick={() => set({ ignored: settings.ignored.filter(k => k !== s.key) })}>
+                            Count it
+                          </Button>
+                        }
+                      />
+                    </div>
+                  ))}
+                </SectionCard>
+              </>
+            )}
             {settings.income === 'both' && recurring.some(r => r?.active !== false && r?.type === 'inflow') && (
               <p className="mt-2 px-5 text-12 text-slate-500 dark:text-slate-400">Pay already on Recurring is left out here, so it is not counted twice.</p>
             )}
@@ -252,6 +279,41 @@ export default function ForecastSettings() {
       </div>
 
       <FloorSheet open={floorOpen} onClose={() => setFloorOpen(false)} floor={floor} currency={base} />
+
+      {/* One found pay: where it comes from, and the way out for something
+          that keeps a rhythm but is not yours to count on. */}
+      <Sheet
+        open={!!picked}
+        onClose={() => setPicked(null)}
+        title={picked?.name ?? ''}
+        footer={picked && (
+          <div className="space-y-2.5">
+            {picked.category && (
+              <Button block variant="secondary" onClick={() => {
+                const cat = picked.category ?? ''
+                setPicked(null)
+                navigate(`/categories/${encodeURIComponent(cat)}`)
+              }}>
+                See its entries
+              </Button>
+            )}
+            <Button block variant="dangerTint" onClick={() => {
+              set({ ignored: [...settings.ignored, picked.key] })
+              setPicked(null)
+            }}>
+              This isn&apos;t pay
+            </Button>
+          </div>
+        )}
+      >
+        {picked && (
+          <p className="text-13 text-slate-500 dark:text-slate-400">
+            {rhythmLabel(picked)}, about {fmt(picked.amount, base)} each time, read from {picked.count} payments
+            {picked.account ? ` into ${picked.account}` : ''}. If it is not money you can count on, leave it out
+            and the forecast stops expecting it.
+          </p>
+        )}
+      </Sheet>
     </SubPage>
   )
 }

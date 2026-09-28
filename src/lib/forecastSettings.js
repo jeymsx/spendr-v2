@@ -6,13 +6,15 @@ import { INCOME_LOOKBACKS } from './incomeStreams'
  * (Home's "Next 30 days", the Insights tile, the Forecast page and the
  * running-short notifications), so none of them can disagree.
  *
- * Kept in meta as one object and carried by backups (lib/backup.js). Not
- * synced: like the floor, it is how this device shows you the numbers, and
- * a second phone can see them its own way.
+ * Kept in meta as one object, carried by backups (lib/backup.js), and synced
+ * with the floor through user_preferences (025), so the phone and the laptop
+ * forecast the same way.
  */
 
 /** The meta key the settings are kept under. */
 export const FORECAST_SETTINGS_KEY = 'forecastSettings'
+/** The meta key the floor is kept under - here, not in the hook, so the sync can read it. */
+export const FORECAST_FLOOR_KEY = 'forecastFloor'
 
 /**
  * @typedef {object} ForecastSettings
@@ -24,6 +26,7 @@ export const FORECAST_SETTINGS_KEY = 'forecastSettings'
  * @property {boolean} savings  count savings accounts in the starting balance
  * @property {boolean} band  draw the likely range around the line
  * @property {boolean} past  draw the recent days before today
+ * @property {string[]} ignored  found pay you said is not pay, by stream key
  */
 
 /** @type {ForecastSettings} */
@@ -39,6 +42,7 @@ export const DEFAULT_FORECAST_SETTINGS = {
   savings: true,
   band: true,
   past: true,
+  ignored: [],
 }
 
 const INCOME = ['recurring', 'history', 'both']
@@ -66,6 +70,9 @@ export function readForecastSettings(value) {
     savings: bool(v.savings, d.savings),
     band: bool(v.band, d.band),
     past: bool(v.past, d.past),
+    ignored: Array.isArray(v.ignored)
+      ? [...new Set(v.ignored.filter((/** @type {any} */ k) => typeof k === 'string' && k))].slice(0, 50)
+      : [],
   }
 }
 
@@ -83,5 +90,6 @@ export function forecastOptions(s) {
     spend: s.spend,
     customDaily: s.customDaily,
     countSavings: s.savings,
+    ignoredStreams: s.ignored,
   }
 }

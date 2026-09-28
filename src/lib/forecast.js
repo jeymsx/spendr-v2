@@ -124,12 +124,13 @@ const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
  * @param {'typical'|'cautious'|'custom'} [input.spend]  how everyday spending is estimated
  * @param {number} [input.customDaily]  everyday spending per day, for 'custom'
  * @param {boolean} [input.countSavings]  start from savings accounts too, or spending ones only
+ * @param {string[]} [input.ignoredStreams]  found pay you said is not pay, by stream key
  */
 export function buildForecast({
   accounts, transactions, recurring = [], debts = [], base, rates = null,
   horizonDays = 30, floor = 0, now = new Date(), priceOf = txBase, historyDays = 0,
   income = 'recurring', incomeLookbackDays = 183, occasional = false,
-  spend = 'typical', customDaily = 0, countSavings = true,
+  spend = 'typical', customDaily = 0, countSavings = true, ignoredStreams = [],
 }) {
   const today = startOfDay(now)
   /* The walk runs at least as far as the payday lookahead, so safe to spend
@@ -196,6 +197,8 @@ export function buildForecast({
   // ── Pay found in the ledger's history ──
   /** @type {import('./incomeStreams').IncomeStream[]} */
   let streams = []
+  /** @type {import('./incomeStreams').IncomeStream[]} */
+  let hiddenStreams = []
   let occasionalPerDay = 0
   if (payFromHistory) {
     const found = findIncomeStreams({
@@ -216,6 +219,11 @@ export function buildForecast({
       return !!r.account && r.account === s.account && Math.abs(amount - s.amount) <= s.amount * 0.25
     }))
     occasionalPerDay = found.occasionalPerDay
+    /* And any you said is not pay - an allowance that keeps a rhythm but is
+       not yours to count on. Kept aside, so the settings can offer it back. */
+    const notPay = new Set(ignoredStreams)
+    hiddenStreams = streams.filter(s => notPay.has(s.key))
+    streams = streams.filter(s => !notPay.has(s.key))
 
     for (const s of streams) {
       const common = {
@@ -358,6 +366,8 @@ export function buildForecast({
     dailyIncome,
     /** Pay found in the history and used - less any a Recurring item covers. */
     streams,
+    /** Found pay you said is not pay, left out of everything. */
+    hiddenStreams,
     occasionalPerDay,
     hasIncome: (payFromRecurring && (recurring ?? []).some(r => r?.active !== false && r?.type === 'inflow'))
       || streams.length > 0,

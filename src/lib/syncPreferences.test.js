@@ -147,4 +147,25 @@ describe('pullPreferences', () => {
     await pullPreferences('u1')
     expect(metaStore.get('dailyNudge').value).toBe('21:00')
   })
+
+  /* 025: the Forecast settings and the floor travel, so the phone and the
+     laptop forecast the same way - checked on the way in, so a row from a
+     newer version cannot break the forecast. */
+  it('brings the forecast settings and the floor across, cleaned up', async () => {
+    remote.row = { forecast_settings: { income: 'history', lookback: '12m', bogus: 1, ignored: ['pay:Income:', 7] }, forecast_floor: '2500', updated_at: NEW }
+    await pullPreferences('u1')
+    const s = metaStore.get('forecastSettings').value
+    expect(s.income).toBe('history')
+    expect(s.lookback).toBe('12m')
+    expect(s.ignored).toEqual(['pay:Income:'])
+    expect('bogus' in s).toBe(false)
+    expect(metaStore.get('forecastFloor').value).toBe(2500)
+  })
+
+  it('keeps forecast settings changed here that the server has not heard about', async () => {
+    metaStore.set('forecastSettings', { key: 'forecastSettings', value: { income: 'recurring' }, updatedAt: NEW })
+    remote.row = { forecast_settings: { income: 'both' }, updated_at: OLD }
+    await pullPreferences('u1')
+    expect(metaStore.get('forecastSettings').value.income).toBe('recurring')
+  })
 })

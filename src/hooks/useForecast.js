@@ -4,10 +4,10 @@ import { useLiveQuery } from './useLiveQuery'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import useRates from './useRates'
 import { buildForecast } from '../lib/forecast'
-import { FORECAST_SETTINGS_KEY, forecastOptions, readForecastSettings } from '../lib/forecastSettings'
+import { FORECAST_FLOOR_KEY, FORECAST_SETTINGS_KEY, forecastOptions, readForecastSettings } from '../lib/forecastSettings'
 
 /** The meta key the forecast's floor is kept under. */
-export const FLOOR_KEY = 'forecastFloor'
+export const FLOOR_KEY = FORECAST_FLOOR_KEY
 
 /**
  * The forecast, kept current as the ledger changes - lib/forecast.js over

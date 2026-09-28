@@ -228,3 +228,18 @@ describe('the forecast settings that are not about pay', () => {
     expect(run({ spend: 'custom', customDaily: 0 }).dailySpend).toBeNull()
   })
 })
+
+describe('found pay you say is not pay', () => {
+  const bank = { id: 1, name: 'BPI', type: 'bank', balance: 20000, currency: 'PHP' }
+  it('is left out of the forecast, and kept aside for the settings to offer back', () => {
+    /** @type {Record<string, any>} */
+    const base = { accounts: [bank], transactions: semimonthlySalary(), recurring: [], debts: [], base: 'PHP', rates: null, horizonDays: 30, now: NOW, priceOf: face, income: 'history' }
+    const found = buildForecast(/** @type {any} */ (base))
+    const key = found.streams[0].key
+    const without = buildForecast(/** @type {any} */ ({ ...base, ignoredStreams: [key] }))
+    expect(without.streams).toHaveLength(0)
+    expect(without.hiddenStreams.map(s => s.key)).toEqual([key])
+    expect(without.events.some(e => e.kind === 'income')).toBe(false)
+    expect(without.hasIncome).toBe(false)
+  })
+})

@@ -164,6 +164,21 @@ function axisWidth(ticks) {
  * @param {number} lo
  * @param {number} hi
  */
+/**
+ * An axis for a line that does not move: zero, and a round figure twice as
+ * far out as the line (1,000 when the line is at zero).
+ * @param {number} v
+ */
+export function flatAxis(v) {
+  const round = (/** @type {number} */ x) => { const m = 10 ** Math.floor(Math.log10(x)); return Math.ceil(x / m) * m }
+  if (v >= 0) {
+    const top = v > 0 ? round(v * 2) : 1000
+    return { floor: 0, ceil: top, ticks: [0, top / 2, top] }
+  }
+  const bottom = -round(-v * 2)
+  return { floor: bottom, ceil: 0, ticks: [bottom, bottom / 2, 0] }
+}
+
 export function niceAxis(lo, hi) {
   const span = hi - lo || Math.abs(hi) || 1
   const raw = span / 3
@@ -279,7 +294,10 @@ export function ForecastChart({ data, todayIndex, color, currency, rangeKey, flo
   const lo = Math.min(...values, floor > 0 ? floor : Infinity)
   const hi = Math.max(...values)
   const nearZero = lo < Math.max(1, hi * 0.15)
-  const axis = niceAxis(Math.min(lo, nearZero ? 0 : lo), hi)
+  /* A line that never moves - an empty ledger, all zeros - has no span for
+     niceAxis to divide, which drew an axis of -1, 0 and 1. A flat line gets
+     a plain one instead: zero and a round figure above (or below) it. */
+  const axis = hi - lo < 1 ? flatAxis(hi) : niceAxis(Math.min(lo, nearZero ? 0 : lo), hi)
   const last = data.length - 1
   /* The first day, today, and three more after it - today always labelled,
      since it is where the line changes from fact to guess. */
