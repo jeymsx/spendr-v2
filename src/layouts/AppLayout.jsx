@@ -129,14 +129,19 @@ export default function AppLayout() {
     if (!el || !saved || location.pathname === '/insights') return
     let gaveUp = false
     let raf = 0
-    let tries = 0
+    const deadline = performance.now() + 2000
     const stop = () => { gaveUp = true }
     el.addEventListener('touchstart', stop, { passive: true })
     el.addEventListener('wheel', stop, { passive: true })
     const place = () => {
       if (gaveUp) return
-      if (el.scrollHeight - el.clientHeight >= saved - 1 || ++tries > 90) el.scrollTop = saved
-      else raf = requestAnimationFrame(place)
+      const max = el.scrollHeight - el.clientHeight
+      if (max >= saved - 1) { el.scrollTop = saved; return }
+      /* As far as the page goes so far - which is also what makes a long
+         list (ui/InfiniteList) load its next rows, so the page grows toward
+         where you were instead of stopping at its first screenful. */
+      el.scrollTop = max
+      if (performance.now() < deadline) raf = requestAnimationFrame(place)
     }
     place()
     return () => {
