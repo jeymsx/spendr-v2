@@ -7,6 +7,8 @@ import BillMark from '../../components/BillMark'
 import { IconCardUI, IconReceipt } from '../../components/icons'
 import { fmt, fmtCompact } from '../../lib/money'
 import SectionHeading from '../../components/ui/SectionHeading'
+import { GlassArt } from '../../components/glass/GlassArt'
+import { useTheme } from '../../context/ThemeContext'
 
 /**
  * A forecast event, as the row below draws it - one mapping for Home and the
@@ -189,6 +191,7 @@ export function UpcomingRow({ item, isLast }) {
  */
 export default function UpcomingSection({ forecast, items }) {
   const navigate = useNavigate()
+  const { accentColor } = useTheme()
   if (!forecast) return null
   const noIncome = !forecast.hasIncome
   const short = forecast.firstNegative
@@ -207,13 +210,23 @@ export default function UpcomingSection({ forecast, items }) {
       <Card clip className="mt-3">
         <Link
           to="/insights/forecast"
-          className="block px-4 pt-4 pb-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+          className="relative block overflow-hidden px-4 pt-4 pb-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
         >
-          <span className="block text-11 font-semibold text-slate-500 dark:text-slate-400">Safe to spend</span>
-          <span className="block mt-1 text-22 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+          {/* A glass wallet, as large as the space allows and cut off by it -
+              the way the Insights highlights carry their art - so the figure
+              is not a lone number on an empty band. In the accent, or red
+              when the money runs out. Decoration: no taps, nothing read. */}
+          <GlassArt
+            name="wallet"
+            hue={short ? '#ef4444' : accentColor}
+            size={164}
+            className="pointer-events-none absolute -right-6 top-1/2 -translate-y-[46%]"
+          />
+          <span className="relative block pr-28 text-11 font-semibold text-slate-500 dark:text-slate-400">Safe to spend</span>
+          <span className="relative block pr-28 mt-1 text-22 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
             <RollingNumber id="home:safe" value={forecast.safeToSpend} format={v => fmt(v)} />
           </span>
-          <span className={`block mt-1.5 text-12 ${short ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+          <span className={`relative block pr-28 mt-1.5 text-12 ${short ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
             {short
               ? `Runs short on ${short.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`
               : forecast.floor > 0 ? `${until}, above your ${fmtCompact(forecast.floor)} floor` : until}

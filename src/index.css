@@ -1351,6 +1351,20 @@ html.dark body {
   --press-scale: 1;
 }
 
+/* A row made of two buttons - TxRow's category tile and its body. Pressing
+   the body tints the whole row, tile and all, on the same quick-in, slow-out
+   timing; pressing the tile leaves the row alone, since the tile answers
+   with its own shrink. */
+.row-press {
+  transition: background-color var(--press-out) var(--ease-settle);
+}
+.row-press:has(> .row-main:active) {
+  background-color: #f8fafc;
+  transition-duration: var(--press-in);
+  transition-timing-function: var(--ease-out);
+}
+.dark .row-press:has(> .row-main:active) { background-color: rgba(255, 255, 255, 0.04); }
+
 /* A figure turning into its other self - hidden to shown, and back. The
    dots and the number are two elements, so the new one resolves out of a
    short blur where the old one was, rather than the text changing under
@@ -2142,12 +2156,61 @@ html.web.dark input[type="date"] {
   .recap-drop { animation: none; opacity: 0; }
 }
 
-/* A row dragged left to delete (components/ui/SwipeRow.jsx). The bin sits
-   at the strip's right end until the row is far enough to go on letting go;
-   then it jumps to the strip's left edge and rides the row, which is how
-   Mail says "this one is going". */
-.swipe-bin { transition: translate 0.16s var(--ease-out); }
-.swipe-strip[data-armed="true"] .swipe-bin { translate: calc(76px - var(--reveal, 76px)) 0; }
+/* A row dragged left to delete (components/ui/SwipeRow.jsx).
+
+   Lifted: the moment it moves, the row becomes its own card - rounded,
+   opaque, shadowed - over the gap it leaves in its group. Opaque because the
+   group's card is see-through in dark mode, and the delete disc sits under
+   where the row was.
+
+   The gap behind it: a softened red, not a solid one, inset and rounded like
+   the row so its corners never poke past the card's; it deepens a step, and
+   the bin grows, once letting go would delete. The bin's position, size and
+   fade are set per frame by the row as it moves, so nothing here transitions
+   those - only the change of state. */
+.swipe-face {
+  border-radius: 0;
+  transition:
+    border-radius 0.2s var(--ease-out),
+    box-shadow 0.2s var(--ease-out),
+    background-color 0.2s var(--ease-out);
+}
+.swipe-row[data-lifted='true'] > .swipe-face {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.16), 0 1px 3px rgba(15, 23, 42, 0.08);
+}
+.dark .swipe-row[data-lifted='true'] > .swipe-face {
+  background:
+    linear-gradient(rgba(var(--color-primary-rgb), 0.06), rgba(var(--color-primary-rgb), 0.06)),
+    #121a26;
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+html.flat .swipe-row[data-lifted='true'] > .swipe-face {
+  background: #ffffff;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+}
+html.flat.dark .swipe-row[data-lifted='true'] > .swipe-face {
+  background: #1c1c1f;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.6);
+}
+.swipe-back {
+  inset: 3px 0 3px 0;
+  border-radius: 16px;
+  opacity: 0;
+  background: rgba(239, 68, 68, 0.13);
+  transition: opacity 0.16s var(--ease-out), background-color 0.16s var(--ease-out);
+}
+.dark .swipe-back { background: rgba(239, 68, 68, 0.2); }
+.swipe-row[data-lifted='true'] .swipe-back { opacity: 1; }
+.swipe-row[data-armed='true'] .swipe-back { background: rgba(239, 68, 68, 0.24); }
+.dark .swipe-row[data-armed='true'] .swipe-back { background: rgba(239, 68, 68, 0.34); }
+.swipe-icon { color: #dc2626; transition: scale 0.2s var(--ease-out); }
+.dark .swipe-icon { color: #f87171; }
+.swipe-row[data-armed='true'] .swipe-icon { scale: 1.15; }
+/* Leaving: the row flies off and the bin goes with the gap, not after it. */
+.swipe-row[data-removing='true'] .swipe-bin { opacity: 0 !important; transition: opacity 0.12s var(--ease-out); }
 
 /* An Insights card opening into its page, and closing back into it
    (pages/insights/zoom.js). The surface sits over the page and under the

@@ -8,15 +8,28 @@ import { prefersReducedMotion, spring } from './motion'
  *
  * ── The gesture ──
  *
- * Drag left and the row follows the finger, uncovering a red strip with a
- * bin in it. Let go past the button's width and the row stays open on it, to
- * tap; let go further than half the row - or flick it - and it goes. Drag it
- * back, tap anywhere else, or scroll, and it closes. One row is open at a
- * time.
+ * Drag left and the row follows the finger. Let go past the button's width
+ * and the row stays open on it, to tap; let go further than half the row - or
+ * flick it - and it goes. Drag it back, tap anywhere else, or scroll, and it
+ * closes. One row is open at a time.
  *
- * The strip is exactly as wide as what has been uncovered, never behind the
- * row: the dark cards are see-through, and a red panel under one would tint
- * it the moment the finger landed.
+ * ── The row leaves its card ──
+ *
+ * The moment it starts to move, the row lifts out of the group it sits in:
+ * its own rounded, opaque surface and a shadow, and the card it belongs to
+ * stops clipping, so the row can travel off the edge of the screen rather
+ * than being cut off at the card's. What it uncovers is the card itself, with
+ * the delete button in the gap. When it goes, it flies off; the gap then
+ * closes over the same beat the list's rows always leave on
+ * (ui/Presence), and the card's corners meet again.
+ *
+ * ── The button ──
+ *
+ * The bin on its own, on a softened red - not the solid slab it was. The red
+ * fills the gap the row leaves (drawn only while the row is lifted, when the
+ * row is opaque and covers the rest of it); the bin sits in the middle of
+ * that gap, so it travels with the row's edge, and grows in as the gap opens.
+ * Both deepen a step once letting go would delete.
  *
  * ── What it never takes ──
  *
@@ -30,7 +43,7 @@ import { prefersReducedMotion, spring } from './motion'
  * but lets go without a spring: it is open, closed or gone at once.
  */
 
-/** The button's width, in px. */
+/** Where the row rests when open, in px - room for the bin. */
 const ACTION_W = 76
 /** Travel before a press becomes a drag. */
 const SLOP = 8
@@ -48,22 +61,52 @@ let openRow = null
 const stretch = (d) => (d * 40) / (40 + d)
 
 /**
+ * A card's clipping, off while any of its rows is lifted out of it - counted
+ * on the element, because a row closing and the next one opening overlap.
+ *
+ * @param {HTMLElement|null} card @param {1|-1} step
+ */
+function unclip(card, step) {
+  if (!card) return
+  const n = Math.max(0, (Number(card.dataset.swipeLifted) || 0) + step)
+  card.dataset.swipeLifted = String(n)
+  card.style.overflow = n > 0 ? 'visible' : ''
+}
+
+/**
  * @param {{children: import('react').ReactNode, onDelete: () => (boolean|void|Promise<boolean|void>),
  *          label: string, disabled?: boolean, className?: string}} props
  *   onDelete: resolve false when nothing was deleted (it went to a
- *   confirmation instead), and the row closes again
+ *   confirmation instead), and the row comes back
  *   label: the button's name, "Delete Lunch"
  */
 export default function SwipeRow({ children, onDelete, label, disabled = false, className = '' }) {
   const root = useRef(/** @type {HTMLDivElement|null} */ (null))
   const face = useRef(/** @type {HTMLDivElement|null} */ (null))
-  const strip = useRef(/** @type {HTMLDivElement|null} */ (null))
+  const bin = useRef(/** @type {HTMLButtonElement|null} */ (null))
   const [open, setOpen] = useState(false)
   const self = useRef({ close: () => {} })
   const x = useRef(0)
   const stop = useRef(/** @type {null | (() => void)} */ (null))
   const swallow = useRef(false)
   const alive = useRef(true)
+  /** The card this row has unclipped, while it is lifted. */
+  const lifted = useRef(/** @type {HTMLElement|null} */ (null))
+
+  function lift() {
+    if (lifted.current || !root.current) return
+    const card = /** @type {HTMLElement|null} */ (root.current.parentElement?.closest('.card') ?? null)
+    lifted.current = card ?? root.current
+    unclip(card, 1)
+    root.current.dataset.lifted = 'true'
+  }
+  function land() {
+    if (!lifted.current) return
+    if (lifted.current !== root.current) unclip(lifted.current, -1)
+    lifted.current = null
+    if (root.current) root.current.dataset.lifted = 'false'
+  }
+
   useEffect(() => {
     /* Set on the way in as well as cleared on the way out: React's
        development mode unmounts and remounts every component once, and a
@@ -71,24 +114,33 @@ export default function SwipeRow({ children, onDelete, label, disabled = false, 
        came back from a swipe that went to a confirmation. */
     alive.current = true
     const me = self.current
+    const node = root.current
     return () => {
       alive.current = false
       stop.current?.()
       if (openRow === me) openRow = null
+      // A row deleted while lifted must still give its card its clipping back.
+      if (lifted.current && lifted.current !== node) unclip(lifted.current, -1)
+      lifted.current = null
     }
   }, [])
 
   /** @param {number} v */
   function paint(v) {
     x.current = v
-    const el = face.current, s = strip.current
+    const el = face.current, b = bin.current, r = root.current
     if (el) el.style.translate = v ? `${v}px 0` : ''
-    if (s) {
-      const w = root.current?.offsetWidth ?? 0
-      s.style.width = `${Math.max(0, -v)}px`
-      s.style.setProperty('--reveal', `${Math.max(0, -v)}px`)
-      // Far enough to delete on letting go: the bin follows the row's edge.
-      s.dataset.armed = String(-v > w * FAR_ENOUGH)
+    const gap = Math.max(0, -v)
+    if (b) {
+      // Centred in the gap, so it moves with the row's edge; grown in as the gap opens.
+      const grown = Math.min(1, gap / ACTION_W)
+      b.style.right = `${Math.max(6, gap / 2 - ACTION_W / 2)}px`
+      b.style.opacity = String(Math.min(1, gap / (ACTION_W * 0.6)))
+      b.style.scale = String(0.55 + 0.45 * grown)
+    }
+    if (r) {
+      const w = r.offsetWidth || 0
+      r.dataset.armed = String(w > 0 && gap > w * FAR_ENOUGH)
     }
   }
 
@@ -96,12 +148,9 @@ export default function SwipeRow({ children, onDelete, label, disabled = false, 
   function settle(to, velocity = 0, then) {
     stop.current?.()
     stop.current = null
-    if (prefersReducedMotion()) { paint(to); then?.(); return }
-    stop.current = spring({
-      from: x.current, to, velocity, duration: 0.3,
-      onUpdate: paint,
-      onComplete: () => { stop.current = null; then?.() },
-    })
+    const done = () => { stop.current = null; if (to === 0) land(); then?.() }
+    if (prefersReducedMotion()) { paint(to); done(); return }
+    stop.current = spring({ from: x.current, to, velocity, duration: 0.3, onUpdate: paint, onComplete: done })
   }
 
   function close() {
@@ -115,18 +164,25 @@ export default function SwipeRow({ children, onDelete, label, disabled = false, 
   function openUp(velocity = 0) {
     if (openRow && openRow !== self.current) openRow.close()
     openRow = self.current
+    lift()
     setOpen(true)
     settle(-ACTION_W, velocity)
   }
 
   async function remove(velocity = 0) {
-    const w = root.current?.offsetWidth ?? 320
+    // Clear of the screen's edge, not just the card's: it is leaving.
+    const w = (root.current?.offsetWidth ?? 320) + 48
     if (openRow === self.current) openRow = null
+    lift()
     setOpen(false)
-    await new Promise(r => settle(-w, velocity, () => r(undefined)))
+    if (root.current) root.current.dataset.removing = 'true'
+    await new Promise(r => settle(-w, Math.min(velocity, -1200), () => r(undefined)))
     const done = await onDelete()
     // Sent to a confirmation, or refused: the row comes back.
-    if (done === false && alive.current) settle(0)
+    if (done === false && alive.current) {
+      if (root.current) root.current.dataset.removing = 'false'
+      settle(0)
+    }
   }
 
   // While open, a touch anywhere else closes it.
@@ -162,6 +218,7 @@ export default function SwipeRow({ children, onDelete, label, disabled = false, 
       d.x0 = e.clientX
       try { e.currentTarget.setPointerCapture(e.pointerId) } catch { /* already released */ }
       if (openRow && openRow !== self.current) openRow.close()
+      lift()
     }
     d.pts.push([e.timeStamp, e.clientX])
     if (d.pts.length > 8) d.pts.shift()
@@ -196,29 +253,30 @@ export default function SwipeRow({ children, onDelete, label, disabled = false, 
   return (
     <div
       ref={root}
-      className={cx('relative overflow-hidden', className)}
+      className={cx('swipe-row relative', className)}
+      data-lifted="false"
       onClickCapture={(e) => { if (swallow.current) { e.preventDefault(); e.stopPropagation() } }}
     >
-      <div
-        ref={strip}
-        aria-hidden={!open}
-        className="swipe-strip absolute inset-y-0 right-0 w-0 overflow-hidden bg-red-500 dark:bg-red-600"
-      >
+      {/* The gap the row leaves: a softened red, shown only while the row is
+          lifted and opaque, so a see-through card at rest never shows it; the
+          bin in it, transparent and scaled down until the gap opens. */}
+      <div aria-hidden={!open} className="absolute inset-0 pointer-events-none">
+        <span className="swipe-back absolute" />
         <button
+          ref={bin}
           type="button"
           tabIndex={open ? 0 : -1}
           aria-label={label}
           onClick={() => remove()}
-          className="swipe-bin absolute inset-y-0 right-0 flex flex-col items-center justify-center gap-1 text-white text-11 font-semibold"
-          style={{ width: ACTION_W }}
+          className="swipe-bin pointer-events-auto absolute inset-y-0 flex items-center justify-center"
+          style={{ width: ACTION_W, right: 6, opacity: 0, scale: '0.55' }}
         >
-          <Trash01 size={20} strokeWidth={1.9} aria-hidden="true" />
-          Delete
+          <Trash01 size={21} strokeWidth={2} className="swipe-icon" aria-hidden="true" />
         </button>
       </div>
       <div
         ref={face}
-        className="relative"
+        className="swipe-face relative"
         style={{ touchAction: 'pan-y' }}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}

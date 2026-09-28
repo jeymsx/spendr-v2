@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { buildForecast, everydaySpend } from './forecast'
+import { buildForecast, everydaySpend, liquidHistory, spendRange } from './forecast'
 
 const NOW = new Date(2026, 8, 10, 12)   // Thu Sep 10, 2026
 const face = (/** @type {any} */ t) => t.amount ?? 0
@@ -144,5 +144,75 @@ describe('safe to spend does not depend on the range shown', () => {
     // What is drawn still stops at the range: 31 days, and nothing after them.
     expect(month.days).toHaveLength(31)
     expect(month.events.every(e => e.date <= month.days.at(-1).date)).toBe(true)
+  })
+})
+
+describe('the likely range', () => {
+  /* Twelve weeks: most cost about ₱2,800, a few far more or less. */
+  const weeks = [2800, 2800, 2600, 3000, 2800, 5600, 2700, 1400, 2900, 2800, 3100, 2800]
+  const txs = weeks.map((amount, w) => ({
+    type: 'expense', account: 'BPI', category: 'Food', amount,
+    date: new Date(2026, 8, 10 - 7 * (w + 1) + 3, 12).toISOString(),
+  }))
+
+  it('reads a quieter and a busier day from the 10th and 90th percentile weeks', () => {
+    const r = spendRange(txs, NOW, face)
+    expect(r.low).toBeLessThan(everydaySpend(txs, NOW, face))
+    expect(r.high).toBeGreaterThan(everydaySpend(txs, NOW, face))
+  })
+
+  it('is nothing today and widens every day after', () => {
+    const f = run({ transactions: txs })
+    expect(f.days[0].low).toBe(f.days[0].high)
+    const w = (/** @type {number} */ i) => f.days[i].high - f.days[i].low
+    expect(w(10)).toBeGreaterThan(w(5))
+    expect(w(30)).toBeGreaterThan(w(10))
+    expect(f.days[30].low).toBeLessThan(f.days[30].balance)
+    expect(f.days[30].high).toBeGreaterThan(f.days[30].balance)
+  })
+
+  it('has no range when every week cost the same', () => {
+    const flat = weeks.map((_, w) => ({ ...txs[w], amount: 2800 }))
+    expect(spendRange(flat, NOW, face)).toBeNull()
+    const f = run({ transactions: flat })
+    expect(f.days[20].low).toBe(f.days[20].high)
+  })
+})
+
+describe('what actually happened, before today', () => {
+  const card = { id: 2, name: 'Card', type: 'credit', balance: 0, currency: 'PHP' }
+  const mp2 = { id: 3, name: 'MP2', type: 'investment', balance: 50000, currency: 'PHP' }
+  const at = (/** @type {number} */ d) => new Date(2026, 8, d, 12).toISOString()
+
+  it('walks the spendable money back from today, day by day', () => {
+    const txs = [
+      { type: 'inflow', account: 'BPI', amount: 25000, date: at(8) },     // pay, two days ago
+      { type: 'expense', account: 'Card', amount: 1000, date: at(9) },    // on the card, yesterday
+    ]
+    const h = liquidHistory({ accounts: [bank, card], transactions: txs, current: 20000, days: 3, now: NOW, priceOf: face })
+    // Each point is the end of that day: Sep 7, 8, 9, then today.
+    expect(h.map(d => d.balance)).toEqual([-4000, 21000, 20000, 20000])
+    expect(h.at(-1).iso).toBe(iso(9, 10))
+  })
+
+  it('counts money into an investment as leaving, and between your own accounts as nothing', () => {
+    const txs = [
+      { type: 'transfer', fromAccount: 'BPI', toAccount: 'MP2', amount: 5000, date: at(9) },
+      { type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount: 3000, date: at(9) },
+    ]
+    const h = liquidHistory({ accounts: [bank, card, mp2], transactions: txs, current: 20000, days: 2, now: NOW, priceOf: face })
+    // Before yesterday, the ₱5,000 was still in the bank; the card payment moved nothing.
+    expect(h.map(d => d.balance)).toEqual([25000, 20000, 20000])
+  })
+
+  it('leaves out what is scheduled for later', () => {
+    const later = [{ type: 'expense', account: 'BPI', amount: 900, date: new Date(2026, 8, 12, 9).toISOString() }]
+    const h = liquidHistory({ accounts: [bank], transactions: later, current: 20000, days: 2, now: NOW, priceOf: face })
+    expect(h.every(d => d.balance === 20000)).toBe(true)
+  })
+
+  it('comes with the forecast only when asked for', () => {
+    expect(run().past).toEqual([])
+    expect(run({ historyDays: 5 }).past).toHaveLength(6)
   })
 })

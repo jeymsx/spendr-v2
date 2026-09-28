@@ -263,8 +263,12 @@ export function TxRow({ tx, catMap, onClick, onCategory }) {
   )
 
   if (onCategory && canRecategorize(tx)) {
+    /* The pressed tint belongs to the whole row, tile included - row-press in
+       index.css draws it on this wrapper when the body is pressed. On the
+       body button alone it stopped short of the tile, a highlight with a
+       bite out of it. */
     return (
-      <div className="flex items-stretch">
+      <div className="row-press flex items-stretch">
         <button
           type="button"
           onClick={() => onCategory(tx)}
@@ -276,8 +280,7 @@ export function TxRow({ tx, catMap, onClick, onCategory }) {
         <button
           type="button"
           onClick={() => onClick(tx)}
-          className="press press-fade flex-1 min-w-0 flex items-center gap-3 pl-3 pr-4 py-3 text-left
-            active:bg-slate-50 dark:active:bg-white/[0.04]"
+          className="row-main press press-fade flex-1 min-w-0 flex items-center gap-3 pl-3 pr-4 py-3 text-left"
         >
           <RowBody tx={tx} cat={cat} cls={cls} sign={sign} magnitude={magnitude} currency={currency} />
         </button>

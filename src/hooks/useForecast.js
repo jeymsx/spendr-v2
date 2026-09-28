@@ -17,8 +17,9 @@ export const FLOOR_KEY = 'forecastFloor'
  * horizon, so the two cannot disagree about today.
  *
  * @param {number} [horizonDays]
+ * @param {number} [historyDays]  days of what already happened, for a chart
  */
-export default function useForecast(horizonDays = 30) {
+export default function useForecast(horizonDays = 30, historyDays = 0) {
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], undefined)
   const transactions = useLiveQuery(() => db.transactions.toArray(), [], undefined)
   const recurring = useLiveQuery(() => db.recurring.toArray(), [], undefined)
@@ -32,9 +33,9 @@ export default function useForecast(horizonDays = 30) {
     && recurring !== undefined && debts !== undefined && floorRow !== undefined
 
   const forecast = useMemo(() => (ready
-    ? buildForecast({ accounts, transactions, recurring, debts, base, rates, horizonDays, floor })
+    ? buildForecast({ accounts, transactions, recurring, debts, base, rates, horizonDays, floor, historyDays })
     : null),
-  [ready, accounts, transactions, recurring, debts, base, rates, horizonDays, floor])
+  [ready, accounts, transactions, recurring, debts, base, rates, horizonDays, floor, historyDays])
 
   return { forecast, floor, recurring: recurring ?? [], accounts: accounts ?? [] }
 }

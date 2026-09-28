@@ -92,7 +92,7 @@ function MiniBars({ values, color, lived }) {
 }
 
 /** Each account's share of the spending, end to end. @param {{parts: Array<{name: string, value: number, color: string}>}} props */
-function StackBar({ parts }) {
+export function StackBar({ parts }) {
   const total = parts.reduce((s, p) => s + p.value, 0)
   return (
     <div className="h-2.5 rounded-full overflow-hidden flex gap-[2px] bg-slate-100 dark:bg-white/[0.06]" aria-hidden="true">

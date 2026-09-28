@@ -43,7 +43,7 @@ import { isInstallmentRow } from '../utils/installments'
 import { creditCardBills } from './creditBills'
 import { netWorthBreakdown } from './netWorth'
 import { isSpend } from './flows'
-import { isLoan } from './accountMeta'
+import { bucketOf, isLoan } from './accountMeta'
 import { LOAN_INTEREST, upcomingLoanPayments } from './loans'
 import { txBase } from './fxContext'
 import { convert } from './fx'
@@ -97,10 +97,12 @@ const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
  * @param {number} [input.floor]   the balance you do not want to go below
  * @param {Date} [input.now]
  * @param {(tx: any) => number} [input.priceOf]
+ * @param {number} [input.historyDays]  days of what actually happened to put
+ *   before today, for the chart (liquidHistory); none unless asked for
  */
 export function buildForecast({
   accounts, transactions, recurring = [], debts = [], base, rates = null,
-  horizonDays = 30, floor = 0, now = new Date(), priceOf = txBase,
+  horizonDays = 30, floor = 0, now = new Date(), priceOf = txBase, historyDays = 0,
 }) {
   const today = startOfDay(now)
   /* The walk runs at least as far as the payday lookahead, so safe to spend
@@ -198,6 +200,7 @@ export function buildForecast({
     || (y.counted ? 1 : 0) - (x.counted ? 1 : 0) || x.name.localeCompare(y.name))
 
   const dailySpend = everydaySpend(transactions ?? [], now, priceOf)
+  const range = spendRange(transactions ?? [], now, priceOf)
 
   // ── The walk ──
   const byDay = new Map()
@@ -206,7 +209,12 @@ export function buildForecast({
     const k = isoDay(e.date)
     byDay.set(k, (byDay.get(k) ?? 0) + e.sign * e.amount)
   }
-  /** @type {Array<{date: Date, iso: string, balance: number}>} */
+  /* Each day also carries a likely range - what the same walk gives with a
+     quieter week's spending and with a busier one (spendRange). The bills,
+     pay and payments are the same in all three; only the everyday spending
+     is uncertain, so the range starts at nothing today and widens by the
+     difference every day after. */
+  /** @type {Array<{date: Date, iso: string, balance: number, low: number, high: number}>} */
   const days = []
   let running = start
   for (let i = 0; i <= walkDays; i++) {
@@ -215,7 +223,9 @@ export function buildForecast({
     running += byDay.get(iso) ?? 0
     // Today's spending so far is already in the balance; the burn starts tomorrow.
     if (i > 0 && dailySpend) running -= dailySpend
-    days.push({ date, iso, balance: round2(running) })
+    const busier = range && dailySpend ? (range.high - dailySpend) * i : 0
+    const quieter = range && dailySpend ? (dailySpend - range.low) * i : 0
+    days.push({ date, iso, balance: round2(running), low: round2(running - busier), high: round2(running + quieter) })
   }
 
   const shown = days.slice(0, horizonDays + 1)
@@ -238,6 +248,8 @@ export function buildForecast({
   return {
     start,
     days: shown,
+    /** What actually happened, before today, oldest first - empty unless asked for. */
+    past: historyDays > 0 ? liquidHistory({ accounts, transactions, current: start, days: historyDays, now, priceOf }) : [],
     events: events.filter(e => e.date <= shownEnd),
     lowest,
     firstNegative,
@@ -265,6 +277,104 @@ export function buildForecast({
  * @returns {number|null}
  */
 export function everydaySpend(transactions, now, priceOf = txBase) {
+  const sorted = weeklySpend(transactions, now, priceOf)
+  if (!sorted) return null
+  const mid = Math.floor(sorted.length / 2)
+  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
+  return median > 0 ? round2(median / 7) : null
+}
+
+/**
+ * A quieter and a busier day, from the same weeks everydaySpend reads: the
+ * 10th and 90th percentile week, over seven. What the forecast's likely
+ * range is drawn from - eight weeks in ten of yours cost between the two.
+ * Null without enough history, or when every week cost the same.
+ *
+ * @param {Array<Record<string, any>>} transactions
+ * @param {Date} now
+ * @param {(tx: any) => number} [priceOf]
+ * @returns {{low: number, high: number}|null}
+ */
+export function spendRange(transactions, now, priceOf = txBase) {
+  const sorted = weeklySpend(transactions, now, priceOf)
+  if (!sorted) return null
+  const q = (/** @type {number} */ p) => {
+    const at = (sorted.length - 1) * p
+    const i = Math.floor(at)
+    return sorted[i] + (sorted[Math.min(i + 1, sorted.length - 1)] - sorted[i]) * (at - i)
+  }
+  const low = q(0.1) / 7
+  const high = q(0.9) / 7
+  return high - low > 0.005 ? { low: round2(low), high: round2(high) } : null
+}
+
+/**
+ * Net liquid money - cash and banks, less what the cards owe - at the end of
+ * each of the last `days` days, and today's `current` as the last point:
+ * the same figure the forecast walks forward from, walked back.
+ *
+ * Built backwards from today by undoing each row's effect on that figure,
+ * as the net-worth line is. A row counts by what it does to money you can
+ * spend: spending and income on a cash, bank or card account; a transfer
+ * only when one side is one of those and the other is not - into an
+ * investment or a loan is money leaving, out of one is money arriving, and
+ * between two of your own spendable accounts nothing changes.
+ *
+ * @param {object} input
+ * @param {Array<Record<string, any>>} input.accounts
+ * @param {Array<Record<string, any>>} input.transactions
+ * @param {number} input.current
+ * @param {number} input.days
+ * @param {Date} [input.now]
+ * @param {(tx: any) => number} [input.priceOf]
+ * @returns {Array<{date: Date, iso: string, balance: number}>}
+ */
+export function liquidHistory({ accounts, transactions, current, days, now = new Date(), priceOf = txBase }) {
+  const spendable = new Set((accounts ?? [])
+    .filter(a => ['spending', 'savings', 'credit'].includes(bucketOf(a)))
+    .map(a => a.name))
+  const nowMs = now.getTime()
+  /** @type {Array<{t: number, delta: number}>} */
+  const moves = []
+  for (const tx of transactions ?? []) {
+    const t = tx?.date ? Date.parse(tx.date) : NaN
+    if (!Number.isFinite(t) || t > nowMs) continue
+    let delta = 0
+    if (tx.type === 'expense' && spendable.has(tx.account)) delta = -priceOf(tx)
+    else if (tx.type === 'inflow' && spendable.has(tx.account)) delta = priceOf(tx)
+    else if (tx.type === 'transfer') {
+      const out = spendable.has(tx.fromAccount), into = spendable.has(tx.toAccount)
+      if (out && !into) delta = -priceOf(tx)
+      else if (into && !out) delta = priceOf(tx)
+    }
+    if (Math.abs(delta) > 0.005) moves.push({ t, delta })
+  }
+  moves.sort((a, b) => b.t - a.t)
+
+  const today = startOfDay(now)
+  const out = [{ date: today, iso: isoDay(today), balance: round2(current) }]
+  let running = current
+  let m = 0
+  for (let i = 1; i <= days; i++) {
+    // The end of day (today - i): undo everything after it.
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i)
+    const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() - i + 1).getTime()
+    while (m < moves.length && moves[m].t >= endOfDay) { running -= moves[m].delta; m++ }
+    out.push({ date, iso: isoDay(date), balance: round2(running) })
+  }
+  return out.reverse()
+}
+
+/**
+ * The last twelve weeks of everyday spending, one total per week, smallest
+ * first - or null when there is not enough history to read.
+ *
+ * @param {Array<Record<string, any>>} transactions
+ * @param {Date} now
+ * @param {(tx: any) => number} priceOf
+ * @returns {number[]|null}
+ */
+function weeklySpend(transactions, now, priceOf) {
   const today = startOfDay(now).getTime()
   let first = Infinity
   for (const t of transactions) {
@@ -285,10 +395,7 @@ export function everydaySpend(transactions, now, priceOf = txBase) {
     const w = Math.floor((at - from) / (7 * DAY_MS))
     if (w >= 0 && w < weeks) totals[w] += priceOf(t)
   }
-  const sorted = totals.slice().sort((a, b) => a - b)
-  const mid = Math.floor(sorted.length / 2)
-  const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
-  return median > 0 ? round2(median / 7) : null
+  return totals.sort((a, b) => a - b)
 }
 
 /** A row that is day-to-day spending, not something the forecast lays out on its own.

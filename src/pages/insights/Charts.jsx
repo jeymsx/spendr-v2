@@ -2,6 +2,7 @@ import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
   AreaChart, Area, ReferenceLine, ReferenceDot,
+  ComposedChart, Line,
 } from 'recharts'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import SectionLabel from '../../components/ui/SectionLabel'
@@ -241,46 +242,56 @@ export function NetWorthChart({ data, color, currency, rangeKey }) {
 // ── Chart: The forecast ────────────────────────────────────────────────────────
 
 /**
- * The balance ahead, day by day - NetWorthChart's frame, drawn forward.
+ * The forecast as a projection: what happened, then what is likely.
  *
- * Three marks on top of the line, and each one answers a question the line
- * alone makes you work out: the floor you set (dashed amber, when there is
- * one), zero (dashed red, only once the line gets near it), and a dot on the
- * tightest day. Steps are the point - a payday is a jump, not a slope - so
- * the line is stepped rather than smoothed; a curve would draw money arriving
- * over days that in fact arrives at once.
+ * Solid up to today - the money as it actually was, from the ledger - then
+ * dashed from today on, because a forecast is a guess and should look like
+ * one. Around the dashed line, a band: where it lands with a quieter week's
+ * spending and with a busier one (lib/forecast spendRange). The bills, pay
+ * and loan payments are fixed, so the band is narrow near today and opens up
+ * the further out it looks - which is exactly how sure the forecast is.
  *
- * @param {object} props
- * @param {Array<{day: string, value: number, iso: string}>} props.data
- * @param {string} props.color
- * @param {string} [props.currency]
- * @param {string} props.rangeKey
- * @param {number} [props.floor]
- * @param {{iso: string, balance: number}|null} [props.lowest]
+ * The floor and zero lines, and the dot on the tightest day, are the ones
+ * the single line had. Stepped, because money moves in steps: a payday is a
+ * jump, not a slope.
+ *
+ * @param {{data: Array<{day: string, iso: string, past?: number, value?: number, band?: [number, number]}>,
+ *          todayIndex: number, color: string, currency: string, rangeKey: string,
+ *          floor?: number, lowest?: {iso: string}|null}} props
  */
-export function ForecastChart({ data, color, currency, rangeKey, floor = 0, lowest = null }) {
-  const values = data.map(d => d.value)
+export function ForecastChart({ data, todayIndex, color, currency, rangeKey, floor = 0, lowest = null }) {
+  const values = data.flatMap(d => [d.past, d.value, ...(d.band ?? [])]).filter(v => Number.isFinite(v))
   const lo = Math.min(...values, floor > 0 ? floor : Infinity)
   const hi = Math.max(...values)
   const nearZero = lo < Math.max(1, hi * 0.15)
   const axis = niceAxis(Math.min(lo, nearZero ? 0 : lo), hi)
   const last = data.length - 1
-  const marks = new Set([0, 0.25, 0.5, 0.75, 1].map(f => Math.round(f * last)))
+  /* The first day, today, and three more after it - today always labelled,
+     since it is where the line changes from fact to guess. */
+  const ahead = last - todayIndex
+  const marks = new Set([0, todayIndex, ...[1 / 3, 2 / 3, 1].map(f => todayIndex + Math.round(f * ahead))])
   const xTick = ({ x, y, payload }) => {
     const i = payload.index
     if (!marks.has(i)) return null
+    if (i !== todayIndex && Math.abs(i - todayIndex) < Math.max(3, last * 0.12)) return null
     const anchor = i === 0 ? 'start' : i === last ? 'end' : 'middle'
-    return <text x={x} y={y + 12} textAnchor={anchor} fontSize={10} fill="#94a3b8">{payload.value}</text>
+    return <text x={x} y={y + 12} textAnchor={anchor} fontSize={10} fill="#94a3b8" fontWeight={i === todayIndex ? 600 : 400}>{payload.value}</text>
   }
-  const gradId = `forecastGrad-${rangeKey}`
-  const low = lowest ? data.find(d => d.iso === lowest.iso) : null
+  const bandId = `forecastBand-${rangeKey}`
+  const pastId = `forecastPast-${rangeKey}`
+  const low = lowest ? data.find(d => d.iso === lowest.iso && d.value != null) : null
+  const today = data[todayIndex]
   return (
     <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
-      <ResponsiveContainer width="100%" height={180}>
-        <AreaChart key={rangeKey} data={data} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={196}>
+        <ComposedChart key={rangeKey} data={data} margin={{ top: 10, right: 4, left: -8, bottom: 0 }}>
           <defs>
-            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={color} stopOpacity={0.22} />
+            <linearGradient id={bandId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.28} />
+              <stop offset="100%" stopColor={color} stopOpacity={0.12} />
+            </linearGradient>
+            <linearGradient id={pastId} x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor={color} stopOpacity={0.16} />
               <stop offset="100%" stopColor={color} stopOpacity={0} />
             </linearGradient>
           </defs>
@@ -299,31 +310,64 @@ export function ForecastChart({ data, color, currency, rangeKey, floor = 0, lowe
             <ReferenceLine y={floor} stroke="#f59e0b" strokeDasharray="5 4" strokeWidth={1.5} ifOverflow="extendDomain" />
           )}
           {nearZero && <ReferenceLine y={0} stroke="#ef4444" strokeDasharray="5 4" strokeWidth={1.25} />}
+          {/* Where the ledger stops and the guess begins. */}
+          {today && todayIndex > 0 && (
+            <ReferenceLine x={today.day} stroke="rgba(148,163,184,0.45)" strokeDasharray="2 3" strokeWidth={1} />
+          )}
           <Tooltip
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null
+              const p = payload[0].payload
+              const isPast = p.value == null
               return (
                 <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
                   <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
-                  <p className="font-medium text-slate-700 dark:text-white tabular-nums">{fmt(payload[0].value, currency)}</p>
+                  <p className="font-medium text-slate-700 dark:text-white tabular-nums">
+                    {isPast ? fmt(p.past, currency) : `About ${fmt(p.value, currency)}`}
+                  </p>
+                  {!isPast && p.band && p.band[1] - p.band[0] > 0.5 && (
+                    <p className="text-slate-500 dark:text-slate-400 tabular-nums">
+                      Likely {fmtCompact(p.band[0], currency)} to {fmtCompact(p.band[1], currency)}
+                    </p>
+                  )}
                 </div>
               )
             }}
             cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '4 2' }}
           />
-          <Area type="stepAfter" dataKey="value"
-            stroke={color} strokeWidth={2.25}
-            fill={`url(#${gradId})`} dot={false} baseValue={axis.floor}
+          <Area type="stepAfter" dataKey="band" stroke="none" fill={`url(#${bandId})`}
+            isAnimationActive={!prefersReducedMotion()} animationDuration={700} activeDot={false} />
+          <Area type="stepAfter" dataKey="past" stroke={color} strokeWidth={2.25} fill={`url(#${pastId})`}
+            baseValue={axis.floor} dot={false} connectNulls={false}
             activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
-            isAnimationActive={!prefersReducedMotion()} animationDuration={700}
-          />
+            isAnimationActive={!prefersReducedMotion()} animationDuration={700} />
+          <Line type="stepAfter" dataKey="value" stroke={color} strokeWidth={2.25} strokeDasharray="6 5"
+            dot={false} connectNulls={false}
+            activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
+            isAnimationActive={!prefersReducedMotion()} animationDuration={700} />
           {low && (
             <ReferenceDot x={low.day} y={low.value} r={4.5}
               fill={low.value < 0 ? '#ef4444' : low.value < floor ? '#f59e0b' : color}
               stroke="white" strokeWidth={2} ifOverflow="visible" />
           )}
-        </AreaChart>
+        </ComposedChart>
       </ResponsiveContainer>
+      {/* What the three marks mean, once - the dashes and the band are the
+          whole difference between this and a statement of fact. */}
+      <div className="mt-1 flex items-center justify-center gap-4 text-11 text-slate-500 dark:text-slate-400" aria-hidden="true">
+        <span className="flex items-center gap-1.5">
+          <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2.25" /></svg>
+          So far
+        </span>
+        <span className="flex items-center gap-1.5">
+          <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2.25" strokeDasharray="4 3" /></svg>
+          Projected
+        </span>
+        <span className="flex items-center gap-1.5">
+          <span className="w-3.5 h-2.5 rounded-sm" style={{ background: color, opacity: 0.22 }} />
+          Likely range
+        </span>
+      </div>
     </div>
   )
 }

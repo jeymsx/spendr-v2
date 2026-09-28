@@ -54,7 +54,9 @@ export default function ForecastPage() {
   const base = useBaseCurrency()
   const kept = useInsightsState()
   const range = AHEAD_RANGES.find(r => r.key === kept.ahead) ?? AHEAD_RANGES[0]
-  const { forecast, floor } = useForecast(range.days)
+  /* How much of the past leads into the projection: about a third of the
+     chart, so today sits left of centre and most of the width is ahead. */
+  const { forecast, floor } = useForecast(range.days, Math.min(60, Math.max(14, Math.round(range.days / 3))))
   const [floorOpen, setFloorOpen] = useState(false)
 
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
@@ -62,9 +64,20 @@ export default function ForecastPage() {
   const catMap = useMemo(() => Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
   const acctByName = useMemo(() => Object.fromEntries((accounts ?? []).map(a => [a.name, a])), [accounts])
 
-  const data = useMemo(() => (forecast?.days ?? []).map((d, i) => ({
-    day: i === 0 ? 'Today' : short(d.date), value: d.balance, iso: d.iso,
-  })), [forecast])
+  /* One row per day, past then ahead. The past carries `past`, the days ahead
+     `value` and `band`; today carries both, so the solid line and the dashed
+     one meet on it. */
+  const data = useMemo(() => {
+    if (!forecast) return []
+    const past = (forecast.past ?? []).slice(0, -1).map(d => ({ day: short(d.date), iso: d.iso, past: d.balance }))
+    const ahead = forecast.days.map((d, i) => ({
+      day: i === 0 ? 'Today' : short(d.date), iso: d.iso, value: d.balance,
+      band: /** @type {[number, number]} */ ([d.low, d.high]),
+      ...(i === 0 ? { past: forecast.start } : {}),
+    }))
+    return [...past, ...ahead]
+  }, [forecast])
+  const todayIndex = Math.max(0, (forecast?.past?.length ?? 1) - 1)
 
   /* The events, by day, the way Transactions groups the past - a heading and
      a hairline, then one card for the day. */
@@ -113,7 +126,7 @@ export default function ForecastPage() {
         {/* ── When is it tight? ── */}
         <section className="mt-6">
           <ForecastChart
-            data={data} color={color} currency={base} rangeKey={range.key}
+            data={data} todayIndex={todayIndex} color={color} currency={base} rangeKey={range.key}
             floor={floor} lowest={low}
           />
           <div className="mt-2.5 px-5">
@@ -121,7 +134,7 @@ export default function ForecastPage() {
           </div>
           <div className="mt-4 px-5 text-center">
             <p className="text-13 text-slate-600 dark:text-slate-300 tabular-nums">
-              Tightest day: <span className="font-semibold">{low.iso === data[0]?.iso ? 'today' : short(low.date)}</span>
+              Tightest day: <span className="font-semibold">{low.iso === forecast.days[0]?.iso ? 'today' : short(low.date)}</span>
               {' at '}<span className="font-semibold">{fmt(low.balance, base)}</span>
             </p>
             {neg ? (
