@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 const AddExpense = lazy(() => import('../pages/AddExpense'))
 const AddInflow  = lazy(() => import('../pages/AddInflow'))
 const Transfer   = lazy(() => import('../pages/Transfer'))
+const QuickLogOverlay = lazy(() => import('../components/QuickLogOverlay'))
 
 /** .card-solid is the page cards' material, composited opaque — see index.css. */
 const OPAQUE_SURFACE = 'card-solid rounded-2xl'
@@ -39,7 +40,7 @@ export function useAddFlow() {
  * purely to ask which kind of transaction this is.
  */
 export function AddFlowProvider({ children }) {
-  const [flow, setFlow] = useState(null)   // null | 'expense' | 'inflow' | 'transfer'
+  const [flow, setFlow] = useState(null)   // null | 'expense' | 'inflow' | 'transfer' | 'quick'
   const location = useLocation()
 
   const openAdd = useCallback((type) => setFlow(type ?? 'expense'), [])
@@ -70,7 +71,14 @@ export function AddFlowProvider({ children }) {
     <AddFlowContext.Provider value={{ openAdd, closeAdd, isOpen: !!flow }}>
       {children}
 
-      {flow && (
+      {/* The quick log is an overlay of its own, as on the phone. */}
+      {flow === 'quick' && (
+        <Suspense fallback={null}>
+          <QuickLogOverlay onClose={closeAdd} />
+        </Suspense>
+      )}
+
+      {flow && Form && (
         <div
           role="dialog"
           aria-modal="true"

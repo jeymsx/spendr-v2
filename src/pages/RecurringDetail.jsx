@@ -324,7 +324,7 @@ export default function RecurringDetail() {
   if (!rec) {
     return (
       <div className="px-5 pt-safe-header">
-        <IconButton label="Back to recurring" onClick={back}>
+        <IconButton label="Back to recurring" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         <EmptyState
@@ -346,7 +346,7 @@ export default function RecurringDetail() {
     <div className="pb-nav">
       {/* ── Header: back, centred name, one door to editing ── */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back to recurring" onClick={back}>
+        <IconButton label="Back to recurring" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
 

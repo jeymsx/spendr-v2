@@ -264,7 +264,7 @@ export default function RecurringForm() {
           disc, centred title, one action, and a 36px spacer when there is no
           action - without it "centred" lands half a button left of centre. */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3 shrink-0">
-        <IconButton label="Back" onClick={back}>
+        <IconButton label="Back" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">

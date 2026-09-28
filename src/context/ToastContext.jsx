@@ -3,6 +3,27 @@ import { IconTick, IconWarning, IconX } from '../components/icons'
 
 const ToastContext = createContext(null)
 
+/**
+ * Somewhere else to show toasts: the desktop registers one (src/web
+ * WebToaster), so a toast there is a stacked card in the bottom corner
+ * rather than the phone's bar over its tab bar. Every caller keeps calling
+ * showToast() and never knows which it got.
+ *
+ * @typedef {{show: (t: {message: string, type: string, actionLabel: string|null,
+ *   onAction: (() => void)|null, duration?: number}) => void, dismiss: () => void}} ToastPresenter
+ * @type {ToastPresenter|null}
+ */
+let presenter = null
+
+/**
+ * @param {ToastPresenter} p
+ * @returns {() => void} stop using it
+ */
+export function setToastPresenter(p) {
+  presenter = p
+  return () => { if (presenter === p) presenter = null }
+}
+
 /* Icons, not glyphs. These were the characters U+2713, U+26A0 and U+2715
    with `font-bold` on them - a text tick rendered by whatever font the OS
    picked, next to a toast whose every other element is drawn. font-bold also
@@ -67,6 +88,9 @@ export function ToastProvider({ children }) {
    */
   const showToast = useCallback((message, type = 'success', options = {}) => {
     const { actionLabel = null, onAction = null, duration, ifIdle = false } = options
+    /* Stacked, nothing is pushed out by what comes after it - so news that
+       can wait (ifIdle) is simply shown too. */
+    if (presenter) { presenter.show({ message, type, actionLabel, onAction, duration }); return }
     if (ifIdle && actionRef.current) return
     if (timerRef.current) clearTimeout(timerRef.current)
 
@@ -83,6 +107,7 @@ export function ToastProvider({ children }) {
   }, [])
 
   const dismiss = useCallback(() => {
+    presenter?.dismiss()
     if (timerRef.current) clearTimeout(timerRef.current)
     actionRef.current = null
     setToast(null)

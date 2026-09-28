@@ -3,10 +3,14 @@ import { createPortal } from 'react-dom'
 import { useAddFlow } from './AddFlow'
 import { WebIconPlus } from './WebIcons'
 
+/* The phone's add sheet, in its words (Expense, Inflow, Transfer), and the
+   quick log it keeps behind a long press of +: a landscape menu has room to
+   show it. */
 const FLOWS = [
   { key: 'expense',  label: 'Expense',  hint: 'Money out',    sign: '−', tone: 'text-red-600 dark:text-red-400' },
-  { key: 'inflow',   label: 'Income',   hint: 'Money in',     sign: '+', tone: 'text-emerald-700 dark:text-emerald-400' },
+  { key: 'inflow',   label: 'Inflow',   hint: 'Money in',     sign: '+', tone: 'text-emerald-700 dark:text-emerald-400' },
   { key: 'transfer', label: 'Transfer', hint: 'Between accounts', sign: '⇄', tone: 'text-primary' },
+  { key: 'quick',    label: 'Quick log', hint: 'Type it the way you say it', sign: '✎', tone: 'text-primary' },
 ]
 
 /**

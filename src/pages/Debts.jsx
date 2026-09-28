@@ -203,7 +203,7 @@ export default function Debts() {
           is the widest possible way to say a thing every other page in the app
           says in 36px. */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back" onClick={() => navigate(-1)}>
+        <IconButton label="Back" className="subpage-back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">

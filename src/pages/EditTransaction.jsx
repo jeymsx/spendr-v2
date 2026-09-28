@@ -75,7 +75,7 @@ export default function EditTransaction() {
     return (
       <div className="pb-nav">
         <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-          <IconButton label="Back" onClick={() => navigate(-1)}>
+          <IconButton label="Back" className="subpage-back" onClick={() => navigate(-1)}>
             <IconChevronLeft />
           </IconButton>
         </header>

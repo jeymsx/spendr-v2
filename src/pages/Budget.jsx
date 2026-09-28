@@ -370,7 +370,7 @@ export default function Budget() {
         {/* Back to wherever you came from - the dashboard card or Settings -
             with a fallback for the case where this page IS the first entry.
             See the hook. */}
-        <IconButton label="Back" onClick={back}>
+        <IconButton label="Back" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         {/* The month is the title. "Budget" named the page you had just
