@@ -6,6 +6,7 @@
  * while, and these stayed behind.
  */
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { txGlyphCat } from '../../lib/txGlyph'
 import { IconEmptyReceipt } from '../../components/icons'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
@@ -83,6 +84,7 @@ export function DetailTxRow({
   meta: metaOverride = null,
 }) {
   const cat = catMap[tx.category]
+  const glyph = txGlyphCat(tx, catMap)
   const isTransfer = tx.type === 'transfer'
 
   // Sign and colour are relative to THIS ACCOUNT, not to the transaction's
@@ -132,15 +134,15 @@ export function DetailTxRow({
       className="w-full text-left flex items-center gap-3 px-4 py-3
         enabled:active:bg-slate-50 dark:enabled:active:bg-white/[0.04] transition-colors"
     >
-      {/* The category's own emoji on its own colour at 13% - the same avatar
-          the Transactions page uses, so a row means the same thing on both
-          screens. */}
+      {/* The same tile the Transactions page draws, so a row means the same
+          thing on both screens. It was a hex wash of its own, a shade off in
+          each theme, with the emoji for a transfer. */}
       <span
-        className="w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 text-[18px]"
-        style={{ backgroundColor: (cat?.color ?? '#2D9DFF') + '22' }}
+        className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
+        style={{ '--cat-color': glyph?.color ?? '#64748b' }}
         aria-hidden="true"
       >
-        <CategoryGlyph cat={cat} size={18} emoji="💸" />
+        <CategoryGlyph cat={glyph} size={18} emoji="💸" />
       </span>
 
       <span className="flex-1 min-w-0">

@@ -156,7 +156,8 @@ export function BudgetSummaryTile({ totals }) {
 
 // ── Budget chip (compact 2-col grid) ──────────────────────────────────────────
 
-export function TxRow({ tx, cat, isLast }) {
+/** @param {{tx: Record<string, any>, cat?: Record<string, any>, glyph?: Record<string, any>|null, isLast?: boolean}} props */
+export function TxRow({ tx, cat, glyph = cat, isLast }) {
   const isExpense  = tx.type === 'expense'
   const isInflow   = tx.type === 'inflow'
   const amountCls  = isExpense  ? 'text-red-500 dark:text-red-400'
@@ -170,9 +171,9 @@ export function TxRow({ tx, cat, isLast }) {
       {/* category icon */}
       <div
         className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-        style={{ '--cat-color': cat?.color ?? '#64748b' }}
+        style={{ '--cat-color': glyph?.color ?? '#64748b' }}
       >
-        <CategoryGlyph cat={cat} size={18} emoji="💸" />
+        <CategoryGlyph cat={glyph} size={18} emoji="💸" />
       </div>
 
       {/* description + account */}

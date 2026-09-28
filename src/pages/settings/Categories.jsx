@@ -159,7 +159,7 @@ export function CategoryPresetsSheet({ open, onClose, activeTab, existingCategor
                     : 'bg-white dark:bg-white/[0.04] border-slate-200 dark:border-white/[0.08] text-slate-600 dark:text-slate-400 active:scale-95',
                 ].join(' ')}
               >
-                <span>{preset.icon}</span>
+                <CategoryGlyph cat={preset} size={15} color={!exists} />
                 {preset.name}
                 {exists && <span className="ml-0.5"><IconTick size={11} /></span>}
                 {isAdding && (

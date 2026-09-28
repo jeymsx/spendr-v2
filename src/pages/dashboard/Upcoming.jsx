@@ -4,7 +4,8 @@ import Divider from '../../components/ui/Divider'
 import RollingNumber from '../../components/ui/RollingNumber'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import BillMark from '../../components/BillMark'
-import { IconCardUI, IconReceipt } from '../../components/icons'
+import { BrandSquare } from '../accounts/HoldingTile'
+import { IconCardUI } from '../../components/icons'
 import { fmt, fmtCompact } from '../../lib/money'
 import SectionHeading from '../../components/ui/SectionHeading'
 import { GlassArt } from '../../components/glass/GlassArt'
@@ -47,14 +48,18 @@ export function toUpcomingItem(e, catMap, acctByName) {
     }
   }
   if (e.kind === 'loan') {
+    const acct = acctByName[e.name]
     return {
-      ...common, meta: 'Loan payment', icon: <IconReceipt size={17} />,
-      color: acctByName[e.name]?.color ?? null,
+      ...common, meta: 'Loan payment',
+      icon: <CategoryGlyph cat={{ name: 'Loan payment', color: acct?.color }} size={17} />,
+      /* The lender's mark, as the loan's row on the Recurring page has it. */
+      mark: acct ? <BrandSquare acct={acct} size={40} className="rounded-2xl" /> : undefined,
+      color: acct?.color ?? null,
       ...(e.overdue ? { status: 'Overdue', late: true } : {}),
     }
   }
   return {
-    ...common, meta: 'You owe', icon: <IconReceipt size={17} />, color: null,
+    ...common, meta: 'You owe', icon: <CategoryGlyph cat={{ name: 'Debt Payment' }} size={17} />, color: null,
     ...(e.overdue ? { status: 'Overdue', late: true } : {}),
   }
 }

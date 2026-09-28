@@ -210,7 +210,7 @@ export const IconWalletUI  = uui(Wallet01)
 export const IconCardUI    = uui(CreditCard01)
 export const IconPhoneUI   = uui(Phone01)
 export const IconCashUI    = uui(BankNote01)
-export const IconReceipt   = uui(Receipt)            // a dated debt in Upcoming
+export const IconReceipt   = uui(Receipt)            // loans on the Net worth page
 export const IconTransferUI = uui(SwitchHorizontal01) // a transfer template
 
 // Release-notes glyphs. Only What's New uses these, and only one row each -

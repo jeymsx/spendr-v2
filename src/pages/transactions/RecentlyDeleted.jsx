@@ -7,6 +7,7 @@ import { useToast } from '../../context/ToastContext'
 import { TRASH_DAYS, deleteForever, describeEntry, emptyTrash, purgeTrash, restoreFromTrash } from '../../db/trash'
 import SubPage from '../../components/SubPage'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { txGlyphCat } from '../../lib/txGlyph'
 import SwipeConfirm from '../../components/SwipeConfirm'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
@@ -119,7 +120,7 @@ export default function RecentlyDeleted() {
             <Card clip>
               {list.map((entry, i) => {
                 const { lead, extra, total, daysLeft } = describeEntry(entry, now)
-                const cat = catMap[lead.category]
+                const glyph = txGlyphCat(lead, catMap)
                 const { cls, sign, currency } = txRowTone(lead)
                 const name = lead.description || lead.category || (lead.type === 'transfer' ? 'Transfer' : 'Transaction')
                 return (
@@ -131,8 +132,8 @@ export default function RecentlyDeleted() {
                           onClick={() => setPicked(entry.id)}
                           className="press press-fade flex-1 min-w-0 flex items-center gap-3 pl-4 pr-2 py-3 text-left active:bg-slate-50 dark:active:bg-white/[0.04]"
                         >
-                          <span className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 opacity-70" style={{ '--cat-color': cat?.color ?? '#64748b' }}>
-                            <CategoryGlyph cat={cat} size={20} emoji="💸" />
+                          <span className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0 opacity-70" style={{ '--cat-color': glyph?.color ?? '#64748b' }}>
+                            <CategoryGlyph cat={glyph} size={20} emoji="💸" />
                           </span>
                           <span className="flex-1 min-w-0">
                             <span className="block text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">{name}</span>

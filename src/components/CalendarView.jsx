@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import CategoryGlyph from './CategoryGlyph'
+import { txGlyphCat } from '../lib/txGlyph'
 import { amountDisplay, TONE_CLASS } from '../lib/txMoney'
 import Card from './ui/Card'
 import Divider from './ui/Divider'
@@ -41,6 +42,7 @@ const DOW_LABELS = ['Mo','Tu','We','Th','Fr','Sa','Su']
 
 function TxRow({ tx, catMap, onClick }) {
   const cat = catMap[tx.category]
+  const glyph = txGlyphCat(tx, catMap)
   const { sign, magnitude, tone, currency } = amountDisplay(tx)
   const cls = TONE_CLASS[tone]
   return (
@@ -51,9 +53,9 @@ function TxRow({ tx, catMap, onClick }) {
     >
       <div
         className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-        style={{ '--cat-color': cat?.color ?? '#64748b' }}
+        style={{ '--cat-color': glyph?.color ?? '#64748b' }}
       >
-        <CategoryGlyph cat={cat} size={16} emoji="💸" />
+        <CategoryGlyph cat={glyph} size={16} emoji="💸" />
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">

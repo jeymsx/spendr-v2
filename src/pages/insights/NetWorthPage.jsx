@@ -16,7 +16,6 @@ import useRates from '../../hooks/useRates'
 import { monthName, monthKeyOf } from '../../lib/recap'
 import { TrendRangeChips } from '../accounts/Trend'
 import { NetWorthChart } from './Charts'
-import { StackBar } from './Explore'
 import { NET_RANGES, NET_RANGE_WORDS, monthEnds, useNetWorthSeries } from './netWorth'
 import { setInsights, useInsightsState } from './period'
 import { NetWorthSkeleton } from './Skeleton'
@@ -34,8 +33,9 @@ import { useArrival } from './zoom'
  * the screen, instead of a second set in the middle of the overview that
  * meant something different from the first.
  *
- * Under the chart, where it stood at the end of each recent month, which is
- * the figure people actually remember.
+ * Under the chart, what today's figure is made of, and where it stood at
+ * the end of each recent month, which is the figure people actually
+ * remember.
  */
 export default function NetWorthPage() {
   const arrival = useArrival()
@@ -116,6 +116,7 @@ export default function NetWorthPage() {
               <section className="mt-8">
                 <SectionHeading>Month by month</SectionHeading>
                 <Card clip className="mx-5">
+                  <MonthBars months={months} thisMonth={thisMonth} />
                   {months.map((m, i) => (
                     <div key={m.key}>
                       <div className="flex items-center gap-3 px-4 py-3">
@@ -160,11 +161,16 @@ export default function NetWorthPage() {
 /**
  * What the figure is made of: what you have, and what you owe.
  *
- * The same six piles Home's wallet shows, as two cards - each led by its
- * total and a bar of its parts, then a row per pile with its share of that
- * side. People are split the way the wallet's Debts tile is not: what others
- * owe you sits with what you have, what you owe them with what you owe, so
- * both totals are real totals. A row opens where that money lives.
+ * The same six piles Home's wallet shows. First the two sides against each
+ * other, on one scale, so the answer to "why is it this number" is a
+ * picture: the shorter bar is short by exactly your net worth, and that
+ * stretch is drawn dashed. Each side had its own card with a bar scaled to
+ * itself, which made a ₱120K side and a ₱420K side look the same length.
+ *
+ * Then a row per pile with its share of its side. People are split the way
+ * the wallet's Debts tile is not: what others owe you sits with what you
+ * have, what you owe them with what you owe, so both totals are real totals.
+ * A row opens where that money lives.
  *
  * @param {{b: ReturnType<typeof netWorthBreakdown>, base: string, includeDebts: boolean,
  *          onOpen: (to: string) => void}} props
@@ -185,9 +191,14 @@ function Makeup({ b, base, includeDebts, onOpen }) {
   return (
     <section className="mt-8">
       <SectionHeading>What it&apos;s made of</SectionHeading>
-      <div className="mx-5 flex flex-col gap-3">
-        <MakeupCard title="You have" rows={have} base={base} onOpen={onOpen} />
-        <MakeupCard title="You owe" rows={owe} base={base} onOpen={onOpen} owe />
+      <Balance have={have} owe={owe} base={base} />
+      <div className="mt-5">
+        <SectionLabel inset="gutter">You have</SectionLabel>
+        <PileCard rows={have} base={base} onOpen={onOpen} />
+      </div>
+      <div className="mt-5">
+        <SectionLabel inset="gutter">You owe</SectionLabel>
+        <PileCard rows={owe} base={base} onOpen={onOpen} />
       </div>
       <div className="mt-2">
         <SectionLabel inset="gutter" gap="none">
@@ -201,28 +212,95 @@ function Makeup({ b, base, includeDebts, onOpen }) {
 }
 
 /**
- * @param {{title: string, rows: Array<{key: string, label: string, note: string, value: number, color: string,
- *          Icon: import('react').ComponentType<{size?: number}>, to: string}>,
- *          base: string, onOpen: (to: string) => void, owe?: boolean}} props
+ * @typedef {{key: string, label: string, note: string, value: number, color: string,
+ *   Icon: import('react').ComponentType<{size?: number}>, to: string}} Pile
  */
-function MakeupCard({ title, rows, base, onOpen, owe = false }) {
-  const total = rows.reduce((s, r) => s + Math.max(0, r.value), 0)
+
+/** @param {Pile[]} rows */
+const sideTotal = (rows) => rows.reduce((s, r) => s + Math.max(0, r.value), 0)
+
+/**
+ * The two sides on one scale, and what is left between them.
+ *
+ * @param {{have: Pile[], owe: Pile[], base: string}} props
+ */
+function Balance({ have, owe, base }) {
+  const hasTotal = sideTotal(have)
+  const owesTotal = sideTotal(owe)
+  const scale = Math.max(hasTotal, owesTotal)
+  const net = hasTotal - owesTotal
+  const even = Math.abs(net) < 0.005
   return (
-    <Card clip>
-      <div className="px-4 pt-3.5 pb-3">
-        <div className="flex items-baseline justify-between gap-3">
-          <span className="text-13 font-semibold text-slate-800 dark:text-white">{title}</span>
-          <span className={`text-15 font-bold tabular-nums ${owe && total > 0.005 ? 'text-red-500 dark:text-red-400' : 'text-slate-900 dark:text-white'}`}>
-            {fmt(total, base)}
+    <Card className="mx-5 px-4 pt-3.5 pb-4">
+      <BalanceBar label="You have" rows={have} total={hasTotal} scale={scale} base={base}
+        short={net < -0.005 ? -net : 0} shortTone="red" />
+      <BalanceBar label="You owe" rows={owe} total={owesTotal} scale={scale} base={base}
+        short={net > 0.005 ? net : 0} shortTone="green" className="mt-3.5" />
+      <Divider className="mt-4 mb-3" />
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-13 font-semibold text-slate-800 dark:text-white">Net worth</span>
+        <span className={`text-15 font-bold tabular-nums ${
+          even ? 'text-slate-900 dark:text-white'
+            : net > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-500 dark:text-red-400'
+        }`}>
+          {fmt(net, base)}
+        </span>
+      </div>
+    </Card>
+  )
+}
+
+const SHORT_TONE = {
+  red: 'border-red-400/70 bg-red-500/[0.07] dark:border-red-400/60 dark:bg-red-400/[0.08]',
+  green: 'border-emerald-500/70 bg-emerald-500/[0.07] dark:border-emerald-400/60 dark:bg-emerald-400/[0.08]',
+}
+
+/**
+ * One side: its total, and a bar of its piles as long as the side is against
+ * the larger one. The side that comes up short gets the difference drawn in
+ * dashes after its bar - the net worth, as a length.
+ *
+ * @param {{label: string, rows: Pile[], total: number, scale: number, base: string,
+ *          short: number, shortTone: 'red'|'green', className?: string}} props
+ */
+function BalanceBar({ label, rows, total, scale, base, short, shortTone, className = '' }) {
+  const parts = rows.filter(r => r.value > 0.005)
+  const width = scale > 0 ? (total / scale) * 100 : 0
+  return (
+    <div className={className}>
+      <div className="flex items-baseline justify-between gap-3">
+        <span className="text-12 font-medium text-slate-500 dark:text-slate-400">{label}</span>
+        <span className="text-14 font-semibold tabular-nums text-slate-900 dark:text-white">{fmt(total, base)}</span>
+      </div>
+      {/* No track under it: the bar and the dashes after it always fill the
+          width between them, and a grey ground showed through the dashes. */}
+      <div className={`mt-1.5 h-3 flex items-stretch gap-[3px] rounded-full${scale > 0 ? '' : ' bg-slate-100 dark:bg-white/[0.06]'}`} aria-hidden="true">
+        {width > 0 && (
+          <span className="grow-x h-full flex gap-[2px] rounded-full overflow-hidden" style={{ width: `${width}%` }}>
+            {parts.map(p => (
+              <span key={p.key} className="h-full" style={{ width: `${(p.value / total) * 100}%`, backgroundColor: p.color }} />
+            ))}
           </span>
-        </div>
-        {total > 0.005 && (
-          <div className="mt-2.5">
-            <StackBar parts={rows.filter(r => r.value > 0.005).map(r => ({ name: r.key, value: r.value, color: r.color }))} />
-          </div>
+        )}
+        {short > 0 && scale > 0 && (
+          <span
+            className={`balance-short flex-1 min-w-[6px] rounded-full border border-dashed ${SHORT_TONE[shortTone]}`}
+          />
         )}
       </div>
-      <Divider />
+    </div>
+  )
+}
+
+/**
+ * A side's piles, one row each, with its share of the side.
+ *
+ * @param {{rows: Pile[], base: string, onOpen: (to: string) => void}} props
+ */
+function PileCard({ rows, base, onOpen }) {
+  const total = sideTotal(rows)
+  return (
+    <Card clip className="mx-5">
       {rows.map((r, i) => (
         <div key={r.key}>
           <button
@@ -257,4 +335,65 @@ function MakeupCard({ title, rows, base, onOpen, owe = false }) {
 function sharePct(v, total) {
   const pct = (Math.max(0, v) / total) * 100
   return pct > 0 && pct < 1 ? '<1%' : `${Math.round(pct)}%`
+}
+
+const BARS_PX = 64
+
+/**
+ * The change in each month as a bar, oldest on the left, over the list that
+ * gives the figures - the shape of the last six months before the numbers.
+ * Gains rise from the zero line and losses hang from it; the line sits in
+ * the middle only when there are both. This month is paler: it is not over.
+ *
+ * @param {{months: Array<{key: string, value: number, change: number|null}>, thisMonth: string}} props
+ */
+function MonthBars({ months, thisMonth }) {
+  const cols = [...months].reverse()
+  const changes = cols.map(m => m.change ?? 0)
+  const max = Math.max(...changes.map(Math.abs))
+  if (cols.length < 2 || !(max > 0.005)) return null
+  const up = changes.some(c => c > 0.005)
+  const down = changes.some(c => c < -0.005)
+  const zero = up ? (down ? BARS_PX / 2 : BARS_PX) : 0
+  return (
+    <>
+      <div className="px-4 pt-4 pb-3" aria-hidden="true">
+        <div className="relative flex gap-2" style={{ height: BARS_PX }}>
+          {/* design-ok: a chart's zero line, not a divider between rows */}
+          <span className="absolute inset-x-0 h-px bg-slate-200 dark:bg-white/10" style={{ top: zero }} />
+          {cols.map((m, i) => {
+            const c = changes[i]
+            const room = c > 0 ? zero : BARS_PX - zero
+            const h = Math.abs(c) < 0.005 ? 0 : Math.max(3, (Math.abs(c) / max) * room)
+            return (
+              <span key={m.key} className="relative flex-1">
+                {h > 0 && (
+                  <span
+                    className={`grow-y absolute inset-x-0 mx-auto max-w-[28px] ${
+                      c > 0 ? 'rounded-t-md bg-emerald-500 dark:bg-emerald-400' : 'rounded-b-md bg-red-500 dark:bg-red-400'
+                    }${m.key === thisMonth ? ' opacity-50' : ''}`}
+                    style={{
+                      height: h, top: c > 0 ? zero - h : zero,
+                      transformOrigin: c > 0 ? 'bottom' : 'top',
+                      animationDelay: `${i * 45}ms`,
+                    }}
+                  />
+                )}
+              </span>
+            )
+          })}
+        </div>
+        <div className="mt-2 flex gap-2">
+          {cols.map(m => (
+            <span key={m.key} className={`flex-1 text-center text-10 tabular-nums ${
+              m.key === thisMonth ? 'font-semibold text-slate-600 dark:text-slate-300' : 'text-slate-400 dark:text-slate-500'
+            }`}>
+              {monthName(m.key).slice(0, 3)}
+            </span>
+          ))}
+        </div>
+      </div>
+      <Divider />
+    </>
+  )
 }

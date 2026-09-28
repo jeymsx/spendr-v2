@@ -2273,11 +2273,24 @@ html.flat.dark .swipe-row[data-lifted='true'] > .swipe-face {
   100% { transform: none; }
 }
 
+/* Net worth's bars (insights/NetWorthPage.jsx). The piles grow in from the
+   left, the months rise from their zero line, and only then does the short
+   side's difference fade in - the dashed stretch is the answer, so it comes
+   last. */
+.grow-x {
+  transform-origin: left center;
+  animation: growX 0.7s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+.grow-y { animation: growY 0.55s cubic-bezier(0.2, 0.9, 0.25, 1) both; }
+.balance-short { animation: fadeIn 0.35s ease-out 0.45s both; }
+@keyframes growX { from { transform: scaleX(0); } }
+@keyframes growY { from { transform: scaleY(0); } }
+
 @media (prefers-reduced-motion: reduce) {
   .glass-enter .gx-s, .glass-enter .gx-g,
   .glass-enter .gx-y, .glass-enter .gx-p,
   .glass-float > svg, .glass-shine .gx-shine,
-  .highlight-lift { animation: none; }
+  .highlight-lift, .grow-x, .grow-y, .balance-short { animation: none; }
 }
 
 /* ── The celebration screen ──────────────────────────────────────────

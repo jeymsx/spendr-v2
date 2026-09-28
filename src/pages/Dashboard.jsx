@@ -41,6 +41,7 @@ import useForecast from '../hooks/useForecast'
 import { convert } from '../lib/fx'
 import { netWorthBreakdown } from '../lib/netWorth'
 import { isSpend } from '../lib/flows'
+import { txGlyphCat } from '../lib/txGlyph'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { txBase } from '../lib/fxContext'
 import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
@@ -729,6 +730,7 @@ export default function Dashboard() {
                   <TxRow
                     tx={tx}
                     cat={catMap[tx.category]}
+                    glyph={txGlyphCat(tx, catMap)}
                     isLast={i === recentTx.length - 1}
                   />
                 </PresenceItem>

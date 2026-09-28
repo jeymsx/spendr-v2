@@ -39,12 +39,14 @@ export function generateTrivia({ expenses, inflows, totalSpent, totalEarned, cat
 
   if (topCategory && totalSpent > 0) {
     const pct = (topCategory.value / totalSpent * 100).toFixed(0)
-    push('top-category', 'trophy', `${topCategory.icon} ${topCategory.name} took up ${pct}% of your spending.`)
+    /* Names only. The category's emoji led the sentence, a colour
+       illustration in a line of text on a card whose picture is glass. */
+    push('top-category', 'trophy', `${topCategory.name} took up ${pct}% of your spending.`)
   }
 
   if (categorySegments.length >= 2 && totalSpent > 0) {
     const top2 = categorySegments[0].value + categorySegments[1].value
-    push('top-two', 'target', `${categorySegments[0].icon} ${categorySegments[0].name} and ${categorySegments[1].icon} ${categorySegments[1].name} together make up ${(top2 / totalSpent * 100).toFixed(0)}% of expenses.`)
+    push('top-two', 'target', `${categorySegments[0].name} and ${categorySegments[1].name} together make up ${(top2 / totalSpent * 100).toFixed(0)}% of expenses.`)
   }
 
   if (totalEarned > 0) {

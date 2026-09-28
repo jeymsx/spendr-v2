@@ -142,6 +142,18 @@ function compactTick(v) {
 }
 
 /**
+ * How wide the figure axis has to be for its longest label. A fixed 40px cut
+ * the minus sign off a net worth below zero - "−450K" read as "450K" - and
+ * Recharts, finding labels it thought would collide, dropped one of them.
+ *
+ * @param {number[]} ticks
+ */
+function axisWidth(ticks) {
+  const longest = Math.max(...ticks.map(t => compactTick(t).length))
+  return Math.max(40, longest * 6 + 18)
+}
+
+/**
  * Round figures for the side of the chart: 0, 40K, 80K, 120K rather than
  * wherever the data happened to start and stop. About four steps, each 1, 2,
  * 2.5 or 5 times a power of ten, with the ends pushed out to the next step
@@ -209,12 +221,15 @@ export function NetWorthChart({ data, color, currency, rangeKey }) {
           <YAxis
             domain={[floor, ceil]}
             ticks={ticks}
+            interval={0}
             tickFormatter={compactTick}
             tick={{ fontSize: 10, fill: '#94a3b8' }}
             axisLine={false}
             tickLine={false}
-            width={40}
+            width={axisWidth(ticks)}
           />
+          {/* Where it crosses from owing to owning, when the line goes near it. */}
+          {floor < 0 && ceil > 0 && <ReferenceLine y={0} stroke="rgba(148,163,184,0.45)" strokeWidth={1} />}
           <Tooltip
             content={({ active, payload, label }) => {
               if (!active || !payload?.length) return null
@@ -300,11 +315,12 @@ export function ForecastChart({ data, todayIndex, color, currency, rangeKey, flo
           <YAxis
             domain={[axis.floor, axis.ceil]}
             ticks={axis.ticks}
+            interval={0}
             tickFormatter={compactTick}
             tick={{ fontSize: 10, fill: '#94a3b8' }}
             axisLine={false}
             tickLine={false}
-            width={40}
+            width={axisWidth(axis.ticks)}
           />
           {floor > 0 && (
             <ReferenceLine y={floor} stroke="#f59e0b" strokeDasharray="5 4" strokeWidth={1.5} ifOverflow="extendDomain" />

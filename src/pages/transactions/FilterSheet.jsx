@@ -3,6 +3,7 @@ import Card from '../../components/ui/Card'
 import SectionLabel from '../../components/ui/SectionLabel'
 import Button from '../../components/ui/Button'
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { txGlyphCat } from '../../lib/txGlyph'
 import CategoryRail from '../../components/CategoryRail'
 import BrandMark from '../../components/BrandMark'
 import BrandWatermark from '../../components/BrandWatermark'
@@ -252,13 +253,15 @@ export function FilterModal({
  */
 export function TxRow({ tx, catMap, onClick, onCategory }) {
   const cat = catMap[tx.category]
+  // A transfer, a loan payment or a correction has a tile of its own (lib/txGlyph).
+  const glyph = txGlyphCat(tx, catMap)
   const { cls, sign, magnitude, currency } = txRowTone(tx)
   const tile = (
     <div
       className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
-      style={{ '--cat-color': cat?.color ?? '#64748b' }}
+      style={{ '--cat-color': glyph?.color ?? '#64748b' }}
     >
-      <CategoryGlyph cat={cat} size={20} emoji="💸" />
+      <CategoryGlyph cat={glyph} size={20} emoji="💸" />
     </div>
   )
 
