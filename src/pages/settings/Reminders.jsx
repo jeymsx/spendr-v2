@@ -6,6 +6,8 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import Switch from '../../components/ui/Switch'
 import { REMINDER_HOUR } from '../../lib/reminders'
+import { DEFAULT_NUDGE, NUDGE_TIMES, nudgeLabel, parseNudge } from '../../lib/nudge'
+import { setNudge, useNudge } from '../../hooks/useNudge'
 import { RowChevron, RowIcon, SettingsRow } from './shared'
 import {
   disableReminders, enableReminders, pushSupport, remindersOn, sendTestReminder, serverKey,
@@ -21,10 +23,12 @@ import { isIos } from '../../utils/platform'
  * block for anything fixed inside it - the sheet would open clipped to the
  * card. So Settings puts the row in the card and the sheet with its others.
  *
- * The sheet is one switch, the time, and a test. Everything a phone can be
- * before reminders are possible at all - signed out, a Safari tab on an
- * iPhone, notifications refused - disables the switch and says, in a line,
- * what to do about it, rather than replacing the sheet with an explanation.
+ * The sheet is two switches - notifications on this device, and the daily
+ * check-in, which is a choice for every device (lib/nudge.js) - their times,
+ * and a test. Everything a phone can be before reminders are possible at all
+ * - signed out, a Safari tab on an iPhone, notifications refused - disables
+ * the switches and says, in a line, what to do about it, rather than
+ * replacing the sheet with an explanation.
  */
 
 function IconBell() {
@@ -67,8 +71,9 @@ export function useReminderSettings(user) {
     if (user?.id && now === 'ok') serverKey().then(setKey)
   }, [open, user?.id])
 
+  /** @returns {Promise<boolean>} whether reminders are on now */
   async function turnOn() {
-    if (!user?.id || busy) return
+    if (!user?.id || busy) return false
     setPending('on')
     setNote(null)
     const r = await enableReminders(user.id, key)
@@ -78,6 +83,7 @@ export function useReminderSettings(user) {
     else if (r.reason === 'dismissed') setNote({ tone: 'error', text: 'Allow notifications to turn this on.' })
     else if (r.reason === 'server') setNote({ tone: 'error', text: 'Couldn’t reach the server. Try again.' })
     else setNote({ tone: 'error', text: r.message || 'Couldn’t turn reminders on.' })
+    return r.ok
   }
 
   async function turnOff() {
@@ -105,7 +111,20 @@ export function useReminderSettings(user) {
       : { tone: 'error', text: r.message || 'Couldn’t send a test.' })
   }
 
-  return { user, open, setOpen, support, on, busy, pending, note, turnOn, turnOff, test }
+  /* The daily check-in (lib/nudge.js). A choice for every device, where the
+     switch above is this device's: turning the check-in on here also turns
+     notifications on here, since a nudge nothing can show is no nudge. */
+  const nudge = useNudge()
+  const checkIn = parseNudge(nudge) ? /** @type {string} */ (nudge) : null
+
+  /** @param {boolean} next */
+  async function setCheckIn(next) {
+    if (!next) return setNudge(null)
+    if (!on && !(await turnOn())) return
+    await setNudge(checkIn ?? DEFAULT_NUDGE)
+  }
+
+  return { user, open, setOpen, support, on, busy, pending, note, turnOn, turnOff, test, checkIn, setCheckIn }
 }
 
 /** @param {ReturnType<typeof useReminderSettings>} r */
@@ -115,7 +134,7 @@ function sublabelFor(r) {
   if (r.support === 'ios-install') return 'Add Spendr to your Home Screen first'
   if (r.support === 'unsupported') return 'Not available on this device'
   if (r.support === 'blocked') return 'Notifications are turned off'
-  return 'Card due dates and bills'
+  return 'Bills, due dates and a daily check-in'
 }
 
 /** @param {{r: ReturnType<typeof useReminderSettings>}} props */
@@ -209,10 +228,10 @@ export function RemindersSheet({ r }) {
         <div className="text-center">
           <BellBadge />
           <h3 className="mt-4 text-18 font-semibold text-slate-900 dark:text-white">
-            Never miss a due date
+            Reminders
           </h3>
-          <p className="mt-1 mx-auto max-w-[260px] text-13 leading-snug text-slate-500 dark:text-slate-400">
-            A heads-up before your card payments and bills are due.
+          <p className="mt-1 mx-auto max-w-[270px] text-13 leading-snug text-slate-500 dark:text-slate-400">
+            A heads-up before bills and card payments are due, and a nudge to log your day.
           </p>
         </div>
 
@@ -229,13 +248,45 @@ export function RemindersSheet({ r }) {
           </div>
           <Divider inset="row" />
           <div className="flex items-center gap-3 px-4 py-3.5">
-            <span className="flex-1 text-14 text-slate-600 dark:text-slate-300">Reminder time</span>
+            <span className="flex-1 text-14 text-slate-600 dark:text-slate-300">Bills and cards</span>
             <span className="text-13 font-semibold tabular-nums px-2.5 py-1 rounded-lg
               bg-white dark:bg-white/[0.07] text-slate-700 dark:text-slate-200"
             >
               {REMINDER_TIME}
             </span>
           </div>
+          <Divider inset="row" />
+          <div className="flex items-center gap-3 px-4 py-3.5">
+            <span className="flex-1 min-w-0">
+              <span className="block text-15 font-semibold text-slate-800 dark:text-white">Daily check-in</span>
+              <span className="block text-12 text-slate-500 dark:text-slate-400 mt-0.5">“Anything to log today?”</span>
+            </span>
+            <Switch
+              on={!!r.checkIn}
+              onChange={next => r.setCheckIn(next)}
+              label="Daily check-in"
+              disabled={!r.user || (!r.on && !!block)}
+            />
+          </div>
+          {r.checkIn && (
+            <>
+              <Divider inset="row" />
+              <label className="flex items-center gap-3 px-4 py-3.5">
+                <span className="flex-1 text-14 text-slate-600 dark:text-slate-300">Check-in time</span>
+                {/* A native select: the phone's own wheel on an iPhone, its
+                    own list on Android, and quarter hours only - the sender
+                    runs every fifteen minutes (lib/nudge.js). */}
+                <select
+                  value={r.checkIn}
+                  onChange={e => setNudge(e.target.value)}
+                  className="text-13 font-semibold tabular-nums px-2.5 py-1 rounded-lg appearance-none text-right
+                    bg-white dark:bg-white/[0.07] text-slate-700 dark:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                >
+                  {NUDGE_TIMES.map(t => <option key={t} value={t}>{nudgeLabel(t)}</option>)}
+                </select>
+              </label>
+            </>
+          )}
           <div className="px-4 pb-4 pt-1">
             {r.user ? (
               <Button
@@ -276,7 +327,7 @@ export function RemindersSheet({ r }) {
         )}
 
         <p className="mt-4 text-center text-12 leading-snug text-slate-500 dark:text-slate-400">
-          Cards and loans: 3 days before and on the day. Bills: on the day.
+          Cards and loans: 3 days before and on the day. Bills: on the day. The check-in skips days you’ve already logged.
         </p>
       </div>
     </Sheet>

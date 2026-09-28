@@ -1,5 +1,5 @@
-import { createContext, useContext, useState, useEffect, lazy, Suspense, useCallback } from 'react'
-import { useLocation } from 'react-router-dom'
+import { createContext, useContext, useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 
 const AddExpense = lazy(() => import('../pages/AddExpense'))
 const AddInflow  = lazy(() => import('../pages/AddInflow'))
@@ -42,6 +42,9 @@ export function useAddFlow() {
 export function AddFlowProvider({ children }) {
   const [flow, setFlow] = useState(null)   // null | 'expense' | 'inflow' | 'transfer' | 'quick'
   const location = useLocation()
+  const navigate = useNavigate()
+  /** The address asked for the quick log (below), and the next page opens it. */
+  const quickNext = useRef(false)
 
   const openAdd = useCallback((type) => setFlow(type ?? 'expense'), [])
   const closeAdd = useCallback(() => setFlow(null), [])
@@ -50,10 +53,24 @@ export function AddFlowProvider({ children }) {
   // overlay directly, but if anything inside one does navigate, the overlay
   // must not be left floating over a page that has changed underneath it.
   // Reacts to a navigation, which is an external event rather than
-  // anything this component can derive. The overlay must not be left
-  // floating over a page that changed underneath it.
-  // eslint-disable-next-line react-hooks/set-state-in-effect
-  useEffect(() => { setFlow(null) }, [location.key])
+  // anything this component can derive.
+  /* Except the navigation that asks for it: `?log=quick` opens the quick
+     log, where the daily check-in's notification points (lib/nudge.js), as
+     the phone's AppLayout does. The parameter comes off at once, so Back or
+     a reload does not open it again - and taking it off is itself a
+     navigation, so the page it lands on is the one that opens it. */
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('log') === 'quick') {
+      params.delete('log')
+      const rest = params.toString()
+      quickNext.current = true
+      navigate({ pathname: location.pathname, search: rest ? `?${rest}` : '' }, { replace: true })
+      return
+    }
+    setFlow(quickNext.current ? 'quick' : null)
+    quickNext.current = false
+  }, [location.key, location.search, location.pathname, navigate])
 
   /* One key from anywhere, as a desktop app would have it: E, I, T and Q
      open the expense, inflow, transfer and quick-log forms (WebAddMenu

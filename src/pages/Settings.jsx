@@ -39,6 +39,7 @@ import { clearCrashes, crashReport, readCrashes } from '../lib/crashLog'
 import { shareOrCopy } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { RemindersRow, RemindersSheet, useReminderSettings } from './settings/Reminders'
+import { InstallRow, InstallSheet, useInstallSettings } from './settings/Install'
 import { useAppLock } from '../components/lock/LockGate'
 import { lockSummary } from '../lib/appLock'
 
@@ -76,6 +77,7 @@ export default function Settings() {
   const { user, signOut } = useAuth()
   const { status: syncStatus } = useSyncManager()
   const reminders = useReminderSettings(user)
+  const install = useInstallSettings()
   const appLock = useAppLock()
 
   const [dedupeOpen, setDedupeOpen] = useState(false)
@@ -207,6 +209,14 @@ export default function Settings() {
       <div className="mb-8">
         <SectionHeader>App</SectionHeader>
         <SectionCard>
+          {/* Only while there is something to do: gone once Spendr is
+              opened from the Home Screen. */}
+          {install.shown && (
+            <>
+              <InstallRow s={install} />
+              <RowDivider />
+            </>
+          )}
           <SettingsRow
             iconEl={<RowIcon color="violet"><IconSliders /></RowIcon>}
             label="Preferences"
@@ -474,6 +484,7 @@ export default function Settings() {
       <DedupeSheet open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
       <PolicySheet open={!!policyOpen} type={policyOpen} onClose={() => setPolicyOpen(null)} />
       {isSupabaseConfigured && <RemindersSheet r={reminders} />}
+      <InstallSheet s={install} />
     </div>
   )
 }

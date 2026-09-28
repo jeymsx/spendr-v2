@@ -24,6 +24,19 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.10.0',
+    date: '2026-09-28',
+    items: [
+      { title: 'Net worth that counts everything', desc: 'Investments, loans and debts with friends now count, and its page shows what you have against what you owe. Leave debts out in Preferences.' },
+      { title: 'Investments and loans', desc: "Add your MP2, a UITF or a loan as an account. Update an investment's value when you check it, and pay a loan from its page: Spendr splits off the interest." },
+      { title: 'Bills is now Recurring', desc: 'It takes your pay too, twice-a-month paydays included, and lists loan payments beside card statements.' },
+      { title: 'Safe to spend', desc: 'Home looks 30 days ahead: what you can spend before payday, your tightest day, and a warning if money could run short. The Forecast page shows the likely range.' },
+      { title: 'What you have, or what you owe', desc: "Home's wallet shows three at a time. Tap the arrows beside the eye to switch." },
+      { title: 'Tidier transactions', desc: 'Transfers, loans and debts get icons like your categories, a loan payment is one row, and long lists keep going as you scroll.' },
+      { title: 'Livelier Insights', desc: 'Highlights are glass cards that come together as you reach them, and each Insights card grows into its page.' },
+    ],
+  },
+  {
     version: '0.9.0',
     date: '2026-09-27',
     items: [

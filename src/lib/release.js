@@ -32,38 +32,18 @@ export const RELEASE_DATE = '2026-09-28'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'chart',
-    title: 'Net worth that counts everything',
-    desc: 'Investments, loans and debts with friends now count, and its page shows what you have against what you owe. Leave debts out in Preferences.',
-  },
-  {
-    icon: 'bank',
-    title: 'Investments and loans',
-    desc: "Add your MP2, a UITF or a loan as an account. Update an investment's value when you check it, and pay a loan from its page: Spendr splits off the interest.",
-  },
-  {
-    icon: 'transfer',
-    title: 'Bills is now Recurring',
-    desc: 'It takes your pay too, twice-a-month paydays included, and lists loan payments beside card statements.',
-  },
-  {
-    icon: 'target',
-    title: 'Safe to spend',
-    desc: 'Home looks 30 days ahead: what you can spend before payday, your tightest day, and a warning if money could run short. The Forecast page shows the likely range.',
-  },
-  {
-    icon: 'wallet',
-    title: 'What you have, or what you owe',
-    desc: "Home's wallet shows three at a time. Tap the arrows beside the eye to switch.",
-  },
-  {
-    icon: 'categories',
-    title: 'Tidier transactions',
-    desc: 'Transfers, loans and debts get icons like your categories, a loan payment is one row, and long lists keep going as you scroll.',
+    icon: 'bell',
+    title: 'A daily check-in',
+    desc: 'A nudge at a time you pick to log what you spent, skipped on days you already have. Turn it on in Settings, Reminders.',
   },
   {
     icon: 'sparkle',
-    title: 'Livelier Insights',
-    desc: 'Highlights are glass cards that come together as you reach them, and each Insights card grows into its page.',
+    title: 'Install Spendr',
+    desc: 'Put Spendr on your Home Screen from Settings: one tap on Android, three on iPhone.',
+  },
+  {
+    icon: 'sparkle',
+    title: 'A friendlier first run',
+    desc: 'Someone new sets up in a few taps: their cards appear as they pick them, and categories are ready without asking.',
   },
 ]
