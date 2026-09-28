@@ -183,7 +183,7 @@ import {
   Contrast01, ZapFast,
   CurrencyDollarCircle, CoinsSwap01, Globe01, Cursor01,
   Trophy01, Target04, CoinsStacked01, TrendUp01, BarChart10, Calculator,
-  AlertCircle, CheckCircle, Lock01, PauseCircle,
+  AlertCircle, CheckCircle, Lock01, PauseCircle, Monitor01,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -229,6 +229,7 @@ export const IconCurrency    = uui(CurrencyDollarCircle) // an account in anothe
 export const IconRates       = uui(CoinsSwap01)      // the exchange-rate table
 export const IconWorldMoney  = uui(Globe01)          // a net worth across currencies
 export const IconTap         = uui(Cursor01)         // the + that would not respond
+export const IconDesktop     = uui(Monitor01)        // the desktop layout
 
 /**
  * An account type's icon.

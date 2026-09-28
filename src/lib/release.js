@@ -46,4 +46,9 @@ export const RELEASE_NOTES = [
     title: 'A friendlier first run',
     desc: 'Someone new sets up in a few taps: their cards appear as they pick them, and categories are ready without asking.',
   },
+  {
+    icon: 'desktop',
+    title: 'A new layout for computers',
+    desc: 'Every page from your phone, with the list and what you pick in it side by side. Press E, I, T or Q to add from anywhere.',
+  },
 ]
