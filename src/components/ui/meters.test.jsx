@@ -109,6 +109,13 @@ describe('LimitMeter', () => {
     expect(handles.length).toBe(1)
   })
 
+  /* A loan fills with what has been paid off, not with debt - "4% used"
+     would say the opposite to someone listening to it. */
+  it('says what its percentage measures', () => {
+    render(<LimitMeter pct={4.4} label="Done by Dec 2029" measure="paid off" tone="accent" />)
+    expect(screen.getByRole('progressbar').getAttribute('aria-label')).toBe('Done by Dec 2029: 4% paid off')
+  })
+
   it('shows the label and the used / total pair when given them', () => {
     render(<LimitMeter pct={50} label="₱25,000.00 left" used="₱25,000.00" total="₱50,000.00" />)
     expect(screen.getByText('₱25,000.00 left')).toBeTruthy()

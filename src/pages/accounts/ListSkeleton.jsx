@@ -94,7 +94,7 @@ function GridSkeleton({ count }) {
   return (
     <div className="mx-5 grid grid-cols-2 gap-3">
       {Array.from({ length: count }, (_, i) => (
-        <Skeleton key={i} className="h-[140px] rounded-2xl" />
+        <Skeleton key={i} className="h-[156px] rounded-2xl" />
       ))}
     </div>
   )

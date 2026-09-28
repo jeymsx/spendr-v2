@@ -1,9 +1,10 @@
 /**
  * How far along a total you are, as a track with a handle on it.
  *
- * Two things use it: a credit card's limit, where the fill is debt and the
- * headroom is what you can still borrow, and a savings goal, where the fill
- * is money saved and the headroom is what is left to save. Opposite feelings,
+ * Three things use it: a credit card's limit, where the fill is debt and the
+ * headroom is what you can still borrow; a savings goal, where the fill is
+ * money saved and the headroom is what is left to save; and a loan, where the
+ * fill is what has been paid off and the headroom is what is still owed. Opposite feelings,
  * identical geometry - which is why the tone is a prop rather than always
  * derived from the percentage. A card at 95% is bad news; a goal at 95% is
  * not, and the meter must not colour it as though it were.
@@ -61,6 +62,8 @@ export default function LimitMeter({
   used,
   total,
   tone = limitTone(pct),
+  /** What the percentage is OF, for a screen reader: "42% used", "4% paid off". */
+  measure = 'used',
   className = '',
 }) {
   const clamped = Math.max(0, Math.min(100, Number(pct) || 0))
@@ -91,7 +94,7 @@ export default function LimitMeter({
         aria-valuenow={Math.round(clamped)}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={label ? `${label}: ${Math.round(clamped)}% used` : undefined}
+        aria-label={label ? `${label}: ${Math.round(clamped)}% ${measure}` : undefined}
       >
         {/* Headroom, struck through.
 

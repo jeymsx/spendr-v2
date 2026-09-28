@@ -580,22 +580,27 @@ export default function AccountDetail() {
           </>
         )}
 
-        {/* A loan: how far along, and when it ends. The next payment has its
+        {/* A loan: how far along, and when it ends - on the credit card's
+            meter, because it is the same object the other way round. On a
+            card the fill is debt and the striped run is what you can still
+            borrow; here the fill is what you have paid off and the run is
+            what is still owed. So its tone is passed, never limitTone(),
+            which reds out past 90% - right for a credit line filling up,
+            exactly wrong for a loan nearly cleared. The next payment has its
             own card below, with the button. */}
         {isLoan && loanInfo && (
           <div className="mt-5 max-w-[320px] mx-auto text-left">
-            <ProgressBar value={loanInfo.progress * 100} fillClass="bg-primary" />
-            <div className="mt-1.5 flex items-baseline justify-between gap-3">
-              <span className="text-11 text-slate-400 dark:text-slate-500">
-                {acctFmt(loanInfo.paidIn)} paid off
-              </span>
-              <span className="text-11 text-slate-400 dark:text-slate-500 text-right">
-                {loanInfo.owed <= 0.005 ? 'Paid off'
-                  : loanInfo.paidOffBy
-                    ? `Done by ${loanInfo.paidOffBy.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}`
-                    : loanInfo.payment > 0 && !Number.isFinite(loanInfo.monthsLeft) ? 'Payment only covers interest' : ''}
-              </span>
-            </div>
+            <LimitMeter
+              pct={loanInfo.progress * 100}
+              tone={loanInfo.owed <= 0.005 ? 'good' : 'accent'}
+              measure="paid off"
+              label={loanInfo.owed <= 0.005 ? 'Paid off'
+                : loanInfo.paidOffBy
+                  ? `Done by ${loanInfo.paidOffBy.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' })}`
+                  : loanInfo.payment > 0 && !Number.isFinite(loanInfo.monthsLeft) ? 'Payment only covers interest' : 'Paid off so far'}
+              used={acctFmt(loanInfo.paidIn)}
+              total={`${acctFmt(loanInfo.paidIn + loanInfo.owed)} paid`}
+            />
           </div>
         )}
       </section>

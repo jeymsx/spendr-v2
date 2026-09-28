@@ -92,8 +92,17 @@ export function HoldingTile({ acct, status = null, hidden = false, onTap, previe
      along, as a bar, or the monthly payment when the ledger has seen none. */
   let footer = null
   if (loan) {
+    /* The bar and its line, the way a credit card's face reads "11% of
+       ₱30.0K used" - here the share already paid off. */
     footer = status && status.paidIn > 0.005
-      ? <ProgressBar value={status.progress * 100} fillClass="bg-primary" className="mt-2" />
+      ? (
+        <>
+          <ProgressBar value={status.progress * 100} fillClass={status.owed <= 0.005 ? 'bg-emerald-500' : 'bg-primary'} className="mt-2" />
+          <span className="block mt-1 text-11 text-slate-500 dark:text-slate-400 tabular-nums truncate">
+            {Math.floor(status.progress * 100)}% paid off
+          </span>
+        </>
+      )
       : acct.minimumPayment > 0
         ? <span key={`pay-${k}`} className={`${swap} block mt-0.5 text-11 text-slate-500 dark:text-slate-400 truncate`}>{money(acct.minimumPayment, true)} a month</span>
         : null
@@ -118,7 +127,7 @@ export function HoldingTile({ acct, status = null, hidden = false, onTap, previe
       interactive={!preview}
       onClick={preview ? undefined : onTap}
       aria-label={preview ? undefined : `${acct.name}, ${loan ? 'owed' : 'value'} ${hidden ? 'hidden' : fmt(figure, cur)}`}
-      className="h-[140px] flex flex-col p-3 min-w-0"
+      className="h-[156px] flex flex-col p-3 min-w-0"
       {...(preview ? {} : dragProps)}
     >
       <span className="flex items-start justify-between gap-2">
