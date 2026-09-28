@@ -106,7 +106,10 @@ export default function Insights() {
     returning.current = null
     // Two frames: past the scroll events of the reset and of the restore.
     requestAnimationFrame(() => requestAnimationFrame(() => tracker.current?.ready()))
-    if (landing) requestAnimationFrame(() => landing.land())
+    /* At once, not a frame later: a Back closing through the View Transitions
+       API holds the screen until this names the card, and while it does the
+       browser runs no frames. The surface waits its frame by itself. */
+    if (landing) landing.land()
   }, [settled, kept.scroll])
 
   const showWrapped = !!recapMonth && !(wrappedOnHome() && recapMonth === addMonths(monthKeyOf(new Date()), -1))

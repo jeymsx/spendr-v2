@@ -2177,8 +2177,9 @@ html.flat.dark .swipe-row[data-lifted='true'] > .swipe-face {
 .swipe-row[data-removing='true'] .swipe-bin { opacity: 0 !important; transition: opacity 0.12s var(--ease-out); }
 
 /* An Insights card opening into its page, and closing back into it
-   (pages/insights/zoom.js). The surface sits over the page and under the
-   tab bar (z-50), is drawn by script, and takes no taps. The page it opens
+   (pages/insights/zoom.js), where the browser has no View Transitions -
+   those rules follow. The surface sits over the page and under the tab bar
+   (z-50), is drawn by script, and takes no taps. The page it opens
    resolves out of a short blur as the surface fades off it. */
 .zoom-surface {
   position: fixed;
@@ -2195,6 +2196,78 @@ html.flat.dark .swipe-row[data-lifted='true'] > .swipe-face {
 @media (prefers-reduced-motion: reduce) {
   .zoom-arrive { animation: none; }
 }
+
+/* The same trip through the View Transitions API, where there is one: the
+   card itself grows into its page, with the page in it the whole way. The
+   card is `insight-zoom` before the route changes and the page's scroll
+   area after it (zoom.js), and <html> says which way it is going.
+
+   The box: its size and place are the browser's own animation, slowed to
+   the app's pace. The pictures in it are clipped to its corners, which
+   round off as it grows and back as it shrinks - the card's own radius at
+   the card's end. Both pictures keep their width to the box and their
+   height to scale, pinned to the top, so the page shows through from its
+   header down rather than squashed to the card's shape. */
+::view-transition-group(insight-zoom) {
+  animation-duration: 0.42s;
+  animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+}
+::view-transition-image-pair(insight-zoom) {
+  overflow: clip;
+  animation: zoomBoxOpen 0.42s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+:root[data-zoom='close']::view-transition-image-pair(insight-zoom) { animation-name: zoomBoxClose; }
+/* The box is painted, turning from the card's colour to the page's: the
+   page's picture has no ground of its own (zoom.js surfaceOf). */
+@keyframes zoomBoxOpen {
+  from { border-radius: var(--zoom-radius, 16px); background-color: var(--zoom-card, transparent); }
+  to   { border-radius: 0; background-color: var(--zoom-page, transparent); }
+}
+@keyframes zoomBoxClose {
+  from { border-radius: 0; background-color: var(--zoom-page, transparent); }
+  to   { border-radius: var(--zoom-radius, 16px); background-color: var(--zoom-card, transparent); }
+}
+
+/* Opening: the card's face goes first, and the page comes up under it
+   straight after - never a moment of empty box between them. The face keeps
+   its own size as it goes: stretched to the growing box, a half-width card
+   was its own words at twice their size for a moment. */
+:root[data-zoom='open']::view-transition-old(insight-zoom) {
+  inline-size: auto;
+  animation: zoomFaceOut 0.12s linear both;
+}
+:root[data-zoom='open']::view-transition-new(insight-zoom) { animation: zoomFaceIn 0.2s linear 0.04s both; }
+/* Closing: the page holds until it is nearly card-sized, then the card's
+   face takes over. */
+:root[data-zoom='close']::view-transition-old(insight-zoom) { animation: zoomFaceOut 0.18s linear 0.2s both; }
+:root[data-zoom='close']::view-transition-new(insight-zoom) { animation: zoomFaceIn 0.16s linear 0.18s both; }
+@keyframes zoomFaceOut { to { opacity: 0; } }
+@keyframes zoomFaceIn  { from { opacity: 0; } }
+
+/* Behind it, the overview sinks back and dims as the page grows over it,
+   and rises out of the dim as the page closes into it. What is behind on
+   the page's side is only the ground. Opening, that ground still fades in
+   under the overview: the new picture is drawn over the old one, so a
+   ground there from the start would hide the overview at once. */
+:root[data-zoom='open']::view-transition-old(root) { animation: zoomUnder 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+:root[data-zoom='open']::view-transition-new(root) { animation: zoomFaceIn 0.42s linear both; }
+:root[data-zoom='close']::view-transition-old(root) { animation: none; }
+:root[data-zoom='close']::view-transition-new(root) { animation: zoomOver 0.42s cubic-bezier(0.22, 1, 0.36, 1) both; }
+@keyframes zoomUnder { to   { opacity: 0; transform: scale(0.96); } }
+@keyframes zoomOver  { from { opacity: 0; transform: scale(0.96); } }
+
+/* The tab bar is the same on both sides, so it sits still above it all -
+   in the root picture it would sink and dim with the overview. */
+:root[data-zoom] #app-main ~ nav { view-transition-name: zoom-nav; }
+::view-transition-group(zoom-nav),
+::view-transition-new(zoom-nav) { animation: none; }
+::view-transition-old(zoom-nav) { animation: none; opacity: 0; }
+
+/* A new route fades up into place (.page-enter). Inside the growing box
+   that fade would be the blank this replaced, so here it takes no time at
+   all. A duration of nought rather than no animation: taking the animation
+   away and giving it back when the trip ends would start the fade then. */
+:root[data-zoom] .page-enter { animation-duration: 0s; }
 
 /* The share sheet's rail of looks for the summary (ShareSheet.jsx). A card's
    size and dimness follow the scroll, set from script frame by frame, so

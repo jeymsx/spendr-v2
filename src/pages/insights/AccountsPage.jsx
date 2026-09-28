@@ -3,23 +3,23 @@ import EmptyState from '../../components/ui/EmptyState'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { SkeletonList } from '../../components/ui/Skeleton'
 import { IconEmptyLedger } from '../../components/icons'
-import { useBack } from '../../hooks/useBack'
 import { fmtCompact } from '../../lib/money'
 import { PeriodControls } from './PeriodBar'
 import { periodPhrase, usePeriod } from './period'
 import { AccountBreakdown } from './Tables'
 import { useInsightsData } from './useInsightsData'
-import { useArrival } from './zoom'
+import { useArrival, useZoomBack } from './zoom'
 
 /**
  * Which accounts the period's spending came out of, and how much of it each
  * paid. Each account opens its own page, where its balance and history are.
  */
 export default function AccountsPage() {
-  const arrival = useArrival()
-  const back = useBack('/insights')
+  const back = useZoomBack('/insights')
   const { period } = usePeriod()
   const data = useInsightsData(period)
+  // Grown out of its card once its figures are in (zoom.js).
+  const arrival = useArrival(!data.loading)
   const rows = data.accountBreakdown
   const total = rows.reduce((s, a) => s + a.value, 0)
 

@@ -9,7 +9,6 @@ import SectionLabel from '../../components/ui/SectionLabel'
 import { SkeletonHero } from '../../components/ui/Skeleton'
 import { IconBankUI, IconCardUI, IconDebt, IconEmptyLedger, IconReceipt, IconTrendUp, IconWalletUI } from '../../components/icons'
 import { useBaseCurrency } from '../../context/CurrencyContext'
-import { useBack } from '../../hooks/useBack'
 import { fmt, fmtCompact } from '../../lib/money'
 import { netWorthBreakdown } from '../../lib/netWorth'
 import useRates from '../../hooks/useRates'
@@ -20,7 +19,7 @@ import { NET_RANGES, NET_RANGE_WORDS, monthEnds, useNetWorthSeries } from './net
 import { setInsights, useInsightsState } from './period'
 import { NetWorthSkeleton } from './Skeleton'
 import { TrendEmpty } from './Trend'
-import { useArrival } from './zoom'
+import { useArrival, useZoomBack } from './zoom'
 
 /**
  * Net worth over time - the one question the rest of Insights never
@@ -38,11 +37,12 @@ import { useArrival } from './zoom'
  * remember.
  */
 export default function NetWorthPage() {
-  const arrival = useArrival()
-  const back = useBack('/insights')
+  const back = useZoomBack('/insights')
   const base = useBaseCurrency()
   const kept = useInsightsState()
   const nw = useNetWorthSeries(kept.net)
+  // Grown out of its card once its figures are in (zoom.js).
+  const arrival = useArrival(!nw.loading)
   const { data, current, range } = nw
   const { table: rates } = useRates()
   const navigate = useNavigate()

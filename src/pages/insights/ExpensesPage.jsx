@@ -9,14 +9,13 @@ import EmptyState from '../../components/ui/EmptyState'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { SkeletonList } from '../../components/ui/Skeleton'
 import { IconEmptyReceipt } from '../../components/icons'
-import { useBack } from '../../hooks/useBack'
 import { fmtCompact } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
 import { DetailTxRow } from '../accounts/DetailParts'
 import { PeriodControls } from './PeriodBar'
 import { periodPhrase, usePeriod } from './period'
 import { useInsightsData } from './useInsightsData'
-import { useArrival } from './zoom'
+import { useArrival, useZoomBack } from './zoom'
 
 /**
  * Every expense in the period, biggest first.
@@ -31,11 +30,12 @@ import { useArrival } from './zoom'
  */
 
 export default function ExpensesPage() {
-  const arrival = useArrival()
-  const back = useBack('/insights')
+  const back = useZoomBack('/insights')
   const navigate = useNavigate()
   const { period } = usePeriod()
   const data = useInsightsData(period)
+  // Grown out of its card once its figures are in (zoom.js).
+  const arrival = useArrival(!data.loading)
   const list = data.rankedExpenses
   const periodKey = `${period.range}-${period.month ?? ''}`
   const paged = useInfiniteList(list, { resetKey: periodKey })

@@ -11,7 +11,6 @@ import SectionHeading from '../../components/ui/SectionHeading'
 import DetailRow from '../../components/ui/DetailRow'
 import RollingNumber from '../../components/ui/RollingNumber'
 import { SkeletonHero } from '../../components/ui/Skeleton'
-import { useBack } from '../../hooks/useBack'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import useForecast, { saveFloor } from '../../hooks/useForecast'
 import db from '../../db/db'
@@ -24,7 +23,7 @@ import { UpcomingRow, toUpcomingItem } from '../dashboard/Upcoming'
 import { ForecastChart } from './Charts'
 import { NetWorthSkeleton } from './Skeleton'
 import { AHEAD_RANGES, setInsights, useInsightsState } from './period'
-import { useArrival } from './zoom'
+import { useArrival, useZoomBack } from './zoom'
 
 const DAY_LABEL = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' })
 /** "Sep 14". @param {Date} d */
@@ -48,8 +47,7 @@ const short = (d) => DAY_LABEL.format(d)
  * is what keeps it honest: there is no second list to forget to update.
  */
 export default function ForecastPage() {
-  const arrival = useArrival()
-  const back = useBack('/insights')
+  const back = useZoomBack('/insights')
   const navigate = useNavigate()
   const base = useBaseCurrency()
   const kept = useInsightsState()
@@ -57,6 +55,8 @@ export default function ForecastPage() {
   /* How much of the past leads into the projection: about a third of the
      chart, so today sits left of centre and most of the width is ahead. */
   const { forecast, floor } = useForecast(range.days, Math.min(60, Math.max(14, Math.round(range.days / 3))))
+  // Grown out of its card once its figures are in (zoom.js).
+  const arrival = useArrival(!!forecast)
   const [floorOpen, setFloorOpen] = useState(false)
 
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
