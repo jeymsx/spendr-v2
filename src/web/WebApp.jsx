@@ -46,6 +46,7 @@ const InsightsExpenses = lazy(() => import('../pages/insights/ExpensesPage'))
 const InsightsAccounts = lazy(() => import('../pages/insights/AccountsPage'))
 const InsightsNetWorth = lazy(() => import('../pages/insights/NetWorthPage'))
 const InsightsForecast = lazy(() => import('../pages/insights/ForecastPage'))
+const ForecastSettings = lazy(() => import('../pages/insights/ForecastSettings'))
 
 const AccountDetail = lazy(() => import('../pages/AccountDetail'))
 const AccountNew    = lazy(() => import('../pages/AccountNew'))
@@ -123,6 +124,7 @@ export default function WebApp() {
                 <Route path="accounts" element={<InsightsAccounts />} />
                 <Route path="net-worth" element={<InsightsNetWorth />} />
                 <Route path="forecast" element={<InsightsForecast />} />
+                <Route path="forecast/settings" element={<ForecastSettings />} />
               </Route>
 
               {/* ── Plans ── */}

@@ -28,7 +28,8 @@ export function toUpcomingItem(e, catMap, acctByName) {
     const cat = e.category ? catMap[e.category] : null
     return {
       ...common,
-      meta: e.account ?? '',
+      // Found pay says it is your usual pay, read off the history; the rest, where it lands.
+      meta: e.learned ? 'Usual pay' : (e.account ?? ''),
       icon: <CategoryGlyph cat={cat} size={17} emoji="🔁" />,
       /* The brand's own logo where there is one - the same mark the
          Recurring list and the item's page draw. BillMark falls back to the
@@ -36,7 +37,7 @@ export function toUpcomingItem(e, catMap, acctByName) {
       mark: <BillMark name={e.name} cat={cat} size={20} boxClass="w-10 h-10 rounded-2xl" />,
       color: cat?.color ?? null,
       ...(e.overdue
-        ? (e.kind === 'income' ? { status: 'Not marked yet', late: false } : { status: 'Overdue', late: true })
+        ? (e.kind === 'income' ? { status: e.learned ? 'Not in yet' : 'Not marked yet', late: false } : { status: 'Overdue', late: true })
         : {}),
     }
   }

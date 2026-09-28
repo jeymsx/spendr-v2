@@ -1,29 +1,29 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { Sliders04 } from '@untitledui/icons'
 import SubPage from '../../components/SubPage'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import Button from '../../components/ui/Button'
-import Sheet from '../../components/ui/Sheet'
-import MoneyField from '../../components/ui/MoneyField'
+import IconButton from '../../components/ui/IconButton'
 import SectionLabel from '../../components/ui/SectionLabel'
 import SectionHeading from '../../components/ui/SectionHeading'
 import DetailRow from '../../components/ui/DetailRow'
 import RollingNumber from '../../components/ui/RollingNumber'
 import { SkeletonHero } from '../../components/ui/Skeleton'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
-import useForecast, { saveFloor } from '../../hooks/useForecast'
+import useForecast from '../../hooks/useForecast'
 import db from '../../db/db'
-import { useToast } from '../../context/ToastContext'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { fmt, fmtCompact } from '../../lib/money'
-import { moneyChangeHandler, numToMoneyStr, parseMoney } from '../../utils/moneyInput'
+import { FORECAST_SETTINGS_PATH } from '../../lib/forecast'
 import { TrendRangeChips } from '../accounts/Trend'
 import { UpcomingRow, toUpcomingItem } from '../dashboard/Upcoming'
 import { ForecastChart } from './Charts'
 import { NetWorthSkeleton } from './Skeleton'
 import { AHEAD_RANGES, setInsights, useInsightsState } from './period'
 import { useArrival, useZoomBack } from './zoom'
+import FloorSheet from './FloorSheet'
 
 const DAY_LABEL = new Intl.DateTimeFormat('en-PH', { month: 'short', day: 'numeric' })
 /** "Sep 14". @param {Date} d */
@@ -43,8 +43,10 @@ const short = (d) => DAY_LABEL.format(d)
  *   What makes it so?    Every bill, payday and payment ahead, by day.
  *
  * Nothing on it is typed in here except the floor - everything comes from
- * Recurring, your loans, your debts and your cards (lib/forecast.js), which
- * is what keeps it honest: there is no second list to forget to update.
+ * Recurring, your loans, your debts, your cards and the pay your history
+ * shows (lib/forecast.js), which is what keeps it honest: there is no second
+ * list to forget to update. How it is worked out and drawn is the settings
+ * page behind the sliders at the top right (ForecastSettings.jsx).
  */
 export default function ForecastPage() {
   const back = useZoomBack('/insights')
@@ -54,7 +56,10 @@ export default function ForecastPage() {
   const range = AHEAD_RANGES.find(r => r.key === kept.ahead) ?? AHEAD_RANGES[0]
   /* How much of the past leads into the projection: about a third of the
      chart, so today sits left of centre and most of the width is ahead. */
-  const { forecast, floor } = useForecast(range.days, Math.min(60, Math.max(14, Math.round(range.days / 3))))
+  const { forecast, floor, settings } = useForecast(range.days, Math.min(60, Math.max(14, Math.round(range.days / 3))))
+  /* The likely range is a setting, and has nothing to draw around a figure
+     you set yourself - that is what you said, not a guess from weeks that vary. */
+  const showBand = settings.band && settings.spend !== 'custom'
   // Grown out of its card once its figures are in (zoom.js).
   const arrival = useArrival(!!forecast)
   const [floorOpen, setFloorOpen] = useState(false)
@@ -72,11 +77,12 @@ export default function ForecastPage() {
     const past = (forecast.past ?? []).slice(0, -1).map(d => ({ day: short(d.date), iso: d.iso, past: d.balance }))
     const ahead = forecast.days.map((d, i) => ({
       day: i === 0 ? 'Today' : short(d.date), iso: d.iso, value: d.balance,
-      band: /** @type {[number, number]} */ ([d.low, d.high]),
+      // The likely range is a setting; without it the line stands alone.
+      ...(showBand ? { band: /** @type {[number, number]} */ ([d.low, d.high]) } : {}),
       ...(i === 0 ? { past: forecast.start } : {}),
     }))
     return [...past, ...ahead]
-  }, [forecast])
+  }, [forecast, showBand])
   const todayIndex = Math.max(0, (forecast?.past?.length ?? 1) - 1)
 
   /* The events, by day, the way Transactions groups the past - a heading and
@@ -92,9 +98,15 @@ export default function ForecastPage() {
     return groups
   }, [forecast, catMap, acctByName])
 
+  const tune = (
+    <IconButton label="Forecast settings" onClick={() => navigate(FORECAST_SETTINGS_PATH)}>
+      <Sliders04 size={18} strokeWidth={1.8} aria-hidden="true" />
+    </IconButton>
+  )
+
   if (!forecast) {
     return (
-      <SubPage title="Forecast" onBack={back}>
+      <SubPage title="Forecast" onBack={back} action={tune}>
         <div className={arrival}>
           <SkeletonHero className="mb-6" />
           <NetWorthSkeleton chips={AHEAD_RANGES.length} />
@@ -108,9 +120,18 @@ export default function ForecastPage() {
   const under = forecast.firstBelowFloor
   const until = forecast.safeUntil ? `Until payday, ${short(forecast.safeUntil)}` : 'For the next 2 weeks'
   const color = neg ? '#ef4444' : under ? '#f59e0b' : '#10b981'
+  const payAhead = forecast.events.filter(e => e.kind === 'income' && e.counted).reduce((s, e) => s + e.amount, 0)
+  const learned = forecast.streams.length > 0
+  const paySub = !forecast.hasIncome
+    ? (settings.income === 'recurring' ? 'None on Recurring yet' : 'None found yet')
+    : learned && settings.income === 'history' ? 'Found in your history'
+      : learned ? 'Recurring, and found in your history' : 'From Recurring'
+  const spendSub = settings.spend === 'custom' ? 'Set by you'
+    : settings.spend === 'cautious' ? 'A busier week than usual, per day' : 'Your usual week, per day'
+  const tuneIt = () => navigate(FORECAST_SETTINGS_PATH)
 
   return (
-    <SubPage title="Forecast" onBack={back}>
+    <SubPage title="Forecast" onBack={back} action={tune}>
       <div className={arrival}>
         {/* ── Can I spend today? ── */}
         <section className="px-5 text-center">
@@ -127,7 +148,7 @@ export default function ForecastPage() {
         <section className="mt-6">
           <ForecastChart
             data={data} todayIndex={todayIndex} color={color} currency={base} rangeKey={range.key}
-            floor={floor} lowest={low}
+            floor={floor} lowest={low} band={showBand}
           />
           <div className="mt-2.5 px-5">
             <TrendRangeChips range={range.key} onRange={(key) => setInsights({ ahead: key })} ranges={AHEAD_RANGES} />
@@ -155,13 +176,22 @@ export default function ForecastPage() {
             <DetailRow
               label="Starting from"
               value={fmt(forecast.start, base)}
-              sub="Cash and banks, less cards"
+              sub={settings.savings ? 'Cash and banks, less cards' : 'Spending accounts, less cards'}
             />
-            <DetailRow
-              label="Everyday spending"
-              value={forecast.dailySpend ? `${fmt(forecast.dailySpend, base)} a day` : 'Not yet'}
-              sub={forecast.dailySpend ? 'Your usual week, per day' : 'Needs a few weeks of spending'}
-            />
+            <Tunable onOpen={tuneIt}>
+              <DetailRow
+                label="Pay"
+                value={payAhead > 0 ? `+${fmt(payAhead, base)}` : 'None'}
+                sub={paySub}
+              />
+            </Tunable>
+            <Tunable onOpen={tuneIt}>
+              <DetailRow
+                label="Everyday spending"
+                value={forecast.dailySpend ? `${fmt(forecast.dailySpend, base)} a day` : settings.spend === 'custom' ? 'None' : 'Not yet'}
+                sub={forecast.dailySpend || settings.spend === 'custom' ? spendSub : 'Needs a few weeks of spending'}
+              />
+            </Tunable>
             <button
               type="button"
               onClick={() => setFloorOpen(true)}
@@ -178,7 +208,9 @@ export default function ForecastPage() {
           {!forecast.hasIncome && (
             <Card padding="md" className="mt-3">
               <p className="text-13 text-slate-600 dark:text-slate-300">
-                Your pay is not on Recurring yet, so the forecast only sees what goes out.
+                {settings.income === 'recurring'
+                  ? 'Your pay is not on Recurring yet, so the forecast only sees what goes out.'
+                  : 'No regular pay in your history or on Recurring yet, so the forecast only sees what goes out.'}
               </p>
               <Button variant="tint" size="sm" className="mt-3 px-4" onClick={() => navigate('/recurring/new?type=income')}>
                 Add your payday
@@ -220,6 +252,22 @@ export default function ForecastPage() {
   )
 }
 
+/**
+ * A row of "What goes into it" that opens the settings behind it.
+ * @param {{onOpen: () => void, children: import('react').ReactNode}} props
+ */
+function Tunable({ onOpen, children }) {
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className="w-full text-left active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+    >
+      {children}
+    </button>
+  )
+}
+
 /** A day's net movement, for its heading. What is not counted - a card's due
  *  date, pay not yet marked - is left out, as the line leaves it out.
  *  @param {Array<Record<string, any>>} items @param {string} cur */
@@ -227,54 +275,4 @@ function signedSum(items, cur) {
   const net = items.reduce((s, it) => s + (it.counted ? it.sign * it.amount : 0), 0)
   if (Math.abs(net) < 0.005) return ''
   return `${net > 0 ? '+' : '−'}${fmtCompact(Math.abs(net), cur)}`
-}
-
-/**
- * The floor: the balance you do not want to go below. The forecast warns
- * the day it would, and "safe to spend" leaves it untouched. Zero means none.
- */
-function FloorSheet({ open, onClose, floor, currency }) {
-  const { showToast } = useToast()
-  const [value, setValue] = useState('')
-  const [saving, setSaving] = useState(false)
-  useEffect(() => {
-    if (!open) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setValue(floor > 0 ? numToMoneyStr(floor) : '')
-  }, [open, floor])
-
-  const save = async () => {
-    setSaving(true)
-    try {
-      await saveFloor(parseMoney(value) || 0)
-      onClose()
-      showToast(parseMoney(value) > 0 ? 'Floor saved' : 'Floor removed')
-    } catch (e) {
-      console.error('[Forecast] floor save failed:', e)
-      showToast('Could not save the floor', 'error')
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  return (
-    <Sheet
-      open={open}
-      onClose={onClose}
-      dismissible={!saving}
-      title="Floor"
-      footer={
-        <div className="flex gap-3">
-          <Button variant="secondary" className="flex-1" onClick={onClose} disabled={saving}>Cancel</Button>
-          <Button className="flex-[2]" onClick={save} loading={saving} disabled={saving}>Save</Button>
-        </div>
-      }
-    >
-      <p className="text-13 text-slate-500 dark:text-slate-400 mb-4">
-        The least you want to keep in cash and banks. The forecast warns you before you dip
-        below it. Leave it empty for none.
-      </p>
-      <MoneyField value={value} onChange={moneyChangeHandler(setValue)} currency={currency} />
-    </Sheet>
-  )
 }

@@ -36,6 +36,20 @@
  *     average: one laptop in August should not make every day ahead look
  *     expensive. Bills, installments, loan interest and debt settlements are
  *     left out of it, because they are already events of their own.
+ *
+ * ── Pay it can find by itself ──
+ *
+ * Pay used to come from Recurring alone, so a salary logged as it arrived and
+ * never set up there did not exist to the forecast. It can now read pay off
+ * the ledger too (lib/incomeStreams.js): a salary that keeps landing on the
+ * 15th and the 30th is expected on the next 15th. Which of the two it uses is
+ * a setting - Recurring, history, or both, where both leaves out any found
+ * pay that a Recurring item already covers, so nothing is counted twice.
+ * Found pay that is late is treated like unmarked Recurring pay: listed, not
+ * counted, until it arrives.
+ *
+ * The defaults here are the forecast as it always was; the app's own
+ * defaults live with its settings (hooks/useForecast.js).
  */
 
 import { advanceNextDate, parseDateLocal } from '../utils/recurring'
@@ -47,6 +61,7 @@ import { bucketOf, isLoan } from './accountMeta'
 import { LOAN_INTEREST, upcomingLoanPayments } from './loans'
 import { txBase } from './fxContext'
 import { convert } from './fx'
+import { STREAM_CYCLE_DAYS, findIncomeStreams, streamDates } from './incomeStreams'
 
 const DAY_MS = 864e5
 const LOOKBACK_WEEKS = 12
@@ -54,6 +69,9 @@ const LOOKBACK_WEEKS = 12
 const MIN_WEEKS = 3
 /** How far "safe to spend" looks when there is no payday to look to. */
 export const SAFE_WINDOW_DAYS = 14
+/** Where found pay leads when tapped: the settings page that lists it. */
+export const FORECAST_SETTINGS_PATH = '/insights/forecast/settings'
+
 /**
  * How far ahead "safe to spend" looks for the next payday - fixed, whatever
  * range the chart shows. Found in review: it looked as far as the chart did,
@@ -83,6 +101,7 @@ const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
  * @property {string|null} account
  * @property {string|null} to    where tapping it goes
  * @property {boolean} [repeats]
+ * @property {boolean} [learned]  pay found in the ledger's history, not on Recurring
  */
 
 /**
@@ -99,10 +118,18 @@ const isoDay = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2,
  * @param {(tx: any) => number} [input.priceOf]
  * @param {number} [input.historyDays]  days of what actually happened to put
  *   before today, for the chart (liquidHistory); none unless asked for
+ * @param {'recurring'|'history'|'both'} [input.income]  where pay comes from
+ * @param {number} [input.incomeLookbackDays]  how far back pay is looked for
+ * @param {boolean} [input.occasional]  count income that keeps no rhythm, as a daily average
+ * @param {'typical'|'cautious'|'custom'} [input.spend]  how everyday spending is estimated
+ * @param {number} [input.customDaily]  everyday spending per day, for 'custom'
+ * @param {boolean} [input.countSavings]  start from savings accounts too, or spending ones only
  */
 export function buildForecast({
   accounts, transactions, recurring = [], debts = [], base, rates = null,
   horizonDays = 30, floor = 0, now = new Date(), priceOf = txBase, historyDays = 0,
+  income = 'recurring', incomeLookbackDays = 183, occasional = false,
+  spend = 'typical', customDaily = 0, countSavings = true,
 }) {
   const today = startOfDay(now)
   /* The walk runs at least as far as the payday lookahead, so safe to spend
@@ -116,7 +143,13 @@ export function buildForecast({
   const curOf = (/** @type {string|null|undefined} */ name) =>
     (accounts ?? []).find(a => a.name === name)?.currency || base
 
-  const start = round2(netWorthBreakdown({ accounts, transactions, view: base, rates }).liquid)
+  const worth = netWorthBreakdown({ accounts, transactions, view: base, rates })
+  /* Net liquid, or - with savings left out - only the money you spend from,
+     less the cards. The line walked back (liquidHistory) makes the same cut,
+     so the past and the projection meet at today. */
+  const start = round2(countSavings ? worth.liquid : worth.spending - worth.credit)
+  const payFromRecurring = income !== 'history'
+  const payFromHistory = income !== 'recurring'
 
   /** @type {ForecastEvent[]} */
   const events = []
@@ -125,6 +158,8 @@ export function buildForecast({
   for (const r of recurring ?? []) {
     if (!r || r.active === false || !r.nextDate || !(r.amount > 0)) continue
     const income = r.type === 'inflow'
+    // Pay from history only: Recurring still supplies the bills, not the pay.
+    if (income && !payFromRecurring) continue
     const amount = round2(toBase(r.amount, curOf(r.account)))
     let date = String(r.nextDate).slice(0, 10)
     let d = parseDateLocal(date)
@@ -155,6 +190,54 @@ export function buildForecast({
       if (!next || next <= date) break
       date = next
       d = parseDateLocal(date)
+    }
+  }
+
+  // ── Pay found in the ledger's history ──
+  /** @type {import('./incomeStreams').IncomeStream[]} */
+  let streams = []
+  let occasionalPerDay = 0
+  if (payFromHistory) {
+    const found = findIncomeStreams({
+      transactions: transactions ?? [], now, lookbackDays: incomeLookbackDays, priceOf,
+      /* Pay a Recurring item posted belongs to that item, which is projected
+         already - with both on, reading it here too would count it twice. */
+      skip: payFromRecurring ? (t => t.recurringId != null || !!t.recurringSyncId) : undefined,
+    })
+    const recurringPay = payFromRecurring
+      ? (recurring ?? []).filter(r => r && r.active !== false && r.type === 'inflow' && r.amount > 0)
+      : []
+    /* And pay logged by hand whose Recurring item exists anyway: the same
+       category, or the same account for about the same amount, is that
+       item, and the item wins - it is the one you told the app about. */
+    streams = found.streams.filter(s => !recurringPay.some(r => {
+      if (r.category && s.category && String(r.category).toLowerCase() === s.category.toLowerCase()) return true
+      const amount = toBase(r.amount, curOf(r.account))
+      return !!r.account && r.account === s.account && Math.abs(amount - s.amount) <= s.amount * 0.25
+    }))
+    occasionalPerDay = found.occasionalPerDay
+
+    for (const s of streams) {
+      const common = {
+        name: s.name, sign: /** @type {1} */ (1), kind: /** @type {'income'} */ ('income'),
+        category: s.category, account: s.account, to: FORECAST_SETTINGS_PATH, repeats: true, learned: true,
+      }
+      const dates = streamDates(s, end)
+      /* A payday that has passed without the pay showing up: listed today as
+         not in yet, and not counted - the same rule as Recurring pay that is
+         not marked received. Only the latest one, and only within a cycle;
+         older misses are simply gone. */
+      const missed = dates.filter(x => x.date < today).at(-1)
+      if (missed && (today.getTime() - missed.date.getTime()) / DAY_MS <= STREAM_CYCLE_DAYS[s.frequency]) {
+        events.push({
+          ...common, key: `${s.key}:${isoDay(missed.date)}:late`, date: today,
+          amount: round2(missed.amount), counted: false, overdue: true,
+        })
+      }
+      for (const x of dates) {
+        if (x.date < today) continue
+        events.push({ ...common, key: `${s.key}:${isoDay(x.date)}`, date: x.date, amount: round2(x.amount), counted: true, overdue: false })
+      }
     }
   }
 
@@ -199,8 +282,18 @@ export function buildForecast({
   events.sort((x, y) => x.date.getTime() - y.date.getTime()
     || (y.counted ? 1 : 0) - (x.counted ? 1 : 0) || x.name.localeCompare(y.name))
 
-  const dailySpend = everydaySpend(transactions ?? [], now, priceOf)
-  const range = spendRange(transactions ?? [], now, priceOf)
+  /* Everyday spending: your usual week (the median), a busier one (the
+     75th percentile, for a forecast that would rather be pessimistic), or
+     a figure you set yourself. A set figure has no likely range: it is what
+     you said, not something read off weeks that vary. */
+  const typicalSpend = everydaySpend(transactions ?? [], now, priceOf)
+  const cautiousDaily = cautiousSpend(transactions ?? [], now, priceOf)
+  const dailySpend = spend === 'custom'
+    ? (customDaily > 0 ? round2(customDaily) : null)
+    : spend === 'cautious' ? (cautiousDaily ?? typicalSpend) : typicalSpend
+  const range = spend === 'custom' ? null : spendRange(transactions ?? [], now, priceOf)
+  // Income that keeps no rhythm, spread over the days - only when asked for.
+  const dailyIncome = payFromHistory && occasional ? occasionalPerDay : 0
 
   // ── The walk ──
   const byDay = new Map()
@@ -223,6 +316,7 @@ export function buildForecast({
     running += byDay.get(iso) ?? 0
     // Today's spending so far is already in the balance; the burn starts tomorrow.
     if (i > 0 && dailySpend) running -= dailySpend
+    if (i > 0 && dailyIncome) running += dailyIncome
     const busier = range && dailySpend ? (range.high - dailySpend) * i : 0
     const quieter = range && dailySpend ? (dailySpend - range.low) * i : 0
     days.push({ date, iso, balance: round2(running), low: round2(running - busier), high: round2(running + quieter) })
@@ -249,7 +343,7 @@ export function buildForecast({
     start,
     days: shown,
     /** What actually happened, before today, oldest first - empty unless asked for. */
-    past: historyDays > 0 ? liquidHistory({ accounts, transactions, current: start, days: historyDays, now, priceOf }) : [],
+    past: historyDays > 0 ? liquidHistory({ accounts, transactions, current: start, days: historyDays, now, priceOf, includeSavings: countSavings }) : [],
     events: events.filter(e => e.date <= shownEnd),
     lowest,
     firstNegative,
@@ -258,7 +352,18 @@ export function buildForecast({
     /** The payday "safe to spend" runs up to, or null for the two-week window. */
     safeUntil: nextPay?.date ?? null,
     dailySpend,
-    hasIncome: (recurring ?? []).some(r => r?.active !== false && r?.type === 'inflow'),
+    /** Your usual day and a busier one, whatever the estimate in use - for the settings page. */
+    typicalSpend,
+    cautiousDaily,
+    dailyIncome,
+    /** Pay found in the history and used - less any a Recurring item covers. */
+    streams,
+    occasionalPerDay,
+    hasIncome: (payFromRecurring && (recurring ?? []).some(r => r?.active !== false && r?.type === 'inflow'))
+      || streams.length > 0,
+    income,
+    spend,
+    countSavings,
     floor,
     horizonDays,
   }
@@ -282,6 +387,24 @@ export function everydaySpend(transactions, now, priceOf = txBase) {
   const mid = Math.floor(sorted.length / 2)
   const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
   return median > 0 ? round2(median / 7) : null
+}
+
+/**
+ * A busier day than usual: the 75th percentile week of the same twelve,
+ * over seven. For a forecast that would rather be wrong on the safe side.
+ *
+ * @param {Array<Record<string, any>>} transactions
+ * @param {Date} now
+ * @param {(tx: any) => number} [priceOf]
+ * @returns {number|null}
+ */
+export function cautiousSpend(transactions, now, priceOf = txBase) {
+  const sorted = weeklySpend(transactions, now, priceOf)
+  if (!sorted) return null
+  const at = (sorted.length - 1) * 0.75
+  const i = Math.floor(at)
+  const week = sorted[i] + (sorted[Math.min(i + 1, sorted.length - 1)] - sorted[i]) * (at - i)
+  return week > 0 ? round2(week / 7) : null
 }
 
 /**
@@ -327,11 +450,14 @@ export function spendRange(transactions, now, priceOf = txBase) {
  * @param {number} input.days
  * @param {Date} [input.now]
  * @param {(tx: any) => number} [input.priceOf]
+ * @param {boolean} [input.includeSavings]  false when the forecast leaves savings
+ *   out: money moved into savings then leaves the line, as it leaves the start
  * @returns {Array<{date: Date, iso: string, balance: number}>}
  */
-export function liquidHistory({ accounts, transactions, current, days, now = new Date(), priceOf = txBase }) {
+export function liquidHistory({ accounts, transactions, current, days, now = new Date(), priceOf = txBase, includeSavings = true }) {
+  const buckets = includeSavings ? ['spending', 'savings', 'credit'] : ['spending', 'credit']
   const spendable = new Set((accounts ?? [])
-    .filter(a => ['spending', 'savings', 'credit'].includes(bucketOf(a)))
+    .filter(a => buckets.includes(bucketOf(a)))
     .map(a => a.name))
   const nowMs = now.getTime()
   /** @type {Array<{t: number, delta: number}>} */

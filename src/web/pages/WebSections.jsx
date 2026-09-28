@@ -63,7 +63,8 @@ export function AccountsIndex() {
 
 export function WebInsightsSection() {
   const { pathname } = useLocation()
-  const page = paramOf('/insights/:page', pathname, 'page')
+  // /* too: Forecast's settings keep the Forecast card lit.
+  const page = paramOf('/insights/:page/*', pathname, 'page')
   return (
     <WebSplit
       label="Insights"
@@ -71,6 +72,9 @@ export function WebInsightsSection() {
       listWidth={440}
       detailWidth={820}
       selected={page ? `[data-zoom="${page}"]` : null}
+      /* A page one step past an Insights card has a card to go back to:
+         keep its back button, which the root pages hide. */
+      isRoot={(p) => !!matchPath('/insights/:page', p)}
     />
   )
 }

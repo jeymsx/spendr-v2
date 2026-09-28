@@ -22,7 +22,7 @@ function preloadPages() {
   for (const load of [
     () => import('./insights/TrendPage'), () => import('./insights/ExpensesPage'),
     () => import('./insights/AccountsPage'), () => import('./insights/NetWorthPage'),
-    () => import('./insights/ForecastPage'),
+    () => import('./insights/ForecastPage'), () => import('./insights/ForecastSettings'),
   ]) load().catch(() => { /* offline and not cached yet: the tap will try again */ })
 }
 

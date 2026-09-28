@@ -272,9 +272,9 @@ export function NetWorthChart({ data, color, currency, rangeKey }) {
  *
  * @param {{data: Array<{day: string, iso: string, past?: number, value?: number, band?: [number, number]}>,
  *          todayIndex: number, color: string, currency: string, rangeKey: string,
- *          floor?: number, lowest?: {iso: string}|null}} props
+ *          floor?: number, lowest?: {iso: string}|null, band?: boolean}} props
  */
-export function ForecastChart({ data, todayIndex, color, currency, rangeKey, floor = 0, lowest = null }) {
+export function ForecastChart({ data, todayIndex, color, currency, rangeKey, floor = 0, lowest = null, band = true }) {
   const values = data.flatMap(d => [d.past, d.value, ...(d.band ?? [])]).filter(v => Number.isFinite(v))
   const lo = Math.min(...values, floor > 0 ? floor : Infinity)
   const hi = Math.max(...values)
@@ -371,18 +371,22 @@ export function ForecastChart({ data, todayIndex, color, currency, rangeKey, flo
       {/* What the three marks mean, once - the dashes and the band are the
           whole difference between this and a statement of fact. */}
       <div className="mt-1 flex items-center justify-center gap-4 text-11 text-slate-500 dark:text-slate-400" aria-hidden="true">
-        <span className="flex items-center gap-1.5">
-          <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2.25" /></svg>
-          So far
-        </span>
+        {todayIndex > 0 && (
+          <span className="flex items-center gap-1.5">
+            <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2.25" /></svg>
+            So far
+          </span>
+        )}
         <span className="flex items-center gap-1.5">
           <svg width="16" height="6"><line x1="0" y1="3" x2="16" y2="3" stroke={color} strokeWidth="2.25" strokeDasharray="4 3" /></svg>
           Projected
         </span>
-        <span className="flex items-center gap-1.5">
-          <span className="w-3.5 h-2.5 rounded-sm" style={{ background: color, opacity: 0.22 }} />
-          Likely range
-        </span>
+        {band && (
+          <span className="flex items-center gap-1.5">
+            <span className="w-3.5 h-2.5 rounded-sm" style={{ background: color, opacity: 0.22 }} />
+            Likely range
+          </span>
+        )}
       </div>
     </div>
   )
