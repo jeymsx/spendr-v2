@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-09-27'
+export const RELEASE_DATE = '2026-09-28'
 
 /**
  * @typedef {object} ReleaseNote
@@ -33,42 +33,37 @@ export const RELEASE_DATE = '2026-09-27'
 export const RELEASE_NOTES = [
   {
     icon: 'chart',
-    title: 'Insights, reorganised',
-    desc: 'Your month leads with where it went, with income, net and how it compares with last month. Trend, top expenses, accounts and net worth each open a page of their own.',
+    title: 'Net worth that counts everything',
+    desc: 'Investments, loans and debts with friends now count, and its page shows what you have against what you owe. Leave debts out in Preferences.',
   },
   {
-    icon: 'sparkle',
-    title: 'Highlights to swipe through',
-    desc: 'Every fact about your month side by side, instead of one at random.',
-  },
-  {
-    icon: 'categories',
-    title: 'Change a category from the list',
-    desc: "Tap a transaction's icon to file it under another category, without opening it.",
-  },
-  {
-    icon: 'trash',
-    title: 'Swipe to delete, and Recently deleted',
-    desc: 'Swipe a transaction left to delete it. It stays in Recently deleted for 30 days, to put back.',
-  },
-  {
-    icon: 'motion',
-    title: 'Reduce motion',
-    desc: "A switch in Preferences that turns off Spendr's animations, whatever your phone is set to.",
-  },
-  {
-    icon: 'target',
-    title: 'Safe to spend',
-    desc: 'Home and Insights look 30 days ahead: what you can spend before payday, your tightest day, and a warning if money could run short.',
-  },
-  {
-    icon: 'chart',
+    icon: 'bank',
     title: 'Investments and loans',
-    desc: "Add your MP2, a UITF or a loan as an account. Update an investment's value when you check it, and pay a loan from its page.",
+    desc: "Add your MP2, a UITF or a loan as an account. Update an investment's value when you check it, and pay a loan from its page: Spendr splits off the interest.",
   },
   {
     icon: 'transfer',
     title: 'Bills is now Recurring',
-    desc: 'It takes your pay too, twice-a-month paydays included. Net worth now counts debts with friends, which you can turn off in Preferences.',
+    desc: 'It takes your pay too, twice-a-month paydays included, and lists loan payments beside card statements.',
+  },
+  {
+    icon: 'target',
+    title: 'Safe to spend',
+    desc: 'Home looks 30 days ahead: what you can spend before payday, your tightest day, and a warning if money could run short. The Forecast page shows the likely range.',
+  },
+  {
+    icon: 'wallet',
+    title: 'What you have, or what you owe',
+    desc: "Home's wallet shows three at a time. Tap the arrows beside the eye to switch.",
+  },
+  {
+    icon: 'categories',
+    title: 'Tidier transactions',
+    desc: 'Transfers, loans and debts get icons like your categories, a loan payment is one row, and long lists keep going as you scroll.',
+  },
+  {
+    icon: 'sparkle',
+    title: 'Livelier Insights',
+    desc: 'Highlights are glass cards that come together as you reach them, and each Insights card grows into its page.',
   },
 ]

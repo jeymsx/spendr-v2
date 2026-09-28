@@ -2,7 +2,7 @@ import db from '../db/db'
 import { markRead } from '../db/notifications'
 import {
   IconSparkle, IconBarChart, IconBell, IconTarget, IconTransferUI, IconTrophy, IconContrast, IconSettings, IconLock,
-  IconTrash, IconCategories, IconMotion,
+  IconTrash, IconCategories, IconMotion, IconWalletUI, IconBankUI,
 } from './icons'
 import Button from './ui/Button'
 import Divider from './ui/Divider'
@@ -24,7 +24,7 @@ const CURRENT_VERSION = APP_VERSION
 const ICONS = /** @type {Record<string, import('react').ComponentType<{size?: number}>>} */ ({
   trophy: IconTrophy, sparkle: IconSparkle, contrast: IconContrast, chart: IconBarChart,
   settings: IconSettings, bell: IconBell, target: IconTarget, transfer: IconTransferUI, lock: IconLock,
-  trash: IconTrash, categories: IconCategories, motion: IconMotion,
+  trash: IconTrash, categories: IconCategories, motion: IconMotion, wallet: IconWalletUI, bank: IconBankUI,
 })
 const WHATS_NEW = RELEASE_NOTES.map(n => ({ Icon: ICONS[n.icon] ?? IconSparkle, title: n.title, desc: n.desc }))
 
