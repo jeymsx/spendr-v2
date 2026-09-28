@@ -24,6 +24,16 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.11.0',
+    date: '2026-09-28',
+    items: [
+      { title: 'A daily check-in', desc: 'A nudge at a time you pick to log what you spent, skipped on days you already have. Turn it on in Settings, Reminders.' },
+      { title: 'Install Spendr', desc: 'Put Spendr on your Home Screen from Settings: one tap on Android, three on iPhone.' },
+      { title: 'A friendlier first run', desc: 'Someone new sets up in a few taps: their cards appear as they pick them, and categories are ready without asking.' },
+      { title: 'A new layout for computers', desc: 'Every page from your phone, with the list and what you pick in it side by side. Press E, I, T or Q to add from anywhere.' },
+    ],
+  },
+  {
     version: '0.10.0',
     date: '2026-09-28',
     items: [

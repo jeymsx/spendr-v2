@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-09-28'
+export const RELEASE_DATE = '2026-09-29'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,23 +32,33 @@ export const RELEASE_DATE = '2026-09-28'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'bell',
-    title: 'A daily check-in',
-    desc: 'A nudge at a time you pick to log what you spent, skipped on days you already have. Turn it on in Settings, Reminders.',
+    icon: 'lock',
+    title: 'Signing in asks first',
+    desc: 'A phone or computer signing in to an account that already has data asks before anything syncs: use the account\'s data, keep both, or sign out.',
+  },
+  {
+    icon: 'chart',
+    title: 'Your pay, found for you',
+    desc: 'The forecast reads your pay from what you have logged, so a salary you never put on Recurring still arrives on the 15th and the 30th.',
+  },
+  {
+    icon: 'settings',
+    title: 'Forecast settings',
+    desc: 'The sliders on Forecast pick where pay comes from, how everyday spending is counted, whether savings count, and what the chart shows.',
   },
   {
     icon: 'sparkle',
-    title: 'Install Spendr',
-    desc: 'Put Spendr on your Home Screen from Settings: one tap on Android, three on iPhone.',
+    title: 'Glass empty screens',
+    desc: 'A screen with nothing on it yet gets a glass picture instead of a flat icon.',
   },
   {
-    icon: 'sparkle',
-    title: 'A friendlier first run',
-    desc: 'Someone new sets up in a few taps: their cards appear as they pick them, and categories are ready without asking.',
+    icon: 'transfer',
+    title: 'Back where you left off',
+    desc: 'Back returns you to where you were on a page, even on one opened from a notification, and tapping the tab you are on scrolls to the top.',
   },
   {
-    icon: 'desktop',
-    title: 'A new layout for computers',
-    desc: 'Every page from your phone, with the list and what you pick in it side by side. Press E, I, T or Q to add from anywhere.',
+    icon: 'motion',
+    title: 'Pull to sync, where it belongs',
+    desc: 'Pulling down syncs on the screens that show your money, not on forms or settings.',
   },
 ]
