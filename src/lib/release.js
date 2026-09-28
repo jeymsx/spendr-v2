@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-09-27'
+export const RELEASE_DATE = '2026-09-28'
 
 /**
  * @typedef {object} ReleaseNote
@@ -31,31 +31,6 @@ export const RELEASE_DATE = '2026-09-27'
 
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
-  {
-    icon: 'chart',
-    title: 'Insights, reorganised',
-    desc: 'Your month leads with where it went, with income, net and how it compares with last month. Trend, top expenses, accounts and net worth each open a page of their own.',
-  },
-  {
-    icon: 'sparkle',
-    title: 'Highlights to swipe through',
-    desc: 'Every fact about your month side by side, instead of one at random.',
-  },
-  {
-    icon: 'categories',
-    title: 'Change a category from the list',
-    desc: "Tap a transaction's icon to file it under another category, without opening it.",
-  },
-  {
-    icon: 'trash',
-    title: 'Swipe to delete, and Recently deleted',
-    desc: 'Swipe a transaction left to delete it. It stays in Recently deleted for 30 days, to put back.',
-  },
-  {
-    icon: 'motion',
-    title: 'Reduce motion',
-    desc: "A switch in Preferences that turns off Spendr's animations, whatever your phone is set to.",
-  },
   {
     icon: 'target',
     title: 'Safe to spend',
@@ -70,5 +45,20 @@ export const RELEASE_NOTES = [
     icon: 'transfer',
     title: 'Bills is now Recurring',
     desc: 'It takes your pay too, twice-a-month paydays included. Net worth now counts debts with friends, which you can turn off in Preferences.',
+  },
+  {
+    icon: 'bell',
+    title: 'A daily check-in',
+    desc: 'A nudge at a time you pick to log what you spent, skipped on days you already have. Turn it on in Settings, Reminders.',
+  },
+  {
+    icon: 'sparkle',
+    title: 'Install Spendr',
+    desc: 'Put Spendr on your Home Screen from Settings: one tap on Android, three on iPhone.',
+  },
+  {
+    icon: 'sparkle',
+    title: 'A friendlier first run',
+    desc: 'Someone new sets up in a few taps: their cards appear as they pick them, and categories are ready without asking.',
   },
 ]

@@ -11,6 +11,9 @@ import { recordCrash } from './lib/crashLog'
 import { version as APP_VERSION } from '../package.json'
 import Shell from './Shell'
 import LockGate from './components/lock/LockGate'
+/* For its side effect: the browser's one-time install prompt is caught as
+   the app starts, before any screen that offers it has mounted. */
+import './lib/install'
 /* Inter, from this origin rather than Google Fonts: the same three weights
    the stylesheet link used to ask for, so nothing renders differently, and
    one fewer third party contacted on every launch. Each weight brings all of

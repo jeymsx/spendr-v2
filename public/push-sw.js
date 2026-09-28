@@ -19,10 +19,15 @@ self.addEventListener('push', (event) => {
   }
 
   const title = data.title || 'Spendr'
+  /* The daily check-in has a new tag every day, so a phone left alone for a
+     week would hold seven of them. They share one notification instead: each
+     day's replaces yesterday's, and still makes a sound (renotify). */
+  const nudge = typeof data.tag === 'string' && data.tag.startsWith('nudge:')
   event.waitUntil(self.registration.showNotification(title, {
     body: data.body || '',
     // The same reminder delivered twice replaces itself rather than stacking.
-    tag: data.tag || undefined,
+    tag: nudge ? 'spendr-nudge' : (data.tag || undefined),
+    renotify: nudge,
     icon: '/icons/icon-192.png',
     data: { url: data.url || '/' },
   }))

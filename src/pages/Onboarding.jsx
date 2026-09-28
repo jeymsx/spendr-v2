@@ -1,288 +1,545 @@
-import { useState, useEffect } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import db from '../db/db'
 import { useAuth } from '../context/AuthContext'
-import { fullSync } from '../lib/sync'
-import { PH_ACCOUNTS } from '../lib/phAccounts'
-import { EXPENSE_PRESETS, INFLOW_PRESETS, SYSTEM_CATS, LOCKED_EXPENSE, LOCKED_INFLOW } from '../lib/phCategories'
+import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
-import { CASH } from './onboarding/shared'
-import {
-  StepDots,
-  StepWelcome,
-  StepName,
-  StepCurrency,
-} from './onboarding/StepsIntro'
-import { StepPickAccounts } from './onboarding/StepAccounts'
-import { StepSetBalances } from './onboarding/StepBalances'
-import { StepPickCategories, StepDone } from './onboarding/StepCategories'
+import { fullSync } from '../lib/sync'
+import { isSupabaseConfigured } from '../lib/supabase'
+import { PH_ACCOUNTS } from '../lib/phAccounts'
+import { enableReminders, pushSupport, serverKey } from '../lib/push'
+import { DEFAULT_NUDGE, nudgeLabel } from '../lib/nudge'
+import { setNudge } from '../hooks/useNudge'
+import { installContext } from '../lib/install'
+import { useKeyboardInset } from '../hooks/useKeyboardInset'
+import { useReduceMotion } from '../hooks/useReduceMotion'
+import { parseMoney } from '../utils/moneyInput'
+import IconButton from '../components/ui/IconButton'
+import { SPRING, EXIT } from './recap/theme'
+import { CASH, CURRENCIES } from './onboarding/shared'
+import { clearDraft, guessCurrency, inPhilippines, planSteps, readDraft, saveDraft, starterCategories } from './onboarding/flow'
+import { readPreview } from './onboarding/preview'
+import Stage, { sceneFor, STAGE_MAX } from './onboarding/Stage'
+import { Heading, OverlayHost, StepBody } from './onboarding/parts'
+import { StepCurrency, StepName, StepWelcome } from './onboarding/StepsIntro'
+import { StepAccounts } from './onboarding/StepAccounts'
+import { StepBalances } from './onboarding/StepBalances'
+import { StepStayOnTrack } from './onboarding/StepStayOnTrack'
+import { StepInstall, StepInstallFirst, StepOpenInBrowser } from './onboarding/StepInstall'
+import { StepDone } from './onboarding/StepDone'
 
-// ── Main Onboarding component ──────────────────────────────────────────────────
+/**
+ * Setup: the first thing anyone sees.
+ *
+ * ── What it is for ──
+ *
+ * To get from "what is this?" to a ledger with your accounts in it, with as
+ * few questions as that takes and nothing that feels like a form. flow.js has
+ * what is asked and why the order changes from phone to phone; each step is
+ * its own file; Stage.jsx is the glass picture above them, which carries its
+ * objects from one step to the next instead of swapping illustrations.
+ *
+ * ── How it moves ──
+ *
+ * Forward, the step slides in from the right out of a short blur while the
+ * one before leaves to the left the same way; Back reverses both. The stage's
+ * objects move to their places for the new step on the same zero-bounce
+ * spring, so the whole screen is one movement rather than a page change with
+ * a picture swap on top. With reduced motion, steps cross-fade and nothing
+ * travels.
+ *
+ * ── Leaving and coming back ──
+ *
+ * Everything answered is kept in the tab as it is answered (flow.js, the
+ * draft). Google's sign-in is a full redirect away and back; a phone short
+ * of memory drops a backgrounded tab. Either way setup resumes at the step it
+ * was on, and signing in partway through either finds an account that
+ * already has data - welcome back, straight to it - or a new one, and
+ * carries on.
+ */
+
+/** The share of the screen each step gives its picture. */
+const STAGE_SHARE = /** @type {Record<import('./onboarding/flow').StepId, number>} */ ({
+  welcome: 0.5,
+  openInBrowser: 0.24,
+  installFirst: 0.24,
+  name: 0.3,
+  currency: 0.24,
+  accounts: 0.26,
+  balances: 0.25,
+  stayOnTrack: 0.3,
+  install: 0.3,
+  done: 0.46,
+})
+
+/**
+ * The room each step's words and buttons need under the picture, at least.
+ * On a short phone the picture gives way, not the question.
+ */
+const CONTENT_MIN = /** @type {Record<import('./onboarding/flow').StepId, number>} */ ({
+  welcome: 300,
+  openInBrowser: 440,
+  installFirst: 440,
+  name: 280,
+  currency: 380,
+  accounts: 400,
+  balances: 380,
+  stayOnTrack: 360,
+  install: 360,
+  done: 300,
+})
+
+/**
+ * Forward slides in from the right; Back from the left.
+ *
+ * Opacity and a short slide, and no blur. The app's content swaps go through
+ * a blur, but those are a figure or a line; a blur over a whole screen of
+ * words and card faces is two full-screen filter passes on every frame of
+ * the move, and on a budget Android that is the difference between a slide
+ * and a stutter. The pictures above still assemble and settle on their own.
+ */
+const SWAP = {
+  enter: (/** @type {number} */ dir) => ({ opacity: 0, x: 36 * dir }),
+  center: { opacity: 1, x: 0 },
+  exit: (/** @type {number} */ dir) => ({ opacity: 0, x: -36 * dir, transition: EXIT }),
+}
+const FADE = {
+  enter: { opacity: 0 },
+  center: { opacity: 1 },
+  exit: { opacity: 0, transition: { duration: 0.15 } },
+}
+
+/* One sign-in's follow-up at a time. StrictMode runs the effect twice in
+   development, and two full syncs racing each other on a fresh account would
+   push the same rows twice. */
+/** @type {{userId: string, promise: Promise<'onboarded'|'returning'|'new'>} | null} */
+let afterSignIn = null
+
+/** Whether the account just signed in to already had a ledger in it. */
+async function hasLedger() {
+  const [txs, accounts, named] = await Promise.all([
+    db.transactions.count(),
+    db.accounts.count(),
+    db.meta.get('displayName'),
+  ])
+  return txs > 0 || accounts > 1 || !!named?.value
+}
+
+/** @param {string} userId */
+function followSignIn(userId) {
+  if (afterSignIn?.userId === userId) return afterSignIn.promise
+  const promise = (async () => {
+    if ((await db.meta.get('onboarded'))?.value) return /** @type {const} */ ('onboarded')
+    await fullSync(userId)
+    return (await hasLedger()) ? /** @type {const} */ ('returning') : /** @type {const} */ ('new')
+  })()
+  afterSignIn = { userId, promise }
+  promise.catch(() => { afterSignIn = null })
+  return promise
+}
 
 export default function Onboarding() {
-  const { showToast } = useToast()
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const { user, signInWithGoogle } = useAuth()
-  const [step,                setStep]                = useState(0)
-  const [name,                setName]                = useState('')
-  const [currency,            setCurrency]            = useState('PHP')
-  const [selectedNames,       setSelectedNames]       = useState(new Set())
-  const [customAccounts,      setCustomAccounts]      = useState([])
-  const [balances,            setBalances]            = useState({})
-  const [creditLimits,        setCreditLimits]        = useState({})
-  const [selectedExpenseNames, setSelectedExpenseNames] = useState(new Set())
-  const [selectedInflowNames,  setSelectedInflowNames]  = useState(new Set())
-  const [customExpenseCats,   setCustomExpenseCats]   = useState([])
-  const [customInflowCats,    setCustomInflowCats]    = useState([])
-  const [saving,              setSaving]              = useState(false)
-  const [signingIn,           setSigningIn]           = useState(false)
+  const { accentColor } = useTheme()
+  const reduce = useReduceMotion()
+  const kb = useKeyboardInset()
 
-  // If already onboarded, skip straight to dashboard
+  const [preview] = useState(readPreview)
+  const [ph] = useState(() => preview?.ph ?? inPhilippines())
+  const cloud = preview?.cloud ?? isSupabaseConfigured
+  const [plan] = useState(() => planSteps({ install: installContext(), cloud, ph }))
+  const [draft] = useState(readDraft)
+
+  const [step, setStep] = useState(() => {
+    const want = preview?.step ?? draft?.step
+    return want && plan.includes(/** @type {any} */ (want)) ? /** @type {import('./onboarding/flow').StepId} */ (want) : 'welcome'
+  })
+  const [dir, setDir] = useState(1)
+  const [name, setName] = useState(draft?.name ?? '')
+  const [currency, setCurrency] = useState(() => draft?.currency ?? (ph ? 'PHP' : guessCurrency(CURRENCIES.map(c => c.code))))
+  const [picked, setPicked] = useState(() => new Set(draft?.picked ?? []))
+  const [custom, setCustom] = useState(/** @type {Array<{name: string, type: string, color: string}>} */ (draft?.custom ?? []))
+  const [balances, setBalances] = useState(/** @type {Record<string, string>} */ (draft?.balances ?? {}))
+  const [limits, setLimits] = useState(/** @type {Record<string, string>} */ (draft?.limits ?? {}))
+  const [nudgeTime, setNudgeTime] = useState(DEFAULT_NUDGE)
+  const [nudgeOn, setNudgeOn] = useState(false)
+  const [key, setKey] = useState(/** @type {string|null} */ (null))
+  const [saving, setSaving] = useState(false)
+  const [signingIn, setSigningIn] = useState(false)
+  const [following, setFollowing] = useState(false)
+  const [fakeSignedIn, setFakeSignedIn] = useState(!!preview?.signedIn)
+  const [host, setHost] = useState(/** @type {HTMLElement|null} */ (null))
+  const headingRef = useRef(/** @type {HTMLHeadingElement|null} */ (null))
+  const firstStep = useRef(true)
+  const columnRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+  const [columnW, setColumnW] = useState(() => (typeof window === 'undefined' ? 390 : Math.min(window.innerWidth, 560)))
+
+  // The column's width, for the stage to fit its hand of cards across.
+  useLayoutEffect(() => {
+    const el = columnRef.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const ro = new ResizeObserver(([entry]) => setColumnW(Math.round(entry.contentRect.width)))
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [])
+
+  const signedIn = preview ? fakeSignedIn : !!user
+  const push = preview ? (preview.push ?? 'ok') : pushSupport()
+
+  // Someone already set up has no business here - except to preview it.
   useEffect(() => {
+    if (preview) return
     db.meta.get('onboarded').then(meta => {
       if (meta?.value) navigate('/', { replace: true })
     })
-  }, [navigate])
+  }, [navigate, preview])
 
-  // If user just signed in via Google (OAuth redirect back), sync and complete onboarding
+  /* Back from Google. An account with a ledger already in it is someone
+     returning: straight to it. A new one carries on with setup, from where
+     the sign-in was started - or from the name, if it was the welcome's
+     "I already have an account" and it turned out there was none. */
   useEffect(() => {
-    if (!user) return
-    db.meta.get('onboarded').then(async meta => {
-      if (meta?.value) return // already done
-      setSigningIn(true)
-      try {
-        await fullSync(user.id)
-        await db.meta.put({ key: 'onboarded', value: true })
+    if (!user?.id || preview) return
+    let live = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFollowing(true)
+    followSignIn(user.id)
+      .then(async result => {
+        if (!live) return
+        if (result === 'new') {
+          setFollowing(false)
+          setStep(s => (s === 'welcome' ? 'name' : s))
+          return
+        }
+        clearDraft()
+        if (result === 'returning') {
+          await db.meta.put({ key: 'onboarded', value: true })
+          showToast('Welcome back. Your data is here.', 'success')
+        }
         navigate('/', { replace: true })
-      } catch (e) {
-        console.error('[Onboarding] sign-in sync failed:', e)
-        showToast('Signed in, but sync failed', 'warning')
-        setSigningIn(false)
-      }
-    })
-  }, [user, navigate, showToast])
+      })
+      .catch(e => {
+        console.error('[Onboarding] after sign-in:', e)
+        if (!live) return
+        setFollowing(false)
+        showToast('Signed in, but the sync failed. You can carry on.', 'warning')
+        setStep(s => (s === 'welcome' ? 'name' : s))
+      })
+    return () => { live = false }
+  }, [user?.id, preview, navigate, showToast])
 
-  async function handleSignIn() {
+  // The draft, kept as it is answered.
+  useEffect(() => {
+    if (step === 'welcome' || preview) return
+    saveDraft({ step, name, currency, picked: [...picked], custom, balances, limits })
+  }, [step, name, currency, picked, custom, balances, limits, preview])
+
+  // The server's push key, fetched while the question is read, so the tap
+  // that answers it has nothing to wait for before it asks the phone.
+  useEffect(() => {
+    if (step !== 'stayOnTrack' || !signedIn || preview || push !== 'ok' || key) return
+    serverKey().then(setKey).catch(() => { /* enableReminders fetches it itself */ })
+  }, [step, signedIn, preview, push, key])
+
+  // The question, read out when a step arrives - not on the first screen,
+  // which has not moved anywhere.
+  useEffect(() => {
+    if (firstStep.current) { firstStep.current = false; return }
+    const t = setTimeout(() => headingRef.current?.focus({ preventScroll: true }), 60)
+    return () => clearTimeout(t)
+  }, [step, following])
+
+  const accounts = useMemo(() => [
+    CASH,
+    ...PH_ACCOUNTS.filter(a => picked.has(a.name)),
+    ...custom,
+  ], [picked, custom])
+  const total = accounts
+    .filter(a => a.type !== 'credit')
+    .reduce((sum, a) => sum + parseMoney(balances[a.name]), 0)
+
+  const index = plan.indexOf(step)
+  /** @param {number} delta */
+  function go(delta) {
+    const next = plan[index + delta]
+    if (!next) return
+    setDir(delta > 0 ? 1 : -1)
+    setStep(next)
+  }
+  const next = () => go(1)
+
+  async function signIn() {
+    if (preview) { setFakeSignedIn(true); return }
+    // Kept first: the redirect is a whole page away and back (see the draft).
+    saveDraft({ step, name, currency, picked: [...picked], custom, balances, limits })
     setSigningIn(true)
     try {
       await signInWithGoogle()
-      // OAuth redirect will take over; setSigningIn stays true during redirect
+      // The redirect takes it from here; the spinner stays until it does.
     } catch (e) {
       console.error('[Onboarding] sign in failed:', e)
-      showToast('Sign-in failed', 'error')
+      showToast('Sign-in failed. Try again.', 'error')
       setSigningIn(false)
     }
   }
 
-  // All selected accounts in order: Cash first, then PH picks, then custom
-  const allAccounts = [
-    CASH,
-    ...PH_ACCOUNTS.filter(a => selectedNames.has(a.name)),
-    ...customAccounts,
-  ]
-
-  function toggleName(name) {
-    setSelectedNames(prev => {
-      const next = new Set(prev)
-      next.has(name) ? next.delete(name) : next.add(name)
-      return next
-    })
+  /** @returns {Promise<{ok: boolean, reason?: string}>} */
+  async function enableNudge() {
+    if (preview) { setNudgeOn(true); return { ok: true } }
+    if (!user?.id) return { ok: false, reason: 'signed-out' }
+    const r = await enableReminders(user.id, key)
+    if (r.ok) {
+      await setNudge(nudgeTime)
+      setNudgeOn(true)
+    }
+    return r
   }
 
-  function addCustomAccount(acct) {
-    setCustomAccounts(prev => [...prev, acct])
-  }
-
-  function removeCustomAccount(name) {
-    setCustomAccounts(prev => prev.filter(a => a.name !== name))
-  }
-
-  function setBalance(name, val) {
-    setBalances(prev => ({ ...prev, [name]: val }))
-  }
-
-  function setCreditLimit(name, val) {
-    setCreditLimits(prev => ({ ...prev, [name]: val }))
-  }
-
-  function toggleExpenseCat(name) {
-    setSelectedExpenseNames(prev => {
-      const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next
-    })
-  }
-
-  function toggleInflowCat(name) {
-    setSelectedInflowNames(prev => {
-      const next = new Set(prev); next.has(name) ? next.delete(name) : next.add(name); return next
-    })
-  }
-
-  async function completeOnboarding(goToImport = false) {
+  async function finish() {
+    if (preview) {
+      showToast('That was a preview. Nothing was saved.', 'success')
+      clearDraft()
+      navigate('/', { replace: true })
+      return
+    }
     setSaving(true)
     try {
       const finalName = name.trim() || 'there'
-      await db.meta.put({ key: 'userName',    value: finalName })
-      await db.meta.put({ key: 'displayName', value: finalName })
-      await db.meta.put({ key: 'currency',    value: currency  })
+      /* Stamped, so a sync that races this one cannot overwrite them with
+         the server's defaults (sync.js, pullPreferences). */
+      const at = new Date().toISOString()
+      await db.meta.put({ key: 'userName', value: finalName, updatedAt: at })
+      await db.meta.put({ key: 'displayName', value: finalName, updatedAt: at })
+      await db.meta.put({ key: 'currency', value: currency, updatedAt: at })
 
-      // Update Cash (seeded in db.js) with starting balance
-      const cashAcct = await db.accounts.where('name').equals('Cash').first()
-      const cashBal  = parseFloat(balances['Cash'] ?? '') || 0
-      if (cashAcct) {
-        await db.accounts.update(cashAcct.id, { balance: cashBal, currency })
+      // Cash is seeded with the database (db.js); it gets its balance here.
+      const cash = await db.accounts.where('name').equals('Cash').first()
+      const cashBal = parseMoney(balances.Cash)
+      if (cash) {
+        await db.accounts.update(cash.id, { balance: cashBal, currency })
         await db.balances.put({ account: 'Cash', balance: cashBal })
       }
 
-      // Add all other selected / custom accounts
-      const toAdd = [
-        ...PH_ACCOUNTS.filter(a => selectedNames.has(a.name)),
-        ...customAccounts,
-      ]
-
-      for (const acct of toAdd) {
-        const isCredit = acct.type === 'credit'
-        const bal      = parseFloat(balances[acct.name]      ?? '') || 0
-        const limit    = parseFloat(creditLimits[acct.name]  ?? '') || 0
-        const row = {
-          name:     acct.name,
-          type:     acct.type,
-          color:    acct.color,
+      /* Each account once, even if this runs twice - a double tap, or a
+         sync that already brought one in. */
+      for (const acct of accounts.slice(1)) {
+        if (await db.accounts.where('name').equals(acct.name).first()) continue
+        const credit = acct.type === 'credit'
+        const bal = parseMoney(balances[acct.name])
+        await db.accounts.add({
+          name: acct.name,
+          type: acct.type,
+          color: acct.color,
           currency,
-          balance:  bal,
-          ...(isCredit ? {
-            creditLimit:    limit,
-            statementDate:  null,
-            dueDate:        null,
-            cutoffDate:     null,
+          balance: bal,
+          ...(credit ? {
+            creditLimit: parseMoney(limits[acct.name]),
+            statementDate: null,
+            dueDate: null,
+            cutoffDate: null,
             minimumPayment: 0,
           } : {}),
-        }
-        await db.accounts.add(row)
+        })
         await db.balances.put({ account: acct.name, balance: bal })
       }
 
-      // Seed categories: locked system cats + user selections + custom
-      const expenseCatsToSeed = [
-        { ...LOCKED_EXPENSE, budget: 0 },
-        ...EXPENSE_PRESETS.filter(p => selectedExpenseNames.has(p.name)).map(c => ({ ...c, budget: 0 })),
-        ...customExpenseCats.map(c => ({ ...c, budget: 0 })),
-      ]
-      const inflowCatsToSeed = [
-        { ...LOCKED_INFLOW, budget: 0 },
-        ...INFLOW_PRESETS.filter(p => selectedInflowNames.has(p.name)).map(c => ({ ...c, budget: 0 })),
-        ...customInflowCats.map(c => ({ ...c, budget: 0 })),
-      ]
-      // Transfer + Transfer Fee — always seeded silently
-      const systemOnlyCats = SYSTEM_CATS
-        .filter(s => s.name !== 'Others' && s.name !== 'Income')
-        .map(c => ({ ...c, budget: 0 }))
-
-      await db.categories.bulkAdd([...expenseCatsToSeed, ...inflowCatsToSeed, ...systemOnlyCats])
+      // The starter categories, less any a sync has already put here.
+      const have = await db.categories.toArray()
+      const missing = starterCategories().filter(c => !have.some(h => h.name === c.name && h.type === c.type))
+      if (missing.length) await db.categories.bulkAdd(missing)
 
       await db.meta.put({ key: 'onboarded', value: true })
-      navigate(goToImport ? '/import' : '/', { replace: true, state: goToImport ? { from: 'onboarding' } : undefined })
+      clearDraft()
+      navigate('/', { replace: true })
     } catch (e) {
       console.error('[Onboarding]', e)
-      showToast('Setup failed - please retry', 'error')
+      showToast('Setup failed. Please try again.', 'error')
       setSaving(false)
     }
   }
 
-  const TOTAL_NON_WELCOME_STEPS = 7
+  // ── The screen ──────────────────────────────────────────────────────────
 
-  return (
-    <div className="onboarding-shell h-dvh text-white relative flex flex-col overflow-hidden">
+  const available = kb.open ? kb.height : Math.max(kb.height, 480)
+  const share = kb.open ? 0.16 : (STAGE_SHARE[step] ?? 0.3)
+  const room = available - 56 - (CONTENT_MIN[step] ?? 360)
+  const stageH = Math.round(Math.max(kb.open ? 96 : 128, Math.min(STAGE_MAX, available * share, room)))
+  const actors = sceneFor(step, {
+    accounts, name, total, currency, signedIn, time: nudgeLabel(nudgeTime), keyboard: kb.open,
+    wide: columnW / stageH, width: columnW, push,
+  })
+  const dots = plan.filter(s => s !== 'welcome' && s !== 'done')
+  const at = dots.indexOf(step)
 
-      {/* Top bar: back + step dots */}
-      <div
-        className="relative z-10 flex items-center justify-between px-6 pb-2 shrink-0"
-        style={{ paddingTop: 'max(3.5rem, calc(env(safe-area-inset-top, 0px) + 1rem))' }}
-      >
-        {step > 0 ? (
-          <button
-            onClick={() => setStep(s => s - 1)}
-            className="w-9 h-9 rounded-full bg-white/[0.08] flex items-center justify-center
-              active:scale-95 transition-transform duration-100 active:bg-white/[0.14]"
-            aria-label="Back"
-          >
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-        ) : (
-          <div className="w-9" />
-        )}
-
-        {step > 0 && <StepDots current={step - 1} total={TOTAL_NON_WELCOME_STEPS} />}
-
-        <div className="w-9" />
-      </div>
-
-      {/* Step content */}
-      <div
-        key={step}
-        className="relative z-10 flex-1 flex flex-col px-6 pt-4 page-enter min-h-0"
-        style={{ paddingBottom: 'max(40px, env(safe-area-inset-bottom))' }}
-      >
-        {step === 0 && <StepWelcome onNext={() => setStep(1)} onSignIn={handleSignIn} signingIn={signingIn} />}
-        {step === 1 && <StepName value={name} onChange={setName} onNext={() => setStep(2)} />}
-        {step === 2 && <StepCurrency value={currency} onChange={setCurrency} onNext={() => setStep(3)} />}
-        {step === 3 && (
-          <StepPickAccounts
-            selectedNames={selectedNames}
-            onToggle={toggleName}
-            customAccounts={customAccounts}
-            onAddCustom={addCustomAccount}
-            onRemoveCustom={removeCustomAccount}
-            onNext={() => setStep(4)}
+  function content() {
+    if (following) {
+      return (
+        <StepBody className="justify-center items-center text-center">
+          <Heading ref={headingRef} title="Getting your account ready" sub="This only takes a moment." />
+          <span className="w-6 h-6 rounded-full border-2 border-white/25 border-t-white animate-spin" aria-hidden="true" />
+        </StepBody>
+      )
+    }
+    switch (step) {
+      case 'welcome':
+        return <StepWelcome ref={headingRef} onNext={next} onSignIn={cloud ? signIn : null} signingIn={signingIn} />
+      case 'openInBrowser':
+        return <StepOpenInBrowser ref={headingRef} onNext={next} />
+      case 'installFirst':
+        return <StepInstallFirst ref={headingRef} onNext={next} />
+      case 'name':
+        return <StepName ref={headingRef} value={name} onChange={setName} onNext={next} />
+      case 'currency':
+        return <StepCurrency ref={headingRef} value={currency} onChange={setCurrency} onNext={next} />
+      case 'accounts':
+        return (
+          <StepAccounts
+            ref={headingRef}
+            selectedNames={picked}
+            onToggle={(/** @type {string} */ n) => setPicked(prev => {
+              const s = new Set(prev)
+              if (s.has(n)) s.delete(n)
+              else s.add(n)
+              return s
+            })}
+            customAccounts={custom}
+            onAddCustom={(/** @type {any} */ a) => setCustom(prev => [...prev, a])}
+            onRemoveCustom={(/** @type {string} */ n) => setCustom(prev => prev.filter(a => a.name !== n))}
+            onNext={next}
           />
-        )}
-        {step === 4 && (
-          <StepSetBalances
-            allAccounts={allAccounts}
+        )
+      case 'balances':
+        return (
+          <StepBalances
+            ref={headingRef}
+            accounts={accounts}
             balances={balances}
-            creditLimits={creditLimits}
-            onBalanceChange={setBalance}
-            onCreditLimitChange={setCreditLimit}
-            onSkip={() => setStep(5)}
-            onNext={() => setStep(5)}
+            limits={limits}
+            currency={currency}
+            onBalance={(/** @type {string} */ n, /** @type {string} */ v) => setBalances(p => ({ ...p, [n]: v }))}
+            onLimit={(/** @type {string} */ n, /** @type {string} */ v) => setLimits(p => ({ ...p, [n]: v }))}
+            onNext={next}
+            onSkip={next}
           />
-        )}
-        {step === 5 && (
-          <StepPickCategories
-            type="expense"
-            stepNum={5}
-            locked={LOCKED_EXPENSE}
-            presets={EXPENSE_PRESETS}
-            selectedNames={selectedExpenseNames}
-            onToggle={toggleExpenseCat}
-            customCats={customExpenseCats}
-            onAddCustom={cat => setCustomExpenseCats(prev => [...prev, cat])}
-            onRemoveCustom={name => setCustomExpenseCats(prev => prev.filter(c => c.name !== name))}
-            onNext={() => setStep(6)}
+        )
+      case 'stayOnTrack':
+        return (
+          <StepStayOnTrack
+            ref={headingRef}
+            signedIn={signedIn}
+            onSignIn={signIn}
+            signingIn={signingIn}
+            push={push}
+            time={nudgeTime}
+            onTime={setNudgeTime}
+            onEnable={enableNudge}
+            onNext={next}
           />
-        )}
-        {step === 6 && (
-          <StepPickCategories
-            type="inflow"
-            stepNum={6}
-            locked={LOCKED_INFLOW}
-            presets={INFLOW_PRESETS}
-            selectedNames={selectedInflowNames}
-            onToggle={toggleInflowCat}
-            customCats={customInflowCats}
-            onAddCustom={cat => setCustomInflowCats(prev => [...prev, cat])}
-            onRemoveCustom={name => setCustomInflowCats(prev => prev.filter(c => c.name !== name))}
-            onNext={() => setStep(7)}
-          />
-        )}
-        {step === 7 && (
+        )
+      case 'install':
+        return <StepInstall ref={headingRef} onNext={next} />
+      case 'done':
+        return (
           <StepDone
-            onFinish={() => completeOnboarding(false)}
+            ref={headingRef}
+            name={name}
+            accounts={accounts.length}
+            total={total}
+            currency={currency}
+            nudge={nudgeOn ? nudgeTime : null}
+            onFinish={finish}
             saving={saving}
           />
-        )}
+        )
+      default:
+        return null
+    }
+  }
+
+  return (
+    <MotionConfig reducedMotion={reduce ? 'always' : 'never'}>
+      {/* `dark` whatever the theme: see .onboarding-shell in index.css.
+          Pinned to the visible part of the screen, so the keyboard shrinks
+          setup rather than covering its buttons. */}
+      <div
+        className="onboarding-shell dark fixed inset-x-0 top-0 overflow-hidden"
+        style={{ top: kb.open ? kb.top : 0, height: kb.open ? kb.height : '100dvh' }}
+      >
+        <OverlayHost.Provider value={host}>
+          <div ref={columnRef} className="onboarding-column relative h-full flex flex-col">
+            <div
+              className="relative z-10 shrink-0 flex items-center justify-between px-5 h-14"
+              style={{ marginTop: 'env(safe-area-inset-top, 0px)' }}
+            >
+              <span className={`transition-opacity duration-300 ${index > 0 && !following ? '' : 'opacity-0 pointer-events-none'}`}>
+                <IconButton label="Back" onClick={() => go(-1)} disabled={index === 0 || following}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                    <path d="M15 18l-6-6 6-6" />
+                  </svg>
+                </IconButton>
+              </span>
+              <Progress count={dots.length} at={at} />
+              <span className="w-9" aria-hidden="true" />
+            </div>
+
+            <Stage actors={actors} height={stageH} hue={accentColor} reduce={reduce} />
+
+            <div className="relative flex-1 min-h-0">
+              <AnimatePresence initial={false} custom={dir}>
+                <motion.div
+                  key={following ? 'following' : step}
+                  custom={dir}
+                  variants={reduce ? FADE : SWAP}
+                  initial="enter"
+                  animate="center"
+                  exit="exit"
+                  transition={reduce ? { duration: 0.2 } : SPRING}
+                  className="absolute inset-0 flex flex-col px-6"
+                >
+                  {content()}
+                </motion.div>
+              </AnimatePresence>
+            </div>
+          </div>
+        </OverlayHost.Provider>
+        <div ref={setHost} />
       </div>
+    </MotionConfig>
+  )
+}
+
+/**
+ * Where setup is: a dot per step, the current one drawn out into a pill -
+ * the one behind shrinking back as the next grows, on the same spring as
+ * everything else. Hidden on the welcome and the last screen, which are not
+ * steps so much as the way in and the way out.
+ *
+ * @param {{count: number, at: number}} props
+ */
+function Progress({ count, at }) {
+  const shown = at >= 0
+  return (
+    <div
+      className={`flex items-center gap-1.5 transition-opacity duration-300 ${shown ? '' : 'opacity-0'}`}
+      role="progressbar"
+      aria-label="Setup"
+      aria-valuemin={1}
+      aria-valuemax={count}
+      aria-valuenow={shown ? at + 1 : undefined}
+      aria-hidden={shown ? undefined : true}
+    >
+      {Array.from({ length: count }, (_, i) => (
+        <motion.span
+          key={i}
+          initial={false}
+          animate={{ width: i === at ? 22 : 6 }}
+          transition={SPRING}
+          className={`block h-1.5 rounded-full transition-colors duration-300 ${i === at ? 'bg-primary' : i < at ? 'bg-primary/55' : 'bg-white/20'}`}
+        />
+      ))}
     </div>
   )
 }

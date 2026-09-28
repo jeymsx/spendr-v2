@@ -71,6 +71,20 @@ export default function AppLayout() {
   }, [showToast, navigate])
   useEffect(() => { pathnameRef.current = location.pathname }, [location.pathname])
 
+  /* `?log=quick` opens the quick log: where the daily check-in's notification
+     points (lib/nudge.js), so a tap on "Anything to log today?" lands on the
+     one field that logs it. The parameter comes off at once, so Back or a
+     reload does not open it again. */
+  useEffect(() => {
+    const params = new URLSearchParams(location.search)
+    if (params.get('log') !== 'quick') return
+    params.delete('log')
+    const rest = params.toString()
+    navigate({ pathname: location.pathname, search: rest ? `?${rest}` : '' }, { replace: true })
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setQuickOpen(true)
+  }, [location.search, location.pathname, navigate])
+
   // Disable browser scroll restoration so it can't override our manual reset
   useEffect(() => {
     if ('scrollRestoration' in history) history.scrollRestoration = 'manual'

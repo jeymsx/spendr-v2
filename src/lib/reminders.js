@@ -7,6 +7,7 @@ import { txMonthKey } from '../utils/txDate'
 import { addMonths, monthKeyOf, monthName, parseMonth } from './recap'
 import { isFlowRow } from './flows'
 import { loanStatus } from './loans'
+import { nudgeReminders } from './nudge'
 
 /**
  * The reminders a ledger is owed, worked out on the device.
@@ -39,8 +40,11 @@ import { loanStatus } from './loans'
  *   The month's recap, on the 1st - once there is anything in the month to
  *   look back on.
  *
- * All at 9 in the morning, local time, which is stored as an absolute instant
- * so the server needs no idea what time zone anybody is in.
+ *   The daily check-in, if it is on: at the time chosen, on each day nothing
+ *   has been logged by then (lib/nudge.js).
+ *
+ * All at 9 in the morning, local time, except the check-in - stored as an
+ * absolute instant, so the server needs no idea what time zone anybody is in.
  *
  * ── Tags ──
  *
@@ -144,10 +148,11 @@ const byTime = (a, b) => a.fireAt.localeCompare(b.fireAt) || a.tag.localeCompare
  * @param {Array<Record<string, any>>} [input.accounts]
  * @param {Array<Record<string, any>>} [input.transactions]
  * @param {Array<Record<string, any>>} [input.recurring]
+ * @param {unknown} [input.nudge]  the daily check-in's time, 'HH:MM', or off
  * @param {Date} [input.now]
  * @returns {Reminder[]}
  */
-export function buildReminders({ accounts = [], transactions = [], recurring = [], now = new Date() } = {}) {
+export function buildReminders({ accounts = [], transactions = [], recurring = [], nudge = null, now = new Date() } = {}) {
   const until = now.getTime() + HORIZON_DAYS * DAY_MS
   /** @type {Reminder[]} */
   const out = []
@@ -251,11 +256,18 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
     })
   }
 
+  /* The daily check-in, when it is on (lib/nudge.js): two weeks of them,
+     today's left out once today has something logged. */
+  const nudges = nudgeReminders({ nudge, transactions, now })
+
   /* The cap is for a ledger of daily bills. It must not cost the one
-     reminder a month that is not a bill, so the recaps are kept outside it. */
+     reminder a month that is not a bill, so the recaps are kept outside it -
+     and the check-ins, which were asked for by name and must neither be
+     crowded out by bills nor crowd a bill out. */
   return [
     ...out.sort(byTime).slice(0, MAX_REMINDERS - recaps.length),
     ...recaps,
+    ...nudges,
   ].sort(byTime)
 }
 

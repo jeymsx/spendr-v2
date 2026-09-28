@@ -16,6 +16,7 @@ import { setReduceMotion, systemReducesMotion } from '../../components/ui/motion
 import { useReduceMotionChosen } from '../../hooks/useReduceMotion'
 import { useAppLock } from '../../components/lock/LockGate'
 import { useAchievements } from '../../context/AchievementContext'
+import { promptInstall, useInstall } from '../../lib/install'
 // Every heavy manager is the mobile sheet, reused — roughly 2,000 lines of
 // category, budget, template, profile, restore and reset logic.
 import {
@@ -114,6 +115,7 @@ export default function WebSettings() {
   const navigate = useNavigate()
   const appLock = useAppLock()
   const reduceChosen = useReduceMotionChosen()
+  const installContext = useInstall()
   const [section, setSection] = useState('profile')
   const { theme, toggleTheme, style, setStyle, accentColor, setAccentColor } = useTheme()
   const { user, signOut, signInWithGoogle } = useAuth()
@@ -325,6 +327,14 @@ export default function WebSettings() {
                 <Btn onClick={() => setViewMode('mobile')}>Switch to mobile</Btn>
                 {viewPref !== 'auto' && <Btn onClick={() => setViewMode('auto')}>Use auto</Btn>}
               </Row>
+              {/* Only when the browser has offered to install. A computer
+                  with no offer has nothing to press, and in the installed
+                  window there is nothing left to do. */}
+              {installContext === 'prompt' && (
+                <Row label="Install Spendr" hint="Its own window, from your dock or taskbar">
+                  <Btn tone="primary" onClick={() => promptInstall()}>Install</Btn>
+                </Row>
+              )}
             </WebPanel>
 
             <WebPanel title="Cloud sync">

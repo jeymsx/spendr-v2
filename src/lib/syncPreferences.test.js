@@ -128,4 +128,23 @@ describe('pullPreferences', () => {
     remote.error = { code: '500', message: 'boom' }
     await expect(pullPreferences('u1')).rejects.toThrow(/user_preferences pull/)
   })
+
+  /* The daily check-in has to agree on every device, or the one that does
+     not know about it deletes the other's nudges on its next upload. */
+  it('brings the daily check-in across, and carries "off" too', async () => {
+    remote.row = { daily_nudge: '20:30', updated_at: NEW }
+    await pullPreferences('u1')
+    expect(metaStore.get('dailyNudge').value).toBe('20:30')
+
+    remote.row = { daily_nudge: 'off', updated_at: '2026-09-20T00:00:00.000Z' }
+    await pullPreferences('u1')
+    expect(metaStore.get('dailyNudge').value).toBe('off')
+  })
+
+  it('keeps a check-in time chosen here that the server has not heard about', async () => {
+    metaStore.set('dailyNudge', { key: 'dailyNudge', value: '21:00', updatedAt: NEW })
+    remote.row = { daily_nudge: 'off', updated_at: OLD }
+    await pullPreferences('u1')
+    expect(metaStore.get('dailyNudge').value).toBe('21:00')
+  })
 })

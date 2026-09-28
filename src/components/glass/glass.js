@@ -399,6 +399,7 @@ const SHIELD = 'M64 18L100 30V58C100 85 84 101 64 110C44 101 28 85 28 58V30Z'
 const BAG_BODY = rpoly([[34, 50], [94, 50], [100, 108], [28, 108]], 9)
 const MONEY_BAG = 'M50 42C38 52 25 66 25 85C25 103 42 111 64 111C86 111 103 103 103 85C103 66 90 52 78 42Z'
 const HEART = 'M64 104C44 90 24 74 24 52A20 20 0 0 1 64 42A20 20 0 0 1 104 52C104 74 84 90 64 104Z'
+const BELL = 'M64 22C49 22 40 34 40 50V71L32 83C30.5 85.5 32 88 35 88H93C96 88 97.5 85.5 96 83L88 71V50C88 34 79 22 64 22Z'
 
 /**
  * Each picture: a function of nothing, returning its layers. Drawn in a 128
@@ -614,6 +615,27 @@ const PICTURES = {
     G(rr(26, 50, 76, 50, 6)),
     S(rr(34, 58, 9, 36, 3) + rr(52, 58, 9, 36, 3) + rr(67, 58, 9, 36, 3) + rr(85, 58, 9, 36, 3), { tone: 'mid', depth: [1, 1.4] }),
     S(rr(18, 100, 92, 10, 5)),
+  ],
+  /* A Home Screen: the phone's pane over a second phone set back, its apps
+     in a grid, and one new app arriving at the foot of it. For installing. */
+  phone: () => [
+    S(rr(34, 20, 50, 92, 13), { t: 'rotate(-11 59 66)' }),
+    G(rr(42, 14, 52, 100, 13)),
+    X('<g fill="{deep}" opacity=".32">'
+      + [0, 1, 2].map(c => [0, 1, 2].map(r => `<rect x="${50 + c * 13}" y="${28 + r * 13}" width="9" height="9" rx="2.8"/>`).join('')).join('')
+      + '</g>'),
+    S(rr(56, 72, 24, 24, 7), { tone: 'mid', depth: [1.2, 1.6] }),
+    Y('down', { x: 68, y: 84, s: 0.68, w: 2.6, ink: 'white' }),
+    X('<rect x="60" y="104" width="16" height="3" rx="1.5" fill="{deep}" opacity=".35"/>'),
+  ],
+  /* A bell, a pane over a solid one tipped back, with its clapper under the
+     rim and a dot for the notice it brings. For the daily reminder. */
+  bell: () => [
+    S(BELL, { t: 'rotate(-14 64 60) translate(-7 2)' }),
+    G(BELL, { t: 'translate(3 0)' }),
+    S(rr(61, 13, 12, 12, 6), { tone: 'mid', depth: [1, 1.2] }),
+    S(circ(67, 99, 8.5), { tone: 'mid', depth: [1, 1.4] }),
+    S(circ(94, 32, 10), { depth: [1.2, 1.6] }),
   ],
 }
 
