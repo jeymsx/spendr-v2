@@ -81,8 +81,8 @@ function LoadingScreen() {
   )
 }
 
-/** A single-task page: one centred column. @param {{width?: number, children: import('react').ReactNode}} props */
-const Column = ({ width = 680, children }) => <WebScroll width={width}>{children}</WebScroll>
+/** A single-task page: one centred column. @param {{width?: number, top?: boolean, children: import('react').ReactNode}} props */
+const Column = ({ width = 680, top = false, children }) => <WebScroll width={width} top={top}>{children}</WebScroll>
 /** A form in a card, centred (WebFormPage). @param {{width?: number, children: import('react').ReactNode}} props */
 const Form = ({ width = 600, children }) => <WebScroll width={width + 64}><WebFormPage width={width}>{children}</WebFormPage></WebScroll>
 
@@ -146,8 +146,8 @@ export default function WebApp() {
               </Route>
 
               {/* ── You ── */}
-              <Route path="/notifications" element={<Column><Notifications /></Column>} />
-              <Route path="/achievements" element={<Column width={760}><Achievements /></Column>} />
+              <Route path="/notifications" element={<Column top><Notifications /></Column>} />
+              <Route path="/achievements" element={<Column width={760} top><Achievements /></Column>} />
               <Route path="/badges" element={<Navigate to="/achievements?tab=badges" replace />} />
               <Route path="/recap" element={<Column><Recap /></Column>} />
               <Route path="/recap/:month" element={<Column><Recap /></Column>} />

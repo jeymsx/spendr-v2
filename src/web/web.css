@@ -116,8 +116,23 @@ html.web .web-shell .pb-nav { padding-bottom: 2rem; }
    button would only step through what the list already shows. Hidden, not
    removed, so its title stays centred. */
 html.web .web-pane-detail[data-root='true'] .subpage-back { visibility: hidden; }
-/* A list's own back button went to Home. The sidebar is how you leave. */
-html.web .web-pane-list .subpage-back { visibility: hidden; }
+/* A list's own back button went to Home, and so does a page the sidebar
+   opens. The sidebar is how you leave either. */
+html.web .web-pane-list .subpage-back,
+html.web .web-scroll[data-top='true'] .subpage-back { visibility: hidden; }
+
+/* ── Pointer ────────────────────────────────────────────────────────────────
+   The phone's rows answer a press (active:bg-…). Under a cursor they answer
+   hovering too, with the same tint, a step fainter. */
+html.web [class*='active:bg-slate-50']:hover:not(:disabled) { background-color: rgb(248 250 252 / 0.8); }
+html.web.dark [class*='dark:active:bg-white/[0.04]']:hover:not(:disabled) { background-color: rgb(255 255 255 / 0.03); }
+
+/* Scrollbars as thin as the phone's are absent: a window still needs one. */
+html.web .web-scroll,
+html.web .web-pane {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
 
 /* The phone's pages are drawn for a phone's top: a notch's worth of room
    above every header. A window has none. */
@@ -202,3 +217,53 @@ html.web.dark .web-toast-close { background: #1b2433; border-color: rgba(255, 25
 
 /* The phone's bar stays for the phone. */
 html.web .toast-host { display: none; }
+
+/* ── Home, in two columns (WebHome, pages/Dashboard.jsx layout="desktop") ── */
+
+html.web .home-desktop { padding: 0.5rem 0.75rem 2.5rem; }
+html.web .home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  column-gap: 0.5rem;
+  align-items: start;
+}
+/* Each column starts level with the other, whatever its first section's
+   own margin was on the phone. */
+html.web .home-column > :first-child { margin-top: 1rem; }
+
+/* The account cards: a rail to swipe on the phone, a grid that shows them
+   all here. */
+html.web .home-desktop .home-accounts-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  overflow: visible;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+html.web .home-desktop .home-accounts-rail > .acct-card { width: auto; }
+html.web .home-desktop .home-accounts-rail > .shrink-0.w-1 { display: none; }
+
+/* ── Narrower windows ───────────────────────────────────────────────────────
+   Under 1280px a list and its page side by side leave the page a phone's
+   width, so the sidebar folds to its icons (each keeps its name as a
+   tooltip) and the list pane narrows. */
+@media (max-width: 1279px) {
+  html.web .web-sidebar { width: 76px; }
+  html.web .web-sidebar .web-brand-text,
+  html.web .web-sidebar .web-nav-heading,
+  html.web .web-sidebar .web-add-label,
+  html.web .web-sidebar .web-nav-item > span:not(.web-nav-icon):not(.web-nav-badge) { display: none; }
+  html.web .web-sidebar .web-nav-heading + .web-nav-item { margin-top: 0.75rem; }
+  html.web .web-sidebar .web-nav-item { justify-content: center; padding: 0; position: relative; }
+  html.web .web-sidebar .web-nav-badge {
+    position: absolute;
+    top: 0.2rem;
+    right: 0.5rem;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.25rem;
+    line-height: 1rem;
+    font-size: 0.625rem;
+  }
+  html.web .web-pane-list { width: 360px !important; }
+}

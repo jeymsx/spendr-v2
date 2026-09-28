@@ -88,6 +88,7 @@ function BillRow({ rec, onOpen, isLast }) {
     <>
       <button
         onClick={() => onOpen(rec)}
+        data-web-id={`recurring-${rec.id}`}
         className="w-full flex items-center gap-3 px-4 py-4 text-left
           active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
       >

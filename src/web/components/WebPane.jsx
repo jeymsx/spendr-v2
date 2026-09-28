@@ -28,15 +28,19 @@ function PaneSpinner() {
  * One column, centred, scrolling: Home, Transactions, and the single-task
  * pages. `width` is the column's cap - a form reads worst stretched.
  *
- * @param {{width?: number, children: import('react').ReactNode, className?: string, pad?: boolean}} props
+ * `top` is for a page the sidebar opens (Notifications, Achievements): on
+ * the phone it hangs off Home, so it has a back button, and here it is a
+ * place of its own with nothing to go back to.
+ *
+ * @param {{width?: number, children: import('react').ReactNode, className?: string, pad?: boolean, top?: boolean}} props
  */
-export function WebScroll({ width = 1200, children, className = '', pad = true }) {
+export function WebScroll({ width = 1200, children, className = '', pad = true, top = false }) {
   const ref = useRef(/** @type {HTMLDivElement|null} */ (null))
   const location = useLocation()
   // A new page starts at its top, as the phone's do.
   useLayoutEffect(() => { if (ref.current) ref.current.scrollTop = 0 }, [location.pathname])
   return (
-    <div id="app-main" ref={ref} className="web-scroll h-full overflow-y-auto overflow-x-hidden">
+    <div id="app-main" ref={ref} className="web-scroll h-full overflow-y-auto overflow-x-hidden" data-top={top ? 'true' : undefined}>
       <div className={`web-column mx-auto w-full ${pad ? 'px-8 py-6' : ''} ${className}`} style={{ maxWidth: width }}>
         {children}
       </div>

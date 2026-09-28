@@ -55,6 +55,27 @@ export function AddFlowProvider({ children }) {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setFlow(null) }, [location.key])
 
+  /* One key from anywhere, as a desktop app would have it: E, I, T and Q
+     open the expense, inflow, transfer and quick-log forms (WebAddMenu
+     shows each beside its name). Not while typing, not with a modifier
+     held (Ctrl+T is the browser's), and not over a sheet or dialog. */
+  useEffect(() => {
+    if (flow) return
+    const KEYS = /** @type {Record<string, string>} */ ({ e: 'expense', i: 'inflow', t: 'transfer', q: 'quick' })
+    const onKey = (/** @type {KeyboardEvent} */ e) => {
+      if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      const type = KEYS[e.key.toLowerCase()]
+      if (!type) return
+      const el = /** @type {HTMLElement|null} */ (e.target)
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return
+      if (document.querySelector('[role="dialog"], .sheet-panel')) return
+      e.preventDefault()
+      setFlow(type)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [flow])
+
   useEffect(() => {
     if (!flow) return
     const onKey = (e) => { if (e.key === 'Escape') setFlow(null) }

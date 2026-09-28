@@ -109,6 +109,7 @@ function CategoryRow({ cat }) {
   return (
     <Link
       to={`/categories/${encodeURIComponent(cat.name)}`}
+      data-web-id={`category-${cat.name}`}
       className="block px-4 py-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
     >
       <div className="flex items-center gap-3">
@@ -590,6 +591,7 @@ export default function Budget() {
                           needs one. */}
                       <Link
                         to={`/categories/${encodeURIComponent(c.name)}`}
+                        data-web-id={`category-${c.name}`}
                         className="flex items-center gap-3 px-4 py-3
                           active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
                       >

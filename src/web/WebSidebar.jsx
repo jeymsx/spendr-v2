@@ -33,6 +33,8 @@ function NavItem({ to, label, Icon, badge = 0, end = false }) {
       to={to}
       end={end}
       className={({ isActive }) => `web-nav-item${isActive ? ' is-active' : ''}`}
+      // The name, for the narrow sidebar that shows only the icons.
+      title={label}
     >
       <span className="web-nav-icon" aria-hidden="true"><Icon size={19} /></span>
       <span className="flex-1 truncate">{label}</span>
@@ -86,7 +88,7 @@ export default function WebSidebar() {
     <aside className="web-sidebar shrink-0 w-[248px] h-full flex flex-col">
       <div className="px-5 pt-6 pb-5 flex items-center gap-2.5">
         <span className="web-brand" aria-hidden="true">S</span>
-        <div className="min-w-0">
+        <div className="web-brand-text min-w-0">
           <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
           <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>
         </div>
@@ -106,7 +108,7 @@ export default function WebSidebar() {
 
       <div className="web-sidebar-foot px-3 py-3 flex flex-col gap-1">
         <WebSyncStatus />
-        <button type="button" onClick={() => setViewMode('mobile')} className="web-nav-item web-nav-item-quiet">
+        <button type="button" onClick={() => setViewMode('mobile')} className="web-nav-item web-nav-item-quiet" title="Switch to mobile view">
           <span className="web-nav-icon" aria-hidden="true"><WebIconPhone /></span>
           <span className="flex-1 truncate text-left">Switch to mobile view</span>
         </button>
