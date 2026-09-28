@@ -31,7 +31,11 @@ import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
 import { currencyOfAccountName } from '../lib/fxContext'
-import { isEverydayAccount } from '../lib/accountMeta'
+import { isEverydayAccount, isLoan } from '../lib/accountMeta'
+import { loanStatus } from '../lib/loans'
+import { payLoan } from '../db/accountWrites'
+import LoanPaySheet from './accounts/LoanPaySheet'
+import { BrandSquare } from './accounts/HoldingTile'
 import { toDateInput } from '../utils/txDate'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -234,6 +238,81 @@ function CardBillRow({ bill, onPay, onOpen, isLast }) {
           variant="tint"
           className="shrink-0 px-3"
           onClick={(e) => { e.stopPropagation(); onPay(bill) }}
+        >
+          Pay
+        </Button>
+      </div>
+      {!isLast && <Divider inset="glyph" />}
+    </>
+  )
+}
+
+/**
+ * A loan's next payment, beside the card statements.
+ *
+ * Not a recurring bill, though it recurs: a bill posts its whole amount as
+ * spending, and a loan payment is mostly your own money paying down what you
+ * owe - only the interest is spending. So it is listed here the way a card
+ * statement is, derived from the loan (lib/loans loanStatus) rather than
+ * stored, and Pay opens the loan's own sheet, which splits it.
+ *
+ * The loan's logo square rather than a card face: a loan is not drawn as a
+ * card anywhere (accounts/HoldingTile).
+ */
+function LoanDueRow({ due, onPay, onOpen, isLast }) {
+  const { account, status } = due
+  const today = new Date(); today.setHours(0, 0, 0, 0)
+  const days = Math.round((new Date(status.nextDue).setHours(0, 0, 0, 0) - today.getTime()) / 864e5)
+  const cur = account.currency || currencyOfAccountName(account.name)
+  const next = status.nextDue.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+  const tone = status.overdue ? 'text-red-500 dark:text-red-400 font-semibold'
+    : status.paidThisCycle ? 'text-emerald-600 dark:text-emerald-400 font-semibold'
+    : 'text-slate-500 dark:text-slate-400'
+  const label = status.overdue ? `${Math.abs(days)}d overdue`
+    /* One word, because the column is narrow: "Paid · next Nov 20" truncated
+       at 390px and "Paid · Nov 20" at 360. The next date is a tap away, and
+       in the row's label for a screen reader. */
+    : status.paidThisCycle ? 'Paid'
+    : days === 0 ? 'Due today'
+    : days === 1 ? 'Due tomorrow'
+    : `Due in ${days} days`
+
+  return (
+    <>
+      <div className="w-full flex items-center gap-3 pr-4">
+        <button
+          type="button"
+          onClick={() => onOpen?.(account)}
+          aria-label={`Open ${account.name}${status.paidThisCycle ? `, paid, next due ${next}` : ''}`}
+          className="flex-1 min-w-0 flex items-center gap-3 px-4 py-4 text-left
+            active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+        >
+          <BrandSquare acct={account} size={40} className="rounded-2xl" />
+
+          <span className="flex-1 min-w-0">
+            <span className="block text-14 font-semibold truncate text-slate-800 dark:text-white">
+              {account.name}
+            </span>
+            <span className={`block text-11 truncate ${tone}`}>{label}</span>
+          </span>
+
+          {/* The interest under the amount, where a card puts its minimum:
+              the one part of the payment that is spending. */}
+          <span className="shrink-0 text-right">
+            <span className="block text-14 font-semibold tabular-nums text-slate-800 dark:text-white">
+              {fmt(status.next.amount, cur)}
+            </span>
+            <span className="block text-11 text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
+              {status.next.interest > 0.005 ? `${fmtCompact(status.next.interest, cur)} interest` : 'no interest'}
+            </span>
+          </span>
+        </button>
+
+        <Button
+          size="xs"
+          variant="tint"
+          className="shrink-0 px-3"
+          onClick={(e) => { e.stopPropagation(); onPay(due) }}
         >
           Pay
         </Button>
@@ -656,6 +735,42 @@ export default function Recurring() {
     })
   }, [navigate])
 
+  /* Loans with a payment set and something still owed, soonest first - see
+     LoanDueRow. Kept apart from `upcoming` for the reason card statements
+     are: no frequency to group by, and no place in the bills total. */
+  const loanDues = useMemo(
+    () => (accounts ?? [])
+      .filter(isLoan)
+      .map(a => ({ account: a, status: loanStatus(a, transactions ?? []) }))
+      .filter(l => l.status.owed > 0.005 && l.status.next && l.status.nextDue)
+      .sort((x, y) => x.status.nextDue.getTime() - y.status.nextDue.getTime()),
+    [accounts, transactions],
+  )
+  const { showToast } = useToast()
+  /* Which loan the sheet is for outlives the sheet being open, so it still
+     has its loan while it animates away. */
+  const [payingLoanId, setPayingLoanId] = useState(/** @type {number|null} */ (null))
+  const [loanPayOpen, setLoanPayOpen] = useState(false)
+  const [loanSaving, setLoanSaving] = useState(false)
+  const payingDue = loanDues.find(l => l.account.id === payingLoanId) ?? null
+  const handleLoanPay = useCallback(async (/** @type {{amount: number, from: any}} */ { amount, from }) => {
+    const loan = payingDue?.account
+    if (!loan || !from || !(amount > 0)) return
+    setLoanSaving(true)
+    try {
+      const { interest } = await payLoan({ loan, from: from.name, amount, dateIso: new Date().toISOString() })
+      setLoanPayOpen(false)
+      showToast(interest > 0.005
+        ? `Paid ${fmt(amount, loan.currency)}, ${fmt(interest, loan.currency)} of it interest`
+        : `Paid ${fmt(amount, loan.currency)} to ${loan.name}`)
+    } catch (e) {
+      console.error('[Recurring] loan payment failed:', e)
+      showToast('Could not record the payment', 'error')
+    } finally {
+      setLoanSaving(false)
+    }
+  }, [payingDue, showToast])
+
   /** Active bills falling due in the next 30 days, soonest first. */
   const upcoming = useMemo(() => {
     const now   = new Date(); now.setHours(0, 0, 0, 0)
@@ -711,6 +826,51 @@ export default function Recurring() {
 
   const loading = allRec === undefined
 
+  /* What you owe that is not a recurring record: card statements and loan
+     payments. Its own piece because it shows with no bills at all too - a
+     ledger with a card or a loan and nothing on Recurring still has these
+     to pay, and the empty state used to hide them. */
+  const dueSections = (
+    <>
+      {/* Statements first. A card bill is usually the largest single
+          thing owed in a month, and it is the one with a late fee
+          attached to missing it. */}
+      {cardBills.length > 0 && (
+        <div className="px-5 mb-5">
+          <SectionLabel inset="none" gap="normal">Card statements</SectionLabel>
+          <Card clip>
+            {cardBills.map((b, i) => (
+              <CardBillRow
+                key={b.id}
+                bill={b}
+                onPay={payCard}
+                onOpen={(x) => navigate(`/accounts/${x.account.id}`)}
+                isLast={i === cardBills.length - 1}
+              />
+            ))}
+          </Card>
+        </div>
+      )}
+
+      {loanDues.length > 0 && (
+        <div className="px-5 mb-5">
+          <SectionLabel inset="none" gap="normal">Loan payments</SectionLabel>
+          <Card clip>
+            {loanDues.map((l, i) => (
+              <LoanDueRow
+                key={l.account.id}
+                due={l}
+                onPay={(d) => { setPayingLoanId(d.account.id); setLoanPayOpen(true) }}
+                onOpen={(a) => navigate(`/accounts/${a.id}`)}
+                isLast={i === loanDues.length - 1}
+              />
+            ))}
+          </Card>
+        </div>
+      )}
+    </>
+  )
+
   return (
     <div className="pb-nav">
       {/* ── Header ──
@@ -744,16 +904,19 @@ export default function Recurring() {
           <SkeletonList rows={3} />
         </div>
       ) : enriched.length === 0 ? (
-        <EmptyState
-          icon={<IconNoBills />}
-          title="Nothing recurring yet"
-          body="Bills, subscriptions and your pay: anything that repeats."
-          action={
-            <Button onClick={() => navigate('/recurring/new')} className="px-5">
-              Add the first one
-            </Button>
-          }
-        />
+        <>
+          <EmptyState
+            icon={<IconNoBills />}
+            title="Nothing recurring yet"
+            body="Bills, subscriptions and your pay: anything that repeats."
+            action={
+              <Button onClick={() => navigate('/recurring/new')} className="px-5">
+                Add the first one
+              </Button>
+            }
+          />
+          <div className="mt-2">{dueSections}</div>
+        </>
       ) : (
         <>
           {/* ── The whole commitment, in one figure ──
@@ -805,25 +968,7 @@ export default function Recurring() {
 
           {tab === 'upcoming' ? (
             <section className="mt-5">
-              {/* Statements first. A card bill is usually the largest single
-                  thing owed in a month, and it is the one with a late fee
-                  attached to missing it. */}
-              {cardBills.length > 0 && (
-                <div className="px-5 mb-5">
-                  <SectionLabel inset="none" gap="normal">Card statements</SectionLabel>
-                  <Card clip>
-                    {cardBills.map((b, i) => (
-                      <CardBillRow
-                        key={b.id}
-                        bill={b}
-                        onPay={payCard}
-                        onOpen={(x) => navigate(`/accounts/${x.account.id}`)}
-                        isLast={i === cardBills.length - 1}
-                      />
-                    ))}
-                  </Card>
-                </div>
-              )}
+              {dueSections}
 
               <SectionLabel inset="gutter" gap="tight"
                 action={<span className="text-12 tabular-nums text-slate-500 dark:text-slate-400 shrink-0">Next 30 days</span>}
@@ -893,6 +1038,20 @@ export default function Recurring() {
       {/* Add only. Editing an existing bill happens on its own page, which is
           also where posting, pausing and deleting live. */}
 
+      {/* The loan's own pay sheet, the one its page opens: the interest split
+          is its whole point, and a second way to pay without it would record
+          the principal as spending. */}
+      {payingDue && (
+        <LoanPaySheet
+          open={loanPayOpen}
+          onClose={() => setLoanPayOpen(false)}
+          loan={payingDue.account}
+          accounts={accounts ?? []}
+          status={payingDue.status}
+          saving={loanSaving}
+          onPay={handleLoanPay}
+        />
+      )}
     </div>
   )
 }
