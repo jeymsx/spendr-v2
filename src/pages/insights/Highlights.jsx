@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import Rail from '../../components/ui/Rail'
 import SectionHeading from '../../components/ui/SectionHeading'
 import { GlassArt } from '../../components/glass/GlassArt'
@@ -28,6 +28,16 @@ import { recapPalette } from '../recap/theme'
  * colour repeated, and carries a glass picture for its kind of fact, large
  * and cut off by the corner. The Clean style keeps its flat white cards,
  * with the picture in the accent.
+ *
+ * ── How the pictures move ──
+ *
+ * Each one assembles the first time its card comes into view - the solid
+ * piece slides in, the glass settles over it, the mark lands last - so
+ * swiping along the row, every card arrives as you reach it. A tap does it
+ * again, with the picture lifting and tilting as it comes together, and the
+ * card gives under the finger. Nothing loops: a row of eight pictures
+ * bobbing forever would be noise, and each is a live filter graph. All of
+ * it stops for reduced motion.
  */
 
 const SAID_ELSEWHERE = new Set(['savings', 'biggest'])
@@ -70,34 +80,78 @@ export default function Highlights({ items }) {
     <section>
       <SectionHeading>Highlights</SectionHeading>
       <Rail className="gap-3 px-5 snap-x snap-mandatory scroll-px-5 pb-2 -mb-2" role="list" aria-label="Highlights">
-        {shown.map((item, i) => {
-          const tone = pal.tones[i % pal.tones.length]
-          return (
-            <div
-              key={item.key}
-              role="listitem"
-              className={`relative isolate shrink-0 snap-start w-[264px] h-[104px] rounded-[22px] overflow-hidden flex items-center pl-4${flat ? ' card' : ''}`}
-              style={flat ? undefined : { background: tone.background, boxShadow: shadow }}
-            >
-              {!flat && <span className="recap-texture" aria-hidden="true" />}
-              {/* Large and cut off by the corner - it is the card's picture,
-                  not an icon to read; the sentence says it all. */}
-              <GlassArt
-                name={GLASS[item.icon] ?? 'chartUp'}
-                hue={flat ? accentColor : tone.light}
-                size={116}
-                className="pointer-events-none absolute -right-4 -bottom-5"
-              />
-              <p
-                className={`relative max-w-[60%] text-13 font-medium leading-snug line-clamp-4${flat ? ' text-slate-700 dark:text-slate-200' : ''}`}
-                style={flat ? undefined : { color: pal.ink }}
-              >
-                {item.text}
-              </p>
-            </div>
-          )
-        })}
+        {shown.map((item, i) => (
+          <HighlightCard
+            key={item.key}
+            item={item}
+            tone={pal.tones[i % pal.tones.length]}
+            ink={pal.ink}
+            flat={flat}
+            accentColor={accentColor}
+            shadow={shadow}
+          />
+        ))}
       </Rail>
     </section>
+  )
+}
+
+/**
+ * One highlight: the sentence, and its picture - assembled when the card
+ * first comes into view, and again on every tap.
+ *
+ * @param {{item: {key: string, icon: string, text: string}, tone: {light: string, background: string},
+ *          ink: string, flat: boolean, accentColor: string, shadow: string}} props
+ */
+function HighlightCard({ item, tone, ink, flat, accentColor, shadow }) {
+  const ref = useRef(/** @type {HTMLDivElement|null} */ (null))
+  // Without an observer to say when it is in view (jsdom, old WebViews), it is simply there.
+  const [seen, setSeen] = useState(() => typeof IntersectionObserver === 'undefined')
+  const [taps, setTaps] = useState(0)
+
+  // Half in view along the row, the first time: the picture arrives.
+  useEffect(() => {
+    const el = ref.current
+    if (seen || !el) return
+    const io = new IntersectionObserver((entries) => {
+      if (entries.some(e => e.isIntersecting)) { setSeen(true); io.disconnect() }
+    }, { threshold: 0.5 })
+    io.observe(el)
+    return () => io.disconnect()
+  }, [seen])
+
+  return (
+    <div
+      ref={ref}
+      role="listitem"
+      onClick={() => { setSeen(true); setTaps(t => t + 1) }}
+      className={`press relative isolate shrink-0 snap-start w-[264px] h-[104px] rounded-[22px] overflow-hidden flex items-center pl-4 cursor-pointer select-none [--press-scale:0.97]${flat ? ' card' : ''}`}
+      style={flat ? undefined : { background: tone.background, boxShadow: shadow }}
+    >
+      {!flat && <span className="recap-texture" aria-hidden="true" />}
+      {/* Large and cut off by the corner - it is the card's picture, not an
+          icon to read; the sentence says it all. Keyed by the tap count, so
+          each tap mounts it afresh and it comes together again. */}
+      <span
+        key={taps}
+        aria-hidden="true"
+        className={`pointer-events-none absolute -right-4 -bottom-5 block w-[116px] h-[116px]${taps ? ' highlight-lift' : ''}`}
+      >
+        {seen && (
+          <GlassArt
+            name={GLASS[item.icon] ?? 'chartUp'}
+            hue={flat ? accentColor : tone.light}
+            size={116}
+            animate
+          />
+        )}
+      </span>
+      <p
+        className={`relative max-w-[60%] text-13 font-medium leading-snug line-clamp-4${flat ? ' text-slate-700 dark:text-slate-200' : ''}`}
+        style={flat ? undefined : { color: ink }}
+      >
+        {item.text}
+      </p>
+    </div>
   )
 }

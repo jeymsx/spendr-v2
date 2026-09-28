@@ -2260,10 +2260,24 @@ html.flat.dark .swipe-row[data-lifted='true'] > .swipe-face {
   38%, 100% { transform: rotate(24deg) translateX(260px); }
 }
 
+/* A highlight's picture on a tap (insights/Highlights.jsx): it lifts and
+   tilts while its layers come together again, and settles - an ease-out
+   with no overshoot, the way everything outside the Wrapped story moves. */
+.highlight-lift {
+  transform-origin: 70% 85%;
+  animation: highlightLift 0.62s cubic-bezier(0.2, 0.9, 0.25, 1) both;
+}
+@keyframes highlightLift {
+  0%   { transform: none; }
+  32%  { transform: translate(-3px, -9px) rotate(-7deg) scale(1.05); }
+  100% { transform: none; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .glass-enter .gx-s, .glass-enter .gx-g,
   .glass-enter .gx-y, .glass-enter .gx-p,
-  .glass-float > svg, .glass-shine .gx-shine { animation: none; }
+  .glass-float > svg, .glass-shine .gx-shine,
+  .highlight-lift { animation: none; }
 }
 
 /* ── The celebration screen ──────────────────────────────────────────
