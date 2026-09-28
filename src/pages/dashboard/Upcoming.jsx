@@ -189,12 +189,12 @@ export function UpcomingRow({ item, isLast }) {
  * Without a payday on the Recurring list the forecast is guessing, so it
  * says so and offers the one thing that fixes it.
  */
-/* The Safe to spend wallet. Big enough that the band's bottom edge cuts
-   through its rounded base, and its frame starts a quarter of its size above
-   the card so the top stands clear of it. A little smaller on a narrow phone,
-   where at full size it ran into the figure. */
-const WALLET_SIZE = 'min(200px, 52vw)'
-const WALLET_RISE = 'calc(min(200px, 52vw) * -0.25)'
+/* The Safe to spend wallet. About as small as it can be while the band's
+   bottom edge still cuts through its rounded base and its top still stands
+   clear of the card - the frame starts a little under a quarter of its size
+   above the card. A little smaller again on a narrow phone. */
+const WALLET_SIZE = 'min(170px, 46vw)'
+const WALLET_RISE = 'calc(min(170px, 46vw) * -0.18)'
 
 export default function UpcomingSection({ forecast, items }) {
   const navigate = useNavigate()
@@ -228,7 +228,7 @@ export default function UpcomingSection({ forecast, items }) {
               runs out. The frame is what clips it: it starts above the card
               and ends where the band does. Decoration: no taps, nothing read. */}
           <span
-            className="pointer-events-none absolute right-5 bottom-0 overflow-hidden"
+            className="pointer-events-none absolute right-1.5 bottom-0 overflow-hidden"
             style={{ top: WALLET_RISE, width: WALLET_SIZE }}
             aria-hidden="true"
           >
