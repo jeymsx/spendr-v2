@@ -24,6 +24,9 @@ import { DetailTxRow } from './accounts/DetailParts'
 import { fmt, fmtCompact } from '../lib/money'
 import { txBase } from '../lib/fxContext'
 import { isAdjustment, isIncome, isSpend } from '../lib/flows'
+import { ListEnd, useInfiniteList } from '../components/ui/InfiniteList'
+
+const NO_ROWS = /** @type {Array<Record<string, any>>} */ ([])
 import { effectiveLimit } from '../lib/rollover'
 
 /**
@@ -120,6 +123,8 @@ export default function CategoryDetail() {
      category but are neither income nor spending (lib/flows.js). They stay in
      the list below, where they explain a balance. */
   const flowTxs = useMemo(() => (catTxs ?? []).filter(t => !isAdjustment(t)), [catTxs])
+  // The list below, a page at a time as you scroll (ui/InfiniteList).
+  const pagedTxs = useInfiniteList(catTxs ?? NO_ROWS, { resetKey: name })
 
   const range = useMemo(
     () => SPEND_TREND_RANGES.find(r => r.key === trendRange) ?? SPEND_TREND_RANGES[1],
@@ -292,8 +297,9 @@ export default function CategoryDetail() {
                 body={`Anything you file under ${name} will show up`}
               />
             ) : (
-              <Card clip className="mb-4">
-                {catTxs.map((tx, i) => (
+              <div className="mb-4">
+              <Card clip>
+                {pagedTxs.visible.map((tx, i) => (
                   <div key={tx.id ?? i}>
                     {/* The account, where an account page prints the category.
                         Both rows answer "and the other axis?" - naming the
@@ -308,10 +314,12 @@ export default function CategoryDetail() {
                       label={tx.description || tx.account || name}
                       meta={tx.description ? tx.account : ''}
                     />
-                    {i < catTxs.length - 1 && <Divider inset="row" />}
+                    {i < pagedTxs.visible.length - 1 && <Divider inset="row" />}
                   </div>
                 ))}
               </Card>
+              <ListEnd list={pagedTxs} done={`All ${catTxs.length} transactions`} />
+              </div>
             )}
           </section>
         </>

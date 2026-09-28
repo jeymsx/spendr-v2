@@ -1,20 +1,26 @@
 import Card from '../../components/ui/Card'
+import { ListEnd, useInfiniteList } from '../../components/ui/InfiniteList'
 import Divider from '../../components/ui/Divider'
 import { fmtCompact } from '../../lib/money'
 import { DetailTxRow } from './DetailParts'
 
 // ── Bits ───────────────────────────────────────────────────────────────────────
 
+/** An account's history, a page at a time as you scroll (ui/InfiniteList). */
 export function TxList({ txs, accountName, onSelect, catMap }) {
+  const list = useInfiniteList(txs, { resetKey: accountName })
   return (
-    <Card clip className="mb-4">
-      {txs.map((tx, i) => (
-        <div key={tx.id ?? i}>
-          <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} catMap={catMap} />
-          {i < txs.length - 1 && <Divider inset="row" />}
-        </div>
-      ))}
-    </Card>
+    <div className="mb-4">
+      <Card clip>
+        {list.visible.map((tx, i) => (
+          <div key={tx.id ?? i}>
+            <DetailTxRow tx={tx} accountName={accountName} onSelect={onSelect} catMap={catMap} />
+            {i < list.visible.length - 1 && <Divider inset="row" />}
+          </div>
+        ))}
+      </Card>
+      <ListEnd list={list} done={`All ${txs.length} transactions`} />
+    </div>
   )
 }
 
