@@ -32,21 +32,6 @@ export const RELEASE_DATE = '2026-09-28'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'target',
-    title: 'Safe to spend',
-    desc: 'Home and Insights look 30 days ahead: what you can spend before payday, your tightest day, and a warning if money could run short.',
-  },
-  {
-    icon: 'chart',
-    title: 'Investments and loans',
-    desc: "Add your MP2, a UITF or a loan as an account. Update an investment's value when you check it, and pay a loan from its page.",
-  },
-  {
-    icon: 'transfer',
-    title: 'Bills is now Recurring',
-    desc: 'It takes your pay too, twice-a-month paydays included. Net worth now counts debts with friends, which you can turn off in Preferences.',
-  },
-  {
     icon: 'bell',
     title: 'A daily check-in',
     desc: 'A nudge at a time you pick to log what you spent, skipped on days you already have. Turn it on in Settings, Reminders.',
