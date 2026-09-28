@@ -125,8 +125,8 @@ export function UpcomingRow({ item, isLast }) {
     <>
     <button
       onClick={() => item.to && navigate(item.to)}
-      className="w-full text-left flex items-center gap-3 px-4 py-3.5
-        active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+      className={`w-full text-left flex items-center gap-3 px-4 py-3.5${isLast ? ' rounded-b-2xl' : ''}
+        active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors`}
     >
       <span className="relative shrink-0">
         {/* The brand's mark where the item carries one, the tinted tile
@@ -189,6 +189,13 @@ export function UpcomingRow({ item, isLast }) {
  * Without a payday on the Recurring list the forecast is guessing, so it
  * says so and offers the one thing that fixes it.
  */
+/* The Safe to spend wallet. Big enough that the band's bottom edge cuts
+   through its rounded base, and its frame starts a quarter of its size above
+   the card so the top stands clear of it. A little smaller on a narrow phone,
+   where at full size it ran into the figure. */
+const WALLET_SIZE = 'min(200px, 52vw)'
+const WALLET_RISE = 'calc(min(200px, 52vw) * -0.25)'
+
 export default function UpcomingSection({ forecast, items }) {
   const navigate = useNavigate()
   const { accentColor } = useTheme()
@@ -207,21 +214,32 @@ export default function UpcomingSection({ forecast, items }) {
         actionLabel="Forecast"
         actionTo="/insights/forecast"
       >Next 30 days</SectionHeading>
-      <Card clip className="mt-3">
+      {/* Not `clip`: the wallet below stands up out of the card's top edge.
+          The band and the last row round their own corners instead, so a
+          pressed tint still keeps to the card's shape. */}
+      <Card className="mt-3">
         <Link
           to="/insights/forecast"
-          className="relative block overflow-hidden px-4 pt-4 pb-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+          className="relative block rounded-t-2xl px-4 pt-4 pb-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
         >
-          {/* A glass wallet, as large as the space allows and cut off by it -
-              the way the Insights highlights carry their art - so the figure
-              is not a lone number on an empty band. In the accent, or red
-              when the money runs out. Decoration: no taps, nothing read. */}
-          <GlassArt
-            name="wallet"
-            hue={short ? '#ef4444' : accentColor}
-            size={164}
-            className="pointer-events-none absolute -right-6 top-1/2 -translate-y-[46%]"
-          />
+          {/* A glass wallet, large, standing up out of the card and cut off
+              only by the band's bottom edge - so the figure is not a lone
+              number on an empty band. In the accent, or red when the money
+              runs out. The frame is what clips it: it starts above the card
+              and ends where the band does. Decoration: no taps, nothing read. */}
+          <span
+            className="pointer-events-none absolute right-5 bottom-0 overflow-hidden"
+            style={{ top: WALLET_RISE, width: WALLET_SIZE }}
+            aria-hidden="true"
+          >
+            <GlassArt
+              name="wallet"
+              hue={short ? '#ef4444' : accentColor}
+              size={200}
+              style={{ width: WALLET_SIZE, height: WALLET_SIZE }}
+              className="absolute left-0 top-0"
+            />
+          </span>
           <span className="relative block pr-28 text-11 font-semibold text-slate-500 dark:text-slate-400">Safe to spend</span>
           <span className="relative block pr-28 mt-1 text-22 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
             <RollingNumber id="home:safe" value={forecast.safeToSpend} format={v => fmt(v)} />
@@ -238,8 +256,8 @@ export default function UpcomingSection({ forecast, items }) {
             <button
               type="button"
               onClick={() => navigate('/recurring/new?type=income')}
-              className="w-full text-left px-4 py-3 text-xs font-semibold text-primary
-                active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
+              className={`w-full text-left px-4 py-3 text-xs font-semibold text-primary
+                active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors${items.length ? '' : ' rounded-b-2xl'}`}
             >
               Add your payday to see what&apos;s ahead
             </button>
