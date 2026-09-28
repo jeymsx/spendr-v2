@@ -1,5 +1,5 @@
 import { useMemo } from 'react'
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import db from '../db/db'
 import { setViewMode } from './useViewMode'
@@ -24,15 +24,20 @@ import useRates from '../hooks/useRates'
  * unread count.
  */
 
-/** @typedef {{to: string, label: string, Icon: import('react').ComponentType<any>, badge?: number}} NavEntry */
+/**
+ * @typedef {{to: string, label: string, Icon: import('react').ComponentType<any>, badge?: number,
+ *   also?: string}} NavEntry  `also`: another address that is this section too
+ */
 
 /** @param {NavEntry & {end?: boolean}} props */
-function NavItem({ to, label, Icon, badge = 0, end = false }) {
+function NavItem({ to, label, Icon, badge = 0, end = false, also }) {
+  const { pathname } = useLocation()
+  const alsoHere = !!also && pathname.startsWith(also)
   return (
     <NavLink
       to={to}
       end={end}
-      className={({ isActive }) => `web-nav-item${isActive ? ' is-active' : ''}`}
+      className={({ isActive }) => `web-nav-item${isActive || alsoHere ? ' is-active' : ''}`}
       // The name, for the narrow sidebar that shows only the icons.
       title={label}
     >
@@ -71,7 +76,8 @@ export default function WebSidebar() {
   ]
   /** @type {NavEntry[]} */
   const plans = [
-    { to: '/budget', label: 'Budget', Icon: IconCalc },
+    // A category's page opens beside the budget (WebSections).
+    { to: '/budget', label: 'Budget', Icon: IconCalc, also: '/categories/' },
     { to: '/goals', label: 'Goals', Icon: IconTarget, badge: counts.goals },
     { to: '/recurring', label: 'Recurring', Icon: IconBillHistory, badge: counts.bills },
     { to: '/debts', label: 'Debts', Icon: IconDebt, badge: counts.debts },

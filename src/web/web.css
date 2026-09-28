@@ -267,3 +267,17 @@ html.web .home-desktop .home-accounts-rail > .shrink-0.w-1 { display: none; }
   }
   html.web .web-pane-list { width: 360px !important; }
 }
+
+/* ── Quick log (components/QuickLogOverlay) ─────────────────────────────────
+   On the phone the line to type fills the width and the confirm disc sits
+   under the right thumb. On a wide screen that is a sentence at the far left
+   and a button in the far corner, so both come into one centred column, the
+   disc at its end. */
+html.web .quick-log {
+  display: grid;
+  grid-template-columns: minmax(0, 640px);
+  justify-content: center;
+  align-content: center;
+  row-gap: 1.5rem;
+}
+html.web .quick-log-go { position: static; justify-self: end; }

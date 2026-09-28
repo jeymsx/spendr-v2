@@ -1,5 +1,8 @@
-import { Suspense } from 'react'
+import { Suspense, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import db from '../db/db'
+import { useLiveQuery } from '../hooks/useLiveQuery'
+import WhatsNewModal, { CURRENT_VERSION } from '../components/WhatsNewModal'
 import WebSidebar from './WebSidebar'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { AddFlowProvider } from './AddFlow'
@@ -36,6 +39,10 @@ const sectionOf = (pathname) => pathname.split('/')[1] || 'home'
 function Chrome() {
   const location = useLocation()
   const section = sectionOf(location.pathname)
+  // What's New, once per version, as the phone's AppLayout shows it.
+  const whatsNewMeta = useLiveQuery(async () => (await db.meta.get('whatsNewSeen')) ?? null, [], undefined)
+  const [whatsNewDismissed, setWhatsNewDismissed] = useState(false)
+  const showWhatsNew = whatsNewMeta !== undefined && whatsNewMeta?.value !== CURRENT_VERSION && !whatsNewDismissed
 
   return (
     <div className="web-shell h-[100dvh] flex overflow-hidden">
@@ -50,6 +57,8 @@ function Chrome() {
           </ErrorBoundary>
         </div>
       </main>
+
+      {showWhatsNew && <WhatsNewModal onClose={() => setWhatsNewDismissed(true)} />}
 
       {/* Renders nothing until something is actually earned. */}
       <Moments />

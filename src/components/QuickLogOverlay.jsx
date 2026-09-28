@@ -363,7 +363,9 @@ export default function QuickLogOverlay({ onClose }) {
         what lets a tap on the empty space around the text fall through to the
         scrim and close.
       */}
-      <div className="quick-in relative h-full pointer-events-none flex flex-col justify-center px-6">
+      {/* quick-log, quick-log-go: inert hooks for the desktop, which centres
+          this in a column (src/web/web.css). */}
+      <div className="quick-in quick-log relative h-full pointer-events-none flex flex-col justify-center px-6">
         {/* pointer-events-none by default, with only the parts you actually
             touch turning them back on. Text is not one of those: the heading
             is full-width, so leaving it interactive made the whole horizontal
@@ -562,7 +564,7 @@ export default function QuickLogOverlay({ onClose }) {
           disabled={!ready}
           aria-label={`Review ${dest.verb.toLowerCase()}`}
           style={{ bottom: `calc(${Math.round(keyboardInset)}px + 1.5rem)` }}
-          className="pointer-events-auto absolute right-6
+          className="quick-log-go pointer-events-auto absolute right-6
             w-14 h-14 rounded-full bg-primary text-white
             flex items-center justify-center
             shadow-[0_8px_28px_-8px_rgba(0,0,0,0.55)]
