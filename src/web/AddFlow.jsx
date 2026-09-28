@@ -4,6 +4,7 @@ import { useLocation } from 'react-router-dom'
 const AddExpense = lazy(() => import('../pages/AddExpense'))
 const AddInflow  = lazy(() => import('../pages/AddInflow'))
 const Transfer   = lazy(() => import('../pages/Transfer'))
+const QuickLogOverlay = lazy(() => import('../components/QuickLogOverlay'))
 
 /** .card-solid is the page cards' material, composited opaque — see index.css. */
 const OPAQUE_SURFACE = 'card-solid rounded-2xl'
@@ -39,7 +40,7 @@ export function useAddFlow() {
  * purely to ask which kind of transaction this is.
  */
 export function AddFlowProvider({ children }) {
-  const [flow, setFlow] = useState(null)   // null | 'expense' | 'inflow' | 'transfer'
+  const [flow, setFlow] = useState(null)   // null | 'expense' | 'inflow' | 'transfer' | 'quick'
   const location = useLocation()
 
   const openAdd = useCallback((type) => setFlow(type ?? 'expense'), [])
@@ -53,6 +54,27 @@ export function AddFlowProvider({ children }) {
   // floating over a page that changed underneath it.
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { setFlow(null) }, [location.key])
+
+  /* One key from anywhere, as a desktop app would have it: E, I, T and Q
+     open the expense, inflow, transfer and quick-log forms (WebAddMenu
+     shows each beside its name). Not while typing, not with a modifier
+     held (Ctrl+T is the browser's), and not over a sheet or dialog. */
+  useEffect(() => {
+    if (flow) return
+    const KEYS = /** @type {Record<string, string>} */ ({ e: 'expense', i: 'inflow', t: 'transfer', q: 'quick' })
+    const onKey = (/** @type {KeyboardEvent} */ e) => {
+      if (e.defaultPrevented || e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
+      const type = KEYS[e.key.toLowerCase()]
+      if (!type) return
+      const el = /** @type {HTMLElement|null} */ (e.target)
+      if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return
+      if (document.querySelector('[role="dialog"], .sheet-panel')) return
+      e.preventDefault()
+      setFlow(type)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [flow])
 
   useEffect(() => {
     if (!flow) return
@@ -70,7 +92,14 @@ export function AddFlowProvider({ children }) {
     <AddFlowContext.Provider value={{ openAdd, closeAdd, isOpen: !!flow }}>
       {children}
 
-      {flow && (
+      {/* The quick log is an overlay of its own, as on the phone. */}
+      {flow === 'quick' && (
+        <Suspense fallback={null}>
+          <QuickLogOverlay onClose={closeAdd} />
+        </Suspense>
+      )}
+
+      {flow && Form && (
         <div
           role="dialog"
           aria-modal="true"

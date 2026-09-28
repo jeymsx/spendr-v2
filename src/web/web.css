@@ -1,0 +1,283 @@
+/* ── The desktop's own styles ──────────────────────────────────────────────
+   Loaded by src/web/WebApp.jsx, so only the desktop bundle carries them.
+   Everything is under html.web: the desktop is the phone's pages laid out for
+   a landscape screen, and these rules are the laying out. The older html.web
+   rules (sheets as centred modals, the pointer cursor) stay in index.css. */
+
+/* ── Sidebar ─────────────────────────────────────────────────────────────── */
+
+html.web .web-sidebar {
+  border-right: 1px solid rgba(15, 23, 42, 0.07);
+  background: rgba(255, 255, 255, 0.72);
+  backdrop-filter: blur(20px) saturate(140%);
+  -webkit-backdrop-filter: blur(20px) saturate(140%);
+}
+html.web.dark .web-sidebar {
+  border-right-color: rgba(var(--color-primary-rgb), 0.10);
+  background: rgba(13, 19, 30, 0.55);
+}
+html.web.flat .web-sidebar { backdrop-filter: none; -webkit-backdrop-filter: none; background: #ffffff; }
+html.web.flat.dark .web-sidebar { background: #0b0b0d; border-right-color: rgba(255, 255, 255, 0.07); }
+
+html.web .web-brand {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.875rem;
+  background: var(--color-primary);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25);
+}
+
+html.web .web-nav-heading {
+  margin: 1.1rem 0.75rem 0.35rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: rgb(100 116 139);           /* slate-500 */
+}
+html.web.dark .web-nav-heading { color: rgb(148 163 184); }
+
+html.web .web-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  height: 2.5rem;
+  padding: 0 0.75rem;
+  border-radius: 0.875rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: rgb(71 85 105);             /* slate-600 */
+  transition: background-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+html.web .web-nav-item:hover { background: rgba(15, 23, 42, 0.05); color: rgb(15 23 42); }
+html.web.dark .web-nav-item { color: rgb(148 163 184); }
+html.web.dark .web-nav-item:hover { background: rgba(255, 255, 255, 0.05); color: rgb(226 232 240); }
+html.web .web-nav-item.is-active,
+html.web .web-nav-item.is-active:hover {
+  background: rgba(var(--color-primary-rgb), 0.12);
+  color: var(--color-primary);
+}
+html.web.dark .web-nav-item.is-active { background: rgba(var(--color-primary-rgb), 0.18); }
+html.web .web-nav-item:focus-visible { outline: 2px solid var(--color-primary); outline-offset: -2px; }
+html.web .web-nav-item-quiet { height: 2.25rem; font-size: 0.75rem; }
+html.web .web-nav-item:disabled { opacity: 0.7; }
+
+html.web .web-nav-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+html.web .web-nav-icon svg { width: 1.25rem; height: 1.25rem; }
+
+html.web .web-nav-badge {
+  min-width: 1.25rem;
+  height: 1.25rem;
+  padding: 0 0.375rem;
+  border-radius: 999px;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  line-height: 1.25rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  background: rgb(239 68 68);
+}
+
+html.web .web-sidebar-foot { border-top: 1px solid rgba(15, 23, 42, 0.07); }
+html.web.dark .web-sidebar-foot { border-top-color: rgba(255, 255, 255, 0.06); }
+
+/* ── Split views ────────────────────────────────────────────────────────────
+   The list on the left sits on a slightly raised ground, like a phone laid
+   on the desk; the thing opened in it is on the page itself. */
+
+html.web .web-pane-list {
+  border-right: 1px solid rgba(15, 23, 42, 0.07);
+  background: rgba(255, 255, 255, 0.42);
+}
+html.web.dark .web-pane-list {
+  border-right-color: rgba(var(--color-primary-rgb), 0.08);
+  background: rgba(255, 255, 255, 0.015);
+}
+html.web.flat .web-pane-list { background: transparent; }
+
+/* The phone pads every page for the tab bar under it. There is none here. */
+html.web .web-shell .pb-nav { padding-bottom: 2rem; }
+
+/* The first thing past a list has nothing behind it on the right: its back
+   button would only step through what the list already shows. Hidden, not
+   removed, so its title stays centred. */
+html.web .web-pane-detail[data-root='true'] .subpage-back { visibility: hidden; }
+/* A list's own back button went to Home, and so does a page the sidebar
+   opens. The sidebar is how you leave either. */
+html.web .web-pane-list .subpage-back,
+html.web .web-scroll[data-top='true'] .subpage-back { visibility: hidden; }
+
+/* ── Pointer ────────────────────────────────────────────────────────────────
+   The phone's rows answer a press (active:bg-…). Under a cursor they answer
+   hovering too, with the same tint, a step fainter. */
+html.web [class*='active:bg-slate-50']:hover:not(:disabled) { background-color: rgb(248 250 252 / 0.8); }
+html.web.dark [class*='dark:active:bg-white/[0.04]']:hover:not(:disabled) { background-color: rgb(255 255 255 / 0.03); }
+
+/* Scrollbars as thin as the phone's are absent: a window still needs one. */
+html.web .web-scroll,
+html.web .web-pane {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148, 163, 184, 0.35) transparent;
+}
+
+/* The phone's pages are drawn for a phone's top: a notch's worth of room
+   above every header. A window has none. */
+html.web .web-shell .pt-safe-header { padding-top: 1.25rem; }
+
+/* ── Toasts (WebToaster, sonner) ────────────────────────────────────────── */
+
+html.web .web-toast {
+  width: 356px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 0.875rem 0.75rem 0.75rem;
+  border-radius: 1rem;
+  font-family: inherit;
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.06);
+  color: rgb(15 23 42);
+}
+html.web.dark .web-toast {
+  background:
+    linear-gradient(rgba(var(--color-primary-rgb), 0.07), rgba(var(--color-primary-rgb), 0.07)),
+    #141c29;
+  border-color: rgba(var(--color-primary-rgb), 0.18);
+  box-shadow: 0 18px 44px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  color: #fff;
+}
+html.web .web-toast-icon { flex-shrink: 0; margin: 0; width: auto; height: auto; }
+html.web .web-toast-title { font-size: 0.8125rem; font-weight: 600; line-height: 1.35; }
+html.web .web-toast [data-content] { flex: 1; min-width: 0; }
+
+html.web .web-toast-mark {
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+html.web .web-toast-mark-success { color: rgb(5 150 105); background: rgba(16, 185, 129, 0.14); }
+html.web .web-toast-mark-warning { color: rgb(217 119 6);  background: rgba(245, 158, 11, 0.16); }
+html.web .web-toast-mark-error   { color: rgb(220 38 38);  background: rgba(239, 68, 68, 0.14); }
+html.web.dark .web-toast-mark-success { color: rgb(52 211 153); }
+html.web.dark .web-toast-mark-warning { color: rgb(251 191 36); }
+html.web.dark .web-toast-mark-error   { color: rgb(248 113 113); }
+
+html.web .web-toast-action {
+  flex-shrink: 0;
+  height: 2rem;
+  padding: 0 0.75rem;
+  border-radius: 0.75rem;
+  font-size: 0.8125rem;
+  font-weight: 700;
+  color: var(--color-primary);
+  background: rgba(var(--color-primary-rgb), 0.10);
+  transition: background-color 0.15s var(--ease-out);
+}
+html.web .web-toast-action:hover { background: rgba(var(--color-primary-rgb), 0.18); }
+
+/* The close sits on the card's corner, and only shows under the pointer. */
+html.web .web-toast-close {
+  position: absolute;
+  top: -0.5rem;
+  left: -0.5rem;
+  width: 1.375rem;
+  height: 1.375rem;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgb(100 116 139);
+  background: #ffffff;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  opacity: 0;
+  transition: opacity 0.15s var(--ease-out);
+}
+html.web .web-toast-close svg { width: 0.75rem; height: 0.75rem; }
+html.web .web-toast:hover .web-toast-close,
+html.web .web-toast-close:focus-visible { opacity: 1; }
+html.web.dark .web-toast-close { background: #1b2433; border-color: rgba(255, 255, 255, 0.14); color: rgb(148 163 184); }
+
+/* The phone's bar stays for the phone. */
+html.web .toast-host { display: none; }
+
+/* ── Home, in two columns (WebHome, pages/Dashboard.jsx layout="desktop") ── */
+
+html.web .home-desktop { padding: 0.5rem 0.75rem 2.5rem; }
+html.web .home-columns {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  column-gap: 0.5rem;
+  align-items: start;
+}
+/* Each column starts level with the other, whatever its first section's
+   own margin was on the phone. */
+html.web .home-column > :first-child { margin-top: 1rem; }
+
+/* The account cards: a rail to swipe on the phone, a grid that shows them
+   all here. */
+html.web .home-desktop .home-accounts-rail {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(176px, 1fr));
+  overflow: visible;
+  padding-bottom: 0;
+  margin-bottom: 0;
+}
+html.web .home-desktop .home-accounts-rail > .acct-card { width: auto; }
+html.web .home-desktop .home-accounts-rail > .shrink-0.w-1 { display: none; }
+
+/* ── Narrower windows ───────────────────────────────────────────────────────
+   Under 1280px a list and its page side by side leave the page a phone's
+   width, so the sidebar folds to its icons (each keeps its name as a
+   tooltip) and the list pane narrows. */
+@media (max-width: 1279px) {
+  html.web .web-sidebar { width: 76px; }
+  html.web .web-sidebar .web-brand-text,
+  html.web .web-sidebar .web-nav-heading,
+  html.web .web-sidebar .web-add-label,
+  html.web .web-sidebar .web-nav-item > span:not(.web-nav-icon):not(.web-nav-badge) { display: none; }
+  html.web .web-sidebar .web-nav-heading + .web-nav-item { margin-top: 0.75rem; }
+  html.web .web-sidebar .web-nav-item { justify-content: center; padding: 0; position: relative; }
+  html.web .web-sidebar .web-nav-badge {
+    position: absolute;
+    top: 0.2rem;
+    right: 0.5rem;
+    min-width: 1rem;
+    height: 1rem;
+    padding: 0 0.25rem;
+    line-height: 1rem;
+    font-size: 0.625rem;
+  }
+  html.web .web-pane-list { width: 360px !important; }
+}
+
+/* ── Quick log (components/QuickLogOverlay) ─────────────────────────────────
+   On the phone the line to type fills the width and the confirm disc sits
+   under the right thumb. On a wide screen that is a sentence at the far left
+   and a button in the far corner, so both come into one centred column, the
+   disc at its end. */
+html.web .quick-log {
+  display: grid;
+  grid-template-columns: minmax(0, 640px);
+  justify-content: center;
+  align-content: center;
+  row-gap: 1.5rem;
+}
+html.web .quick-log-go { position: static; justify-self: end; }

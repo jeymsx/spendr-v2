@@ -107,6 +107,7 @@ function GoalTile({ goal, onOpen, today }) {
       interactive
       padding="md"
       onClick={() => onOpen(goal)}
+      data-web-id={`goal-${goal.id}`}
       className="flex flex-col items-center min-w-0"
     >
       {/* 104, down from the 116 it was bare. The card's own padding is the
@@ -468,6 +469,7 @@ export default function Goals() {
                       <Fragment key={g.id}>
                         <button
                           onClick={() => openGoal(g)}
+                          data-web-id={`goal-${g.id}`}
                           className="w-full flex items-center gap-3 px-4 py-3 text-left active:opacity-70"
                         >
                           <span className="text-[16px] leading-none opacity-50" aria-hidden="true">{g.icon ?? '🎯'}</span>

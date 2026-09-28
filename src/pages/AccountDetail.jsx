@@ -428,7 +428,7 @@ export default function AccountDetail() {
   if (!account) {
     return (
       <div className="pt-safe-header px-5">
-        <IconButton label="Back to accounts" className="-ml-1" onClick={back}>
+        <IconButton label="Back to accounts" className="subpage-back -ml-1" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         <EmptyState
@@ -466,7 +466,7 @@ export default function AccountDetail() {
     <div className="pb-10">
       {/* ── Header: back, centred title, edit ── */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back to accounts" onClick={back}>
+        <IconButton label="Back to accounts" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
 

@@ -109,6 +109,7 @@ function CategoryRow({ cat }) {
   return (
     <Link
       to={`/categories/${encodeURIComponent(cat.name)}`}
+      data-web-id={`category-${cat.name}`}
       className="block px-4 py-3.5 active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
     >
       <div className="flex items-center gap-3">
@@ -370,7 +371,7 @@ export default function Budget() {
         {/* Back to wherever you came from - the dashboard card or Settings -
             with a fallback for the case where this page IS the first entry.
             See the hook. */}
-        <IconButton label="Back" onClick={back}>
+        <IconButton label="Back" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         {/* The month is the title. "Budget" named the page you had just
@@ -590,6 +591,7 @@ export default function Budget() {
                           needs one. */}
                       <Link
                         to={`/categories/${encodeURIComponent(c.name)}`}
+                        data-web-id={`category-${c.name}`}
                         className="flex items-center gap-3 px-4 py-3
                           active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
                       >
