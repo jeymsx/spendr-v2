@@ -50,3 +50,49 @@ phone's Settings in a split view, so their phone Settings row shows here on
 its own. Resolve that conflict by taking the deletion.
 
 ## Log
+
+- **2026-09-28, shell.** A sidebar in the phone's material lists every
+  section, with the phone's badges (goals reached, bills due, debts past
+  their date, unread notifications). Sync status sits at its foot; click it
+  to sync. The add menu has quick log, and E, I, T and Q open each form
+  from anywhere. Under 1280px the sidebar folds to icons. Toasts are sonner
+  cards in the bottom right (WebToaster). ToastContext hands them over
+  through setToastPresenter, and the phone keeps its bar.
+- **Routes.** Every phone address is routed (WebApp.jsx). routes.test.js
+  fails if one is missing.
+- **Split views** (pages/WebSections.jsx, components/WebPane.jsx).
+  - Sections: Accounts (opens the first account), Insights (opens Trend),
+    Recurring, Debts, Goals, Budget with a category's page, and Settings
+    (opens Preferences).
+  - The item open on the right is ringed in the list, via `[data-web-id]`
+    hooks on the phone's rows and Insights' own `[data-zoom]`.
+  - Back buttons are hidden where they would only step through the list
+    (the `subpage-back` hook). The card zoom stays on the phone.
+- **Home** is the phone's Dashboard with `layout="desktop"`. Its sections
+  are now named pieces, so the phone draws exactly what it did while the
+  desktop puts them in two columns. The account cards become a grid.
+- **Retired:** WebDashboard, WebAccounts, WebTransactions, WebInsights,
+  WebRecurring, WebDebts, WebSettings, WebPanel and WebSelect.
+- **Also:** What's New shows on the desktop, quick log is centred in a
+  column, and rows answer hover.
+- **QA.**
+  - Every route checked in light and dark at 1100, 1280, 1440 and 1920, and
+    in the Clean style.
+  - Flows walked: the split views, the edit and back steps, the add
+    overlay, a sheet, a toast with Undo, quick log, What's New, the
+    new-account and new-bill forms.
+  - The phone's pages screenshot pixel-identical to main.
+- **Gate:** check 7/7, lint, 1749 tests, build. sonner is only in the
+  desktop chunk.
+
+## Left for later
+
+- **Dead code.** Budgets.jsx, CategoryManager.jsx and Templates.jsx still
+  export desktop modals that only the retired WebSettings used, and their
+  comments still name it. Once the onboarding branch has merged (it edits
+  Settings.jsx), delete them with the stale comments in Settings.jsx and
+  Accounts.jsx.
+- **Merge conflict.** feat/onboarding changes WebSettings.jsx, which this
+  branch deletes. Take the deletion: its Install row is also in the phone's
+  Settings, which the desktop now shows.
+
