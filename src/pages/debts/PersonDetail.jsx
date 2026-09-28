@@ -117,7 +117,7 @@ export default function PersonDetail() {
     return (
       <div className="pb-nav">
         <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-          <IconButton label="Back to debts" onClick={back}>
+          <IconButton label="Back to debts" className="subpage-back" onClick={back}>
             <IconChevronLeft />
           </IconButton>
         </header>
@@ -135,7 +135,7 @@ export default function PersonDetail() {
   return (
     <div className="pb-nav">
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back to debts" onClick={back}>
+        <IconButton label="Back to debts" className="subpage-back" onClick={back}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">

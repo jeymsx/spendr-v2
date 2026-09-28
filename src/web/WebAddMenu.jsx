@@ -2,11 +2,16 @@ import { useState, useRef, useEffect, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import { useAddFlow } from './AddFlow'
 import { WebIconPlus } from './WebIcons'
+import { IconQuickLog } from '../components/icons'
 
+/* The phone's add sheet, in its words (Expense, Inflow, Transfer), and the
+   quick log it keeps behind a long press of +: a landscape menu has room to
+   show it. */
 const FLOWS = [
-  { key: 'expense',  label: 'Expense',  hint: 'Money out',    sign: '−', tone: 'text-red-600 dark:text-red-400' },
-  { key: 'inflow',   label: 'Income',   hint: 'Money in',     sign: '+', tone: 'text-emerald-700 dark:text-emerald-400' },
-  { key: 'transfer', label: 'Transfer', hint: 'Between accounts', sign: '⇄', tone: 'text-primary' },
+  { key: 'expense',  label: 'Expense',  hint: 'Money out',    sign: '−', tone: 'text-red-600 dark:text-red-400', kbd: 'E' },
+  { key: 'inflow',   label: 'Inflow',   hint: 'Money in',     sign: '+', tone: 'text-emerald-700 dark:text-emerald-400', kbd: 'I' },
+  { key: 'transfer', label: 'Transfer', hint: 'Between accounts', sign: '⇄', tone: 'text-primary', kbd: 'T' },
+  { key: 'quick',    label: 'Quick log', hint: 'Type it the way you say it', sign: <IconQuickLog size={15} />, tone: 'text-primary', kbd: 'Q' },
 ]
 
 /**
@@ -95,6 +100,7 @@ export default function WebAddMenu() {
         onClick={() => setOpen(o => !o)}
         onFocus={() => setOpen(true)}
         aria-haspopup="menu"
+        aria-label="Add transaction"
         aria-expanded={open}
         className="w-full h-10 rounded-xl flex items-center justify-center gap-2
           text-sm font-semibold text-white
@@ -102,7 +108,7 @@ export default function WebAddMenu() {
         style={{ background: 'var(--color-primary)' }}
       >
         <WebIconPlus />
-        Add transaction
+        <span className="web-add-label">Add transaction</span>
       </button>
 
       {open && rect && createPortal(
@@ -134,7 +140,7 @@ export default function WebAddMenu() {
                 bg-slate-100 dark:bg-white/[0.07] ${f.tone}`}>
                 {f.sign}
               </span>
-              <span className="min-w-0">
+              <span className="min-w-0 flex-1">
                 <span className="block text-13 font-semibold text-slate-800 dark:text-white leading-tight">
                   {f.label}
                 </span>
@@ -142,6 +148,9 @@ export default function WebAddMenu() {
                   {f.hint}
                 </span>
               </span>
+              {/* The key that opens it from anywhere (AddFlow). */}
+              <kbd className="shrink-0 min-w-[20px] h-5 px-1 rounded-md text-10 font-semibold leading-5 text-center
+                text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-white/[0.07]">{f.kbd}</kbd>
             </button>
           ))}
         </div>,

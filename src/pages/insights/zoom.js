@@ -66,6 +66,9 @@ let named = null
 let waiting = null
 
 const canMorph = () => typeof document !== 'undefined' && typeof document.startViewTransition === 'function'
+/* On the desktop the card's page opens beside the overview, not over it
+   (src/web WebSections) - there is nothing to grow into, so no zoom. */
+const onDesktop = () => typeof document !== 'undefined' && document.documentElement.classList.contains('web')
 /** The router's key for the history entry on screen. @returns {string|undefined} */
 const entryKey = () => window.history.state?.key
 const appMain = () => /** @type {HTMLElement|null} */ (document.getElementById('app-main'))
@@ -172,7 +175,7 @@ export function closeInto(go) {
   /* Only from the very page the card opened. Reached any other way - the
      same page opened again from Home, after leaving this one by the tab
      bar - Back leads somewhere with no card to close into. */
-  if (!trip || !trip.entry || trip.entry !== entryKey() || busy || prefersReducedMotion() || !canMorph()) {
+  if (!trip || !trip.entry || trip.entry !== entryKey() || busy || prefersReducedMotion() || !canMorph() || onDesktop()) {
     go()
     return
   }
@@ -266,7 +269,7 @@ const scrolled = () => document.getElementById('app-main')?.scrollTop ?? 0
 export function openFrom(card, go, key) {
   leftThrough = { key }
   setInsights({ scroll: scrolled() }, true)
-  if (busy || prefersReducedMotion()) { go(); return }
+  if (busy || prefersReducedMotion() || onDesktop()) { go(); return }
   if (canMorph()) { morphOpen(card, go); return }
   if (typeof card.animate !== 'function') { go(); return }
   busy = true
@@ -341,6 +344,7 @@ export function beginReturn(back) {
   }
   const trip = leftThrough
   leftThrough = null
+  if (onDesktop()) return null
   if (closing) {
     if (!trip || !back) { release('close'); return null }
     return landing(trip)

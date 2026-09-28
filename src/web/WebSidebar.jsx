@@ -1,43 +1,51 @@
-import { NavLink } from 'react-router-dom'
+import { useMemo } from 'react'
+import { NavLink, useLocation } from 'react-router-dom'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import db from '../db/db'
 import { setViewMode } from './useViewMode'
 import WebAddMenu from './WebAddMenu'
+import WebSyncStatus from './WebSyncStatus'
+import { WebIconHome, WebIconList, WebIconWallet, WebIconChart, WebIconImport, WebIconPhone } from './WebIcons'
 import {
-  WebIconHome, WebIconList, WebIconWallet, WebIconChart,
-  WebIconHandshake, WebIconRepeat, WebIconSettings, WebIconImport,
-  WebIconPhone,
-} from './WebIcons'
+  IconBell, IconTarget, IconTrophy, IconDebt, IconBillHistory, IconSettings, IconCalc,
+} from '../components/icons'
+import { quickActionCounts } from '../pages/dashboard/shared'
+import { useBaseCurrency } from '../context/CurrencyContext'
+import useRates from '../hooks/useRates'
 
-const MAIN = [
-  { to: '/',             label: 'Home',         Icon: WebIconHome },
-  { to: '/transactions', label: 'Transactions', Icon: WebIconList },
-  { to: '/accounts',     label: 'Accounts',     Icon: WebIconWallet },
-  { to: '/insights',     label: 'Insights',     Icon: WebIconChart },
-  { to: '/debts',        label: 'Debts',        Icon: WebIconHandshake },
-  { to: '/recurring',    label: 'Recurring',    Icon: WebIconRepeat },
-]
+/**
+ * The desktop's navigation: every place the phone can reach, in one column.
+ *
+ * On the phone, four are tabs and the rest hang off Home - its quick actions
+ * (Goals, Debts, Recurring) and the discs in its header (the bell, Settings).
+ * A landscape screen has the room to list them all, so nothing is two taps
+ * away. The badges are the phone's own: Home's quick-action counts (the same
+ * rule - only what you can act on, and acting clears it) and the bell's
+ * unread count.
+ */
 
-const SECONDARY = [
-  { to: '/import',   label: 'Import',   Icon: WebIconImport },
-  { to: '/settings', label: 'Settings', Icon: WebIconSettings },
-]
+/**
+ * @typedef {{to: string, label: string, Icon: import('react').ComponentType<any>, badge?: number,
+ *   also?: string}} NavEntry  `also`: another address that is this section too
+ */
 
-function NavItem({ to, label, Icon }) {
+/** @param {NavEntry & {end?: boolean}} props */
+function NavItem({ to, label, Icon, badge = 0, end = false, also }) {
+  const { pathname } = useLocation()
+  const alsoHere = !!also && pathname.startsWith(also)
   return (
     <NavLink
       to={to}
-      end={to === '/'}
-      className={({ isActive }) => [
-        'flex items-center gap-3 px-3 h-10 rounded-xl text-sm font-medium',
-        'transition-colors duration-150',
-        isActive
-          ? 'bg-primary/[0.12] text-primary dark:bg-primary/[0.18]'
-          : 'text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-slate-200',
-      ].join(' ')}
+      end={end}
+      className={({ isActive }) => `web-nav-item${isActive || alsoHere ? ' is-active' : ''}`}
+      // The name, for the narrow sidebar that shows only the icons.
+      title={label}
     >
-      <span className="shrink-0"><Icon /></span>
-      <span className="truncate">{label}</span>
+      <span className="web-nav-icon" aria-hidden="true"><Icon size={19} /></span>
+      <span className="flex-1 truncate">{label}</span>
+      {badge > 0 && (
+        <span className="web-nav-badge" aria-label={`${badge} to see to`}>{badge > 9 ? '9+' : badge}</span>
+      )}
     </NavLink>
   )
 }
@@ -45,54 +53,70 @@ function NavItem({ to, label, Icon }) {
 export default function WebSidebar() {
   const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
   const name = nameMeta?.value || 'there'
+  const unread = useLiveQuery(() => db.notifications.where('read').equals(0).count(), [], 0)
+
+  // The phone's quick-action badges, read the same way (dashboard/shared.js).
+  const recurring = useLiveQuery(() => db.recurring.toArray(), [], [])
+  const debts = useLiveQuery(() => db.debts.toArray(), [], [])
+  const goals = useLiveQuery(() => db.goals.toArray(), [], [])
+  const accounts = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const base = useBaseCurrency()
+  const { table: rates } = useRates()
+  const counts = useMemo(
+    () => quickActionCounts({ recurring, debts, goals, accounts, base, rates }),
+    [recurring, debts, goals, accounts, base, rates],
+  )
+
+  /** @type {NavEntry[]} */
+  const money = [
+    { to: '/', label: 'Home', Icon: WebIconHome },
+    { to: '/transactions', label: 'Transactions', Icon: WebIconList },
+    { to: '/accounts', label: 'Accounts', Icon: WebIconWallet },
+    { to: '/insights', label: 'Insights', Icon: WebIconChart },
+  ]
+  /** @type {NavEntry[]} */
+  const plans = [
+    // A category's page opens beside the budget (WebSections).
+    { to: '/budget', label: 'Budget', Icon: IconCalc, also: '/categories/' },
+    { to: '/goals', label: 'Goals', Icon: IconTarget, badge: counts.goals },
+    { to: '/recurring', label: 'Recurring', Icon: IconBillHistory, badge: counts.bills },
+    { to: '/debts', label: 'Debts', Icon: IconDebt, badge: counts.debts },
+  ]
+  /** @type {NavEntry[]} */
+  const you = [
+    { to: '/notifications', label: 'Notifications', Icon: IconBell, badge: unread },
+    { to: '/achievements', label: 'Achievements', Icon: IconTrophy },
+    { to: '/import', label: 'Import', Icon: WebIconImport },
+    { to: '/settings', label: 'Settings', Icon: IconSettings },
+  ]
 
   return (
-    <aside
-      className="shrink-0 w-[248px] h-full flex flex-col
-        border-r border-slate-200/70 dark:border-white/[0.06]
-        bg-white/80 dark:bg-navy/60 backdrop-blur-xl"
-    >
-      {/* Brand */}
-      <div className="px-5 pt-6 pb-5">
-        <div className="flex items-center gap-2.5">
-          <span
-            className="w-8 h-8 rounded-xl flex items-center justify-center text-white font-bold text-sm shrink-0"
-            style={{ background: 'var(--color-primary)' }}
-          >
-            S
-          </span>
-          <div className="min-w-0">
-            <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
-            <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>
-          </div>
+    <aside className="web-sidebar shrink-0 w-[248px] h-full flex flex-col">
+      <div className="px-5 pt-6 pb-5 flex items-center gap-2.5">
+        <span className="web-brand" aria-hidden="true">S</span>
+        <div className="web-brand-text min-w-0">
+          <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
+          <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>
         </div>
       </div>
 
-      {/* Primary action. Hovering reveals the three transaction types, so a
-          form is one hover and one click away — no intermediate dialog. */}
       <div className="px-4 pb-4">
         <WebAddMenu />
       </div>
 
-      {/* Nav */}
-      <nav className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 flex flex-col gap-0.5">
-        {MAIN.map(i => <NavItem key={i.to} {...i} />)}
-        <div className="h-px bg-slate-200/70 dark:bg-white/[0.06] my-3 mx-3" />
-        {SECONDARY.map(i => <NavItem key={i.to} {...i} />)}
+      <nav className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 pb-3 flex flex-col" aria-label="Spendr">
+        {money.map(i => <NavItem key={i.to} {...i} end={i.to === '/'} />)}
+        <p className="web-nav-heading">Plans</p>
+        {plans.map(i => <NavItem key={i.to} {...i} />)}
+        <p className="web-nav-heading">You</p>
+        {you.map(i => <NavItem key={i.to} {...i} />)}
       </nav>
 
-      {/* Escape hatch back to the phone layout. Lives here rather than in the
-          mobile Settings page so the existing UI needed no changes. */}
-      <div className="px-3 py-4 border-t border-slate-200/70 dark:border-white/[0.06]">
-        <button
-          onClick={() => setViewMode('mobile')}
-          className="w-full flex items-center gap-3 px-3 h-9 rounded-xl text-xs font-medium
-            text-slate-500 hover:bg-slate-100 hover:text-slate-700
-            dark:text-slate-400 dark:hover:bg-white/[0.05] dark:hover:text-slate-200
-            transition-colors duration-150"
-        >
-          <WebIconPhone />
-          Switch to mobile view
+      <div className="web-sidebar-foot px-3 py-3 flex flex-col gap-1">
+        <WebSyncStatus />
+        <button type="button" onClick={() => setViewMode('mobile')} className="web-nav-item web-nav-item-quiet" title="Switch to mobile view">
+          <span className="web-nav-icon" aria-hidden="true"><WebIconPhone /></span>
+          <span className="flex-1 truncate text-left">Switch to mobile view</span>
         </button>
       </div>
     </aside>

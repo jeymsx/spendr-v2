@@ -88,6 +88,7 @@ function BillRow({ rec, onOpen, isLast }) {
     <>
       <button
         onClick={() => onOpen(rec)}
+        data-web-id={`recurring-${rec.id}`}
         className="w-full flex items-center gap-3 px-4 py-4 text-left
           active:bg-slate-50 dark:active:bg-white/[0.04] transition-colors"
       >
@@ -883,7 +884,7 @@ export default function Recurring() {
           small break you feel without being able to name. It was "Bills"
           while bills were all it held; your pay lives here too now. */}
       <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back" onClick={() => navigate(-1)}>
+        <IconButton label="Back" className="subpage-back" onClick={() => navigate(-1)}>
           <IconChevronLeft />
         </IconButton>
         <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">

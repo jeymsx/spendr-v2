@@ -52,7 +52,11 @@ import { isEverydayAccount } from '../lib/accountMeta'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
-export default function Dashboard() {
+/**
+ * @param {{layout?: 'phone'|'desktop'}} props  where the sections go: one
+ *   column on the phone, two on the desktop (src/web/pages/WebHome.jsx)
+ */
+export default function Dashboard({ layout = 'phone' } = {}) {
   const navigate = useNavigate()
   const { accentColor, theme } = useTheme()
   const [balanceHidden,    setBalanceHidden]    = useState(true)
@@ -204,9 +208,10 @@ export default function Dashboard() {
       .filter(t => (t.date ?? '') <= cutoff)
       .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')))
       // Five. Ten was half a screen of scrolling for a list whose whole job
-      // is "does anything here look wrong", and "See all" is right there.
-      .slice(0, 5)
-  }, [txAll])
+      // is "does anything here look wrong", and "See all" is right there. A
+      // desktop column has the height for eight.
+      .slice(0, layout === 'desktop' ? 8 : 5)
+  }, [txAll, layout])
 
   /* Rows that arrive and leave - see components/ui/Presence.jsx. The scope is
      shared with Transactions: a row seen arriving here has been seen, and
@@ -398,9 +403,11 @@ export default function Dashboard() {
   }
 
   // ── Render ────────────────────────────────────────────────────────────────────
-  return (
-    <div className="min-h-full pb-4">
-
+  /* Each section on its own, so the desktop can place them in two columns
+     (src/web/pages/WebHome.jsx). The phone draws them in this order, one
+     under the other, exactly as it always has. */
+  const header = (
+    <>
       {/* ── Header ──────────────────────────────────────────────────────────── */}
       {/* items-start, not items-center: this is the one header whose left
           side is two lines, and centring the Settings chip against both of
@@ -426,7 +433,10 @@ export default function Dashboard() {
           </IconButton>
         </div>
       </header>
-
+    </>
+  )
+  const walletSection = (
+    <>
       {/* ── Net worth Card ───────────────────────────────────────────────────── */}
       <section className="px-5 mt-4">
         {(() => {
@@ -611,7 +621,10 @@ export default function Dashboard() {
           )
         })()}
       </section>
-
+    </>
+  )
+  const accountsSection = (
+    <>
       {/* ── Account Cards ────────────────────────────────────────────────────── */}
       <section className="mt-6">
         <div className="flex items-center justify-between px-5">
@@ -629,7 +642,7 @@ export default function Dashboard() {
             See all
           </Link>
         </div>
-        <Rail className="gap-3 mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4">
+        <Rail className="home-accounts-rail gap-3 mt-3 px-5 pt-1 -mt-1 pb-4 -mb-4">
           {(accounts || []).length === 0 && (
             <EmptyPill label="No accounts yet" />
           )}
@@ -662,11 +675,20 @@ export default function Dashboard() {
           <div className="shrink-0 w-1" />
         </Rail>
       </section>
-
+    </>
+  )
+  const quickActions = (
+    <>
       <QuickActions counts={actionCounts} />
-
+    </>
+  )
+  const wrappedSection = (
+    <>
       {wrappedMonth && <LazyWrappedCard month={wrappedMonth} className="px-5 mt-8" />}
-
+    </>
+  )
+  const budgetSection = (
+    <>
       {/* ── Budget ────────────────────────────────────────────────────────────
           One line and one meter, tapping through to the full breakdown. It
           was a grid of eight per-category chips, which is a lot of screen
@@ -677,8 +699,11 @@ export default function Dashboard() {
           <BudgetSummaryTile totals={budgetTotals} />
         </div>
       </section>
-
-{/* ── Quick templates ─────────────────────────────────────────────────── */}
+    </>
+  )
+  const templatesSection = (
+    <>
+      {/* ── Quick templates ─────────────────────────────────────────────────── */}
       {(templates ?? []).length > 0 && (
         <section className="mt-3">
           <Rail className="gap-2 px-5 pb-1">
@@ -711,10 +736,16 @@ export default function Dashboard() {
           </Rail>
         </section>
       )}
-
-      {/* ── Recent Transactions ──────────────────────────────────────────────── */}
+    </>
+  )
+  const upcomingSection = (
+    <>
       <UpcomingSection forecast={forecast} items={upcomingItems} />
-
+    </>
+  )
+  const recentSection = (
+    <>
+      {/* ── Recent Transactions ──────────────────────────────────────────────── */}
       <section className="px-5 mt-8 pb-nav">
         <SectionHeading inset="none" gap="none" actionLabel="See all" actionTo="/transactions">Recent</SectionHeading>
         <Card radius="3xl" clip className="mt-3">
@@ -723,7 +754,10 @@ export default function Dashboard() {
               size="sm"
               icon={<IconEmptyLedger size={24} />}
               title="No transactions yet"
-              body={<>Tap <span className="font-semibold">+</span> to add your first entry</>}
+              body={layout === 'desktop'
+                // No + to tap on the desktop: its add button, or a key.
+                ? <>Use <span className="font-semibold">Add transaction</span>, or press E</>
+                : <>Tap <span className="font-semibold">+</span> to add your first entry</>}
             />
           ) : (
             <AnimatePresence key={recentRows.epoch} initial={false}>
@@ -741,7 +775,10 @@ export default function Dashboard() {
           )}
         </Card>
       </section>
-
+    </>
+  )
+  const templateSheet = (
+    <>
       {/*
         The sheet the template chips open.
 
@@ -760,6 +797,34 @@ export default function Dashboard() {
         onClose={() => setQuickConfirmOpen(false)}
         template={quickTemplate}
       />
+    </>
+  )
+
+  if (layout === 'desktop') {
+    return (
+      <div className="home-desktop">
+        {header}
+        <div className="home-columns">
+          <div className="home-column">{walletSection}{accountsSection}{recentSection}</div>
+          <div className="home-column">{wrappedSection}{upcomingSection}{budgetSection}{templatesSection}</div>
+        </div>
+        {templateSheet}
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-full pb-4">
+      {header}
+      {walletSection}
+      {accountsSection}
+      {quickActions}
+      {wrappedSection}
+      {budgetSection}
+      {templatesSection}
+      {upcomingSection}
+      {recentSection}
+      {templateSheet}
     </div>
   )
 }

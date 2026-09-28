@@ -3,40 +3,75 @@ import { Routes, Route, Navigate } from 'react-router-dom'
 import { OnboardingGuard } from '../App'
 import SyncManager from '../components/SyncManager'
 import WebLayout from './WebLayout'
+import WebToaster from './WebToaster'
+import { WebScroll } from './components/WebPane'
 import WebFormPage from './WebFormPage'
+import {
+  WebAccountsSection, AccountsIndex, WebInsightsSection, WebRecurringSection, RecurringIndex,
+  WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex, WebBudgetSection, BudgetIndex,
+  WebSettingsSection,
+} from './pages/WebSections'
+// The desktop's own styles: loaded with this bundle only, so a phone never
+// downloads them.
+import './web.css'
 
-// Public routes are full-screen flows in both UIs, so the mobile components are
-// used unchanged and outside the shell.
+/**
+ * The desktop app: every route the phone has, rendering the phone's page.
+ *
+ * What the desktop adds is where a page sits (WebLayout, components/WebPane,
+ * pages/WebSections) - never a second version of what it does. A feature
+ * added to a phone page is on the desktop the moment it lands, reading the
+ * same tables and syncing through the same SyncManager.
+ *
+ * Addresses mirror App.jsx exactly, so a notification's link, a bookmark, or
+ * switching layouts mid-page lands on the same thing in either.
+ */
+
+// Public routes are full-screen flows in both UIs, used unchanged.
 const Login      = lazy(() => import('../pages/Login'))
 const Onboarding = lazy(() => import('../pages/Onboarding'))
 
-// Desktop pages. Every route has one now.
-const WebDashboard    = lazy(() => import('./pages/WebDashboard'))
-const WebTransactions = lazy(() => import('./pages/WebTransactions'))
-const WebInsights     = lazy(() => import('./pages/WebInsights'))
-const WebAccounts     = lazy(() => import('./pages/WebAccounts'))
-const WebRecurring    = lazy(() => import('./pages/WebRecurring'))
-const WebDebts        = lazy(() => import('./pages/WebDebts'))
-const WebSettings     = lazy(() => import('./pages/WebSettings'))
-const WebImport       = lazy(() => import('./pages/WebImport'))
+const WebHome      = lazy(() => import('./pages/WebHome'))
+const WebImport    = lazy(() => import('./pages/WebImport'))
 
-// Single-column forms, reused whole inside desktop chrome (see WebFormPage).
+const Transactions    = lazy(() => import('../pages/Transactions'))
+const RecentlyDeleted = lazy(() => import('../pages/transactions/RecentlyDeleted'))
+const EditTransaction = lazy(() => import('../pages/EditTransaction'))
 const AddExpense   = lazy(() => import('../pages/AddExpense'))
 const AddInflow    = lazy(() => import('../pages/AddInflow'))
 const Transfer     = lazy(() => import('../pages/Transfer'))
-/* The recap is a full-screen story on every screen size, and the list of
-   notifications a single column - both reused as they are. Both are where a
-   push notification lands, and a push goes to every device, a tablet in
-   landscape included: without them here, tapping one opened a blank page. */
+
+const InsightsTrend    = lazy(() => import('../pages/insights/TrendPage'))
+const InsightsExpenses = lazy(() => import('../pages/insights/ExpensesPage'))
+const InsightsAccounts = lazy(() => import('../pages/insights/AccountsPage'))
+const InsightsNetWorth = lazy(() => import('../pages/insights/NetWorthPage'))
+const InsightsForecast = lazy(() => import('../pages/insights/ForecastPage'))
+
+const AccountDetail = lazy(() => import('../pages/AccountDetail'))
+const AccountNew    = lazy(() => import('../pages/AccountNew'))
+const AccountEdit   = lazy(() => import('../pages/AccountEdit'))
+const CategoryDetail = lazy(() => import('../pages/CategoryDetail'))
+const PersonDetail  = lazy(() => import('../pages/debts/PersonDetail'))
+const GoalDetail    = lazy(() => import('../pages/GoalDetail'))
+const RecurringDetail = lazy(() => import('../pages/RecurringDetail'))
+const RecurringForm   = lazy(() => import('../pages/RecurringForm'))
+
 const Notifications = lazy(() => import('../pages/Notifications'))
-const Recap         = lazy(() => import('../pages/recap/RecapPage'))
-/* A milestone's notification and the celebration's share both point here,
-   and the page is one column of cards whose sheets already become centred
-   modals under html.web - so it is reused as it is too. */
 const Achievements  = lazy(() => import('../pages/Achievements'))
-const Changelog     = lazy(() => import('../pages/settings/Changelog'))
-const AppLock       = lazy(() => import('../pages/settings/AppLock'))
-const RecentlyDeleted = lazy(() => import('../pages/transactions/RecentlyDeleted'))
+const Recap         = lazy(() => import('../pages/recap/RecapPage'))
+
+const SettingsAccent = lazy(() => import('../pages/SettingsAccent'))
+const SettingsCategories = lazy(() => import('../pages/Settings').then(m => ({ default: m.CategoriesPage })))
+const SettingsBudgets    = lazy(() => import('../pages/Settings').then(m => ({ default: m.BudgetsPage })))
+const SettingsTemplates  = lazy(() => import('../pages/Settings').then(m => ({ default: m.TemplatesPage })))
+const SettingsRates      = lazy(() => import('../pages/settings/Rates'))
+const SettingsPreferences = lazy(() => import('../pages/settings/Preferences'))
+const SettingsSync       = lazy(() => import('../pages/settings/Sync'))
+const SettingsReports    = lazy(() => import('../pages/settings/Reports'))
+const SettingsBackup     = lazy(() => import('../pages/settings/BackupRestore'))
+const SettingsChangelog  = lazy(() => import('../pages/settings/Changelog'))
+const SettingsAppLock    = lazy(() => import('../pages/settings/AppLock'))
+const SettingsProfile    = lazy(() => import('../pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 
 function LoadingScreen() {
   return (
@@ -46,9 +81,15 @@ function LoadingScreen() {
   )
 }
 
+/** A single-task page: one centred column. @param {{width?: number, top?: boolean, children: import('react').ReactNode}} props */
+const Column = ({ width = 680, top = false, children }) => <WebScroll width={width} top={top}>{children}</WebScroll>
+/** A form in a card, centred (WebFormPage). @param {{width?: number, children: import('react').ReactNode}} props */
+const Form = ({ width = 600, children }) => <WebScroll width={width + 64}><WebFormPage width={width}>{children}</WebFormPage></WebScroll>
+
 export default function WebApp() {
   return (
     <Suspense fallback={<LoadingScreen />}>
+      <WebToaster />
       <Routes>
         <Route path="/login"      element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
@@ -58,50 +99,78 @@ export default function WebApp() {
         <Route element={<SyncManager />}>
           <Route element={<OnboardingGuard />}>
             <Route element={<WebLayout />}>
-              <Route path="/"             element={<WebDashboard />} />
+              <Route path="/" element={<WebHome />} />
 
-              <Route path="/transactions" element={<WebTransactions />} />
-              <Route path="/accounts"     element={<WebAccounts />} />
-              {/* The mobile edit page has no desktop counterpart - editing
-                  here is the modal WebAccounts already opens - and this route
-                  tree has no catch-all, so the URL rendered a blank screen.
-                  Reachable by switching to desktop view while on it, or by a
-                  bookmark. */}
-              <Route path="/accounts/:id/edit" element={<Navigate to="/accounts" replace />} />
-              <Route path="/insights"     element={<WebInsights />} />
-              <Route path="/debts"        element={<WebDebts />} />
-              <Route path="/recurring"    element={<WebRecurring />} />
-              <Route path="/settings"     element={<WebSettings />} />
-              {/* No outer title: each of these forms renders its own header with
-                  a back button, so adding one above it reads as a duplicate. */}
-              <Route path="/expense"  element={<WebFormPage><AddExpense /></WebFormPage>} />
-              <Route path="/inflow"   element={<WebFormPage><AddInflow /></WebFormPage>} />
-              <Route path="/transfer" element={<WebFormPage><Transfer /></WebFormPage>} />
-              <Route path="/import"   element={<WebImport />} />
-              <Route path="/notifications" element={<WebFormPage><Notifications /></WebFormPage>} />
-              <Route path="/recap"         element={<WebFormPage><Recap /></WebFormPage>} />
-              <Route path="/recap/:month"  element={<WebFormPage><Recap /></WebFormPage>} />
-              <Route path="/achievements"  element={<WebFormPage width={640}><Achievements /></WebFormPage>} />
-              <Route path="/settings/changelog" element={<WebFormPage width={640}><Changelog /></WebFormPage>} />
-              <Route path="/settings/app-lock" element={<WebFormPage width={640}><AppLock /></WebFormPage>} />
-              {/* Addresses only the phone layout has - a notification's link,
-                  a bookmark, switching to desktop view while on one - go to
-                  where desktop keeps the same thing, and anything else goes
-                  home, rather than to a blank page. Budgets live in
-                  Insights here. */}
-              <Route path="/budget"             element={<Navigate to="/insights" replace />} />
-              <Route path="/badges"             element={<Navigate to="/achievements?tab=badges" replace />} />
-              <Route path="/categories/:name"   element={<Navigate to="/insights" replace />} />
-              {/* The phone's Insights opens its cards as pages; the desktop
-                  one has all of it on one screen already. */}
-              <Route path="/insights/*"         element={<Navigate to="/insights" replace />} />
-              <Route path="/transactions/deleted" element={<WebFormPage width={640}><RecentlyDeleted /></WebFormPage>} />
-              <Route path="/transactions/*"     element={<Navigate to="/transactions" replace />} />
-              <Route path="/accounts/*"         element={<Navigate to="/accounts" replace />} />
-              <Route path="/debts/*"            element={<Navigate to="/debts" replace />} />
-              <Route path="/recurring/*"        element={<Navigate to="/recurring" replace />} />
-              <Route path="/settings/*"         element={<Navigate to="/settings" replace />} />
-              <Route path="*"                   element={<Navigate to="/" replace />} />
+              {/* ── Money ── */}
+              <Route path="/transactions" element={<Column width={780}><Transactions /></Column>} />
+              <Route path="/transactions/deleted" element={<Column><RecentlyDeleted /></Column>} />
+              <Route path="/transactions/:id/edit" element={<Form><EditTransaction /></Form>} />
+              <Route path="/expense"  element={<Form><AddExpense /></Form>} />
+              <Route path="/inflow"   element={<Form><AddInflow /></Form>} />
+              <Route path="/transfer" element={<Form><Transfer /></Form>} />
+
+              <Route path="/accounts" element={<WebAccountsSection />}>
+                <Route index element={<AccountsIndex />} />
+                <Route path="new" element={<AccountNew />} />
+                <Route path=":id" element={<AccountDetail />} />
+                <Route path=":id/edit" element={<AccountEdit />} />
+              </Route>
+
+              <Route path="/insights" element={<WebInsightsSection />}>
+                <Route index element={<Navigate to="/insights/trend" replace />} />
+                <Route path="trend" element={<InsightsTrend />} />
+                <Route path="expenses" element={<InsightsExpenses />} />
+                <Route path="accounts" element={<InsightsAccounts />} />
+                <Route path="net-worth" element={<InsightsNetWorth />} />
+                <Route path="forecast" element={<InsightsForecast />} />
+              </Route>
+
+              {/* ── Plans ── */}
+              <Route element={<WebBudgetSection />}>
+                <Route path="/budget" element={<BudgetIndex />} />
+                <Route path="/categories/:name" element={<CategoryDetail />} />
+              </Route>
+              <Route path="/goals" element={<WebGoalsSection />}>
+                <Route index element={<GoalsIndex />} />
+                <Route path=":id" element={<GoalDetail />} />
+              </Route>
+              <Route path="/recurring" element={<WebRecurringSection />}>
+                <Route index element={<RecurringIndex />} />
+                <Route path="new" element={<RecurringForm />} />
+                <Route path=":id" element={<RecurringDetail />} />
+                <Route path=":id/edit" element={<RecurringForm />} />
+              </Route>
+              <Route path="/debts" element={<WebDebtsSection />}>
+                <Route index element={<DebtsIndex />} />
+                <Route path="person/:key" element={<PersonDetail />} />
+              </Route>
+
+              {/* ── You ── */}
+              <Route path="/notifications" element={<Column top><Notifications /></Column>} />
+              <Route path="/achievements" element={<Column width={760} top><Achievements /></Column>} />
+              <Route path="/badges" element={<Navigate to="/achievements?tab=badges" replace />} />
+              <Route path="/recap" element={<Column><Recap /></Column>} />
+              <Route path="/recap/:month" element={<Column><Recap /></Column>} />
+              <Route path="/import" element={<WebScroll width={1200}><WebImport /></WebScroll>} />
+
+              <Route path="/settings" element={<WebSettingsSection />}>
+                <Route index element={<Navigate to="/settings/preferences" replace />} />
+                <Route path="profile" element={<SettingsProfile />} />
+                <Route path="preferences" element={<SettingsPreferences />} />
+                <Route path="sync" element={<SettingsSync />} />
+                <Route path="reports" element={<SettingsReports />} />
+                <Route path="backup" element={<SettingsBackup />} />
+                <Route path="changelog" element={<SettingsChangelog />} />
+                <Route path="app-lock" element={<SettingsAppLock />} />
+                <Route path="accent" element={<SettingsAccent />} />
+                <Route path="categories" element={<SettingsCategories />} />
+                <Route path="budgets" element={<SettingsBudgets />} />
+                <Route path="rates" element={<SettingsRates />} />
+                <Route path="templates" element={<SettingsTemplates />} />
+                <Route path="*" element={<Navigate to="/settings/preferences" replace />} />
+              </Route>
+
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Route>
           </Route>
         </Route>
