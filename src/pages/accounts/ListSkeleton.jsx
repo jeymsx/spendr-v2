@@ -47,7 +47,7 @@ function rememberedStacks() {
   try {
     const v = JSON.parse(localStorage.getItem(STACKS_KEY) ?? 'null')
     if (Array.isArray(v) && v.length > 0 && v.length <= 20 &&
-        v.every(n => Number.isInteger(n) && n > 0 && n <= 50)) return v
+        v.every(n => Number.isInteger(n) && n !== 0 && Math.abs(n) <= 50)) return v
   } catch { /* private mode, or not JSON */ }
   return FALLBACK
 }
@@ -89,6 +89,17 @@ function StackSkeleton({ count }) {
   )
 }
 
+/** Investments and loans: tiles two to a row (accounts/HoldingTile), remembered as a negative count. */
+function GridSkeleton({ count }) {
+  return (
+    <div className="mx-5 grid grid-cols-2 gap-3">
+      {Array.from({ length: count }, (_, i) => (
+        <Skeleton key={i} className="h-[140px] rounded-2xl" />
+      ))}
+    </div>
+  )
+}
+
 export default function AccountsSkeleton() {
   const [stacks] = useState(rememberedStacks)
   return (
@@ -107,7 +118,7 @@ export default function AccountsSkeleton() {
               <Divider className="flex-1" />
               <Skeleton className="h-[11px] w-12 rounded-md" />
             </div>
-            <StackSkeleton count={count} />
+            {count < 0 ? <GridSkeleton count={-count} /> : <StackSkeleton count={count} />}
           </section>
         ))}
       </div>

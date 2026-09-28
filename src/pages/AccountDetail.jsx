@@ -53,6 +53,7 @@ import { ordinal } from '../utils/recurring'
 import { payLoan, recordValue } from '../db/accountWrites'
 import UpdateValueSheet from './accounts/UpdateValueSheet'
 import LoanPaySheet from './accounts/LoanPaySheet'
+import { BrandSquare } from './accounts/HoldingTile'
 
 /**
  * One account, as a page rather than a sheet.
@@ -496,6 +497,12 @@ export default function AccountDetail() {
 
       {/* ── The one number, leading the page ── */}
       <section className="px-5 mt-1 text-center">
+        {(isInvestment || isLoan) && (
+          <div className="flex flex-col items-center mb-3">
+            <BrandSquare acct={account} size={48} />
+            <p className="mt-1.5 text-12 text-slate-500 dark:text-slate-400">{typeLabel}</p>
+          </div>
+        )}
         <SectionLabel>
           {isCredit ? 'Balance used' : isLoan ? 'Owed' : isInvestment ? 'Value' : 'Current balance'}
         </SectionLabel>
@@ -645,7 +652,11 @@ export default function AccountDetail() {
         </section>
       )}
 
-      {/* ── The card, laid back so it costs less height ── */}
+      {/* ── The card, laid back so it costs less height ──
+          Not for an investment or a loan: neither is something you pay with,
+          so neither is drawn as a card (accounts/HoldingTile). Their brand
+          square sits over the figure instead. */}
+      {!isInvestment && !isLoan && (
       <section className="px-5 card-tilt">
         <div
           className="acct-card mx-auto w-full max-w-[300px] rounded-2xl px-5 pt-4 pb-4
@@ -683,6 +694,7 @@ export default function AccountDetail() {
           </div>
         </div>
       </section>
+      )}
 
       {/* ── Balance over time ──────────────────────────────────────────────
 

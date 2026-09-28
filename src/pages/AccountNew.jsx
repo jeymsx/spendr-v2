@@ -12,6 +12,7 @@ import { createInvestment } from '../db/accountWrites'
 import Field from '../components/ui/Field'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
 import {
+  ColorRail,
   PreviewCard,
   SchemeRail,
 } from '../components/CardStyle'
@@ -31,6 +32,7 @@ import Rail from '../components/ui/Rail'
 import CurrencyPickerSheet from '../components/CurrencyPickerSheet'
 import { currencyOf, symbolOf } from '../lib/currency'
 import { getBaseCurrency } from '../lib/money'
+import { HoldingTile, holdingFromDraft } from './accounts/HoldingTile'
 
 /**
  * Creating an account, as a guided page rather than one long sheet.
@@ -164,9 +166,14 @@ export default function AccountNew() {
   // step three; a credit card gets it at four, because its statement fields
   // have to be asked for somewhere and they are not something to interrupt
   // the visual step with.
+  /* No style step for an investment or a loan: neither is drawn as a card
+     (accounts/HoldingTile), so there is no card design to choose - its colour
+     is asked for on the details step instead, and the last step's button is
+     the one that adds it. */
+  const isHolding = isInvestment || isLoan
   const steps = useMemo(
-    () => ['institution', 'details', ...(isCredit ? ['credit'] : []), ...(isLoan ? ['loan'] : []), 'style'],
-    [isCredit, isLoan],
+    () => ['institution', 'details', ...(isCredit ? ['credit'] : []), ...(isLoan ? ['loan'] : []), ...(isHolding ? [] : ['style'])],
+    [isCredit, isLoan, isHolding],
   )
   // Changing type away from credit can strand the index past the end.
   const current = steps[Math.min(step, steps.length - 1)]
@@ -337,7 +344,7 @@ export default function AccountNew() {
      read as a suggestion rather than the way forward. Filling the gutter is
      what iOS does with a primary action, and it makes the target the full
      width of the thumb's reach. px-8 stays as the floor for the label. */
-  const actionButton = current === 'style' ? (
+  const actionButton = current === steps[steps.length - 1] ? (
     <button
       onClick={save}
       disabled={saving || !!nameProblem}
@@ -483,7 +490,15 @@ export default function AccountNew() {
            to look like the subject of the screen rather than a header
            attachment. */
         <div className="pt-7">
-          <PreviewCard draft={draft} />
+          {isHolding ? (
+            <div className="px-5">
+              <div className="mx-auto max-w-[184px]">
+                <HoldingTile acct={holdingFromDraft(draft)} preview />
+              </div>
+            </div>
+          ) : (
+            <PreviewCard draft={draft} />
+          )}
         </div>
       )}
 
@@ -713,6 +728,16 @@ export default function AccountNew() {
                 onChange={moneyChangeHandler(v => set({ investedStart: v }))}
                 currency={draft.currency}
               />
+            </div>
+          )}
+
+          {/* The one piece of the card's style an investment or a loan keeps:
+              its colour, on the tile's logo square. The same swatch row the
+              style step and Customise card use, house colour first. */}
+          {isHolding && (
+            <div>
+              <SectionLabel>Colour</SectionLabel>
+              <ColorRail draft={draft} set={set} />
             </div>
           )}
 

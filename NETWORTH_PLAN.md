@@ -238,3 +238,14 @@ missing column), but a correction or value row pushed before it runs never gets 
 
 `lib/flows.js`, `lib/netWorth.js`, `lib/forecast.js`, `lib/loans.js`, `lib/investments.js`, `db/accountWrites.js`,
 `pages/insights/ForecastPage.jsx`, `pages/AccountDetail.jsx` (the investment and loan variants).
+
+## After the morning report
+- **Investments and loans are tiles, not cards** (the owner's call: they are not something you pay with).
+  - Accounts: a two-column grid of `accounts/HoldingTile` (brand square, name, kind or due day, the figure, gain or
+    progress, an Old value / Overdue / Paid off chip). Drag to reorder within the grid.
+  - Their pages drop the 3D card for a brand square; Home's account carousel leaves them out; the create flow skips
+    the card-style step (colour is on the details step) and previews the tile; the edit page shows the tile plus the
+    colour row instead of Customise card.
+- **More presets:** 20 investments (bank UITFs, Sun Life, brokers, RTB, PERA, gold, real estate, business) and 15
+  loans (Pag-IBIG and SSS calamity, GSIS, home, motorcycle, GLoan, Maya, Home Credit, company, student).
+  New investment kinds: bonds, pera, gold, business.

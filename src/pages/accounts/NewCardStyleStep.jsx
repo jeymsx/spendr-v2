@@ -1,6 +1,7 @@
 import { CardDesignGallery, ColorRail, PreviewCard } from '../../components/CardStyle'
 import Confetti from '../../components/Confetti'
 import Button from '../../components/ui/Button'
+import { HoldingTile, holdingFromDraft } from './HoldingTile'
 
 // ── Card style step ────────────────────────────────────────────────────────────
 
@@ -93,7 +94,13 @@ export function CreatedStep({ draft, onDone, onAddTransaction }) {
       {/* Rises a little later than the text, so the card arrives rather than
           appearing with it. */}
       <div className="w-full mt-7" style={{ animation: 'quickIn 0.5s 0.12s cubic-bezier(0.32, 0.72, 0, 1) both' }}>
-        <PreviewCard draft={draft} large />
+        {draft.type === 'investment' || draft.type === 'loan' ? (
+          <div className="mx-auto max-w-[184px] text-left">
+            <HoldingTile acct={holdingFromDraft(draft)} preview />
+          </div>
+        ) : (
+          <PreviewCard draft={draft} large />
+        )}
       </div>
 
       <p className="mt-5 text-13 leading-relaxed text-slate-400 dark:text-slate-500 max-w-[300px]">

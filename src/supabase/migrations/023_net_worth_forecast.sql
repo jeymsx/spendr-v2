@@ -52,8 +52,10 @@ comment on column public.transactions.adjust is
   'correction | value: moves a balance, not counted as income or spending. Null for ordinary rows.';
 
 -- ── accounts: investments ────────────────────────────────────────────────
--- What kind of investment: 'fund', 'mp2', 'stocks', 'vul', 'deposit',
--- 'property', 'other'. A label and a glyph; every kind is valued the same way.
+-- What kind of investment: 'fund', 'mp2', 'stocks', 'bonds', 'deposit', 'pera',
+-- 'vul', 'gold', 'property', 'business', 'other' (lib/accountMeta.js
+-- INVESTMENT_KINDS). A label only; every kind is valued the same way. Free
+-- text, so a kind added later needs no migration.
 alter table public.accounts
   add column if not exists kind text;
 
@@ -71,7 +73,7 @@ alter table public.accounts
   add column if not exists valued_at timestamp with time zone;
 
 comment on column public.accounts.kind is
-  'Investment kind: fund | mp2 | stocks | vul | deposit | property | other. Null for other account types.';
+  'Investment kind (see INVESTMENT_KINDS in the app): fund, mp2, stocks, bonds, deposit, pera, vul, gold, property, business, other. Null for other account types.';
 comment on column public.accounts.invested_start is
   'Investments: amount paid in before the account was tracked.';
 comment on column public.accounts.valued_at is

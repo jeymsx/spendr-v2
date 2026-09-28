@@ -11,6 +11,7 @@ import {
 import {
   SortableContext,
   arrayMove,
+  rectSortingStrategy,
 } from '@dnd-kit/sortable'
 import 'react-image-crop/dist/ReactCrop.css'
 import db from '../db/db'
@@ -35,6 +36,9 @@ import { QrViewerModal } from './accounts/QrSheets'
 import { AccountSortSheet } from './accounts/SortSheet'
 import { CreditTxSection, DetailTxRow } from './accounts/DetailParts'
 import { SummaryBar, AccountCard } from './accounts/ListCard'
+import { SortableHoldingTile, withinGrid } from './accounts/HoldingTile'
+import { investmentStatus } from '../lib/investments'
+import { loanStatus } from '../lib/loans'
 import AccountsSkeleton, { rememberStacks } from './accounts/ListSkeleton'
 import {
   QuickAddSheet, SortableAccountCard, lockToVerticalAxis, stackSortingStrategy,
@@ -78,9 +82,10 @@ export { CreditTxSection, DetailTxRow }
 const ACCOUNT_GROUPS = [
   { label: 'Spending',    roles: ['spending'] },
   { label: 'Savings',     roles: ['savings']  },
-  { label: 'Investments', roles: ['invested'] },
+  // Tiles, two to a row, not card faces - see accounts/HoldingTile.
+  { label: 'Investments', roles: ['invested'], tiles: true },
   { label: 'Credit',      roles: ['credit']   },
-  { label: 'Loans',       roles: ['loan']     },
+  { label: 'Loans',       roles: ['loan'],     tiles: true },
 ]
 
 /**
@@ -181,6 +186,18 @@ export default function Accounts() {
     return map
   }, [accounts, transactions])
 
+  /* What each investment and loan tile says beyond its balance - the gain,
+     the old-value mark, how far along, a missed payment. */
+  const holdingStatus = useMemo(() => {
+    /** @type {Record<string, any>} */
+    const map = {}
+    for (const a of accounts ?? []) {
+      if (a.type === 'investment') map[a.name] = investmentStatus(a, transactions ?? [])
+      else if (a.type === 'loan') map[a.name] = loanStatus(a, transactions ?? [])
+    }
+    return map
+  }, [accounts, transactions])
+
   const parentNames = useMemo(() =>
     new Set((accounts ?? []).filter(a => a.parentName).map(a => a.parentName)),
     [accounts],
@@ -245,9 +262,10 @@ export default function Accounts() {
   // How many cards each stack held, so the next visit's skeleton is this shape.
   useEffect(() => {
     if (loading) return
+    // A grid section is remembered as a negative count - ListSkeleton draws tiles for it.
     rememberStacks(sections.map(s => (s.kind === 'parent'
       ? 1 + accounts.filter(a => a.parentName === s.parent.name).length
-      : s.group.accounts.length)))
+      : s.group.tiles ? -s.group.accounts.length : s.group.accounts.length)))
   }, [loading, sections, accounts])
 
   // ?open=<accountName> used to pop the detail sheet. The detail view is a
@@ -482,7 +500,8 @@ export default function Accounts() {
             <DndContext
               sensors={cardSensors}
               collisionDetection={closestCenter}
-              modifiers={[lockToVerticalAxis]}
+              // A grid moves both ways; a stack only up and down.
+              modifiers={group.tiles ? [withinGrid] : [lockToVerticalAxis]}
               autoScroll={{ threshold: { x: 0, y: 0.2 } }}
               onDragStart={buzz}
               onDragEnd={({ active, over }) => {
@@ -497,8 +516,21 @@ export default function Accounts() {
             >
               <SortableContext
                 items={group.accounts.map(a => a.id)}
-                strategy={stackSortingStrategy}
+                strategy={group.tiles ? rectSortingStrategy : stackSortingStrategy}
               >
+                {group.tiles ? (
+                  <div className="mx-5 grid grid-cols-2 gap-3">
+                    {group.accounts.map(acct => (
+                      <SortableHoldingTile
+                        key={acct.id}
+                        acct={acct}
+                        status={holdingStatus[acct.name]}
+                        hidden={balanceHidden}
+                        onTap={() => { if (!tapAfterDrag()) openDetail(acct) }}
+                      />
+                    ))}
+                  </div>
+                ) : (
                 <div className="mx-5 flex flex-col">
                   {group.accounts.map((acct, i) => (
                     <SortableAccountCard
@@ -511,6 +543,7 @@ export default function Accounts() {
                     />
                   ))}
                 </div>
+                )}
               </SortableContext>
             </DndContext>
           </section>

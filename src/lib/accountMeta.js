@@ -39,9 +39,13 @@ export const INVESTMENT_KINDS = [
   { value: 'fund',     label: 'UITF / fund' },
   { value: 'mp2',      label: 'MP2 / Pag-IBIG' },
   { value: 'stocks',   label: 'Stocks' },
-  { value: 'vul',      label: 'Insurance / VUL' },
+  { value: 'bonds',    label: 'Bonds / RTB' },
   { value: 'deposit',  label: 'Time deposit' },
+  { value: 'pera',     label: 'PERA' },
+  { value: 'vul',      label: 'Insurance / VUL' },
+  { value: 'gold',     label: 'Gold' },
   { value: 'property', label: 'Property' },
+  { value: 'business', label: 'Business' },
   { value: 'other',    label: 'Other' },
 ]
 

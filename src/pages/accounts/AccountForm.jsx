@@ -25,9 +25,11 @@ import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
 import SubPage from '../../components/SubPage'
 import {
+  ColorRail,
   PreviewCard,
   SchemeRail,
 } from '../../components/CardStyle'
+import { HoldingTile } from './HoldingTile'
 import { IconCard, IconTrash } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
@@ -596,6 +598,24 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 Flat rather than upright because this is a preview, not a
                 choice - the card only stands up in Customise card, where the
                 thing being chosen IS how it looks. */}
+            {/* An investment or a loan is not drawn as a card, so it has no
+                card to design: its tile, and the one thing of the card's
+                style it keeps - the colour on its logo square. */}
+            {(isInvestmentType || isLoanType) ? (
+            <div className="pt-1 pb-1">
+              <div className="mx-auto max-w-[184px]">
+                <HoldingTile
+                  acct={{ ...(account ?? {}), name, type, kind, color, customColor, presetColor, currency,
+                    balance: isEdit ? account?.balance : balanceFromField(startingBal) }}
+                  preview
+                />
+              </div>
+              <div className="mt-4">
+                <SectionLabel>Colour</SectionLabel>
+                <ColorRail draft={draft} set={setDraft} />
+              </div>
+            </div>
+            ) : (
             <div className="pt-1 pb-1">
               <PreviewCard draft={draft} large />
 
@@ -615,6 +635,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 Customise card
               </button>
             </div>
+            )}
 
             {/* Name */}
             <div>

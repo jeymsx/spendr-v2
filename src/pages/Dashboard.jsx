@@ -46,6 +46,7 @@ import { txBase } from '../lib/fxContext'
 import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
 import { useRecapMonth } from './recap/useRecapMonth'
 import LazyWrappedCard, { preloadWrappedCard } from './recap/LazyWrappedCard'
+import { isEverydayAccount } from '../lib/accountMeta'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -581,9 +582,11 @@ export default function Dashboard() {
           {(() => {
             const allAccts    = accounts || []
             const parentNames = new Set(allAccts.filter(a => a.parentName).map(a => a.parentName))
-            // Show parent accounts (combined balance) + flat accounts; exclude child accounts
+            // Show parent accounts (combined balance) + flat accounts; exclude child accounts.
+            // Money you spend from only: investments and loans are not cards
+            // (accounts/HoldingTile), and the wallet above already has their tiles.
             const cardAccts   = allAccts
-              .filter(a => parentNames.has(a.name) || !a.parentName)
+              .filter(a => (parentNames.has(a.name) || !a.parentName) && isEverydayAccount(a))
               .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
             return cardAccts.map(acct => {
               const isParent = parentNames.has(acct.name)
