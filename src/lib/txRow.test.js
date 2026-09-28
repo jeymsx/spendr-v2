@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { txGlyphCat } from './txGlyph'
+import { txGlyphCat, txKindLabel, txRowWords } from './txRow'
 import { categoryIcon } from '../components/CategoryGlyph'
 import { loanPaymentNote, loanInterestNote, LOAN_INTEREST } from './loans'
 
@@ -69,5 +69,36 @@ describe('txGlyphCat', () => {
   it('is nothing for a row with no category and no kind of its own', () => {
     expect(txGlyphCat({ type: 'expense' }, catMap)).toBeNull()
     expect(txGlyphCat(null, catMap)).toBeNull()
+  })
+})
+
+describe('txRowWords', () => {
+  it('titles a loan payment with the loan, from the account that paid it', () => {
+    const tx = { type: 'transfer', fromAccount: 'BPI', toAccount: 'Car Loan', description: loanPaymentNote('Car Loan') }
+    expect(txRowWords(tx)).toEqual({ title: 'Car Loan', where: 'BPI', kind: 'Loan payment' })
+  })
+
+  it('keeps a plain transfer as its two accounts, with no kind', () => {
+    expect(txRowWords({ type: 'transfer', fromAccount: 'BPI', toAccount: 'GCash' }))
+      .toEqual({ title: 'Transfer to GCash', where: 'BPI → GCash', kind: '' })
+  })
+
+  it('gives an ordinary row its category', () => {
+    expect(txRowWords({ type: 'expense', description: 'Lunch', category: 'Food', account: 'GCash' }, catMap.Food))
+      .toEqual({ title: 'Lunch', where: 'GCash', kind: 'Food' })
+  })
+})
+
+describe('txKindLabel', () => {
+  it('names the rows the app writes for what they are', () => {
+    expect(txKindLabel({ type: 'inflow', category: 'Income', adjust: 'correction' })).toBe('Adjustment')
+    expect(txKindLabel({ type: 'expense', category: 'Others', description: 'Balance adjustment' })).toBe('Adjustment')
+    expect(txKindLabel({ type: 'expense', category: 'Debt Payment' })).toBe('Debt')
+    expect(txKindLabel({ type: 'inflow', category: 'Debt Collection' })).toBe('Debt')
+  })
+
+  it('is the category for anything else, and nothing for no row', () => {
+    expect(txKindLabel({ type: 'expense', category: 'Groceries' })).toBe('Groceries')
+    expect(txKindLabel(null)).toBe('')
   })
 })

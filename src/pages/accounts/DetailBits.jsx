@@ -1,4 +1,6 @@
+import { useMemo } from 'react'
 import Card from '../../components/ui/Card'
+import { foldLoanPayments } from '../../lib/loans'
 import { ListEnd, useInfiniteList } from '../../components/ui/InfiniteList'
 import Divider from '../../components/ui/Divider'
 import { fmtCompact } from '../../lib/money'
@@ -6,9 +8,11 @@ import { DetailTxRow } from './DetailParts'
 
 // ── Bits ───────────────────────────────────────────────────────────────────────
 
-/** An account's history, a page at a time as you scroll (ui/InfiniteList). */
+/** An account's history, a page at a time as you scroll (ui/InfiniteList),
+ *  with each loan payment as one row (lib/loans.js foldLoanPayments). */
 export function TxList({ txs, accountName, onSelect, catMap }) {
-  const list = useInfiniteList(txs, { resetKey: accountName })
+  const rows = useMemo(() => foldLoanPayments(txs), [txs])
+  const list = useInfiniteList(rows, { resetKey: accountName })
   return (
     <div className="mb-4">
       <Card clip>
@@ -19,7 +23,7 @@ export function TxList({ txs, accountName, onSelect, catMap }) {
           </div>
         ))}
       </Card>
-      <ListEnd list={list} done={`All ${txs.length} transactions`} />
+      <ListEnd list={list} done={`All ${rows.length} transactions`} />
     </div>
   )
 }

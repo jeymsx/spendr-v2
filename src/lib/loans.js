@@ -57,19 +57,105 @@ export const loanInterestNote = (loan) => `Interest · ${loan}`
  */
 export function loanPairOf(tx, all) {
   if (!tx?.date) return null
-  if (tx.type === 'transfer' && tx.toAccount && tx.description === loanPaymentNote(tx.toAccount)) {
-    return all.find(r => r !== tx && r.type === 'expense' && r.category === LOAN_INTEREST
-      && r.date === tx.date && r.account === tx.fromAccount
-      && r.description === loanInterestNote(tx.toAccount)) ?? null
+  // A copy of the row counts as the row: a sheet is handed one.
+  const other = (/** @type {Record<string, any>} */ r) => r !== tx && (tx.id == null || r.id !== tx.id)
+  if (isLoanPayment(tx)) {
+    return all.find(r => other(r) && interestLoanOf(r) === tx.toAccount
+      && r.date === tx.date && r.account === tx.fromAccount) ?? null
   }
-  if (tx.type === 'expense' && tx.category === LOAN_INTEREST && typeof tx.description === 'string'
-    && tx.description.startsWith(loanInterestNote(''))) {
-    const loan = tx.description.slice(loanInterestNote('').length)
-    return all.find(r => r !== tx && r.type === 'transfer' && r.toAccount === loan
-      && r.date === tx.date && r.fromAccount === tx.account
-      && r.description === loanPaymentNote(loan)) ?? null
+  const loan = interestLoanOf(tx)
+  if (loan) {
+    return all.find(r => other(r) && isLoanPayment(r) && r.toAccount === loan
+      && r.date === tx.date && r.fromAccount === tx.account) ?? null
   }
   return null
+}
+
+/**
+ * The part of a loan payment that goes to the loan: the transfer into it.
+ * @param {Record<string, any>|null|undefined} tx
+ */
+export function isLoanPayment(tx) {
+  return tx?.type === 'transfer' && !!tx.toAccount && tx.description === loanPaymentNote(tx.toAccount)
+}
+
+/**
+ * The loan an interest row was paid on, or null when it is not one.
+ * @param {Record<string, any>|null|undefined} tx
+ * @returns {string|null}
+ */
+export function interestLoanOf(tx) {
+  if (tx?.type !== 'expense' || tx.category !== LOAN_INTEREST || typeof tx.description !== 'string') return null
+  const prefix = loanInterestNote('')
+  return tx.description.startsWith(prefix) ? tx.description.slice(prefix.length) : null
+}
+
+/**
+ * A list with each loan payment as the one row it was: you paid ₱12,850
+ * once, and the list showed two rows - the interest in red, the rest as a
+ * blue transfer that read like money you had only moved.
+ *
+ * The payment is still two rows underneath (see the note at the top), and
+ * every total still reads those. This is only what a list draws: the
+ * transfer stands for both, carrying its interest row as `loanInterest`,
+ * in the transfer's place. A half whose partner is not in `txs` - filtered
+ * out, or on another account's page - stays as it is, so a list of
+ * expenses still shows the interest and a loan's own page the principal.
+ *
+ * Hand a row back to anything that reads or writes it through
+ * unfoldLoanPayment: `loanInterest` is for drawing, not for storing.
+ *
+ * @template {Record<string, any>} T
+ * @param {T[]} txs
+ * @returns {Array<T & {loanInterest?: T}>}
+ */
+export function foldLoanPayments(txs) {
+  /** @type {Map<string, T>} */
+  const interest = new Map()
+  for (const t of txs) {
+    const loan = interestLoanOf(t)
+    if (loan) interest.set(`${t.date}\u001f${t.account}\u001f${loan}`, t)
+  }
+  if (!interest.size) return txs
+  const folded = new Set()
+  /** @type {Array<T & {loanInterest?: T}>} */
+  const out = []
+  for (const t of txs) {
+    const i = isLoanPayment(t) ? interest.get(`${t.date}\u001f${t.fromAccount}\u001f${t.toAccount}`) : null
+    if (i && !folded.has(i)) {
+      folded.add(i)
+      out.push({ ...t, loanInterest: i })
+    } else {
+      out.push(t)
+    }
+  }
+  return folded.size ? out.filter(t => !folded.has(t)) : out
+}
+
+/**
+ * What a folded row carries on top of its own amount - the interest - so
+ * the figure a list shows is the whole payment. 0 for any other row.
+ *
+ * @param {Record<string, any>|null|undefined} row
+ */
+export function interestCarried(row) {
+  return row?.loanInterest ? Math.abs(Number(row.loanInterest.amount) || 0) : 0
+}
+
+/**
+ * A row from foldLoanPayments as the transaction it stands for - the
+ * transfer - for a sheet to open, or a delete to take (which takes its
+ * interest with it: db/txHelpers.js expandDeletion).
+ *
+ * @template {Record<string, any>} T
+ * @param {T & {loanInterest?: any}} row
+ * @returns {T}
+ */
+export function unfoldLoanPayment(row) {
+  if (!row?.loanInterest) return row
+  const tx = { ...row }
+  delete tx.loanInterest
+  return tx
 }
 
 /**

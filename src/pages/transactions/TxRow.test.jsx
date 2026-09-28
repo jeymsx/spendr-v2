@@ -43,4 +43,26 @@ describe('TxRow', () => {
     render(<TxRow tx={lunch} catMap={catMap} onClick={() => {}} />)
     expect(screen.getAllByRole('button')).toHaveLength(1)
   })
+
+  it('a loan payment is one row: the loan, the whole payment, and the transfer it stands for', () => {
+    const principal = { id: 3, type: 'transfer', amount: 9150, fromAccount: 'BPI', toAccount: 'Car Loan', description: 'Loan payment · Car Loan', date: lunch.date }
+    const interest = { id: 4, type: 'expense', amount: 3700, account: 'BPI', category: 'Loan interest', description: 'Interest · Car Loan', date: lunch.date }
+    const onClick = vi.fn()
+    render(<TxRow tx={{ ...principal, loanInterest: interest }} catMap={catMap} onClick={onClick} onCategory={() => {}} />)
+    expect(screen.getByText('Car Loan')).toBeTruthy()
+    expect(screen.getByText('· Loan payment')).toBeTruthy()
+    expect(screen.getByText(/12,850\.00/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button'))
+    expect(onClick).toHaveBeenCalledWith(principal)
+  })
+
+  it('says what the app own rows are, where their category would mislead', () => {
+    render(<TxRow tx={{ id: 5, type: 'inflow', amount: 500, category: 'Income', adjust: 'correction', description: 'Balance adjustment', account: 'GCash', date: lunch.date }}
+      catMap={catMap} onClick={() => {}} />)
+    expect(screen.getByText('· Adjustment')).toBeTruthy()
+    cleanup()
+    render(<TxRow tx={{ id: 6, type: 'expense', amount: 1000, category: 'Debt Payment', description: 'Paid Ana back', account: 'GCash', date: lunch.date }}
+      catMap={catMap} onClick={() => {}} />)
+    expect(screen.getByText('· Debt')).toBeTruthy()
+  })
 })

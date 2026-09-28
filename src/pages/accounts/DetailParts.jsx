@@ -6,7 +6,8 @@
  * while, and these stayed behind.
  */
 import CategoryGlyph from '../../components/CategoryGlyph'
-import { txGlyphCat } from '../../lib/txGlyph'
+import { txGlyphCat, txKindLabel } from '../../lib/txRow'
+import { interestCarried, isLoanPayment, unfoldLoanPayment } from '../../lib/loans'
 import { IconEmptyReceipt } from '../../components/icons'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
@@ -79,13 +80,17 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
  * @param {string} [props.meta]   overrides the second line's tail
  */
 export function DetailTxRow({
-  tx, accountName, onSelect, catMap = {},
+  tx: row, accountName, onSelect, catMap = {},
   label: labelOverride = null,
   meta: metaOverride = null,
 }) {
+  // A loan payment folded into one row (lib/loans.js) is its transfer, carrying its interest.
+  const tx = unfoldLoanPayment(row)
   const cat = catMap[tx.category]
   const glyph = txGlyphCat(tx, catMap)
   const isTransfer = tx.type === 'transfer'
+  const loan = isLoanPayment(tx)
+  const onLoanPage = loan && tx.toAccount === accountName
 
   // Sign and colour are relative to THIS ACCOUNT, not to the transaction's
   // own type, and that is the one thing not copied from the Transactions
@@ -98,14 +103,19 @@ export function DetailTxRow({
      render "−₱-500.00" and colour money coming back as money going out. It
      takes the account so a transfer is still signed by the side being
      looked at. */
-  const { sign, magnitude, tone, currency } = amountDisplay(tx, { account: accountName })
+  const { sign, magnitude: own, tone, currency } = amountDisplay(tx, { account: accountName })
+  // The whole payment: what left the account, interest and all.
+  const magnitude = own + interestCarried(row)
   const isOneSided = tx.type !== 'transfer' && tx.account !== accountName
   const color = isOneSided ? 'text-slate-600 dark:text-slate-300' : TONE_CLASS[tone]
 
   const isTransferFee = tx.type === 'expense' && tx.category === 'Transfer Fee'
   const refunded = isRefund(tx)
 
-  const label = labelOverride ?? (tx.description || (isTransfer
+  /* A loan payment is titled with the loan, from the account that paid it,
+     and simply "Loan payment" on the loan's own page - its note, "Loan
+     payment · Car Loan", named the loan a second time on both. */
+  const label = labelOverride ?? (loan ? (onLoanPage ? 'Loan payment' : tx.toAccount) : tx.description || (isTransfer
     ? (tx.fromAccount === accountName ? `To ${tx.toAccount ?? ''}` : `From ${tx.fromAccount ?? ''}`)
     : (tx.category ?? '—')))
 
@@ -117,11 +127,14 @@ export function DetailTxRow({
      Maya Savings" - so repeating it here as "← Maya Savings" printed the same
      account twice on one row. It earns its place only when a description took
      the label instead. */
-  const meta = metaOverride ?? (isTransfer
-    ? (tx.description
-      ? (tx.fromAccount === accountName ? `→ ${tx.toAccount ?? ''}` : `← ${tx.fromAccount ?? ''}`)
-      : '')
-    : (cat?.name ?? tx.category ?? ''))
+  const meta = metaOverride ?? (loan
+    ? (onLoanPage ? `From ${tx.fromAccount ?? ''}` : 'Loan payment')
+    : isTransfer
+      ? (tx.description
+        ? (tx.fromAccount === accountName ? `→ ${tx.toAccount ?? ''}` : `← ${tx.fromAccount ?? ''}`)
+        : '')
+      // "Adjustment" and "Debt" for the rows the app writes itself (lib/txRow).
+      : txKindLabel(tx, cat))
 
   // Tappable so charges reachable only from here can still be edited or
   // deleted — scheduled installments are filtered out of the Transactions

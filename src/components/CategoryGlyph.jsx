@@ -114,7 +114,7 @@ const CATEGORY_ICON = {
   // ── Written by the app, never picked ──
   /* The categories the app files rows under by itself - a loan payment's
      interest, a debt settled up - and two names a row's tile is given for
-     what it is rather than a category it has (lib/txGlyph.js): the part of a
+     what it is rather than a category it has (lib/txRow.js): the part of a
      loan payment that goes to the loan, which is a transfer, and a balance
      correction. None of them had a glyph, so each drew the emoji it was
      created with, or a flying banknote.

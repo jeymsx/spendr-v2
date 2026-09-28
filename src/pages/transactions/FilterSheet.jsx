@@ -3,7 +3,8 @@ import Card from '../../components/ui/Card'
 import SectionLabel from '../../components/ui/SectionLabel'
 import Button from '../../components/ui/Button'
 import CategoryGlyph from '../../components/CategoryGlyph'
-import { txGlyphCat } from '../../lib/txGlyph'
+import { txGlyphCat, txRowWords } from '../../lib/txRow'
+import { interestCarried, unfoldLoanPayment } from '../../lib/loans'
 import CategoryRail from '../../components/CategoryRail'
 import BrandMark from '../../components/BrandMark'
 import BrandWatermark from '../../components/BrandWatermark'
@@ -248,14 +249,19 @@ export function FilterModal({
  * Rows whose category cannot be changed here (canRecategorize) stay one
  * button.
  *
+ * A loan payment folded into one row (lib/loans.js foldLoanPayments) shows
+ * the whole payment, and hands its handlers the transaction it stands for.
+ *
  * @param {{tx: Record<string, any>, catMap: Record<string, any>, onClick: (tx: any) => void,
  *          onCategory?: (tx: any) => void}} props
  */
-export function TxRow({ tx, catMap, onClick, onCategory }) {
+export function TxRow({ tx: row, catMap, onClick, onCategory }) {
+  const tx = unfoldLoanPayment(row)
   const cat = catMap[tx.category]
-  // A transfer, a loan payment or a correction has a tile of its own (lib/txGlyph).
+  // A transfer, a loan payment or a correction has a tile of its own (lib/txRow).
   const glyph = txGlyphCat(tx, catMap)
-  const { cls, sign, magnitude, currency } = txRowTone(tx)
+  const { cls, sign, magnitude: own, currency } = txRowTone(tx)
+  const magnitude = own + interestCarried(row)
   const tile = (
     <div
       className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
@@ -307,18 +313,17 @@ export function TxRow({ tx, catMap, onClick, onCategory }) {
 
 /** A row's words and figure: what it was, where from, how much, when. */
 function RowBody({ tx, cat, cls, sign, magnitude, currency }) {
+  const { title, where, kind } = txRowWords(tx, cat)
   return (
     <>
       <div className="flex-1 min-w-0">
         <p className="text-13 font-semibold text-slate-800 dark:text-slate-100 truncate leading-snug">
-          {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
+          {title}
         </p>
         <p className="text-11 text-slate-500 dark:text-slate-400 truncate mt-0.5">
-          {tx.type === 'transfer'
-            ? `${tx.fromAccount ?? ''} → ${tx.toAccount ?? ''}`
-            : (tx.account ?? '')}
-          {cat && tx.type !== 'transfer' && (
-            <span className="ml-1.5 text-slate-400 dark:text-slate-500">· {cat.name}</span>
+          {where}
+          {kind && (
+            <span className="ml-1.5 text-slate-400 dark:text-slate-500">· {kind}</span>
           )}
         </p>
       </div>

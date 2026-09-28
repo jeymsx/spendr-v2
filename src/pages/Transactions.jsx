@@ -33,6 +33,7 @@ import SearchField from '../components/ui/SearchField'
 import SearchResults from './transactions/SearchResults'
 import LedgerSkeleton from './transactions/ListSkeleton'
 import { searchEverything, txMatches } from '../lib/search'
+import { foldLoanPayments, unfoldLoanPayment } from '../lib/loans'
 import { baseSymbol } from '../lib/money'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
@@ -162,9 +163,14 @@ export default function Transactions() {
     })
   }, [txAll, deferredSearch, typeFilter, accountFilters, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
+  /* Each loan payment as the one row it was, not its two halves - see
+     lib/loans.js foldLoanPayments. Only what the list draws: the calendar,
+     the filter's count and every total still read filteredTx. */
+  const shownTx = useMemo(() => foldLoanPayments(filteredTx), [filteredTx])
+
   /* A page at a time, the next one added before you reach the end - no
      "Load more" to tap. See components/ui/InfiniteList. */
-  const list      = useInfiniteList(filteredTx, { page: PAGE_SIZE, resetKey: filterSig })
+  const list      = useInfiniteList(shownTx, { page: PAGE_SIZE, resetKey: filterSig })
   const visibleTx = list.visible
   const groups    = useMemo(() => groupByDate(visibleTx), [visibleTx])
 
@@ -431,7 +437,7 @@ export default function Transactions() {
                         >
                           <SwipeRow
                             label={`Delete ${tx.description || tx.category || 'transaction'}`}
-                            onDelete={() => swipeDelete(tx)}
+                            onDelete={() => swipeDelete(unfoldLoanPayment(tx))}
                           >
                             <TxRow tx={tx} catMap={catMap} onClick={(t) => { setDetailIntent('detail'); setSelectedTx(t) }} onCategory={setQuickCatTx} />
                           </SwipeRow>
@@ -448,7 +454,7 @@ export default function Transactions() {
             })}
           </AnimatePresence>
 
-          <ListEnd list={list} done={`All ${filteredTx.length} transactions`} />
+          <ListEnd list={list} done={`All ${shownTx.length} transactions`} />
         </>
       )}
 

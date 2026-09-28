@@ -83,7 +83,7 @@ export default function NetWorthPage() {
           <>
             <section className="px-5 text-center">
               <SectionLabel inset="none">Today</SectionLabel>
-              <p className="mt-2 text-38 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
+              <p className={`mt-2 ${heroSize(fmt(current ?? 0, base))} leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white`}>
                 {fmt(current ?? 0, base)}
               </p>
               {data.length > 1 && (
@@ -230,12 +230,16 @@ function Balance({ have, owe, base }) {
   const scale = Math.max(hasTotal, owesTotal)
   const net = hasTotal - owesTotal
   const even = Math.abs(net) < 0.005
+  /* The dashes are the gap between two bars. With nothing on one side there
+     is no gap to show - the other bar is the whole answer - and a bar of
+     dashes over "You owe ₱0.00" read as something owed. */
+  const both = hasTotal > 0.005 && owesTotal > 0.005
   return (
     <Card className="mx-5 px-4 pt-3.5 pb-4">
       <BalanceBar label="You have" rows={have} total={hasTotal} scale={scale} base={base}
-        short={net < -0.005 ? -net : 0} shortTone="red" />
+        short={both && net < -0.005 ? -net : 0} shortTone="red" />
       <BalanceBar label="You owe" rows={owe} total={owesTotal} scale={scale} base={base}
-        short={net > 0.005 ? net : 0} shortTone="green" className="mt-3.5" />
+        short={both && net > 0.005 ? net : 0} shortTone="green" className="mt-3.5" />
       <Divider className="mt-4 mb-3" />
       <div className="flex items-baseline justify-between gap-3">
         <span className="text-13 font-semibold text-slate-800 dark:text-white">Net worth</span>
@@ -272,9 +276,10 @@ function BalanceBar({ label, rows, total, scale, base, short, shortTone, classNa
         <span className="text-12 font-medium text-slate-500 dark:text-slate-400">{label}</span>
         <span className="text-14 font-semibold tabular-nums text-slate-900 dark:text-white">{fmt(total, base)}</span>
       </div>
-      {/* No track under it: the bar and the dashes after it always fill the
-          width between them, and a grey ground showed through the dashes. */}
-      <div className={`mt-1.5 h-3 flex items-stretch gap-[3px] rounded-full${scale > 0 ? '' : ' bg-slate-100 dark:bg-white/[0.06]'}`} aria-hidden="true">
+      {/* A track only for a side with nothing on it. Otherwise the bar and
+          the dashes after it fill the width between them, and a grey ground
+          showed through the dashes. */}
+      <div className={`mt-1.5 h-3 flex items-stretch gap-[3px] rounded-full${width > 0 || short > 0 ? '' : ' bg-slate-100 dark:bg-white/[0.06]'}`} aria-hidden="true">
         {width > 0 && (
           <span className="grow-x h-full flex gap-[2px] rounded-full overflow-hidden" style={{ width: `${width}%` }}>
             {parts.map(p => (
@@ -317,7 +322,8 @@ function PileCard({ rows, base, onOpen }) {
             </span>
             <span className="text-right shrink-0">
               <span className="block text-13 font-semibold tabular-nums text-slate-900 dark:text-white">{fmt(r.value, base)}</span>
-              {total > 0.005 && (
+              {/* No share for an empty pile: "₱0.00 · 0%" says nothing twice. */}
+              {total > 0.005 && r.value > 0.005 && (
                 <span className="block text-11 tabular-nums text-slate-400 dark:text-slate-500">
                   {sharePct(r.value, total)}
                 </span>
@@ -329,6 +335,17 @@ function PileCard({ rows, base, onOpen }) {
       ))}
     </Card>
   )
+}
+
+/**
+ * The hero figure's size for its length. 38px holds fourteen characters in
+ * the width of a 360px phone; a net worth in the tens of millions, owed,
+ * is sixteen, and ran off both edges.
+ *
+ * @param {string} text
+ */
+function heroSize(text) {
+  return text.length <= 14 ? 'text-38' : text.length <= 17 ? 'text-32' : 'text-28'
 }
 
 /** A pile's share of its side: "34%", or "<1%" for a sliver that is not nothing. @param {number} v @param {number} total */

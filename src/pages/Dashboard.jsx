@@ -41,7 +41,8 @@ import useForecast from '../hooks/useForecast'
 import { convert } from '../lib/fx'
 import { netWorthBreakdown } from '../lib/netWorth'
 import { isSpend } from '../lib/flows'
-import { txGlyphCat } from '../lib/txGlyph'
+import { txGlyphCat } from '../lib/txRow'
+import { foldLoanPayments } from '../lib/loans'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import { txBase } from '../lib/fxContext'
 import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
@@ -198,9 +199,10 @@ export default function Dashboard() {
   // Without this they'd sort to the top of Recent and sit there for months.
   const recentTx = useMemo(() => {
     const cutoff = scheduledCutoff()
-    return (txAll || [])
+    // A loan payment is one of the five, not two (lib/loans.js).
+    return foldLoanPayments((txAll || [])
       .filter(t => (t.date ?? '') <= cutoff)
-      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')))
       // Five. Ten was half a screen of scrolling for a list whose whole job
       // is "does anything here look wrong", and "See all" is right there.
       .slice(0, 5)

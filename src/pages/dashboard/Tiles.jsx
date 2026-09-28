@@ -12,6 +12,8 @@ import { useSwap } from '../../components/ui/useSwap'
 import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 import { currencyOfTx } from '../../lib/fxContext'
+import { txRowWords } from '../../lib/txRow'
+import { interestCarried } from '../../lib/loans'
 import { INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
 
 // ── Account card ───────────────────────────────────────────────────────────────
@@ -158,6 +160,7 @@ export function BudgetSummaryTile({ totals }) {
 
 /** @param {{tx: Record<string, any>, cat?: Record<string, any>, glyph?: Record<string, any>|null, isLast?: boolean}} props */
 export function TxRow({ tx, cat, glyph = cat, isLast }) {
+  const { title, where, kind } = txRowWords(tx, cat)
   const isExpense  = tx.type === 'expense'
   const isInflow   = tx.type === 'inflow'
   const amountCls  = isExpense  ? 'text-red-500 dark:text-red-400'
@@ -179,19 +182,17 @@ export function TxRow({ tx, cat, glyph = cat, isLast }) {
       {/* description + account */}
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate">
-          {tx.description || (tx.type === 'transfer' ? `Transfer to ${tx.toAccount ?? ''}` : tx.category) || '—'}
+          {title}
         </p>
         <p className="text-xs text-slate-400 dark:text-slate-500 truncate mt-0.5">
-          {tx.type === 'transfer'
-            ? `${tx.fromAccount ?? ''} → ${tx.toAccount ?? ''}`
-            : tx.account ?? ''}
+          {where}{kind ? ` · ${kind}` : ''}
         </p>
       </div>
 
       {/* amount + date */}
       <div className="text-right shrink-0">
         <p className={`text-sm font-semibold tabular-nums ${amountCls}`}>
-          {amountSign}{fmt(tx.amount, currencyOfTx(tx))}
+          {amountSign}{fmt((tx.amount ?? 0) + interestCarried(tx), currencyOfTx(tx))}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
           {fmtDate(tx.date)}

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
-  LOAN_INTEREST, dueOn, loanPairOf, loanStatus, matchInstallments, monthsToClear, rateLabel,
-  solveMonthlyRate, splitPayment, upcomingLoanPayments,
+  LOAN_INTEREST, dueOn, foldLoanPayments, loanPairOf, loanStatus, matchInstallments, monthsToClear, rateLabel,
+  solveMonthlyRate, splitPayment, unfoldLoanPayment, upcomingLoanPayments,
 } from './loans'
 
 describe('the rate a lender never told you', () => {
@@ -193,5 +193,42 @@ describe('the two rows of one loan payment', () => {
     expect(loanPairOf(lunch, [principal, interest, lunch])).toBeNull()
     const plainTransfer = { ...principal, id: 6, description: 'Top up' }
     expect(loanPairOf(plainTransfer, [plainTransfer, interest])).toBeNull()
+  })
+
+  it('finds the other half from a copy of the row, as a sheet is handed', () => {
+    expect(loanPairOf({ ...principal }, [principal, interest])).toBe(interest)
+  })
+})
+
+describe('a loan payment as one row in a list', () => {
+  const at = '2026-09-28T02:00:00.000Z'
+  const principal = { id: 1, type: 'transfer', amount: 9070, fromAccount: 'BPI', toAccount: 'Car Loan', description: 'Loan payment · Car Loan', date: at }
+  const interest = { id: 2, type: 'expense', amount: 3780, account: 'BPI', category: LOAN_INTEREST, description: 'Interest · Car Loan', date: at }
+  const lunch = { id: 3, type: 'expense', amount: 200, account: 'BPI', category: 'Food', description: 'Lunch', date: '2026-09-27T02:00:00.000Z' }
+
+  it('draws the transfer, carrying its interest, where the two were', () => {
+    const rows = foldLoanPayments([interest, principal, lunch])
+    expect(rows.map(r => r.id)).toEqual([1, 3])
+    expect(rows[0].loanInterest).toBe(interest)
+  })
+
+  it('leaves a half alone when its partner is not in the list', () => {
+    expect(foldLoanPayments([principal, lunch])).toEqual([principal, lunch])
+    expect(foldLoanPayments([interest, lunch])).toEqual([interest, lunch])
+  })
+
+  it('does not fold two payments into one', () => {
+    const second = { ...principal, id: 4, date: '2026-10-28T02:00:00.000Z' }
+    const rows = foldLoanPayments([principal, interest, second])
+    expect(rows.map(r => r.id)).toEqual([1, 4])
+    expect(rows[1].loanInterest).toBeUndefined()
+  })
+
+  it('hands back the transfer itself, without what it carried for drawing', () => {
+    const [row] = foldLoanPayments([principal, interest])
+    const tx = unfoldLoanPayment(row)
+    expect(tx).toEqual(principal)
+    expect('loanInterest' in tx).toBe(false)
+    expect(unfoldLoanPayment(lunch)).toBe(lunch)
   })
 })

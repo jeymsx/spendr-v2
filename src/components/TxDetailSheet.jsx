@@ -26,6 +26,7 @@ import { fmt, baseSymbol } from '../lib/money'
 import { currencyOfTx, repriceForEdit } from '../lib/fxContext'
 import { isAdjustment } from '../lib/flows'
 import { impliedRate, rederiveReceived } from '../lib/transferLegs'
+import { interestLoanOf, isLoanPayment, loanPairOf } from '../lib/loans'
 
 const TYPE_CFG = {
   expense:  { label: 'Expense',  color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400',      sign: '−' },
@@ -121,6 +122,18 @@ export default function TxDetailSheet({
   const allTxs = useLiveQuery(
     async () => (needsAll ? db.transactions.toArray() : []),
     [needsAll, tx?.txId, tx?.splitId], [])
+
+  /* A loan payment is two rows - what went to the loan, and its interest
+     (lib/loans.js) - and the lists show them as one. Opened on either half,
+     this shows the payment: the whole, and its two parts. Keyed on the
+     record still on screen rather than `tx`, which goes null the moment the
+     sheet starts to close: the payment would turn back into half of itself
+     as it slid away. */
+  const shown = tx ?? lastTx
+  const loanHalf = isLoanPayment(shown) || interestLoanOf(shown) != null
+  const loanPair = useLiveQuery(
+    async () => (loanHalf ? loanPairOf(shown, await db.transactions.toArray()) : null),
+    [loanHalf, shown?.id, shown?.date], null)
 
   const legs = tx?.splitId ? splitGroup(tx, allTxs) : []
   const wholePurchase = tx?.splitId ? splitTotal(tx, allTxs) : 0
@@ -319,7 +332,15 @@ export default function TxDetailSheet({
      $40 charge showed as -P40.00 here, which is wrong by a factor of sixty
      and looks entirely plausible. */
   const txCur       = currencyOfTx(rec)
-  const cfg         = TYPE_CFG[rec.type] ?? TYPE_CFG.expense
+  /** The loan payment this row is half of, as its two parts; null for any other row. */
+  const payment     = loanPair
+    ? (isLoanPayment(rec) ? { principal: rec, interest: loanPair } : { principal: loanPair, interest: rec })
+    : null
+  // A payment reads as what it mostly is, money moved to the loan.
+  const cfg         = payment ? TYPE_CFG.transfer : (TYPE_CFG[rec.type] ?? TYPE_CFG.expense)
+  const heroAmount  = payment
+    ? fmt((payment.principal.amount ?? 0) + (payment.interest.amount ?? 0), txCur)
+    : `${cfg.sign}${fmt(rec.amount, txCur)}`
   const cat         = catMap[rec.category]
   const acct        = acctMap[rec.account]
   const fromAcct    = acctMap[rec.fromAccount]
@@ -347,7 +368,10 @@ export default function TxDetailSheet({
             Refund
           </Button>
         )}
-        {!adjustment && (
+        {/* Nor for a loan payment: its split is worked out from the loan's
+            rate, and editing one half would leave the other wrong. Delete
+            takes both, and paying again splits it afresh. */}
+        {!adjustment && !payment && (
           <Button className="flex-[2]" onClick={enterEdit}>
             Edit
           </Button>
@@ -401,7 +425,7 @@ export default function TxDetailSheet({
      "Edit Expense" - and this was the one place still lowercasing it. */
   const title = mode === 'edit' ? `Edit ${cfg.label}` : null
 
-  const deleteHeading = planCount > 1 ? 'Delete whole plan?' : 'Delete this transaction?'
+  const deleteHeading = planCount > 1 ? 'Delete whole plan?' : payment ? 'Delete this loan payment?' : 'Delete this transaction?'
 
   return (
     <>
@@ -466,12 +490,12 @@ export default function TxDetailSheet({
                   where the name goes rather than hard left. */}
               <div className="flex justify-center">
                 <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-11 font-semibold ${cfg.badge}`}>
-                  {cfg.label}
+                  {payment ? 'Loan payment' : cfg.label}
                 </span>
               </div>
 
               <AmountHero color={cfg.color} className="mt-5 mb-6">
-                {cfg.sign}{fmt(rec.amount, txCur)}
+                {heroAmount}
               </AmountHero>
 
               {/* What the purchase actually cost, once money came back.
@@ -531,10 +555,18 @@ export default function TxDetailSheet({
                   two columns, and the sheet owns the horizontal inset, so
                   `padded={false}` keeps them on its gutter. */}
               <div className="flex flex-col">
-                {rec.description && rec.description.trim() && (
+                {payment && (
+                  <>
+                    <DetailRow label={`To ${payment.principal.toAccount}`} value={fmt(payment.principal.amount, txCur)} padded={false} isLast />
+                    <DetailRow label="Interest" value={fmt(payment.interest.amount, txCur)} padded={false} isLast />
+                  </>
+                )}
+                {/* The notes and the interest's category are the app's own
+                    words for the two halves - the rows above say it. */}
+                {!payment && rec.description && rec.description.trim() && (
                   <DetailRow label="Note" value={rec.description} padded={false} isLast />
                 )}
-                {cat && (
+                {cat && !payment && (
                   <DetailRow
                     label="Category"
                     value={<><CategoryGlyph cat={cat} size={14} className="inline-block mr-1.5 -mt-px" />{cat.name}</>}
@@ -547,7 +579,7 @@ export default function TxDetailSheet({
                     block of its own under the list - a fourth fact about the
                     transaction, presented as though it were a different kind
                     of fact. */}
-                {acct && (
+                {acct && !payment && (
                   <DetailRow
                     label="Account"
                     value={(
@@ -601,7 +633,9 @@ export default function TxDetailSheet({
                     />
                   )
                 })()}
-                {(fromAcct || toAcct) && (
+                {payment ? (
+                  <TransferLegs from={acctMap[payment.principal.fromAccount]} to={acctMap[payment.principal.toAccount]} />
+                ) : (fromAcct || toAcct) && (
                   <TransferLegs from={fromAcct} to={toAcct} />
                 )}
               </div>
@@ -729,7 +763,7 @@ export default function TxDetailSheet({
               </div>
 
               <AmountHero color={cfg.color} className="mt-5 mb-6">
-                {planCount > 1 ? fmt(planTotal, txCur) : `${cfg.sign}${fmt(rec.amount, txCur)}`}
+                {planCount > 1 ? fmt(planTotal, txCur) : heroAmount}
               </AmountHero>
 
               {/* The same flat list the detail sheet uses, including the
@@ -740,7 +774,14 @@ export default function TxDetailSheet({
                 {planCount > 1 && (
                   <DetailRow label="Payments" value={`${planCount}`} padded={false} isLast />
                 )}
-                {rec.description && rec.description.trim() && (
+                {/* Both go: one payment, two rows (db/txHelpers.js expandDeletion). */}
+                {payment && (
+                  <>
+                    <DetailRow label={`To ${payment.principal.toAccount}`} value={fmt(payment.principal.amount, txCur)} padded={false} isLast />
+                    <DetailRow label="Interest" value={fmt(payment.interest.amount, txCur)} padded={false} isLast />
+                  </>
+                )}
+                {!payment && rec.description && rec.description.trim() && (
                   <DetailRow label="Note" value={rec.description} padded={false} isLast />
                 )}
                 <DetailRow
