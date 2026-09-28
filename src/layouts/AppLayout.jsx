@@ -13,6 +13,7 @@ import { AchievementProvider } from '../context/AchievementContext'
 import Moments from '../components/achievements/Moments'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
+import { canPullToSync } from '../lib/pullToSync'
 
 // Shown while a lazy route chunk loads. Sized to roughly a screen so the
 // navbar and scroll position stay stable instead of collapsing to zero height.
@@ -50,6 +51,7 @@ export default function AppLayout() {
   const [whatsNewDismissed, setWhatsNewDismissed] = useState(false)
   const location = useLocation()
   const mainRef = useRef(null)
+  const pullRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const touchStartY = useRef(-1)
   const [pullState, setPullState] = useState('idle') // idle | pulling | ready
   const runSyncRef   = useRef(runSync)
@@ -101,26 +103,60 @@ export default function AppLayout() {
     const el = mainRef.current
     if (!el) return
 
-    const noPullRoutes = new Set(['/import'])
+    /* The hint follows the finger - its height, set here straight on the
+       element so a pull never re-renders the page - and eases back when the
+       finger lifts. Only crossing a threshold changes React state, which is
+       what swaps the words. */
+    const READY = 64
+    let startX = 0
+    /** @type {'x'|'y'|null} */
+    let axis = null
+    const setHint = (/** @type {number} */ h, /** @type {boolean} */ settle) => {
+      const hint = pullRef.current
+      if (!hint) return
+      hint.style.transition = settle ? 'height 220ms cubic-bezier(0.2, 0.9, 0.25, 1)' : 'none'
+      hint.style.height = `${h}px`
+    }
+    const cancel = () => {
+      touchStartY.current = -1
+      setHint(0, true)
+      setPullState('idle')
+    }
 
     const onTouchStart = (e) => {
-      if (noPullRoutes.has(pathnameRef.current)) { touchStartY.current = -1; return }
-      // Disable pull-to-refresh while any sheet/modal is open
-      if (document.querySelector('.sheet-overlay')) { touchStartY.current = -1; return }
+      axis = null
+      /* Not on a form, an editor or a settings page (lib/pullToSync.js), and
+         not while anything modal is up - a sheet, the QR lightbox - whose own
+         drags are not a pull on the page behind. */
+      if (!canPullToSync(pathnameRef.current)
+        || document.querySelector('.sheet-overlay, [aria-modal="true"]')) { touchStartY.current = -1; return }
+      startX = e.touches[0].clientX
       touchStartY.current = el.scrollTop <= 0 ? e.touches[0].clientY : -1
     }
     const onTouchMove = (e) => {
       if (touchStartY.current < 0) return
+      const dx = e.touches[0].clientX - startX
       const dy = e.touches[0].clientY - touchStartY.current
-      if (dy > 8 && el.scrollTop <= 0) setPullState(dy > 64 ? 'ready' : 'pulling')
-      else setPullState('idle')
+      /* Which way the finger is going, decided once it has gone somewhere.
+         Sideways is a rail being scrolled or a row being swiped: not a pull,
+         however far down it drifts on the way. */
+      if (!axis && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) axis = Math.abs(dx) > Math.abs(dy) ? 'x' : 'y'
+      if (axis === 'x' || el.scrollTop > 0) { cancel(); return }
+      if (dy > 8) {
+        // Resistance, like the platform's own: the hint moves at under half the finger.
+        setHint(Math.min(56, (dy - 8) * 0.45), false)
+        setPullState(dy > READY ? 'ready' : 'pulling')
+      } else {
+        setHint(0, false)
+        setPullState('idle')
+      }
     }
     const onTouchEnd = (e) => {
       if (touchStartY.current < 0) return
       const dy = e.changedTouches[0].clientY - touchStartY.current
-      touchStartY.current = -1
-      setPullState('idle')
-      if (dy > 64) {
+      const ready = axis === 'y' && dy > READY
+      cancel()
+      if (ready) {
         if (canSyncRef.current) runSyncRef.current()
         else promptRef.current?.()
       }
@@ -129,10 +165,12 @@ export default function AppLayout() {
     el.addEventListener('touchstart', onTouchStart, { passive: true })
     el.addEventListener('touchmove', onTouchMove, { passive: true })
     el.addEventListener('touchend', onTouchEnd, { passive: true })
+    el.addEventListener('touchcancel', cancel, { passive: true })
     return () => {
       el.removeEventListener('touchstart', onTouchStart)
       el.removeEventListener('touchmove', onTouchMove)
       el.removeEventListener('touchend', onTouchEnd)
+      el.removeEventListener('touchcancel', cancel)
     }
   }, [])
 
@@ -156,13 +194,25 @@ export default function AppLayout() {
         ref={mainRef}
         className="flex-1 overflow-y-auto overflow-x-hidden overscroll-x-none min-h-0 relative no-scrollbar"
       >
-        {/* Pull-to-refresh hint */}
-        <div className={`flex items-center justify-center overflow-hidden transition-all duration-200 text-xs font-medium text-primary/70 ${
-          pullState !== 'idle' ? 'h-9' : 'h-0'
-        }`}>
+        {/* Pull-to-sync hint. Its height is the gesture's (see the touch
+            listeners above); the arrow turns over once letting go would sync. */}
+        <div
+          ref={pullRef}
+          aria-hidden="true"
+          className="flex items-center justify-center gap-1.5 overflow-hidden text-xs font-medium text-primary/80"
+          style={{ height: 0 }}
+        >
+          <svg
+            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+            strokeLinecap="round" strokeLinejoin="round"
+            className="transition-transform duration-200"
+            style={{ transform: pullState === 'ready' ? 'rotate(180deg)' : 'none' }}
+          >
+            <path d="M12 5v14M6 13l6 6 6-6" />
+          </svg>
           {!canSync
-            ? (pullState === 'ready' ? '↑ Release to sign in and sync' : '↓ Sync needs an account')
-            : (pullState === 'ready' ? '↑ Release to sync' : '↓ Pull to sync')}
+            ? (pullState === 'ready' ? 'Release to sign in and sync' : 'Sync needs an account')
+            : (pullState === 'ready' ? 'Release to sync' : 'Pull to sync')}
         </div>
 
         {/* pb-nav ensures content isn't hidden under the fixed navbar */}

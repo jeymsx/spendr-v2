@@ -175,6 +175,9 @@ export function QrViewerModal({ open, onClose, qrImage, accountName }) {
     <div
       className="fixed inset-0 z-[200] flex flex-col items-center justify-center bg-black/90"
       style={{ touchAction: 'none' }}
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${accountName} QR code`}
       onClick={onClose}
     >
       <p className="text-white/60 text-xs font-semibold mb-5">
