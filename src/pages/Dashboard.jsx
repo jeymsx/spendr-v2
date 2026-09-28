@@ -706,7 +706,12 @@ export default function Dashboard({ layout = 'phone' } = {}) {
       {/* ── Quick templates ─────────────────────────────────────────────────── */}
       {(templates ?? []).length > 0 && (
         <section className="mt-3">
-          <Rail className="gap-2 px-5 pb-1">
+          {/* Room inside the rail for the chips' shadow, handed back by the
+              negative margins so nothing moves. A scroller clips everything
+              it paints at its padding edge - overflow-x forces overflow-y too
+              - and with no room above and 4px below, the dark theme's 16px
+              shadow was cut off in a hard line under every chip. */}
+          <Rail className="gap-2 px-5 pt-3 -mt-3 pb-5 -mb-4">
             {(templates ?? [])
               .slice()
               .sort((a, b) => (a.name ?? '').localeCompare(b.name ?? ''))
