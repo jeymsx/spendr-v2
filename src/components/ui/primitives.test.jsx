@@ -14,6 +14,8 @@ import { render, screen, cleanup } from '@testing-library/react'
 import SectionLabel from './SectionLabel'
 import Divider from './Divider'
 import EmptyState from './EmptyState'
+import { ThemeProvider } from '../../context/ThemeContext'
+import { glassPalette } from '../glass/glass'
 import Card from './Card'
 import DetailRow from './DetailRow'
 
@@ -155,13 +157,14 @@ describe('EmptyState', () => {
     expect(screen.getByText('Track what you owe.')).toBeTruthy()
   })
 
-  it('drops the disc when there is no icon', () => {
-    // A 56px disc inside a card section is louder than the section it sits in.
+  it('draws no picture at all when given neither art nor an icon', () => {
     const { container } = render(<EmptyState title="Nothing here" />)
     expect(container.querySelector('.rounded-full')).toBe(null)
+    expect(container.querySelector('.glass-live, img')).toBe(null)
   })
 
-  it('turns the disc emerald when empty is good news', () => {
+  it('still draws the old disc for an icon, emerald when empty is good news', () => {
+    // Nothing in the app passes one now; this is the way it used to be, kept.
     const { container } = render(
       <EmptyState icon={<svg />} title="Nothing overdue" tone="good" />,
     )
@@ -171,6 +174,46 @@ describe('EmptyState', () => {
   it('renders the way out when given one', () => {
     render(<EmptyState title="No goals yet" action={<button>Add a goal</button>} />)
     expect(screen.getByRole('button', { name: 'Add a goal' })).toBeTruthy()
+  })
+})
+
+describe('EmptyState with a glass picture', () => {
+  afterEach(() => {
+    document.documentElement.classList.remove('reduce-motion')
+    localStorage.clear()
+  })
+  const inTheme = (/** @type {import('react').ReactNode} */ ui) => render(<ThemeProvider>{ui}</ThemeProvider>)
+
+  it('draws `art` in the accent, and no disc', () => {
+    localStorage.setItem('accentColor', '#7048E8')
+    const { container } = inTheme(<EmptyState art="target" icon={<svg />} title="No goals yet" />)
+    const live = container.querySelector('.glass-live')
+    expect(live).not.toBe(null)
+    expect(live.innerHTML).toContain(glassPalette('#7048E8').deep)
+    expect(container.querySelector('.rounded-full')).toBe(null)
+  })
+
+  it('draws good news green, and takes a hue of its own over either', () => {
+    const good = inTheme(<EmptyState art="allClear" tone="good" title="All clear" />)
+    expect(good.container.querySelector('.glass-live').innerHTML).toContain(glassPalette('#099268').deep)
+    good.unmount()
+    const own = inTheme(<EmptyState art="allClear" tone="good" hue="#E8A40C" title="All clear" />)
+    expect(own.container.querySelector('.glass-live').innerHTML).toContain(glassPalette('#E8A40C').deep)
+  })
+
+  it('comes together once and then holds still', () => {
+    // An entrance, and no float or shine: nothing loops on an empty screen.
+    const { container } = inTheme(<EmptyState art="bell" title="You're all caught up" />)
+    const live = container.querySelector('.glass-live')
+    expect(live.className).toContain('glass-enter')
+    expect(live.className).not.toContain('glass-float')
+  })
+
+  it('is the still picture from the start under reduced motion', () => {
+    document.documentElement.classList.add('reduce-motion')
+    const { container } = inTheme(<EmptyState art="trash" title="Nothing deleted" />)
+    expect(container.querySelector('.glass-live')).toBe(null)
+    expect(container.querySelector('img')?.getAttribute('src')).toMatch(/^data:image\/svg\+xml/)
   })
 })
 

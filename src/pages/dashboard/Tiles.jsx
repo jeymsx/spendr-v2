@@ -6,6 +6,7 @@ import BrandWatermark from '../../components/BrandWatermark'
 import BudgetMeter, { budgetTone } from '../../components/BudgetMeter'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import Card from '../../components/ui/Card'
+import { EmptyArt } from '../../components/ui/EmptyState'
 import { RowDivider } from '../../components/ui/Presence'
 import RollingNumber from '../../components/ui/RollingNumber'
 import { useSwap } from '../../components/ui/useSwap'
@@ -208,10 +209,13 @@ export function TxRow({ tx, cat, glyph = cat, isLast }) {
 
 // ── Empty states ───────────────────────────────────────────────────────────────
 
+/* Where the first account card would be, the size of one, with the wallet
+   every other "no accounts" moment draws. */
 export function EmptyPill({ label }) {
   return (
-    <div className="card shrink-0 h-24 w-36 rounded-2xl flex items-center justify-center border-dashed">
-      <span className="text-xs text-slate-400 dark:text-slate-500">{label}</span>
+    <div className="card shrink-0 h-24 w-36 rounded-2xl flex flex-col items-center justify-center gap-0.5 border-dashed">
+      <EmptyArt name="wallet" size={48} />
+      <span className="text-xs text-slate-500 dark:text-slate-400">{label}</span>
     </div>
   )
 }

@@ -9,7 +9,7 @@ import Transfer from './Transfer'
 import EmptyState from '../components/ui/EmptyState'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
-import { IconChevronLeft, IconNotFound } from '../components/icons'
+import { IconChevronLeft } from '../components/icons'
 
 /**
  * Editing a transaction in the form that created it.
@@ -82,7 +82,7 @@ export default function EditTransaction() {
         </header>
         <EmptyState
           className="mt-8"
-          icon={<IconNotFound />}
+          art={gone ? 'notFound' : 'receipt'}
           title={gone ? 'Transaction not found' : 'This one cannot be edited'}
           body={gone
             ? 'It may have been deleted.'

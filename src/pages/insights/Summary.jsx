@@ -35,7 +35,7 @@ import { openFrom } from './zoom'
  */
 export function DonutHero({ segments, total, animKey, selected, onSelect, change, compareLabel, emptyPhrase }) {
   if (!segments.length) {
-    return <EmptyState size="sm" title={`No expenses ${emptyPhrase}`} className="py-16" />
+    return <EmptyState art="receipt" title={`No expenses ${emptyPhrase}`} className="py-16" />
   }
   /* Spending less is the good direction, so down is green and up is amber:
      the app's warm "worth a look", never alarming red. */

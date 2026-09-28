@@ -13,6 +13,7 @@ import { rollsOver, monthKey } from '../../lib/rollover'
 import SubPage from '../../components/SubPage'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import Button from '../../components/ui/Button'
+import EmptyState from '../../components/ui/EmptyState'
 import Sheet from '../../components/ui/Sheet'
 import { baseSymbol } from '../../lib/money'
 
@@ -168,9 +169,7 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
               bg-white border border-slate-100
               dark:bg-white/[0.04] dark:border-white/[0.07]">
               {expenseCats.length === 0 ? (
-                <div className="py-10 text-center">
-                  <p className="text-sm text-slate-400 dark:text-slate-500">No expense categories yet</p>
-                </div>
+                <EmptyState size="sm" art="tiles" title="No expense categories yet" />
               ) : expenseCats.map((cat, i) => {
                 /* The field's text: whatever has been typed, else the saved
                    limit, and an empty string for zero - a category with no

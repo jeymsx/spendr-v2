@@ -324,28 +324,6 @@ function LoanDueRow({ due, onPay, onOpen, isLast }) {
   )
 }
 
-/** A flat calendar page with nothing on it. */
-function IconNoBills() {
-  return (
-    <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="5" width="18" height="16" rx="3" />
-      <path d="M3 10h18M8 3v4M16 3v4" />
-      <path d="M8.5 15.5h7" />
-    </svg>
-  )
-}
-
-/** A tick, for a week with nothing due. */
-function IconAllClear() {
-  return (
-    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M20 6 9 17l-5-5" />
-    </svg>
-  )
-}
-
 // ── Recurring Form Sheet ───────────────────────────────────────────────────────
 
 /**
@@ -909,7 +887,7 @@ export default function Recurring() {
       ) : enriched.length === 0 ? (
         <>
           <EmptyState
-            icon={<IconNoBills />}
+            art="repeat"
             title="Nothing recurring yet"
             body="Bills, subscriptions and your pay: anything that repeats."
             action={
@@ -982,7 +960,7 @@ export default function Recurring() {
                     <EmptyState
                       size="sm"
                       tone="good"
-                      icon={<IconAllClear />}
+                      art="allClear"
                       title="All clear"
                       body="Nothing due in the next 30 days."
                     />

@@ -13,7 +13,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import DeleteConfirmSheet from '../../components/DeleteConfirmSheet'
 import DetailRow from '../../components/ui/DetailRow'
 import SectionLabel from '../../components/ui/SectionLabel'
-import { IconChevronLeft, IconChevronRight, IconTrash, IconNotFound } from '../../components/icons'
+import { IconChevronLeft, IconChevronRight, IconTrash } from '../../components/icons'
 import { getInitials, getAvatarColor, fmtDueDate } from './shared'
 import { byPerson, outstanding, isSettled } from '../../lib/people'
 import { fmt } from '../../lib/money'
@@ -123,7 +123,7 @@ export default function PersonDetail() {
         </header>
         <EmptyState
           className="mt-8"
-          icon={<IconNotFound />}
+          art="notFound"
           title="Nobody here"
           body="Every entry for this person has been deleted."
           action={<Button className="px-6" onClick={back}>Back to debts</Button>}

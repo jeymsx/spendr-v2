@@ -4,7 +4,6 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { allocateGoals, isFundable, pace, monthsUntil } from '../lib/goals'
 import SubPage from '../components/SubPage'
-import { IconNotFound } from '../components/icons'
 import Button from '../components/ui/Button'
 import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
@@ -142,7 +141,7 @@ export default function GoalDetail() {
       <SubPage title="Goal" onBack={() => navigate('/goals')}>
         <EmptyState
           className="mt-8"
-          icon={<IconNotFound />}
+          art="notFound"
           title="Goal not found"
           body="It may have been deleted."
           action={

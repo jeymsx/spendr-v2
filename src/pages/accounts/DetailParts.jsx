@@ -8,7 +8,6 @@
 import CategoryGlyph from '../../components/CategoryGlyph'
 import { txGlyphCat, txKindLabel } from '../../lib/txRow'
 import { interestCarried, isLoanPayment, unfoldLoanPayment } from '../../lib/loans'
-import { IconEmptyReceipt } from '../../components/icons'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
@@ -49,7 +48,7 @@ export function CreditTxSection({ title, dateRange, txs, total, accountName, emp
               which reads as a well sunk into the page - right for something
               inside a card, wrong for a card that IS the section. Sitting
               between two raised ones it just looked grey. */}
-          <EmptyState size="sm" icon={<IconEmptyReceipt size={22} />} title={emptyLabel} />
+          <EmptyState size="sm" art="receipt" title={emptyLabel} />
         </Card>
       ) : (
         <Card clip>

@@ -8,7 +8,6 @@ import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { SkeletonList } from '../../components/ui/Skeleton'
-import { IconEmptyReceipt } from '../../components/icons'
 import { fmtCompact } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
 import { DetailTxRow } from '../accounts/DetailParts'
@@ -48,7 +47,7 @@ export default function ExpensesPage() {
         <PeriodControls className="mb-6" />
         <section className="px-5">
           {data.loading ? <SkeletonList rows={6} /> : !list.length ? (
-            <EmptyState icon={<IconEmptyReceipt />} title={`No expenses ${periodPhrase(period)}`} />
+            <EmptyState art="receipt" title={`No expenses ${periodPhrase(period)}`} />
           ) : (
             <>
               <SectionLabel gap="loose">

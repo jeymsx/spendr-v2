@@ -27,7 +27,7 @@ import {
 } from './transactions/shared'
 import { ListEnd, useInfiniteList } from '../components/ui/InfiniteList'
 import { QuickTypeFilter } from './transactions/QuickFilter'
-import { FilterModal, TxRow, IconNoTransactions } from './transactions/FilterSheet'
+import { FilterModal, TxRow } from './transactions/FilterSheet'
 import Rail from '../components/ui/Rail'
 import SearchField from '../components/ui/SearchField'
 import SearchResults from './transactions/SearchResults'
@@ -194,6 +194,10 @@ export default function Transactions() {
     (accountFilters.length ? 1 : 0) +
     (categoryFilter ? 1 : 0) +
     (amountMin != null || amountMax != null ? 1 : 0)
+  /* Whether anything at all is narrowing the list - the search, the type
+     chips or the filter sheet - which is what an empty list means depends
+     on. */
+  const narrowed = activeFilterCount > 0 || typeFilter !== 'all' || deferredSearch.trim() !== ''
 
   function handlePrevMonth() {
     if (calMonth === 0) { setCalYear(y => y - 1); setCalMonth(11) }
@@ -399,11 +403,14 @@ export default function Transactions() {
       ) : loading ? (
         <LedgerSkeleton />
       ) : filteredTx.length === 0 ? (
-        <EmptyState
-          icon={<IconNoTransactions />}
-          title="No transactions found"
-          body="Try adjusting your filters"
-        />
+        /* Two different moments. Narrowed, there are rows and none of them
+           match. Not narrowed, there are simply none yet - and "adjust your
+           filters" sent someone new looking for filters they never set. */
+        narrowed ? (
+          <EmptyState art="notFound" title="No transactions found" body="Try adjusting your filters" />
+        ) : (
+          <EmptyState art="ledger" title="No transactions yet" body="Everything you spend or receive shows up here." />
+        )
       ) : (
         <>
           {/* Keyed by the epoch, so a change of view redraws the list rather

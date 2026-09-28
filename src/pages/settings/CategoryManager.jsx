@@ -15,6 +15,7 @@ import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
 import Divider from '../../components/ui/Divider'
 import IconButton from '../../components/ui/IconButton'
+import EmptyState from '../../components/ui/EmptyState'
 import { IconPlus } from '../../components/icons'
 import { CategoryRow, CategoryPresetsSheet } from './Categories'
 import { CategoryFormSheet } from './CategoryForm'
@@ -186,10 +187,7 @@ export function CategoryManager({ open, onClose, variant = 'sheet' }) {
                 dark:bg-white/[0.04] dark:border-white/[0.07]
                 shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none mb-3">
                 {visibleCats.length === 0 ? (
-                  <div className="py-10 text-center">
-                    <p className="text-sm text-slate-400 dark:text-slate-500">No {activeTab} categories</p>
-                    <p className="text-xs text-slate-300 dark:text-slate-600 mt-1">Tap "Add" below to create one</p>
-                  </div>
+                  <EmptyState size="sm" art="tiles" title={`No ${activeTab} categories`} body={'Tap "Add" below to create one'} />
                 ) : (
                   <DndContext
                     sensors={sensors}

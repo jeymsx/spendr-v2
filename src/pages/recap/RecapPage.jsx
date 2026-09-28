@@ -52,7 +52,7 @@ export default function RecapPage() {
   if (!recap) {
     return (
       <SubPage title="Monthly recap" onBack={close}>
-        <EmptyState className="mt-10" {...emptyCopy(month)} />
+        <EmptyState className="mt-10" art="sparkles" {...emptyCopy(month)} />
       </SubPage>
     )
   }

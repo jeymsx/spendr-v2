@@ -16,7 +16,6 @@ import {
   daysToDue,
   isSettled,
   owedOn,
-  IconNoDebts,
 } from './debts/shared'
 import PersonCard from './debts/PersonCard'
 import { byPerson } from '../lib/people'
@@ -40,10 +39,11 @@ import { DebtFormSheet } from './debts/DebtFormSheet'
 /**
  * Nothing here, in the app's own voice.
  *
- * The shape - a 56px disc, a line saying what is empty, a line saying what to
+ * The shape - a picture, a line saying what is empty, a line saying what to
  * do about it - is <EmptyState> in src/components/ui now, because Bills had
  * already converged on the same one byte for byte. What is left here is the
- * copy, which is the only part that was ever this page's own.
+ * copy and which picture goes with it, the only parts that were ever this
+ * page's own. Owing nothing is good news, so that one is a tick, in green.
  *
  * Two of the three lost their second line. "You owe nothing" followed by
  * "Nothing recorded against you." is the same sentence twice, and a body that
@@ -52,9 +52,9 @@ import { DebtFormSheet } from './debts/DebtFormSheet'
  * is for rather than repeating what it just said.
  */
 const EMPTY_COPY = {
-  all:        { title: 'No debts yet',    body: 'Track what you owe and what you are owed.' },
-  i_owe:      { title: 'You owe nothing', body: null },
-  owed_to_me: { title: 'Nobody owes you', body: null },
+  all:        { title: 'No debts yet',    body: 'Track what you owe and what you are owed.', art: 'people', tone: 'calm' },
+  i_owe:      { title: 'You owe nothing', body: null, art: 'allClear', tone: 'good' },
+  owed_to_me: { title: 'Nobody owes you', body: null, art: 'people', tone: 'calm' },
 }
 
 // ── Main Page ──────────────────────────────────────────────────────────────────
@@ -222,7 +222,7 @@ export default function Debts() {
         </div>
       ) : rows.length === 0 ? (
         <EmptyState
-          icon={<IconNoDebts />}
+          art={EMPTY_COPY.all.art}
           title={EMPTY_COPY.all.title}
           body={EMPTY_COPY.all.body}
           action={<Button className="px-6" onClick={openAdd}>Add a debt</Button>}
@@ -280,7 +280,8 @@ export default function Debts() {
           {open.length === 0 && settled.length === 0 ? (
             <div className="mt-2">
               <EmptyState
-                icon={<IconNoDebts />}
+                art={emptyCopy.art}
+                tone={emptyCopy.tone}
                 title={emptyCopy.title}
                 body={emptyCopy.body}
                 action={<Button className="px-6" onClick={openAdd}>Add a debt</Button>}

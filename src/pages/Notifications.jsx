@@ -6,7 +6,7 @@ import SubPage from '../components/SubPage'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
 import Divider from '../components/ui/Divider'
-import NotificationIcon, { BellGlyph } from '../components/NotificationIcon'
+import NotificationIcon from '../components/NotificationIcon'
 import WhatsNewModal from '../components/WhatsNewModal'
 import { groupByDay, timeOf } from '../lib/notifications'
 import { markRead } from '../db/notifications'
@@ -69,7 +69,7 @@ export default function Notifications() {
       {rows && rows.length === 0 && (
         <EmptyState
           className="mt-10"
-          icon={<BellGlyph size={24} />}
+          art="bell"
           title="You're all caught up"
           body="Card due dates, bills, budget alerts and your monthly recap will show up here."
         />

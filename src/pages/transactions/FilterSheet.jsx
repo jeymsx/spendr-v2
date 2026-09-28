@@ -337,19 +337,3 @@ function RowBody({ tx, cat, cls, sign, magnitude, currency }) {
     </>
   )
 }
-
-/* The glyph only. The 20px squircle it used to sit in, and the 14/12px text
-   under it, were this screen's own design for a moment every other screen
-   draws as a 56px disc over 15/13px - so the shape is EmptyState's now and
-   the icon is sized to match the rest of the set. */
-export function IconNoTransactions() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="2" y="5" width="20" height="14" rx="3" />
-      <line x1="2" y1="10" x2="22" y2="10" />
-      <line x1="6" y1="15" x2="10" y2="15" />
-      <line x1="6" y1="18" x2="8" y2="18" />
-    </svg>
-  )
-}

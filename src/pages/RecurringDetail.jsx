@@ -8,7 +8,7 @@ import { useToast } from '../context/ToastContext'
 import { deleteRecurringRemote } from '../lib/sync'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
 import TxConfirmSheet from '../components/TxConfirmSheet'
-import { IconChevronLeft, IconNotFound, IconEmptyReceipt } from '../components/icons'
+import { IconChevronLeft } from '../components/icons'
 import {
   FREQ_LABEL, FREQ_SHORT,
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
@@ -54,9 +54,6 @@ function IconBolt() {
     </svg>
   )
 }
-
-/* IconEmptyReceipt moved to components/icons.jsx when the credit statement
-   sections wanted it too - see the empty-state family there. */
 
 // ── Pieces ─────────────────────────────────────────────────────────────────────
 
@@ -329,7 +326,7 @@ export default function RecurringDetail() {
         </IconButton>
         <EmptyState
           className="mt-8"
-          icon={<IconNotFound />}
+          art="notFound"
           title="Not found"
           body="It may have been deleted."
           action={
@@ -532,7 +529,7 @@ export default function RecurringDetail() {
             ) : history.length === 0 ? (
               <EmptyState
                 size="sm"
-                icon={<IconEmptyReceipt />}
+                art="receipt"
                 title={income ? 'Nothing received yet' : 'Nothing charged yet'}
                 body={income ? 'Each one you mark received shows here.' : 'Charges appear here once posted.'}
               />
