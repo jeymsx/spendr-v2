@@ -52,7 +52,9 @@ function NavItem({ to, label, Icon, badge = 0, end = false, also }) {
 
 export default function WebSidebar() {
   const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
-  const name = nameMeta?.value || 'there'
+  /* Only a name you gave. Home can fall back to "Good morning, there!", but
+     under the logo "there" reads as a label for nothing. */
+  const name = nameMeta?.value?.trim() || ''
   const unread = useLiveQuery(() => db.notifications.where('read').equals(0).count(), [], 0)
 
   // The phone's quick-action badges, read the same way (dashboard/shared.js).
@@ -92,11 +94,13 @@ export default function WebSidebar() {
 
   return (
     <aside className="web-sidebar shrink-0 w-[248px] h-full flex flex-col">
+      {/* The mark, as the sign-in screen, the lock screen and Settings show
+          it - not a letter in a tile. */}
       <div className="px-5 pt-6 pb-5 flex items-center gap-2.5">
-        <span className="web-brand" aria-hidden="true">S</span>
+        <img src="/icons/icon-192.png" alt="" width={36} height={36} className="web-brand" />
         <div className="web-brand-text min-w-0">
           <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
-          <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>
+          {name && <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>}
         </div>
       </div>
 
