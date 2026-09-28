@@ -66,8 +66,8 @@ export function HighlightsSkeleton() {
     <div aria-hidden="true">
       <HeadingSkeleton />
       <div className="flex gap-3 pl-5 overflow-hidden">
-        <Skeleton className="shrink-0 w-[264px] h-[96px] rounded-2xl" />
-        <Skeleton className="shrink-0 w-[264px] h-[96px] rounded-2xl" />
+        <Skeleton className="shrink-0 w-[264px] h-[104px] rounded-[22px]" />
+        <Skeleton className="shrink-0 w-[264px] h-[104px] rounded-[22px]" />
       </div>
     </div>
   )

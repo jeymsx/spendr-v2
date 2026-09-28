@@ -1,7 +1,3 @@
-import {
-  IconCalendar, IconReceipt, IconTrophy, IconCheckCircle, IconAlert,
-  IconTarget, IconCoins, IconTrendUp as IconTrendGlyph, IconBarChart, IconCalc,
-} from '../../components/icons'
 import { fmtCompact } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
 
@@ -82,18 +78,4 @@ export function generateTrivia({ expenses, inflows, totalSpent, totalEarned, cat
   }
 
   return items
-}
-
-/** Which watermark each kind of insight wears. See the note in icons.jsx. */
-export const INSIGHT_GLYPH = {
-  calendar: IconCalendar,
-  receipt:  IconReceipt,
-  trophy:   IconTrophy,
-  check:    IconCheckCircle,
-  alert:    IconAlert,
-  target:   IconTarget,
-  coins:    IconCoins,
-  trend:    IconTrendGlyph,
-  chart:    IconBarChart,
-  calc:     IconCalc,
 }
