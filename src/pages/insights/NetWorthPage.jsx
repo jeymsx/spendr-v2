@@ -7,7 +7,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import SectionHeading from '../../components/ui/SectionHeading'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { SkeletonHero } from '../../components/ui/Skeleton'
-import { IconBankUI, IconCardUI, IconDebt, IconEmptyLedger, IconReceipt, IconTrendUp, IconWalletUI } from '../../components/icons'
+import { IconBankUI, IconCardUI, IconDebt, IconReceipt, IconTrendUp, IconWalletUI } from '../../components/icons'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { fmt, fmtCompact } from '../../lib/money'
 import { netWorthBreakdown } from '../../lib/netWorth'
@@ -78,7 +78,7 @@ export default function NetWorthPage() {
             <NetWorthSkeleton chips={NET_RANGES.length} />
           </>
         ) : !nw.accounts.length ? (
-          <EmptyState icon={<IconEmptyLedger />} title="No accounts yet" body="Add an account and its balance starts your net worth." />
+          <EmptyState art="wallet" title="No accounts yet" body="Add an account and its balance starts your net worth." />
         ) : (
           <>
             <section className="px-5 text-center">

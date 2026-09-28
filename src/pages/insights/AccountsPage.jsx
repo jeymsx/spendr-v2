@@ -2,7 +2,6 @@ import SubPage from '../../components/SubPage'
 import EmptyState from '../../components/ui/EmptyState'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { SkeletonList } from '../../components/ui/Skeleton'
-import { IconEmptyLedger } from '../../components/icons'
 import { fmtCompact } from '../../lib/money'
 import { PeriodControls } from './PeriodBar'
 import { periodPhrase, usePeriod } from './period'
@@ -28,7 +27,7 @@ export default function AccountsPage() {
       <div className={arrival}>
         <PeriodControls className="mb-6" />
         {data.loading ? <div className="px-5"><SkeletonList rows={3} /></div> : !rows.length ? (
-          <EmptyState icon={<IconEmptyLedger />} title={`No expenses ${periodPhrase(period)}`} />
+          <EmptyState art="wallet" title={`No expenses ${periodPhrase(period)}`} />
         ) : (
           <section>
             <SectionLabel inset="gutter" gap="loose">

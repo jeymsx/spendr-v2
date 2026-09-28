@@ -12,7 +12,6 @@ import InfoButton from '../components/ui/InfoButton'
 import Card from '../components/ui/Card'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
-import { IconNoGoals } from '../components/icons'
 import Skeleton, { SkeletonHero, SkeletonStatTrio } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
 import { AccountChip } from '../components/AccountPickerSheet'
@@ -287,7 +286,7 @@ export default function Goals() {
       ) : alloc.active.length === 0 && archived.length === 0 ? (
         <div>
           <EmptyState
-            icon={<IconNoGoals />}
+            art="target"
             title="No goals yet"
             body="Name what you are saving for, set the amount, and point it at the account holding the money."
             action={(

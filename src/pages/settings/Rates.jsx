@@ -220,7 +220,7 @@ export default function RatesPage() {
         </Card>
 
         {!table ? (
-          <EmptyState title="No rates yet" body="Connect to the internet and tap Update." />
+          <EmptyState art="globe" title="No rates yet" body="Connect to the internet and tap Update." />
         ) : (
           <>
             <Card padding="none" clip>

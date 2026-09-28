@@ -427,11 +427,7 @@ export default function Accounts() {
       {/* ── Empty state ── */}
       {!loading && (accounts ?? []).length === 0 && (
         <EmptyState
-          icon={(
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="5" width="20" height="14" rx="3" /><line x1="2" y1="10" x2="22" y2="10" />
-            </svg>
-          )}
+          art="wallet"
           title="No accounts yet"
           body="Tap + to get started"
         />

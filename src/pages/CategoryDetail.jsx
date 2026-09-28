@@ -18,7 +18,7 @@ import { budgetTone } from '../components/BudgetMeter'
 import {
   RANGE_TITLE, SPEND_TREND_RANGES, DAY_MS,
   buildSpendTrend, spendSpan, spendBaseline,
-  TrendRangeChips, BalanceTrend, IconEmptyLedger,
+  TrendRangeChips, BalanceTrend,
 } from './accounts/Trend'
 import { DetailTxRow } from './accounts/DetailParts'
 import { fmt, fmtCompact } from '../lib/money'
@@ -292,7 +292,7 @@ export default function CategoryDetail() {
             </SectionLabel>
             {!catTxs?.length ? (
               <EmptyState
-                icon={<IconEmptyLedger />}
+                art="ledger"
                 title="Nothing here yet"
                 body={`Anything you file under ${name} will show up`}
               />

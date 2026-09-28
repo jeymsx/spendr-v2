@@ -2,7 +2,7 @@ import { useState, useCallback, useRef } from 'react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { deleteTemplateRemote } from '../lib/sync'
-import { IconTemplate, IconTransferUI } from './icons'
+import { IconTransferUI } from './icons'
 import CategoryGlyph from './CategoryGlyph'
 import Card from './ui/Card'
 import Divider from './ui/Divider'
@@ -115,7 +115,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
       <div className="-mx-5">
           {templates.length === 0 ? (
             <EmptyState
-              icon={<IconTemplate size={26} />}
+              art="template"
               title="No templates yet"
               body="Save a transaction as a template to use it here."
             />

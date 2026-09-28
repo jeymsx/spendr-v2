@@ -31,6 +31,21 @@ function paramOf(pattern, pathname, key = 'id') {
 /** A `[data-web-id]` selector for the list item open on the right. @param {string|null} id */
 const byId = (id) => (id == null ? null : `[data-web-id="${String(id).replace(/["\\]/g, '\\$&')}"]`)
 
+/**
+ * Whether the list on the left has anything in it to pick - undefined until
+ * it is read.
+ *
+ * The right half says "pick one to see it here" only when there is one to
+ * pick. With the list empty, the list's own empty state - its picture, its
+ * line, its way out - is the whole message, and a second picture beside it,
+ * often the same one, asked for a choice between none.
+ *
+ * @param {() => Promise<number>} count
+ */
+function useAnyToPick(count) {
+  return useLiveQuery(async () => (await count()) > 0, [], undefined)
+}
+
 // ── Accounts ─────────────────────────────────────────────────────────────────
 
 export function WebAccountsSection() {
@@ -50,11 +65,13 @@ export function WebAccountsSection() {
 export function AccountsIndex() {
   const first = useLiveQuery(async () => {
     const all = await db.accounts.toArray()
+    // None at all: the list says so itself (useAnyToPick).
+    if (!all.length) return false
     const shown = all.filter(a => !a.archived && !a.parentName)
       .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
     return shown[0] ?? null
   }, [], undefined)
-  if (first === undefined) return null
+  if (first === undefined || first === false) return null
   if (first) return <Navigate to={`/accounts/${first.id}`} replace />
   return <WebPaneEmpty art="wallet" title="No accounts yet" body="Add your cash, a bank or an e-wallet, and it opens here." />
 }
@@ -91,6 +108,8 @@ export function WebRecurringSection() {
 }
 
 export function RecurringIndex() {
+  const any = useAnyToPick(() => db.recurring.count())
+  if (!any) return null
   return <WebPaneEmpty art="calendar" title="Pick one to see it here" body="Its history, what it costs a year, and when it comes next." />
 }
 
@@ -109,6 +128,8 @@ export function WebDebtsSection() {
 }
 
 export function DebtsIndex() {
+  const any = useAnyToPick(() => db.debts.count())
+  if (!any) return null
   return <WebPaneEmpty art="scale" title="Pick someone to see it here" body="Everything between the two of you, and what is still open." />
 }
 
@@ -121,6 +142,8 @@ export function WebGoalsSection() {
 }
 
 export function GoalsIndex() {
+  const any = useAnyToPick(() => db.goals.count())
+  if (!any) return null
   return <WebPaneEmpty art="target" title="Pick a goal to see it here" body="What it is set to, how far along it is, and what is left." />
 }
 
@@ -140,6 +163,9 @@ export function WebBudgetSection() {
 }
 
 export function BudgetIndex() {
+  // The Budget page lists the categories with a limit, and nothing without one.
+  const any = useAnyToPick(() => db.categories.filter(c => (c.budget ?? 0) > 0).count())
+  if (!any) return null
   return <WebPaneEmpty art="gauge" title="Pick a category to see it here" body="Where its money went, month by month." />
 }
 

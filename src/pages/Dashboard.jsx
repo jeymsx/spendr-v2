@@ -9,7 +9,6 @@ import { getCreditStatus } from '../utils/creditCycle'
 import TemplateConfirmSheet from '../components/TemplateConfirmSheet'
 import {
   IconTransferUI,
-  IconEmptyLedger,
 } from '../components/icons'
 import CategoryGlyph from '../components/CategoryGlyph'
 import { scheduledCutoff } from '../utils/scheduled'
@@ -752,7 +751,7 @@ export default function Dashboard({ layout = 'phone' } = {}) {
           {recentTx.length === 0 ? (
             <EmptyState
               size="sm"
-              icon={<IconEmptyLedger size={24} />}
+              art="ledger"
               title="No transactions yet"
               body={layout === 'desktop'
                 // No + to tap on the desktop: its add button, or a key.

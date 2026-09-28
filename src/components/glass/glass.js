@@ -400,6 +400,31 @@ const BAG_BODY = rpoly([[34, 50], [94, 50], [100, 108], [28, 108]], 9)
 const MONEY_BAG = 'M50 42C38 52 25 66 25 85C25 103 42 111 64 111C86 111 103 103 103 85C103 66 90 52 78 42Z'
 const HEART = 'M64 104C44 90 24 74 24 52A20 20 0 0 1 64 42A20 20 0 0 1 104 52C104 74 84 90 64 104Z'
 const BELL = 'M64 22C49 22 40 34 40 50V71L32 83C30.5 85.5 32 88 35 88H93C96 88 97.5 85.5 96 83L88 71V50C88 34 79 22 64 22Z'
+const BIN = rpoly([[34, 46], [94, 46], [88, 110], [40, 110]], 9)
+
+/**
+ * A ring with a hole in it: the outer circle one way round and the inner the
+ * other, so the default fill rule leaves the middle empty.
+ * @param {number} cx @param {number} cy @param {number} R @param {number} r
+ */
+function annulus(cx, cy, R, r) {
+  return circ(cx, cy, R)
+    + `M${f(cx - r)} ${f(cy)}a${f(r)} ${f(r)} 0 1 1 ${f(2 * r)} 0a${f(r)} ${f(r)} 0 1 1 ${f(-2 * r)} 0Z`
+}
+
+/**
+ * Head and shoulders: a disc over a dome that is flat at its foot.
+ * @param {number} cx @param {number} top  the head's top @param {number} w  the shoulders' width
+ */
+function person(cx, top, w) {
+  const hr = w * 0.27
+  const head = circ(cx, top + hr, hr)
+  const y = top + hr * 2 + w * 0.08
+  const R = w / 2, k = w * 0.12, foot = y + R + w * 0.16
+  const body = `M${f(cx - R)} ${f(foot - k)}V${f(y + R)}A${f(R)} ${f(R)} 0 0 1 ${f(cx + R)} ${f(y + R)}`
+    + `V${f(foot - k)}A${f(k)} ${f(k)} 0 0 1 ${f(cx + R - k)} ${f(foot)}H${f(cx - R + k)}A${f(k)} ${f(k)} 0 0 1 ${f(cx - R)} ${f(foot - k)}Z`
+  return head + body
+}
 
 /**
  * Each picture: a function of nothing, returning its layers. Drawn in a 128
@@ -636,6 +661,84 @@ const PICTURES = {
     S(rr(61, 13, 12, 12, 6), { tone: 'mid', depth: [1, 1.2] }),
     S(circ(67, 99, 8.5), { tone: 'mid', depth: [1, 1.4] }),
     S(circ(94, 32, 10), { depth: [1.2, 1.6] }),
+  ],
+  /* A tick on a glass disc over a solid one, for good news that is an
+     absence: nothing due, nothing owed, nothing stored twice. */
+  allClear: () => [
+    S(circ(56, 58, 36)),
+    G(circ(68, 68, 36)),
+    Y('check', { x: 68, y: 69, s: 2, w: 2.2 }),
+  ],
+  /* A lens over a card whose middle is a dashed outline: looked, and what
+     should be here is not. For a link to something deleted, and a search
+     that matched nothing. Nothing in the lens - a rule there reads as zoom. */
+  notFound: () => [
+    S(rr(14, 24, 72, 54, 11), { t: 'rotate(-10 50 51)' }),
+    G(rr(24, 36, 78, 58, 12)),
+    X(`<path d="${rr(36, 48, 50, 34, 7)}" fill="none" stroke="{deep}" stroke-width="3" stroke-dasharray="5 6" stroke-linecap="round" opacity=".5"/>`),
+    G(circ(82, 78, 15)),
+    S(annulus(82, 78, 20, 14) + rpoly([[91.1, 94.9], [101.1, 104.9], [108.9, 97.1], [98.9, 87.1]], 5.5), { tone: 'mid', depth: [1.2, 1.6] }),
+  ],
+  /* A page of rows, a tile and a line each, the last row only dashed: the
+     entries that would be here. For no transactions. */
+  ledger: () => [
+    S(rr(24, 20, 62, 84, 10), { t: 'rotate(-9 55 62)' }),
+    G(rr(36, 26, 66, 86, 12)),
+    S(rr(46, 38, 14, 14, 4) + rr(46, 60, 14, 14, 4), { tone: 'mid', depth: [1, 1.4] }),
+    X('<path d="M68 45h24M68 67h16" stroke="{deep}" stroke-width="3.6" stroke-linecap="round" opacity=".6"/>'
+      + `<path d="${rr(46, 82, 14, 14, 4)}" fill="none" stroke="{deep}" stroke-width="2.4" stroke-dasharray="3 4" opacity=".5"/>`
+      + '<path d="M68 89h20" stroke="{deep}" stroke-width="3.6" stroke-linecap="round" stroke-dasharray="1 7" opacity=".5"/>'),
+  ],
+  /* An empty bin with its lid on. For Recently deleted. */
+  trash: () => [
+    S(BIN, { t: 'rotate(-10 64 78) translate(-9 -2)' }),
+    G(BIN),
+    X('<path d="M54 62v34M64 62v34M74 62v34" stroke="{deep}" stroke-width="3.4" stroke-linecap="round" opacity=".5"/>'),
+    S(rr(26, 32, 76, 11, 5.5), { tone: 'mid', depth: [1.2, 1.6] }),
+    S(rr(53, 22, 22, 12, 5), { tone: 'mid', depth: [1, 1.2] }),
+  ],
+  /* A saved card with a bolt on it, the Templates button's own mark. */
+  template: () => [
+    S(rr(18, 26, 80, 54, 10), { t: 'rotate(-12 58 53)' }),
+    G(rr(28, 44, 84, 56, 11)),
+    X('<path d="M42 62h30M42 74h20" stroke="{deep}" stroke-width="3.6" stroke-linecap="round" opacity=".6"/>'),
+    S(circ(92, 90, 16), { depth: [1.4, 1.8] }),
+    Y('bolt', { x: 92, y: 90, s: 0.95, w: 2.4, ink: 'white' }),
+  ],
+  /* Two people, one set back behind the other. For debts, which are kept
+     by person. */
+  people: () => [
+    S(person(56, 14, 50), { t: 'rotate(-10 56 60)' }),
+    G(person(74, 32, 56)),
+  ],
+  /* The calendar, with a loop where its days would be. For recurring. */
+  repeat: () => [
+    S(rr(22, 32, 74, 72, 13), { t: 'rotate(-10 59 68)' }),
+    G(rr(32, 40, 76, 72, 13)),
+    S('M45 40H95A13 13 0 0 1 108 53V60H32V53A13 13 0 0 1 45 40Z', { depth: [0, 0] }),
+    S(rr(50, 28, 7, 20, 3.5) + rr(83, 28, 7, 20, 3.5), { tone: 'mid', depth: [1.2, 1.6] }),
+    Y('repeat', { x: 70, y: 86, s: 1.45, w: 2.3 }),
+  ],
+  /* A chart with a dashed line level across it. For a period with nothing
+     in it: a line going up or down would draw a trend there is not. */
+  chartFlat: () => [
+    S(rr(20, 30, 72, 72, 13), { t: 'rotate(-10 56 66)' }),
+    G(rr(32, 38, 78, 74, 13)),
+    X('<path d="M46 52v42h50" fill="none" stroke="{deep}" stroke-width="3.6" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/>'
+      + '<path d="M56 74h38" stroke="{deeper}" stroke-width="4.4" stroke-linecap="round" stroke-dasharray="6 7"/>'),
+  ],
+  /* Category tiles in a grid, the last one glass. For no categories. */
+  tiles: () => [
+    S(rr(22, 22, 38, 38, 11)),
+    S(rr(68, 22, 38, 38, 11), { tone: 'mid' }),
+    S(rr(22, 68, 38, 38, 11), { tone: 'mid' }),
+    G(rr(62, 62, 46, 46, 13)),
+  ],
+  /* A globe on a glass disc, for money from elsewhere: exchange rates. */
+  globe: () => [
+    S(circ(56, 58, 36)),
+    G(circ(68, 68, 36)),
+    Y('globe', { x: 68, y: 68, s: 2.2, w: 1.7 }),
   ],
 }
 

@@ -256,7 +256,7 @@ export default function CalendarView({
           </div>
 
           {selectedTxs.length === 0 ? (
-            <EmptyState size="sm" title="No transactions on this date" />
+            <EmptyState size="sm" art="ledger" title="No transactions on this date" />
           ) : (
             <Card clip className="mx-5">
               {selectedTxs.map((tx, i) => (

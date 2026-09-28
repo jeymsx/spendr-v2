@@ -3,6 +3,7 @@ import Sheet from '../../components/ui/Sheet'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
+import EmptyState from '../../components/ui/EmptyState'
 import SwipeConfirm from '../../components/SwipeConfirm'
 import { useToast } from '../../context/ToastContext'
 import { surveyDuplicates, applyDedupe } from '../../lib/dedupeWrite'
@@ -92,9 +93,7 @@ export function DedupeSheet({ open, onClose }) {
             Checking…
           </p>
         ) : total === 0 ? (
-          <p className="py-6 text-center text-13 text-slate-500 dark:text-slate-400">
-            Nothing is stored twice. There is nothing to merge.
-          </p>
+          <EmptyState size="sm" art="allClear" tone="good" title="Nothing is stored twice" body="There is nothing to merge." />
         ) : (
           <>
             <p className="mb-4 text-13 leading-snug text-slate-500 dark:text-slate-400">

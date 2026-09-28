@@ -3,6 +3,7 @@ import {
 } from 'recharts'
 import { fmt } from '../../lib/money'
 import { EASE_OUT, prefersReducedMotion } from '../../components/ui/motion'
+import { EmptyArt } from '../../components/ui/EmptyState'
 import { TREND_RANGES } from '../../lib/trend'
 
 /* The arithmetic moved to lib/trend.js when the category page needed
@@ -99,16 +100,18 @@ export function BalanceTrend({
     // failed to load - a thing gone wrong - when the truth is milder and
     // more specific: the balance genuinely did not move. So the empty state
     // is drawn in the chart's own language, as the line it would have been:
-    // a dashed baseline, flat, because flat is the answer.
+    // a chart with a dashed baseline across it, flat, because flat is the
+    // answer. A rising line would have been the wrong picture - it implies
+    // data. It is the glass picture every other empty state draws now, a
+    // size down, so it does not outweigh the figure above it.
     //
     // The height matches the real chart's 132px so switching ranges never
-    // shifts the page. Same margins too, so the dashed line starts and ends
-    // exactly where a real line would.
+    // shifts the page.
     return (
       <div className={padClass}>
         <div className="h-[132px] flex flex-col items-center justify-center text-center">
-          <IconFlatChart />
-          <p className="text-13 font-medium text-slate-500 dark:text-slate-400 mt-3">
+          <EmptyArt name="chartFlat" size={56} />
+          <p className="text-13 font-medium text-slate-500 dark:text-slate-400 mt-2">
             {emptyTitle ?? `Flat · ${rangeTitle.toLowerCase()}`}
           </p>
           <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
@@ -204,34 +207,6 @@ export function BalanceTrend({
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
-
-/**
- * Flat-chart glyph: an axis corner with a dashed, level series.
- *
- * Same family as IconEmptyLedger - 24x24, 2px stroke on integer coordinates
- * so edges land on pixel boundaries at 1x, currentColor, no fill. A rising
- * line would have been the wrong picture: it implies data. Level and dashed
- * is the actual answer.
- */
-export function IconFlatChart() {
-  return (
-    <svg
-      width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"
-      className="text-slate-300 dark:text-white/20"
-      aria-hidden="true" focusable="false"
-    >
-      <path d="M4 4v16h16" />
-      <path d="M8 13h9" strokeDasharray="3 3" />
-    </svg>
-  )
-}
-
-/* IconEmptyLedger moved to components/icons.jsx when the dashboard wanted it:
-   importing it from here would have pulled recharts into the one route that
-   is not lazy-loaded. Re-exported so the two pages that already had it from
-   this module keep working. */
-export { IconEmptyLedger } from '../../components/icons'
 
 export function IconChevronLeft() {
   return (

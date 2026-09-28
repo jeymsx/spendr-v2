@@ -108,7 +108,7 @@ export default function RecentlyDeleted() {
       <div className="px-5">
         {entries === undefined ? <SkeletonList rows={3} /> : !list.length ? (
           <EmptyState
-            icon={<Trash01 size={26} strokeWidth={1.6} />}
+            art="trash"
             title="Nothing deleted"
             body={`Transactions you delete stay here for ${TRASH_DAYS} days, so you can put them back.`}
           />

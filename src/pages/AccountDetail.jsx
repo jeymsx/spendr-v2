@@ -19,7 +19,7 @@ import {
 import { applyBalanceEffect, postCardPayment } from '../db/txHelpers'
 import { UNSYNCED } from '../db/db'
 import { useToast } from '../context/ToastContext'
-import { IconChevronRight, IconNotFound } from '../components/icons'
+import { IconChevronRight } from '../components/icons'
 import {
   AccountFormSheet,
   QrViewerModal,
@@ -37,7 +37,7 @@ import IconButton from '../components/ui/IconButton'
 import SectionLabel from '../components/ui/SectionLabel'
 import {
   TREND_RANGES, RANGE_TITLE, buildTrend, TrendRangeChips, BalanceTrend,
-  IconChevronLeft, IconQr, IconEmptyLedger, DAY_MS,
+  IconChevronLeft, IconQr, DAY_MS,
 } from './accounts/Trend'
 import { TxList, TrendDelta } from './accounts/DetailBits'
 import CardPaymentSheet from './accounts/CardPaymentSheet'
@@ -432,7 +432,7 @@ export default function AccountDetail() {
           <IconChevronLeft />
         </IconButton>
         <EmptyState
-          icon={<IconNotFound />}
+          art="notFound"
           title="Account not found"
           body="It may have been deleted."
           action={
@@ -1076,7 +1076,7 @@ export default function AccountDetail() {
             </SectionLabel>
             {acctTxs.length === 0 ? (
               <EmptyState
-                icon={<IconEmptyLedger />}
+                art="ledger"
                 title="No transactions yet"
                 body={isInvestment ? 'Money you move in, and each value you save, shows up here'
                   : isLoan ? 'Payments you make show up here'

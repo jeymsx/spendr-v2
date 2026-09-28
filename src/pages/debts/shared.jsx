@@ -86,14 +86,3 @@ export function IconEdit() {
   )
 }
 
-/** Two people, for a ledger with nobody in it. */
-export function IconNoDebts() {
-  return (
-    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <circle cx="9" cy="8" r="3.2" />
-      <path d="M2.8 20a6.2 6.2 0 0 1 12.4 0" />
-      <path d="M16.5 5.4a3.2 3.2 0 0 1 0 5.2M18.4 20a6.2 6.2 0 0 0-2.3-4.8" />
-    </svg>
-  )
-}

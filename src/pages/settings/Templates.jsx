@@ -21,9 +21,10 @@ import CategoryPickerSheet from '../../components/CategoryPickerSheet'
 import CategoryRail from '../../components/CategoryRail'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import {
-  IconChevronRight, IconPlus, IconTemplate, IconTransferUI, IconArrowDown,
+  IconChevronRight, IconPlus, IconTransferUI, IconArrowDown,
 } from '../../components/icons'
 import Button from '../../components/ui/Button'
+import EmptyState from '../../components/ui/EmptyState'
 import Sheet from '../../components/ui/Sheet'
 import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
@@ -448,13 +449,11 @@ export function TemplateManager({ open, onClose, variant = 'sheet' }) {
   const listBody = (
     <>
       {(templates ?? []).length === 0 ? (
-        <div className="py-14 text-center px-8">
-          <p className="mb-3 flex justify-center text-slate-400 dark:text-slate-500"><IconTemplate size={30} /></p>
-          <p className="text-sm font-semibold text-slate-600 dark:text-slate-300">No templates yet</p>
-          <p className="text-xs text-slate-400 dark:text-slate-500 mt-1">
-            Add one below, or toggle &ldquo;Save as template&rdquo; when confirming any transaction
-          </p>
-        </div>
+        <EmptyState
+          art="template"
+          title="No templates yet"
+          body={<>Add one below, or toggle &ldquo;Save as template&rdquo; when confirming any transaction</>}
+        />
       ) : (
         <div className="mx-5 rounded-2xl overflow-hidden bg-white border border-slate-100
           dark:bg-white/[0.04] dark:border-white/[0.07] shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none mb-3">
