@@ -124,7 +124,7 @@ import { APP_HOST } from '../config'
   .nav-chip[aria-current='true'] { color: #fff; background: var(--color-primary-deep); box-shadow: 0 6px 14px -8px rgba(26, 115, 217, 0.9); }
 
   .feature-group + .feature-group { border-top: 1px solid var(--hairline); }
-  .feature-shots { --fs-w: min(62vw, 280px); position: relative; display: flex; justify-content: center; }
+  .feature-shots { --fs-w: min(62vw, 280px); position: relative; display: flex; align-items: flex-start; justify-content: center; }
   .feature-shots.is-pair { --fs-w: min(46vw, 250px); gap: 0; }
   .feature-shots.is-pair :global(.fs-0) { rotate: -4deg; z-index: 2; margin-right: calc(var(--fs-w) * -0.18); }
   .feature-shots.is-pair :global(.fs-1) { rotate: 5deg; margin-top: calc(var(--fs-w) * 0.22); }

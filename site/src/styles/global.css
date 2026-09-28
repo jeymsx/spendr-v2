@@ -339,6 +339,9 @@
   --bezel: calc(var(--w) * 0.034);
   position: relative;
   width: var(--w);
+  /* Never taller than its screen and band: a flex row that stretches its
+     items would otherwise grow the black band under the screen. */
+  height: fit-content;
   flex: none;
   padding: var(--bezel);
   border-radius: calc(var(--w) * 0.17);
