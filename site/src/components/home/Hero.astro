@@ -16,16 +16,16 @@ const badge = medallion({ glyph: art.glyph, hue: art.hue, shape: art.shape })
 <section class="hero relative" aria-labelledby="hero-title">
   <div class="container-site grid items-center gap-12 pb-20 pt-8 sm:pt-12 lg:grid-cols-[1.04fr_1fr] lg:gap-6 lg:pb-28 lg:pt-14">
     <div class="relative z-10 max-w-[640px]">
-      <p class="eyebrow" data-reveal>Personal finance, made for the Philippines</p>
-      <h1 id="hero-title" class="h-display mt-5" data-reveal style="--d:70ms">
+      <p class="hero-in eyebrow">Personal finance, made for the Philippines</p>
+      <h1 id="hero-title" class="hero-in h-display mt-5" style="--d:70ms">
         Every peso,<br /> accounted for.
       </h1>
-      <p class="lede mt-6 max-w-[33rem]" data-reveal style="--d:140ms">
+      <p class="hero-in lede mt-6 max-w-[33rem]" style="--d:140ms">
         Spendr keeps your cash, banks, e-wallets and credit cards in one place.
         Log a purchase in seconds, see what your cards really owe, and know what’s
         safe to spend until payday.
       </p>
-      <div class="mt-9 flex flex-wrap items-center gap-3" data-reveal style="--d:210ms">
+      <div class="hero-in mt-9 flex flex-wrap items-center gap-3" style="--d:210ms">
         <a href={APP_URL} class="btn btn-primary press">
           Open Spendr
           <Icon name="arrow-up-right" size={21} stroke={2.2} />
@@ -35,7 +35,7 @@ const badge = medallion({ glyph: art.glyph, hue: art.hue, shape: art.shape })
           Add to home screen
         </a>
       </div>
-      <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-2.5 text-[0.9375rem] font-medium text-muted" data-reveal style="--d:280ms">
+      <ul class="hero-in mt-8 flex flex-wrap gap-x-6 gap-y-2.5 text-[0.9375rem] font-medium text-muted" style="--d:280ms">
         {['Free', 'No account needed', 'Works offline'].map(p => (
           <li class="flex items-center gap-2">
             <span class="grid size-5 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-primary)_16%,transparent)] text-ink">
@@ -49,14 +49,14 @@ const badge = medallion({ glyph: art.glyph, hue: art.hue, shape: art.shape })
 
     <div class="hero-stage relative mx-auto w-full max-w-[540px]" data-tilt aria-label="Spendr on two iPhones" role="img">
       <div class="hero-tilt">
-        <div class="stage-back" data-reveal="scale" style="--d:260ms">
+        <div class="hero-pop stage-back" style="--d:260ms">
           <Phone shot="insights" alt="" width="var(--back-w)" sizes="(min-width: 1024px) 250px, 58vw" />
         </div>
-        <div class="stage-front" data-reveal style="--d:120ms">
+        <div class="hero-in stage-front" style="--d:120ms">
           <Phone shot="home" alt="" width="var(--front-w)" sizes="(min-width: 1024px) 290px, 66vw" eager />
         </div>
 
-        <div class="float float-safe" data-reveal="scale" style="--d:620ms">
+        <div class="hero-pop float float-safe" style="--d:620ms">
           <div class="surface-solid bob rounded-[22px] px-4 py-3.5" style="--bob:7s">
             <p class="text-[0.75rem] font-semibold text-muted">Safe to spend</p>
             <p class="tabular mt-0.5 text-[1.375rem] font-bold tracking-[-0.02em]" data-count-to="51176.29" data-count-prefix="₱" data-count-delay="700">₱51,176.29</p>
@@ -64,7 +64,7 @@ const badge = medallion({ glyph: art.glyph, hue: art.hue, shape: art.shape })
           </div>
         </div>
 
-        <div class="float float-tx" data-reveal="scale" style="--d:760ms">
+        <div class="hero-pop float float-tx" style="--d:760ms">
           <div class="surface-solid bob flex items-center gap-3 rounded-[20px] py-2.5 pl-2.5 pr-4" style="--bob:6.2s;--bob-delay:-2s">
             <span class="cat-tile grid size-10 place-items-center rounded-[13px]" style="--cat:#FFB347">
               <Icon name="tools-kitchen-2" size={20} stroke={2} />
@@ -77,7 +77,7 @@ const badge = medallion({ glyph: art.glyph, hue: art.hue, shape: art.shape })
           </div>
         </div>
 
-        <div class="float float-badge" data-reveal="scale" style="--d:900ms">
+        <div class="hero-pop float float-badge" style="--d:900ms">
           <span class="glass-live glass-enter glass-float block size-full" style="--gx-delay:900ms;--gx-float-delay:-1s" set:html={badge} />
         </div>
       </div>
@@ -99,7 +99,11 @@ const badge = medallion({ glyph: art.glyph, hue: art.hue, shape: art.shape })
   @media (min-width: 640px) {
     .hero-stage { --front-w: 292px; --back-w: 250px; --front-x: -0.62; --back-x: 0.02; }
   }
+  /* Side by side with the words, the stage is narrower until 1280. */
   @media (min-width: 1024px) {
+    .hero-stage { --front-w: 262px; --back-w: 224px; height: 620px; }
+  }
+  @media (min-width: 1280px) {
     .hero-stage { --front-w: 300px; --back-w: 256px; height: 700px; }
   }
   .hero-tilt { position: absolute; inset: 0; transform-style: preserve-3d; }

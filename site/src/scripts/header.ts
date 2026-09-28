@@ -42,7 +42,10 @@ export function initHeader() {
 
   button.addEventListener('click', () => (panel.hidden ? open() : close()))
   panel.addEventListener('click', e => {
-    if ((e.target as HTMLElement).closest('a')) close(false)
+    const t = e.target as HTMLElement
+    if (t.closest('a')) close(false)
+    // A tap on the dimmed page, outside the card, puts the menu away.
+    else if (!t.closest('.menu-card')) close()
   })
   document.addEventListener('keydown', e => {
     if (panel.hidden) return

@@ -33,7 +33,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Can I use it on my computer?',
-    a: 'Yes. On a wide screen it becomes a desktop app with a sidebar, tables and charts side by side. Sign in on both to keep them in sync.',
+    a: 'Yes. On a wide screen it spreads out into a desktop app, with a sidebar and a key for every kind of entry. Sign in on both to keep them in sync.',
   },
   {
     q: 'Can I get my data out?',

@@ -5,7 +5,7 @@ The public website for Spendr, a separate site from the app. It uses Tarsi's pag
 ## Where it lives
 
 | | Address | Built from |
-|---|---|---|
+| --- | --- | --- |
 | The app | `spendr-v2.vercel.app`, unchanged | repo root, the existing Vercel project |
 | The website | its own free `*.vercel.app` name (for example `spendr.vercel.app`) | `site/`, a second Vercel project on the same GitHub repo |
 
@@ -20,7 +20,7 @@ The website's "Open Spendr" buttons link to the app. Nothing redirects.
    - privacy promises
    - an FAQ
 
-   The testimonials section is built but only renders when `src/data/quotes.ts` has real quotes in it. Prices, numbers and claims come from the code.
+   The testimonials section is built but only renders when `src/data/quotes.ts` has real quotes in it. Prices, numbers and claims come from the code: the counts of banks, badges, levels and challenges are read from the app's modules, and quick log's chips were recorded from the app one keystroke at a time.
 2. **Spendr's brand, not Tarsi's:**
    - Spendr's mark and its blue, `#2D9DFF`
    - Inter
@@ -29,24 +29,24 @@ The website's "Open Spendr" buttons link to the app. Nothing redirects.
    - its voice, which is plain, warm and specific
 3. **Spendr's motion language:**
    - surfaces that move, and content that swaps through a short blur
-   - curves that settle, with no bounce
-   - no glows, no confetti
+   - the app's own curves (`--ease-out`, `--ease-sheet`, `--ease-settle`), which settle with no bounce
+   - no glows, no confetti; Wrapped's panel is the one loud place, as in the app
    - everything off under `prefers-reduced-motion`
-4. **One source of truth.** The changelog and the Privacy and Terms text are imported from the app (`src/lib/changelog.js`, `src/lib/policy.js`), so the site can't drift from the app.
+4. **One source of truth.** The changelog, the release notes, the Privacy and Terms text, the achievements, the bank list and the glass art are imported from the app (`src/lib/changelog.js`, `src/lib/release.js`, `src/lib/policy.js`, `src/lib/achievements.js`, `src/lib/challenges.js`, `src/lib/phAccounts.js`, `src/components/glass/glass.js`), so the site can't drift from the app. The only copy is the eight accent names, in `src/data/app.ts`, because they live in a React module.
 5. **Fast and honest to share:**
-   - static HTML
-   - no analytics
+   - static HTML, CSS inlined, about 6 KB of script
+   - no analytics, no cookies
    - a bundled font
-   - real Open Graph cards
-   - light pages on a phone
+   - a real Open Graph card (`public/og.jpg`)
+   - below-the-fold sections skip layout until they near the screen (`content-visibility`)
 
 ## Pages
 
 - **`/` Home:** the full story; see below.
-- **`/features`:** every feature, grouped, with screens.
-- **`/install`:** adding Spendr to the home screen on iPhone, Android and desktop.
+- **`/features`:** every feature, in ten groups, with screens and a chip rail that follows the reader.
+- **`/install`:** iPhone and iPad, Android, and a computer, with the visitor's own device marked.
 - **`/changelog`:** every release, from the app's own changelog.
-- **`/privacy`, `/terms`:** from the app's own text.
+- **`/privacy`, `/terms`:** from the app's own text, word for word.
 - **`/404`**
 
 ## Home, top to bottom
@@ -54,108 +54,89 @@ The website's "Open Spendr" buttons link to the app. Nothing redirects.
 Tarsi's structure, Spendr's content:
 
 | # | Tarsi | Spendr |
-|---|---|---|
-| 1 | Hero: headline, store buttons, "30,000+ people" | Hero: headline, **Open Spendr** and **Add to home screen**, a line of true promises (free, no account needed, works offline), phones with real screens and account cards |
-| 2 | Three benefits | Three benefits: see where it goes; stay ahead of the month; pay off and save up |
-| 3 | Screenshot carousel | A marquee of real screens, which pauses on hover and scrolls by hand under reduced motion |
-| 4 | (features page only) | A showcase with tabs that swap the phone's screen through the app's blur swap. Tabs: Log, Cards, Budgets, Recurring, Debts, Goals, Insights |
-| 5 | (none) | Quick log, live: "150 jollibee" types itself and becomes a transaction row |
-| 6 | Awards | Wrapped and Achievements: the monthly story and the badges, with real badge art |
-| 7 | "Tarsi on the web, too" | "Spendr on your computer, too": the desktop layout, and sync |
-| 8 | Testimonials | Privacy: stays on your phone, no tracking, Face ID lock, hide balances. Quotes appear here once there are real ones |
-| 9 | Community | What's new: the latest release, straight from the changelog |
-| 10 | (none) | FAQ |
-| 11 | Download | Final call to action: Open Spendr and Add to home screen |
-| 12 | Footer | Product, Legal, Contact, "Made by James Sablay" |
+| --- | --- | --- |
+| 1 | Hero: headline, store buttons, "30,000+ people" | "Every peso, accounted for.": **Open Spendr** and **Add to home screen**, three true promises (free, no account needed, works offline), two phones with the demo ledger, and a Safe to spend card, a transaction and a badge floating beside them |
+| 2 | "Backed by" | The 29 banks and e-wallets and 35 investments and loans the app knows by name, as moving rows, with the not-affiliated line |
+| 3 | Three benefits | Three benefits with the app's glass pictures: see where it goes; stay ahead of the month; pay off and save up |
+| 4 | Screenshot carousel | Store-style cards of real screens, drifting past, with a pause button |
+| 5 | (features page only) | Seven parts in tabs; the phone swaps its screen through the blur, moving on by itself until someone picks one |
+| 6 | (none) | Quick log, live: "185 starbucks" and "1000 from gcash to bpi savings" type themselves, the recorded chips answer, and the app's prefilled form appears |
+| 7 | Awards | Wrapped: the story's twelve slides, playing with its own progress bar, with jump buttons |
+| 8 | (none) | Achievements: the app's medallions in Badges, Milestones and Challenges tabs |
+| 9 | "Tarsi on the web, too" | "The big picture, on a big screen": the desktop layout in a window, Home and Insights |
+| 10 | Testimonials | Privacy: on your phone, nothing watching, Face ID, yours to take. Quotes appear here once there are real ones |
+| 11 | Community | What's new: the latest release, straight from What's New |
+| 12 | (none) | FAQ |
+| 13 | Download | "Log your first peso today.": Open Spendr, Add to home screen, and a QR code on wide screens |
+| 14 | Footer | Product, Legal, Contact, © James Sablay, the version |
 
-## Screens to capture
+## Screens
 
-Captured from the real app with the demo data (`seed-wrapped-demo.html` and `seed-networth-demo.html`, run on this worktree's dev server):
-- Phone: 390×844 at 3×, dark and light.
-- Desktop: 1440×900.
-- Output: `src/assets/screens/<name>-<theme>.png`.
+Captured from the real app with a demo ledger (Mika's) by `scripts/capture.mjs`. The ledger is `scripts/demo-ledger.json`, a dump of the curated demo data (IndexedDB tables and localStorage), loaded into a fresh Chrome profile, so no real data is read or changed.
+
+- Phone: an iPhone 15 Pro, 393×852 at 3×, **with the real safe areas emulated** (CDP `Emulation.setSafeAreaInsetsOverride`, top 59, bottom 34), so the app pads for the island exactly as on the phone, and `Phone.astro` draws the status bar, island and home indicator into that space.
+- Desktop: 1440×900 at 2×.
+- Both themes, except Wrapped, which is the same in both.
+- Stored as WebP (quality 92) in `src/assets/screens/<name>-<theme>.webp`; Astro makes the sizes each page asks for.
 
 | Name | Route | Used in |
-|---|---|---|
-| home | `/` (balances shown) | hero, marquee, showcase |
-| transactions | `/transactions` | marquee, showcase: Log |
-| expense | `/expense` (keypad with an amount) | features: Log |
-| accounts | `/accounts` | showcase: Cards |
-| card | `/accounts/:id`, a credit card | features: Cards |
-| budget | `/budget` | showcase: Budgets |
-| recurring | `/recurring` | showcase: Recurring |
-| debts | `/debts` | showcase: Debts |
-| goals | `/goals` | showcase: Goals |
-| insights | `/insights` | showcase: Insights |
-| networth | `/insights/net-worth` | features: Insights |
-| forecast | `/insights/forecast` | features: Budgets (Safe to spend) |
-| wrapped | `/recap/<last month>`, one slide | Wrapped section |
-| achievements | `/achievements` | Achievements section |
-| desktop | `/` at 1440×900 | "on your computer, too" |
+| --- | --- | --- |
+| home | `/` (balances shown) | hero, install, quick log's background, OG card |
+| transactions, accounts, card, budget, recurring, debts, goals, insights, networth, forecast, achievements | their pages | marquee, showcase, features |
+| expense | `/expense`, filled in | features: Logging |
+| ql-expense-form, ql-transfer-form | the forms quick log opens | quick log |
+| wrapped-* | `/recap/2026-08`, all twelve slides | Wrapped, marquee, features |
+| desktop, desktop-insights | `/`, `/insights` at 1440 | "on your computer", features |
+
+To recapture after the app changes:
+
+1. Run the app from the repo root: `npm run dev -- --port 5195`.
+2. Once, in `site/`: `npm i --no-save playwright` (it needs Google Chrome installed).
+3. In `site/`: `node scripts/capture.mjs` for everything, or `node scripts/capture.mjs dark goals,budget` for some. It writes WebP straight into `src/assets/screens`, and the same app gives byte-identical files.
 
 ## Tech
 
-- **Astro** (static output), **Tailwind v4** through `@tailwindcss/vite`, and **Inter** from `@fontsource-variable/inter`.
-- Images go through `astro:assets`, which produces AVIF/WebP at the sizes used, with lazy loading.
-- Motion is CSS plus about 3 KB of vanilla JS in `src/scripts/`. There is no framework runtime.
-  - `IntersectionObserver` reveals
-  - the marquee
-  - the showcase tabs
-  - the quick-log demo
-  - the header state
-  - the FAQ height animation
-  - the theme toggle
-- **Theme:** follows the OS, with a toggle remembered in `localStorage`. Screens swap between their dark and light captures with the theme.
-- **Addresses:**
-  - The canonical and Open Graph URLs come from Vercel's `VERCEL_PROJECT_PRODUCTION_URL`, so whatever name the project gets is correct.
-  - The app's address is `APP_URL` in `src/config.ts`.
+- **Astro 7** (static), **Tailwind v4** through `@tailwindcss/vite`, **Inter** from `@fontsource-variable/inter`, **Tabler** icons (the app's set) inlined at build time, and `qrcode` for the closing QR.
+- Motion is CSS plus small scripts beside their sections: arrivals (`[data-reveal]`, IntersectionObserver, once), the hero's load animation (CSS only, so the headline paints at once), the marquees, the showcase tabs, quick log, the Wrapped player (one Web Animations clock drives the bar and the slide), the achievements tabs, the FAQ heights, the header and its phone menu, the theme toggle and the cross-page fade (`@view-transition`).
+- **Theme:** follows the OS, with a toggle remembered in `localStorage` (`spendr-site-theme`). Each capture is a `<picture>` whose dark source answers `prefers-color-scheme`; a pick that disagrees with the OS rewrites that media query, so only the shown capture is ever downloaded.
+- **Addresses:** the canonical and Open Graph URLs come from Vercel's `VERCEL_PROJECT_PRODUCTION_URL`. The app's address is `APP_URL` in `src/config.ts`.
 
 ## Repo integration
 
-- **`site/` is self-contained,** with its own `package.json` and lockfile. It only imports two data files from the app.
+- **`site/` is self-contained,** with its own `package.json` and lockfile. It imports the app's pure modules listed above, nothing with React in it.
 - **Root `eslint.config.js`** ignores `site/`.
-- **Root `src/index.css`** gets `@source not "../site";`, so the app's Tailwind doesn't scan the website's files.
+- **Root `src/index.css`** has `@source not "../site";`, so the app's Tailwind doesn't scan the website's files.
 - **Neither build affects the other.**
 
 ## Deploying (the second Vercel project)
 
 1. Vercel → Add New → Project → import this same GitHub repo.
-2. Root Directory: `site`. Vercel detects Astro, so leave the defaults.
-3. Keep "Include files outside the root directory in the Build Step" on (the default). The site reads the app's changelog and policy text.
+2. Root Directory: `site`. Vercel detects Astro; leave the build settings as they are. Node 22 or later (the default).
+3. Keep "Include files outside the root directory in the Build Step" on (the default). The site reads the app's changelog, policy and badge modules.
 4. Name the project. The name becomes the `*.vercel.app` address.
-5. Settings → Git → Ignored Build Step: `git diff HEAD^ HEAD --quiet -- . ../src/lib/changelog.js ../src/lib/release.js ../src/lib/policy.js ../package.json` (skip unless the site or its data changed).
-6. On the app's project, add an Ignored Build Step of `git diff HEAD^ HEAD --quiet -- . ':!site'` (skip when only the site changed).
+5. Settings → Git → Ignored Build Step, so the site builds only when it or what it reads changed: `git diff HEAD^ HEAD --quiet -- . ../src/lib ../src/components/glass ../package.json`
+6. On the app's project, an Ignored Build Step of `git diff HEAD^ HEAD --quiet -- . ':!site'` skips the app when only the site changed.
 
-## QA checklist
+## QA
 
-- **Widths:**
-  - 360, 390 and 430 (phones)
-  - 768 and 834 (iPad portrait)
-  - 1024 and 1180 (iPad landscape)
-  - 1280, 1440 and 1920 (desktop)
-- **Themes:** dark and light, and the toggle.
-- **Reduced motion:** nothing moves; everything is still readable and reachable.
-- **Keyboard:**
-  - skip link
-  - focus rings
-  - the menu, tabs and FAQ
-- **WebKit** (Playwright), checked by seeking animations rather than sampling them over time.
-- **Lighthouse:** Performance, Accessibility, Best Practices and SEO all at 95 or above on mobile.
-- **Builds and checks:**
-  - `astro build` is clean
-  - every internal link resolves
-  - the app's own `npm run check`, lint and tests still pass
+- **Widths:** 360, 390, 430 (phones), 768 and 834 (iPad portrait), 1024 and 1180 (iPad landscape), 1280, 1440 and 1920.
+- **Themes:** dark and light, and the toggle, with the captures following.
+- **Reduced motion:** nothing moves, and everything is in place.
+- **Keyboard:** skip link, focus rings, the phone menu (Escape, focus kept inside), the tabs (arrows, Home, End), the FAQ.
+- **WebKit** (Playwright), as well as Chrome.
+- **Lighthouse (mobile):** Performance 96, Accessibility 100, Best Practices 100, SEO 100.
+- **Builds and checks:** `astro build`, and the app's `npm run check`, lint, tests and build.
 
 ## Progress
 
-- [ ] Worktree and branch `feat/website`
-- [ ] App text moved to `src/lib/policy.js`, shared by the app and the site
-- [ ] Astro scaffold, tokens, layout, header, footer and theme
-- [ ] Demo data and screen captures
-- [ ] Home, every section
-- [ ] Features, Install, Changelog, Privacy, Terms and 404
-- [ ] Motion, all of it
-- [ ] Open Graph image, favicons, sitemap and robots.txt
-- [ ] QA at every width and theme, reduced motion, WebKit and Lighthouse
-- [ ] Repo integration: ESLint ignore, Tailwind `@source not`, the app's checks green
-- [ ] Commit on `feat/website`; merge when the other chats have committed
+- [x] Worktree and branch `feat/website`
+- [x] App text moved to `src/lib/policy.js`, shared by the app and the site (main's daily check-in sentence carried over in the merge)
+- [x] Astro scaffold, tokens, layout, header, footer and theme
+- [x] Demo data and screen captures, with safe areas, both themes, after merging main (0.11.0 and the desktop refresh)
+- [x] Home, every section
+- [x] Features, Install, Changelog, Privacy, Terms and 404
+- [x] Motion
+- [x] Open Graph image, favicons, sitemap and robots.txt
+- [x] QA at every width and theme, reduced motion, WebKit and Lighthouse
+- [x] Repo integration: ESLint ignore, Tailwind `@source not`
+- [ ] Merge into main, when James says so, and set up the second Vercel project

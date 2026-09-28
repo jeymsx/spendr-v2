@@ -11,14 +11,11 @@ const badgeArt = badges.map(b => {
   const a = artFor(b.key)!
   return { name: b.name, blurb: b.blurb, svg: medallion({ glyph: a.glyph, hue: a.hue, shape: 'hex' }) }
 })
-const challengeArt = challenges.map(c => ({
-  name: c.name, blurb: c.blurb, length: c.length,
-  svg: medallion({ glyph: c.glyph, hue: hueOf(c.tone), shape: 'shield' }),
-}))
+// The two tabs that start hidden draw their medallions as files
+// (pages/art), not inline: nobody sees them until they ask to.
+const challengeArt = challenges.map(c => ({ name: c.name, blurb: c.blurb, length: c.length, src: `/art/challenge-${c.key}.svg` }))
 const trackArt = tracks.map(t => ({
-  name: t.name, about: t.about, levels: t.levels.map(l => l.label),
-  svg: medallion({ glyph: t.glyph, hue: hueOf(t.tone), shape: 'circle', level: t.levels[0].label }),
-  hue: hueOf(t.tone),
+  name: t.name, about: t.about, levels: t.levels.map(l => l.label), src: `/art/track-${t.key}.svg`, hue: hueOf(t.tone),
 }))
 const TABS = [
   { id: 'badges', label: 'Badges' },
@@ -66,7 +63,7 @@ const TABS = [
           {trackArt.map(t => (
             <li class="surface track rounded-[var(--radius-card)] p-5">
               <div class="flex items-center gap-4">
-                <span class="glass-live glass-enter size-16 shrink-0" set:html={t.svg} />
+                <img src={t.src} alt="" width="64" height="64" loading="lazy" decoding="async" class="size-16 shrink-0" />
                 <div class="min-w-0">
                   <p class="font-semibold leading-snug">{t.name}</p>
                   <p class="mt-0.5 text-[0.8125rem] leading-snug text-muted">{t.about}</p>
@@ -87,7 +84,7 @@ const TABS = [
         <ul class="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {challengeArt.map(c => (
             <li class="surface flex items-start gap-4 rounded-[var(--radius-card)] p-5">
-              <span class="glass-live glass-enter size-14 shrink-0" set:html={c.svg} />
+              <img src={c.src} alt="" width="56" height="56" loading="lazy" decoding="async" class="size-14 shrink-0" />
               <div class="min-w-0">
                 <p class="font-semibold leading-snug">{c.name}</p>
                 <p class="mt-1 text-[0.8125rem] leading-snug text-muted">{c.blurb}</p>
@@ -106,9 +103,9 @@ const TABS = [
   /* The app's segmented control: a pill that slides to the chosen tab. */
   .seg { position: relative; display: inline-grid; grid-auto-flow: column; grid-auto-columns: 1fr; padding: 5px; border-radius: 999px; background: rgba(15, 23, 42, 0.05); box-shadow: inset 0 0 0 1px rgba(15, 23, 42, 0.06); }
   :global(.dark) .seg { background: rgba(255, 255, 255, 0.05); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
-  .seg-tab { position: relative; z-index: 1; min-width: 108px; padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 0.9375rem; color: var(--muted); transition: color 0.3s var(--ease-out); }
+  .seg-tab { position: relative; z-index: 1; min-width: 108px; padding: 10px 18px; border-radius: 999px; font-weight: 600; font-size: 0.9375rem; color: var(--muted-on-tint); transition: color 0.3s var(--ease-out); }
   .seg-tab[aria-selected='true'] { color: #fff; }
-  .seg-pill { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: var(--color-primary-fill); box-shadow: 0 6px 16px -8px rgba(40, 147, 245, 0.8); translate: calc(var(--seg, 0) * 100%) 0; transition: translate 0.45s var(--ease-sheet); }
+  .seg-pill { position: absolute; top: 5px; bottom: 5px; left: 5px; width: calc((100% - 10px) / 3); border-radius: 999px; background: var(--color-primary-deep); box-shadow: 0 6px 16px -8px rgba(26, 115, 217, 0.8); translate: calc(var(--seg, 0) * 100%) 0; transition: translate 0.45s var(--ease-sheet); }
   @media (max-width: 400px) { .seg-tab { min-width: 0; padding-inline: 12px; } }
 
   .ach-panel.is-entering { animation: swapIn 0.36s var(--ease-out) both; }

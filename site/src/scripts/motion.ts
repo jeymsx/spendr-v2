@@ -8,19 +8,42 @@
 export const reducedMotion = () => window.matchMedia('(prefers-reduced-motion: reduce)').matches
 
 export function initReveal() {
-  const targets = document.querySelectorAll<HTMLElement>('[data-reveal], .glass-enter')
+  const targets = [...document.querySelectorAll<HTMLElement>('[data-reveal], .glass-enter')]
   if (!('IntersectionObserver' in window) || reducedMotion()) {
     for (const t of targets) t.classList.add('is-in')
     return
   }
+  const left = new Set(targets)
+  const reveal = (el: Element) => {
+    el.classList.add('is-in')
+    left.delete(el as HTMLElement)
+    io.unobserve(el)
+  }
   const io = new IntersectionObserver(entries => {
-    for (const e of entries) {
-      if (!e.isIntersecting) continue
-      e.target.classList.add('is-in')
-      io.unobserve(e.target)
-    }
+    for (const e of entries) if (e.isIntersecting) reveal(e.target)
   }, { rootMargin: '0px 0px -8% 0px', threshold: 0.12 })
   for (const t of targets) io.observe(t)
+
+  /* A fast fling can carry something past the screen between two frames, so
+     the observer never sees it on screen. Whatever is already above the
+     bottom of the screen is shown too, so scrolling back never finds a gap.
+     Skipped while hidden (a closed tab), which has no box to measure. */
+  let queued = false
+  const sweep = () => {
+    queued = false
+    const bottom = window.innerHeight
+    // In page order, so the walk can stop a screen below the fold: measuring
+    // further down would lay out sections content-visibility is skipping.
+    for (const el of left) {
+      if (!el.offsetParent) continue
+      const top = el.getBoundingClientRect().top
+      if (top < bottom) reveal(el)
+      else if (top > bottom * 2) break
+    }
+    if (!left.size) window.removeEventListener('scroll', onScroll)
+  }
+  const onScroll = () => { if (!queued) { queued = true; window.setTimeout(() => requestAnimationFrame(sweep), 120) } }
+  window.addEventListener('scroll', onScroll, { passive: true })
 }
 
 /**

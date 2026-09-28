@@ -14,8 +14,9 @@ const site = host ? `https://${host}` : 'http://localhost:4321'
 export default defineConfig({
   site,
   // features.html rather than features/index.html; vercel.json's cleanUrls
-  // serves it at /features.
-  build: { format: 'file' },
+  // serves it at /features. The CSS is inlined: about 14 KB gzipped, and one
+  // round trip fewer before a phone on a slow connection can paint anything.
+  build: { format: 'file', inlineStylesheets: 'always' },
   trailingSlash: 'never',
   devToolbar: { enabled: false },
   integrations: [

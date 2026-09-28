@@ -21,8 +21,8 @@ const CARDS = [
   { shot: 'achievements', title: 'Badges for the big moments', alt: 'Achievements: badges earned' },
 ]
 ---
-<section class="screens py-8 sm:py-12" aria-label="Screens from the app" data-marquee>
-  <div class="screens-rail" data-reveal="fade">
+<section class="screens py-8 sm:py-12" data-marquee>
+  <div class="screens-rail" data-reveal="fade" tabindex="0" role="region" aria-label="Screens from the app">
     <div class="screens-track marquee-track">
       {[0, 1].map(copy => (
         <ul class="screens-set" aria-hidden={copy ? 'true' : undefined}>
@@ -49,7 +49,8 @@ const CARDS = [
 </section>
 
 <style>
-  .screens-rail { overflow: hidden; }
+  .screens-rail { overflow: hidden; border-radius: 12px; }
+  .screens-rail:focus-visible { outline-offset: -2px; }
   .screens-track { display: flex; width: max-content; --marquee-duration: 90s; animation: var(--animate-marquee); }
   .screens-set { display: flex; gap: 16px; padding-right: 16px; }
   .screen-card {

@@ -73,6 +73,13 @@ const html = (s: string) => s.replace('<svg-share/>', share)
       ))}
     </div>
 
+    <div class="container-site mt-4" data-reveal>
+      <p class="surface flex items-center gap-4 rounded-[var(--radius-card)] px-5 py-4 text-[0.9875rem] leading-relaxed">
+        <span class="cat-tile grid size-10 shrink-0 place-items-center rounded-[13px]" style="--cat:#20C997"><Icon name="settings" size={20} stroke={1.9} /></span>
+        <span>Already using Spendr in your browser? Open <strong class="font-semibold">Settings</strong> and tap <strong class="font-semibold">Install Spendr</strong>: one tap on Android, three on iPhone.</span>
+      </p>
+    </div>
+
     <div class="container-site mt-16 grid items-center gap-12 lg:grid-cols-[auto_1fr] lg:gap-20">
       <div class="mx-auto" data-reveal="scale">
         <Phone shot="home" alt="Spendr open from the home screen" width="min(64vw, 270px)" sizes="270px" />
@@ -114,7 +121,7 @@ const html = (s: string) => s.replace('<svg-share/>', share)
   .yours {
     position: absolute; top: 22px; right: 22px; display: none;
     padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; color: #fff;
-    background: var(--color-primary-fill);
+    background: var(--color-primary-deep);
   }
   .device.is-yours { box-shadow: 0 0 0 2px var(--color-primary), 0 20px 40px -24px rgba(40, 147, 245, 0.5); }
   .device.is-yours .yours { display: inline-block; }

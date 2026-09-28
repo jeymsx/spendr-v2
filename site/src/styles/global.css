@@ -17,6 +17,9 @@
      #2D9DFF, which measures 2.85:1 against white and just misses the 3:1
      large text needs. This one is 3.2:1. */
   --color-primary-fill: #2893F5;
+  /* And under small white text - a selected pill, a badge - deeper still:
+     4.7:1 against white. */
+  --color-primary-deep: #1A73D9;
   --color-navy: #0b0f14;
   --color-page-dark: #0d1117;
   --color-panel-dark: #111820;
@@ -44,6 +47,9 @@
   --page: #f8fafc;
   --text: #0f172a;
   --muted: #64748b;
+  /* Muted text that sits on a tinted pill rather than the page: slate-600,
+     since slate-500 on a 5% tint measures 4.1:1. */
+  --muted-on-tint: #475569;
   --hairline: rgba(15, 23, 42, 0.08);
   color-scheme: light;
 }
@@ -53,6 +59,7 @@
   --page: #0b0f14;
   --text: #f1f5f9;
   --muted: #94a3b8;
+  --muted-on-tint: #aab6c7;
   --hairline: rgba(255, 255, 255, 0.07);
   color-scheme: dark;
 }
@@ -128,6 +135,13 @@
   padding-inline: 20px;
   @media (width >= 40rem) { padding-inline: 28px; }
   @media (width >= 64rem) { padding-inline: 40px; }
+}
+
+/* Laid out and painted only near the screen. `auto` in the size remembers
+   the real height once it has been drawn, so the scrollbar settles. */
+@utility cv-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 900px;
 }
 
 /* ── Type ───────────────────────────────────────────────────────────────── */
@@ -287,7 +301,9 @@
 }
 @utility chip-accent {
   background: color-mix(in srgb, var(--color-primary) 14%, transparent);
-  color: var(--ink);
+  /* On its own tint the accent needs a step darker than --ink to read. */
+  color: color-mix(in srgb, var(--color-primary) 62%, black);
+  &:where(.dark, .dark *) { color: var(--ink); }
 }
 @utility chip-plain {
   background: rgba(15, 23, 42, 0.06);
@@ -460,6 +476,16 @@ html.js [data-reveal] {
 html.js [data-reveal='fade'] { translate: none; }
 html.js [data-reveal='scale'] { translate: none; scale: 0.94; transition-property: opacity, scale, filter; transition-duration: 0.7s, 1s, 0.7s; }
 html.js [data-reveal].is-in { opacity: 1; translate: none; scale: none; filter: none; }
+
+/* The top of a page arrives on its own, from the first frame, without
+   waiting for the script: the same rise out of a blur, but starting a
+   little visible, so the browser counts the headline as painted at once
+   rather than holding the page's largest paint until the fade is done. */
+@keyframes heroIn { from { opacity: 0.25; translate: 0 18px; filter: blur(8px); } to { opacity: 1; translate: none; filter: none; } }
+@keyframes heroPop { from { opacity: 0; scale: 0.92; filter: blur(8px); } to { opacity: 1; scale: none; filter: none; } }
+.hero-in { animation: heroIn 0.9s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+.hero-pop { animation: heroPop 0.8s var(--ease-out) both; animation-delay: var(--d, 0ms); }
+@media (prefers-reduced-motion: reduce) { .hero-in, .hero-pop { animation: none; } }
 
 /* A figure or a line of text becoming its next self: out through a blur,
    and the new one resolving out of it. */

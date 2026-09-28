@@ -8,12 +8,12 @@ import { APP_URL } from '../config'
   <section class="py-24 sm:py-32">
     <div class="container-site flex flex-col items-center text-center">
       <span class="glass-live glass-enter glass-float size-[132px]" set:html={picture('pin')} />
-      <p class="eyebrow mt-8" data-reveal>404</p>
-      <h1 class="h-display mt-4 max-w-[14ch]" data-reveal style="--d:60ms">Nothing here.</h1>
-      <p class="lede mt-5 max-w-[30rem]" data-reveal style="--d:120ms">
+      <p class="eyebrow hero-in mt-8">404</p>
+      <h1 class="h-display hero-in mt-4 max-w-[14ch]" style="--d:60ms">Nothing here.</h1>
+      <p class="lede hero-in mt-5 max-w-[30rem]" style="--d:120ms">
         This page doesn’t exist, or it moved. Looking for the app? It lives at its own address.
       </p>
-      <div class="mt-9 flex flex-wrap justify-center gap-3" data-reveal style="--d:180ms">
+      <div class="hero-in mt-9 flex flex-wrap justify-center gap-3" style="--d:180ms">
         <a href={APP_URL} class="btn btn-primary press">Open Spendr <Icon name="arrow-up-right" size={21} stroke={2.2} /></a>
         <a href="/" class="btn btn-secondary press">Home</a>
       </div>

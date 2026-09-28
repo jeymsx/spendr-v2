@@ -16,8 +16,9 @@ const VIEWS = [
         <p class="eyebrow" data-reveal>On your computer, too</p>
         <h2 id="desk-title" class="h-section mt-4" data-reveal style="--d:60ms">The big picture, on a big screen.</h2>
         <p class="lede mt-5" data-reveal style="--d:120ms">
-          On a wide screen Spendr becomes a full desktop app, with a sidebar, tables and charts side by side.
-          Sign in with Google and your phone and computer stay in step.
+          On a wide screen Spendr spreads out: a sidebar for every section, Home in two columns, and the
+          list on the left with what you picked on the right. Sign in with Google and your phone and
+          computer stay in step.
         </p>
       </div>
       <div class="seg-mini" role="tablist" aria-label="Desktop screens" data-reveal style="--d:160ms">
@@ -46,7 +47,7 @@ const VIEWS = [
 
 <style>
   .dot { display: block; width: 11px; height: 11px; border-radius: 999px; }
-  .url { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; color: var(--muted); background: rgba(15, 23, 42, 0.05); }
+  .url { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; color: var(--muted-on-tint); background: rgba(15, 23, 42, 0.05); }
   :global(.dark) .url { background: rgba(255, 255, 255, 0.06); }
   .desk-screens { position: relative; aspect-ratio: 1440 / 900; }
   .desk-screen { position: absolute; inset: 0; opacity: 0; filter: blur(10px); transition: opacity 0.45s var(--ease-out), filter 0.45s var(--ease-out); }
@@ -55,7 +56,7 @@ const VIEWS = [
 
   .seg-mini { display: inline-flex; gap: 4px; padding: 4px; border-radius: 999px; background: rgba(15, 23, 42, 0.05); justify-self: start; }
   :global(.dark) .seg-mini { background: rgba(255, 255, 255, 0.06); }
-  .seg-mini-tab { padding: 8px 16px; border-radius: 999px; font-size: 0.875rem; font-weight: 600; color: var(--muted); transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out); }
+  .seg-mini-tab { padding: 8px 16px; border-radius: 999px; font-size: 0.875rem; font-weight: 600; color: var(--muted-on-tint); transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out); }
   .seg-mini-tab[aria-selected='true'] { color: var(--text); background: #fff; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1); }
   :global(.dark) .seg-mini-tab[aria-selected='true'] { background: rgba(40, 60, 95, 0.55); box-shadow: inset 0 0 0 1px rgba(45, 157, 255, 0.2); }
   @media (prefers-reduced-motion: reduce) { .desk-screen { transition: none; filter: none; } }

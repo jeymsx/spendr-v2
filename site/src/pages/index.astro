@@ -22,16 +22,18 @@ import Cta from '../components/home/Cta.astro'
 ---
 <Base>
   <Hero />
-  <Names />
-  <Benefits />
-  <Screens />
-  <Showcase />
-  <QuickLog />
-  <Wrapped />
-  <Achievements />
-  <Desktop />
-  <Privacy />
-  <WhatsNew />
-  <Faq />
-  <Cta />
+  {/* Everything below the fold is laid out and painted only as it nears the
+      screen (content-visibility), so the first paint is the hero's alone. */}
+  <div class="cv-auto"><Names /></div>
+  <div class="cv-auto"><Benefits /></div>
+  <div class="cv-auto"><Screens /></div>
+  <div class="cv-auto"><Showcase /></div>
+  <div class="cv-auto"><QuickLog /></div>
+  <div class="cv-auto"><Wrapped /></div>
+  <div class="cv-auto"><Achievements /></div>
+  <div class="cv-auto"><Desktop /></div>
+  <div class="cv-auto"><Privacy /></div>
+  <div class="cv-auto"><WhatsNew /></div>
+  <div class="cv-auto"><Faq /></div>
+  <div class="cv-auto"><Cta /></div>
 </Base>

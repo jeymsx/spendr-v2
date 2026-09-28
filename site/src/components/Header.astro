@@ -53,7 +53,7 @@ const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
   </div>
 </header>
 
-<div id="site-menu" data-menu class="site-menu fixed inset-x-0 top-16 z-40 min-[900px]:hidden" hidden>
+<div id="site-menu" data-menu class="site-menu fixed inset-x-0 bottom-0 top-16 z-40 min-[900px]:hidden" hidden>
   <div class="container-site">
     <div class="surface-solid menu-card rounded-[var(--radius-panel)] p-2">
       <nav aria-label="Menu">
@@ -109,8 +109,15 @@ const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
   [aria-expanded='true'] .menu-glyph span:first-child { translate: 0 4px; rotate: 45deg; }
   [aria-expanded='true'] .menu-glyph span:last-child { translate: 0 -4px; rotate: -45deg; }
 
-  /* The panel drops from under the bar on the sheet curve; its rows follow. */
+  /* The panel drops from under the bar on the sheet curve; its rows follow.
+     The page behind dims, and a tap on it closes the menu. */
   .site-menu { padding-top: 6px; }
+  .site-menu::before {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: rgba(15, 23, 42, 0.18); opacity: 0; transition: opacity 0.24s var(--ease-exit);
+  }
+  :global(.dark) .site-menu::before { background: rgba(0, 0, 0, 0.5); }
+  .site-menu[data-open]::before { opacity: 1; transition: opacity 0.3s var(--ease-out); }
   .menu-card {
     transform-origin: top center;
     opacity: 0; translate: 0 -10px; scale: 0.98; filter: blur(6px);
@@ -126,7 +133,7 @@ const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
     transition: opacity 0.36s var(--ease-out) calc(60ms + var(--i) * 35ms), translate 0.5s var(--ease-out) calc(60ms + var(--i) * 35ms);
   }
   @media (prefers-reduced-motion: reduce) {
-    .menu-card, .menu-item, .site-menu[data-open] .menu-card, .site-menu[data-open] .menu-item { transition: none; }
+    .menu-card, .menu-item, .site-menu[data-open] .menu-card, .site-menu[data-open] .menu-item, .site-menu::before { transition: none; }
     .menu-glyph span { transition: none; }
   }
 </style>
