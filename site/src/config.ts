@@ -1,5 +1,5 @@
 /** Where the app lives. Every "Open Spendr" on the site goes here. */
-export const APP_URL = 'https://spendr-v2.vercel.app'
+export const APP_URL = 'https://go-spendr.vercel.app'
 
 /** The app's address as people see it, without the scheme. */
 export const APP_HOST = new URL(APP_URL).host

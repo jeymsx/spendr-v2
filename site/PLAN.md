@@ -6,10 +6,10 @@ The public website for Spendr, a separate site from the app. It uses Tarsi's pag
 
 | | Address | Built from |
 | --- | --- | --- |
-| The app | `spendr-v2.vercel.app`, unchanged | repo root, the existing Vercel project |
-| The website | its own free `*.vercel.app` name (for example `spendr.vercel.app`) | `site/`, a second Vercel project on the same GitHub repo |
+| The app | `go-spendr.vercel.app`, which the site links to; `spendr-v2.vercel.app` serves the same build | repo root, the existing Vercel project |
+| The website | its own free `*.vercel.app` name: `get-spendr.vercel.app` pairs with the app's | `site/`, a second Vercel project on the same GitHub repo |
 
-**The app never moves.** Its address is what the installed home-screen app opens. It is also what the phone's data, the Face ID passkeys and push reminders are tied to.
+**The app's addresses stay put.** An address is what the installed home-screen app opens, and it is also what the phone's data, the Face ID passkeys and push reminders are tied to. Each address keeps its own data, so anyone who installed from `spendr-v2` keeps using that icon, or signs in to sync first.
 
 The website's "Open Spendr" buttons link to the app. Nothing redirects.
 
