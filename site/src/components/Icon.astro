@@ -1,0 +1,55 @@
+---
+/**
+ * A Tabler icon, the set the app draws with, inlined at build time. Nothing
+ * of the icon set reaches the browser but the paths used.
+ */
+import { createRequire } from 'node:module'
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
+
+interface Props {
+  name: string
+  size?: number
+  stroke?: number
+  class?: string
+  label?: string
+}
+
+const require = createRequire(join(process.cwd(), 'package.json'))
+const g = globalThis as unknown as { __tablerCache?: Map<string, string> }
+const cache = (g.__tablerCache ??= new Map())
+
+function paths(name: string): string {
+  let inner = cache.get(name)
+  if (inner == null) {
+    const svg = readFileSync(require.resolve(`@tabler/icons/outline/${name}.svg`), 'utf8')
+    inner = svg
+      .replace(/^[\s\S]*?<svg[^>]*>/, '')
+      .replace(/<\/svg>\s*$/, '')
+      .replace(/<path stroke="none" d="M0 0h24v24H0z" fill="none"\s*\/>/, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+    cache.set(name, inner)
+  }
+  return inner
+}
+
+const { name, size = 20, stroke = 1.8, class: cls = '', label } = Astro.props
+const inner = paths(name)
+---
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width={size}
+  height={size}
+  viewBox="0 0 24 24"
+  fill="none"
+  stroke="currentColor"
+  stroke-width={stroke}
+  stroke-linecap="round"
+  stroke-linejoin="round"
+  class={cls}
+  role={label ? 'img' : undefined}
+  aria-label={label}
+  aria-hidden={label ? undefined : 'true'}
+  set:html={inner}
+></svg>

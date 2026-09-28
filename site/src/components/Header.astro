@@ -1,0 +1,132 @@
+---
+import Logo from './Logo.astro'
+import Icon from './Icon.astro'
+import ThemeToggle from './ThemeToggle.astro'
+import { APP_URL } from '../config'
+
+const NAV = [
+  { href: '/features', label: 'Features' },
+  { href: '/install', label: 'Install' },
+  { href: '/changelog', label: 'What’s new' },
+  { href: '/privacy', label: 'Privacy' },
+]
+const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
+---
+<div data-header-sentinel class="absolute top-0 h-px w-px" aria-hidden="true"></div>
+<header data-header class="site-header sticky top-0 z-50">
+  <div class="container-site flex h-16 items-center gap-3 sm:h-[72px]">
+    <a href="/" class="press -ml-1 rounded-xl p-1" aria-label="Spendr home">
+      <Logo size={34} />
+    </a>
+
+    <nav aria-label="Main" class="ml-6 hidden min-[900px]:block">
+      <ul class="flex items-center gap-1">
+        {NAV.map(n => (
+          <li>
+            <a
+              href={n.href}
+              aria-current={here === n.href ? 'page' : undefined}
+              class="nav-link press rounded-full px-3.5 py-2 text-[0.9375rem] font-medium text-muted hover:text-[var(--text)]"
+            >{n.label}</a>
+          </li>
+        ))}
+      </ul>
+    </nav>
+
+    <div class="ml-auto flex items-center gap-1.5">
+      <ThemeToggle />
+      <a href={APP_URL} class="btn btn-neutral press hidden min-h-10 px-4 text-[0.9375rem] min-[420px]:inline-flex">
+        Open Spendr
+        <Icon name="arrow-up-right" size={17} stroke={2} />
+      </a>
+      <button
+        type="button"
+        class="icon-btn press menu-button min-[900px]:hidden"
+        data-menu-button
+        aria-expanded="false"
+        aria-controls="site-menu"
+        aria-label="Open menu"
+      >
+        <span class="menu-glyph" aria-hidden="true"><span></span><span></span></span>
+      </button>
+    </div>
+  </div>
+</header>
+
+<div id="site-menu" data-menu class="site-menu fixed inset-x-0 top-16 z-40 min-[900px]:hidden" hidden>
+  <div class="container-site">
+    <div class="surface-solid menu-card rounded-[var(--radius-panel)] p-2">
+      <nav aria-label="Menu">
+        <ul>
+          {NAV.map((n, i) => (
+            <li class="menu-item" style={`--i:${i}`}>
+              <a
+                href={n.href}
+                aria-current={here === n.href ? 'page' : undefined}
+                class="press press-fade flex items-center justify-between rounded-[20px] px-4 py-3.5 text-[1.1875rem] font-semibold tracking-[-0.01em] hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+              >
+                {n.label}
+                <Icon name="chevron-right" size={18} class="text-muted" />
+              </a>
+            </li>
+          ))}
+        </ul>
+      </nav>
+      <div class="menu-item px-2 pb-2 pt-3" style="--i:4">
+        <a href={APP_URL} class="btn btn-primary press w-full">
+          Open Spendr
+          <Icon name="arrow-up-right" size={20} stroke={2.2} />
+        </a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<style>
+  .site-header {
+    view-transition-name: site-header;
+    transition: background-color 0.3s var(--ease-out), border-color 0.3s var(--ease-out), backdrop-filter 0.3s var(--ease-out);
+    border-bottom: 1px solid transparent;
+  }
+  .site-header[data-scrolled],
+  .site-header[data-menu-open] {
+    background: color-mix(in srgb, var(--page) 78%, transparent);
+    backdrop-filter: blur(18px) saturate(160%);
+    -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border-bottom-color: var(--hairline);
+  }
+  .nav-link[aria-current='page'] { color: var(--text); background: rgba(15, 23, 42, 0.05); }
+  :global(.dark) .nav-link[aria-current='page'] { background: rgba(255, 255, 255, 0.07); }
+
+  /* Two bars that become a cross, rotating about their middles. */
+  .menu-glyph { position: relative; width: 18px; height: 12px; display: block; }
+  .menu-glyph span {
+    position: absolute; left: 0; right: 0; height: 2px; border-radius: 2px; background: currentColor;
+    transition: translate 0.32s var(--ease-out), rotate 0.32s var(--ease-out);
+  }
+  .menu-glyph span:first-child { top: 1px; }
+  .menu-glyph span:last-child { bottom: 1px; }
+  [aria-expanded='true'] .menu-glyph span:first-child { translate: 0 4px; rotate: 45deg; }
+  [aria-expanded='true'] .menu-glyph span:last-child { translate: 0 -4px; rotate: -45deg; }
+
+  /* The panel drops from under the bar on the sheet curve; its rows follow. */
+  .site-menu { padding-top: 6px; }
+  .menu-card {
+    transform-origin: top center;
+    opacity: 0; translate: 0 -10px; scale: 0.98; filter: blur(6px);
+    transition: opacity 0.22s var(--ease-exit), translate 0.24s var(--ease-exit), scale 0.24s var(--ease-exit), filter 0.22s var(--ease-exit);
+  }
+  .site-menu[data-open] .menu-card {
+    opacity: 1; translate: none; scale: none; filter: none;
+    transition: opacity 0.28s var(--ease-out), translate 0.4s var(--ease-sheet), scale 0.4s var(--ease-sheet), filter 0.28s var(--ease-out);
+  }
+  .menu-item { opacity: 0; translate: 0 6px; transition: opacity 0.2s var(--ease-exit), translate 0.2s var(--ease-exit); }
+  .site-menu[data-open] .menu-item {
+    opacity: 1; translate: none;
+    transition: opacity 0.36s var(--ease-out) calc(60ms + var(--i) * 35ms), translate 0.5s var(--ease-out) calc(60ms + var(--i) * 35ms);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .menu-card, .menu-item, .site-menu[data-open] .menu-card, .site-menu[data-open] .menu-item { transition: none; }
+    .menu-glyph span { transition: none; }
+  }
+</style>

@@ -1,0 +1,18 @@
+---
+import Base from '../layouts/Base.astro'
+import PageHero from '../components/PageHero.astro'
+import PolicyBody from '../components/PolicyBody.astro'
+import { privacy } from '../data/app'
+---
+<Base title="Privacy policy" description="What Spendr stores, where, and every service it contacts. The same policy the app shows in Settings.">
+  <PageHero
+    eyebrow="Privacy"
+    title="Privacy policy"
+    lede="The same policy the app shows in Settings, word for word. This website itself uses no cookies and no analytics."
+  />
+  <section class="pb-20 sm:pb-28">
+    <div class="container-site max-w-[52rem]">
+      <PolicyBody sections={privacy} />
+    </div>
+  </section>
+</Base>

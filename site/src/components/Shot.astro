@@ -1,0 +1,47 @@
+---
+/**
+ * One of the app's screens, in whichever theme the site is showing.
+ *
+ * A <picture> whose dark <source> answers prefers-color-scheme, so the
+ * browser fetches only the capture it will show. When the visitor has picked
+ * a theme with the toggle, the site's script rewrites that media query to
+ * match (see scripts/theme.ts), and the browser swaps the picture itself.
+ */
+import { getImage } from 'astro:assets'
+import { screen } from '../data/screens'
+
+interface Props {
+  name: string
+  alt: string
+  /** The rendered width, for the browser to pick a file by. */
+  sizes: string
+  widths?: number[]
+  eager?: boolean
+  class?: string
+}
+
+const { name, alt, sizes, widths = [320, 480, 640, 960], eager = false, class: cls = '' } = Astro.props
+const pair = screen(name)
+const opts = { widths, format: 'webp' as const, quality: 80 }
+const light = pair.light ? await getImage({ src: pair.light, ...opts }) : null
+const dark = pair.dark ? await getImage({ src: pair.dark, ...opts }) : null
+const base = (light ?? dark)!
+const meta = (pair.light ?? pair.dark)!
+---
+<picture class={cls}>
+  {light && dark && (
+    <source data-theme-source media="(prefers-color-scheme: dark)" srcset={dark.srcSet.attribute} sizes={sizes} type="image/webp" />
+  )}
+  <img
+    src={base.src}
+    srcset={base.srcSet.attribute}
+    sizes={sizes}
+    width={meta.width}
+    height={meta.height}
+    alt={alt}
+    loading={eager ? 'eager' : 'lazy'}
+    fetchpriority={eager ? 'high' : undefined}
+    decoding={eager ? undefined : 'async'}
+    draggable="false"
+  />
+</picture>

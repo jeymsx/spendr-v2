@@ -1,0 +1,251 @@
+---
+/**
+ * Quick log, played out on a phone: a line typed the way you would say it,
+ * the chips that answer each keystroke, and the form it hands you to check.
+ *
+ * The chips are not invented. They were recorded from the app itself, one
+ * keystroke at a time, typing these two lines into quick log with the demo
+ * ledger: what the app showed after each character is what plays here. The
+ * forms at the end are the app's own screens, reached the same way.
+ */
+import Phone from '../Phone.astro'
+import Shot from '../Shot.astro'
+import Icon from '../Icon.astro'
+
+type Chip = [id: string, tone: 'a' | 'p' | 'g', text: string, icon?: string]
+const E = (amt: string): Chip[] => [['dir', 'a', 'Expense'], ['amt', 'p', amt]]
+
+// [characters typed, chips shown] - only the keystrokes where the chips changed.
+const PHRASES: { text: string; form: string; steps: [number, Chip[]][] }[] = [
+  {
+    text: '185 starbucks',
+    form: 'ql-expense-form',
+    steps: [
+      [1, E('₱1.00')], [2, E('₱18.00')], [3, E('₱185.00')],
+      [5, [...E('₱185.00'), ['desc', 'p', 'S']]],
+      [6, [...E('₱185.00'), ['desc', 'p', 'St']]],
+      [7, [...E('₱185.00'), ['desc', 'p', 'Sta']]],
+      [8, [...E('₱185.00'), ['desc', 'p', 'Star']]],
+      [9, [...E('₱185.00'), ['desc', 'p', 'Starb']]],
+      [10, [...E('₱185.00'), ['desc', 'p', 'Starbu']]],
+      [11, [...E('₱185.00'), ['desc', 'p', 'Starbuc']]],
+      [12, [...E('₱185.00'), ['cat', 'g', 'Coffee', 'coffee'], ['acct', 'g', 'GCash']]],
+    ],
+  },
+  {
+    text: '1000 from gcash to bpi savings',
+    form: 'ql-transfer-form',
+    steps: [
+      [1, E('₱1.00')], [2, E('₱10.00')], [3, E('₱100.00')], [4, E('₱1,000.00')],
+      [6, [...E('₱1,000.00'), ['desc', 'p', 'F']]],
+      [7, [...E('₱1,000.00'), ['desc', 'p', 'Fr']]],
+      [8, [...E('₱1,000.00'), ['desc', 'p', 'Fro']]],
+      [9, E('₱1,000.00')],
+      [11, [...E('₱1,000.00'), ['desc', 'p', 'G']]],
+      [12, [...E('₱1,000.00'), ['desc', 'p', 'Gc']]],
+      [13, [...E('₱1,000.00'), ['desc', 'p', 'Gca']]],
+      [14, [...E('₱1,000.00'), ['desc', 'p', 'Gcas']]],
+      [15, [...E('₱1,000.00'), ['from', 'p', 'GCash']]],
+      [17, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'T']]],
+      [18, [...E('₱1,000.00'), ['from', 'p', 'GCash']]],
+      [20, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'B']]],
+      [21, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bp']]],
+      [22, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bpi']]],
+      [24, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bpi S']]],
+      [25, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bpi Sa']]],
+      [26, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bpi Sav']]],
+      [27, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bpi Savi']]],
+      [28, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bpi Savin']]],
+      [29, [...E('₱1,000.00'), ['from', 'p', 'GCash'], ['desc', 'p', 'Bpi Saving']]],
+      [30, [['dir', 'a', 'Transfer'], ['amt', 'p', '₱1,000.00'], ['from', 'p', 'from GCash'], ['to', 'p', 'to BPI Savings']]],
+    ],
+  },
+]
+const first = PHRASES[0]
+const finalChips = first.steps[first.steps.length - 1][1]
+---
+<section class="quicklog py-20 sm:py-28" aria-labelledby="ql-title">
+  <div class="container-site grid items-center gap-14 lg:grid-cols-[auto_1fr] lg:gap-24">
+    <div class="order-2 mx-auto lg:order-1" data-reveal="scale">
+      <Phone width="var(--ql-w)" class="ql-phone">
+        <div class="ql" data-quicklog data-phrases={JSON.stringify(PHRASES)} aria-hidden="true">
+          <div class="ql-bg"><Shot name="home" alt="" sizes="(min-width: 1024px) 300px, 72vw" /></div>
+          <div class="ql-scrim"></div>
+          <div class="ql-forms">
+            {PHRASES.map(p => (
+              <div class="ql-form" data-form={p.form}><Shot name={p.form} alt="" sizes="(min-width: 1024px) 300px, 72vw" /></div>
+            ))}
+          </div>
+          <div class="ql-sheet">
+            <p class="ql-q">What do you want to log?</p>
+            <p class="ql-input"><span data-typed>{first.text}</span><span class="ql-caret"></span></p>
+            <div class="ql-chips" data-chips>
+              {finalChips.map(([id, tone, text, icon]) => (
+                <span class:list={['chip ql-chip', tone === 'a' ? 'chip-accent' : tone === 'g' ? 'chip-guess' : 'chip-plain']} data-id={id}>
+                  {icon && <Icon name={icon} size={13} stroke={2} />}<span data-text>{text}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          <span class="ql-check"><Icon name="check" size={24} stroke={2.4} /></span>
+        </div>
+      </Phone>
+    </div>
+
+    <div class="order-1 max-w-[560px] lg:order-2">
+      <p class="eyebrow" data-reveal>Quick log</p>
+      <h2 id="ql-title" class="h-section mt-4" data-reveal style="--d:60ms">Type it the way you’d say it.</h2>
+      <p class="lede mt-5" data-reveal style="--d:120ms">
+        Hold the + and write “185 starbucks”. Spendr works out the amount, the category and the
+        account you usually use, then hands you the form to check before anything is saved.
+        It learns as you go.
+      </p>
+      <ul class="mt-8 space-y-4" data-reveal style="--d:180ms">
+        <li class="flex items-start gap-4">
+          <span class="chip chip-accent mt-0.5 w-[5.5rem] justify-center">Expense</span>
+          <span class="text-[0.9875rem] leading-relaxed text-muted">What it is. The one thing it is always sure of.</span>
+        </li>
+        <li class="flex items-start gap-4">
+          <span class="chip chip-plain mt-0.5 w-[5.5rem] justify-center">₱185.00</span>
+          <span class="text-[0.9875rem] leading-relaxed text-muted">Filled: you said it. It is in the words you typed.</span>
+        </li>
+        <li class="flex items-start gap-4">
+          <span class="chip chip-guess mt-0.5 w-[5.5rem] justify-center"><Icon name="coffee" size={13} stroke={2} />Coffee</span>
+          <span class="text-[0.9875rem] leading-relaxed text-muted">Dashed: a guess, from your own history or a list of known merchants.</span>
+        </li>
+      </ul>
+      <p class="mt-8 text-[0.9375rem] text-muted" data-reveal style="--d:220ms">
+        Transfers work the same way: <span class="font-medium text-[var(--text)]">“1000 from gcash to bpi savings”</span>.
+      </p>
+    </div>
+  </div>
+</section>
+
+<style>
+  .quicklog { --ql-w: min(72vw, 300px); }
+  @media (min-width: 1024px) { .quicklog { --ql-w: 308px; } }
+
+  .ql { position: absolute; inset: 0; }
+  .ql-bg { position: absolute; inset: -6%; filter: blur(14px) saturate(1.1); }
+  .ql-bg :global(picture), .ql-bg :global(img) { width: 100%; height: 100%; object-fit: cover; }
+  .ql-scrim { position: absolute; inset: 0; background: rgba(248, 250, 252, 0.72); }
+  :global(.dark) .ql-scrim { background: rgba(0, 0, 0, 0.62); }
+
+  .ql-sheet { position: absolute; left: 6.1cqw; right: 6.1cqw; top: 41%; transition: opacity 0.3s var(--ease-out), filter 0.3s var(--ease-out); }
+  .ql-q { font-size: 7.1cqw; line-height: 1.15; font-weight: 700; letter-spacing: -0.02em; color: #0b0f14; }
+  :global(.dark) .ql-q { color: #fff; }
+  .ql-input { margin-top: 3.2cqw; font-size: 4.3cqw; line-height: 1.35; color: #334155; min-height: 1.35em; white-space: pre; }
+  :global(.dark) .ql-input { color: #cbd5e1; }
+  .ql-caret { display: inline-block; width: 0.5cqw; height: 1.15em; margin-left: 0.3cqw; vertical-align: -0.2em; background: var(--color-primary); border-radius: 1px; animation: caret 1.05s steps(1) infinite; }
+  @keyframes caret { 50% { opacity: 0; } }
+  .ql-chips { display: flex; flex-wrap: wrap; gap: 2cqw; margin-top: 4.4cqw; min-height: 7cqw; }
+  .ql .ql-chip { font-size: 3.05cqw; padding: 1.2cqw 2.6cqw; gap: 1.2cqw; }
+  .ql .ql-chip :global(svg) { width: 3.4cqw; height: 3.4cqw; }
+  .ql-chip.is-new { animation: swapIn 0.3s var(--ease-out) both; }
+  .ql-chip.is-leaving { animation: swapOut 0.18s var(--ease-exit) both; }
+  .ql-chip [data-text].is-changing { animation: swapIn 0.22s var(--ease-out) both; }
+
+  .ql-check {
+    position: absolute; right: 5.3cqw; bottom: 7cqw; width: 14cqw; height: 14cqw; border-radius: 999px;
+    display: grid; place-items: center; color: #fff; background: var(--color-primary);
+    box-shadow: 0 8px 20px -8px rgba(45, 157, 255, 0.7);
+    transition: scale 0.32s var(--ease-settle), opacity 0.3s var(--ease-out);
+  }
+  .ql-check :global(svg) { width: 6cqw; height: 6cqw; }
+  .ql-check.is-pressed { scale: 0.88; transition-duration: 0.09s; }
+
+  .ql-forms { position: absolute; inset: 0; z-index: 2; pointer-events: none; }
+  .ql-form { position: absolute; inset: 0; opacity: 0; filter: blur(10px); transition: opacity 0.42s var(--ease-out), filter 0.42s var(--ease-out); }
+  .ql-form.is-on { opacity: 1; filter: none; }
+  .ql-form :global(picture), .ql-form :global(img) { width: 100%; height: 100%; }
+  .ql[data-state='form'] .ql-sheet, .ql[data-state='form'] .ql-check { opacity: 0; filter: blur(6px); }
+
+  @media (prefers-reduced-motion: reduce) {
+    .ql-caret { animation: none; }
+    .ql-form, .ql-sheet, .ql-check { transition: none; }
+  }
+</style>
+
+<script>
+  import { whileVisible, reducedMotion } from '../../scripts/motion'
+
+  type Chip = [string, 'a' | 'p' | 'g', string, string?]
+  type Phrase = { text: string; form: string; steps: [number, Chip[]][] }
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-quicklog]')) {
+    const phrases: Phrase[] = JSON.parse(root.dataset.phrases!)
+    const typed = root.querySelector<HTMLElement>('[data-typed]')!
+    const chipsBox = root.querySelector<HTMLElement>('[data-chips]')!
+    const check = root.querySelector<HTMLElement>('.ql-check')!
+    const forms = new Map([...root.querySelectorAll<HTMLElement>('[data-form]')].map(f => [f.dataset.form!, f]))
+    // The coffee glyph, borrowed from the chip the page was rendered with.
+    const coffee = chipsBox.querySelector('svg')?.outerHTML ?? ''
+
+    if (reducedMotion()) continue // The rendered state - the first line, finished - is the picture.
+
+    let run = 0
+    const sleep = (ms: number, id: number) => new Promise<boolean>(r => setTimeout(() => r(id === run), ms))
+
+    const toneClass = (t: string) => (t === 'a' ? 'chip-accent' : t === 'g' ? 'chip-guess' : 'chip-plain')
+    const render = (chips: Chip[]) => {
+      const want = new Map(chips.map(c => [c[0], c]))
+      for (const el of [...chipsBox.children] as HTMLElement[]) {
+        if (el.classList.contains('is-leaving')) continue
+        if (!want.has(el.dataset.id!)) {
+          el.classList.add('is-leaving')
+          setTimeout(() => el.remove(), 180)
+        }
+      }
+      let prev: HTMLElement | null = null
+      for (const [id, tone, text, icon] of chips) {
+        let el = chipsBox.querySelector<HTMLElement>(`[data-id="${id}"]:not(.is-leaving)`)
+        if (!el) {
+          el = document.createElement('span')
+          el.dataset.id = id
+          el.className = `chip ql-chip ${toneClass(tone)} is-new`
+          el.innerHTML = `${icon ? coffee : ''}<span data-text></span>`
+          el.querySelector('[data-text]')!.textContent = text
+          if (prev) prev.after(el); else chipsBox.prepend(el)
+        } else {
+          el.className = `chip ql-chip ${toneClass(tone)}`
+          const t = el.querySelector<HTMLElement>('[data-text]')!
+          if (t.textContent !== text) {
+            t.textContent = text
+            t.classList.remove('is-changing'); void t.offsetWidth; t.classList.add('is-changing')
+          }
+        }
+        prev = el
+      }
+    }
+
+    const play = async (id: number) => {
+      for (let p = 0; id === run; p = (p + 1) % phrases.length) {
+        const { text, form, steps } = phrases[p]
+        // Back to an empty line over the dimmed app.
+        root.dataset.state = 'typing'
+        for (const f of forms.values()) f.classList.remove('is-on')
+        typed.textContent = ''
+        chipsBox.replaceChildren()
+        if (!(await sleep(900, id))) return
+        for (let i = 1; i <= text.length; i++) {
+          typed.textContent = text.slice(0, i)
+          const step = steps.find(s => s[0] === i)
+          if (step) render(step[1])
+          const ch = text[i - 1]
+          const gap = ch === ' ' ? 150 : /\d/.test(ch) ? 120 : 70 + ((i * 37) % 60)
+          if (!(await sleep(gap, id))) return
+        }
+        if (!(await sleep(1100, id))) return
+        check.classList.add('is-pressed')
+        if (!(await sleep(140, id))) return
+        check.classList.remove('is-pressed')
+        if (!(await sleep(180, id))) return
+        root.dataset.state = 'form'
+        forms.get(form)?.classList.add('is-on')
+        if (!(await sleep(3200, id))) return
+      }
+    }
+
+    whileVisible(root, () => { run++; play(run) }, () => { run++ }, 0.4)
+  }
+</script>

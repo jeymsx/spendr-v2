@@ -1,0 +1,86 @@
+---
+/**
+ * The questions, as <details>: they open and close without a script, and the
+ * script only adds the height animation. The answer's height is measured
+ * each time, so a long one never clips.
+ */
+import Icon from '../Icon.astro'
+import { FAQ } from '../../data/faq'
+---
+<section class="faq py-20 sm:py-28" aria-labelledby="faq-title">
+  <div class="container-site grid gap-10 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+    <div>
+      <p class="eyebrow" data-reveal>Questions</p>
+      <h2 id="faq-title" class="h-section mt-4" data-reveal style="--d:60ms">Asked and answered.</h2>
+      <p class="lede mt-5 max-w-[26rem]" data-reveal style="--d:120ms">
+        Something else? Email <a class="font-medium text-ink hover:underline" href="mailto:jamesandgen111@gmail.com">jamesandgen111@gmail.com</a>.
+      </p>
+    </div>
+    <div class="surface rounded-[var(--radius-panel)] px-2 py-2 sm:px-3" data-reveal style="--d:120ms">
+      {FAQ.map((f, i) => (
+        <details class="qa" data-qa>
+          <summary class="qa-q press press-fade">
+            <span>{f.q}</span>
+            <span class="qa-icon" aria-hidden="true"><Icon name="plus" size={18} stroke={2.2} /></span>
+          </summary>
+          <div class="qa-a"><p set:html={f.a} /></div>
+        </details>
+      ))}
+    </div>
+  </div>
+</section>
+
+<style>
+  .qa + .qa { border-top: 1px solid var(--hairline); }
+  .qa-q {
+    display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    padding: 18px 16px; border-radius: 18px; cursor: pointer; list-style: none;
+    font-weight: 600; font-size: 1.0625rem; letter-spacing: -0.01em;
+  }
+  .qa-q::-webkit-details-marker { display: none; }
+  .qa-q:hover { background: rgba(15, 23, 42, 0.03); }
+  :global(.dark) .qa-q:hover { background: rgba(255, 255, 255, 0.03); }
+  .qa-icon {
+    display: grid; place-items: center; width: 30px; height: 30px; border-radius: 999px; flex: none;
+    color: var(--ink); background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+    transition: rotate 0.35s var(--ease-out), background-color 0.3s var(--ease-out);
+  }
+  .qa[open] .qa-icon { rotate: 45deg; }
+  .qa-a { overflow: hidden; }
+  .qa-a p { padding: 0 16px 20px; color: var(--muted); line-height: 1.65; max-width: 40rem; }
+  .qa-a :global(a) { color: var(--ink); font-weight: 550; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--color-primary) 40%, transparent); }
+  .qa-a :global(strong) { color: var(--text); font-weight: 600; }
+  @media (prefers-reduced-motion: reduce) { .qa-icon { transition: none; } }
+</style>
+
+<script>
+  import { reducedMotion } from '../../scripts/motion'
+
+  /* <details> snaps open and shut. This animates the answer's height on the
+     sheet curve, measuring it each time. Closing keeps [open] until the
+     animation ends, so the text is there while it folds away. */
+  for (const d of document.querySelectorAll<HTMLDetailsElement>('[data-qa]')) {
+    const summary = d.querySelector('summary')!
+    const body = d.querySelector<HTMLElement>('.qa-a')!
+    let anim: Animation | null = null
+    summary.addEventListener('click', e => {
+      if (reducedMotion()) return
+      e.preventDefault()
+      const opening = !d.open
+      const start = body.offsetHeight
+      if (opening) d.open = true
+      const end = opening ? body.scrollHeight : 0
+      anim?.cancel()
+      anim = body.animate(
+        [{ height: `${opening ? 0 : start}px`, opacity: opening ? 0 : 1 }, { height: `${end}px`, opacity: opening ? 1 : 0 }],
+        { duration: opening ? 380 : 260, easing: opening ? 'cubic-bezier(0.32, 0.72, 0, 1)' : 'cubic-bezier(0.4, 0, 0.2, 1)' },
+      )
+      anim.onfinish = () => { anim = null; if (!opening) d.open = false }
+      // The icon turns with it, from where it is.
+      d.classList.toggle('is-opening', opening)
+      if (!opening) d.querySelector<HTMLElement>('.qa-icon')!.style.rotate = '0deg'
+      else d.querySelector<HTMLElement>('.qa-icon')!.style.rotate = ''
+      anim.addEventListener('finish', () => { d.querySelector<HTMLElement>('.qa-icon')!.style.rotate = '' })
+    })
+  }
+</script>

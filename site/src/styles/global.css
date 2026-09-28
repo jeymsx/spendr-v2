@@ -1,0 +1,525 @@
+@import "tailwindcss";
+@import "@fontsource-variable/inter/wght.css";
+
+/* Dark mode is a class on <html>, set before the first paint by the script in
+   Base.astro: the OS's choice unless the visitor has picked one. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── Tokens ────────────────────────────────────────────────────────────────
+   Spendr's own, from the app's index.css and tailwind.config.js: the azure
+   accent, the navy page, the three dark surfaces, 18/24/30 radii, Inter, and
+   the three curves everything in the app moves on. */
+@theme {
+  --font-sans: 'Inter Variable', Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+
+  --color-primary: #2D9DFF;
+  /* The accent as a FILL under white bold 19px text: a notch deeper than
+     #2D9DFF, which measures 2.85:1 against white and just misses the 3:1
+     large text needs. This one is 3.2:1. */
+  --color-primary-fill: #2893F5;
+  --color-navy: #0b0f14;
+  --color-page-dark: #0d1117;
+  --color-panel-dark: #111820;
+  --color-lifted-dark: #1a2130;
+
+  --radius-tile: 18px;
+  --radius-card: 24px;
+  --radius-panel: 30px;
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-sheet: cubic-bezier(0.32, 0.72, 0, 1);
+  --ease-settle: cubic-bezier(0.2, 0.7, 0.3, 1);
+  --ease-exit: cubic-bezier(0.4, 0, 1, 1);
+  --ease-move: cubic-bezier(0.4, 0, 0.2, 1);
+
+  --animate-marquee: marquee var(--marquee-duration, 60s) linear infinite;
+}
+
+:root {
+  --press-in: 90ms;
+  --press-out: 320ms;
+  /* The accent as TEXT. Mixed toward black on light and white on dark, the
+     app's .accent-ink: 5.1:1 on white, 7.1:1 on navy. */
+  --ink: color-mix(in srgb, var(--color-primary) 72%, black);
+  --page: #f8fafc;
+  --text: #0f172a;
+  --muted: #64748b;
+  --hairline: rgba(15, 23, 42, 0.08);
+  color-scheme: light;
+}
+
+.dark {
+  --ink: color-mix(in srgb, var(--color-primary) 88%, white);
+  --page: #0b0f14;
+  --text: #f1f5f9;
+  --muted: #94a3b8;
+  --hairline: rgba(255, 255, 255, 0.07);
+  color-scheme: dark;
+}
+
+/* ── Base ───────────────────────────────────────────────────────────────── */
+@layer base {
+  html {
+    background: var(--page);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    -webkit-tap-highlight-color: transparent;
+    scroll-padding-top: 88px;
+    /* A turned phone's corner must never widen a phone's layout viewport. */
+    overflow-x: clip;
+  }
+  body {
+    min-height: 100dvh;
+    overflow-x: clip;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+  ::selection { background: color-mix(in srgb, var(--color-primary) 28%, transparent); }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 3px;
+  }
+  a { color: inherit; text-decoration: none; }
+  img, svg, picture { display: block; }
+  h1, h2, h3 { text-wrap: balance; }
+  p { text-wrap: pretty; }
+}
+
+/* The app's dark background: the page lit faintly from the top in the accent,
+   fixed to the viewport so it never scrolls or clips. html.dark.accent-blue
+   ::before in the app, at the same strengths. */
+.dark body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(130% 90% at 50% -10%,
+      rgba(45, 157, 255, 0.13),
+      rgba(45, 157, 255, 0.07) 35%,
+      rgba(45, 157, 255, 0.02) 45%,
+      transparent 85%),
+    radial-gradient(110% 90% at 70% 90%,
+      rgba(45, 157, 255, 0.10),
+      rgba(45, 157, 255, 0.04) 55%,
+      rgba(11, 15, 20, 0.85) 80%,
+      #0b0f14 85%);
+}
+
+/* Theme changes cross-fade the surfaces rather than snapping. Only while the
+   toggle is switching (html.theme-switching), so nothing else ever animates
+   its colours by accident. */
+.theme-switching,
+.theme-switching *,
+.theme-switching *::before,
+.theme-switching *::after {
+  transition: background-color 0.35s var(--ease-out), border-color 0.35s var(--ease-out),
+    color 0.35s var(--ease-out), fill 0.35s var(--ease-out), box-shadow 0.35s var(--ease-out) !important;
+}
+
+/* ── Layout ─────────────────────────────────────────────────────────────── */
+@utility container-site {
+  width: 100%;
+  max-width: 1200px;
+  margin-inline: auto;
+  padding-inline: 20px;
+  @media (width >= 40rem) { padding-inline: 28px; }
+  @media (width >= 64rem) { padding-inline: 40px; }
+}
+
+/* ── Type ───────────────────────────────────────────────────────────────── */
+@utility eyebrow {
+  font-size: 0.8125rem;
+  line-height: 1.2;
+  font-weight: 650;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+@utility h-display {
+  font-size: clamp(2.6rem, 1.6rem + 4.4vw, 4.75rem);
+  line-height: 1.02;
+  font-weight: 750;
+  letter-spacing: -0.038em;
+}
+@utility h-section {
+  font-size: clamp(2rem, 1.35rem + 2.6vw, 3.25rem);
+  line-height: 1.06;
+  font-weight: 750;
+  letter-spacing: -0.032em;
+}
+@utility h-card {
+  font-size: 1.25rem;
+  line-height: 1.25;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+@utility lede {
+  font-size: clamp(1.0625rem, 1rem + 0.35vw, 1.25rem);
+  line-height: 1.55;
+  color: var(--muted);
+}
+@utility text-muted { color: var(--muted); }
+@utility text-ink { color: var(--ink); }
+@utility tabular { font-variant-numeric: tabular-nums; }
+
+/* ── Surfaces ───────────────────────────────────────────────────────────── */
+/* The app's .card: white with a hairline and a soft shadow in light; in dark,
+   a translucent blue-grey glass with the accent in its border and a lit top
+   edge. */
+@utility surface {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.072);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.07), 0 1px 2px rgba(0, 0, 0, 0.04);
+  &:where(.dark, .dark *) {
+    background: rgba(40, 60, 95, 0.2);
+    backdrop-filter: blur(10px) saturate(140%);
+    -webkit-backdrop-filter: blur(10px) saturate(140%);
+    border-color: rgba(45, 157, 255, 0.10);
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.28), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+/* The opaque twin, .card-solid, for things that float over the page. */
+@utility surface-solid {
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.12), 0 2px 6px rgba(0, 0, 0, 0.05);
+  &:where(.dark, .dark *) {
+    background: linear-gradient(rgba(45, 157, 255, 0.06), rgba(45, 157, 255, 0.06)), #121a26;
+    border-color: rgba(45, 157, 255, 0.16);
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+  }
+}
+@utility hairline { border-color: var(--hairline); }
+
+/* ── Press ──────────────────────────────────────────────────────────────────
+   The app's: a small shrink in 90ms, a 320ms settle back. `scale`, not
+   transform, so it composes with anything else the element is doing. */
+@utility press {
+  transition: scale var(--press-out) var(--ease-settle), background-color var(--press-out) var(--ease-settle),
+    color var(--press-out) var(--ease-settle), box-shadow var(--press-out) var(--ease-settle),
+    border-color var(--press-out) var(--ease-settle), opacity var(--press-out) var(--ease-settle);
+  &:active { scale: var(--press-scale, 0.97); transition-duration: var(--press-in); transition-timing-function: var(--ease-out); }
+}
+
+/* No shrink, for rows: the row tints instead. */
+@utility press-fade { --press-scale: 1; }
+
+/* ── Buttons ────────────────────────────────────────────────────────────── */
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.55rem;
+  min-height: 44px;
+  padding-inline: 1.25rem;
+  border-radius: 999px;
+  font-weight: 650;
+  font-size: 0.9375rem;
+  white-space: nowrap;
+  user-select: none;
+}
+/* The hero's and the closing call's: large text, so the azure fill can carry
+   white type (see --color-primary-fill). */
+@utility btn-primary {
+  background: var(--color-primary-fill);
+  color: #fff;
+  font-size: 1.1875rem;
+  font-weight: 700;
+  min-height: 56px;
+  padding-inline: 1.75rem;
+  box-shadow: 0 10px 24px -12px rgba(40, 147, 245, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  &:hover { background: #1f89ee; }
+}
+@utility btn-secondary {
+  font-size: 1.0625rem;
+  min-height: 56px;
+  padding-inline: 1.5rem;
+  color: var(--text);
+  background: rgba(15, 23, 42, 0.05);
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  &:hover { background: rgba(15, 23, 42, 0.08); }
+  &:where(.dark, .dark *) {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(255, 255, 255, 0.1);
+    &:hover { background: rgba(255, 255, 255, 0.1); }
+  }
+}
+/* The header's: the most contrast there is, navy on light and white on dark. */
+@utility btn-neutral {
+  background: #0b0f14;
+  color: #fff;
+  &:hover { background: #1a2130; }
+  &:where(.dark, .dark *) {
+    background: #f1f5f9;
+    color: #0b0f14;
+    &:hover { background: #ffffff; }
+  }
+}
+@utility icon-btn {
+  display: inline-grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  color: var(--text);
+  --press-scale: 0.9;
+  &:hover { background: rgba(15, 23, 42, 0.06); }
+  &:where(.dark, .dark *):hover { background: rgba(255, 255, 255, 0.08); }
+}
+
+/* ── Chips ──────────────────────────────────────────────────────────────────
+   Quick log's three tones, which mean something there: accent for the
+   direction, filled for what you typed, dashed for what it guessed. */
+@utility chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4em;
+  padding: 0.3em 0.75em;
+  border-radius: 999px;
+  font-size: 0.8125rem;
+  font-weight: 550;
+  line-height: 1.3;
+  white-space: nowrap;
+}
+@utility chip-accent {
+  background: color-mix(in srgb, var(--color-primary) 14%, transparent);
+  color: var(--ink);
+}
+@utility chip-plain {
+  background: rgba(15, 23, 42, 0.06);
+  color: #334155;
+  &:where(.dark, .dark *) { background: rgba(255, 255, 255, 0.08); color: #e2e8f0; }
+}
+@utility chip-guess {
+  border: 1px dashed rgba(15, 23, 42, 0.22);
+  color: #475569;
+  &:where(.dark, .dark *) { border-color: rgba(255, 255, 255, 0.25); color: #cbd5e1; }
+}
+
+/* ── Category tiles ─────────────────────────────────────────────────────────
+   The app's .cat-tile: a 14% wash of the category's colour, its glyph inked
+   in the same colour pushed toward legibility. */
+.cat-tile {
+  --cat-wash: color-mix(in srgb, var(--cat, #64748b) 14%, transparent);
+  background: linear-gradient(var(--cat-wash), var(--cat-wash)), #ffffff;
+  color: color-mix(in srgb, var(--cat, #64748b) 65%, black);
+}
+.dark .cat-tile {
+  background: linear-gradient(var(--cat-wash), var(--cat-wash)), rgba(40, 60, 95, 0.22);
+  color: var(--cat, #94a3b8);
+}
+
+/* ── The phone ──────────────────────────────────────────────────────────────
+   An iPhone 15 Pro: a 393 x 852 screen in a thin black band. The captures are
+   taken with the phone's real safe areas, so the island and the status bar
+   are drawn into space the app itself left for them. Everything inside is
+   sized in container units, so a phone is the same drawing at any width. */
+.phone {
+  --w: 300px;
+  --bezel: calc(var(--w) * 0.034);
+  position: relative;
+  width: var(--w);
+  flex: none;
+  padding: var(--bezel);
+  border-radius: calc(var(--w) * 0.17);
+  background: #07090c;
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.06),
+    0 0 0 1px rgba(15, 23, 42, 0.14),
+    0 40px 80px -32px rgba(2, 8, 23, 0.45),
+    0 18px 36px -18px rgba(2, 8, 23, 0.3);
+}
+.dark .phone {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.07),
+    0 0 0 1px rgba(148, 163, 184, 0.22),
+    0 40px 80px -30px rgba(0, 0, 0, 0.75),
+    0 18px 36px -18px rgba(0, 0, 0, 0.55);
+}
+.phone-screen {
+  position: relative;
+  aspect-ratio: 393 / 852;
+  border-radius: calc(var(--w) * 0.137);
+  overflow: hidden;
+  background: #f8fafc;
+  container-type: inline-size;
+  isolation: isolate;
+  /* Safari clips a rounded overflow badly while children animate unless the
+     box has its own layer. */
+  transform: translateZ(0);
+}
+.dark .phone-screen { background: #0b0f14; }
+.phone-screen > picture,
+.phone-screen > img,
+.phone-screen .phone-shot {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.phone-screen picture img { width: 100%; height: 100%; object-fit: cover; }
+.phone-status {
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 15cqw;
+  z-index: 3;
+  display: grid;
+  grid-template-columns: 1fr 32cqw 1fr;
+  align-items: center;
+  padding-top: 0.6cqw;
+  color: #0b0f14;
+  pointer-events: none;
+}
+.dark .phone-status,
+.phone-status[data-tone='light'] { color: #fff; }
+.phone-time {
+  justify-self: center;
+  font-size: 4.35cqw;
+  font-weight: 650;
+  letter-spacing: -0.01em;
+  font-variant-numeric: tabular-nums;
+  padding-left: 2cqw;
+}
+/* Signal, wi-fi and battery, drawn once as a mask and painted in the status
+   bar's colour, rather than three SVGs repeated in every phone. */
+.phone-icons {
+  justify-self: center;
+  width: 18cqw;
+  height: 3.05cqw;
+  margin-right: 1cqw;
+  background: currentColor;
+  --icons: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 71 12'><rect y='8' width='3' height='4' rx='.8'/><rect x='5' y='5.5' width='3' height='6.5' rx='.8'/><rect x='10' y='3' width='3' height='9' rx='.8'/><rect x='15' width='3' height='12' rx='.8'/><path transform='translate(23 0)' d='M8 2.4c2.3 0 4.4.9 6 2.4l1.2-1.3A10.4 10.4 0 0 0 8 .6C5.2.6 2.7 1.7.8 3.5L2 4.8a8.6 8.6 0 0 1 6-2.4Zm0 3.5c1.4 0 2.6.5 3.6 1.4l1.2-1.3A7 7 0 0 0 8 4.1a7 7 0 0 0-4.8 1.9l1.2 1.3c1-.9 2.2-1.4 3.6-1.4Zm0 3.4c.5 0 1 .2 1.3.5L8 11.4 6.7 9.8c.3-.3.8-.5 1.3-.5Z'/><g transform='translate(44 0)'><rect x='.5' y='.5' width='22' height='11' rx='3.2' fill='none' stroke='black' opacity='.4'/><rect x='2' y='2' width='19' height='8' rx='2'/><path d='M24.5 4v4c.8-.3 1.5-1.1 1.5-2s-.7-1.7-1.5-2Z' opacity='.45'/></g></svg>");
+  -webkit-mask: var(--icons) center / contain no-repeat;
+  mask: var(--icons) center / contain no-repeat;
+}
+.phone-island {
+  position: absolute;
+  z-index: 4;
+  top: 2.8cqw;
+  left: 50%;
+  translate: -50% 0;
+  width: 32cqw;
+  height: 9.4cqw;
+  border-radius: 999px;
+  background: #000;
+}
+.phone-home {
+  position: absolute;
+  z-index: 4;
+  bottom: 2cqw;
+  left: 50%;
+  translate: -50% 0;
+  width: 34cqw;
+  height: 1.3cqw;
+  border-radius: 999px;
+  background: rgba(15, 23, 42, 0.82);
+}
+.dark .phone-home,
+.phone-home[data-tone='light'] { background: rgba(255, 255, 255, 0.86); }
+
+/* The desktop capture, in a plain window. */
+.window {
+  border-radius: 16px;
+  overflow: hidden;
+  background: #ffffff;
+  box-shadow: 0 0 0 1px rgba(15, 23, 42, 0.1), 0 40px 90px -40px rgba(2, 8, 23, 0.45), 0 18px 40px -24px rgba(2, 8, 23, 0.25);
+}
+.dark .window {
+  background: #0d1117;
+  box-shadow: 0 0 0 1px rgba(148, 163, 184, 0.18), 0 40px 90px -36px rgba(0, 0, 0, 0.8), 0 18px 40px -24px rgba(0, 0, 0, 0.5);
+}
+.window-bar {
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  height: 40px;
+  padding-inline: 14px;
+  background: #f1f5f9;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.07);
+}
+.dark .window-bar { background: #151c27; border-bottom-color: rgba(255, 255, 255, 0.06); }
+
+/* ── Motion ─────────────────────────────────────────────────────────────────
+   Arrivals: content resolves out of a short blur as it rises into place,
+   the app's swap-in on the page's scale. Only once the script is running
+   (html.js), so a visitor without it sees everything. The delay is --d. */
+html.js [data-reveal] {
+  opacity: 0;
+  translate: 0 22px;
+  filter: blur(8px);
+  transition:
+    opacity 0.7s var(--ease-out) var(--d, 0ms),
+    translate 0.9s var(--ease-out) var(--d, 0ms),
+    filter 0.7s var(--ease-out) var(--d, 0ms);
+}
+html.js [data-reveal='fade'] { translate: none; }
+html.js [data-reveal='scale'] { translate: none; scale: 0.94; transition-property: opacity, scale, filter; transition-duration: 0.7s, 1s, 0.7s; }
+html.js [data-reveal].is-in { opacity: 1; translate: none; scale: none; filter: none; }
+
+/* A figure or a line of text becoming its next self: out through a blur,
+   and the new one resolving out of it. */
+@keyframes swapIn { from { opacity: 0; filter: blur(6px); } to { opacity: 1; filter: blur(0); } }
+@keyframes swapOut { from { opacity: 1; filter: blur(0); } to { opacity: 0; filter: blur(6px); } }
+.swap-in { animation: swapIn 0.32s var(--ease-out) both; }
+.swap-out { animation: swapOut 0.2s var(--ease-exit) both; }
+
+@keyframes marquee { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-50%, 0, 0); } }
+
+/* A gentle bob for things floating beside the phones. */
+@keyframes bob { 0%, 100% { translate: 0 0; } 50% { translate: 0 -8px; } }
+.bob { animation: bob var(--bob, 6s) ease-in-out infinite; animation-delay: var(--bob-delay, 0s); }
+
+/* ── Glass illustrations ────────────────────────────────────────────────────
+   The app's .glass-live rules, for its SVG pictures drawn inline: the solid
+   set back slides in, the pane settles over it, the mark lands last, and
+   then the whole picture floats. Mirrors src/index.css. */
+.glass-live { display: inline-block; position: relative; flex: none; }
+.glass-live > svg { display: block; width: 100%; height: 100%; overflow: visible; }
+.glass-live .gx-s, .glass-live .gx-g, .glass-live .gx-y, .glass-live .gx-p { transform-box: fill-box; transform-origin: center; }
+/* The script marks each picture .is-in as it comes into view, the way it
+   marks [data-reveal]; until then its layers wait, unseen. */
+.glass-enter.is-in .gx-s { animation: gxBack 0.8s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--i) * 70ms + var(--gx-delay, 0ms)); }
+.glass-enter.is-in .gx-g { animation: gxPane 0.8s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--i) * 70ms + var(--gx-delay, 0ms)); }
+.glass-enter.is-in .gx-y,
+.glass-enter.is-in .gx-p { animation: gxMark 0.6s cubic-bezier(0.2, 0.9, 0.25, 1) both; animation-delay: calc(var(--i) * 70ms + 120ms + var(--gx-delay, 0ms)); }
+html.js .glass-enter:not(.is-in) :is(.gx-s, .gx-g, .gx-y, .gx-p) { opacity: 0; }
+@keyframes gxBack { from { opacity: 0; transform: translate(-9px, 7px) rotate(-10deg) scale(0.88); } to { opacity: 1; transform: none; } }
+@keyframes gxPane { from { opacity: 0; transform: translate(8px, -6px) scale(0.9); } to { opacity: 1; transform: none; } }
+@keyframes gxMark { from { opacity: 0; transform: scale(0.55); } to { opacity: 1; transform: none; } }
+.glass-float > svg { animation: gxFloat 4.2s ease-in-out infinite; animation-delay: var(--gx-float-delay, 0s); }
+.glass-shine .gx-shine { transform-box: view-box; transform-origin: 64px 64px; animation: gxShine 4.6s cubic-bezier(0.45, 0, 0.3, 1) infinite; animation-delay: var(--gx-shine-delay, 1.4s); }
+@keyframes gxFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-6%); } }
+@keyframes gxShine { 0% { transform: rotate(24deg) translateX(0); } 38%, 100% { transform: rotate(24deg) translateX(260px); } }
+
+/* A medallion on hover: it lifts and tilts and settles, no overshoot. The
+   app's .highlight-lift. */
+.lift-on-hover { transition: translate 0.5s var(--ease-out), rotate 0.5s var(--ease-out), scale 0.5s var(--ease-out); transform-origin: 70% 85%; }
+@media (hover: hover) {
+  .lift-on-hover:hover { translate: -2px -6px; rotate: -5deg; scale: 1.05; }
+}
+
+/* ── Reduced motion ─────────────────────────────────────────────────────────
+   Nothing moves: every arrival is already in place, loops stop, and swaps are
+   instant. The content is identical; only the travel is gone. */
+@media (prefers-reduced-motion: reduce) {
+  html.js [data-reveal] { opacity: 1; translate: none; scale: none; filter: none; transition: none; }
+  .swap-in, .swap-out, .bob, .glass-float > svg, .glass-shine .gx-shine,
+  .glass-enter.is-in :is(.gx-s, .gx-g, .gx-y, .gx-p) { animation: none; }
+  html.js .glass-enter:not(.is-in) :is(.gx-s, .gx-g, .gx-y, .gx-p) { opacity: 1; }
+  .lift-on-hover, .lift-on-hover:hover { transition: none; translate: none; rotate: none; scale: none; }
+  .press:active { scale: none; }
+  html { scroll-behavior: auto; }
+}
+
+/* Cross-page: the pages cross-fade and the header stays where it is. */
+@view-transition { navigation: auto; }
+::view-transition-old(root) { animation: 0.18s var(--ease-exit) both swapOut; }
+::view-transition-new(root) { animation: 0.32s var(--ease-out) both swapIn; }
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*), ::view-transition-old(*), ::view-transition-new(*) { animation: none !important; }
+}

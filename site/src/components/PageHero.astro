@@ -1,0 +1,13 @@
+---
+/** The top of an inner page: eyebrow, title and a line under it. */
+interface Props { eyebrow: string; title: string; lede?: string; center?: boolean }
+const { eyebrow, title, lede, center = false } = Astro.props
+---
+<section class:list={['page-hero pb-10 pt-12 sm:pb-14 sm:pt-20', center && 'text-center']}>
+  <div class="container-site">
+    <p class="eyebrow" data-reveal>{eyebrow}</p>
+    <h1 class:list={['h-display mt-5 max-w-[16ch]', center && 'mx-auto']} data-reveal style="--d:60ms">{title}</h1>
+    {lede && <p class:list={['lede mt-6 max-w-[40rem]', center && 'mx-auto']} data-reveal style="--d:120ms">{lede}</p>}
+    <slot />
+  </div>
+</section>

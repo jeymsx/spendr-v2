@@ -1,0 +1,135 @@
+---
+/**
+ * Adding Spendr to a home screen, on each kind of device. The one you're on
+ * is marked, but nothing moves: the order stays the same for everyone.
+ */
+import Base from '../layouts/Base.astro'
+import PageHero from '../components/PageHero.astro'
+import Icon from '../components/Icon.astro'
+import Phone from '../components/Phone.astro'
+import { APP_URL, APP_HOST } from '../config'
+
+const DEVICES = [
+  {
+    id: 'ios', icon: 'brand-apple', name: 'iPhone and iPad', browser: 'in Safari',
+    steps: [
+      `Open <strong>${APP_HOST}</strong> in Safari.`,
+      'Tap <span class="kbd"><svg-share/></span> Share. If you don’t see it, tap <span class="kbd">···</span> first.',
+      'Scroll down, tap <strong>Add to Home Screen</strong>, then <strong>Add</strong>. Leave <strong>Open as Web App</strong> on if you see it.',
+    ],
+    note: 'Open Spendr from its icon from then on. On an iPhone, the icon keeps its own data, apart from Safari’s.',
+  },
+  {
+    id: 'android', icon: 'brand-android', name: 'Android', browser: 'in Chrome',
+    steps: [
+      `Open <strong>${APP_HOST}</strong> in Chrome.`,
+      'Tap <span class="kbd">⋮</span> at the top right.',
+      'Tap <strong>Add to home screen</strong> or <strong>Install app</strong>, then <strong>Install</strong>.',
+    ],
+    note: 'Spendr opens full screen from your home screen and your app drawer, like any other app.',
+  },
+  {
+    id: 'desktop', icon: 'device-laptop', name: 'Computer', browser: 'in Chrome, Edge or Safari',
+    steps: [
+      `Open <strong>${APP_HOST}</strong>.`,
+      'In Chrome or Edge, click the install icon at the right end of the address bar, or find <strong>Install</strong> in the browser’s menu.',
+      'In Safari on a Mac, choose <strong>File</strong>, then <strong>Add to Dock</strong>.',
+    ],
+    note: 'On a wide screen Spendr lays itself out as a desktop app. Sign in with Google on both to keep your phone and computer in step.',
+  },
+]
+const share = '<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 9h-1a2 2 0 0 0 -2 2v8a2 2 0 0 0 2 2h10a2 2 0 0 0 2 -2v-8a2 2 0 0 0 -2 -2h-1"/><path d="M12 14v-11"/><path d="M9 6l3 -3l3 3"/></svg>'
+const html = (s: string) => s.replace('<svg-share/>', share)
+---
+<Base title="Install" description="Add Spendr to the home screen on an iPhone, an Android phone or a computer. It opens full screen and works offline.">
+  <PageHero
+    eyebrow="Install"
+    title="Add Spendr to your home screen."
+    lede="Spendr is a web app. Add it once and it opens full screen from your home screen, works offline and keeps its data on your device. Updates arrive on their own."
+  >
+    <div class="mt-9 flex flex-wrap gap-3" data-reveal style="--d:180ms">
+      <a href={APP_URL} class="btn btn-primary press">Open Spendr <Icon name="arrow-up-right" size={21} stroke={2.2} /></a>
+    </div>
+  </PageHero>
+
+  <section class="pb-20 sm:pb-28" aria-label="How to install">
+    <div class="container-site grid gap-4 lg:grid-cols-3">
+      {DEVICES.map((d, i) => (
+        <article class="surface device relative rounded-[var(--radius-panel)] p-7 sm:p-8" data-device={d.id} data-reveal style={`--d:${i * 80}ms`} aria-labelledby={`dev-${d.id}`}>
+          <span class="yours" aria-hidden="true">Your device</span>
+          <span class="cat-tile grid size-12 place-items-center rounded-[16px]" style="--cat:#2D9DFF"><Icon name={d.icon} size={24} stroke={1.8} /></span>
+          <h2 id={`dev-${d.id}`} class="mt-6 text-[1.375rem] font-bold tracking-[-0.02em]">{d.name}</h2>
+          <p class="text-[0.9375rem] text-muted">{d.browser}</p>
+          <ol class="mt-6 space-y-4">
+            {d.steps.map((s, n) => (
+              <li class="flex gap-3.5">
+                <span class="step tabular">{n + 1}</span>
+                <p class="step-text pt-0.5 text-[0.9875rem] leading-relaxed" set:html={html(s)} />
+              </li>
+            ))}
+          </ol>
+          <p class="mt-7 border-t hairline pt-5 text-[0.875rem] leading-relaxed text-muted">{d.note}</p>
+        </article>
+      ))}
+    </div>
+
+    <div class="container-site mt-16 grid items-center gap-12 lg:grid-cols-[auto_1fr] lg:gap-20">
+      <div class="mx-auto" data-reveal="scale">
+        <Phone shot="home" alt="Spendr open from the home screen" width="min(64vw, 270px)" sizes="270px" />
+      </div>
+      <div class="max-w-[36rem]">
+        <h2 class="h-section" data-reveal>Why not the App Store?</h2>
+        <p class="lede mt-5" data-reveal style="--d:60ms">
+          Because it doesn’t need one. A web app you add to your home screen opens full screen, works
+          without a connection, can send reminders, and is always the latest version: there’s nothing
+          to update and nothing to download from a store.
+        </p>
+        <ul class="mt-8 space-y-3" data-reveal style="--d:120ms">
+          {['Works offline, all of it', 'Updates itself the next time you open it', 'Reminders for due dates and bills, once you turn them on', 'Face ID lock, if you want one'].map(t => (
+            <li class="flex items-center gap-3 text-[1rem]">
+              <span class="grid size-6 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-primary)_16%,transparent)] text-ink"><Icon name="check" size={14} stroke={3} /></span>
+              {t}
+            </li>
+          ))}
+        </ul>
+      </div>
+    </div>
+  </section>
+</Base>
+
+<style>
+  .step {
+    display: grid; place-items: center; width: 28px; height: 28px; border-radius: 999px; flex: none;
+    font-size: 0.8125rem; font-weight: 700; color: var(--ink);
+    background: color-mix(in srgb, var(--color-primary) 13%, transparent);
+  }
+  .step-text :global(strong) { font-weight: 650; }
+  .step-text :global(.kbd) {
+    display: inline-flex; align-items: center; justify-content: center; gap: 2px; min-width: 26px; height: 24px;
+    padding: 0 6px; margin: 0 1px; border-radius: 7px; vertical-align: -5px;
+    font-size: 0.8125rem; font-weight: 700; color: var(--ink);
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 22%, transparent);
+  }
+  .yours {
+    position: absolute; top: 22px; right: 22px; display: none;
+    padding: 4px 10px; border-radius: 999px; font-size: 0.75rem; font-weight: 700; color: #fff;
+    background: var(--color-primary-fill);
+  }
+  .device.is-yours { box-shadow: 0 0 0 2px var(--color-primary), 0 20px 40px -24px rgba(40, 147, 245, 0.5); }
+  .device.is-yours .yours { display: inline-block; }
+</style>
+
+<script>
+  /* Which of the three is this? iPadOS reports itself as a Mac, so a Mac
+     with a touch screen is an iPad. */
+  const ua = navigator.userAgent
+  const ios = /iPhone|iPad|iPod/.test(ua) || (/Macintosh/.test(ua) && navigator.maxTouchPoints > 1)
+  const android = /Android/.test(ua)
+  const id = ios ? 'ios' : android ? 'android' : 'desktop'
+  const card = document.querySelector<HTMLElement>(`[data-device="${id}"]`)
+  if (card) {
+    card.classList.add('is-yours')
+    card.setAttribute('aria-description', 'Your device')
+  }
+</script>

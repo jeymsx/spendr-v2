@@ -1,0 +1,67 @@
+---
+/**
+ * The closing call: open the app, or add it to the home screen. On a wide
+ * screen there's a code to scan, since the phone is where Spendr lives.
+ */
+import QRCode from 'qrcode'
+import { Image } from 'astro:assets'
+import Icon from '../Icon.astro'
+import mark from '../../assets/brand/logo-512.png'
+import { APP_URL, APP_HOST } from '../../config'
+
+const qr = await QRCode.toString(APP_URL, {
+  type: 'svg', margin: 0, errorCorrectionLevel: 'M', color: { dark: '#0b0f14', light: '#00000000' },
+})
+---
+<section class="cta py-16 sm:py-24" aria-labelledby="cta-title">
+  <div class="container-site">
+    <div class="cta-panel relative overflow-hidden rounded-[var(--radius-panel)] px-6 py-14 text-white sm:px-12 sm:py-16 lg:px-16" data-reveal="scale">
+      <div class="relative grid items-center gap-12 lg:grid-cols-[1fr_auto]">
+        <div class="max-w-[36rem]">
+          <span class="grid size-[72px] place-items-center rounded-[22px] bg-white shadow-[0_10px_30px_-12px_rgba(0,0,0,0.6)]">
+            <Image src={mark} alt="" width={58} height={58} densities={[1, 2, 3]} format="webp" />
+          </span>
+          <h2 id="cta-title" class="h-section mt-7">Log your first peso today.</h2>
+          <p class="mt-5 text-[1.125rem] leading-relaxed text-white/75">
+            It’s free, it works offline, and there’s nothing to sign up for. Open it in your
+            browser and add it to your home screen.
+          </p>
+          <div class="mt-9 flex flex-wrap gap-3">
+            <a href={APP_URL} class="btn btn-primary press">
+              Open Spendr
+              <Icon name="arrow-up-right" size={21} stroke={2.2} />
+            </a>
+            <a href="/install" class="btn press cta-secondary">
+              <Icon name="device-mobile" size={20} />
+              Add to home screen
+            </a>
+          </div>
+        </div>
+        <div class="qr hidden lg:block" aria-hidden="true">
+          <div class="qr-card">
+            <div class="qr-code" set:html={qr} />
+          </div>
+          <p class="mt-4 text-center text-[0.875rem] text-white/70">Scan to open <span class="font-semibold text-white">{APP_HOST}</span><br />on your phone</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Navy in both themes, lit from the top the way the app's dark mode is. */
+  .cta-panel {
+    background:
+      radial-gradient(120% 90% at 20% -20%, rgba(45, 157, 255, 0.28), rgba(45, 157, 255, 0.08) 45%, transparent 75%),
+      #0b0f14;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 30px 80px -40px rgba(2, 8, 23, 0.7);
+  }
+  .cta-secondary {
+    font-size: 1.0625rem; min-height: 56px; padding-inline: 1.5rem; color: #fff;
+    background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+  }
+  .cta-secondary:hover { background: rgba(255, 255, 255, 0.14); }
+  .qr-card { width: 196px; padding: 18px; border-radius: 26px; background: #fff; box-shadow: 0 20px 50px -24px rgba(0, 0, 0, 0.8); }
+  .qr-code :global(svg) { width: 100%; height: auto; display: block; }
+  .cta-panel :global(:focus-visible) { outline-color: #fff; }
+</style>

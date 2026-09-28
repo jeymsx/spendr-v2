@@ -1,0 +1,42 @@
+---
+/**
+ * The privacy policy or the terms, from the app's own text (src/lib/policy.js),
+ * laid out the way the app's sheet lays them out: the intro as a callout, then
+ * numbered sections, with the contact address as a link.
+ */
+import { splitEmail, type PolicySection } from '../data/app'
+
+interface Props { sections: PolicySection[] }
+const { sections } = Astro.props
+const intro = sections.find(s => s.h === null)
+const body = sections.filter(s => s.h !== null)
+---
+<div class="policy">
+  {intro && (
+    <p class="surface rounded-[var(--radius-card)] px-5 py-4 text-[0.9875rem] italic leading-relaxed text-muted" data-reveal>{intro.b}</p>
+  )}
+  <ol class="mt-8 grid gap-3">
+    {body.map((s, i) => {
+      const [before, email, after] = splitEmail(s.b)
+      return (
+        <li class="surface flex gap-4 rounded-[var(--radius-card)] p-5 sm:p-6" data-reveal style={`--d:${Math.min(i, 4) * 40}ms`}>
+          <span class="num tabular" aria-hidden="true">{i + 1}</span>
+          <div class="min-w-0">
+            <h2 class="font-semibold leading-snug tracking-[-0.01em]">{s.h}</h2>
+            <p class="mt-1.5 text-[0.9875rem] leading-relaxed text-muted">
+              {before}{email && <a href={`mailto:${email}`} class="font-semibold text-ink underline decoration-[color-mix(in_srgb,var(--color-primary)_40%,transparent)] underline-offset-2">{email}</a>}{after}
+            </p>
+          </div>
+        </li>
+      )
+    })}
+  </ol>
+</div>
+
+<style>
+  .num {
+    display: grid; place-items: center; width: 28px; height: 28px; border-radius: 9px; flex: none; margin-top: -2px;
+    font-size: 0.75rem; font-weight: 700; color: var(--ink);
+    background: color-mix(in srgb, var(--color-primary) 12%, transparent);
+  }
+</style>

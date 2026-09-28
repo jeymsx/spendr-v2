@@ -1,0 +1,93 @@
+---
+import '../styles/global.css'
+import interLatin from '@fontsource-variable/inter/files/inter-latin-wght-normal.woff2?url'
+import Header from '../components/Header.astro'
+import Footer from '../components/Footer.astro'
+import { SITE_NAME, TAGLINE } from '../config'
+
+interface Props {
+  title?: string
+  description?: string
+  /** A path under public/ for the Open Graph picture. */
+  image?: string
+  noindex?: boolean
+}
+
+const { title, description = TAGLINE, image = '/og.jpg', noindex = false } = Astro.props
+const fullTitle = title ? `${title} · ${SITE_NAME}` : `${SITE_NAME}: every peso, accounted for`
+const canonical = new URL(Astro.url.pathname.replace(/\.html$/, '').replace(/\/index$/, '/'), Astro.site)
+const ogImage = new URL(image, Astro.site)
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>{fullTitle}</title>
+    <meta name="description" content={description} />
+    <link rel="canonical" href={canonical} />
+    {noindex && <meta name="robots" content="noindex" />}
+
+    <meta name="theme-color" content="#f8fafc" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0b0f14" media="(prefers-color-scheme: dark)" />
+    <meta name="color-scheme" content="light dark" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="sitemap" href="/sitemap-index.xml" />
+    <link rel="preload" href={interLatin} as="font" type="font/woff2" crossorigin />
+
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content={SITE_NAME} />
+    <meta property="og:title" content={title ?? `${SITE_NAME}: every peso, accounted for`} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Spendr on an iPhone, with the words Every peso, accounted for." />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- The theme, before anything paints: the visitor's pick, else the OS. -->
+    <script is:inline>
+      (function () {
+        var d = document.documentElement, pref = null;
+        try { pref = localStorage.getItem('spendr-site-theme'); } catch (e) {}
+        var dark = pref === 'dark' || (pref !== 'light' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+        if (dark) d.classList.add('dark');
+        d.classList.add('js');
+        // If the site's script never arrives, show everything it would have revealed.
+        setTimeout(function () { if (!window.__spendrReady) d.classList.remove('js'); }, 4000);
+      })();
+    </script>
+    <slot name="head" />
+  </head>
+  <body>
+    <a href="#main" class="skip-link">Skip to content</a>
+    <Header />
+    <main id="main" tabindex="-1">
+      <slot />
+    </main>
+    <Footer />
+    <script>
+      import '../scripts/site.ts'
+    </script>
+  </body>
+</html>
+
+<style is:global>
+  .skip-link {
+    position: fixed;
+    left: 16px;
+    top: 12px;
+    z-index: 100;
+    padding: 10px 16px;
+    border-radius: 999px;
+    background: #0b0f14;
+    color: #fff;
+    font-weight: 600;
+    translate: 0 -200%;
+    transition: translate 0.2s var(--ease-out);
+  }
+  .skip-link:focus { translate: none; }
+  main:focus { outline: none; }
+</style>

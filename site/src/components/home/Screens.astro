@@ -1,0 +1,91 @@
+---
+/**
+ * The app, screen by screen, drifting past: store-style cards with a line on
+ * top and the real screen rising out of the bottom.
+ */
+import Phone from '../Phone.astro'
+import MarqueeToggle from '../MarqueeToggle.astro'
+
+const CARDS = [
+  { shot: 'transactions', title: 'Every peso, in its place', alt: 'The transactions list, grouped by day' },
+  { shot: 'accounts', title: 'Your accounts, stacked like a wallet', alt: 'Accounts stacked like cards in a wallet' },
+  { shot: 'card', title: 'Cards that understand statements', alt: 'A credit card with its balance, limit and statement' },
+  { shot: 'budget', title: 'A budget you can read at a glance', alt: 'The monthly budget as an arc' },
+  { shot: 'forecast', title: 'Know what’s safe to spend', alt: 'The forecast, with what is safe to spend until payday' },
+  { shot: 'recurring', title: 'Bills and paydays, in one list', alt: 'Recurring bills, loan payments and pay' },
+  { shot: 'debts', title: 'Who owes whom, kept straight', alt: 'Debts with friends' },
+  { shot: 'goals', title: 'Goals funded by real money', alt: 'Savings goals with rings of progress' },
+  { shot: 'insights', title: 'See where it all went', alt: 'Insights: the month by category' },
+  { shot: 'networth', title: 'Net worth that counts everything', alt: 'Net worth over six months' },
+  { shot: 'wrapped-intro', title: 'Your month, Wrapped', alt: 'The first slide of August Wrapped', color: true },
+  { shot: 'achievements', title: 'Badges for the big moments', alt: 'Achievements: badges earned' },
+]
+---
+<section class="screens py-8 sm:py-12" aria-label="Screens from the app" data-marquee>
+  <div class="screens-rail" data-reveal="fade">
+    <div class="screens-track marquee-track">
+      {[0, 1].map(copy => (
+        <ul class="screens-set" aria-hidden={copy ? 'true' : undefined}>
+          {CARDS.map((c, i) => (
+            <li class:list={['screen-card', i % 2 ? 'is-navy' : 'is-blue']}>
+              <p class="screen-title">{c.title}</p>
+              <Phone
+                shot={c.shot}
+                alt={copy ? '' : c.alt}
+                width="var(--card-phone)"
+                sizes="(min-width: 640px) 210px, 172px"
+                onColor={c.color}
+                class="screen-phone"
+              />
+            </li>
+          ))}
+        </ul>
+      ))}
+    </div>
+  </div>
+  <div class="container-site mt-4 flex justify-end">
+    <MarqueeToggle label="screens" />
+  </div>
+</section>
+
+<style>
+  .screens-rail { overflow: hidden; }
+  .screens-track { display: flex; width: max-content; --marquee-duration: 90s; animation: var(--animate-marquee); }
+  .screens-set { display: flex; gap: 16px; padding-right: 16px; }
+  .screen-card {
+    --card-w: 236px;
+    --card-phone: calc(var(--card-w) * 0.8);
+    position: relative;
+    width: var(--card-w);
+    height: calc(var(--card-w) * 1.94);
+    border-radius: var(--radius-panel);
+    overflow: hidden;
+    padding: 24px 22px 0;
+    color: #fff;
+    flex: none;
+  }
+  @media (min-width: 640px) { .screen-card { --card-w: 264px; } }
+  .screen-card.is-blue { background: var(--color-primary-fill); }
+  .screen-card.is-navy { background: #0f1724; }
+  :global(.dark) .screen-card.is-navy { background: #141d2b; box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06); }
+  :global(.dark) .screen-card.is-blue { box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.1); }
+  .screen-title {
+    font-size: 1.3125rem;
+    line-height: 1.18;
+    font-weight: 750;
+    letter-spacing: -0.02em;
+    max-width: 15ch;
+  }
+  .screen-card :global(.screen-phone) {
+    position: absolute;
+    left: 50%;
+    translate: -50% 0;
+    top: calc(var(--card-w) * 0.62);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .screens-rail { overflow-x: auto; scroll-snap-type: x mandatory; scrollbar-width: none; padding-inline: 20px; }
+    .screens-track { animation: none; }
+    .screens-set[aria-hidden] { display: none; }
+    .screen-card { scroll-snap-align: center; }
+  }
+</style>

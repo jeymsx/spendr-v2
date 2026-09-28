@@ -1,0 +1,20 @@
+---
+/** Sun on dark, moon on light: the one you would switch to. */
+import Icon from './Icon.astro'
+---
+<button type="button" class="icon-btn press theme-toggle" data-theme-toggle aria-label="Switch theme" aria-pressed="false">
+  <span class="glyph glyph-moon"><Icon name="moon" size={20} /></span>
+  <span class="glyph glyph-sun"><Icon name="sun" size={20} /></span>
+</button>
+
+<style>
+  .theme-toggle { position: relative; }
+  .glyph {
+    position: absolute; inset: 0; display: grid; place-items: center;
+    transition: opacity 0.3s var(--ease-out), filter 0.3s var(--ease-out), rotate 0.45s var(--ease-out), scale 0.45s var(--ease-out);
+  }
+  .glyph-sun { opacity: 0; filter: blur(4px); rotate: -60deg; scale: 0.7; }
+  :global(.dark) .glyph-sun { opacity: 1; filter: none; rotate: none; scale: none; }
+  :global(.dark) .glyph-moon { opacity: 0; filter: blur(4px); rotate: 60deg; scale: 0.7; }
+  @media (prefers-reduced-motion: reduce) { .glyph { transition: none; } }
+</style>

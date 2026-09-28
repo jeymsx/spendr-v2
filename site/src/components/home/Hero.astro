@@ -1,0 +1,152 @@
+---
+/**
+ * The top of the page: what Spendr is in one line, the two ways in, and the
+ * app itself - two phones with the demo ledger, and three things lifted off
+ * its screens floating beside them. Every figure is the demo ledger's own.
+ */
+import Phone from '../Phone.astro'
+import Icon from '../Icon.astro'
+import { APP_URL } from '../../config'
+import { artFor } from '../../data/app'
+import { medallion } from '../../data/glass'
+
+const art = artFor('pay-yourself-first')!
+const badge = medallion({ glyph: art.glyph, hue: art.hue, shape: art.shape })
+---
+<section class="hero relative" aria-labelledby="hero-title">
+  <div class="container-site grid items-center gap-12 pb-20 pt-8 sm:pt-12 lg:grid-cols-[1.04fr_1fr] lg:gap-6 lg:pb-28 lg:pt-14">
+    <div class="relative z-10 max-w-[640px]">
+      <p class="eyebrow" data-reveal>Personal finance, made for the Philippines</p>
+      <h1 id="hero-title" class="h-display mt-5" data-reveal style="--d:70ms">
+        Every peso,<br /> accounted for.
+      </h1>
+      <p class="lede mt-6 max-w-[33rem]" data-reveal style="--d:140ms">
+        Spendr keeps your cash, banks, e-wallets and credit cards in one place.
+        Log a purchase in seconds, see what your cards really owe, and know what’s
+        safe to spend until payday.
+      </p>
+      <div class="mt-9 flex flex-wrap items-center gap-3" data-reveal style="--d:210ms">
+        <a href={APP_URL} class="btn btn-primary press">
+          Open Spendr
+          <Icon name="arrow-up-right" size={21} stroke={2.2} />
+        </a>
+        <a href="/install" class="btn btn-secondary press">
+          <Icon name="device-mobile" size={20} />
+          Add to home screen
+        </a>
+      </div>
+      <ul class="mt-8 flex flex-wrap gap-x-6 gap-y-2.5 text-[0.9375rem] font-medium text-muted" data-reveal style="--d:280ms">
+        {['Free', 'No account needed', 'Works offline'].map(p => (
+          <li class="flex items-center gap-2">
+            <span class="grid size-5 place-items-center rounded-full bg-[color-mix(in_srgb,var(--color-primary)_16%,transparent)] text-ink">
+              <Icon name="check" size={13} stroke={3} />
+            </span>
+            {p}
+          </li>
+        ))}
+      </ul>
+    </div>
+
+    <div class="hero-stage relative mx-auto w-full max-w-[540px]" data-tilt aria-label="Spendr on two iPhones" role="img">
+      <div class="hero-tilt">
+        <div class="stage-back" data-reveal="scale" style="--d:260ms">
+          <Phone shot="insights" alt="" width="var(--back-w)" sizes="(min-width: 1024px) 250px, 58vw" />
+        </div>
+        <div class="stage-front" data-reveal style="--d:120ms">
+          <Phone shot="home" alt="" width="var(--front-w)" sizes="(min-width: 1024px) 290px, 66vw" eager />
+        </div>
+
+        <div class="float float-safe" data-reveal="scale" style="--d:620ms">
+          <div class="surface-solid bob rounded-[22px] px-4 py-3.5" style="--bob:7s">
+            <p class="text-[0.75rem] font-semibold text-muted">Safe to spend</p>
+            <p class="tabular mt-0.5 text-[1.375rem] font-bold tracking-[-0.02em]" data-count-to="51176.29" data-count-prefix="₱" data-count-delay="700">₱51,176.29</p>
+            <p class="mt-0.5 text-[0.75rem] text-muted">Until payday, Sep 30</p>
+          </div>
+        </div>
+
+        <div class="float float-tx" data-reveal="scale" style="--d:760ms">
+          <div class="surface-solid bob flex items-center gap-3 rounded-[20px] py-2.5 pl-2.5 pr-4" style="--bob:6.2s;--bob-delay:-2s">
+            <span class="cat-tile grid size-10 place-items-center rounded-[13px]" style="--cat:#FFB347">
+              <Icon name="tools-kitchen-2" size={20} stroke={2} />
+            </span>
+            <span class="min-w-0">
+              <span class="block text-[0.875rem] font-semibold leading-tight">Jollibee</span>
+              <span class="block text-[0.75rem] leading-tight text-muted">GCash · Food</span>
+            </span>
+            <span class="tabular ml-3 text-[0.875rem] font-semibold text-[#dc2626] dark:text-[#f87171]">−₱185.00</span>
+          </div>
+        </div>
+
+        <div class="float float-badge" data-reveal="scale" style="--d:900ms">
+          <span class="glass-live glass-enter glass-float block size-full" style="--gx-delay:900ms;--gx-float-delay:-1s" set:html={badge} />
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* On a phone the pair is tucked closer, and the one behind is smaller, so
+     its turned corner stays inside the screen. */
+  .hero-stage {
+    --front-w: min(62vw, 272px);
+    --back-w: calc(var(--front-w) * 0.8);
+    --front-x: -0.72;
+    --back-x: -0.08;
+    height: calc(var(--front-w) * 2.17 + 40px);
+    perspective: 1400px;
+  }
+  @media (min-width: 640px) {
+    .hero-stage { --front-w: 292px; --back-w: 250px; --front-x: -0.62; --back-x: 0.02; }
+  }
+  @media (min-width: 1024px) {
+    .hero-stage { --front-w: 300px; --back-w: 256px; height: 700px; }
+  }
+  .hero-tilt { position: absolute; inset: 0; transform-style: preserve-3d; }
+
+  .stage-front, .stage-back { position: absolute; }
+  .stage-front { left: 50%; top: 12px; margin-left: calc(var(--front-w) * var(--front-x)); rotate: -4deg; z-index: 2; }
+  .stage-back { left: 50%; top: calc(var(--front-w) * 0.2); margin-left: calc(var(--front-w) * var(--back-x)); rotate: 6deg; z-index: 1; }
+
+  .float { position: absolute; z-index: 3; }
+  .float-safe { left: max(-4px, calc(50% - var(--front-w) * 0.95)); bottom: calc(var(--front-w) * 0.34); }
+  .float-tx { right: max(-4px, calc(50% - var(--front-w) * 0.98)); top: calc(var(--front-w) * 0.62); }
+  .float-badge { right: max(0px, calc(50% - var(--front-w) * 0.86)); top: 0; width: calc(var(--front-w) * 0.36); height: calc(var(--front-w) * 0.36); }
+  /* A phone's screen has room for two floating things, not three: the row
+     would sit on the net worth it is meant to sit beside. */
+  @media (max-width: 639px) {
+    .float-tx { display: none; }
+  }
+  @media (max-width: 420px) {
+    .float-safe { bottom: calc(var(--front-w) * 0.22); }
+    .float-safe .surface-solid { padding: 10px 12px; }
+  }
+</style>
+
+<script>
+  /* A gentle lean toward the pointer, eased so it settles rather than
+     tracks: the stage follows a point that chases the cursor. Only for a
+     mouse, and never under reduced motion. */
+  const stage = document.querySelector<HTMLElement>('[data-tilt]')
+  const tilt = stage?.querySelector<HTMLElement>('.hero-tilt')
+  const fine = window.matchMedia('(hover: hover) and (pointer: fine)').matches
+  const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  if (stage && tilt && fine && !reduce) {
+    let tx = 0, ty = 0, x = 0, y = 0, raf = 0
+    const frame = () => {
+      x += (tx - x) * 0.08
+      y += (ty - y) * 0.08
+      tilt.style.transform = `rotateX(${(-y * 5).toFixed(3)}deg) rotateY(${(x * 7).toFixed(3)}deg)`
+      raf = Math.abs(tx - x) + Math.abs(ty - y) > 0.001 ? requestAnimationFrame(frame) : 0
+    }
+    const kick = () => { if (!raf) raf = requestAnimationFrame(frame) }
+    window.addEventListener('pointermove', e => {
+      const r = stage.getBoundingClientRect()
+      if (r.bottom < 0 || r.top > innerHeight) return
+      tx = Math.max(-1, Math.min(1, (e.clientX - (r.left + r.width / 2)) / (innerWidth / 2)))
+      ty = Math.max(-1, Math.min(1, (e.clientY - (r.top + r.height / 2)) / (innerHeight / 2)))
+      kick()
+    }, { passive: true })
+    document.addEventListener('pointerleave', () => { tx = 0; ty = 0; kick() })
+  }
+</script>

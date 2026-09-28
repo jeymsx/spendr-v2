@@ -1,0 +1,55 @@
+---
+/**
+ * The names Spendr already knows, from the app's own presets. Plain text,
+ * never logos: they are labels for your own accounts, and the app is not
+ * affiliated with any of them.
+ */
+import { banks, holdings } from '../../data/app'
+import MarqueeToggle from '../MarqueeToggle.astro'
+
+const names = banks.map(b => b.name)
+const half = Math.ceil(names.length / 2)
+const rows = [names.slice(0, half), names.slice(half)]
+---
+<section class="names py-10 sm:py-14" aria-labelledby="names-title" data-marquee>
+  <div class="container-site">
+    <h2 id="names-title" class="mx-auto max-w-[44rem] text-center text-[0.9375rem] font-medium text-muted" data-reveal>
+      Ready for the {banks.length} banks and e-wallets you already use, and {holdings.length} kinds of investments and loans
+    </h2>
+  </div>
+  <div class="names-rail mt-7 space-y-3" data-reveal="fade" style="--d:120ms">
+    {rows.map((row, r) => (
+      <div class="names-track marquee-track" style={`--marquee-duration:${r ? 56 : 46}s;--dir:${r ? 'reverse' : 'normal'}`}>
+        {[0, 1].map(copy => (
+          <ul class="names-set" aria-hidden={copy ? 'true' : undefined}>
+            {row.map(n => (
+              <li class="surface rounded-full px-4 py-2 text-[0.9375rem] font-semibold tracking-[-0.01em]">{n}</li>
+            ))}
+          </ul>
+        ))}
+      </div>
+    ))}
+  </div>
+  <div class="container-site mt-5 flex items-center justify-center gap-3" data-reveal="fade" style="--d:200ms">
+    <p class="text-center text-[0.8125rem] text-muted">
+      Names are labels for your own accounts. Spendr isn’t affiliated with any bank or e-wallet.
+    </p>
+    <MarqueeToggle label="names" />
+  </div>
+</section>
+
+<style>
+  .names-rail {
+    overflow: hidden;
+    mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent);
+  }
+  .names-track { display: flex; width: max-content; animation: var(--animate-marquee); animation-direction: var(--dir); }
+  .names-set { display: flex; gap: 10px; padding-right: 10px; }
+  .names-set li { white-space: nowrap; }
+  @media (prefers-reduced-motion: reduce) {
+    .names-track { animation: none; width: auto; justify-content: center; padding-inline: 20px; }
+    .names-set { flex-wrap: wrap; justify-content: center; padding-right: 0; }
+    .names-set[aria-hidden] { display: none; }
+    .names-rail { mask-image: none; }
+  }
+</style>

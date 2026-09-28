@@ -1,0 +1,184 @@
+---
+/**
+ * Every feature, grouped the way the app is, each group with the screens
+ * that show it. The chips at the top follow you down the page and mark the
+ * group you're reading.
+ */
+import Base from '../layouts/Base.astro'
+import PageHero from '../components/PageHero.astro'
+import Phone from '../components/Phone.astro'
+import Shot from '../components/Shot.astro'
+import Icon from '../components/Icon.astro'
+import Cta from '../components/home/Cta.astro'
+import { GROUPS } from '../data/features'
+import { accents } from '../data/app'
+import { APP_HOST } from '../config'
+---
+<Base title="Features" description="Everything Spendr does: quick log, credit cards that understand statements, budgets, a forecast of what’s safe to spend, recurring bills, debts, goals, Insights, Wrapped and achievements.">
+  <PageHero
+    eyebrow="Features"
+    title="Everything Spendr does."
+    lede="Every part of the app, in one place. All of it works offline, and none of it needs an account."
+  />
+
+  <div data-nav-sentinel aria-hidden="true"></div>
+  <nav class="feature-nav sticky z-30" aria-label="Feature groups" data-feature-nav>
+    <div class="container-site">
+      <ul class="nav-rail">
+        {GROUPS.map(g => (
+          <li><a href={`#${g.id}`} class="nav-chip press" data-chip={g.id}>{g.nav}</a></li>
+        ))}
+      </ul>
+    </div>
+  </nav>
+
+  {GROUPS.map((g, gi) => (
+    <section id={g.id} class="feature-group scroll-mt-32 py-16 sm:py-24" aria-labelledby={`${g.id}-title`} data-group>
+      <div class:list={['container-site grid items-center gap-12', g.shots && 'lg:grid-cols-2 lg:gap-16']}>
+        <div class:list={[g.shots && gi % 2 === 1 && 'lg:order-2']}>
+          <p class="eyebrow" data-reveal>{g.eyebrow}</p>
+          <h2 id={`${g.id}-title`} class="h-section mt-4 max-w-[18ch]" data-reveal style="--d:60ms">{g.title}</h2>
+          <p class="lede mt-5 max-w-[36rem]" data-reveal style="--d:120ms">{g.lede}</p>
+
+          {g.swatches && (
+            <ul class="mt-8 flex flex-wrap gap-3" aria-label="Accent colours" data-reveal style="--d:160ms">
+              {accents.map(a => (
+                <li class="swatch" style={`--c:${a.hex}`}>
+                  <span class="swatch-dot" aria-hidden="true"></span>
+                  <span class="text-[0.875rem] font-medium">{a.name}</span>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <ul class:list={['mt-10 grid gap-x-8 gap-y-7', g.shots ? 'sm:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3']}>
+            {g.items.map((f, i) => (
+              <li class="flex gap-4" data-reveal style={`--d:${(i % 2) * 60 + 60}ms`}>
+                <span class="cat-tile grid size-10 shrink-0 place-items-center rounded-[13px]" style="--cat:#2D9DFF">
+                  <Icon name={f.icon} size={20} stroke={1.9} />
+                </span>
+                <div class="min-w-0">
+                  <h3 class="font-semibold leading-snug tracking-[-0.01em]">{f.title}</h3>
+                  <p class="mt-1 text-[0.9375rem] leading-relaxed text-muted">{f.body}</p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+
+        {g.shots && (
+          <div class:list={['feature-shots', g.shots.length > 1 && 'is-pair', gi % 2 === 1 && 'lg:order-1']} data-reveal="scale" style="--d:100ms">
+            {g.shots.map((s, i) => (
+              <Phone
+                shot={s.name}
+                alt={s.alt}
+                width="var(--fs-w)"
+                sizes="(min-width: 1024px) 260px, 46vw"
+                onColor={s.name.startsWith('wrapped')}
+                class={`fs-phone fs-${i}`}
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      {g.desktop && (
+        <div class="container-site mt-12">
+          <div class="window" data-reveal="scale">
+            <div class="window-bar" aria-hidden="true">
+              <span class="flex gap-2"><i class="dot bg-[#ff5f57]"></i><i class="dot bg-[#febc2e]"></i><i class="dot bg-[#28c840]"></i></span>
+              <span class="url"><Icon name="lock" size={12} stroke={2.2} />{APP_HOST}</span>
+              <span></span>
+            </div>
+            <Shot name="desktop-insights" alt="Spendr’s desktop Insights" sizes="(min-width: 1200px) 1120px, 94vw" widths={[640, 960, 1280, 1920, 2400]} />
+          </div>
+        </div>
+      )}
+    </section>
+  ))}
+
+  <Cta />
+</Base>
+
+<style>
+  .feature-nav { top: 64px; padding-block: 10px; }
+  @media (min-width: 640px) { .feature-nav { top: 72px; } }
+  .feature-nav::before {
+    content: ''; position: absolute; inset: 0; z-index: -1;
+    background: color-mix(in srgb, var(--page) 80%, transparent);
+    backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+    border-bottom: 1px solid var(--hairline);
+    opacity: 0; transition: opacity 0.3s var(--ease-out);
+  }
+  .feature-nav[data-stuck]::before { opacity: 1; }
+  .nav-rail { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin-inline: -20px; padding-inline: 20px; }
+  .nav-rail::-webkit-scrollbar { display: none; }
+  .nav-chip {
+    display: inline-flex; white-space: nowrap; padding: 8px 14px; border-radius: 999px;
+    font-size: 0.875rem; font-weight: 600; color: var(--muted);
+    background: rgba(15, 23, 42, 0.05);
+    transition: background-color 0.3s var(--ease-out), color 0.3s var(--ease-out), box-shadow 0.3s var(--ease-out);
+  }
+  :global(.dark) .nav-chip { background: rgba(255, 255, 255, 0.06); }
+  .nav-chip:hover { color: var(--text); }
+  .nav-chip[aria-current='true'] { color: #fff; background: var(--color-primary-fill); box-shadow: 0 6px 14px -8px rgba(40, 147, 245, 0.9); }
+
+  .feature-group + .feature-group { border-top: 1px solid var(--hairline); }
+  .feature-shots { --fs-w: min(62vw, 280px); position: relative; display: flex; justify-content: center; }
+  .feature-shots.is-pair { --fs-w: min(46vw, 250px); gap: 0; }
+  .feature-shots.is-pair :global(.fs-0) { rotate: -4deg; z-index: 2; margin-right: calc(var(--fs-w) * -0.18); }
+  .feature-shots.is-pair :global(.fs-1) { rotate: 5deg; margin-top: calc(var(--fs-w) * 0.22); }
+  @media (min-width: 1024px) {
+    .feature-shots { --fs-w: 290px; }
+    .feature-shots.is-pair { --fs-w: 260px; }
+  }
+
+  .swatch { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; border-radius: 999px; background: rgba(15, 23, 42, 0.04); }
+  :global(.dark) .swatch { background: rgba(255, 255, 255, 0.05); }
+  .swatch-dot { width: 22px; height: 22px; border-radius: 999px; background: var(--c); box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.08); }
+  .dot { display: block; width: 11px; height: 11px; border-radius: 999px; }
+  .url { display: inline-flex; align-items: center; gap: 6px; padding: 5px 14px; border-radius: 999px; font-size: 0.75rem; font-weight: 500; color: var(--muted); background: rgba(15, 23, 42, 0.05); }
+  :global(.dark) .url { background: rgba(255, 255, 255, 0.06); }
+</style>
+
+<script>
+  /* The chip for the group you're reading lights up, and scrolls into view
+     in its rail; the rail gains a surface once it's stuck under the header. */
+  const nav = document.querySelector<HTMLElement>('[data-feature-nav]')
+  if (nav) {
+    const chips = new Map([...nav.querySelectorAll<HTMLAnchorElement>('[data-chip]')].map(c => [c.dataset.chip!, c]))
+    const rail = nav.querySelector<HTMLElement>('.nav-rail')!
+    let current = ''
+    const mark = (id: string) => {
+      if (id === current) return
+      chips.get(current)?.removeAttribute('aria-current')
+      const c = chips.get(id)
+      c?.setAttribute('aria-current', 'true')
+      current = id
+      if (c && rail.scrollWidth > rail.clientWidth) {
+        const r = c.getBoundingClientRect(), s = rail.getBoundingClientRect()
+        if (r.left < s.left + 20 || r.right > s.right - 20) {
+          const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+          rail.scrollBy({ left: r.left - s.left - 20, behavior: reduce ? 'auto' : 'smooth' })
+        }
+      }
+    }
+    // The group that holds the middle of the screen, or none above the first.
+    const groups = [...document.querySelectorAll<HTMLElement>('[data-group]')]
+    let queued = false
+    const update = () => {
+      queued = false
+      const mid = window.innerHeight / 2
+      const hit = groups.find(g => { const r = g.getBoundingClientRect(); return r.top <= mid && r.bottom > mid })
+      if (hit) mark(hit.id)
+      else if (current) { chips.get(current)?.removeAttribute('aria-current'); current = '' }
+    }
+    window.addEventListener('scroll', () => { if (!queued) { queued = true; requestAnimationFrame(update) } }, { passive: true })
+    update()
+    // Stuck once the spot it started from has gone up under the header.
+    const sentinel = document.querySelector('[data-nav-sentinel]')
+    if (sentinel) {
+      new IntersectionObserver(([e]) => nav.toggleAttribute('data-stuck', !e.isIntersecting && e.boundingClientRect.top < 100), { rootMargin: '-80px 0px 0px 0px' }).observe(sentinel)
+    }
+  }
+</script>

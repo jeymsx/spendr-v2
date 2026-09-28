@@ -1,0 +1,180 @@
+---
+/**
+ * Wrapped: last month's story, played the way the app plays it. Every slide
+ * is the app's own, captured from the demo ledger's August.
+ *
+ * The captures already carry the story's progress bar, with the slides before
+ * each one filled in; the segment for the slide on screen is drawn over the
+ * capture here and fills while it plays. Its place was measured from the
+ * captures: twelve segments across the top, just under the status bar.
+ */
+import Phone from '../Phone.astro'
+import Shot from '../Shot.astro'
+import Icon from '../Icon.astro'
+
+const SLIDES = [
+  { shot: 'wrapped-intro', label: 'Intro', alt: 'August Wrapped: Mika’s month in money' },
+  { shot: 'wrapped-receipt', label: 'You spent', alt: 'You spent ₱85,388, shown as a receipt week by week' },
+  { shot: 'wrapped-kept', label: 'You kept', alt: 'You kept ₱53,612, 39% of what came in' },
+  { shot: 'wrapped-top', label: 'Most went to', alt: 'Most went to Groceries, 22% of spending' },
+  { shot: 'wrapped-busiest', label: 'Busiest day', alt: 'Your busiest day: August 12, and 3 no-spend days' },
+  { shot: 'wrapped-biggest', label: 'Biggest purchase', alt: 'Biggest purchase: ₱18,990 for headphones' },
+  { shot: 'wrapped-goto', label: 'Your go-to', alt: 'Your go-to: lunch, 16 times' },
+  { shot: 'wrapped-budgets', label: 'Budgets', alt: '6 of 10 budgets stayed on track' },
+  { shot: 'wrapped-networth', label: 'Net worth', alt: 'Net worth on August 31: ₱140,458' },
+  { shot: 'wrapped-badges', label: 'Achievements', alt: '13 achievements earned in August' },
+  { shot: 'wrapped-personality', label: 'Personality', alt: 'Your money personality: The Regular' },
+  { shot: 'wrapped-summary', label: 'Summary', alt: 'August Wrapped, all on one card' },
+]
+// Where the story's segments sit, in 3x pixels of the 1179-wide capture.
+const SEG_LEFT = [48, 138, 231, 321, 414, 504, 594, 687, 777, 870, 960, 1053]
+const SEG_W = 79
+const cq = (px: number) => `${((px / 1179) * 100).toFixed(3)}cqw`
+---
+<section class="wrapped-section py-16 sm:py-24" aria-labelledby="wrapped-title">
+  <div class="container-site">
+    <div class="wrapped-panel rounded-[var(--radius-panel)] px-6 py-12 sm:px-12 sm:py-16 lg:px-16" data-reveal>
+      <div class="grid items-center gap-12 lg:grid-cols-[1fr_auto] lg:gap-16">
+        <div class="max-w-[560px] text-white">
+          <p class="eyebrow !text-white/80">Wrapped</p>
+          <h2 id="wrapped-title" class="h-section mt-4">Your month, told as a story.</h2>
+          <p class="mt-5 text-[1.125rem] leading-relaxed text-white/85">
+            On the 1st, Spendr looks back at the month before: what you spent and kept, your busiest
+            day, your go-to place and your money personality. Share any slide, with the amounts hidden
+            if you like.
+          </p>
+          <div class="mt-8 flex flex-wrap gap-2" role="group" aria-label="Jump to a slide">
+            {SLIDES.map((s, i) => (
+              <button type="button" class="wr-jump press" data-jump={i} aria-pressed={i === 0 ? 'true' : 'false'}>{s.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div class="wr-player mx-auto" data-wrapped>
+          <Phone width="var(--wr-w)" onColor>
+            {SLIDES.map((s, i) => (
+              <div class:list={['wr-slide', i === 0 && 'is-on']} data-slide={i} aria-hidden={i === 0 ? undefined : 'true'}>
+                <Shot name={s.shot} alt={s.alt} sizes="(min-width: 1024px) 290px, 70vw" class="phone-shot" />
+              </div>
+            ))}
+            <span class="wr-seg" style={`left:${cq(SEG_LEFT[0])};width:${cq(SEG_W)};top:${cq(176.5)};height:${cq(9)}`} aria-hidden="true"><span></span></span>
+            <button type="button" class="wr-tap wr-prev" aria-label="Previous slide"></button>
+            <button type="button" class="wr-tap wr-next" aria-label="Next slide"></button>
+          </Phone>
+          <div class="mt-5 flex items-center justify-center gap-3 text-white">
+            <button type="button" class="wr-ctl press" data-wr-toggle aria-pressed="false" aria-label="Pause the story">
+              <span class="wr-g wr-pause"><Icon name="player-pause" size={18} stroke={2.2} /></span>
+              <span class="wr-g wr-play"><Icon name="player-play" size={18} stroke={2.2} /></span>
+            </button>
+            <p class="tabular text-[0.875rem] font-medium text-white/80" aria-live="polite"><span data-wr-count>1</span> of {SLIDES.length}</p>
+          </div>
+          <template data-seg-left>{JSON.stringify(SEG_LEFT.map(cq))}</template>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<style>
+  /* Wrapped is the one place Spendr gets to be loud: the story's own blue,
+     deep enough under white text to read. */
+  .wrapped-panel {
+    background: linear-gradient(160deg, #1f6fd1 0%, #1552b0 45%, #0b2466 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 30px 80px -40px rgba(11, 36, 102, 0.8);
+    overflow: hidden;
+  }
+  .wr-player { --wr-w: min(70vw, 290px); }
+  .wr-slide { position: absolute; inset: 0; opacity: 0; filter: blur(10px); scale: 1.02; transition: opacity 0.45s var(--ease-out), filter 0.45s var(--ease-out), scale 0.7s var(--ease-out); }
+  .wr-slide.is-on { opacity: 1; filter: none; scale: none; }
+  .wr-slide :global(picture), .wr-slide :global(img) { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .wr-seg { position: absolute; z-index: 3; border-radius: 999px; overflow: hidden; pointer-events: none; transition: left 0.3s var(--ease-out); }
+  .wr-seg span { display: block; width: 100%; height: 100%; background: #fff; transform-origin: left; scale: 0 1; }
+
+  /* Tap the left third to go back and the rest to go on, like the app. */
+  .wr-tap { position: absolute; top: 18%; bottom: 12%; z-index: 4; cursor: pointer; border-radius: 12px; }
+  .wr-prev { left: 0; width: 33%; }
+  .wr-next { right: 0; width: 67%; }
+  .wr-tap:focus-visible { outline-offset: -4px; }
+
+  .wr-jump {
+    padding: 7px 14px; border-radius: 999px; font-size: 0.875rem; font-weight: 600; color: #fff;
+    background: rgba(255, 255, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+    transition: background-color 0.25s var(--ease-out), color 0.25s var(--ease-out);
+  }
+  .wr-jump:hover { background: rgba(255, 255, 255, 0.2); }
+  .wr-jump[aria-pressed='true'] { background: #fff; color: #0b2466; }
+  .wr-ctl { position: relative; width: 40px; height: 40px; border-radius: 999px; background: rgba(255, 255, 255, 0.14); --press-scale: 0.9; }
+  .wr-g { position: absolute; inset: 0; display: grid; place-items: center; transition: opacity 0.2s var(--ease-out), filter 0.2s var(--ease-out); }
+  .wr-play { opacity: 0; filter: blur(3px); }
+  .wr-ctl[aria-pressed='true'] .wr-play { opacity: 1; filter: none; }
+  .wr-ctl[aria-pressed='true'] .wr-pause { opacity: 0; filter: blur(3px); }
+  .wrapped-panel :global(:focus-visible) { outline-color: #fff; }
+  @media (prefers-reduced-motion: reduce) {
+    .wr-slide { transition: none; filter: none; scale: none; }
+    .wr-seg { display: none; }
+  }
+</style>
+
+<script>
+  import { whileVisible, reducedMotion } from '../../scripts/motion'
+
+  for (const root of document.querySelectorAll<HTMLElement>('[data-wrapped]')) {
+    const slides = [...root.querySelectorAll<HTMLElement>('[data-slide]')]
+    const seg = root.querySelector<HTMLElement>('.wr-seg')!
+    const fill = seg.firstElementChild as HTMLElement
+    const lefts: string[] = JSON.parse(root.querySelector('template[data-seg-left]')!.innerHTML)
+    const count = root.querySelector<HTMLElement>('[data-wr-count]')!
+    const toggle = root.querySelector<HTMLButtonElement>('[data-wr-toggle]')!
+    const jumps = [...document.querySelectorAll<HTMLButtonElement>('[data-jump]')]
+    const DWELL = 4200
+    // Three reasons to hold the story: the button, a resting pointer, and
+    // being off screen. It plays only when none of them applies.
+    let paused = reducedMotion(), held = false, visible = false
+    let at = 0
+    let anim: Animation | null = null
+    if (paused) toggle.setAttribute('aria-pressed', 'true')
+
+    const sync = () => {
+      if (!anim) return
+      if (visible && !paused && !held) anim.play(); else anim.pause()
+    }
+    // The segment fills over the slide's time, and finishing it is what moves
+    // the story on - one clock, so the bar and the slide can never disagree.
+    const startFill = () => {
+      anim?.cancel()
+      if (reducedMotion()) return
+      anim = fill.animate([{ scale: '0 1' }, { scale: '1 1' }], { duration: DWELL, easing: 'linear', fill: 'forwards' })
+      anim.onfinish = () => go(at + 1)
+      sync()
+    }
+    const go = (i: number) => {
+      i = (i + slides.length) % slides.length
+      if (i !== at) {
+        slides[at].classList.remove('is-on'); slides[at].setAttribute('aria-hidden', 'true')
+        slides[i].classList.add('is-on'); slides[i].removeAttribute('aria-hidden')
+        jumps[at]?.setAttribute('aria-pressed', 'false'); jumps[i]?.setAttribute('aria-pressed', 'true')
+        at = i
+        count.textContent = String(i + 1)
+      }
+      seg.style.left = lefts[at]
+      startFill()
+    }
+
+    root.querySelector('.wr-prev')!.addEventListener('click', () => go(at - 1))
+    root.querySelector('.wr-next')!.addEventListener('click', () => go(at + 1))
+    jumps.forEach((b, i) => b.addEventListener('click', () => go(i)))
+    toggle.addEventListener('click', () => {
+      paused = !paused
+      toggle.setAttribute('aria-pressed', String(paused))
+      if (!anim && !paused) startFill(); else sync()
+    })
+    root.addEventListener('keydown', e => {
+      if (e.key === 'ArrowRight') { e.preventDefault(); go(at + 1) }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); go(at - 1) }
+    })
+    // Resting a pointer on the story holds it, the way pressing does in the app.
+    root.addEventListener('pointerenter', e => { if (e.pointerType === 'mouse') { held = true; sync() } })
+    root.addEventListener('pointerleave', e => { if (e.pointerType === 'mouse') { held = false; sync() } })
+    whileVisible(root, () => { visible = true; if (!anim) startFill(); else sync() }, () => { visible = false; sync() }, 0.45)
+  }
+</script>
