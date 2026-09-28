@@ -754,7 +754,10 @@ export default function Dashboard({ layout = 'phone' } = {}) {
               size="sm"
               icon={<IconEmptyLedger size={24} />}
               title="No transactions yet"
-              body={<>Tap <span className="font-semibold">+</span> to add your first entry</>}
+              body={layout === 'desktop'
+                // No + to tap on the desktop: its add button, or a key.
+                ? <>Use <span className="font-semibold">Add transaction</span>, or press E</>
+                : <>Tap <span className="font-semibold">+</span> to add your first entry</>}
             />
           ) : (
             <AnimatePresence key={recentRows.epoch} initial={false}>
