@@ -87,12 +87,19 @@ its own. Resolve that conflict by taking the deletion.
 
 ## Left for later
 
-- **Dead code.** Budgets.jsx, CategoryManager.jsx and Templates.jsx still
-  export desktop modals that only the retired WebSettings used, and their
-  comments still name it. Once the onboarding branch has merged (it edits
-  Settings.jsx), delete them with the stale comments in Settings.jsx and
-  Accounts.jsx.
-- **Merge conflict.** feat/onboarding changes WebSettings.jsx, which this
-  branch deletes. Take the deletion: its Install row is also in the phone's
-  Settings, which the desktop now shows.
+- **Dead code.** The `variant="sheet"` desktop modals of the budget,
+  template and category managers (BudgetManagerSheet, TemplateManagerSheet,
+  and the Settings.jsx re-exports) were only for the retired WebSettings,
+  and their comments still name it. CategoryManagerSheet is still used by
+  settings/Categories.jsx. The onboarding branch has merged, so this is
+  free to do; it was left because it touches phone files and changes
+  nothing anyone sees.
+- ~~**Merge conflict.**~~ Resolved in 663e86a, the merge of origin/main
+  (0.11.0) into local main. WebSettings.jsx stayed deleted: its Install row
+  is in the phone's Settings, which the desktop shows. The same merge made
+  the desktop honour the daily check-in's `?log=quick` link (AddFlow.jsx),
+  as the phone's AppLayout does.
+- **Not pushed.** Local main is ahead of origin/main with this work, waiting
+  for James to review it. The desktop has no What's New note yet; it would
+  go in the next release's notes.
 
