@@ -4,7 +4,7 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useBack } from '../../hooks/useBack'
 import { useToast } from '../../context/ToastContext'
-import { TRASH_DAYS, deleteForever, describeEntry, emptyTrash, purgeTrash, restoreFromTrash } from '../../db/trash'
+import { MissingAccountError, TRASH_DAYS, deleteForever, describeEntry, emptyTrash, purgeTrash, restoreFromTrash } from '../../db/trash'
 import SubPage from '../../components/SubPage'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import { txGlyphCat } from '../../lib/txRow'
@@ -71,6 +71,11 @@ export default function RecentlyDeleted() {
       setPicked(null)
       showToast(n > 1 ? `${n} transactions put back` : n ? 'Transaction put back' : 'Already put back', n ? 'success' : 'warning')
     } catch (e) {
+      if (e instanceof MissingAccountError) {
+        const [first, ...rest] = e.names
+        showToast(rest.length ? `${e.names.join(' and ')} were deleted. Add them again first.` : `${first} was deleted. Add it again first.`, 'warning')
+        return
+      }
       console.error('[RecentlyDeleted] restore failed:', e)
       showToast('Could not put it back. Try again.', 'error')
     }

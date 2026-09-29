@@ -175,7 +175,7 @@ const {
   postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
   updateTransaction, settleWithPerson, saveTemplate, recategorize, refile,
 } = await import('./txHelpers')
-const { moveToTrash, restoreFromTrash, purgeTrash, describeEntry, deleteForever } = await import('./trash')
+const { moveToTrash, restoreFromTrash, purgeTrash, describeEntry, deleteForever, MissingAccountError } = await import('./trash')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
 beforeEach(() => {
@@ -946,6 +946,19 @@ describe('Recently deleted', () => {
     await restoreFromTrash(/** @type {number} */ (moved?.id))
     expect(store.debts[0].amountPaid).toBe(100)
     expect(acct('Maya Savings').balance).toBe(10100)
+  })
+
+  it('puts nothing back onto an account deleted since, and says which', async () => {
+    store.transactions.push(purchase())
+    const moved = await moveToTrash([store.transactions[0]])
+    store.accounts = store.accounts.filter(a => a.name !== 'Maya Savings')
+
+    const put = restoreFromTrash(/** @type {number} */ (moved?.id))
+    await expect(put).rejects.toBeInstanceOf(MissingAccountError)
+    await expect(put).rejects.toMatchObject({ names: ['Maya Savings'] })
+    // Nothing half-done: no row back, and it is still in Recently deleted.
+    expect(store.transactions).toHaveLength(0)
+    expect(store.trash).toHaveLength(1)
   })
 
   it('puts back once: a second tap finds nothing to do', async () => {

@@ -137,6 +137,9 @@ export default function TxDetailSheet({
 
   const legs = tx?.splitId ? splitGroup(tx, allTxs) : []
   const wholePurchase = tx?.splitId ? splitTotal(tx, allTxs) : 0
+  /* Deleting one part deletes the purchase (db/txHelpers.js expandDeletion),
+     so its confirmation shows the purchase, not the part you opened. */
+  const splitParts = legs.length > 1 ? legs.length : 0
 
   /* Who owes you a piece of this.
 
@@ -763,7 +766,7 @@ export default function TxDetailSheet({
               </div>
 
               <AmountHero color={cfg.color} className="mt-5 mb-6">
-                {planCount > 1 ? fmt(planTotal, txCur) : heroAmount}
+                {planCount > 1 ? fmt(planTotal, txCur) : splitParts ? `${cfg.sign}${fmt(wholePurchase, txCur)}` : heroAmount}
               </AmountHero>
 
               {/* The same flat list the detail sheet uses, including the
@@ -813,6 +816,11 @@ export default function TxDetailSheet({
               {planCount > 1 && (
                 <p className="text-12 font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
                   All {planCount} payments in this plan ({fmt(rec.amount, txCur)} × {planCount}) will be deleted.
+                </p>
+              )}
+              {splitParts > 0 && (
+                <p className="text-12 font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
+                  {splitParts === 2 ? 'Both parts' : `All ${splitParts} parts`} of this split will be deleted.
                 </p>
               )}
             </div>

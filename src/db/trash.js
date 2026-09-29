@@ -82,10 +82,25 @@ async function findDebt(ref) {
   return bySync ?? (ref.id != null ? await db.debts.get(ref.id) : null)
 }
 
+/** Put back refused: an account the rows were on has been deleted since. */
+export class MissingAccountError extends Error {
+  /** @param {string[]} names */
+  constructor(names) {
+    super(`No account named ${names.join(', ')}`)
+    this.name = 'MissingAccountError'
+    this.names = names
+  }
+}
+
 /**
  * Put a deletion back: its rows, then what it did to debts, undone. Safe to
  * run twice - a row already back is skipped - so a double-tapped Put back or
  * an Undo after one is harmless.
+ *
+ * Not onto an account that has gone since. The row came back on no account
+ * at all: in the lists and the budget, but in no balance and no net worth,
+ * with no account page to fix it from. So it throws MissingAccountError,
+ * naming them, and puts nothing back.
  *
  * @param {number} id
  * @returns {Promise<number>} how many rows came back
@@ -93,6 +108,17 @@ async function findDebt(ref) {
 export async function restoreFromTrash(id) {
   const entry = /** @type {TrashEntry|undefined} */ (await db.trash.get(id))
   if (!entry) return 0
+  /** @type {Set<string>} */
+  const named = new Set()
+  for (const tx of entry.txs ?? []) {
+    const row = /** @type {Record<string, any>} */ (tx)
+    for (const k of ['account', 'fromAccount', 'toAccount']) if (row[k]) named.add(row[k])
+  }
+  if (named.size) {
+    const have = new Set((await db.accounts.toArray()).map(a => a.name))
+    const missing = [...named].filter(n => !have.has(n))
+    if (missing.length) throw new MissingAccountError(missing)
+  }
   /* A deletion made on another device names its charges' bill by the id
      that travels, not by this device's row number - find the bill here. */
   /** @type {Array<Record<string, any>>} */
