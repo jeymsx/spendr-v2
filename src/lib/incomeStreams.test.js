@@ -107,6 +107,17 @@ describe('finding pay in the history', () => {
     expect(payName('13th month pay')).toBe('month pay')
   })
 
+  it('does not let a small income the day before payday stand in for the pay', () => {
+    // September: the 15th came, the month end has not; a 750 lands on the 9th's eve of it.
+    const now = new Date(2026, 8, 29, 20)
+    const rows = [...semimonthlySalary(), { type: 'inflow', category: 'Salary', description: 'Salary', account: 'BPI', amount: 18000, date: at(2026, 8, 15) },
+      { type: 'inflow', category: 'Salary', description: 'Refund', account: 'BPI', amount: 750, date: at(2026, 8, 29) }]
+    const [s] = findIncomeStreams({ transactions: rows, now, lookbackDays: 183, priceOf: face }).streams
+    const next = streamDates(s, new Date(2026, 9, 20)).filter(x => x.date >= new Date(2026, 8, 29))[0]
+    expect(next.date.getDate()).toBe(30)
+    expect(next.amount).toBe(20000)
+  })
+
   it('drops pay that stopped: a job that ended is not a payday', () => {
     const rows = semimonthlySalary().filter(r => new Date(r.date) < new Date(2026, 5, 1))
     expect(find(rows).streams).toHaveLength(0)

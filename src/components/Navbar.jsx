@@ -2,6 +2,7 @@ import { useRef, useCallback, useEffect } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useKeyboardInset } from '../hooks/useKeyboardInset'
 import { prefersReducedMotion } from './ui/motion'
+import { quietTaps, tapsQuiet } from './ui/tapGuard'
 
 /* ── SVG icon primitives ───────────────────────────────── */
 function IconHome({ active }) {
@@ -67,6 +68,8 @@ function Tab({ path, label, Icon }) {
      Accounts) the tap is a way back to the tab's first page, which the link
      does on its own. */
   const onClick = (/** @type {import('react').MouseEvent} */ e) => {
+    // The trailing tap of one that just closed a sheet or changed the page.
+    if (tapsQuiet()) { e.preventDefault(); return }
     if (location.pathname !== path) return
     e.preventDefault()
     document.getElementById('app-main')?.scrollTo({ top: 0, behavior: prefersReducedMotion() ? 'auto' : 'smooth' })
@@ -103,6 +106,9 @@ const HOLD_MS = 420
 const SLOP_PX = 12
 
 export default function Navbar({ onAddClick, onQuickLog }) {
+  // A page that has just changed: what was under the finger is gone too.
+  const { key: locationKey } = useLocation()
+  useEffect(() => { quietTaps(350) }, [locationKey])
   const timer   = useRef(null)
   const heldRef = useRef(false)   // the hold fired: quick log is open already
   const downAt  = useRef({ x: 0, y: 0 })
@@ -178,6 +184,7 @@ export default function Navbar({ onAddClick, onQuickLog }) {
   const endPress = useCallback(() => { clearTimer() }, [clearTimer])
 
   const onAdd = useCallback(() => {
+    if (tapsQuiet()) return
     if (heldRef.current) {
       // The hold opened quick log; this is the click that trails it.
       heldRef.current = false

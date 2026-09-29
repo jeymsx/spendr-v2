@@ -186,13 +186,23 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
      by a guess. */
   const guess = useCategoryGuess(description, 'expense', categories)
   const [catChosen, setCatChosen] = useState(false)
-  const guessed = !catChosen && !!guess && category?.id === guess.id
+  /* The id the app itself picked, so a guess that stops fitting - "Grab"
+     changed to "Office supplies" - is let go of rather than passing for your
+     own choice. */
+  const [guessedId, setGuessedId] = useState(/** @type {any} */ (null))
+  const guessed = !isEdit && !catChosen && category != null && category.id === guessedId
   useEffect(() => {
-    if (catChosen || isEdit || !guess || splitLegs) return
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setCategory(prev => (prev?.id === guess.id ? prev : guess))
-    setCatError(false)
-  }, [guess, catChosen, isEdit, splitLegs])
+    if (catChosen || isEdit || splitLegs) return
+    if (guess) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setCategory(prev => (prev?.id === guess.id ? prev : guess))
+      setGuessedId(guess.id)
+      setCatError(false)
+    } else if (guessedId != null) {
+      setCategory(prev => (prev?.id === guessedId ? null : prev))
+      setGuessedId(null)
+    }
+  }, [guess, guessedId, catChosen, isEdit, splitLegs])
 
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false
@@ -254,6 +264,14 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     let err = false
     if (!category && !splitLegs) { setCatError(true);  err = true }
     if (!account)  { setAcctError(true); err = true }
+    /* A date after today. The field's max stops the picker, not a date
+       typed into it on a computer - and a future row moved the balance at
+       once while the lists, which hide what has not happened yet, never
+       showed it. A row being edited that was already ahead keeps its date. */
+    if (date > localDateStr(new Date()) && !(isEdit && String(editTx?.date ?? '').slice(0, 10) > localDateStr(new Date()))) {
+      showToast('Pick today or an earlier date', 'error')
+      err = true
+    }
     if (err) return
 
     /* What this will actually take out of the account.

@@ -4,6 +4,7 @@ import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 import FadeScroller from '../FadeScroller'
 import { cx } from './cx'
 import { keepTabInside } from './focus'
+import { quietTaps } from './tapGuard'
 import { useSheetDrag } from './useSheetDrag'
 
 /**
@@ -200,6 +201,14 @@ export default function Sheet({
     dragAll,
     onDismiss: onClose,
   })
+
+  /* A second tap on the button that closed it must not land on what the
+     sheet was covering (ui/tapGuard.js). */
+  const wasOpen = useRef(open)
+  useEffect(() => {
+    if (wasOpen.current && !open) quietTaps()
+    wasOpen.current = open
+  }, [open])
 
   useEffect(() => {
     if (open) {

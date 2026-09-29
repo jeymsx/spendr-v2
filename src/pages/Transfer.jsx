@@ -194,6 +194,14 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     let err = false
     if (!fromAccount) { setFromError(true); err = true }
     if (!toAccount)   { setToError(true);   err = true }
+    /* A date after today. The field's max stops the picker, not a date
+       typed into it on a computer - and a future row moved the balance at
+       once while the lists, which hide what has not happened yet, never
+       showed it. A row being edited that was already ahead keeps its date. */
+    if (date > localDateStr(new Date()) && !(isEdit && String(editTx?.date ?? '').slice(0, 10) > localDateStr(new Date()))) {
+      showToast('Pick today or an earlier date', 'error')
+      err = true
+    }
     if (err) return
     /* On an edit the old transfer is already in both balances, so only the
        DIFFERENCE is being taken out - unless the money is now leaving a

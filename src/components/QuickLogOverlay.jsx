@@ -7,6 +7,7 @@ import CategoryGlyph from './CategoryGlyph'
 import { IconTick, IconWarning, IconBell } from './icons'
 import { fmt } from '../lib/money'
 import { currencyOfAccountName } from '../lib/fxContext'
+import { quietTaps } from './ui/tapGuard'
 
 /* Always a magnitude - this row never shows a sign - so it is fmt() of an
    absolute value, which produces the identical string.
@@ -211,6 +212,8 @@ export default function QuickLogOverlay({ onClose }) {
 
   const dismiss = useCallback(() => {
     if (exitTimer.current) return        // already on its way out
+    // The tick's second tap belongs to the tick, not the tab bar under it.
+    quietTaps()
     setClosing(true)
     exitTimer.current = setTimeout(onClose, exitDelay())
   }, [onClose])

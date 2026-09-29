@@ -15,6 +15,7 @@ import { ACCOUNT_ICON, fmtDate } from './shared'
 import { currencyOfTx } from '../../lib/fxContext'
 import { txRowWords } from '../../lib/txRow'
 import { interestCarried } from '../../lib/loans'
+import { isRefund } from '../../lib/txMoney'
 import { INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
 
 // ── Account card ───────────────────────────────────────────────────────────────
@@ -162,8 +163,11 @@ export function BudgetSummaryTile({ totals }) {
 /** @param {{tx: Record<string, any>, cat?: Record<string, any>, glyph?: Record<string, any>|null, isLast?: boolean}} props */
 export function TxRow({ tx, cat, glyph = cat, isLast }) {
   const { title, where, kind } = txRowWords(tx, cat)
-  const isExpense  = tx.type === 'expense'
-  const isInflow   = tx.type === 'inflow'
+  /* A refund is a negative expense (lib/txMoney.js): money back, so it reads
+     as the Transactions list reads it - green, with a plus - not as "-−". */
+  const refund     = isRefund(tx)
+  const isExpense  = tx.type === 'expense' && !refund
+  const isInflow   = tx.type === 'inflow' || refund
   const amountCls  = isExpense  ? 'text-red-500 dark:text-red-400'
     : isInflow  ? 'text-emerald-600 dark:text-emerald-400'
     : 'text-primary'
@@ -193,7 +197,7 @@ export function TxRow({ tx, cat, glyph = cat, isLast }) {
       {/* amount + date */}
       <div className="text-right shrink-0">
         <p className={`text-sm font-semibold tabular-nums ${amountCls}`}>
-          {amountSign}{fmt((tx.amount ?? 0) + interestCarried(tx), currencyOfTx(tx))}
+          {amountSign}{fmt(Math.abs((tx.amount ?? 0) + interestCarried(tx)), currencyOfTx(tx))}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
           {fmtDate(tx.date)}

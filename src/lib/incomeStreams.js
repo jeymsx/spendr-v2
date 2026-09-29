@@ -289,6 +289,11 @@ export function rhythmOf(payments, today) {
       if (better) { fit[held] = false; holder.set(slot, i) } else fit[i] = false
     })
   }
+  /* A payment far smaller than the rest is not the payday, however close to
+     it it lands: ₱750 filed as Income the day before a ₱21,000 salary took
+     the salary's place, and the forecast stopped expecting the salary. */
+  const typical = median(payments.filter((_, i) => fit[i]).map(p => p.amount))
+  payments.forEach((p, i) => { if (fit[i] && p.amount < typical * 0.5) fit[i] = false })
   const kept = payments.filter((_, i) => fit[i])
   if (kept.length < MIN_PAYMENTS[frequency]) return null
   const last = kept[kept.length - 1]
