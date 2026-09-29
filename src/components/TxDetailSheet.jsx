@@ -17,6 +17,7 @@ import CategoryGlyph from './CategoryGlyph'
 import AmountHero from './ui/AmountHero'
 import SwipeConfirm from './SwipeConfirm'
 import { CardThumb, TransferLegs } from './AccountLine'
+import { feeOf } from '../lib/transferFee'
 import Button from './ui/Button'
 import Card from './ui/Card'
 import DetailRow from './ui/DetailRow'
@@ -118,7 +119,8 @@ export default function TxDetailSheet({
   const canRefund = tx?.type === 'expense' && !!tx?.txId && !isRefund(tx) && !adjustment
   /* Also when this is a leg of a split, which needs its siblings to say what
      the whole purchase came to. */
-  const needsAll = canRefund || !!tx?.splitId
+  // And for a transfer, whose fee is a row of its own (lib/transferFee.js).
+  const needsAll = canRefund || !!tx?.splitId || tx?.type === 'transfer'
   const allTxs = useLiveQuery(
     async () => (needsAll ? db.transactions.toArray() : []),
     [needsAll, tx?.txId, tx?.splitId], [])
@@ -140,6 +142,9 @@ export default function TxDetailSheet({
   /* Deleting one part deletes the purchase (db/txHelpers.js expandDeletion),
      so its confirmation shows the purchase, not the part you opened. */
   const splitParts = legs.length > 1 ? legs.length : 0
+  /* The fee the transfer was saved with: shown with it, and deleted with it
+     (db/txHelpers.js expandDeletion), so the confirmation says so. */
+  const transferFee = tx?.type === 'transfer' ? feeOf(tx, allTxs) : null
 
   /* Who owes you a piece of this.
 
@@ -636,6 +641,15 @@ export default function TxDetailSheet({
                     />
                   )
                 })()}
+                {transferFee && (
+                  <DetailRow
+                    label="Fee"
+                    value={fmt(transferFee.amount ?? 0, txCur)}
+                    sub={`Spent from ${transferFee.account}`}
+                    padded={false}
+                    isLast
+                  />
+                )}
                 {payment ? (
                   <TransferLegs from={acctMap[payment.principal.fromAccount]} to={acctMap[payment.principal.toAccount]} />
                 ) : (fromAcct || toAcct) && (
@@ -821,6 +835,11 @@ export default function TxDetailSheet({
               {splitParts > 0 && (
                 <p className="text-12 font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
                   {splitParts === 2 ? 'Both parts' : `All ${splitParts} parts`} of this split will be deleted.
+                </p>
+              )}
+              {transferFee && (
+                <p className="text-12 font-medium text-amber-600 dark:text-amber-400 mt-3 text-center">
+                  Its {fmt(transferFee.amount ?? 0, txCur)} fee will be deleted too.
                 </p>
               )}
             </div>

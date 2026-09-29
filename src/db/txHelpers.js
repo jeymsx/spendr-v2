@@ -7,6 +7,7 @@ import { deleteDebtRemote } from '../lib/sync'
 import { currencyOfAccountName, repriceForEdit } from '../lib/fxContext'
 import { estimateConversion } from '../lib/transferLegs'
 import { loanPairOf } from '../lib/loans'
+import { TRANSFER_FEE, feeDescription, isFeeOf, isFormFeeDescription } from '../lib/transferFee'
 
 /* Re-exported: they used to live here and ten files import them from
    here. See db/balances.js for why they moved. */
@@ -176,6 +177,51 @@ export async function updateTransaction(tx, patch) {
   })
 
   return next
+}
+
+/**
+ * A transfer's fee, after the transfer was edited: moved to the account the
+ * money now leaves, renamed for the new route and re-dated with it, at the
+ * new figure - added when there was none, deleted when it is set to nothing.
+ * It used to stay behind on the old account, still titled with the old
+ * route, and the edit form had no way to reach it.
+ *
+ * Found BEFORE the transfer is updated: the link is the old moment and the
+ * old account (lib/transferFee.js).
+ *
+ * @param {Record<string, any>|null} fee       the fee row as it was, or null
+ * @param {Record<string, any>} transfer        the transfer as it is now
+ * @param {number} amount                       the fee it should have
+ */
+export async function syncTransferFee(fee, transfer, amount) {
+  const description = feeDescription(transfer.fromAccount, transfer.toAccount)
+  if (fee && amount > 0) {
+    return updateTransaction(fee, {
+      amount,
+      account: transfer.fromAccount,
+      date: transfer.date,
+      // A fee you renamed yourself keeps your words.
+      ...(isFormFeeDescription(fee.description) ? { description } : {}),
+    })
+  }
+  if (fee) {
+    await deleteTxGroup([/** @type {any} */ (fee)])
+    return null
+  }
+  if (!(amount > 0)) return null
+  const now = new Date().toISOString()
+  const row = {
+    txId: crypto.randomUUID(), type: 'expense', amount, description, category: TRANSFER_FEE,
+    account: transfer.fromAccount, date: transfer.date, synced: UNSYNCED, updatedAt: now,
+  }
+  await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.categories], async () => {
+    if (!(await db.categories.where('name').equals(TRANSFER_FEE).first())) {
+      await db.categories.add(/** @type {any} */ ({ name: TRANSFER_FEE, icon: '💸', color: '#f59e0b', type: 'expense', budget: 0 }))
+    }
+    await db.transactions.add(/** @type {any} */ (row))
+    await applyBalanceEffect(/** @type {any} */ (row))
+  })
+  return row
 }
 
 /**
@@ -533,6 +579,14 @@ async function expandDeletion(list) {
     // A loan payment's principal and its interest: one payment, two rows.
     const pair = loanPairOf(tx, all)
     if (pair && !byId.has(pair.id)) byId.set(pair.id, /** @type {Transaction} */ (pair))
+    /* A transfer's fee, which the form wrote beside it (lib/transferFee.js):
+       deleting the transfer left the fee behind, still spent, on an account
+       the money no longer came from. */
+    if (tx.type === 'transfer') {
+      for (const r of all) {
+        if (isFeeOf(r, tx) && !byId.has(r.id)) byId.set(r.id, r)
+      }
+    }
   }
 
   return [...byId.values()]

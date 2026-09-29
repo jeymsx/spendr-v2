@@ -2,7 +2,8 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import db, { UNSYNCED } from '../db/db'
-import { applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } from '../db/txHelpers'
+import { applyBalanceEffect, checkOverdraw, saveTemplate, syncTransferFee, updateTransaction } from '../db/txHelpers'
+import { feeOf } from '../lib/transferFee'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
@@ -187,6 +188,17 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     }
   }, [isEdit, editTx, accounts])
 
+  /* The fee this transfer was saved with, found by the old moment and the
+     old account, so it is known before either changes (lib/transferFee.js).
+     Filled into the fee field once the rows have loaded. */
+  const editFee = useMemo(() => (isEdit ? feeOf(editTx, transactions) : null), [isEdit, editTx, transactions])
+  const feeHydrated = useRef(false)
+  useEffect(() => {
+    if (!isEdit || feeHydrated.current || !transactions.length) return
+    feeHydrated.current = true
+    setFeeStr(editFee ? numToMoneyStr(editFee.amount ?? 0) : '0')
+  }, [isEdit, editFee, transactions])
+
   /** A transfer between currencies saved before the received leg existed. */
   const legacyCross = isEdit && crosses && editTx?.toAmount == null
     && fromAccount?.name === editTx?.fromAccount && toAccount?.name === editTx?.toAccount
@@ -207,8 +219,9 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     /* On an edit the old transfer is already in both balances, so only the
        DIFFERENCE is being taken out - unless the money is now leaving a
        different account, which is charged the whole thing. */
+    const oldFee = editFee?.amount ?? 0
     const draw = !isEdit ? amount + fee
-      : (fromAccount.name === editTx.fromAccount ? amount - (editTx.amount ?? 0) : amount)
+      : (fromAccount.name === editTx.fromAccount ? amount - (editTx.amount ?? 0) + fee - oldFee : amount + fee)
     // The fee leaves the same account, so it counts toward the overdraw.
     const over = draw > 0 ? await checkOverdraw(fromAccount.name, draw) : null
     if (over) {
@@ -246,18 +259,19 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
   async function handleSave(templateData) {
     setSaving(true)
     try {
-      /* An edit moves this transfer and nothing else. The fee is a SEPARATE
-         expense row, which is why the fee field is not offered here: changing
-         it would mean creating or deleting a second transaction, and that is
-         not editing the one you opened. */
+      /* An edit moves the transfer, and its fee with it: to the account the
+         money now leaves, at the figure in the fee field - added, changed or
+         taken away (db/txHelpers.js syncTransferFee). */
       if (isEdit) {
-        await updateTransaction(editTx, {
+        const patch = {
           amount,
           ...receivedFields,
           fromAccount: fromAccount.name,
           toAccount: toAccount.name,
           date: dateInputToIso(date, editTx.date),
-        })
+        }
+        await updateTransaction(editTx, patch)
+        await syncTransferFee(editFee, { ...editTx, ...patch }, fee)
         showToast('Transfer updated')
         if (onSaved) onSaved(); else back()
         return
@@ -483,13 +497,9 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           </div>
         )}
 
-        {/* Transfer Fee — never on an edit.
-
-            The fee is its own expense row, not a field of the transfer, so
-            changing it here would mean creating or deleting a second
-            transaction. That fee row can be opened and edited on its own like
-            any other expense. */}
-        {!isEdit && (
+        {/* Transfer fee. Its own expense row, but it belongs to the transfer:
+            on an edit it shows what was charged, and saving moves, changes or
+            removes it with the transfer. */}
         <div>
           <SectionLabel>
             Transfer fee <span className="font-normal text-slate-400 dark:text-slate-600">(optional)</span>
@@ -512,7 +522,6 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
             )}
           </div>
         </div>
-        )}
 
         {/* Date — last */}
         <div>

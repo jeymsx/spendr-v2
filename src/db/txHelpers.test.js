@@ -143,6 +143,7 @@ const db = {
   templates:    table(() => store.templates, 'id'),
   meta:         table(() => store.meta, 'key'),
   trash:        table(() => store.trash, 'id'),
+  categories:   table(() => store.categories, 'id'),
   /**
    * Dexie runs the body and rolls back if it throws. The rollback is the part
    * a fake cannot fake cheaply, so this snapshots the tables first and
@@ -173,8 +174,9 @@ vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1, TRASH_DAYS: 30 }))
 
 const {
   postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
-  updateTransaction, settleWithPerson, saveTemplate, recategorize, refile,
+  updateTransaction, settleWithPerson, saveTemplate, recategorize, refile, syncTransferFee,
 } = await import('./txHelpers')
+const { isFeeOf } = await import('../lib/transferFee')
 const { moveToTrash, restoreFromTrash, purgeTrash, describeEntry, deleteForever, MissingAccountError } = await import('./trash')
 
 /** A card owing 3,200 and a savings account holding 10,000. */
@@ -196,6 +198,7 @@ beforeEach(() => {
     templates: [],
     meta: [],
     trash: [],
+    categories: [],
   }
 })
 
@@ -1010,5 +1013,70 @@ describe('recategorize', () => {
     store.transactions.push({ id: 1, txId: 'a', type: 'expense', amount: 50, category: 'Food', account: 'Maya Savings' })
     await recategorize(store.transactions.slice(), 'Coffee')
     expect(acct('Maya Savings').balance).toBe(10000)
+  })
+})
+
+/*
+ * A transfer's fee is an expense of its own, written beside the transfer at
+ * the same moment on the account the money left (lib/transferFee.js). Found
+ * in QA: deleting or re-routing the transfer left the fee behind.
+ */
+describe("a transfer's fee", () => {
+  const at = '2026-09-20T10:00:00.000Z'
+  const transfer = (over = {}) => ({ id: 50, txId: 'tr-1', type: 'transfer', amount: 2000, fromAccount: 'Maya Savings', toAccount: 'ZZ Test Card', date: at, ...over })
+  const feeRow = (over = {}) => ({ id: 51, txId: 'fee-1', type: 'expense', amount: 15, category: 'Transfer Fee', description: 'Transfer fee · Maya Savings → ZZ Test Card', account: 'Maya Savings', date: at, ...over })
+
+  it('is found by the moment and the account, however the server wrote the date', () => {
+    expect(isFeeOf(feeRow({ date: '2026-09-20T10:00:00+00:00' }), transfer())).toBe(true)
+    expect(isFeeOf(feeRow({ date: '2026-09-20T10:00:01.000Z' }), transfer())).toBe(false)
+    expect(isFeeOf(feeRow({ account: 'Other Card' }), transfer())).toBe(false)
+    expect(isFeeOf(feeRow({ category: 'Food' }), transfer())).toBe(false)
+  })
+
+  it('goes with its transfer when the transfer is deleted, and comes back with it', async () => {
+    store.transactions.push(transfer(), feeRow())
+    const moved = await moveToTrash([store.transactions[0]])
+    expect(moved?.count).toBe(2)
+    expect(store.transactions).toHaveLength(0)
+    expect(describeEntry(store.trash[0]).extra).toBe('With its fee')
+
+    await restoreFromTrash(/** @type {number} */ (moved?.id))
+    expect(store.transactions.map(t => t.txId).sort()).toEqual(['fee-1', 'tr-1'])
+  })
+
+  it('can go on its own, and the transfer stays', async () => {
+    store.transactions.push(transfer(), feeRow())
+    await deleteTxGroup([store.transactions[1]])
+    expect(store.transactions.map(t => t.txId)).toEqual(['tr-1'])
+  })
+
+  it('moves with a re-routed transfer, renamed for the new route', async () => {
+    store.transactions.push(transfer(), feeRow())
+    const before = acct('Maya Savings')?.balance ?? 0
+    const fee = { ...store.transactions[1] }
+    await syncTransferFee(fee, transfer({ fromAccount: 'Other Card' }), 15)
+    const f = store.transactions.find(t => t.txId === 'fee-1')
+    expect(f).toMatchObject({ account: 'Other Card', description: 'Transfer fee · Other Card → ZZ Test Card', amount: 15 })
+    // Off the account it no longer leaves.
+    expect(acct('Maya Savings')?.balance).toBe(before + 15)
+  })
+
+  it('keeps a description you wrote yourself', async () => {
+    store.transactions.push(transfer(), feeRow({ description: 'ATM fee' }))
+    await syncTransferFee({ ...store.transactions[1] }, transfer({ toAccount: 'Other Card' }), 20)
+    expect(store.transactions.find(t => t.txId === 'fee-1')).toMatchObject({ description: 'ATM fee', amount: 20 })
+  })
+
+  it('is removed when set to nothing, and added when there was none', async () => {
+    store.transactions.push(transfer(), feeRow())
+    await syncTransferFee({ ...store.transactions[1] }, transfer(), 0)
+    expect(store.transactions.some(t => t.txId === 'fee-1')).toBe(false)
+
+    const added = await syncTransferFee(null, transfer(), 25)
+    const row = store.transactions.find(t => t.category === 'Transfer Fee')
+    expect(row).toMatchObject({ amount: 25, account: 'Maya Savings', date: at })
+    expect(isFeeOf(row, transfer())).toBe(true)
+    expect(added?.txId).toBe(row?.txId)
+    expect(store.categories.some(c => c.name === 'Transfer Fee')).toBe(true)
   })
 })

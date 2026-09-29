@@ -2,6 +2,7 @@ import db, { SYNCED, TRASH_DAYS, UNSYNCED } from './db'
 import { deleteTxGroup, newJournal, restoreDeletedTxs } from './txHelpers'
 import { cancelRemoteDelete, queueRemoteDelete } from '../lib/sync'
 import { txBase } from '../lib/fxContext'
+import { isFeeOf } from '../lib/transferFee'
 
 /**
  * Recently deleted: every deleted transaction, kept thirty days, to put back
@@ -205,6 +206,7 @@ export function describeEntry(entry, now = new Date()) {
   const lead = /** @type {Record<string, any>} */ (txs[0] ?? {})
   const plan = txs.length > 1 && txs.every(t => t.installmentId && t.installmentId === lead.installmentId)
   const split = txs.length > 1 && !!lead.splitId && txs.every(t => t.splitId === lead.splitId)
+  const withFee = txs.length === 2 && lead.type === 'transfer' && isFeeOf(txs[1], lead)
   const sameKind = txs.filter(t => t.type === lead.type)
   const total = sameKind.reduce((s, t) => s + txBase(t), 0)
   const age = Math.max(0, now.getTime() - Date.parse(entry.deletedAt))
@@ -217,6 +219,7 @@ export function describeEntry(entry, now = new Date()) {
     /** What went with it, in words - "All 12 payments", "With 2 other parts". */
     extra: plan ? `All ${txs.length} payments`
       : split ? `With its ${more} other part${more === 1 ? '' : 's'}`
+        : withFee ? 'With its fee'
         : more > 0 ? `With ${more} linked row${more === 1 ? '' : 's'}` : '',
     daysLeft: left,
   }
