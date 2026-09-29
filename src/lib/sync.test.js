@@ -9,6 +9,7 @@ import {
   goalToRow, rowToGoal,
   badgeToRow,
   challengeToRow, rowToChallenge, trashToRow, rowToTrash,
+  noteToRow, rowToNote,
   isPendingDelete,
   isLocalIdConflict, unknownColumnOf, columnsToDrop,
   deleteRecurringRemote,
@@ -354,6 +355,55 @@ describe('trash', () => {
   it('reads a row with nothing in it as a deletion of nothing, not a crash', () => {
     expect(rowToTrash({ sync_id: 't-2', deleted_at: '2026-09-27T10:00:00.000Z', entry: null }))
       .toMatchObject({ txs: [], debts: [], unhooked: [], paid: [] })
+  })
+})
+
+/*
+ * Notes (027). The document travels whole; the device that pulls a note
+ * reads its title and text off the document itself.
+ */
+describe('notes', () => {
+  const doc = {
+    type: 'doc',
+    content: [
+      { type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text: 'Payday' }] },
+      { type: 'taskList', content: [{ type: 'taskItem', attrs: { checked: false }, content: [{ type: 'paragraph', content: [{ type: 'text', text: 'Rent' }] }] }] },
+    ],
+  }
+  /** @type {NoteRow} */
+  const local = {
+    id: 9, syncId: 'n-1', doc, title: 'Payday', text: 'Payday\nRent', pinned: true,
+    createdAt: '2026-09-29T01:00:00.000Z', editedAt: '2026-09-30T02:00:00.000Z', deletedAt: null,
+    updatedAt: '2026-09-30T02:00:00.000Z', synced: UNSYNCED, pushed: false,
+  }
+
+  it('goes up as its document, known by its sync_id', () => {
+    const row = noteToRow(local, UID)
+    expect(row).toEqual({
+      user_id: UID, sync_id: 'n-1', title: 'Payday', content: doc, pinned: true,
+      created_at: local.createdAt, edited_at: local.editedAt, deleted_at: null, updated_at: local.updatedAt,
+    })
+    expect(row).not.toHaveProperty('local_id')
+  })
+
+  it('comes down with its words read off the document, marked as on the server', () => {
+    const back = rowToNote({ ...noteToRow(local, UID), title: 'a stale title' })
+    expect(back).toMatchObject({
+      syncId: 'n-1', doc, title: 'Payday', text: 'Payday\nRent', pinned: true,
+      editedAt: local.editedAt, deletedAt: null, synced: SYNCED, pushed: true,
+    })
+  })
+
+  it('carries Recently deleted with it', () => {
+    const gone = { ...local, deletedAt: '2026-09-30T03:00:00.000Z' }
+    expect(rowToNote(noteToRow(gone, UID)).deletedAt).toBe('2026-09-30T03:00:00.000Z')
+  })
+
+  it('reads a row with no document as an empty note, not a crash', () => {
+    for (const content of [null, {}, 'text', { type: 'paragraph' }]) {
+      expect(rowToNote({ sync_id: 'n-2', content, updated_at: '2026-09-30T00:00:00.000Z' }))
+        .toMatchObject({ doc: { type: 'doc', content: [] }, title: '', text: '', pinned: false })
+    }
   })
 })
 

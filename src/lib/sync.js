@@ -9,6 +9,7 @@ import { SYNCED_WITH_KEY, accountHasData, deviceStanding, localOnlyDeltas } from
 import { SYSTEM_CATS } from './phCategories'
 import { NUDGE_KEY } from './nudge'
 import { FORECAST_FLOOR_KEY, FORECAST_SETTINGS_KEY, readForecastSettings } from './forecastSettings'
+import { docText, noteTitle } from './noteText'
 
 // ── Pending remote deletes ────────────────────────────────────────────────────
 // Deleting a row locally has to delete it remotely too, or the next pull re-adds
@@ -373,6 +374,32 @@ export function trashToRow(r, userId) {
 }
 
 /**
+ * A note. See migrations/027_notes.sql.
+ *
+ * The document goes up whole, as jsonb, the way Recently deleted's entries
+ * do: it is read back as one piece, never queried inside. The title rides
+ * along only so the table reads sensibly on the server; the device that pulls
+ * a note works its own out from the document (rowToNote), so the two cannot
+ * disagree.
+ *
+ * @param {NoteRow} r
+ * @param {string} userId
+ */
+export function noteToRow(r, userId) {
+  return {
+    user_id:    userId,
+    sync_id:    r.syncId ?? null,
+    title:      r.title ?? '',
+    content:    r.doc && typeof r.doc === 'object' ? r.doc : {},
+    pinned:     !!r.pinned,
+    created_at: r.createdAt ?? null,
+    edited_at:  r.editedAt ?? null,
+    deleted_at: r.deletedAt ?? null,
+    updated_at: r.updatedAt ?? new Date().toISOString(),
+  }
+}
+
+/**
  * @param {Template} r
  * @param {string} userId
  */
@@ -592,6 +619,35 @@ export function rowToChallenge(row) {
     finishedAt: row.finished_at ?? null,
     updatedAt:  row.updated_at,
     synced:     SYNCED,
+  }
+}
+
+/**
+ * A note from the server. Its title and text are worked out here, from the
+ * document itself, rather than taken from the row.
+ *
+ * `pushed`: it is on the server, so deleting it for good has to delete it
+ * there too (lib/notes.js deleteNoteForever).
+ *
+ * @param {Record<string, any>} row  a row as Supabase returned it
+ * @returns {NoteRow}
+ */
+export function rowToNote(row) {
+  const doc = row.content && typeof row.content === 'object' && row.content.type === 'doc'
+    ? row.content
+    : { type: 'doc', content: [] }
+  return {
+    ...syncIdOf(row),
+    doc,
+    title:     noteTitle(doc),
+    text:      docText(doc),
+    pinned:    !!row.pinned,
+    createdAt: row.created_at ?? null,
+    editedAt:  row.edited_at ?? row.updated_at ?? null,
+    deletedAt: row.deleted_at ?? null,
+    updatedAt: row.updated_at,
+    synced:    SYNCED,
+    pushed:    true,
   }
 }
 
@@ -861,7 +917,83 @@ export async function syncToSupabase(userId) {
   await optionalSync('challenges push', () =>
     pushTable('challenges', db.challenges, challengeToRow, userId, 'user_id,sync_id'))
   await optionalSync('trash push', () => pushTrash(userId))
+  await optionalSync('notes push', () => pushNotes(userId))
   await pushPreferences(userId)
+}
+
+/**
+ * Notes, up: only the ones changed since they last went.
+ *
+ * Not pushTable, which sends every row on every sync. A note is a document,
+ * and a week of them re-sent each time the app comes to the front would be
+ * all cost - so each goes when it has changed, and is marked when it has.
+ *
+ * Blank notes stay behind. A note is made the moment you tap the pencil, and
+ * one opened and left without a word is thrown away (lib/notes.js); until it
+ * has something in it, it is nobody's business but this device's.
+ *
+ * An edit made while the push was on its way keeps its mark: the row is
+ * marked sent only if it is still the row that was sent.
+ *
+ * @param {string} userId
+ */
+async function pushNotes(userId) {
+  const rows = (await db.notes.toArray())
+    .filter(n => n.syncId && n.synced !== SYNCED && (n.text ?? '').trim())
+  if (!rows.length) return
+  const { error } = await supabase.from('notes')
+    .upsert(rows.map(r => noteToRow(r, userId)), { onConflict: 'user_id,sync_id', ignoreDuplicates: false })
+  if (error) throw new Error(`notes push: ${error.message}`)
+  await db.transaction('rw', db.notes, async () => {
+    for (const r of rows) {
+      const now = await db.notes.get(/** @type {number} */ (r.id))
+      if (!now) continue
+      await db.notes.update(/** @type {number} */ (r.id),
+        now.updatedAt === r.updatedAt ? { synced: SYNCED, pushed: true } : { pushed: true })
+    }
+  })
+}
+
+/**
+ * Notes, down: which ones changed, and then only those, whole.
+ *
+ * A first request for every note's id and stamp, and a second for the notes
+ * that are new here or newer there - so a sync that finds nothing new moves a
+ * few bytes a note, not every document. The stamps are the devices' own
+ * (no trigger writes them, as for every table but transactions), which is
+ * why this is a comparison per note and not a watermark.
+ *
+ * @param {string} userId
+ * @param {Array<{table: string, match?: Record<string, any>}>} pending
+ * @param {{first?: boolean}} [opts]  a first sync takes the server's copy of
+ *   every note both sides hold, as pullSimpleTable does
+ */
+async function pullNotes(userId, pending, { first = false } = {}) {
+  const heads = await fetchAllRows('notes', userId, supabase, null, 'id,sync_id,updated_at')
+  if (!heads.length) return
+  /** @type {Map<string, NoteRow>} */
+  const local = new Map()
+  for (const n of await db.notes.toArray()) if (n.syncId) local.set(n.syncId, n)
+
+  const want = heads.filter(h => {
+    if (!h.sync_id || isPendingDelete(pending, 'notes', h)) return false
+    const mine = local.get(h.sync_id)
+    if (!mine || first) return true
+    const theirs = h.updated_at ? new Date(h.updated_at).getTime() : 0
+    const ours = mine.updatedAt ? new Date(mine.updatedAt).getTime() : 0
+    return theirs > ours
+  }).map(h => h.sync_id)
+
+  for (let i = 0; i < want.length; i += 100) {
+    const { data, error } = await supabase.from('notes').select('*')
+      .eq('user_id', userId).in('sync_id', want.slice(i, i + 100))
+    if (error) throw new Error(`notes pull: ${error.message}`)
+    for (const row of data ?? []) {
+      const mine = local.get(row.sync_id)
+      if (mine?.id != null) await db.notes.update(mine.id, rowToNote(row))
+      else await db.notes.add(rowToNote(row))
+    }
+  }
 }
 
 /**
@@ -1402,6 +1534,7 @@ export async function syncFromSupabase(userId, opts = {}) {
   await optionalSync('challenges pull', () =>
     pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending, opts))
   await optionalSync('trash pull', () => pullTrash(userId, pending, opts))
+  await optionalSync('notes pull', () => pullNotes(userId, pending, opts))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()

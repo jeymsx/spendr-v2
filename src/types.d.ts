@@ -268,6 +268,27 @@ interface ChallengeRow {
   [key: string]: any
 }
 
+/** A note (lib/notes.js): its document, and what is read off it on save. */
+interface NoteRow {
+  id?: number
+  syncId?: string
+  /** The editor's document, ProseMirror JSON. */
+  doc: Record<string, any>
+  /** Its first line, for the list. */
+  title: string
+  /** All of it as plain text, for the list's second line and for search. */
+  text: string
+  pinned?: boolean
+  createdAt?: string
+  /** When its words last changed. */
+  editedAt?: string
+  /** In Recently deleted since; null when it is not. */
+  deletedAt?: string | null
+  updatedAt?: string
+  synced?: number
+  [key: string]: any
+}
+
 /** The key-value table: seeded flags, tombstones, the user's settings. */
 interface MetaRow {
   key: string

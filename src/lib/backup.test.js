@@ -35,6 +35,7 @@ const good = {
   badges: [],
   challenges: [],
   trash: [],
+  notes: [{ id: 1, title: 'Payday', text: 'Payday\nRent first', doc: { type: 'doc', content: [] } }],
 }
 
 describe('inspectBackup', () => {
@@ -44,6 +45,14 @@ describe('inspectBackup', () => {
     expect(out.counts.accounts).toBe(1)
     expect(out.exportedAt).toBe('2026-09-12T00:00:00.000Z')
     expect(out.missing).toEqual([])
+  })
+
+  it('counts notes, and reads a file from before them as having none to say', () => {
+    expect(inspectBackup(good).counts.notes).toBe(1)
+    const { notes: _gone, ...older } = good
+    const out = inspectBackup(older)
+    expect(out.missing).toEqual(['notes'])
+    expect(out.counts.notes).toBe(0)
   })
 
   it('takes the file as a string, which is how it arrives from a picker', () => {

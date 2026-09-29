@@ -24,6 +24,7 @@ import { stampTxCurrency } from '../lib/fxContext'
  *   notifications: import('dexie').Table<NotificationRow, string>,
  *   challenges:   import('dexie').Table<ChallengeRow, number>,
  *   trash:        import('dexie').Table<Record<string, any>, number>,
+ *   notes:        import('dexie').Table<NoteRow, number>,
  * }} SpendrDB
  */
 
@@ -228,17 +229,34 @@ db.version(15).stores({
   trash: '++id, deletedAt, syncId',
 })
 
+/* v16 - Notes (pages/Notes.jsx, lib/notes.js).
+ *
+ * One row per note: its body as the editor's own document (ProseMirror
+ * JSON), with the title and plain text worked out from it on every save - the
+ * list shows those and search reads them, so neither walks a document for
+ * every row. `editedAt` is when its words last changed, which is the date the
+ * list shows and sorts by: pinning a note is not writing in it, so it is not
+ * `updatedAt`, which moves for either. `deletedAt` puts it in the notes'
+ * Recently deleted, for thirty days.
+ *
+ * Synced, through 027_notes.sql, and identified by syncId like the other
+ * synced tables. In backups too. */
+db.version(16).stores({
+  notes: '++id, syncId, editedAt, deletedAt',
+})
+
 /** How long Recently deleted keeps a deletion, in days. */
 export const TRASH_DAYS = 30
 
 /** The tables that carry a syncId. Exported so sync and backup agree. */
 export const SYNCED_TABLES = [
-  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash',
+  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes',
 ]
 
 /** How a row is FILED, as opposed to what it says. Changing only these is not
- *  an edit, so it must not move updatedAt. See the updating hook below. */
-const BOOKKEEPING = new Set(['syncId', 'synced'])
+ *  an edit, so it must not move updatedAt. See the updating hook below.
+ *  `pushed`: a note that has been on the server at least once (lib/notes.js). */
+const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed'])
 
 /* Stamped on the way IN, for every writer at once.
  *
