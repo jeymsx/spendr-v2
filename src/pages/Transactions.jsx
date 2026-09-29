@@ -471,7 +471,7 @@ export default function Transactions() {
         <div className="flex justify-center mt-6 px-5">
           <Link
             to="/transactions/deleted"
-            className="press press-fade text-13 font-semibold text-slate-500 dark:text-slate-400 px-3 py-2"
+            className="press press-fade active:opacity-60 text-13 font-semibold text-slate-500 dark:text-slate-400 px-3 py-2"
           >
             Recently deleted · {trashCount}
           </Link>

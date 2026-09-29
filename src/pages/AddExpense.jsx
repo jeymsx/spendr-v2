@@ -616,7 +616,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
             <button
               type="button"
               onClick={() => setDivideOpen(true)}
-              className={`${fieldFrame()} w-full text-left`}
+              className={`${fieldFrame()} press press-fade w-full text-left active:bg-slate-50 dark:active:bg-primary/[0.12]`}
             >
               <span className="flex-1 min-w-0">
                 <span className="block text-11 text-slate-400 dark:text-slate-500">

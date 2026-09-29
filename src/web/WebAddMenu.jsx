@@ -41,6 +41,11 @@ export default function WebAddMenu() {
   const btnRef = useRef(null)
   const menuRef = useRef(null)
   const closeTimer = useRef(null)
+  /* How it opened. The pointer opens it on its way to the button, so a click
+     that simply toggled shut the menu hovering had just opened, and the add
+     button looked dead on its first press. A click on a menu that hover or
+     focus opened keeps it open; a click on one a click opened closes it. */
+  const openedBy = useRef(/** @type {'hover'|'focus'|'click'|null} */ (null))
 
   const measure = useCallback(() => {
     const r = btnRef.current?.getBoundingClientRect()
@@ -92,13 +97,17 @@ export default function WebAddMenu() {
     <div
       ref={wrapRef}
       className="relative"
-      onMouseEnter={() => { cancelClose(); setOpen(true) }}
+      onMouseEnter={() => { cancelClose(); if (!open) openedBy.current = 'hover'; setOpen(true) }}
       onMouseLeave={scheduleClose}
     >
       <button
         ref={btnRef}
-        onClick={() => setOpen(o => !o)}
-        onFocus={() => setOpen(true)}
+        onClick={() => {
+          if (open && openedBy.current !== 'click') { openedBy.current = 'click'; return }
+          openedBy.current = open ? null : 'click'
+          setOpen(!open)
+        }}
+        onFocus={() => { if (!open) openedBy.current = 'focus'; setOpen(true) }}
         aria-haspopup="menu"
         aria-label="Add transaction"
         aria-expanded={open}

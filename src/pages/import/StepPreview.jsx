@@ -8,10 +8,34 @@ import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
 import DetailRow from '../../components/ui/DetailRow'
 import { fmt, baseSymbol } from '../../lib/money'
+import { isoToDateInput } from '../../utils/txDate'
+import { fmtDateFull } from '../../utils/recurring'
 import { IconArrowLeft, fmtBytes, VALID_TYPES, IconFile, IconWarning } from './shared'
 import { WarnBanner, TypeBadge } from './bits'
 
 // ── Step 2: Preview & validation ───────────────────────────────────────────────
+
+/* "Sep 1, 2026", on the reader's own calendar. A Spendr file stores the moment
+   in UTC ("2026-09-01T04:00:00.000Z"), which is what the preview used to print.
+   A date the file wrote some other way is shown as it came. */
+/** @param {string} [d] */
+function readableDate(d) {
+  if (!d) return '—'
+  const day = /^\d{4}-\d{2}-\d{2}$/.test(d) ? d : isoToDateInput(d)
+  return fmtDateFull(day) || d
+}
+
+/* "Sep 1 – Sep 3, 2026": the year once when both ends share it. */
+/** @param {string} [a] @param {string} [b] */
+function readableRange(a, b) {
+  const from = readableDate(a)
+  const to = readableDate(b)
+  if (from === to) return from
+  const year = /, (\d{4})$/
+  const fy = from.match(year)?.[1]
+  if (fy && fy === to.match(year)?.[1]) return `${from.replace(year, '')} – ${to}`
+  return `${from} – ${to}`
+}
 
 export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
   const existingAccounts  = useLiveQuery(() => db.accounts.toArray(),  [], [])
@@ -21,8 +45,8 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
     if (!rows) return null
 
     const dates = rows.map(r => r.date).filter(Boolean).sort()
-    const earliest = dates[0] ?? '—'
-    const latest   = dates[dates.length - 1] ?? '—'
+    const earliest = dates[0]
+    const latest   = dates[dates.length - 1]
 
     const byType = { expense: 0, inflow: 0, transfer: 0, other: 0 }
     rows.forEach(r => {
@@ -104,7 +128,7 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
         <SectionLabel>Summary</SectionLabel>
         <Card clip>
           <DetailRow label="Total transactions" value={String(rows.length)} />
-          <DetailRow label="Date range" value={`${analysis.earliest} → ${analysis.latest}`} />
+          <DetailRow label="Date range" value={readableRange(analysis.earliest, analysis.latest)} />
           <DetailRow label="Expenses" value={String(analysis.byType.expense)} />
           <DetailRow label="Inflows" value={String(analysis.byType.inflow)} />
           <DetailRow
@@ -204,7 +228,7 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
                       !VALID_TYPES.has(row.type) ? 'bg-red-50/50 dark:bg-red-500/[0.05]' : ''
                     }`}
                   >
-                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400 whitespace-nowrap font-mono">{row.date}</td>
+                    <td className="px-3 py-2 text-slate-500 dark:text-slate-400 whitespace-nowrap tabular-nums">{readableDate(row.date)}</td>
                     <td className="px-3 py-2 whitespace-nowrap">
                       <TypeBadge type={row.type} />
                     </td>

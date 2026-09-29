@@ -208,7 +208,7 @@ export function ProfileSheet({
           type="button"
           onClick={() => setPickerOpen(true)}
           disabled={saving}
-          className={`${fieldFrame()} w-full text-left`}
+          className={`${fieldFrame()} press press-fade w-full text-left active:bg-slate-50 dark:active:bg-primary/[0.12]`}
         >
           <span
             className="w-7 shrink-0 text-15 font-semibold text-slate-700 dark:text-white"

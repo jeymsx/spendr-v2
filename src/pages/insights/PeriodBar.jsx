@@ -56,7 +56,8 @@ export function MonthNav({ month, onMonth, className = '' }) {
         className="p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200">
         <Chevron d="15 18 9 12 15 6" />
       </button>
-      <button type="button" onClick={() => !isCurrent && onMonth(null)} className="press press-fade flex items-center gap-1.5"
+      {/* Dims under the finger only when it does something: on this month it is a label. */}
+      <button type="button" onClick={() => !isCurrent && onMonth(null)} className={`press press-fade flex items-center gap-1.5 ${isCurrent ? '' : 'active:opacity-60'}`}
         aria-label={isCurrent ? `${MONTHS_SHORT[m]} ${year}` : `${MONTHS_SHORT[m]} ${year}, back to this month`}>
         <span className="text-13 font-semibold text-slate-600 dark:text-slate-300">{MONTHS_SHORT[m]} {year}</span>
         {!isCurrent && (

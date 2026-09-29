@@ -140,7 +140,7 @@ export function CategoryLegend({ segments, selected }) {
           key={seg.name}
           to={`/categories/${encodeURIComponent(seg.name)}`}
           className={`press press-fade flex items-center gap-2 min-w-0 py-1.5 transition-opacity duration-150 ${
-            selected != null && selected !== i ? 'opacity-30' : ''
+            selected != null && selected !== i ? 'opacity-30' : 'active:opacity-60'
           }`}
         >
           <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }} aria-hidden="true" />
