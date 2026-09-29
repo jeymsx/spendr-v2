@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
+import { useCategoryGuess } from '../hooks/useCategoryGuess'
 import db, { UNSYNCED } from '../db/db'
 import { postSplitExpense, applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -148,6 +149,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
       setAmountStr(p.amount != null ? numToMoneyStr(p.amount) : '0')
       setDescription(p.description || '')
       setCategory(p.category ?? null)
+      setCatChosen(!!p.category)
       setAccount(p.account ?? null)
       if (p.date) setDate(p.date)
       setInstallMonths(0)
@@ -176,6 +178,21 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     setCategory(categories.find(c => c.name === editTx.category) ?? null)
     setAccount(accounts.find(a => a.name === editTx.account) ?? null)
   }, [isEdit, editTx, categories, accounts])
+
+  /* The category this description has meant before (hooks/useCategoryGuess):
+     "Jollibee" is Food because that is what it has always been. Only while
+     the category is still the app's to choose - one you picked, or one a
+     template, a quick log or the row being edited brought, is never replaced
+     by a guess. */
+  const guess = useCategoryGuess(description, 'expense', categories)
+  const [catChosen, setCatChosen] = useState(false)
+  const guessed = !catChosen && !!guess && category?.id === guess.id
+  useEffect(() => {
+    if (catChosen || isEdit || !guess || splitLegs) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setCategory(prev => (prev?.id === guess.id ? prev : guess))
+    setCatError(false)
+  }, [guess, catChosen, isEdit, splitLegs])
 
   const skipConfirmMeta = useLiveQuery(() => db.meta.get('skipConfirm'), [], null)
   const skipConfirm = skipConfirmMeta?.value ?? false
@@ -436,7 +453,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     if (tpl.description) setDescription(tpl.description)
     const cat = (categories ?? []).find(c => c.name === tpl.category)
     const acct = (accounts ?? []).find(a => a.name === tpl.account)
-    if (cat)  { setCategory(cat);  setCatError(false) }
+    if (cat)  { setCategory(cat); setCatChosen(true); setCatError(false) }
     if (acct) chooseAccount(acct)
   }
 
@@ -565,6 +582,9 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
             {catError && !category && (
               <p className="text-xs font-medium text-red-500 dark:text-red-400 mb-1.5">Pick one</p>
             )}
+            {guessed && (
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">From your history</p>
+            )}
           </div>
           {splitLegs ? (
             /* Once it is split there is no single category to highlight, so
@@ -590,7 +610,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
             <CategoryRail
               categories={categories ?? []}
               selected={category}
-              onSelect={cat => { setCategory(cat); setCatError(false) }}
+              onSelect={cat => { setCategory(cat); setCatChosen(true); setCatError(false) }}
             />
           )}
 

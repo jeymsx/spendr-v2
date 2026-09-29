@@ -90,14 +90,31 @@ export default function RecurringForm() {
      and on the payroll cut-offs, since that is how pay lands here. */
   const [searchParams] = useSearchParams()
   const askedIncome = !isEdit && searchParams.get('type') === 'income'
+  /* Filled in from a bill found in your history (lib/billSpots.js): the
+     Recurring page's "Add" opens this with what the ledger already says -
+     the name, a typical amount, the day it lands, where it is paid from. */
+  const [pre] = useState(() => {
+    if (isEdit) return null
+    const amount = Number(searchParams.get('amount'))
+    const freq = searchParams.get('frequency')
+    const next = searchParams.get('next')
+    return {
+      name: searchParams.get('name')?.slice(0, 60) ?? null,
+      amount: Number.isFinite(amount) && amount > 0 ? amount : null,
+      frequency: FREQ_OPTIONS.some(o => o.value === freq) ? freq : null,
+      next: next && /^\d{4}-\d{2}-\d{2}$/.test(next) ? next : null,
+      category: searchParams.get('category'),
+      account: searchParams.get('account'),
+    }
+  })
   const [kind, setKind] = useState(/** @type {'expense'|'inflow'} */ (askedIncome ? 'inflow' : 'expense'))
   const isIncome = kind === 'inflow'
-  const [name, setName] = useState(DRAFT_DEFAULTS.name)
-  const [amountStr, setAmountStr] = useState(DRAFT_DEFAULTS.amountStr)
+  const [name, setName] = useState(pre?.name ?? DRAFT_DEFAULTS.name)
+  const [amountStr, setAmountStr] = useState(pre?.amount ? numToMoneyStr(pre.amount) : DRAFT_DEFAULTS.amountStr)
   const [category, setCategory] = useState(null)
   const [account, setAccount] = useState(null)
-  const [frequency, setFrequency] = useState(askedIncome ? 'semimonthly' : DRAFT_DEFAULTS.frequency)
-  const [nextDate, setNextDate] = useState(() => (askedIncome ? snapToCutoff(toDateInput()) : toDateInput()))
+  const [frequency, setFrequency] = useState(askedIncome ? 'semimonthly' : (pre?.frequency ?? DRAFT_DEFAULTS.frequency))
+  const [nextDate, setNextDate] = useState(() => (askedIncome ? snapToCutoff(toDateInput()) : (pre?.next ?? toDateInput())))
   const [active, setActive] = useState(DRAFT_DEFAULTS.active)
   const [split, setSplit] = useState(/** @type {any} */ (null))
   const [dividing, setDividing] = useState(false)
@@ -143,6 +160,17 @@ export default function RecurringForm() {
     setCategory(categories.find(c => c.name === editRec.category) ?? null)
     setAccount(accounts.find(a => a.name === editRec.account) ?? null)
   }, [isEdit, editRec, categories, accounts])
+
+  // The same, for a form filled in from a spotted bill: once the tables are in.
+  const prefilled = useRef(false)
+  useEffect(() => {
+    if (isEdit || prefilled.current || !pre || (!pre.category && !pre.account)) return
+    if (!categories?.length || !accounts?.length) return
+    prefilled.current = true
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (pre.category) setCategory(categories.find(c => c.name === pre.category && c.type === 'expense') ?? null)
+    if (pre.account) setAccount(accounts.find(a => a.name === pre.account) ?? null)
+  }, [isEdit, pre, categories, accounts])
 
   const kindCategories = useMemo(
     () => (categories ?? [])

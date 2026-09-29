@@ -1,6 +1,7 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
+import BillSpots from './recurring/BillSpots'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -896,6 +897,7 @@ export default function Recurring() {
               </Button>
             }
           />
+          <BillSpots className="mt-2" transactions={transactions ?? []} recurring={allRec ?? []} categories={categories ?? []} />
           <div className="mt-2">{dueSections}</div>
         </>
       ) : (
@@ -934,6 +936,9 @@ export default function Recurring() {
               ]}
             />
           </section>
+
+          {/* Bills the ledger shows that are not on this list yet - nothing at all when there are none. */}
+          <BillSpots className="mt-7" transactions={transactions ?? []} recurring={allRec ?? []} categories={categories ?? []} />
 
           {/* ── Which list ── */}
           <div className="px-5 mt-6">
