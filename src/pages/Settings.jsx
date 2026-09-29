@@ -361,7 +361,7 @@ export default function Settings() {
           <button
             type="button"
             onClick={() => navigate('/settings/changelog')}
-            className="font-semibold accent-ink underline-offset-2 active:underline"
+            className="relative hit-slop [--hit-x:-8px] font-semibold accent-ink underline-offset-2 active:underline"
           >
             Changelog
           </button>

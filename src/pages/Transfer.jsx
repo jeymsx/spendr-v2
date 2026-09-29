@@ -19,6 +19,7 @@ import { IconCalendar, IconChevronLeft, IconTemplate, IconWarning, IconArrowDown
 import { useQuickPrefill } from '../hooks/useQuickPrefill'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
+import PinnedTop from '../components/ui/PinnedTop'
 import SectionLabel from '../components/ui/SectionLabel'
 import Divider from '../components/ui/Divider'
 import { fmt, baseSymbol } from '../lib/money'
@@ -307,7 +308,8 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
       })
       if (templateData) await saveTemplate(templateData)
       showToast('Transfer saved')
-      if (onSaved) onSaved(); else navigate('/')
+      // Home in place of the form, so back does not reopen it (AddExpense).
+      if (onSaved) onSaved(); else navigate('/', { replace: true })
     } catch (e) {
       console.error('[Transfer] save failed:', e)
       showToast('Failed to save transfer', 'error')
@@ -331,26 +333,30 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           the true centre whatever is either side of it - a 36px back button
           on one, the wider Templates pill (or nothing) on the other - the way
           every SubPage title does. */}
-      <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
-        <IconButton label="Back" className="justify-self-start" onClick={() => (onCancel ? onCancel() : back())}>
-          <IconChevronLeft />
-        </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
-          {isEdit ? 'Edit Transfer' : 'Transfer'}
-        </h1>
-        {!isEdit && (
-          <Button
-            variant="tint"
-            size="xs"
-            className="justify-self-end px-3.5 gap-1.5"
-            onClick={() => setShowTemplates(true)}
-          >
-            <IconTemplate size={14} />
-            {/* Words from 380px up: under that the title needs the room. */}
-            <span className="max-[379px]:sr-only">Templates</span>
-          </Button>
-        )}
-      </header>
+      {/* Pinned while the form scrolls under it, the way every page's
+          header is (ui/PinnedTop.jsx). */}
+      <PinnedTop className="shrink-0">
+        <header className="relative grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
+          <IconButton label="Back" className="justify-self-start" onClick={() => (onCancel ? onCancel() : back())}>
+            <IconChevronLeft />
+          </IconButton>
+          <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
+            {isEdit ? 'Edit Transfer' : 'Transfer'}
+          </h1>
+          {!isEdit && (
+            <Button
+              variant="tint"
+              size="xs"
+              className="justify-self-end px-3.5 gap-1.5"
+              onClick={() => setShowTemplates(true)}
+            >
+              <IconTemplate size={14} />
+              {/* Words from 380px up: under that the title needs the room. */}
+              <span className="max-[379px]:sr-only">Templates</span>
+            </Button>
+          )}
+        </header>
+      </PinnedTop>
 
       {/* ── Amount ── */}
       <div className="flex flex-col items-center px-6 pt-12 pb-12 shrink-0">

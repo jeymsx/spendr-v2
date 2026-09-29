@@ -76,7 +76,7 @@ export default function SectionHeading({
       {actionLabel && actionTo && (
         <Link
           to={actionTo}
-          className="text-xs font-medium text-primary shrink-0 active:opacity-70"
+          className="relative hit-slop [--hit-x:-8px] text-xs font-medium text-primary shrink-0 active:opacity-70"
         >
           {actionLabel}
         </Link>

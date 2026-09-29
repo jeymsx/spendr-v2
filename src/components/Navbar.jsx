@@ -56,12 +56,35 @@ const RIGHT_TABS = [
   { path: '/insights',  label: 'Insights',  Icon: IconChart  },
 ]
 
+/* Which tab a page lights: the one it is opened from, as an iPhone app's tab
+   bar keeps lit the tab you pushed a page from. It was a short list, so
+   Debts and Recurring lit Home while Goals beside them lit nothing, and so
+   did Budget, Settings and every settings page. Most pages have one way in
+   and are listed. A category page opens from Budget (Home's) and from the
+   Insights legend alike, so it keeps whichever tab was lit before it. The
+   add forms light none: they are a task over the app, not a place in it. */
+const TAB_OF = [
+  ['/transactions', '/transactions'],
+  ['/accounts', '/accounts'],
+  ['/insights', '/insights'], ['/recap', '/insights'],
+  ['/debts', '/'], ['/recurring', '/'], ['/goals', '/'], ['/budget', '/'],
+  ['/achievements', '/'], ['/badges', '/'], ['/notifications', '/'],
+  ['/settings', '/'], ['/import', '/'],
+]
+let lastLit = '/'
+
+/** @param {string} pathname @returns {string|null} */
+function litTab(pathname) {
+  if (pathname === '/') return (lastLit = '/')
+  const hit = TAB_OF.find(([p]) => pathname === p || pathname.startsWith(`${p}/`))
+  if (hit) return (lastLit = hit[1])
+  if (pathname.startsWith('/categories/')) return lastLit
+  return null
+}
+
 function Tab({ path, label, Icon }) {
   const location = useLocation()
-  const HOME_SECONDARY = ['/debts', '/recurring', '/import']
-  const active = path === '/'
-    ? location.pathname === '/' || HOME_SECONDARY.some(p => location.pathname.startsWith(p))
-    : location.pathname.startsWith(path)
+  const active = litTab(location.pathname) === path
 
   /* The tab you are already on, tapped again: back to the top, smoothly, as
      the platform's tab bars do. Deeper in the tab (an account from

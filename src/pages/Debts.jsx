@@ -4,10 +4,11 @@ import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import SegTabs from '../components/SegTabs'
-import { IconPlus, IconChevronLeft } from '../components/icons'
+import { IconPlus } from '../components/icons'
 import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import IconButton from '../components/ui/IconButton'
+import PageHeader from '../components/PageHeader'
 import SectionLabel from '../components/ui/SectionLabel'
 import StatTrio from '../components/ui/StatTrio'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
@@ -199,17 +200,15 @@ export default function Debts() {
           The + is an icon and nothing else. It was a "＋ Add Debt" pill, which
           is the widest possible way to say a thing every other page in the app
           says in 36px. */}
-      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back" className="subpage-back" onClick={back}>
-          <IconChevronLeft />
-        </IconButton>
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          Debts
-        </h1>
-        <IconButton label="New debt" variant="primary" onClick={openAdd}>
-          <IconPlus />
-        </IconButton>
-      </header>
+      <PageHeader
+        title="Debts"
+        onBack={back}
+        action={(
+          <IconButton label="New debt" variant="primary" onClick={openAdd}>
+            <IconPlus />
+          </IconButton>
+        )}
+      />
 
       {/* The loading state is the page's own shape, not three grey
           rectangles: the hero, the stat row and the list, at the sizes

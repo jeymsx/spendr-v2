@@ -15,6 +15,7 @@ import {
   toMonthlyAmount, billingLine, dueStatus, DUE_TONE, fmtDateFull,
 } from '../utils/recurring'
 import IconButton from '../components/ui/IconButton'
+import PageHeader from '../components/PageHeader'
 import Button from '../components/ui/Button'
 import DeleteConfirmSheet from '../components/DeleteConfirmSheet'
 import { CardThumb } from '../components/AccountLine'
@@ -347,24 +348,21 @@ export default function RecurringDetail() {
   return (
     <div className="pb-nav">
       {/* ── Header: back, centred name, one door to editing ── */}
-      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back to recurring" className="subpage-back" onClick={back}>
-          <IconChevronLeft />
-        </IconButton>
-
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          {rec.name}
-        </h1>
-
-        <Button
-          variant="tint"
-          size="xs"
-          className="shrink-0 px-4"
-          onClick={() => navigate(`/recurring/${rec.id}/edit`)}
-        >
-          Edit
-        </Button>
-      </header>
+      <PageHeader
+        title={rec.name}
+        backLabel="Back to recurring"
+        onBack={back}
+        action={(
+          <Button
+            variant="tint"
+            size="xs"
+            className="shrink-0 px-4"
+            onClick={() => navigate(`/recurring/${rec.id}/edit`)}
+          >
+            Edit
+          </Button>
+        )}
+      />
 
       {/* ── The bill itself ──
           Icon, name and price together, the way the reference leads with the

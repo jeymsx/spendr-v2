@@ -55,6 +55,10 @@ export default function AppLayout() {
   const mainRef = useRef(null)
   const pageRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const pullRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+  // The status bar's frost (index.css .status-frost), shown once the page scrolls.
+  const statusRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+  // Set by the edge swipe: the page it goes back to is already in place.
+  const swipedBack = useRef(false)
   const back = useBack()
   const backRef = useRef(back)
   useEffect(() => { backRef.current = back }, [back])
@@ -118,7 +122,11 @@ export default function AppLayout() {
     let frame = 0
     const onScroll = () => {
       if (frame) return
-      frame = requestAnimationFrame(() => { frame = 0; positions.current.set(shownKey.current, el.scrollTop) })
+      frame = requestAnimationFrame(() => {
+        frame = 0
+        positions.current.set(shownKey.current, el.scrollTop)
+        statusRef.current?.toggleAttribute('data-under', el.scrollTop > 4)
+      })
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => { el.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame) }
@@ -153,11 +161,16 @@ export default function AppLayout() {
        steps (New account, the import wizard), the zoom back into an
        Insights card - so the swipe and the button never disagree. The
        generic back only when a page has no button of its own. */
+    /** @returns {boolean} whether it goes to another page, not a step back inside this one */
     const pageBack = () => {
       const btn = /** @type {HTMLButtonElement|null} */ (pageRef.current?.querySelector('header button'))
       const label = btn?.getAttribute('aria-label') ?? ''
-      if (btn && /back|previous|leave|close/i.test(label)) btn.click()
-      else backRef.current()
+      if (btn && /back|previous|leave|close/i.test(label)) {
+        btn.click()
+        return !/previous|step/i.test(label)
+      }
+      backRef.current()
+      return true
     }
     /** @type {{x: number, y: number, t: number}|null} */
     let start = null
@@ -211,9 +224,25 @@ export default function AppLayout() {
         slide(width, true)
         setTimeout(() => {
           leaving = false
-          pageBack()
-          // If nothing navigated (a page with nowhere to go), bring it back.
-          requestAnimationFrame(() => { if (pageRef.current?.style.transform) slide(0, true) })
+          /* The finger has already taken this page off: the one behind is
+             simply there, as in any iPhone app, rather than fading up as if
+             it had been opened. */
+          swipedBack.current = true
+          const from = shownKey.current
+          const leavesPage = pageBack()
+          /* A step back inside the page (New account, the importer) changes
+             no route: the page comes straight back with its earlier step. A
+             route change lands a frame or a few later - history.back() is
+             not synchronous - so only if it never does does the page come
+             back. Checking a frame later slid the page back in just before
+             the one behind replaced it. */
+          const recover = () => {
+            if (shownKey.current !== from || !pageRef.current?.style.transform) return
+            swipedBack.current = false
+            slide(0, true)
+          }
+          if (leavesPage) setTimeout(recover, 700)
+          else requestAnimationFrame(recover)
         }, 200)
       } else {
         slide(0, true)
@@ -243,9 +272,15 @@ export default function AppLayout() {
   useLayoutEffect(() => {
     const el = mainRef.current
     shownKey.current = location.key
+    /* Before the first paint, so the fade never starts (index.css .page-enter). */
+    if (swipedBack.current) {
+      swipedBack.current = false
+      if (pageRef.current) pageRef.current.style.animation = 'none'
+    }
     const saved = navType === 'POP' ? positions.current.get(location.key) : undefined
     if (el) el.scrollTop = 0
     window.scrollTo(0, 0)
+    statusRef.current?.removeAttribute('data-under')
     /* Back to a page you had scrolled: put it back as soon as there is enough
        page to put it back on - a lazy page and its live queries arrive a few
        frames after the route does. Insights keeps its own place, with its own
@@ -411,6 +446,10 @@ export default function AppLayout() {
           </ErrorBoundary>
         </div>
       </main>
+
+      {/* Frost behind the status bar once a page without a pinned top has
+          scrolled under it (index.css .status-frost). */}
+      <div ref={statusRef} className="status-frost" aria-hidden="true" />
 
       <Navbar onAddClick={() => setSheetOpen(true)} onQuickLog={() => setQuickOpen(true)} />
       <AddActionSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />

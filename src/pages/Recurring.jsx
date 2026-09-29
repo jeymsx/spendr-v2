@@ -9,7 +9,7 @@ import { moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import { deleteRecurringRemote } from '../lib/sync'
-import { IconChevronRight, IconChevronLeft, IconPlus } from '../components/icons'
+import { IconChevronRight, IconPlus } from '../components/icons'
 import SegTabs from '../components/SegTabs'
 import { validateRecurring, saveRecurring, isIncomeRecurring } from '../lib/recurringWrite'
 import {
@@ -19,6 +19,7 @@ import {
 import CategoryGlyph from '../components/CategoryGlyph'
 import BillMark from '../components/BillMark'
 import IconButton from '../components/ui/IconButton'
+import PageHeader from '../components/PageHeader'
 import Sheet from '../components/ui/Sheet'
 import StatTrio from '../components/ui/StatTrio'
 import Button from '../components/ui/Button'
@@ -864,17 +865,15 @@ export default function Recurring() {
           a door labelled one thing opening onto a page labelled another is a
           small break you feel without being able to name. It was "Bills"
           while bills were all it held; your pay lives here too now. */}
-      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back" className="subpage-back" onClick={back}>
-          <IconChevronLeft />
-        </IconButton>
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          Recurring
-        </h1>
-        <IconButton label="Add recurring" variant="primary" onClick={() => navigate('/recurring/new')}>
-          <IconPlus />
-        </IconButton>
-      </header>
+      <PageHeader
+        title="Recurring"
+        onBack={back}
+        action={(
+          <IconButton label="Add recurring" variant="primary" onClick={() => navigate('/recurring/new')}>
+            <IconPlus />
+          </IconButton>
+        )}
+      />
 
       {/* The loading state is the page's own shape, not three grey
           rectangles: the hero, the stat row and the list, at the sizes

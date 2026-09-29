@@ -9,6 +9,7 @@ import { deleteDebtRemote } from '../../lib/sync'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
+import PageHeader from '../../components/PageHeader'
 import Divider from '../../components/ui/Divider'
 import EmptyState from '../../components/ui/EmptyState'
 import DeleteConfirmSheet from '../../components/DeleteConfirmSheet'
@@ -138,22 +139,21 @@ export default function PersonDetail() {
 
   return (
     <div className="pb-nav">
-      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        <IconButton label="Back to debts" className="subpage-back" onClick={back}>
-          <IconChevronLeft />
-        </IconButton>
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          {person.label}
-        </h1>
-        <Button
-          variant="tint"
-          size="xs"
-          className="shrink-0 px-4"
-          onClick={() => { setEditDebt(null); setFormOpen(true) }}
-        >
-          Add
-        </Button>
-      </header>
+      <PageHeader
+        title={person.label}
+        backLabel="Back to debts"
+        onBack={back}
+        action={(
+          <Button
+            variant="tint"
+            size="xs"
+            className="shrink-0 px-4"
+            onClick={() => { setEditDebt(null); setFormOpen(true) }}
+          >
+            Add
+          </Button>
+        )}
+      />
 
       {/* ── What they come to ── */}
       <section className="px-5 mt-1">

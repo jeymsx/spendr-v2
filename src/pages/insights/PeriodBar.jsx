@@ -30,7 +30,7 @@ export function RangeChips({ range, onRange }) {
           type="button"
           onClick={() => onRange(r.key)}
           aria-pressed={range === r.key}
-          className={`relative z-10 w-9 py-1 text-10 font-bold text-center transition-colors duration-200 ${
+          className={`relative z-10 hit-slop [--hit-x:0px] [--hit-y:-10px] w-9 py-1 text-10 font-bold text-center transition-colors duration-200 ${
             range === r.key ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
           }`}
         >{r.label}</button>
@@ -53,11 +53,11 @@ export function MonthNav({ month, onMonth, className = '' }) {
   return (
     <div className={`flex items-center justify-center gap-3 ${className}`}>
       <button type="button" onClick={() => onMonth(addMonths(month, -1))} aria-label="Previous month"
-        className="p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200">
+        className="relative hit-slop [--hit-x:-10px] p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200">
         <Chevron d="15 18 9 12 15 6" />
       </button>
       {/* Dims under the finger only when it does something: on this month it is a label. */}
-      <button type="button" onClick={() => !isCurrent && onMonth(null)} className={`press press-fade flex items-center gap-1.5 ${isCurrent ? '' : 'active:opacity-60'}`}
+      <button type="button" onClick={() => !isCurrent && onMonth(null)} className={`relative hit-slop [--hit-x:-2px] press press-fade flex items-center gap-1.5 ${isCurrent ? '' : 'active:opacity-60'}`}
         aria-label={isCurrent ? `${MONTHS_SHORT[m]} ${year}` : `${MONTHS_SHORT[m]} ${year}, back to this month`}>
         <span className="text-13 font-semibold text-slate-600 dark:text-slate-300">{MONTHS_SHORT[m]} {year}</span>
         {!isCurrent && (
@@ -65,7 +65,7 @@ export function MonthNav({ month, onMonth, className = '' }) {
         )}
       </button>
       <button type="button" onClick={() => onMonth(addMonths(month, 1))} disabled={isCurrent} aria-label="Next month"
-        className="p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200 disabled:opacity-25">
+        className="relative hit-slop [--hit-x:-10px] p-1 text-slate-400 dark:text-slate-500 active:text-slate-700 dark:active:text-slate-200 disabled:opacity-25">
         <Chevron d="9 18 15 12 9 6" />
       </button>
     </div>

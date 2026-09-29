@@ -53,7 +53,9 @@ export default function PersonCard({ person, onOpen }) {
             {square
               ? `Square · ${person.rows.length} ${person.rows.length === 1 ? 'entry' : 'entries'}`
               : owed ? 'Owes you'
-              : 'Paid ahead'}
+              /* Not "Paid ahead": below zero is anything you owe them, which
+                 is almost always a plain debt. Their page says the same. */
+              : 'You owe them'}
           </span>
         </span>
 

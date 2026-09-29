@@ -11,14 +11,14 @@ import { validateRecurring, saveRecurring } from '../lib/recurringWrite'
 import { FREQ_OPTIONS, snapToCutoff } from '../utils/recurring'
 import { isEverydayAccount } from '../lib/accountMeta'
 import Segmented from '../components/ui/Segmented'
-import { IconChevronLeft, IconChevronRight } from '../components/icons'
+import { IconChevronRight } from '../components/icons'
 import CategoryRail from '../components/CategoryRail'
 import AccountSelectRow from '../components/AccountSelectRow'
 import AccountPickerSheet from '../components/AccountPickerSheet'
 import FadeScroller from '../components/FadeScroller'
 import BillMark from '../components/BillMark'
 import Button from '../components/ui/Button'
-import IconButton from '../components/ui/IconButton'
+import PageHeader from '../components/PageHeader'
 import SectionLabel from '../components/ui/SectionLabel'
 import Card from '../components/ui/Card'
 import { parseMoney } from '../utils/moneyInput'
@@ -292,14 +292,10 @@ export default function RecurringForm() {
           carry a centred title. So this is SubPage's header exactly: back
           disc, centred title, one action, and a 36px spacer when there is no
           action - without it "centred" lands half a button left of centre. */}
-      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3 shrink-0">
-        <IconButton label="Back" className="subpage-back" onClick={back}>
-          <IconChevronLeft />
-        </IconButton>
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          {isEdit ? `Edit ${noun}` : `New ${noun}`}
-        </h1>
-        {isEdit && editRec ? (
+      <PageHeader
+        title={isEdit ? `Edit ${noun}` : `New ${noun}`}
+        onBack={back}
+        action={isEdit && editRec ? (
           <Button
             variant={confirmDel ? 'danger' : 'dangerTint'}
             size="xs"
@@ -309,10 +305,8 @@ export default function RecurringForm() {
           >
             {deleting ? 'Deleting…' : confirmDel ? 'Confirm delete' : 'Delete'}
           </Button>
-        ) : (
-          <span className="w-9 shrink-0" aria-hidden="true" />
-        )}
-      </header>
+        ) : null}
+      />
 
       {waiting ? (
         <p className="px-5 pt-12 text-center text-sm text-slate-400 dark:text-slate-500">

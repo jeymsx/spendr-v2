@@ -13,7 +13,7 @@ import { budgetTone } from '../components/BudgetMeter'
 import BudgetGauge from '../components/BudgetGauge'
 import CategoryGlyph from '../components/CategoryGlyph'
 import { IconChevronRight } from '../components/icons'
-import IconButton from '../components/ui/IconButton'
+import PageHeader from '../components/PageHeader'
 import Button from '../components/ui/Button'
 import StatTrio from '../components/ui/StatTrio'
 import SectionLabel from '../components/ui/SectionLabel'
@@ -65,15 +65,6 @@ function monthPrefix(d = new Date()) {
 }
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
-
-function IconChevronLeft() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M15 18l-6-6 6-6" />
-    </svg>
-  )
-}
 
 // ── Bits ───────────────────────────────────────────────────────────────────────
 
@@ -367,31 +358,27 @@ export default function Budget() {
   return (
     <div className="pb-10">
       {/* ── Header ── */}
-      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
-        {/* Back to wherever you came from - the dashboard card or Settings -
-            with a fallback for the case where this page IS the first entry.
-            See the hook. */}
-        <IconButton label="Back" className="subpage-back" onClick={back}>
-          <IconChevronLeft />
-        </IconButton>
-        {/* The month is the title. "Budget" named the page you had just
-            tapped to get to, and the month was a second line under it saying
-            the thing the page is actually about. */}
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          {monthName}
-        </h1>
-        {/* The way to the limits. This page reports the month; setting the
-            numbers is a different job, and it used to be a second entry in
-            Settings that opened a different screen about the same thing. */}
-        <Button
-          variant="tint"
-          size="xs"
-          className="shrink-0 px-4"
-          onClick={() => navigate('/settings/budgets')}
-        >
-          Edit limits
-        </Button>
-      </header>
+      {/* Back to wherever you came from - the dashboard card or Settings -
+          with a fallback for the case where this page IS the first entry
+          (hooks/useBack.js). The month is the title: "Budget" named the page
+          you had just tapped to get to, and the month was a second line
+          under it saying the thing the page is actually about. "Edit limits"
+          is the way to the limits: this page reports the month, and setting
+          the numbers is a different job. */}
+      <PageHeader
+        title={monthName}
+        onBack={back}
+        action={(
+          <Button
+            variant="tint"
+            size="xs"
+            className="shrink-0 px-4"
+            onClick={() => navigate('/settings/budgets')}
+          >
+            Edit limits
+          </Button>
+        )}
+      />
 
       {loading ? (
         <div className="px-5 mt-2 flex flex-col gap-7">

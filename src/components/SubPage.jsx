@@ -1,6 +1,4 @@
-import { useBack } from '../hooks/useBack'
-import { IconChevronLeft } from './icons'
-import IconButton from './ui/IconButton'
+import PageHeader from './PageHeader'
 
 /**
  * The app's sub-page shell: back disc, centred title, optional right action.
@@ -20,31 +18,14 @@ import IconButton from './ui/IconButton'
  * pb-nav rather than pb-10: the navbar is a fixed 80px overlay, so a page
  * short enough not to scroll has no way to get its last element out from
  * under it.
+ *
+ * The header itself is PageHeader, which the pages that lay themselves out
+ * use too, and it stays pinned while the page scrolls under it.
  */
 export default function SubPage({ title, action = null, onBack, children, className = '' }) {
-  const back = useBack()
   return (
     <div className={`pb-nav ${className}`}>
-      {/* Three columns, the outer two equal while what is in them fits, so the
-          title sits in the true centre whatever is on its right - a round
-          icon, an "Edit" pill - and only gives way when something is too
-          wide to share. A flex row centred it in the space LEFT between the
-          two, which put "Goal" 10px left of centre beside an Edit pill. */}
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-5 pt-safe-header pb-3">
-        {/* subpage-back: an inert hook for the desktop, which hides it where
-            the page is the right half of a split view with nothing behind. */}
-        <IconButton label="Back" className="subpage-back justify-self-start" onClick={onBack ?? back}>
-          <IconChevronLeft />
-        </IconButton>
-
-        <h1 className="min-w-0 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
-          {title}
-        </h1>
-
-        <div className="justify-self-end flex">
-          {action ?? <span className="w-9 shrink-0" aria-hidden="true" />}
-        </div>
-      </header>
+      <PageHeader title={title} action={action} onBack={onBack} />
 
       {children}
     </div>

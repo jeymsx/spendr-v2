@@ -496,7 +496,7 @@ export default function Dashboard({ layout = 'phone' } = {}) {
                       <button
                         onPointerDown={e => e.stopPropagation()}
                         onClick={() => pickSide(walletSide === 'have' ? 'owe' : 'have')}
-                        className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
+                        className="relative hit-slop [--hit-x:-7px] text-white/60 hover:text-white/90 transition-colors active:scale-95"
                         aria-label={walletSide === 'have'
                           ? 'Showing what you have. Show what you owe.'
                           : 'Showing what you owe. Show what you have.'}
@@ -512,7 +512,7 @@ export default function Dashboard({ layout = 'phone' } = {}) {
                     <button
                       onPointerDown={e => e.stopPropagation()}
                       onClick={() => setBalanceHidden(h => !h)}
-                      className="text-white/60 hover:text-white/90 transition-colors active:scale-95"
+                      className="relative hit-slop [--hit-x:-7px] text-white/60 hover:text-white/90 transition-colors active:scale-95"
                       aria-label={balanceHidden ? 'Show balance' : 'Hide balance'}
                     >
                       {balanceHidden ? <IconEyeOff /> : <IconEye />}
@@ -631,13 +631,13 @@ export default function Dashboard({ layout = 'phone' } = {}) {
             <h2 className="text-base font-semibold text-slate-800 dark:text-white">Accounts</h2>
             <button
               onClick={() => setAccountsHidden(h => !h)}
-              className="text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors active:scale-95"
+              className="relative hit-slop text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300 transition-colors active:scale-95"
               aria-label={accountsHidden ? 'Show account balances' : 'Hide account balances'}
             >
               {accountsHidden ? <IconEyeOff size={15} /> : <IconEye size={15} />}
             </button>
           </div>
-          <Link to="/accounts" className="text-xs font-medium text-primary dark:text-primary active:opacity-70">
+          <Link to="/accounts" className="relative hit-slop [--hit-x:-8px] text-xs font-medium text-primary dark:text-primary active:opacity-70">
             See all
           </Link>
         </div>
