@@ -24,6 +24,18 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.12.0',
+    date: '2026-09-29',
+    items: [
+      { title: 'Signing in asks first', desc: 'A phone or computer signing in to an account that already has data asks before anything syncs: use the account\'s data, keep both, or sign out.' },
+      { title: 'Your pay, found for you', desc: 'The forecast reads your pay from what you have logged, so a salary you never put on Recurring still arrives on the 15th and the 30th.' },
+      { title: 'Forecast settings', desc: 'The sliders on Forecast pick where pay comes from, how everyday spending is counted, whether savings count, and what the chart shows.' },
+      { title: 'Glass empty screens', desc: 'A screen with nothing on it yet gets a glass picture instead of a flat icon.' },
+      { title: 'Back where you left off', desc: 'Back returns you to where you were on a page, even on one opened from a notification, and tapping the tab you are on scrolls to the top.' },
+      { title: 'Pull to sync, where it belongs', desc: 'Pulling down syncs on the screens that show your money, not on forms or settings.' },
+    ],
+  },
+  {
     version: '0.11.0',
     date: '2026-09-28',
     items: [

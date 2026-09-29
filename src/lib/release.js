@@ -33,32 +33,37 @@ export const RELEASE_DATE = '2026-09-29'
 export const RELEASE_NOTES = [
   {
     icon: 'lock',
-    title: 'Signing in asks first',
-    desc: 'A phone or computer signing in to an account that already has data asks before anything syncs: use the account\'s data, keep both, or sign out.',
+    title: 'Your data, kept safer',
+    desc: 'Every synced change keeps the version it replaced for 30 days, and Spendr asks your browser not to clear its data when space runs low.',
   },
   {
-    icon: 'chart',
-    title: 'Your pay, found for you',
-    desc: 'The forecast reads your pay from what you have logged, so a salary you never put on Recurring still arrives on the 15th and the 30th.',
+    icon: 'bell',
+    title: 'Backup reminders',
+    desc: 'The bell asks for a backup when your last one is two weeks old, and Backup & restore shows when you saved it.',
   },
   {
-    icon: 'settings',
-    title: 'Forecast settings',
-    desc: 'The sliders on Forecast pick where pay comes from, how everyday spending is counted, whether savings count, and what the chart shows.',
+    icon: 'wallet',
+    title: 'Bills spotted for you',
+    desc: 'Recurring lists the bills it finds in your history, ready to add in one tap.',
   },
   {
-    icon: 'sparkle',
-    title: 'Glass empty screens',
-    desc: 'A screen with nothing on it yet gets a glass picture instead of a flat icon.',
+    icon: 'categories',
+    title: 'A category guess',
+    desc: 'Type what you bought and the category is picked from what you logged before. Tap another to change it.',
   },
   {
     icon: 'transfer',
-    title: 'Back where you left off',
-    desc: 'Back returns you to where you were on a page, even on one opened from a notification, and tapping the tab you are on scrolls to the top.',
+    title: 'Swipe back, like an iPhone app',
+    desc: 'In the installed app, swipe from the left edge to go back. Headers stay at the top as you scroll, and Back returns to where you came from.',
   },
   {
-    icon: 'motion',
-    title: 'Pull to sync, where it belongs',
-    desc: 'Pulling down syncs on the screens that show your money, not on forms or settings.',
+    icon: 'chart',
+    title: 'A steadier forecast',
+    desc: 'Tell it a found payment is not pay, and your settings follow you to your other devices. Pay and bills on Recurring are never counted twice.',
+  },
+  {
+    icon: 'bank',
+    title: 'Cards that add up',
+    desc: 'Paying more than you owe leaves the extra as credit, cash taken from a card counts toward its bill, and setup records what a card already owes.',
   },
 ]
