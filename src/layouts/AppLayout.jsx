@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect, useCallback, Suspense } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, Suspense, lazy } from 'react'
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -19,6 +19,10 @@ import { useBack } from '../hooks/useBack'
 import { formGuarded } from '../lib/backGuard'
 import { entryBehind, recordNav } from '../lib/navTrail'
 import { prefersReducedMotion } from '../components/ui/motion'
+import { useNotesEdge } from './useNotesEdge'
+
+// Notes, drawn under the finger while the right-edge swipe brings it in (useNotesEdge).
+const NotesPeek = lazy(() => import('../pages/Notes'))
 
 // Shown while a lazy route chunk loads. Sized to roughly a screen so the
 // navbar and scroll position stay stable instead of collapsing to zero height.
@@ -85,6 +89,12 @@ export default function AppLayout() {
     )
   }, [showToast, navigate])
   useEffect(() => { pathnameRef.current = location.pathname }, [location.pathname])
+
+  /* Notes, from the right edge of a tab, in the installed app on an iPhone
+     (useNotesEdge.js) - the other half of the left edge's Back. */
+  const openNotes = useCallback(() => navigate('/notes'), [navigate])
+  const { standalone: edgeApp, peek: notesPeek, aheadRef, dimRef, land: landNotes } =
+    useNotesEdge({ mainRef, pageRef, pathnameRef, onOpen: openNotes })
 
   /* `?log=quick` opens the quick log: where the daily check-in's notification
      points (lib/nudge.js), so a tap on "Anything to log today?" lands on the
@@ -371,6 +381,8 @@ export default function AppLayout() {
       if (pageRef.current) pageRef.current.style.animation = 'none'
       setTimeout(hideBehind, 280)
     }
+    // Notes, brought in from the right edge: in place already, under its drawn copy.
+    if (landNotes() && pageRef.current) pageRef.current.style.animation = 'none'
     const saved = navType === 'POP' ? positions.current.get(location.key) : undefined
     if (el) el.scrollTop = 0
     window.scrollTo(0, 0)
@@ -557,6 +569,28 @@ export default function AppLayout() {
       {/* Frost behind the status bar once a page without a pinned top has
           scrolled under it (index.css .status-frost). */}
       <div ref={statusRef} className="status-frost" aria-hidden="true" />
+
+      {/* Notes coming in from the right edge, over the page it opens from, and
+          the shade that page takes as it goes (useNotesEdge.js). */}
+      {edgeApp && (
+        <>
+          <div ref={dimRef} className="swipe-ahead-dim" aria-hidden="true" />
+          <div
+            ref={aheadRef}
+            className="swipe-ahead"
+            aria-hidden="true"
+            style={{ transform: 'translateX(100%)', visibility: 'hidden' }}
+          >
+            {notesPeek && (
+              <Suspense fallback={null}>
+                <div className="swipe-ahead-page">
+                  <div className="pb-nav"><NotesPeek peek /></div>
+                </div>
+              </Suspense>
+            )}
+          </div>
+        </>
+      )}
 
       <Navbar onAddClick={() => setSheetOpen(true)} onQuickLog={() => setQuickOpen(true)} />
       <AddActionSheet open={sheetOpen} onClose={() => setSheetOpen(false)} />
