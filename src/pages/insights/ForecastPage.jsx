@@ -18,6 +18,7 @@ import db from '../../db/db'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { fmt, fmtCompact } from '../../lib/money'
 import { FORECAST_SETTINGS_PATH } from '../../lib/forecast'
+import { onDay } from '../../lib/dayWords'
 import { TrendRangeChips } from '../accounts/Trend'
 import { UpcomingRow, toUpcomingItem } from '../dashboard/Upcoming'
 import { ForecastChart } from './Charts'
@@ -161,11 +162,11 @@ export default function ForecastPage() {
             </p>
             {neg ? (
               <p className="mt-1 text-13 font-semibold text-red-500 dark:text-red-400">
-                You run out on {short(neg.date)}
+                You run out {onDay(neg.date)}
               </p>
             ) : under ? (
               <p className="mt-1 text-13 font-semibold text-amber-600 dark:text-amber-400">
-                Drops below your floor on {short(under.date)}
+                {under.iso === forecast.days[0]?.iso ? 'Below your floor today' : `Drops below your floor ${onDay(under.date)}`}
               </p>
             ) : null}
           </div>

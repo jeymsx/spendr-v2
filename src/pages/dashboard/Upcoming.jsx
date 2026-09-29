@@ -7,6 +7,8 @@ import BillMark from '../../components/BillMark'
 import { BrandSquare } from '../accounts/HoldingTile'
 import { IconCardUI } from '../../components/icons'
 import { fmt, fmtCompact } from '../../lib/money'
+import { onDay } from '../../lib/dayWords'
+import { SAFE_WINDOW_DAYS } from '../../lib/forecast'
 import SectionHeading from '../../components/ui/SectionHeading'
 import { GlassArt } from '../../components/glass/GlassArt'
 import { useTheme } from '../../context/ThemeContext'
@@ -22,7 +24,8 @@ import { useTheme } from '../../context/ThemeContext'
 export function toUpcomingItem(e, catMap, acctByName) {
   const common = {
     key: e.key, date: e.date, name: e.name, amount: e.amount, sign: e.sign,
-    to: e.to, kind: e.repeats ? 'recurring' : 'statement', counted: e.counted,
+    // Found pay repeats too, but it is not on Recurring: its own badge says so.
+    to: e.to, kind: e.learned ? 'learned' : e.repeats ? 'recurring' : 'statement', counted: e.counted,
   }
   if (e.kind === 'bill' || e.kind === 'income') {
     const cat = e.category ? catMap[e.category] : null
@@ -94,6 +97,17 @@ export function IconRepeatBadge() {
   )
 }
 
+/** A clock: pay read off your history, not set up on Recurring. */
+export function IconHistoryBadge() {
+  return (
+    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <path d="M12 7v5l3 2" />
+    </svg>
+  )
+}
+
 /** A calendar leaf: this one falls due on a date rather than repeating. */
 export function IconDueBadge() {
   return (
@@ -157,7 +171,7 @@ export function UpcomingRow({ item, isLast }) {
             derived from - see .upcoming-badge. */}
         <span className="upcoming-badge absolute -bottom-0.5 -right-0.5 w-[15px] h-[15px]
           rounded-full flex items-center justify-center">
-          {item.kind === 'recurring' ? <IconRepeatBadge /> : <IconDueBadge />}
+          {item.kind === 'recurring' ? <IconRepeatBadge /> : item.kind === 'learned' ? <IconHistoryBadge /> : <IconDueBadge />}
         </span>
       </span>
 
@@ -209,6 +223,14 @@ export default function UpcomingSection({ forecast, items }) {
   if (!forecast) return null
   const noIncome = !forecast.hasIncome
   const short = forecast.firstNegative
+  /* Under the floor before payday. Safe to spend is nought then, and the
+     line under it said "above your floor" - the opposite of what had
+     happened, with ₱38,845 left against a ₱50,000 floor. */
+  const day0 = forecast.days[0]?.date
+  const windowEnd = forecast.safeUntil
+    ?? (day0 ? new Date(day0.getFullYear(), day0.getMonth(), day0.getDate() + SAFE_WINDOW_DAYS) : null)
+  const under = !short && forecast.floor > 0 && forecast.firstBelowFloor
+    && (!windowEnd || forecast.firstBelowFloor.date < windowEnd) ? forecast.firstBelowFloor : null
   const until = forecast.safeUntil
     ? `Until payday, ${forecast.safeUntil.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`
     : 'For the next 2 weeks'
@@ -251,10 +273,16 @@ export default function UpcomingSection({ forecast, items }) {
           <span className="relative block pr-28 mt-1 text-22 leading-none font-semibold tracking-tight tabular-nums text-slate-900 dark:text-white">
             <RollingNumber id="home:safe" value={forecast.safeToSpend} format={v => fmt(v)} />
           </span>
-          <span className={`relative block pr-28 mt-1.5 text-12 ${short ? 'text-red-500 dark:text-red-400 font-medium' : 'text-slate-500 dark:text-slate-400'}`}>
+          <span className={`relative block pr-28 mt-1.5 text-12 ${short ? 'text-red-500 dark:text-red-400 font-medium'
+            : under ? 'text-amber-600 dark:text-amber-400 font-medium'
+            : 'text-slate-500 dark:text-slate-400'}`}>
             {short
-              ? `Runs short on ${short.date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`
-              : forecast.floor > 0 ? `${until}, above your ${fmtCompact(forecast.floor)} floor` : until}
+              ? `Runs short ${onDay(short.date)}`
+              : under
+                ? (under.iso === forecast.days[0]?.iso
+                  ? `Below your ${fmtCompact(forecast.floor)} floor`
+                  : `Dips below your ${fmtCompact(forecast.floor)} floor ${onDay(under.date)}`)
+                : forecast.floor > 0 ? `${until}, above your ${fmtCompact(forecast.floor)} floor` : until}
           </span>
         </Link>
         {noIncome && (

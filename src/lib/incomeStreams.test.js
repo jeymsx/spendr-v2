@@ -105,6 +105,14 @@ describe('finding pay in the history', () => {
     expect(payName('Salary Sep 15')).toBe('salary')
     expect(payName('Salary (Aug 30)')).toBe('salary')
     expect(payName('13th month pay')).toBe('month pay')
+    expect(payName('Salary September 15')).toBe('salary')
+    expect(payName('Salary sept. 30')).toBe('salary')
+    // A word that only starts like a month is a name.
+    expect(payName('Maynilad')).toBe('maynilad')
+    expect(payName('Maya Savings')).toBe('maya savings')
+    expect(payName('Decathlon')).toBe('decathlon')
+    expect(payName('Junction')).toBe('junction')
+    expect(payName('Augustine')).toBe('augustine')
   })
 
   it('does not let a small income the day before payday stand in for the pay', () => {
@@ -171,6 +179,35 @@ describe('the forecast, with pay from history', () => {
     expect(pays.every(e => !e.learned)).toBe(true)
     expect(pays).toHaveLength(2)
     expect(f.streams).toHaveLength(0)
+    // Found, and counted from Recurring: the settings say so rather than "nothing yet".
+    expect(f.coveredStreams).toHaveLength(1)
+  })
+
+  it('keeps found pay when Recurring holds something else in the same category', () => {
+    const recurring = [{ id: 9, name: 'Allowance', type: 'inflow', category: 'Salary', amount: 5000, frequency: 'monthly', nextDate: '2026-10-01', active: true, account: 'BPI' }]
+    const f = run({ income: 'both', recurring })
+    const learned = f.events.filter(e => e.kind === 'income' && e.learned).map(e => e.date.getDate())
+    expect(learned).toEqual([15, 30])
+    expect(f.streams).toHaveLength(1)
+  })
+
+  it('leaves Recurring the paydays it has, and keeps the ones it has not', () => {
+    const recurring = [{ id: 9, name: 'Salary', type: 'inflow', category: 'Salary', amount: 20000, frequency: 'monthly', nextDate: '2026-09-30', active: true, account: 'BPI' }]
+    const f = run({ income: 'both', recurring })
+    const pays = f.events.filter(e => e.kind === 'income').map(e => [e.date.getDate(), e.learned ? 'found' : 'recurring'])
+    expect(pays).toEqual([[15, 'found'], [30, 'recurring']])
+  })
+
+  it('does not count a payday whose pay is in already, filed under something else', () => {
+    const payday = new Date(2026, 8, 15, 12)
+    const rows = [...semimonthlySalary(), { type: 'inflow', category: 'Others', description: 'Salary', account: 'BPI', amount: 18000, date: new Date(2026, 8, 15, 9).toISOString() }]
+    const f = run({ transactions: rows, now: payday })
+    const pays = f.events.filter(e => e.kind === 'income').map(e => `${e.date.getMonth() + 1}/${e.date.getDate()}`)
+    // Today's is in; the next two are still to come.
+    expect(pays).toEqual(['9/30', '10/15'])
+    // Filed as Salary, it would have been the stream's own last payment: the same answer.
+    const filed = run({ transactions: [...semimonthlySalary(), { ...rows.at(-1), category: 'Salary' }], now: payday })
+    expect(filed.events.filter(e => e.kind === 'income').map(e => `${e.date.getMonth() + 1}/${e.date.getDate()}`)).toEqual(pays)
   })
 
   it('ignores the history entirely when set to Recurring', () => {
@@ -225,6 +262,19 @@ describe('the forecast settings that are not about pay', () => {
   it('leaves savings out of the start when told to', () => {
     expect(run().start).toBe(70000)
     expect(run({ countSavings: false }).start).toBe(20000)
+  })
+
+  it('does not count a bill logged by hand as everyday spending as well', () => {
+    const steady = spend.map(t => ({ ...t, amount: 700 }))
+    const rent = [6, 7, 8].map(m => ({ type: 'expense', account: 'BPI', category: 'Bills', description: 'Rent', amount: 12000, date: new Date(2026, m, 5, 9).toISOString() }))
+    const recurring = [{ id: 1, name: 'Rent', category: 'Bills', amount: 12000, frequency: 'monthly', nextDate: '2026-10-05', active: true, account: 'BPI' }]
+    const f = run({ transactions: [...steady, ...rent], recurring })
+    // Rent is taken on the 5th, and only there: the usual and the busier day are the food's.
+    expect(f.dailySpend).toBe(100)
+    expect(f.cautiousDaily).toBe(100)
+    expect(f.days.at(-1)?.low).toBe(f.days.at(-1)?.balance)
+    // Without it on Recurring, rent paid by hand is spending like any other.
+    expect(run({ transactions: [...steady, ...rent] }).cautiousDaily).toBeGreaterThan(100)
   })
 
   it('estimates a cautious day above the usual one, and takes a set figure as given', () => {

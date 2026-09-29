@@ -337,6 +337,13 @@ describe('backups', () => {
     const [n] = backups(null)
     expect(n.body).toBe('You have not saved one yet.')
     expect(n.id).toBe('backup:never:2026-09')
+    // Dated when it is said, so it is news rather than filed under the 1st.
+    expect(n.at).toBe(NOW.toISOString())
+  })
+
+  it('gives the year of a backup from another year', () => {
+    const [n] = backups(new Date(2025, 7, 25, 10).toISOString())
+    expect(n.body).toBe('Your last one was Aug 25, 2025.')
   })
 
   it('says nothing for a ledger too small to back up, or when the caller has no date to give', () => {

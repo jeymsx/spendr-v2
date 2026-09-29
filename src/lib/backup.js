@@ -392,5 +392,9 @@ export async function downloadBackupJson() {
   document.body.removeChild(a)
   URL.revokeObjectURL(url)
   await db.meta.put({ key: LAST_BACKUP_KEY, value: payload.exportedAt })
+  /* And the bell's "Time for a backup" goes: it is done. The list keeps
+     what happened, but this one was a request, and left there it went on
+     saying "You have not saved one yet" about a backup just saved. */
+  await db.notifications.filter(n => n.kind === 'backup-stale').delete()
   return { transactions: payload.transactions.length, accounts: payload.accounts.length }
 }

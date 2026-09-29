@@ -35,8 +35,10 @@ export default function BackupRestorePage() {
   const lastBackup = useLiveQuery(async () => (await db.meta.get(LAST_BACKUP_KEY))?.value ?? null, [], null)
   const [kept, setKept] = useState(/** @type {boolean|null} */ (null))
   useEffect(() => { storageKept().then(setKept) }, [])
-  const lastLine = lastBackup
-    ? `Last one ${new Date(lastBackup).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`
+  // A date that does not read as one is as good as none: never "Last one Invalid Date".
+  const lastAt = lastBackup ? new Date(lastBackup) : null
+  const lastLine = lastAt && Number.isFinite(lastAt.getTime())
+    ? `Last one ${lastAt.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}`
     : 'None saved on this device yet'
 
   async function backup() {

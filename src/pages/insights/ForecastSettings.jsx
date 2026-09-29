@@ -19,6 +19,7 @@ import db from '../../db/db'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { fmt, fmtCompact } from '../../lib/money'
 import { INCOME_LOOKBACKS, rhythmLabel, streamDates } from '../../lib/incomeStreams'
+import { dayName } from '../../lib/dayWords'
 import { moneyChangeHandler, numToMoneyStr, parseMoney } from '../../utils/moneyInput'
 import { RowChevron, RowDivider, RowIcon, SectionCard, SectionHeader, SettingsRow } from '../settings/shared'
 import FloorSheet from './FloorSheet'
@@ -136,7 +137,13 @@ export default function ForecastSettings() {
             <SectionCard>
               {forecast.streams.length === 0 ? (
                 <p className="px-4 py-4 text-13 text-slate-500 dark:text-slate-400">
-                  Nothing regular yet. Pay that keeps arriving on the same days shows up here after a few paydays.
+                  {/* Only "nothing yet" when nothing was found: pay on Recurring, or
+                      pay you said is not pay, was found and is simply counted elsewhere. */}
+                  {forecast.coveredStreams?.length
+                    ? 'Your pay is on Recurring, so it is counted from there.'
+                    : forecast.hiddenStreams.length
+                      ? 'Nothing else here keeps a rhythm.'
+                      : 'Nothing regular yet. Pay that keeps arriving on the same days shows up here after a few paydays.'}
                 </p>
               ) : forecast.streams.map((s, i) => (
                 <div key={s.key}>
@@ -216,7 +223,9 @@ export default function ForecastSettings() {
           {settings.spend === 'custom' && (
             <MoneyField
               className="mt-3"
-              value={custom}
+              /* Empty, not "0", when there is nothing in it: the hint says leave it
+                 empty, and the field snapped back to 0 under the backspace. */
+              value={custom === '0' ? '' : custom}
               currency={base}
               aria-label="Everyday spending per day"
               onChange={moneyChangeHandler((/** @type {string} */ v) => { setTyped(true); setCustom(v) })}
@@ -349,7 +358,12 @@ function StreamRow({ stream, cat, currency, today, onOpen }) {
       </span>
       <span className="shrink-0 text-right">
         <span className="block text-sm font-semibold tabular-nums text-slate-700 dark:text-slate-200">{fmt(stream.amount, currency)}</span>
-        {next && <span className="block mt-0.5 text-xs text-slate-500 dark:text-slate-400">Next {DAY.format(next.date)}</span>}
+        {next && (
+          <span className="block mt-0.5 text-xs text-slate-500 dark:text-slate-400">
+            {/* "Today" on payday, not "Next Sep 30" on the 30th. */}
+            {['Today', 'Tomorrow'].includes(dayName(next.date, today)) ? dayName(next.date, today) : `Next ${DAY.format(next.date)}`}
+          </span>
+        )}
       </span>
     </Wrap>
   )

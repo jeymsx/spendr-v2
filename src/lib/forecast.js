@@ -56,12 +56,12 @@ import { advanceNextDate, parseDateLocal } from '../utils/recurring'
 import { isInstallmentRow } from '../utils/installments'
 import { creditCardBills } from './creditBills'
 import { netWorthBreakdown } from './netWorth'
-import { isSpend } from './flows'
+import { isIncome, isSpend } from './flows'
 import { bucketOf, isLoan } from './accountMeta'
 import { LOAN_INTEREST, upcomingLoanPayments } from './loans'
 import { txBase } from './fxContext'
 import { convert } from './fx'
-import { STREAM_CYCLE_DAYS, findIncomeStreams, streamDates } from './incomeStreams'
+import { STREAM_CYCLE_DAYS, findIncomeStreams, payName, streamDates } from './incomeStreams'
 
 const DAY_MS = 864e5
 const LOOKBACK_WEEKS = 12
@@ -154,6 +154,10 @@ export function buildForecast({
 
   /** @type {ForecastEvent[]} */
   const events = []
+  /** Every payday Recurring pay is expected on, late ones on their own date:
+   *  what found pay is checked against, so the same money is not counted twice.
+   *  @type {Array<{date: Date, amount: number, name: string, account: string|null, category: string|null}>} */
+  const recPay = []
 
   // ── Recurring bills and income ──
   for (const r of recurring ?? []) {
@@ -172,7 +176,11 @@ export function buildForecast({
       category: r.category ?? null, account: r.account ?? null,
       to: r.id != null ? `/recurring/${r.id}` : '/recurring', repeats: true,
     }
+    const pay = (/** @type {Date} */ on) => {
+      if (income) recPay.push({ date: on, amount, name: base_.name, account: base_.account, category: base_.category })
+    }
     if (d < today) {
+      pay(d)
       events.push({
         ...base_, key: `rec:${r.id}:${date}:late`, date: today,
         counted: !income, overdue: true,
@@ -186,6 +194,7 @@ export function buildForecast({
       }
     }
     for (let i = 0; i < 400 && d && d <= end; i++) {
+      pay(d)
       events.push({ ...base_, key: `rec:${r.id}:${date}`, date: d, counted: true, overdue: false })
       const next = advanceNextDate(date, r.frequency)
       if (!next || next <= date) break
@@ -199,6 +208,9 @@ export function buildForecast({
   let streams = []
   /** @type {import('./incomeStreams').IncomeStream[]} */
   let hiddenStreams = []
+  /** Found pay that Recurring stands for on every payday, so counted from there.
+   *  @type {import('./incomeStreams').IncomeStream[]} */
+  const coveredStreams = []
   let occasionalPerDay = 0
   if (payFromHistory) {
     const found = findIncomeStreams({
@@ -207,17 +219,45 @@ export function buildForecast({
          already - with both on, reading it here too would count it twice. */
       skip: payFromRecurring ? (t => t.recurringId != null || !!t.recurringSyncId) : undefined,
     })
-    const recurringPay = payFromRecurring
-      ? (recurring ?? []).filter(r => r && r.active !== false && r.type === 'inflow' && r.amount > 0)
-      : []
-    /* And pay logged by hand whose Recurring item exists anyway: the same
-       category, or the same account for about the same amount, is that
-       item, and the item wins - it is the one you told the app about. */
-    streams = found.streams.filter(s => !recurringPay.some(r => {
-      if (r.category && s.category && String(r.category).toLowerCase() === s.category.toLowerCase()) return true
-      const amount = toBase(r.amount, curOf(r.account))
-      return !!r.account && r.account === s.account && Math.abs(amount - s.amount) <= s.amount * 0.25
-    }))
+    /* And pay logged by hand whose Recurring item exists anyway: the item
+       wins, as the one you told the app about. Payday by payday, not stream
+       by stream - a Recurring "Salary" on the 30th stands for that payday
+       and not the 15th - and only on something that says it is the same
+       money: the same name, or about the same amount into the same account
+       or under the same category. A category alone took "Allowance,
+       ₱5,000, Income" for the ₱21,000 salary, and the salary vanished. */
+    const onRecurring = (/** @type {import('./incomeStreams').IncomeStream} */ st, /** @type {{date: Date, amount: number}} */ x) =>
+      recPay.some(r => {
+        if (Math.abs(r.date.getTime() - x.date.getTime()) > 4 * DAY_MS) return false
+        const n = payName(r.name)
+        if (n && n === payName(st.name)) return true
+        if (Math.abs(r.amount - x.amount) > Math.max(r.amount, x.amount) * 0.25) return false
+        return (!!r.account && r.account === st.account)
+          || (!!r.category && !!st.category && r.category.toLowerCase() === st.category.toLowerCase())
+      })
+    /* And a payday whose pay is in already, filed somewhere else - the
+       salary logged under Others is still the salary, and counting its
+       payday as well took it twice. About the same amount, around the day,
+       into the same account or under the same name. */
+    const inflows = (transactions ?? []).filter(t => isIncome(t) && !Array.isArray(t.settles) && !!t.date)
+    const inAlready = (/** @type {import('./incomeStreams').IncomeStream} */ st, /** @type {{date: Date, amount: number}} */ x) =>
+      x.date.getTime() <= today.getTime() + 3 * DAY_MS && inflows.some(t => {
+        const at = Date.parse(t.date)
+        if (!(at <= now.getTime()) || Math.abs(startOfDay(new Date(at)).getTime() - x.date.getTime()) > 3 * DAY_MS) return false
+        if (Math.abs(priceOf(t) - x.amount) > x.amount * 0.25) return false
+        return (!!st.account && t.account === st.account) || (!!payName(t.description) && payName(t.description) === payName(st.name))
+      })
+    /** @type {Map<string, Array<{date: Date, amount: number}>>} */
+    const datesOf = new Map()
+    for (const st of found.streams) {
+      datesOf.set(st.key, streamDates(st, end).filter(x => !onRecurring(st, x) && !inAlready(st, x)))
+    }
+    // A stream Recurring stands for on every payday is Recurring's.
+    for (const st of found.streams) {
+      const all = streamDates(st, end)
+      if (all.length && all.every(x => onRecurring(st, x))) coveredStreams.push(st)
+      else streams.push(st)
+    }
     occasionalPerDay = found.occasionalPerDay
     /* And any you said is not pay - an allowance that keeps a rhythm but is
        not yours to count on. Kept aside, so the settings can offer it back. */
@@ -230,7 +270,7 @@ export function buildForecast({
         name: s.name, sign: /** @type {1} */ (1), kind: /** @type {'income'} */ ('income'),
         category: s.category, account: s.account, to: FORECAST_SETTINGS_PATH, repeats: true, learned: true,
       }
-      const dates = streamDates(s, end)
+      const dates = datesOf.get(s.key) ?? []
       /* A payday that has passed without the pay showing up: listed today as
          not in yet, and not counted - the same rule as Recurring pay that is
          not marked received. Only the latest one, and only within a cycle;
@@ -294,12 +334,29 @@ export function buildForecast({
      75th percentile, for a forecast that would rather be pessimistic), or
      a figure you set yourself. A set figure has no likely range: it is what
      you said, not something read off weeks that vary. */
-  const typicalSpend = everydaySpend(transactions ?? [], now, priceOf)
-  const cautiousDaily = cautiousSpend(transactions ?? [], now, priceOf)
+  /* A bill logged by hand rather than posted from Recurring is still that
+     bill, and the walk takes it on its date already: counted in the usual
+     week as well, rent paid on the 5th was taken twice, and its one big
+     week a month stretched the likely range to ₱1,500 a day. The same name
+     at about the price, or the same category at the price. */
+  const bills = (recurring ?? [])
+    .filter(r => r && r.active !== false && r.type !== 'inflow' && r.amount > 0)
+    .map(r => ({ name: payName(r.name), category: String(r.category ?? '').toLowerCase(), amount: toBase(r.amount, curOf(r.account)) }))
+  const billByHand = bills.length
+    ? (/** @type {Record<string, any>} */ t) => {
+        const n = payName(t.description)
+        const cat = String(t.category ?? '').toLowerCase()
+        const price = priceOf(t)
+        return bills.some(b => (!!n && n === b.name && Math.abs(price - b.amount) <= b.amount * 0.35)
+          || (!!b.category && cat === b.category && Math.abs(price - b.amount) <= b.amount * 0.1))
+      }
+    : undefined
+  const typicalSpend = everydaySpend(transactions ?? [], now, priceOf, billByHand)
+  const cautiousDaily = cautiousSpend(transactions ?? [], now, priceOf, billByHand)
   const dailySpend = spend === 'custom'
     ? (customDaily > 0 ? round2(customDaily) : null)
     : spend === 'cautious' ? (cautiousDaily ?? typicalSpend) : typicalSpend
-  const range = spend === 'custom' ? null : spendRange(transactions ?? [], now, priceOf)
+  const range = spend === 'custom' ? null : spendRange(transactions ?? [], now, priceOf, billByHand)
   // Income that keeps no rhythm, spread over the days - only when asked for.
   const dailyIncome = payFromHistory && occasional ? occasionalPerDay : 0
 
@@ -368,6 +425,8 @@ export function buildForecast({
     streams,
     /** Found pay you said is not pay, left out of everything. */
     hiddenStreams,
+    /** Found pay Recurring already has, counted from Recurring. */
+    coveredStreams,
     occasionalPerDay,
     hasIncome: (payFromRecurring && (recurring ?? []).some(r => r?.active !== false && r?.type === 'inflow'))
       || streams.length > 0,
@@ -389,10 +448,11 @@ export function buildForecast({
  * @param {Array<Record<string, any>>} transactions
  * @param {Date} now
  * @param {(tx: any) => number} priceOf
+ * @param {(tx: Record<string, any>) => boolean} [skip]  rows that are something else - a bill paid by hand
  * @returns {number|null}
  */
-export function everydaySpend(transactions, now, priceOf = txBase) {
-  const sorted = weeklySpend(transactions, now, priceOf)
+export function everydaySpend(transactions, now, priceOf = txBase, skip) {
+  const sorted = weeklySpend(transactions, now, priceOf, skip)
   if (!sorted) return null
   const mid = Math.floor(sorted.length / 2)
   const median = sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2
@@ -406,10 +466,11 @@ export function everydaySpend(transactions, now, priceOf = txBase) {
  * @param {Array<Record<string, any>>} transactions
  * @param {Date} now
  * @param {(tx: any) => number} [priceOf]
+ * @param {(tx: Record<string, any>) => boolean} [skip]
  * @returns {number|null}
  */
-export function cautiousSpend(transactions, now, priceOf = txBase) {
-  const sorted = weeklySpend(transactions, now, priceOf)
+export function cautiousSpend(transactions, now, priceOf = txBase, skip) {
+  const sorted = weeklySpend(transactions, now, priceOf, skip)
   if (!sorted) return null
   const at = (sorted.length - 1) * 0.75
   const i = Math.floor(at)
@@ -426,10 +487,11 @@ export function cautiousSpend(transactions, now, priceOf = txBase) {
  * @param {Array<Record<string, any>>} transactions
  * @param {Date} now
  * @param {(tx: any) => number} [priceOf]
+ * @param {(tx: Record<string, any>) => boolean} [skip]
  * @returns {{low: number, high: number}|null}
  */
-export function spendRange(transactions, now, priceOf = txBase) {
-  const sorted = weeklySpend(transactions, now, priceOf)
+export function spendRange(transactions, now, priceOf = txBase, skip) {
+  const sorted = weeklySpend(transactions, now, priceOf, skip)
   if (!sorted) return null
   const q = (/** @type {number} */ p) => {
     const at = (sorted.length - 1) * p
@@ -508,9 +570,10 @@ export function liquidHistory({ accounts, transactions, current, days, now = new
  * @param {Array<Record<string, any>>} transactions
  * @param {Date} now
  * @param {(tx: any) => number} priceOf
+ * @param {(tx: Record<string, any>) => boolean} [skip]  rows to leave out besides
  * @returns {number[]|null}
  */
-function weeklySpend(transactions, now, priceOf) {
+function weeklySpend(transactions, now, priceOf, skip) {
   const today = startOfDay(now).getTime()
   let first = Infinity
   for (const t of transactions) {
@@ -525,7 +588,7 @@ function weeklySpend(transactions, now, priceOf) {
   const totals = new Array(weeks).fill(0)
   const from = today - weeks * 7 * DAY_MS
   for (const t of transactions) {
-    if (!isEverydaySpend(t)) continue
+    if (!isEverydaySpend(t) || skip?.(t)) continue
     const at = Date.parse(t.date)
     if (!Number.isFinite(at) || at < from || at >= today) continue
     const w = Math.floor((at - from) / (7 * DAY_MS))

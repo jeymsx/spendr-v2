@@ -1,7 +1,9 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
-import db from '../db/db'
+import db, { UNSYNCED } from '../db/db'
+import { CORRECTION_DESC } from '../lib/flows'
+import { APP_VERSION } from '../lib/release'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
 import { useToast } from '../context/ToastContext'
@@ -260,9 +262,9 @@ export default function Onboarding() {
     ...PH_ACCOUNTS.filter(a => picked.has(a.name)),
     ...custom,
   ], [picked, custom])
+  // What you have, less what the cards owe: the figure Home will open on.
   const total = accounts
-    .filter(a => a.type !== 'credit')
-    .reduce((sum, a) => sum + parseMoney(balances[a.name]), 0)
+    .reduce((sum, a) => sum + (a.type === 'credit' ? -1 : 1) * parseMoney(balances[a.name]), 0)
 
   const index = plan.indexOf(step)
   /** @param {number} delta */
@@ -337,7 +339,8 @@ export default function Onboarding() {
           type: acct.type,
           color: acct.color,
           currency,
-          balance: bal,
+          // A card's balance is its charges (utils/creditCycle.js); what it owes today is one, below.
+          balance: credit ? 0 : bal,
           ...(credit ? {
             creditLimit: parseMoney(limits[acct.name]),
             statementDate: null,
@@ -346,7 +349,27 @@ export default function Onboarding() {
             minimumPayment: 0,
           } : {}),
         })
-        await db.balances.put({ account: acct.name, balance: bal })
+        await db.balances.put({ account: acct.name, balance: credit ? 0 : bal })
+        /* What a card owes on the day you start. The number used to go on
+           the account, where nothing reads it for a card: Home said the whole
+           limit was free, the card said nothing was used, and net worth left
+           the debt out. As a correction it is the card's first charge - it
+           moves the card and net worth, and is not spending. */
+        if (credit && bal > 0) {
+          const nowISO = new Date().toISOString()
+          await db.transactions.add({
+            txId:        crypto.randomUUID(),
+            type:        'expense',
+            date:        nowISO,
+            description: CORRECTION_DESC,
+            category:    'Others',
+            account:     acct.name,
+            amount:      bal,
+            adjust:      'correction',
+            synced:      UNSYNCED,
+            updatedAt:   nowISO,
+          })
+        }
       }
 
       // The starter categories, less any a sync has already put here.
@@ -354,6 +377,10 @@ export default function Onboarding() {
       const missing = starterCategories().filter(c => !have.some(h => h.name === c.name && h.type === c.type))
       if (missing.length) await db.categories.bulkAdd(missing)
 
+      /* Someone who has just set up has no earlier version to hear about:
+         What's New over their first Home was a list of changes to an app
+         they had never used. */
+      await db.meta.put({ key: 'whatsNewSeen', value: APP_VERSION })
       await db.meta.put({ key: 'onboarded', value: true })
       clearDraft()
       navigate('/', { replace: true })

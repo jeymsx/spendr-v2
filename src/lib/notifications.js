@@ -240,14 +240,19 @@ export function collectNotifications({
     const since = lastBackup ? new Date(lastBackup) : new Date(first)
     const staleAt = at9(since, BACKUP_STALE_DAYS)
     if (Number.isFinite(staleAt.getTime()) && staleAt.getTime() <= nowMs) {
-      const monthStart = at9(new Date(now.getFullYear(), now.getMonth(), 1))
-      const at = new Date(Math.max(staleAt.getTime(), monthStart.getTime()))
+      /* Dated when it is first said, which is what makes it news. Dated the
+         day it went stale, or the 1st, it was filed under a day already
+         looked at: no dot, and below everything newer in the list. The list
+         keeps the first date it was given (db/notifications.js). */
+      const sameYear = since.getFullYear() === now.getFullYear()
       offer({
-        id: `backup:${lastBackup ? ymd(since) : 'never'}:${monthKeyOf(at)}`,
+        id: `backup:${lastBackup ? ymd(since) : 'never'}:${monthKeyOf(now)}`,
         kind: 'backup-stale',
-        at: at.toISOString(),
+        at: now.toISOString(),
         title: 'Time for a backup',
-        body: lastBackup ? `Your last one was ${shortDate(since)}.` : 'You have not saved one yet.',
+        body: lastBackup
+          ? `Your last one was ${sameYear ? shortDate(since) : since.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}.`
+          : 'You have not saved one yet.',
         url: '/settings/backup',
       })
     }

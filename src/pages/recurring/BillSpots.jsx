@@ -1,6 +1,7 @@
 import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
+import { useToast } from '../../context/ToastContext'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
@@ -28,6 +29,7 @@ export const DISMISSED_BILLS_KEY = 'dismissedBills'
  */
 export default function BillSpots({ transactions, recurring, categories, className = '' }) {
   const navigate = useNavigate()
+  const { showToast } = useToast()
   const dismissed = useLiveQuery(async () => (await db.meta.get(DISMISSED_BILLS_KEY))?.value ?? [], [], null)
   const spots = useMemo(
     () => (dismissed ? spotBills({ transactions, recurring, dismissed }) : []),
@@ -36,11 +38,20 @@ export default function BillSpots({ transactions, recurring, categories, classNa
   const catMap = useMemo(() => Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
   if (!spots.length) return null
 
-  const notABill = (/** @type {string} */ key) => db.meta.put({
-    key: DISMISSED_BILLS_KEY,
-    value: [...new Set([...(dismissed ?? []), key])].slice(-200),
-    updatedAt: new Date().toISOString(),
-  })
+  /** @param {string} key @param {(keys: string[]) => string[]} change */
+  const keep = async (key, change) => {
+    const now = (await db.meta.get(DISMISSED_BILLS_KEY))?.value ?? []
+    await db.meta.put({ key: DISMISSED_BILLS_KEY, value: change(now).slice(-200), updatedAt: new Date().toISOString() })
+  }
+  /* Never suggested again - so with an Undo, as found pay has "Count it":
+     a mis-tap was otherwise for good, with nowhere to bring it back. */
+  const notABill = async (/** @type {{key: string, name: string}} */ s) => {
+    await keep(s.key, keys => [...new Set([...keys, s.key])])
+    showToast(`${s.name} won't be suggested again`, 'success', {
+      actionLabel: 'Undo',
+      onAction: () => keep(s.key, keys => keys.filter(k => k !== s.key)),
+    })
+  }
 
   return (
     <section className={className}>
@@ -73,7 +84,7 @@ export default function BillSpots({ transactions, recurring, categories, classNa
                         onClick={() => navigate(`/recurring/new?${billFormQuery(s, toDateInput)}`)}>
                         Add to Recurring
                       </Button>
-                      <Button size="xs" variant="quiet" className="px-3" onClick={() => notABill(s.key)}>
+                      <Button size="xs" variant="quiet" className="px-3" onClick={() => notABill(s)}>
                         Not a bill
                       </Button>
                     </div>

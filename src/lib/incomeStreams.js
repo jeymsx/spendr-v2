@@ -105,12 +105,16 @@ const isSettlement = (t) => Array.isArray(t?.settles) || t?.category === 'Debt C
 /**
  * What a row is called, with the parts that change every time taken out -
  * "Salary Sep 15" and "Salary (Sept 30)" are the same pay.
+ *
+ * A month as a word of its own, not a word that starts like one: taking any
+ * word beginning "may" took Maynilad, the water bill half of Metro Manila
+ * pays, and Maya, and Decathlon and Junction with "dec" and "jun".
  * @param {string|null|undefined} s
  */
 export function payName(s) {
   return String(s ?? '')
     .toLowerCase()
-    .replace(/\b(jan|feb|mar|apr|may|jun|jul|aug|sep|sept|oct|nov|dec)[a-z]*\b/g, ' ')
+    .replace(/\b(jan(uary)?|feb(ruary)?|mar(ch)?|apr(il)?|may|june?|july?|aug(ust)?|sept?(ember)?|oct(ober)?|nov(ember)?|dec(ember)?)\b/g, ' ')
     .replace(/[0-9]+(st|nd|rd|th)?/g, ' ')
     .replace(/[^a-zÀ-ɏ]+/g, ' ')
     .trim()

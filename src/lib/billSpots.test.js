@@ -33,6 +33,12 @@ describe('bills the ledger already shows', () => {
     expect(s.name).toBe('Meralco')
   })
 
+  it('spots a bill whose name starts like a month', () => {
+    // "may" was read as the month and taken out, leaving nothing to group by.
+    const [s] = spot(monthly('Maynilad', m => [480, 510, 495, 530, 500, 520][m - 3], () => 10))
+    expect(s?.name).toBe('Maynilad')
+  })
+
   it('does not take a habit for a bill: no rhythm, or amounts all over the place', () => {
     const lunches = Array.from({ length: 40 }, (_, i) => ({
       type: 'expense', category: 'Food', description: 'Jollibee', amount: 180, date: new Date(2026, 5, 1 + i * 3, 12).toISOString(),
