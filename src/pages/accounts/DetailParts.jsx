@@ -130,7 +130,7 @@ export function DetailTxRow({
     ? (onLoanPage ? `From ${tx.fromAccount ?? ''}` : 'Loan payment')
     : isTransfer
       ? (tx.description
-        ? (tx.fromAccount === accountName ? `→ ${tx.toAccount ?? ''}` : `← ${tx.fromAccount ?? ''}`)
+        ? (tx.fromAccount === accountName ? `To ${tx.toAccount ?? ''}` : `From ${tx.fromAccount ?? ''}`)
         : '')
       // "Adjustment" and "Debt" for the rows the app writes itself (lib/txRow).
       : txKindLabel(tx, cat))
@@ -176,8 +176,8 @@ export function DetailTxRow({
           )}
         </span>
         <span className="block text-11 text-slate-500 dark:text-slate-400 truncate mt-0.5">
-          {fmtTxDate(tx.date)}
-          {meta && <span className="ml-1.5 text-slate-400 dark:text-slate-500">· {meta}</span>}
+          {/* One tone, a space either side of the dot - as Home's Recent has it. */}
+          {fmtTxDate(tx.date)}{meta ? ` · ${meta}` : ''}
         </span>
       </span>
 

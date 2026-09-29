@@ -321,10 +321,8 @@ function RowBody({ tx, cat, cls, sign, magnitude, currency }) {
           {title}
         </p>
         <p className="text-11 text-slate-500 dark:text-slate-400 truncate mt-0.5">
-          {where}
-          {kind && (
-            <span className="ml-1.5 text-slate-400 dark:text-slate-500">· {kind}</span>
-          )}
+          {/* One tone, a space either side of the dot - as Home's Recent has it. */}
+          {where}{kind ? ` · ${kind}` : ''}
         </p>
       </div>
 

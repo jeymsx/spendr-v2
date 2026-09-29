@@ -50,7 +50,8 @@ describe('TxRow', () => {
     const onClick = vi.fn()
     render(<TxRow tx={{ ...principal, loanInterest: interest }} catMap={catMap} onClick={onClick} onCategory={() => {}} />)
     expect(screen.getByText('Car Loan')).toBeTruthy()
-    expect(screen.getByText('· Loan payment')).toBeTruthy()
+    // One caption, a space either side of the dot: "BPI · Loan payment".
+    expect(screen.getByText(/^\S.* · Loan payment$/)).toBeTruthy()
     expect(screen.getByText(/12,850\.00/)).toBeTruthy()
     fireEvent.click(screen.getByRole('button'))
     expect(onClick).toHaveBeenCalledWith(principal)
@@ -59,10 +60,10 @@ describe('TxRow', () => {
   it('says what the app own rows are, where their category would mislead', () => {
     render(<TxRow tx={{ id: 5, type: 'inflow', amount: 500, category: 'Income', adjust: 'correction', description: 'Balance adjustment', account: 'GCash', date: lunch.date }}
       catMap={catMap} onClick={() => {}} />)
-    expect(screen.getByText('· Adjustment')).toBeTruthy()
+    expect(screen.getByText(/^\S.* · Adjustment$/)).toBeTruthy()
     cleanup()
     render(<TxRow tx={{ id: 6, type: 'expense', amount: 1000, category: 'Debt Payment', description: 'Paid Ana back', account: 'GCash', date: lunch.date }}
       catMap={catMap} onClick={() => {}} />)
-    expect(screen.getByText('· Debt')).toBeTruthy()
+    expect(screen.getByText(/^\S.* · Debt$/)).toBeTruthy()
   })
 })

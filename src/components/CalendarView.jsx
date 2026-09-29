@@ -65,10 +65,8 @@ function TxRow({ tx: row, catMap, onClick }) {
           {title}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 truncate mt-0.5">
-          {where}
-          {kind && (
-            <span className="ml-1.5 text-slate-300 dark:text-slate-600">· {kind}</span>
-          )}
+          {/* One tone, a space either side of the dot - as Home's Recent has it. */}
+          {where}{kind ? ` · ${kind}` : ''}
         </p>
       </div>
       <div className="text-right shrink-0">
