@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
+import { useLeaveGuard } from '../hooks/useBackGuard'
+import DiscardSheet from '../components/DiscardSheet'
 import { useCategoryGuess } from '../hooks/useCategoryGuess'
 import db, { UNSYNCED } from '../db/db'
 import { postSplitExpense, applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } from '../db/txHelpers'
@@ -192,6 +194,21 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
      own choice. */
   const [guessedId, setGuessedId] = useState(/** @type {any} */ (null))
   const guessed = !isEdit && !catChosen && category != null && category.id === guessedId
+
+  /* Whether leaving would lose something: on a new entry anything typed or
+     picked (a quick log or a template counts - you asked for it), on an edit
+     anything changed from the row. Asked before Back, the edge swipe or
+     system Back throws it away (hooks/useBackGuard.js). */
+  const dirty = isEdit
+    ? !!account && (
+      parseMoney(amountStr) !== Math.abs(editTx.amount ?? 0)
+      || description.trim() !== String(editTx.description ?? '').trim()
+      || (!!category && category.name !== editTx.category)
+      || account.name !== editTx.account
+      || date !== isoToDateInput(editTx.date))
+    : parseMoney(amountStr) > 0 || description.trim() !== '' || catChosen
+      || !!splitLegs?.length || !!people?.length || installMonths > 0
+  const leaveGuard = useLeaveGuard(dirty, onCancel ?? back)
   useEffect(() => {
     if (catChosen || isEdit || splitLegs) return
     if (guess) {
@@ -334,7 +351,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           date: dateInputToIso(date, editTx.date, undefined, editsPlanPayment),
         })
         showToast('Expense updated')
-        if (onSaved) onSaved(); else back()
+        leaveGuard.leave(() => { if (onSaved) onSaved(); else back() })
         return
       }
 
@@ -435,7 +452,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         showToast(shares.length
           ? `Split ${splitLegs.length} ways · ${shares.length} owe you`
           : `Split across ${splitLegs.length} categories`)
-        if (onSaved) onSaved(); else navigate('/', { replace: true })
+        leaveGuard.leave(() => { if (onSaved) onSaved(); else navigate('/', { replace: true }) })
         return
       }
 
@@ -461,7 +478,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
               : 'Expense saved')
       // Home in place of the form: back from there is the page you added
       // from, not an empty form to fill in again.
-      if (onSaved) onSaved(); else navigate('/', { replace: true })
+      leaveGuard.leave(() => { if (onSaved) onSaved(); else navigate('/', { replace: true }) })
     } catch (e) {
       console.error('[AddExpense] save failed:', e)
       showToast('Failed to save expense', 'error')
@@ -528,7 +545,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           header is (ui/PinnedTop.jsx). */}
       <PinnedTop className="shrink-0">
         <header className="relative grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
-          <IconButton label="Back" className="justify-self-start" onClick={() => (onCancel ? onCancel() : back())}>
+          <IconButton label="Back" className="justify-self-start" onClick={leaveGuard.tryLeave}>
             <IconChevronLeft />
           </IconButton>
           <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
@@ -850,6 +867,8 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         account={account}
         type="expense"
       />
+      {/* Before what you typed is thrown away (hooks/useBackGuard.js). */}
+      <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />
     </div>
   )
 }

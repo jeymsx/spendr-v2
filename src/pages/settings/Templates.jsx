@@ -199,6 +199,8 @@ export function TemplateFormSheet({ open, onClose, template, allAccounts, allCat
       <Sheet
         open={open}
         onClose={onClose}
+        // Typed into and dismissed by accident: asked first (ui/Sheet.jsx).
+        unsaved="typed"
         z={120}
         scrim={45}
         maxHeight="92vh"

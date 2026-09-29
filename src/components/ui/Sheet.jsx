@@ -6,6 +6,8 @@ import { cx } from './cx'
 import { keepTabInside } from './focus'
 import { quietTaps } from './tapGuard'
 import { useSheetDrag } from './useSheetDrag'
+import Button from './Button'
+import { useBackGuard } from '../../hooks/useBackGuard'
 
 /**
  * The bottom sheet, once, instead of 28 times.
@@ -112,6 +114,17 @@ export default function Sheet({
    */
   dismissible = true,
   /**
+   * A form with input that is not saved yet. Dismissing it - the scrim, a
+   * drag, Escape, system Back - asks "Discard changes?" first, the way an
+   * iPhone sheet with unsaved changes resists being swiped away. Its own
+   * Cancel still just cancels: that button says what it does.
+   *
+   * 'typed' works it out: anything typed into the sheet since it opened.
+   * What a form loads when it opens is not typing, so an edit sheet asks
+   * only once something in it has been changed by hand.
+   */
+  unsaved = false,
+  /**
    * Stacking order. A prop rather than a constant because it is real
    * information: a confirmation opened from a picker has to sit above it.
    */
@@ -163,6 +176,10 @@ export default function Sheet({
      there is something on screen for the animation to happen to. The test
      for this is the one that caught it. */
   const [phase, setPhase] = useState(open ? 'open' : 'closed')
+  // "Discard changes?", open over an unsaved sheet that someone tried to dismiss.
+  const [asking, setAsking] = useState(false)
+  const [typed, setTyped] = useState(false)
+  const isUnsaved = unsaved === 'typed' ? typed : !!unsaved
   const [docked, setDocked] = useState(false)
   const panelRef = useRef(null)
   const overlayRef = useRef(null)
@@ -194,12 +211,29 @@ export default function Sheet({
      it shrinks the screen under the sheet, and a form that fitted a moment
      ago may now need to scroll to reach its next field. */
   const dragAll = !isDocked && !keyboardOpen
+  /* Every way of dismissing it, in one place: straight to onClose, or - with
+     unsaved input - to the question first. */
+  const attemptClose = () => {
+    if (!dismissible) return
+    if (isUnsaved) setAsking(true)
+    else onClose?.()
+  }
   useSheetDrag({
     panelRef, overlayRef,
     enabled: open && phase === 'open',
-    dismissible,
+    dismissible: dismissible && !isUnsaved,
     dragAll,
     onDismiss: onClose,
+    // Held back from leaving, it springs home and asks instead.
+    onAttempt: dismissible && isUnsaved ? () => setAsking(true) : undefined,
+  })
+
+  /* System Back closes it - or, unsaved, asks (lib/backGuard.js). A sheet
+     that is saving stays put, and keeps answering Back. */
+  useBackGuard(open, () => {
+    if (!dismissible) return 'stay'
+    if (isUnsaved) { setAsking(true); return 'stay' }
+    onClose?.()
   })
 
   /* A second tap on the button that closed it must not land on what the
@@ -208,6 +242,12 @@ export default function Sheet({
   useEffect(() => {
     if (wasOpen.current && !open) quietTaps()
     wasOpen.current = open
+  }, [open])
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!open) setAsking(false)
+    else setTyped(false)
   }, [open])
 
   useEffect(() => {
@@ -307,7 +347,7 @@ export default function Sheet({
       // Only the innermost sheet answers. See openSheets.
       if (openSheets.length && openSheets[openSheets.length - 1] !== stackToken.current) return
       if (e.key === 'Escape') {
-        if (dismissible) { e.preventDefault(); onClose?.() }
+        if (dismissible) { e.preventDefault(); attemptClose() }
         return
       }
       // Keep Tab inside the dialog. The page behind is already inert to a
@@ -316,7 +356,7 @@ export default function Sheet({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, dismissible, onClose])
+  }, [open, dismissible, onClose, isUnsaved]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Freeze the contents for the length of the exit.
 
@@ -378,7 +418,7 @@ export default function Sheet({
         ref={overlayRef}
         className={cx('sheet-overlay absolute inset-0 backdrop-blur-sm', closing && 'sheet-overlay-out')}
         style={{ backgroundColor: `rgba(0,0,0,${scrim / 100})` }}
-        onClick={dismissible ? onClose : undefined}
+        onClick={dismissible ? attemptClose : undefined}
       />
 
       <div
@@ -389,6 +429,7 @@ export default function Sheet({
         aria-labelledby={shown.title ? titleId : undefined}
         aria-label={!shown.title && ariaLabel ? ariaLabel : undefined}
         tabIndex={-1}
+        onInput={unsaved === 'typed' && !typed ? () => setTyped(true) : undefined}
         className={cx(
           closing ? 'sheet-panel-exit' : 'sheet-panel',
           isDocked ? 'sheet-dock' : 'sheet-float',
@@ -434,6 +475,53 @@ export default function Sheet({
           </div>
         )}
       </div>
+
+      {unsaved && (
+        <DiscardSheet
+          open={open && asking}
+          z={z + 20}
+          onKeep={() => setAsking(false)}
+          onDiscard={() => { setAsking(false); onClose?.() }}
+        />
+      )}
     </div>
+  )
+}
+
+/**
+ * "Discard changes?" - asked before a form's unsaved input is thrown away:
+ * by its Back button, the edge swipe, system Back, or dismissing a sheet form
+ * (`unsaved` above, hooks/useBackGuard.js). Here rather than in a file of its
+ * own so Sheet can use it without the two importing each other.
+ *
+ * Keep editing is the safe answer and the easy one; Back, Escape and the scrim
+ * give it too.
+ *
+ * @param {{open: boolean, onKeep: () => void, onDiscard: () => void, z?: number}} props
+ */
+export function DiscardSheet({ open, onKeep, onDiscard, z = 120 }) {
+  return (
+    <Sheet
+      open={open}
+      onClose={onKeep}
+      z={z}
+      scrim={50}
+      ariaLabel="Discard changes?"
+      footer={(
+        <div className="flex flex-col gap-2.5">
+          <Button variant="danger" size="lg" block onClick={onDiscard}>
+            Discard
+          </Button>
+          <Button variant="secondary" size="lg" block onClick={onKeep}>
+            Keep editing
+          </Button>
+        </div>
+      )}
+    >
+      <div className="text-center pt-1 pb-2">
+        <h3 className="text-base font-semibold text-slate-800 dark:text-white">Discard changes?</h3>
+        <p className="mt-1.5 text-13 text-slate-500 dark:text-slate-400">What you entered here will be lost.</p>
+      </div>
+    </Sheet>
   )
 }

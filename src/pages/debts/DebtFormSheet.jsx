@@ -113,6 +113,8 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
         title row as `titleAction`, and Save is pinned under the scrolling body
         as `footer` so it cannot end up below the fold on a short screen. */}
     <Sheet
+      // Typed into and dismissed by accident: asked first (ui/Sheet.jsx).
+      unsaved="typed"
       open={open}
       onClose={onClose}
       scrim={40}

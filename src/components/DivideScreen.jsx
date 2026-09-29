@@ -9,6 +9,7 @@ import { moneyChangeHandler, parseMoney } from '../utils/moneyInput'
 import { fmt, baseSymbol } from '../lib/money'
 import PeopleSplit, { EMPTY_SPLIT, resolveSplitValue } from './PeopleSplit'
 import { useTheme } from '../context/ThemeContext'
+import { useBackGuard } from '../hooks/useBackGuard'
 
 /**
  * Dividing one expense, on a screen of its own.
@@ -94,6 +95,8 @@ export default function DivideScreen({
   /* The expense being divided, so every slice of it carries the same mark. */
   currency,
 }) {
+  // System Back closes this screen, back to the expense, as its own Back does.
+  useBackGuard(open, () => { onClose?.() })
   const [tab, setTab] = useState('categories')
   const [head, setHead] = useState(/** @type {any} */ (null))
   const [rest, setRest] = useState(/** @type {any[]} */ ([]))

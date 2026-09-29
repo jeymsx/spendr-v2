@@ -48,6 +48,7 @@ import { describe, it, expect, beforeEach, vi } from 'vitest'
  * @property {Row[]} templates
  * @property {Row[]} meta
  * @property {Row[]} trash
+ * @property {Row[]} categories
  */
 
 /** @type {Store} */
@@ -1038,7 +1039,7 @@ describe("a transfer's fee", () => {
     const moved = await moveToTrash([store.transactions[0]])
     expect(moved?.count).toBe(2)
     expect(store.transactions).toHaveLength(0)
-    expect(describeEntry(store.trash[0]).extra).toBe('With its fee')
+    expect(describeEntry(/** @type {any} */ (store.trash[0])).extra).toBe('With its fee')
 
     await restoreFromTrash(/** @type {number} */ (moved?.id))
     expect(store.transactions.map(t => t.txId).sort()).toEqual(['fee-1', 'tr-1'])
@@ -1046,7 +1047,7 @@ describe("a transfer's fee", () => {
 
   it('can go on its own, and the transfer stays', async () => {
     store.transactions.push(transfer(), feeRow())
-    await deleteTxGroup([store.transactions[1]])
+    await deleteTxGroup([/** @type {any} */ (store.transactions[1])])
     expect(store.transactions.map(t => t.txId)).toEqual(['tr-1'])
   })
 
@@ -1076,7 +1077,7 @@ describe("a transfer's fee", () => {
     const row = store.transactions.find(t => t.category === 'Transfer Fee')
     expect(row).toMatchObject({ amount: 25, account: 'Maya Savings', date: at })
     expect(isFeeOf(row, transfer())).toBe(true)
-    expect(added?.txId).toBe(row?.txId)
-    expect(store.categories.some(c => c.name === 'Transfer Fee')).toBe(true)
+    expect(/** @type {any} */ (added)?.txId).toBe(row?.txId)
+    expect(store.categories.some((/** @type {Row} */ c) => c.name === 'Transfer Fee')).toBe(true)
   })
 })

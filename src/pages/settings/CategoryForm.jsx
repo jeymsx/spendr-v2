@@ -204,6 +204,8 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
 
   return (
     <Sheet
+      // Typed into and dismissed by accident: asked first (ui/Sheet.jsx).
+      unsaved="typed"
       open={open}
       onClose={onClose}
       z={zIndex}

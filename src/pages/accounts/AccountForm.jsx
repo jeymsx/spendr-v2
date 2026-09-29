@@ -43,6 +43,8 @@ import { CardStyleSheet } from './CardStyleSheet'
 import { QrCropSheet } from './QrSheets'
 import Rail from '../../components/ui/Rail'
 import Segmented from '../../components/ui/Segmented'
+import { useChangedSince, useLeaveGuard } from '../../hooks/useBackGuard'
+import DiscardSheet from '../../components/DiscardSheet'
 
 // ── Account form sheet ─────────────────────────────────────────────────────────
 
@@ -194,6 +196,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const [design,         setDesign]         = useState('')
   const [customColor,    setCustomColor]    = useState(false)
   const [styleOpen,      setStyleOpen]      = useState(false)
+  // Which record the fields were last filled from, so changes are judged against it.
+  const [filledFor,      setFilledFor]      = useState(/** @type {any} */ (null))
   const allAccounts = useLiveQuery(() => db.accounts.toArray(), [], [])
 
   const isEdit = !!account?.id
@@ -291,6 +295,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       // A preset hands over its house colour, which is not an override.
       setCustomColor(false)
     }
+    setFilledFor(account?.id ?? 'new')
     // Hydrates the form when the sheet opens. Listing every field would
     // re-run the effect that SETS them and clobber edits in progress;
     // `open` plus the record id is what actually means "something else is
@@ -303,6 +308,22 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
      that guard is `dismissible={!saving}`, and the exit animation it used to
      run here belongs to Sheet. */
   const close = () => { if (!saving) onClose() }
+
+  /* Whether leaving would lose something (hooks/useBackGuard.js): any field
+     moved since the form was filled in. The QR image by its size and start,
+     not its whole data URL, which would be a long string to compare on
+     every keystroke. */
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (!open) setFilledFor(null)
+  }, [open])
+  const changed = useChangedSince([
+    name, type, role, color, startingBal, currency, creditLimit, statementDay, dueDay, cutoffDay,
+    minPayment, interestRate, lateFee, kind, investedStart, loanMonths, parentName, scheme, design,
+    customColor, qrImage ? `${String(qrImage).length}:${String(qrImage).slice(0, 48)}` : null,
+  ], open && filledFor != null)
+  const dirty = changed && !saving
+  const leaveGuard = useLeaveGuard(isPage && dirty, close)
 
   /* The picker opens from the form, not from inside the crop sheet.
 
@@ -450,7 +471,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
           ? `${type === 'loan' ? 'Owed' : 'Balance'} corrected to ${fmt(parseMoney(startingBal), currency)}`
         : 'Account updated',
       )
-      close()
+      leaveGuard.leave(close)
     } catch (e) {
       console.error('[AccountForm] save failed:', e)
       showToast('Failed to save account', 'error')
@@ -501,7 +522,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       await deleteAccountRemote(account.name)
       /* As a page, Back would land on this account's own page - which now
          says "Account not found". Accounts is where it lived. */
-      if (isPage) navigate('/accounts', { replace: true })
+      if (isPage) leaveGuard.leave(() => navigate('/accounts', { replace: true }))
       else close()
     } catch (e) {
       console.error('[AccountForm] delete failed:', e)
@@ -1252,9 +1273,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
          account entirely rather than returning to the form behind it. */
       <SubPage
         title={isEdit ? 'Edit account' : 'New account'}
-        onBack={mode === 'form' ? close : () => setMode('form')}
+        onBack={mode === 'form' ? leaveGuard.tryLeave : () => setMode('form')}
       >
         {inner}
+        <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />
       </SubPage>
     ) : (
       /* The overlay, the panel, the grab handle, the scroll lock, Escape, the
@@ -1269,6 +1291,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
         open={open}
         onClose={onClose}
         dismissible={!saving}
+        unsaved={dirty}
         maxHeight="92dvh"
         title={sheetTitle}
         /* Only reaches the dialog in confirm-delete mode, where sheetTitle is

@@ -21,6 +21,9 @@ import {
 } from './Accounts'
 import IconButton from '../components/ui/IconButton'
 import PinnedTop from '../components/ui/PinnedTop'
+import { useBack } from '../hooks/useBack'
+import { useBackGuard, useLeaveGuard } from '../hooks/useBackGuard'
+import DiscardSheet from '../components/DiscardSheet'
 import SectionLabel from '../components/ui/SectionLabel'
 import Segmented from '../components/ui/Segmented'
 import MoneyField from '../components/ui/MoneyField'
@@ -137,6 +140,17 @@ export default function AccountNew() {
     investedStart: '',
     loanMonths: '',
     interestRate: '',
+  })
+
+  /* Leaving the flow - Back on the first step, the edge swipe, system Back -
+     asks once a name is typed or a step is behind you. Up to Accounts when
+     it was opened cold, back to where you were otherwise (hooks/useBack). */
+  const leavePage = useBack('/accounts')
+  const leaveGuard = useLeaveGuard(!created && (draft.name.trim() !== '' || step > 0), leavePage)
+  // System Back on a later step is the step back, as the header's button is.
+  useBackGuard(!created && step > 0, () => {
+    setStep(s => Math.max(s - 1, 0))
+    return step - 1 > 0 ? 'stay' : undefined
   })
   const set = useCallback((patch) => setDraft(d => ({ ...d, ...patch })), [])
 
@@ -293,7 +307,7 @@ export default function AccountNew() {
   }
 
   function back() {
-    if (step === 0) navigate('/accounts')
+    if (step === 0) leaveGuard.tryLeave()
     else setStep(s => Math.max(s - 1, 0))
   }
 
@@ -882,6 +896,8 @@ export default function AccountNew() {
         onSelect={code => set({ currency: code })}
         hint="What this account's balance and its transactions are in."
       />
+      {/* Before what you set up is thrown away (hooks/useBackGuard.js). */}
+      <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />
     </div>
   )
 }

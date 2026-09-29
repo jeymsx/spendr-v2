@@ -1,6 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
+import { useLeaveGuard } from '../hooks/useBackGuard'
+import DiscardSheet from '../components/DiscardSheet'
 import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect, checkOverdraw, saveTemplate, syncTransferFee, updateTransaction } from '../db/txHelpers'
 import { feeOf } from '../lib/transferFee'
@@ -199,6 +201,17 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     setFeeStr(editFee ? numToMoneyStr(editFee.amount ?? 0) : '0')
   }, [isEdit, editFee, transactions])
 
+  // Whether leaving would lose something - see AddExpense.
+  const dirty = isEdit
+    ? !!fromAccount && !!toAccount && (
+      amount !== Math.abs(editTx.amount ?? 0)
+      || fee !== (editFee?.amount ?? 0)
+      || fromAccount.name !== editTx.fromAccount
+      || toAccount.name !== editTx.toAccount
+      || date !== isoToDateInput(editTx.date))
+    : amount > 0 || fee > 0
+  const leaveGuard = useLeaveGuard(dirty, onCancel ?? back)
+
   /** A transfer between currencies saved before the received leg existed. */
   const legacyCross = isEdit && crosses && editTx?.toAmount == null
     && fromAccount?.name === editTx?.fromAccount && toAccount?.name === editTx?.toAccount
@@ -273,7 +286,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         await updateTransaction(editTx, patch)
         await syncTransferFee(editFee, { ...editTx, ...patch }, fee)
         showToast('Transfer updated')
-        if (onSaved) onSaved(); else back()
+        leaveGuard.leave(() => { if (onSaved) onSaved(); else back() })
         return
       }
 
@@ -323,7 +336,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
       if (templateData) await saveTemplate(templateData)
       showToast('Transfer saved')
       // Home in place of the form, so back does not reopen it (AddExpense).
-      if (onSaved) onSaved(); else navigate('/', { replace: true })
+      leaveGuard.leave(() => { if (onSaved) onSaved(); else navigate('/', { replace: true }) })
     } catch (e) {
       console.error('[Transfer] save failed:', e)
       showToast('Failed to save transfer', 'error')
@@ -351,7 +364,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           header is (ui/PinnedTop.jsx). */}
       <PinnedTop className="shrink-0">
         <header className="relative grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
-          <IconButton label="Back" className="justify-self-start" onClick={() => (onCancel ? onCancel() : back())}>
+          <IconButton label="Back" className="justify-self-start" onClick={leaveGuard.tryLeave}>
             <IconChevronLeft />
           </IconButton>
           <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
@@ -602,6 +615,8 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         account={fromAccount}
         type="transfer"
       />
+      {/* Before what you typed is thrown away (hooks/useBackGuard.js). */}
+      <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />
     </div>
   )
 }

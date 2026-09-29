@@ -125,6 +125,8 @@ export default function GoalFormSheet({
        a whole field on a phone with the URL bar showing. A height also docks
        the panel, which is what a sheet that means to scroll wants. */
     <Sheet
+      // Typed into and dismissed by accident: asked first (ui/Sheet.jsx).
+      unsaved="typed"
       open={open}
       onClose={onClose}
       title={isEdit ? 'Edit goal' : 'New goal'}

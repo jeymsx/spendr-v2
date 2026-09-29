@@ -16,6 +16,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { canPullToSync } from '../lib/pullToSync'
 import { keepStorage } from '../lib/keepStorage'
 import { useBack } from '../hooks/useBack'
+import { formGuarded } from '../lib/backGuard'
 
 // Shown while a lazy route chunk loads. Sized to roughly a screen so the
 // navbar and scroll position stay stable instead of collapsing to zero height.
@@ -220,6 +221,9 @@ export default function AppLayout() {
       start = null
       const width = el.clientWidth || window.innerWidth
       if (dx > width / 3 || (speed > 0.5 && dx > 40)) {
+        /* A form with something typed into it: the page springs back and its
+           Back button asks first, as it does when pressed (hooks/useBackGuard). */
+        if (formGuarded()) { slide(0, true); pageBack(); return }
         leaving = true
         slide(width, true)
         setTimeout(() => {

@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
+import { useBackGuard, useLeaveGuard } from '../hooks/useBackGuard'
+import DiscardSheet from '../components/DiscardSheet'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
@@ -219,6 +221,23 @@ export default function RecurringForm() {
   }, [frequency, editRec])
   const back = useBack()
 
+  /* Whether leaving would lose something (hooks/useBackGuard.js). A new bill:
+     anything typed, including what a spotted bill filled in for you. One
+     being edited: anything changed from it. */
+  const dirty = isEdit
+    ? !!editRec && (
+      name.trim() !== String(editRec.name ?? '').trim()
+      || parseMoney(amountStr) !== (editRec.amount ?? 0)
+      || frequency !== (editRec.frequency ?? 'monthly')
+      || nextDate !== String(editRec.nextDate ?? '').slice(0, 10)
+      || active !== (editRec.active !== false)
+      || (!!category && category.name !== editRec.category)
+      || (!!account && account.name !== editRec.account))
+    : name.trim() !== '' || parseMoney(amountStr) > 0
+  const leaveGuard = useLeaveGuard(dirty && !saving && !deleting, back)
+  // The people screen answers Back itself: back to the bill.
+  useBackGuard(dividing, () => { setDividing(false) })
+
   async function handleSave() {
     const draft = { name, amountStr, category, account, frequency, nextDate, active, split, type: kind }
     const errs = validateRecurring(draft)
@@ -228,7 +247,7 @@ export default function RecurringForm() {
     try {
       const what = await saveRecurring(draft, editRec)
       showToast(`${noun} ${what === 'created' ? 'added' : 'updated'}`)
-      back()
+      leaveGuard.leave(back)
     } catch (e) {
       console.error('[RecurringForm] save failed:', e)
       showToast('Failed to save', 'error')
@@ -245,7 +264,7 @@ export default function RecurringForm() {
       showToast(`${noun} deleted`)
       /* Back twice: the detail page for a bill that no longer exists is
          behind this one, and returning to it would land on an empty record. */
-      navigate('/recurring', { replace: true })
+      leaveGuard.leave(() => navigate('/recurring', { replace: true }))
     } catch (e) {
       console.error('[RecurringForm] delete failed:', e)
       showToast('Failed to delete', 'error')
@@ -294,7 +313,7 @@ export default function RecurringForm() {
           action - without it "centred" lands half a button left of centre. */}
       <PageHeader
         title={isEdit ? `Edit ${noun.toLowerCase()}` : `New ${noun.toLowerCase()}`}
-        onBack={back}
+        onBack={leaveGuard.tryLeave}
         action={isEdit && editRec ? (
           <Button
             variant={confirmDel ? 'danger' : 'dangerTint'}
@@ -565,6 +584,8 @@ export default function RecurringForm() {
         selected={account}
         onSelect={a => { setAccount(a); setShowAcctPick(false) }}
       />
+      {/* Before what you typed is thrown away (hooks/useBackGuard.js). */}
+      <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />
     </div>
   )
 }

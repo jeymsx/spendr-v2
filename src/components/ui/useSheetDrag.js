@@ -90,11 +90,11 @@ function speedOf(samples, now) {
  *   onDismiss?: () => void,
  * }} o
  */
-export function useSheetDrag({ panelRef, overlayRef, enabled, dismissible, dragAll, onDismiss }) {
+export function useSheetDrag({ panelRef, overlayRef, enabled, dismissible, dragAll, onDismiss, onAttempt }) {
   /* The latest props, for handlers bound once per open. Written in an
      effect rather than during render. */
-  const opts = useRef({ dismissible, dragAll, onDismiss })
-  useEffect(() => { opts.current = { dismissible, dragAll, onDismiss } })
+  const opts = useRef({ dismissible, dragAll, onDismiss, onAttempt })
+  useEffect(() => { opts.current = { dismissible, dragAll, onDismiss, onAttempt } })
 
   useEffect(() => {
     const panel = panelRef.current
@@ -174,7 +174,10 @@ export function useSheetDrag({ panelRef, overlayRef, enabled, dismissible, dragA
       setTimeout(() => { swallowClick = false }, 0)
 
       const v = cancelled ? 0 : speedOf(gesture.pts, e.timeStamp)
-      const { dismissible: canGo, onDismiss: go } = opts.current
+      const { dismissible: canGo, onDismiss: go, onAttempt: tried } = opts.current
+      /* Held back - unsaved input (ui/Sheet.jsx) - a pull that would have
+         dismissed it springs home and asks instead. */
+      if (!canGo && tried && !cancelled && (v > FLICK || y > 48)) setTimeout(tried, 0)
       const leave = canGo && !cancelled &&
         ((v > FLICK && y > 12) || (y > gesture.dist * FAR_ENOUGH && v > -250))
       const reduce = prefersReducedMotion()

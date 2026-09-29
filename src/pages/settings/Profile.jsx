@@ -16,6 +16,8 @@ import { fieldFrame } from '../../components/ui/Field'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
 import { currencyOf, symbolOf } from '../../lib/currency'
 import SubPage from '../../components/SubPage'
+import { useLeaveGuard } from '../../hooks/useBackGuard'
+import DiscardSheet from '../../components/DiscardSheet'
 
 // ── Profile sheet ──────────────────────────────────────────────────────────────
 
@@ -158,6 +160,12 @@ export function ProfileSheet({
     setPickerOpen(false)
   }, [open, initName, initCurrency])
 
+  /* Whether leaving would lose something (hooks/useBackGuard.js): the name
+     or the currency moved from what was saved. */
+  const dirty = open && !saving
+    && (name.trim() !== String(initName || '').trim() || currency !== (initCurrency || 'PHP'))
+  const leaveGuard = useLeaveGuard(isPage && dirty, onClose)
+
   async function handleSave() {
     setSaving(true)
     try {
@@ -171,7 +179,7 @@ export function ProfileSheet({
          because it read the pre-click `saving` out of a stale closure;
          calling it with the current value would have refused to close the
          sheet it had just finished saving. */
-      onClose()
+      leaveGuard.leave(onClose)
     } catch (e) {
       console.error('[ProfileSheet] save failed:', e)
       showToast('Failed to save profile', 'error')
@@ -244,7 +252,7 @@ export function ProfileSheet({
         Cancel
       </Button>
       <Button className="flex-[2]" onClick={handleSave} disabled={saving}>
-        {saving ? 'Saving…' : 'Save Profile'}
+        {saving ? 'Saving…' : 'Save profile'}
       </Button>
     </div>
   )
@@ -252,7 +260,7 @@ export function ProfileSheet({
   return (
     <>
     {isPage ? (
-      <SubPage title="Edit profile" onBack={saving ? () => {} : onClose}>
+      <SubPage title="Edit profile" onBack={saving ? () => {} : leaveGuard.tryLeave}>
         <div className="px-5">
           {body}
           {/* On the page the actions are the last thing in the flow rather
@@ -283,11 +291,13 @@ export function ProfileSheet({
            that is writing the profile must not be dismissed by the scrim or
            by Escape out from under the write. */
         dismissible={!saving}
+        unsaved={dirty}
         footer={footer}
       >
         {body}
       </Sheet>
     )}
+    {isPage && <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />}
 
     {/* Outside both shells, so it is a sheet over a PAGE on the phone and the
         only stacked sheet on the desktop, where a centred modal over a

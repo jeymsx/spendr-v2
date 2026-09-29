@@ -441,6 +441,8 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
       <Sheet
         open={open}
         onClose={onClose}
+        // Typed into and dismissed by accident: asked first (ui/Sheet.jsx).
+        unsaved="typed"
         scrim={40}
         maxHeight="92dvh"
         title={editRec ? `Edit ${noun.toLowerCase()}` : 'New bill'}

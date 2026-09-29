@@ -16,6 +16,8 @@ import Button from '../../components/ui/Button'
 import EmptyState from '../../components/ui/EmptyState'
 import Sheet from '../../components/ui/Sheet'
 import { baseSymbol } from '../../lib/money'
+import { useLeaveGuard } from '../../hooks/useBackGuard'
+import DiscardSheet from '../../components/DiscardSheet'
 
 // ── Budget summary card (inside category manager) ──────────────────────────────
 
@@ -105,6 +107,9 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
     onClose()
   }
 
+  // The page asks before limits you typed are thrown away (hooks/useBackGuard.js).
+  const leaveGuard = useLeaveGuard(asPage && open && hasPendingChanges && !saving, close)
+
   function handleLocalChange(catId, str) {
     setLocalBudgets(prev => ({ ...prev, [catId]: str }))
   }
@@ -139,7 +144,7 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
       )
       setLocalBudgets({})
       setLocalRollover({})
-      close()
+      leaveGuard.leave(close)
     } catch (e) {
       console.error('[BudgetManager] save failed:', e)
       showToast('Failed to save budgets', 'error')
@@ -311,9 +316,10 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
      are fields now: you tap one and type. */
   if (asPage) {
     return (
-      <SubPage title="Budget limits" onBack={close}>
+      <SubPage title="Budget limits" onBack={leaveGuard.tryLeave}>
         <div className="pt-4">{listBody}</div>
         <div className="px-5 -mt-3">{saveButton}</div>
+        <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />
       </SubPage>
     )
   }
@@ -335,6 +341,8 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
       scrim={45}
       maxHeight="88vh"
       surface="bg-page"
+      // Its own Discard says what it does; the scrim, a drag or Back ask.
+      unsaved={hasPendingChanges}
       title="Budget limits"
       titleAction={(
         <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
