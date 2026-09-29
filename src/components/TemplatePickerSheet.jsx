@@ -110,7 +110,7 @@ export default function TemplatePickerSheet({ open, onClose, type, onSelect }) {
       onClose={onClose}
       z={130}
       maxHeight="80dvh"
-      title="Quick Templates"
+      title="Quick templates"
     >
       <div className="-mx-5">
           {templates.length === 0 ? (

@@ -238,7 +238,7 @@ export function CategoryManager({ open, onClose, variant = 'sheet' }) {
                     border border-slate-200 dark:border-white/[0.07]
                     active:scale-[0.98] transition-transform duration-100"
                 >
-                  Browse Presets
+                  Browse presets
                 </button>
                 <p className="text-11 text-slate-400 dark:text-slate-500 text-center mt-1">
                   Hold a category to quickly delete it
@@ -304,7 +304,7 @@ export function CategoryManager({ open, onClose, variant = 'sheet' }) {
         scrim={45}
         maxHeight="92vh"
         surface="bg-page"
-        title="Manage Categories"
+        title="Categories"
         titleAction={(
           <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
             Done

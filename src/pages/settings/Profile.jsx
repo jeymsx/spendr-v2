@@ -65,7 +65,7 @@ export function SheetsConfigSheet({ open, onClose, onSync, syncing }) {
       onClose={onClose}
       z={100}
       scrim={45}
-      title="Google Sheets Sync"
+      title="Google Sheets sync"
       footer={(
         <Button size="lg" block onClick={handleSync} disabled={syncing || !url.trim()}>
           {syncing
@@ -252,7 +252,7 @@ export function ProfileSheet({
   return (
     <>
     {isPage ? (
-      <SubPage title="Edit Profile" onBack={saving ? () => {} : onClose}>
+      <SubPage title="Edit profile" onBack={saving ? () => {} : onClose}>
         <div className="px-5">
           {body}
           {/* On the page the actions are the last thing in the flow rather
@@ -267,7 +267,7 @@ export function ProfileSheet({
         onClose={onClose}
         z={100}
         scrim={45}
-        title="Edit Profile"
+        title="Edit profile"
         /* The header's Cancel, in the slot built for it - outside the <h3>,
            so the word does not become part of the dialog's accessible name. */
         titleAction={(

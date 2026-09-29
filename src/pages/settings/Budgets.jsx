@@ -311,7 +311,7 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
      are fields now: you tap one and type. */
   if (asPage) {
     return (
-      <SubPage title="Monthly Limits" onBack={close}>
+      <SubPage title="Budget limits" onBack={close}>
         <div className="pt-4">{listBody}</div>
         <div className="px-5 -mt-3">{saveButton}</div>
       </SubPage>
@@ -335,7 +335,7 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
       scrim={45}
       maxHeight="88vh"
       surface="bg-page"
-      title="Monthly Budgets"
+      title="Budget limits"
       titleAction={(
         <button onClick={close} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
           {hasPendingChanges ? 'Discard' : 'Done'}

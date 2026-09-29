@@ -127,7 +127,7 @@ export default function GoalFormSheet({
     <Sheet
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit Goal' : 'New Goal'}
+      title={isEdit ? 'Edit goal' : 'New goal'}
       maxHeight="88dvh"
       footer={actions}
     >

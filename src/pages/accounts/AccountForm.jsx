@@ -1210,7 +1210,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   /* The sheet's chrome, by mode. On a page none of it applies - SubPage
      carries the title and Back, and the buttons stay in the body. */
   const sheetTitle =
-    mode === 'form' ? (isEdit ? 'Edit Account' : 'New Account')
+    mode === 'form' ? (isEdit ? 'Edit account' : 'New account')
     /* confirm-delete keeps its centred, icon-topped heading in the body, so
        the dialog takes its name from ariaLabel instead. */
     : null
@@ -1251,7 +1251,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
          screen that was no longer there - and Back would have left the
          account entirely rather than returning to the form behind it. */
       <SubPage
-        title={isEdit ? 'Edit Account' : 'New Account'}
+        title={isEdit ? 'Edit account' : 'New account'}
         onBack={mode === 'form' ? close : () => setMode('form')}
       >
         {inner}

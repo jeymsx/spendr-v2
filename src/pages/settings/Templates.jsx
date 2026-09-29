@@ -206,7 +206,7 @@ export function TemplateFormSheet({ open, onClose, template, allAccounts, allCat
            that is writing a template must not be dismissed out from under the
            write. */
         dismissible={!saving}
-        title={isEdit ? 'Edit Template' : 'New Template'}
+        title={isEdit ? 'Edit template' : 'New template'}
         titleAction={(
           <div className="flex items-center gap-3">
             {isEdit && (
@@ -498,7 +498,7 @@ export function TemplateManager({ open, onClose, variant = 'sheet' }) {
     return (
       <>
         <SubPage
-          title="Quick Templates"
+          title="Quick templates"
           action={(
             <IconButton label="New template" variant="primary" onClick={openAdd}>
               <IconPlus />
@@ -531,7 +531,7 @@ export function TemplateManager({ open, onClose, variant = 'sheet' }) {
         scrim={45}
         maxHeight="92vh"
         surface="bg-page"
-        title="Quick Templates"
+        title="Quick templates"
         titleAction={(
           <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
             Done

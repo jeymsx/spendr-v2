@@ -144,7 +144,7 @@ export function AccountSortSheet({ open, onClose, accounts }) {
     <Sheet
       open={open}
       onClose={onClose}
-      title="Sort Accounts"
+      title="Sort accounts"
       maxHeight="80dvh"
     >
       <p className="text-xs text-slate-400 dark:text-slate-500">

@@ -26,7 +26,7 @@ export function CardStyleSheet({ open, onClose, draft, set }) {
       onClose={onClose}
       z={150}
       scrim={55}
-      title="Customise Card"
+      title="Customise card"
       maxHeight="94dvh"
     >
       {/* The card stands up here, exactly as it does on the create flow's

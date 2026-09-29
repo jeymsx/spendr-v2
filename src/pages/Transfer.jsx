@@ -341,7 +341,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
             <IconChevronLeft />
           </IconButton>
           <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
-            {isEdit ? 'Edit Transfer' : 'Transfer'}
+            {isEdit ? 'Edit transfer' : 'Transfer'}
           </h1>
           {!isEdit && (
             <Button

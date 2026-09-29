@@ -267,7 +267,7 @@ export default function Settings() {
 
       {/* ══ DATA & REPORTS ══ */}
       <div className="mb-8">
-        <SectionHeader>Data & Reports</SectionHeader>
+        <SectionHeader>Data & reports</SectionHeader>
         <SectionCard>
           {/* Only when there is something to do. A permanent "Merge
               duplicates" row on a database with none is a standing
@@ -313,7 +313,7 @@ export default function Settings() {
 
       {/* ══ HELP & ABOUT ══ */}
       <div className="mb-8">
-        <SectionHeader>Help & About</SectionHeader>
+        <SectionHeader>Help & about</SectionHeader>
         <SectionCard>
           {/* Always here now, not only once something has broken: when you
               want it is when you are telling someone that it did. With a log,

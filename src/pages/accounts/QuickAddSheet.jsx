@@ -185,7 +185,7 @@ export function QuickAddSheet({ open, onClose, onPickPreset, onCustom }) {
     <Sheet
       open={open}
       onClose={onClose}
-      title="Add Account"
+      title="Add account"
       maxHeight="88dvh"
       footer={(
         /* The hairline it used to carry is gone with the migration: at

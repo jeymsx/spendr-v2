@@ -293,7 +293,7 @@ export default function RecurringForm() {
           disc, centred title, one action, and a 36px spacer when there is no
           action - without it "centred" lands half a button left of centre. */}
       <PageHeader
-        title={isEdit ? `Edit ${noun}` : `New ${noun}`}
+        title={isEdit ? `Edit ${noun.toLowerCase()}` : `New ${noun.toLowerCase()}`}
         onBack={back}
         action={isEdit && editRec ? (
           <Button

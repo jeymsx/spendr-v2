@@ -151,9 +151,9 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
   }
 
   const sheetTitle = {
-    form:             isEdit ? 'Edit Category' : 'New Category',
-    'confirm-delete': 'Delete Category',
-    reassign:         'Reassign Transactions',
+    form:             isEdit ? 'Edit category' : 'New category',
+    'confirm-delete': 'Delete category',
+    reassign:         'Reassign transactions',
   }[mode]
 
   /* One action row per mode, pinned by Sheet under the scrolling body.
@@ -314,7 +314,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
                 <CategoryGlyph cat={{ name: name.trim(), color, icon }} size={20} />
               </div>
               <div>
-                <p className="text-sm font-semibold text-slate-800 dark:text-white">{name || 'Category Name'}</p>
+                <p className="text-sm font-semibold text-slate-800 dark:text-white">{name || 'Category name'}</p>
                 <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
                   {type === 'expense' ? 'Expense' : 'Inflow'}
                   {parseMoney(budget) > 0 && ` · ${fmt(parseMoney(budget))} / mo`}

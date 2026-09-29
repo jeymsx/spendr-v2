@@ -253,7 +253,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
             <IconChevronLeft />
           </IconButton>
           <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
-            {isEdit ? 'Edit Inflow' : 'Add Inflow'}
+            {isEdit ? 'Edit inflow' : 'Add inflow'}
           </h1>
           {/* Templates start a new entry from a saved one, which is the
               opposite of editing a particular row. */}

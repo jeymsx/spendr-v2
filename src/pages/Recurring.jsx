@@ -443,7 +443,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
         onClose={onClose}
         scrim={40}
         maxHeight="92dvh"
-        title={editRec ? `Edit ${noun}` : 'New Bill'}
+        title={editRec ? `Edit ${noun.toLowerCase()}` : 'New bill'}
         titleAction={editRec && showDelete && (
           <Button
             variant={confirmDel ? 'danger' : 'dangerTint'}

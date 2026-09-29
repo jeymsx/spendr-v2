@@ -8,7 +8,7 @@ import CategoryTile from './CategoryTile'
  *   intro: a line above the grid - what is being filed, when the sheet is
  *   opened from a list rather than from the form that is filing it
  */
-export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect, title = 'Select Category', intro = null }) {
+export default function CategoryPickerSheet({ open, onClose, categories, selected, onSelect, title = 'Select a category', intro = null }) {
   const pick = (cat) => { onSelect(cat); onClose() }
 
   return (
