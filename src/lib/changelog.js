@@ -24,6 +24,19 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.13.0',
+    date: '2026-09-29',
+    items: [
+      { title: 'Your data, kept safer', desc: 'Every synced change keeps the version it replaced for 30 days, and Spendr asks your browser not to clear its data when space runs low.' },
+      { title: 'Backup reminders', desc: 'The bell asks for a backup when your last one is two weeks old, and Backup & restore shows when you saved it.' },
+      { title: 'Bills spotted for you', desc: 'Recurring lists the bills it finds in your history, ready to add in one tap.' },
+      { title: 'A category guess', desc: 'Type what you bought and the category is picked from what you logged before. Tap another to change it.' },
+      { title: 'Swipe back, like an iPhone app', desc: 'In the installed app, swipe from the left edge to go back. Headers stay at the top as you scroll, and Back returns to where you came from.' },
+      { title: 'A steadier forecast', desc: 'Tell it a found payment is not pay, and your settings follow you to your other devices. Pay and bills on Recurring are never counted twice.' },
+      { title: 'Cards that add up', desc: 'Paying more than you owe leaves the extra as credit, cash taken from a card counts toward its bill, and setup records what a card already owes.' },
+    ],
+  },
+  {
     version: '0.12.0',
     date: '2026-09-29',
     items: [

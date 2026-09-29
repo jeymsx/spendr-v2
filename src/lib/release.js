@@ -32,38 +32,23 @@ export const RELEASE_DATE = '2026-09-29'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'lock',
-    title: 'Your data, kept safer',
-    desc: 'Every synced change keeps the version it replaced for 30 days, and Spendr asks your browser not to clear its data when space runs low.',
-  },
-  {
-    icon: 'bell',
-    title: 'Backup reminders',
-    desc: 'The bell asks for a backup when your last one is two weeks old, and Backup & restore shows when you saved it.',
-  },
-  {
-    icon: 'wallet',
-    title: 'Bills spotted for you',
-    desc: 'Recurring lists the bills it finds in your history, ready to add in one tap.',
-  },
-  {
-    icon: 'categories',
-    title: 'A category guess',
-    desc: 'Type what you bought and the category is picked from what you logged before. Tap another to change it.',
-  },
-  {
     icon: 'transfer',
-    title: 'Swipe back, like an iPhone app',
-    desc: 'In the installed app, swipe from the left edge to go back. Headers stay at the top as you scroll, and Back returns to where you came from.',
+    title: 'Back that feels like a phone',
+    desc: 'A swipe back shows the page you came from sliding in underneath, and Android\'s Back button closes the sheet on top instead of leaving the page.',
   },
   {
-    icon: 'chart',
-    title: 'A steadier forecast',
-    desc: 'Tell it a found payment is not pay, and your settings follow you to your other devices. Pay and bills on Recurring are never counted twice.',
+    icon: 'lock',
+    title: 'Nothing you typed is lost',
+    desc: 'Every form asks before throwing away what you entered, whether you tap Back, swipe, or close its sheet.',
   },
   {
     icon: 'bank',
-    title: 'Cards that add up',
-    desc: 'Paying more than you owe leaves the extra as credit, cash taken from a card counts toward its bill, and setup records what a card already owes.',
+    title: 'Fees stay with their transfer',
+    desc: 'Deleting or re-routing a transfer takes its fee with it, and the transfer shows and edits its fee.',
+  },
+  {
+    icon: 'sparkle',
+    title: 'Titles, all alike',
+    desc: 'Every page and sheet title is written the same way, and named like the row that opens it.',
   },
 ]
