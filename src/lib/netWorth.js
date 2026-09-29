@@ -60,7 +60,8 @@ export function netWorthBreakdown({
   const savings  = take(sumInBase(piles.savings, view, rates))
   const invested = take(sumInBase(piles.invested, view, rates))
   const credit   = take(sumInBase(piles.credit, view, rates, a =>
-    (creditStatus?.[a.name] ?? getCreditStatus(/** @type {any} */ (a), transactions ?? [])).currentBalance ?? 0))
+    /* Signed: an overpaid card holds a credit, which is money you have. */
+    ((/** @type {any} */ st) => st.signedBalance ?? st.currentBalance ?? 0)(creditStatus?.[a.name] ?? getCreditStatus(/** @type {any} */ (a), transactions ?? []))))
   // Owed, as a positive figure. Unclamped: a loan paid past zero is money back.
   const loans    = take(sumInBase(piles.loan, view, rates, a => -(a.balance ?? 0)))
 

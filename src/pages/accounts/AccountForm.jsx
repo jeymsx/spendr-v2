@@ -6,6 +6,7 @@
  * QrCropSheet come with it because nothing else opens them.
  */
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import 'react-image-crop/dist/ReactCrop.css'
 import db, { UNSYNCED } from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -89,10 +90,10 @@ export function buildAccountRow({
     color,
     currency,
     creditLimit:    isCredit ? (parseMoney(creditLimit) || 0)   : null,
-    statementDate:  isCredit ? (parseInt(statementDay) || null) : null,
+    statementDate:  isCredit ? dayOfMonth(statementDay) : null,
     // A day of the month: "45" is a typo for a day that exists, not a date to store.
     dueDate:        isCredit || isLoan ? dayOfMonth(dueDay) : null,
-    cutoffDate:     isCredit ? (parseInt(cutoffDay)    || null) : null,
+    cutoffDate:     isCredit ? dayOfMonth(cutoffDay) : null,
     minimumPayment: isCredit || isLoan ? (parseMoney(minPayment) || 0) : null,
     /* What the bank charges for paying late. Both optional: a card carrying
        neither cannot be estimated for, and financeCharge.js says so rather
@@ -149,6 +150,7 @@ export async function createAccount(row, balance) {
  */
 export function AccountFormSheet({ open, onClose, account, prefill = null, variant = 'sheet' }) {
   const isPage = variant === 'page'
+  const navigate = useNavigate()
   const { showToast } = useToast()
   const [saving,     setSaving]     = useState(false)
   const [mode,       setMode]       = useState('form') // 'form' | 'confirm-delete'
@@ -181,7 +183,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const [kind,           setKind]           = useState('fund')
   const [investedStart,  setInvestedStart]  = useState('')
   const [loanMonths,     setLoanMonths]     = useState('')
-  const [nameError,      setNameError]      = useState(false)
+  // false, or why the name will not do: 'required', or 'taken' by another account.
+  const [nameError,      setNameError]      = useState(/** @type {false|'required'|'taken'} */ (false))
   const [qrImage,        setQrImage]        = useState(null)
   const [qrCropOpen,     setQrCropOpen]     = useState(false)
   const [qrSrc,          setQrSrc]          = useState(null)
@@ -322,10 +325,22 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   }
 
   async function handleSave() {
-    if (!name.trim()) { setNameError(true); return }
+    if (!name.trim()) { setNameError('required'); return }
+    const cleanName = name.trim()
+    /* One name, one account. The New account flow always refused a name
+       already in use, and editing did not: renaming Piggy Bank to "Cash"
+       gave two accounts called Cash, and because every transaction, bill and
+       balance finds its account BY NAME, the two shared one ledger - and
+       renaming it back carried Cash's whole history away with it. Case and
+       spaces do not make a name different. Renaming an account to its own
+       name in another case is still fine. */
+    if (isEdit && cleanName.toLowerCase() !== String(account.name ?? '').trim().toLowerCase()) {
+      const taken = (await db.accounts.toArray())
+        .some(a => a.id !== account.id && String(a.name ?? '').trim().toLowerCase() === cleanName.toLowerCase())
+      if (taken) { setNameError('taken'); return }
+    }
     setSaving(true)
     try {
-      const cleanName = name.trim()
       const data = buildAccountRow({
         name: cleanName, type, role, color, creditLimit,
         statementDay, dueDay, cutoffDay, minPayment, lateFee,
@@ -339,7 +354,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
       if (isEdit) {
         const oldName = account.name
-        await db.transaction('rw', [db.accounts, db.balances, db.transactions, db.goals], async () => {
+        await db.transaction('rw', [db.accounts, db.balances, db.transactions, db.goals, db.recurring, db.templates, db.trash], async () => {
           await db.accounts.update(account.id, data)
           if (oldName !== cleanName) {
             // Migrate balance record
@@ -369,6 +384,27 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 updatedAt: new Date().toISOString(),
                 synced: 0,
               })
+            }
+            /* And everything else that names it. Left behind, a bill kept
+               paying from an account that no longer existed - Rent posted
+               ₱12,000 against "BPI" after BPI became "BPI Payroll", moving
+               no balance at all - and a template did the same. Recently
+               deleted keeps copies of rows too; put back, they would land on
+               the old name. */
+            await db.recurring.where('account').equals(oldName).modify({ account: cleanName })
+            for (const field of ['account', 'fromAccount', 'toAccount']) {
+              await db.templates.where(field).equals(oldName).modify({ [field]: cleanName })
+            }
+            const rename = (/** @type {any} */ t) => ({
+              ...t,
+              ...(t?.account === oldName ? { account: cleanName } : {}),
+              ...(t?.fromAccount === oldName ? { fromAccount: cleanName } : {}),
+              ...(t?.toAccount === oldName ? { toAccount: cleanName } : {}),
+            })
+            for (const e of await db.trash.toArray()) {
+              const txs = Array.isArray(e.txs) ? e.txs : []
+              if (!txs.some(t => t?.account === oldName || t?.fromAccount === oldName || t?.toAccount === oldName)) continue
+              await db.trash.update(e.id, { txs: txs.map(rename) })
             }
           }
 
@@ -463,7 +499,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       })
       // Without this the next pull re-adds the account from Supabase.
       await deleteAccountRemote(account.name)
-      close()
+      /* As a page, Back would land on this account's own page - which now
+         says "Account not found". Accounts is where it lived. */
+      if (isPage) navigate('/accounts', { replace: true })
+      else close()
     } catch (e) {
       console.error('[AccountForm] delete failed:', e)
       showToast('Failed to delete account', 'error')
@@ -647,7 +686,11 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 maxLength={40}
                 className={inputClass(nameError)}
               />
-              {nameError && <p className="text-xs text-red-500 mt-1.5 px-1">Name is required</p>}
+              {nameError && (
+                <p className="text-xs text-red-500 mt-1.5 px-1">
+                  {nameError === 'taken' ? 'You already have an account with this name' : 'Name is required'}
+                </p>
+              )}
             </div>
 
             {/* Type */}

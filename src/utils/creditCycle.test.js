@@ -353,3 +353,26 @@ describe('nextDueDate', () => {
     expect(nextDueDate(null)).toBeNull()
   })
 })
+
+describe('money taken out of a card', () => {
+  const visa = { name: 'Visa', type: 'credit', cutoffDate: 25, dueDate: 10, creditLimit: 30000 }
+  it('is owed on the card, like a purchase: a cash advance is borrowing', () => {
+    const txs = [
+      { type: 'expense', account: 'Visa', amount: 2000, date: at(2026, 9, 3).toISOString() },
+      { type: 'transfer', fromAccount: 'Visa', toAccount: 'Cash', amount: 1000, date: at(2026, 9, 5).toISOString() },
+    ]
+    const s = getCreditStatus(/** @type {any} */ (visa), txs, at(2026, 9, 10))
+    expect(s.currentBalance).toBe(3000)
+    expect(s.availableCredit).toBe(27000)
+  })
+
+  it('keeps an overpayment as a credit the card owes you', () => {
+    const txs = [
+      { type: 'expense', account: 'Visa', amount: 2000, date: at(2026, 9, 3).toISOString() },
+      { type: 'transfer', fromAccount: 'BPI', toAccount: 'Visa', amount: 5000, date: at(2026, 9, 6).toISOString() },
+    ]
+    const s = getCreditStatus(/** @type {any} */ (visa), txs, at(2026, 9, 10))
+    expect(s.currentBalance).toBe(0)
+    expect(s.signedBalance).toBe(-3000)
+  })
+})

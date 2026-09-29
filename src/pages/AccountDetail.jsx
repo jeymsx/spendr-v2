@@ -517,6 +517,12 @@ export default function AccountDetail() {
             format={acctFmt}
           />
         </p>
+        {/* Overpaid: the card owes you, and that is money of yours. */}
+        {isCredit && (creditData?.signedBalance ?? 0) < -0.005 && (
+          <p className="mt-2 text-13 font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">
+            {acctFmt(-(creditData?.signedBalance ?? 0))} credit on the card
+          </p>
+        )}
 
         {isCredit && limit > 0 && (
           /* The hairline this replaces was amber up to 80% and red past it,

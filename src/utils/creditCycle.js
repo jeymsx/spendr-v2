@@ -192,7 +192,12 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
   // Single pass. The previous copies of this ran three or four .filter()
   // sweeps over every transaction, per card, on every render.
   for (const tx of txs ?? []) {
-    const isCharge  = tx.type === 'expense' && tx.account === name
+    /* Money taken OUT of the card by a transfer - a cash advance, a top-up
+       paid by card - is borrowed exactly like a purchase is. It used to be
+       ignored: the cash arrived, the card never owed it, and net worth rose
+       by the amount of the loan. */
+    const isCharge  = (tx.type === 'expense'  && tx.account     === name)
+                   || (tx.type === 'transfer' && tx.fromAccount === name)
     const isPayment = (tx.type === 'inflow'   && tx.account   === name)
                    || (tx.type === 'transfer' && tx.toAccount === name)
     if (!isCharge && !isPayment) continue
@@ -284,6 +289,10 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
      yet. Clamped at zero only at the very end, so an overpaid card offsets
      new charges instead of showing them at full value. */
   const currentBalance = Math.max(0, carried + nextTotal)
+  /* The same, unclamped: below zero the card owes YOU - an overpayment's
+     credit. "Balance used" cannot be negative, but net worth has to count
+     the credit, or overpaying a card by ₱3,000 made the ₱3,000 vanish. */
+  const signedBalance = carried + nextTotal
 
   return {
     cycleStart, cycleEnd, nextCycleEnd,
@@ -294,7 +303,7 @@ export function getCreditStatus(account, txs, referenceDate = new Date()) {
     /* billedTotal/paidTotal are the running figures; `carried` is what they
        come to, signed - negative means the card owes YOU. */
     billedTotal, paidTotal, carried,
-    stmtPaid, hasStatement, stmtOutstanding, minimumDue, currentBalance,
+    stmtPaid, hasStatement, stmtOutstanding, minimumDue, currentBalance, signedBalance,
     availableCredit: (account?.creditLimit ?? 0) - currentBalance,
   }
 }

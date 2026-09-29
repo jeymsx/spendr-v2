@@ -75,3 +75,23 @@ describe('net worth', () => {
     expect(b.total).toBe(100)
   })
 })
+
+describe('cards in net worth', () => {
+  it('counts an overpaid card as money you have, not as nothing', () => {
+    const paid = [
+      { type: 'expense', account: 'Card', amount: 1500, date: new Date().toISOString() },
+      { type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount: 4000, date: new Date().toISOString() },
+    ]
+    // The bank's stored balance already lost the 4,000; the card holds 2,500 of it.
+    const nw = netWorthBreakdown({ accounts: [{ ...bank, balance: 46000 }, card], transactions: paid, view: 'PHP', rates: null })
+    expect(nw.credit).toBe(-2500)
+    expect(nw.total).toBe(48500)
+  })
+
+  it('does not let a cash advance off a card raise net worth', () => {
+    const advance = [{ type: 'transfer', fromAccount: 'Card', toAccount: 'Wallet', amount: 1000, date: new Date().toISOString() }]
+    const before = netWorthBreakdown({ accounts: [wallet, card], transactions: [], view: 'PHP', rates: null }).total
+    const after = netWorthBreakdown({ accounts: [{ ...wallet, balance: 3000 }, card], transactions: advance, view: 'PHP', rates: null }).total
+    expect(after).toBe(before)
+  })
+})

@@ -251,6 +251,14 @@ export default function CardPaymentSheet({
               This leaves {from?.name} short by {fmt(short, fromCur)}.
             </p>
           )}
+          {/* Paying more than the card holds is allowed - the rest stays on it
+              as a credit, counted in net worth - but it is said, because it is
+              almost always a slip of a digit. */}
+          {value > (status?.currentBalance ?? 0) + 0.005 && (
+            <p className="mb-2 text-11 text-amber-600 dark:text-amber-400">
+              {fmt(value - (status?.currentBalance ?? 0), cardCur)} more than you owe. It stays on the card as credit.
+            </p>
+          )}
 
           <div className="mt-5">
             <SwipeConfirm
