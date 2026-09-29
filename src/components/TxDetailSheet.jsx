@@ -464,6 +464,9 @@ export default function TxDetailSheet({
       <Sheet
         open={open}
         onClose={onClose}
+        /* Escape and Back from the delete confirmation or the edit go back to
+           the details, as their Cancel does; from the details they close. */
+        onBack={mode === 'detail' ? null : () => setMode('detail')}
         z={zIndex}
         scrim={55}
         /* Not while it is writing: the sheet that is saving or deleting a

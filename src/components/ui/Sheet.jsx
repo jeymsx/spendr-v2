@@ -125,6 +125,12 @@ export default function Sheet({
    */
   unsaved = false,
   /**
+   * A step back inside the sheet - a confirmation back to what it confirms,
+   * an edit back to the details - for Escape and system Back, as the step's
+   * own Cancel does. Tapping outside or dragging it away still closes it.
+   */
+  onBack = null,
+  /**
    * Stacking order. A prop rather than a constant because it is real
    * information: a confirmation opened from a picker has to sit above it.
    */
@@ -232,6 +238,7 @@ export default function Sheet({
      that is saving stays put, and keeps answering Back. */
   useBackGuard(open, () => {
     if (!dismissible) return 'stay'
+    if (onBack) { onBack(); return 'stay' }
     if (isUnsaved) { setAsking(true); return 'stay' }
     onClose?.()
   })
@@ -347,7 +354,7 @@ export default function Sheet({
       // Only the innermost sheet answers. See openSheets.
       if (openSheets.length && openSheets[openSheets.length - 1] !== stackToken.current) return
       if (e.key === 'Escape') {
-        if (dismissible) { e.preventDefault(); attemptClose() }
+        if (dismissible) { e.preventDefault(); if (onBack) onBack(); else attemptClose() }
         return
       }
       // Keep Tab inside the dialog. The page behind is already inert to a
@@ -356,7 +363,7 @@ export default function Sheet({
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, dismissible, onClose, isUnsaved]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [open, dismissible, onClose, isUnsaved, onBack]) // eslint-disable-line react-hooks/exhaustive-deps
 
   /* Freeze the contents for the length of the exit.
 
