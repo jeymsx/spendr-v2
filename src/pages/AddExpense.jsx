@@ -31,7 +31,7 @@ import IconButton from '../components/ui/IconButton'
 import PinnedTop from '../components/ui/PinnedTop'
 import SectionLabel from '../components/ui/SectionLabel'
 import DivideScreen from '../components/DivideScreen'
-import { fmt } from '../lib/money'
+import { fmt, baseDecimals, zeroAmount } from '../lib/money'
 import Rail from '../components/ui/Rail'
 import AmountInput from '../components/ui/AmountInput'
 import ConversionChip from '../components/ConversionChip'
@@ -277,7 +277,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     return () => clearTimeout(t)
   }, [])
 
-  const handleAmountChange = moneyChangeHandler(setAmountStr)
+  const handleAmountChange = moneyChangeHandler(setAmountStr, baseDecimals(account?.currency))
 
   async function onConfirmPress() {
     let err = false
@@ -576,7 +576,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           currency={account?.currency}
-          placeholder="0.00"
+          placeholder={zeroAmount(account?.currency)}
           label="Amount"
         />
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">

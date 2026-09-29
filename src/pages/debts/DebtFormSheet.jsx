@@ -10,7 +10,7 @@ import Sheet from '../../components/ui/Sheet'
 import Button from '../../components/ui/Button'
 import DeleteConfirmSheet from '../../components/DeleteConfirmSheet'
 import DetailRow from '../../components/ui/DetailRow'
-import { fmt, baseSymbol } from '../../lib/money'
+import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 import { fmtDueDate } from './shared'
 
 // ── Debt Form Sheet ────────────────────────────────────────────────────────────
@@ -157,7 +157,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
             type="text"
             inputMode="decimal"
             autoFocus={!editDebt}
-            placeholder={`${baseSymbol()}0.00`}
+            placeholder={`${baseSymbol()}${zeroAmount()}`}
             value={amountStr}
             onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
             aria-label="Amount"
@@ -210,7 +210,7 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
             <RowInput
               value={paidStr && paidStr !== '0' ? `${baseSymbol()}${paidStr}` : ''}
               onChange={e => { e.target.value = e.target.value.replace(/[^0-9.]/g, ''); moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
-              placeholder={`${baseSymbol()}0.00`}
+              placeholder={`${baseSymbol()}${zeroAmount()}`}
               inputMode="decimal"
             />
           </EditRow>

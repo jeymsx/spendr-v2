@@ -130,6 +130,9 @@ export function currencyOf(code) {
 /** @param {string|null|undefined} code */
 export const symbolOf = (code) => currencyOf(code).symbol
 
+/** How many decimals a currency is written with: 2 for most, 0 for the yen and the won. @param {string|null|undefined} code */
+export const decimalsOf = (code) => currencyOf(code).decimals
+
 /**
  * Currencies that must NOT be given a flag by the rule below.
  *

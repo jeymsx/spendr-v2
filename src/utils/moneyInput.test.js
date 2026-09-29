@@ -1,5 +1,6 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 import { parseMoney, numToMoneyStr, moneyChangeHandler } from './moneyInput'
+import { setBaseCurrency, zeroAmount } from '../lib/money'
 
 /**
  * The money input, which every amount in the app is typed through.
@@ -143,5 +144,54 @@ describe('moneyChangeHandler', () => {
   it('refuses an eleventh integer digit instead of truncating', () => {
     expect(typed('12345678901')).toBeUndefined()
     expect(typed('1234567890')).toBe('1,234,567,890')
+  })
+})
+
+/* A yen or a won is quoted whole. "1,500.75" was accepted for one, stored,
+   and shown back as ¥1,501 - the field took a figure the currency does not
+   have. */
+describe('a currency quoted whole', () => {
+  afterEach(() => { setBaseCurrency('PHP') })
+
+  /** Types `text` one key at a time, as a field sees it; returns what it shows. */
+  const keyed = (/** @type {string} */ text, /** @type {number|undefined} */ decimals) => {
+    let shown = ''
+    for (const ch of text) {
+      const set = vi.fn()
+      moneyChangeHandler(set, decimals)({ target: { value: shown + ch } })
+      if (set.mock.calls.length) shown = set.mock.calls[0][0]
+    }
+    return shown
+  }
+
+  /* The point stays and takes nothing after it. Dropping it let the next
+     digits run on, so "1500.75" typed a key at a time came out as 150,075. */
+  it('takes no digits after the point when its currency has none', () => {
+    expect(keyed('1500.75', 0)).toBe('1,500.')
+    expect(parseMoney(keyed('1500.75', 0))).toBe(1500)
+    expect(keyed('12.3.4', 0)).toBe('12.')
+    expect(keyed('1500', 0)).toBe('1,500')
+  })
+
+  it("takes the ledger's places when a field names no currency", () => {
+    setBaseCurrency('JPY')
+    expect(keyed('1500.75', undefined)).toBe('1,500.')
+    setBaseCurrency('PHP')
+    expect(keyed('1500.75', undefined)).toBe('1,500.75')
+  })
+
+  it('prefills whole, in a whole ledger or for a code given', () => {
+    expect(numToMoneyStr(1500.6, 'JPY')).toBe('1,501')
+    setBaseCurrency('JPY')
+    expect(numToMoneyStr(1500.4)).toBe('1,500')
+    expect(numToMoneyStr(12.34, 'USD')).toBe('12.34')
+  })
+
+  it('shows "0" rather than "0.00" as the empty field', () => {
+    expect(zeroAmount('JPY')).toBe('0')
+    expect(zeroAmount('KRW')).toBe('0')
+    expect(zeroAmount('PHP')).toBe('0.00')
+    setBaseCurrency('JPY')
+    expect(zeroAmount()).toBe('0')
   })
 })

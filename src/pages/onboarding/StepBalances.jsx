@@ -4,6 +4,7 @@ import MoneyField from '../../components/ui/MoneyField'
 import { accountBrand } from '../../lib/accountBrands'
 import { TYPE_LABEL } from '../../lib/accountMeta'
 import { moneyChangeHandler } from '../../utils/moneyInput'
+import { baseDecimals } from '../../lib/money'
 import { Heading, StepBody, StepFooter } from './parts'
 
 /**
@@ -51,7 +52,7 @@ export const StepBalances = forwardRef(
                         <span className="text-12 font-medium text-slate-400 pl-2">Owed now</span>
                         <MoneyField
                           value={balances[acct.name] ?? ''}
-                          onChange={moneyChangeHandler(v => onBalance(acct.name, v))}
+                          onChange={moneyChangeHandler(v => onBalance(acct.name, v), baseDecimals(currency))}
                           currency={currency}
                           aria-label={`${acct.name}, owed now`}
                         />
@@ -60,7 +61,7 @@ export const StepBalances = forwardRef(
                         <span className="text-12 font-medium text-slate-400 pl-2">Limit</span>
                         <MoneyField
                           value={limits[acct.name] ?? ''}
-                          onChange={moneyChangeHandler(v => onLimit(acct.name, v))}
+                          onChange={moneyChangeHandler(v => onLimit(acct.name, v), baseDecimals(currency))}
                           currency={currency}
                           aria-label={`${acct.name}, credit limit`}
                         />
@@ -69,7 +70,7 @@ export const StepBalances = forwardRef(
                   ) : (
                     <MoneyField
                       value={balances[acct.name] ?? ''}
-                      onChange={moneyChangeHandler(v => onBalance(acct.name, v))}
+                      onChange={moneyChangeHandler(v => onBalance(acct.name, v), baseDecimals(currency))}
                       currency={currency}
                       aria-label={`${acct.name}, balance`}
                     />

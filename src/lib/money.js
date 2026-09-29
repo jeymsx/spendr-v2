@@ -54,7 +54,7 @@
  */
 
 import {
-  DEFAULT_CURRENCY, compactAmount, formatAmount, isCurrencyCode, maskedAmount, symbolOf,
+  DEFAULT_CURRENCY, compactAmount, decimalsOf, formatAmount, isCurrencyCode, maskedAmount, symbolOf,
 } from './currency'
 
 let base = DEFAULT_CURRENCY
@@ -125,3 +125,21 @@ export const fmtHidden = (code, dots = 4) => maskedAmount(code ?? base, dots)
  * @param {string} [code]
  */
 export const baseSymbol = (code) => symbolOf(code ?? base)
+
+/**
+ * How many places an amount is typed to: its currency's own - none for the
+ * yen or the won - and the base's when no code is given. moneyChangeHandler
+ * stops the typing there, so a field never takes a figure its currency does
+ * not have.
+ *
+ * @param {string} [code]
+ */
+export const baseDecimals = (code) => decimalsOf(code ?? base)
+
+/**
+ * An empty amount field's placeholder: "0.00", or "0" for a currency quoted
+ * whole, which is how the field will take it.
+ *
+ * @param {string} [code]
+ */
+export const zeroAmount = (code) => (baseDecimals(code) > 0 ? '0.00' : '0')

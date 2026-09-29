@@ -1,6 +1,6 @@
 import { forwardRef } from 'react'
 import { cx } from './cx'
-import { baseSymbol } from '../../lib/money'
+import { baseSymbol, baseDecimals } from '../../lib/money'
 
 /**
  * The big figure at the top of a sheet, when you can type into it.
@@ -94,7 +94,8 @@ const AmountInput = forwardRef(function AmountInput({
     <input
       ref={ref}
       type="text"
-      inputMode="decimal"
+      // No point on the keypad for a currency quoted whole (the yen, the won).
+      inputMode={baseDecimals(currency) > 0 ? 'decimal' : 'numeric'}
       /* Empty stays empty so the placeholder can show. A lone "₱" is not a
          value, and rendering one would mean the field never looks unfilled. */
       value={value ? mark + value : ''}

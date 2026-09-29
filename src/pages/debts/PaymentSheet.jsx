@@ -8,7 +8,7 @@ import { parseMoney, moneyChangeHandler } from '../../utils/moneyInput'
 import AccountPickerSheet from '../../components/AccountPickerSheet'
 import AccountSelectRow from '../../components/AccountSelectRow'
 import Sheet from '../../components/ui/Sheet'
-import { fmt, baseSymbol } from '../../lib/money'
+import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 import { getInitials, getAvatarColor } from './shared'
 
 // ── Payment Sheet ──────────────────────────────────────────────────────────────
@@ -188,7 +188,7 @@ export function PaymentSheet({ open, onClose, debt }) {
               type="text"
               inputMode="decimal"
               autoFocus
-              placeholder={`${baseSymbol()}0.00`}
+              placeholder={`${baseSymbol()}${zeroAmount()}`}
               value={amountStr === '0' ? '' : amountStr}
               onChange={moneyChangeHandler(setAmountStr)}
               aria-label="Payment amount"

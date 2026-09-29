@@ -35,7 +35,7 @@ import { StyleStep, CreatedStep } from './accounts/NewCardStyleStep'
 import Rail from '../components/ui/Rail'
 import CurrencyPickerSheet from '../components/CurrencyPickerSheet'
 import { currencyOf, symbolOf } from '../lib/currency'
-import { getBaseCurrency } from '../lib/money'
+import { getBaseCurrency, baseDecimals } from '../lib/money'
 import { HoldingTile, holdingFromDraft } from './accounts/HoldingTile'
 
 /**
@@ -677,7 +677,7 @@ export default function AccountNew() {
                   on the two screens that ask for a balance. */}
               <MoneyField
                 value={draft.startingBal}
-                onChange={moneyChangeHandler(v => set({ startingBal: v }))}
+                onChange={moneyChangeHandler(v => set({ startingBal: v }), baseDecimals(draft.currency))}
                 currency={draft.currency}
               />
 
@@ -711,7 +711,7 @@ export default function AccountNew() {
               <SectionLabel hint="Leave it blank if it is the same as the value.">Paid in so far</SectionLabel>
               <MoneyField
                 value={draft.investedStart}
-                onChange={moneyChangeHandler(v => set({ investedStart: v }))}
+                onChange={moneyChangeHandler(v => set({ investedStart: v }), baseDecimals(draft.currency))}
                 currency={draft.currency}
               />
             </div>
@@ -808,7 +808,7 @@ export default function AccountNew() {
               <SectionLabel>Monthly payment</SectionLabel>
               <MoneyField
                 value={draft.minPayment === '0' ? '' : draft.minPayment}
-                onChange={moneyChangeHandler(v => set({ minPayment: v }))}
+                onChange={moneyChangeHandler(v => set({ minPayment: v }), baseDecimals(draft.currency))}
                 currency={draft.currency}
               />
             </div>

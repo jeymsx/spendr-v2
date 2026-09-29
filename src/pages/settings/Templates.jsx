@@ -30,7 +30,7 @@ import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
 import IconButton from '../../components/ui/IconButton'
 import { fieldFrame } from '../../components/ui/Field'
-import { fmt, baseSymbol } from '../../lib/money'
+import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 
 // ── Template row ───────────────────────────────────────────────────────────────
 
@@ -252,7 +252,7 @@ export function TemplateFormSheet({ open, onClose, template, allAccounts, allCat
               <input
                 type="text"
                 inputMode="decimal"
-                placeholder={`${baseSymbol()}0.00`}
+                placeholder={`${baseSymbol()}${zeroAmount()}`}
                 value={amountStr === '0' ? '' : amountStr}
                 onChange={moneyChangeHandler(setAmountStr)}
                 aria-label="Default amount"

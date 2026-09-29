@@ -24,7 +24,7 @@ import PageHeader from '../components/PageHeader'
 import SectionLabel from '../components/ui/SectionLabel'
 import Card from '../components/ui/Card'
 import { parseMoney } from '../utils/moneyInput'
-import { fmt, baseSymbol } from '../lib/money'
+import { fmt, baseSymbol, baseDecimals, zeroAmount } from '../lib/money'
 import { fieldFrame } from '../components/ui/Field'
 import PeopleSplit, { EMPTY_SPLIT, resolveSplitValue } from '../components/PeopleSplit'
 import SubPage from '../components/SubPage'
@@ -348,10 +348,10 @@ export default function RecurringForm() {
             <input
               type="text"
               inputMode="decimal"
-              placeholder={`${baseSymbol(account?.currency)}0.00`}
+              placeholder={`${baseSymbol(account?.currency)}${zeroAmount(account?.currency)}`}
               value={amountStr === '0' ? '' : amountStr}
               onChange={e => {
-                moneyChangeHandler(setAmountStr)(e)
+                moneyChangeHandler(setAmountStr, baseDecimals(account?.currency))(e)
                 setErrors(p => ({ ...p, amount: null }))
               }}
               className="amount-input font-semibold tabular-nums bg-transparent text-center w-full

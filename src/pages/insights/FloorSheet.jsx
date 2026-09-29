@@ -5,6 +5,7 @@ import MoneyField from '../../components/ui/MoneyField'
 import { saveFloor } from '../../hooks/useForecast'
 import { useToast } from '../../context/ToastContext'
 import { moneyChangeHandler, numToMoneyStr, parseMoney } from '../../utils/moneyInput'
+import { baseDecimals } from '../../lib/money'
 
 /**
  * The floor: the balance you do not want to go below. The forecast warns
@@ -56,7 +57,7 @@ export default function FloorSheet({ open, onClose, floor, currency }) {
         The least you want to keep in cash and banks. The forecast warns you before you dip
         below it. Leave it empty for none.
       </p>
-      <MoneyField value={value} onChange={moneyChangeHandler(setValue)} currency={currency} />
+      <MoneyField value={value} onChange={moneyChangeHandler(setValue, baseDecimals(currency))} currency={currency} />
     </Sheet>
   )
 }

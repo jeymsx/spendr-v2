@@ -6,7 +6,7 @@ import CategoryGlyph from './CategoryGlyph'
 import IconButton from './ui/IconButton'
 import { IconChevronLeft } from './icons'
 import { moneyChangeHandler, parseMoney } from '../utils/moneyInput'
-import { fmt, baseSymbol } from '../lib/money'
+import { fmt, baseSymbol, baseDecimals, zeroAmount } from '../lib/money'
 import PeopleSplit, { EMPTY_SPLIT, resolveSplitValue } from './PeopleSplit'
 import { useTheme } from '../context/ThemeContext'
 import { useBackGuard } from '../hooks/useBackGuard'
@@ -257,9 +257,9 @@ export default function DivideScreen({
                     <span className="text-14 font-medium text-slate-400 dark:text-slate-500">{baseSymbol(currency)}</span>
                     <input
                       value={leg.amountStr}
-                      onChange={moneyChangeHandler(v => setLeg(i, { amountStr: v }))}
+                      onChange={moneyChangeHandler(v => setLeg(i, { amountStr: v }), baseDecimals(currency))}
                       inputMode="decimal"
-                      placeholder="0.00"
+                      placeholder={zeroAmount(currency)}
                       aria-label={`Amount for ${leg.cat?.name ?? 'this category'}`}
                       style={amountWidth(leg.amountStr)}
                       className={amountInput}

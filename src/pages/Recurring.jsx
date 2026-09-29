@@ -28,7 +28,7 @@ import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import SectionLabel from '../components/ui/SectionLabel'
 import { SkeletonHero, SkeletonStatTrio, SkeletonList } from '../components/ui/Skeleton'
-import { fmt, fmtCompact, baseSymbol } from '../lib/money'
+import { fmt, fmtCompact, baseSymbol, zeroAmount } from '../lib/money'
 import { creditCardBills } from '../lib/creditBills'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
@@ -500,7 +500,7 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
                 type="text" inputMode="decimal"
                 value={amountStr}
                 onChange={e => { moneyChangeHandler(setAmountStr)(e); setErrors(p => ({ ...p, amount: null })) }}
-                placeholder="0.00"
+                placeholder={zeroAmount()}
                 className="flex-1 bg-transparent outline-none text-sm font-semibold text-slate-800 dark:text-white placeholder:text-slate-300 dark:placeholder:text-slate-600 tabular-nums w-0"
               />
             </div>

@@ -11,7 +11,7 @@ import SwatchRail from '../../components/ui/SwatchRail'
 import Field from '../../components/ui/Field'
 import { IconWarning, IconCheck } from '../../components/icons'
 import { CAT_COLORS, DEFAULT_CAT_NAMES, EMOJI_OPTIONS } from './shared'
-import { fmt, baseSymbol } from '../../lib/money'
+import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 
 // ── Category form sheet ────────────────────────────────────────────────────────
 
@@ -331,7 +331,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               value={budget === '0' ? '' : budget}
               onChange={moneyChangeHandler(setBudget)}
               left={baseSymbol()}
-              placeholder="0.00"
+              placeholder={zeroAmount()}
               /* "Optional — 0 means no budget" was the placeholder, which is
                  three jobs for one line: what goes in the box, that the box is
                  optional, and what zero does. A placeholder can only do the

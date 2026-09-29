@@ -28,6 +28,7 @@ import SectionLabel from '../components/ui/SectionLabel'
 import AmountInput from '../components/ui/AmountInput'
 import ConversionChip from '../components/ConversionChip'
 import { isEverydayAccount } from '../lib/accountMeta'
+import { baseDecimals, zeroAmount } from '../lib/money'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -162,7 +163,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
     return () => clearTimeout(t)
   }, [])
 
-  const handleAmountChange = moneyChangeHandler(setAmountStr)
+  const handleAmountChange = moneyChangeHandler(setAmountStr, baseDecimals(account?.currency))
 
   async function onConfirmPress() {
     let err = false
@@ -293,7 +294,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           currency={account?.currency}
-          placeholder="0.00"
+          placeholder={zeroAmount(account?.currency)}
           label="Amount"
         />
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">Amount</p>

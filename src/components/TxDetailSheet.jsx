@@ -23,7 +23,7 @@ import Card from './ui/Card'
 import DetailRow from './ui/DetailRow'
 import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
-import { fmt, baseSymbol } from '../lib/money'
+import { fmt, baseSymbol, zeroAmount } from '../lib/money'
 import { currencyOfTx, repriceForEdit } from '../lib/fxContext'
 import { isAdjustment } from '../lib/flows'
 import { impliedRate, rederiveReceived } from '../lib/transferLegs'
@@ -677,7 +677,7 @@ export default function TxDetailSheet({
                     <RowInput
                       value={editAmount ? `${baseSymbol(txCur)}${editAmount}` : ''}
                       onChange={e => setEditAmount(e.target.value.replace(/[^0-9.]/g, ''))}
-                      placeholder={`${baseSymbol(txCur)}0.00`}
+                      placeholder={`${baseSymbol(txCur)}${zeroAmount(txCur)}`}
                       inputMode="decimal"
                       autoFocus
                     />

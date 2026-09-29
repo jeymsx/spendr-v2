@@ -21,7 +21,7 @@ import { CORRECTION_DESC, isAdjustment } from '../../lib/flows'
 import { monthsToClear, rateLabel, solveMonthlyRate } from '../../lib/loans'
 import { createInvestment } from '../../db/accountWrites'
 import { deleteTxGroup } from '../../db/txHelpers'
-import { fmt, getBaseCurrency } from '../../lib/money'
+import { fmt, getBaseCurrency, baseDecimals } from '../../lib/money'
 import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
 import SubPage from '../../components/SubPage'
@@ -879,7 +879,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 </SectionLabel>
                 <MoneyField
                   value={startingBal === '0' ? '' : startingBal}
-                  onChange={moneyChangeHandler(setStartingBal)}
+                  onChange={moneyChangeHandler(setStartingBal, baseDecimals(currency))}
                   currency={currency}
                 />
                 {/* A correction moves the balance and net worth, and is not
@@ -925,7 +925,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 <SectionLabel>{isEdit ? 'Paid in before you added it' : 'Paid in so far'}</SectionLabel>
                 <MoneyField
                   value={investedStart}
-                  onChange={moneyChangeHandler(setInvestedStart)}
+                  onChange={moneyChangeHandler(setInvestedStart, baseDecimals(currency))}
                   currency={currency}
                 />
                 <p className="mt-2 px-1 text-12 text-slate-500 dark:text-slate-400">
@@ -947,7 +947,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     <SectionLabel>Monthly payment</SectionLabel>
                     <MoneyField
                       value={minPayment === '0' ? '' : minPayment}
-                      onChange={moneyChangeHandler(setMinPayment)}
+                      onChange={moneyChangeHandler(setMinPayment, baseDecimals(currency))}
                       currency={currency}
                     />
                   </div>

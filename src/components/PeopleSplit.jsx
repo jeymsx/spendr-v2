@@ -6,7 +6,7 @@ import Button from './ui/Button'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
 import { parseMoney } from '../utils/moneyInput'
 import { chipClass } from '../pages/accounts/shared'
-import { fmt, baseSymbol } from '../lib/money'
+import { fmt, baseSymbol, zeroAmount } from '../lib/money'
 import { resolveSplit, SPLIT_MODES, MODE_FIELD } from '../lib/splitModes'
 
 /**
@@ -178,7 +178,7 @@ function PersonRow({
           value={value ? `${baseSymbol(currency)}${value}` : ''}
           onChange={onChange}
           inputMode="decimal"
-          placeholder={`${baseSymbol(currency)}0.00`}
+          placeholder={`${baseSymbol(currency)}${zeroAmount(currency)}`}
           aria-label={`Amount for ${label}`}
           className="shrink-0 w-[88px] text-right text-14 font-semibold tabular-nums
             bg-transparent outline-none border-0 p-0 text-slate-800 dark:text-white

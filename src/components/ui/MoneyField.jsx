@@ -1,6 +1,6 @@
 import { cx } from './cx'
 import { fieldFrame } from './Field'
-import { baseSymbol } from '../../lib/money'
+import { baseSymbol, zeroAmount, baseDecimals } from '../../lib/money'
 
 /**
  * A field that takes money, and says which before you type.
@@ -13,8 +13,8 @@ import { baseSymbol } from '../../lib/money'
  * a count, a day or a percentage was the one with no mark on it.
  *
  * So the currency mark is a span inside the frame, permanent, and the
- * placeholder goes back to a bare "0.00" because the mark is already there
- * and two would be worse than none.
+ * placeholder goes back to a bare "0.00" ("0" for a currency quoted whole)
+ * because the mark is already there and two would be worse than none.
  *
  * ── Why not prefix the value string ──
  *
@@ -31,7 +31,8 @@ import { baseSymbol } from '../../lib/money'
 export default function MoneyField({
   value,
   onChange,
-  placeholder = '0.00',
+  /** "0.00", or "0" in a currency quoted whole. */
+  placeholder = null,
   /** The amount's currency, for the mark in the frame. The base currency
       when not given. */
   currency,
@@ -51,10 +52,11 @@ export default function MoneyField({
       </span>
       <input
         type="text"
-        inputMode="decimal"
+        // No point on the keypad for a currency quoted whole (the yen, the won).
+        inputMode={baseDecimals(currency) > 0 ? 'decimal' : 'numeric'}
         value={value}
         onChange={onChange}
-        placeholder={placeholder}
+        placeholder={placeholder ?? zeroAmount(currency)}
         className="flex-1 min-w-0 bg-transparent outline-none tabular-nums
           text-sm font-medium text-slate-800 dark:text-white
           placeholder-slate-400 dark:placeholder-slate-500 placeholder:font-normal"

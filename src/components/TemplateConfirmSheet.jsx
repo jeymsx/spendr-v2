@@ -15,7 +15,7 @@ import Sheet from './ui/Sheet'
 import { fieldFrame } from './ui/Field'
 import { currencyOfAccountName } from '../lib/fxContext'
 import { receivedLeg } from '../lib/transferLegs'
-import { fmt } from '../lib/money'
+import { fmt, baseDecimals } from '../lib/money'
 
 const TYPE_CONFIG = {
   expense:  { label: 'Expense',  sign: '−', color: '#ef4444', badge: 'bg-red-50 text-red-600 dark:bg-red-500/10 dark:text-red-400' },
@@ -179,7 +179,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
         <AmountHero color={cfg.color} className="mt-5 mb-6">
           <AmountInput
             value={amountStr}
-            onChange={moneyChangeHandler(setAmountStr)}
+            onChange={moneyChangeHandler(setAmountStr, baseDecimals(currencyOfAccountName(template?.account ?? template?.fromAccount)))}
             label="Amount"
             sign={cfg.sign}
             color={cfg.color}

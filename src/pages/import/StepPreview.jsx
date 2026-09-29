@@ -7,7 +7,7 @@ import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
 import SectionLabel from '../../components/ui/SectionLabel'
 import DetailRow from '../../components/ui/DetailRow'
-import { fmt, baseSymbol } from '../../lib/money'
+import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 import { isoToDateInput } from '../../utils/txDate'
 import { fmtDateFull } from '../../utils/recurring'
 import { IconArrowLeft, fmtBytes, VALID_TYPES, IconFile, IconWarning } from './shared'
@@ -365,7 +365,7 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
                     ? setCreditLimits(prev => ({ ...prev, [name]: e.target.value }))
                     : setBalances(prev => ({ ...prev, [name]: e.target.value }))
                   }
-                  placeholder={`${baseSymbol()}0.00`}
+                  placeholder={`${baseSymbol()}${zeroAmount()}`}
                   className="w-28 text-right text-slate-800 dark:text-white
                     placeholder:text-slate-300 dark:placeholder:text-slate-600
                     bg-transparent focus:outline-none text-15 tabular-nums"

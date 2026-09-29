@@ -26,7 +26,7 @@ import IconButton from '../components/ui/IconButton'
 import PinnedTop from '../components/ui/PinnedTop'
 import SectionLabel from '../components/ui/SectionLabel'
 import Divider from '../components/ui/Divider'
-import { fmt, baseSymbol } from '../lib/money'
+import { fmt, baseSymbol, baseDecimals, zeroAmount } from '../lib/money'
 import AmountInput from '../components/ui/AmountInput'
 import ConversionChip from '../components/ConversionChip'
 import useRates from '../hooks/useRates'
@@ -166,9 +166,9 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
     return () => clearTimeout(t)
   }, [])
 
-  const handleAmountChange = moneyChangeHandler(setAmountStr)
-  const handleFeeChange    = moneyChangeHandler(setFeeStr)
-  const handleReceivedChange = moneyChangeHandler(v => { setReceivedStr(v); setReceivedTouched(true) })
+  const handleAmountChange = moneyChangeHandler(setAmountStr, baseDecimals(fromCur))
+  const handleFeeChange    = moneyChangeHandler(setFeeStr, baseDecimals(fromCur))
+  const handleReceivedChange = moneyChangeHandler(v => { setReceivedStr(v); setReceivedTouched(true) }, baseDecimals(toCur))
 
   /* Filling the form from the transfer being edited. Waits for the accounts,
      guarded by a ref - see AddExpense for why both. */
@@ -393,7 +393,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
           value={amountStr === '0' ? '' : amountStr}
           onChange={handleAmountChange}
           currency={fromAccount?.currency}
-          placeholder="0.00"
+          placeholder={zeroAmount(fromCur)}
           label="Amount"
         />
         <p className="text-xs text-slate-400 dark:text-slate-500 mt-2 tracking-wide">Amount</p>
@@ -467,7 +467,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
               <input
                 type="text"
                 inputMode="decimal"
-                placeholder="0.00"
+                placeholder={zeroAmount(toCur)}
                 aria-label={`Amount ${toAccount.name} receives`}
                 value={receivedShown === '0' ? '' : receivedShown}
                 onChange={handleReceivedChange}
@@ -518,7 +518,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
             <input
               type="text"
               inputMode="decimal"
-              placeholder="0.00"
+              placeholder={zeroAmount(fromCur)}
               value={feeStr === '0' ? '' : feeStr}
               onChange={handleFeeChange}
               className="flex-1 bg-transparent text-sm text-slate-800 dark:text-white

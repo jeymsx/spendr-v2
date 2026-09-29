@@ -11,7 +11,7 @@ import { useBaseCurrency } from '../../context/CurrencyContext'
 import { CURRENCY_CODES, currencyName, currencyOf, symbolOf } from '../../lib/currency'
 import { convert, rateAge } from '../../lib/fx'
 import { moneyChangeHandler, parseMoney } from '../../utils/moneyInput'
-import { fmt } from '../../lib/money'
+import { fmt, baseDecimals } from '../../lib/money'
 import SearchField from '../../components/ui/SearchField'
 
 /**
@@ -261,7 +261,7 @@ export default function RatesPage() {
               table={table}
               code={fromCode}
               amount={amount}
-              onAmount={moneyChangeHandler(setAmount)}
+              onAmount={moneyChangeHandler(setAmount, baseDecimals(fromCode))}
               onPick={() => setPickOpen(true)}
             />
 
