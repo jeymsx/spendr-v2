@@ -1697,6 +1697,31 @@ html { overscroll-behavior-x: none; }
   .pull-hint-label[data-pulling] { opacity: 1; }
 }
 
+/* ── The page behind, during the edge swipe (layouts/AppLayout.jsx) ──
+   A copy of the page you came from, shown only while a swipe back is
+   uncovering it: the same box as the page's own scroller, scrolled to where
+   you left it, clipped to the strip the page has moved off. */
+.swipe-behind {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  visibility: hidden;
+  pointer-events: none;
+}
+.swipe-behind[data-shown] { visibility: visible; }
+.swipe-behind-scroll {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+}
+.swipe-behind-dim {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  opacity: 0;
+}
+html.web .swipe-behind { display: none; }
+
 /* The desktop draws its own chrome round a page: the bar stays in the flow
    there, with nothing behind it. */
 html.web .pinned-top { position: static; }

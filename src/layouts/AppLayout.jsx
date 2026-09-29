@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useLayoutEffect, Suspense } from 'react'
+import { useState, useRef, useEffect, useLayoutEffect, useCallback, Suspense } from 'react'
 import { Outlet, useLocation, useNavigate, useNavigationType } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import ErrorBoundary from '../components/ErrorBoundary'
@@ -17,6 +17,7 @@ import { canPullToSync } from '../lib/pullToSync'
 import { keepStorage } from '../lib/keepStorage'
 import { useBack } from '../hooks/useBack'
 import { formGuarded } from '../lib/backGuard'
+import { prefersReducedMotion } from '../components/ui/motion'
 
 // Shown while a lazy route chunk loads. Sized to roughly a screen so the
 // navbar and scroll position stay stable instead of collapsing to zero height.
@@ -117,6 +118,45 @@ export default function AppLayout() {
   const navType = useNavigationType()
   const positions = useRef(/** @type {Map<string, number>} */ (new Map()))
   const shownKey = useRef(location.key)
+
+  /* ── The page behind, for the edge swipe to uncover ──
+     An iPhone keeps the page you came from under the one on top, so a swipe
+     back slides the top one off and there it is, coming in from the left.
+     Here the page you leave unmounts, and the swipe uncovered an empty
+     screen. So as a page leaves, a copy of it is kept - its DOM, cloned as it
+     goes, and the scroll it was left at - and the swipe shows the copy of the
+     entry behind. Which entry that is comes from the history's own order,
+     kept here by location.key; a few back is as far as a swipe ever reaches. */
+  const trail = useRef(/** @type {string[]} */ ([location.key]))
+  const pictures = useRef(/** @type {Map<string, {node: HTMLElement, scroll: number}>} */ (new Map()))
+  const behindRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+  useEffect(() => { if (behindRef.current) behindRef.current.inert = true }, [])
+  const setPage = useCallback((/** @type {HTMLDivElement|null} */ node) => {
+    const leaving = pageRef.current
+    pageRef.current = node
+    if (node || !leaving) return
+    const copy = /** @type {HTMLElement} */ (leaving.cloneNode(true))
+    copy.classList.remove('page-enter')
+    copy.removeAttribute('style')
+    // No second copy of any id on the page: getElementById must find the real one.
+    for (const el of copy.querySelectorAll('[id]')) el.removeAttribute('id')
+    const key = shownKey.current
+    pictures.current.delete(key)
+    pictures.current.set(key, { node: copy, scroll: positions.current.get(key) ?? 0 })
+    while (pictures.current.size > 6) {
+      const oldest = pictures.current.keys().next().value
+      if (oldest === undefined) break
+      pictures.current.delete(oldest)
+    }
+  }, [])
+  const hideBehind = useCallback(() => {
+    const layer = behindRef.current
+    if (!layer) return
+    layer.removeAttribute('data-shown')
+    layer.style.clipPath = ''
+    const scroller = /** @type {HTMLElement|null} */ (layer.firstElementChild)
+    scroller?.replaceChildren()
+  }, [])
   useEffect(() => {
     const el = mainRef.current
     if (!el) return
@@ -173,12 +213,34 @@ export default function AppLayout() {
       backRef.current()
       return true
     }
+    /* The picture of the entry behind, put under the page as the drag starts
+       (see pictures, above). Not for a step back inside a flow: what is
+       behind a page is the page you came from, not its earlier step. */
+    let behind = false
+    const uncover = () => {
+      const layer = behindRef.current
+      const keys = trail.current
+      const btn = pageRef.current?.querySelector('header button')
+      if (!layer || keys.length < 2 || /previous|step/i.test(btn?.getAttribute('aria-label') ?? '')) return false
+      const pic = pictures.current.get(keys[keys.length - 2])
+      if (!pic) return false
+      const scroller = /** @type {HTMLElement} */ (layer.firstElementChild)
+      scroller.replaceChildren(pic.node)
+      layer.setAttribute('data-shown', '')
+      scroller.scrollTop = pic.scroll
+      return true
+    }
     /** @type {{x: number, y: number, t: number}|null} */
     let start = null
     /** @type {'x'|'y'|null} */
     let axis = null
     let dx = 0
     let leaving = false
+    const putAway = () => {
+      if (!behind) return
+      behind = false
+      setTimeout(hideBehind, 260)
+    }
     const slide = (/** @type {number} */ x, /** @type {boolean} */ settle) => {
       const page = pageRef.current
       if (!page) return
@@ -187,11 +249,28 @@ export default function AppLayout() {
       /* A hairline as well as the shadow: on a dark page over a dark ground
          the shadow alone is invisible, and the page floats with no edge. */
       page.style.boxShadow = x ? '-1px 0 0 rgba(148, 163, 184, 0.28), -16px 0 32px -12px rgba(0, 0, 0, 0.45)' : ''
+      /* What is behind shows only where the page has moved off it - the page
+         is transparent between its cards, and the picture under the whole of
+         it showed through - drifting in from a third of the way left and
+         lightening as it comes, as on an iPhone. */
+      const layer = behindRef.current
+      if (!behind || !layer) return
+      const w = el.clientWidth || window.innerWidth
+      const p = Math.min(1, Math.max(0, x / w))
+      const ease = settle ? '240ms cubic-bezier(0.2, 0.9, 0.25, 1)' : '0s'
+      const scroller = /** @type {HTMLElement} */ (layer.firstElementChild)
+      const dim = /** @type {HTMLElement} */ (layer.lastElementChild)
+      layer.style.transition = `clip-path ${ease}`
+      layer.style.clipPath = `inset(0 ${Math.max(0, w - x)}px 0 0)`
+      scroller.style.transition = `transform ${ease}`
+      scroller.style.transform = prefersReducedMotion() ? '' : `translateX(${-(1 - p) * 0.3 * w}px)`
+      dim.style.transition = `opacity ${ease}`
+      dim.style.opacity = String((1 - p) * 0.14)
     }
     const onStart = (/** @type {TouchEvent} */ e) => {
       /* A second finger mid-swipe - a palm, the other thumb - calls the
          swipe off. It used to leave the page frozen half off the screen. */
-      if (start && e.touches.length > 1) { start = null; slide(0, true); return }
+      if (start && e.touches.length > 1) { start = null; slide(0, true); putAway(); return }
       start = null
       const t = e.touches[0]
       if (leaving || e.touches.length !== 1 || t.clientX > EDGE || TABS.has(pathnameRef.current)) return
@@ -206,7 +285,10 @@ export default function AppLayout() {
       const t = e.touches[0]
       const mx = t.clientX - start.x
       const my = t.clientY - start.y
-      if (!axis && (Math.abs(mx) > 8 || Math.abs(my) > 8)) axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y'
+      if (!axis && (Math.abs(mx) > 8 || Math.abs(my) > 8)) {
+        axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y'
+        if (axis === 'x') behind = uncover()
+      }
       if (axis === 'y') { start = null; return }
       if (axis !== 'x') return
       // The page is being dragged, not scrolled.
@@ -223,7 +305,7 @@ export default function AppLayout() {
       if (dx > width / 3 || (speed > 0.5 && dx > 40)) {
         /* A form with something typed into it: the page springs back and its
            Back button asks first, as it does when pressed (hooks/useBackGuard). */
-        if (formGuarded()) { slide(0, true); pageBack(); return }
+        if (formGuarded()) { slide(0, true); putAway(); pageBack(); return }
         leaving = true
         slide(width, true)
         setTimeout(() => {
@@ -244,12 +326,14 @@ export default function AppLayout() {
             if (shownKey.current !== from || !pageRef.current?.style.transform) return
             swipedBack.current = false
             slide(0, true)
+            putAway()
           }
           if (leavesPage) setTimeout(recover, 700)
           else requestAnimationFrame(recover)
         }, 200)
       } else {
         slide(0, true)
+        putAway()
       }
     }
     /* The system taking the touch away (a notification pulled down, a call)
@@ -258,6 +342,7 @@ export default function AppLayout() {
       if (!start) return
       start = null
       slide(0, true)
+      putAway()
     }
     el.addEventListener('touchstart', onStart, { passive: true })
     el.addEventListener('touchmove', onMove, { passive: false })
@@ -269,17 +354,29 @@ export default function AppLayout() {
       el.removeEventListener('touchend', onEnd)
       el.removeEventListener('touchcancel', onCancel)
     }
-  }, [])
+  }, [hideBehind])
 
   // Reset scroll to top on every navigation — useLayoutEffect fires before paint
   // so iOS Safari cannot restore the previous scroll position after the reset.
   useLayoutEffect(() => {
     const el = mainRef.current
     shownKey.current = location.key
-    /* Before the first paint, so the fade never starts (index.css .page-enter). */
+    // Which entries are behind this one: a push adds one, Back drops to it.
+    const keys = trail.current
+    if (navType === 'PUSH') keys.push(location.key)
+    else if (navType === 'REPLACE') keys[keys.length - 1] = location.key
+    else {
+      const at = keys.lastIndexOf(location.key)
+      if (at >= 0) keys.length = at + 1
+      else trail.current = [location.key]
+    }
+    /* Before the first paint, so the fade never starts (index.css .page-enter).
+       The picture the swipe uncovered stays over the real page for a moment,
+       while its rows load and its scroll comes back, then goes. */
     if (swipedBack.current) {
       swipedBack.current = false
       if (pageRef.current) pageRef.current.style.animation = 'none'
+      setTimeout(hideBehind, 280)
     }
     const saved = navType === 'POP' ? positions.current.get(location.key) : undefined
     if (el) el.scrollTop = 0
@@ -405,6 +502,14 @@ export default function AppLayout() {
         children participate in the root stacking context directly, so their z-[100+]
         values properly beat the Navbar's z-50.
       */}
+      {/* The page behind, uncovered by the edge swipe (see pictures, above):
+          under <main> in the paint order, clipped to the strip the page has
+          moved off. */}
+      <div ref={behindRef} className="swipe-behind" aria-hidden="true">
+        <div className="swipe-behind-scroll" />
+        <div className="swipe-behind-dim" />
+      </div>
+
       <main
         id="app-main"
         ref={mainRef}
@@ -437,7 +542,7 @@ export default function AppLayout() {
         </div>
 
         {/* pb-nav ensures content isn't hidden under the fixed navbar */}
-        <div key={location.pathname} ref={pageRef} className="page-enter pb-nav">
+        <div key={location.pathname} ref={setPage} className="page-enter pb-nav">
           {/*
             Inner Suspense boundary for the lazy route chunks. It sits inside the
             layout on purpose — suspending here keeps the Navbar mounted, so a
