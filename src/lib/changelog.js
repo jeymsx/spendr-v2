@@ -24,6 +24,16 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.13.1',
+    date: '2026-09-29',
+    items: [
+      { title: 'Back that feels like a phone', desc: 'A swipe back shows the page you came from sliding in underneath, and Android\'s Back button closes the sheet on top instead of leaving the page.' },
+      { title: 'Nothing you typed is lost', desc: 'Every form asks before throwing away what you entered, whether you tap Back, swipe, or close its sheet.' },
+      { title: 'Fees stay with their transfer', desc: 'Deleting or re-routing a transfer takes its fee with it, and the transfer shows and edits its fee.' },
+      { title: 'Titles, all alike', desc: 'Every page and sheet title is written the same way, and named like the row that opens it.' },
+    ],
+  },
+  {
     version: '0.13.0',
     date: '2026-09-29',
     items: [

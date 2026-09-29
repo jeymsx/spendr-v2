@@ -32,23 +32,33 @@ export const RELEASE_DATE = '2026-09-29'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
+    icon: 'settings',
+    title: 'Tidier headers',
+    desc: 'Settings\' title sits beside its Back button, as on every other page, and Templates on Add expense, Add inflow and Transfer is an icon, clear of the title.',
+  },
+  {
+    icon: 'categories',
+    title: 'Less empty space',
+    desc: 'Pages end just above the tab bar instead of leaving a gap under their last row, and captions like "Cash · Food" read as one line.',
+  },
+  {
     icon: 'transfer',
-    title: 'Back that feels like a phone',
-    desc: 'A swipe back shows the page you came from sliding in underneath, and Android\'s Back button closes the sheet on top instead of leaving the page.',
+    title: 'Back after saving',
+    desc: 'An entry started on Home returns you to that Home when saved, so the next Back works the first time.',
   },
   {
-    icon: 'lock',
-    title: 'Nothing you typed is lost',
-    desc: 'Every form asks before throwing away what you entered, whether you tap Back, swipe, or close its sheet.',
+    icon: 'trash',
+    title: 'Escape keeps your place',
+    desc: 'Escape or Back on a delete confirmation returns to the transaction instead of closing it.',
   },
   {
-    icon: 'bank',
-    title: 'Fees stay with their transfer',
-    desc: 'Deleting or re-routing a transfer takes its fee with it, and the transfer shows and edits its fee.',
+    icon: 'wallet',
+    title: 'Setup in your currency',
+    desc: 'A profile kept in yen or another currency shows it on every card during setup, Android\'s Back steps back through setup, and yen and won are typed without decimals.',
   },
   {
-    icon: 'sparkle',
-    title: 'Titles, all alike',
-    desc: 'Every page and sheet title is written the same way, and named like the row that opens it.',
+    icon: 'desktop',
+    title: 'Keys on a computer',
+    desc: 'The Add transaction menu works with the arrow keys, Enter and Escape.',
   },
 ]
