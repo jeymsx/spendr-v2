@@ -1604,6 +1604,10 @@ html { overscroll-behavior-x: none; }
 
 /* Nav bar height + bottom safe area — keeps content from hiding under nav */
 .pb-nav { padding-bottom: calc(5rem + env(safe-area-inset-bottom, 0px)); }
+/* A page's own breathing room at its end. The tab bar's height is cleared
+   once, by the layout's page wrapper (.pb-nav in AppLayout); a page that
+   cleared it again ended 80px above the bar instead of 24. */
+.pb-page { padding-bottom: 1.5rem; }
 .h-nav  { height:         calc(5rem + env(safe-area-inset-bottom, 0px)); }
 
 /* Page header top padding — notch + visual breathing room.

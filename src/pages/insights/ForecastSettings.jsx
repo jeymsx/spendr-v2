@@ -266,7 +266,7 @@ export default function ForecastSettings() {
       </div>
 
       {/* ── How the chart draws it ── */}
-      <div className="mt-7 mb-6">
+      <div className="mt-7">
         <SectionHeader>Chart</SectionHeader>
         <SectionCard>
           <SettingsRow

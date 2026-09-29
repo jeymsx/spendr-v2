@@ -106,7 +106,8 @@ html.web.dark .web-pane-list {
 html.web.flat .web-pane-list { background: transparent; }
 
 /* The phone pads every page for the tab bar under it. There is none here. */
-html.web .web-shell .pb-nav { padding-bottom: 2rem; }
+html.web .web-shell .pb-nav,
+html.web .web-shell .pb-page { padding-bottom: 2rem; }
 
 /* The first thing past a list has nothing behind it on the right: its back
    button would only step through what the list already shows. Hidden, not

@@ -297,7 +297,7 @@ export default function CategoryDetail() {
                 body={`Anything you file under ${name} will show up`}
               />
             ) : (
-              <div className="mb-4">
+              <div>
               <Card clip>
                 {pagedTxs.visible.map((tx, i) => (
                   <div key={tx.id ?? i}>

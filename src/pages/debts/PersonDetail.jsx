@@ -116,11 +116,11 @@ export default function PersonDetail() {
     }
   }
 
-  if (loading) return <div className="pb-nav" />
+  if (loading) return <div className="pb-page" />
 
   if (!person) {
     return (
-      <div className="pb-nav">
+      <div className="pb-page">
         <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
           <IconButton label="Back to debts" className="subpage-back" onClick={back}>
             <IconChevronLeft />
@@ -138,7 +138,7 @@ export default function PersonDetail() {
   }
 
   return (
-    <div className="pb-nav">
+    <div className="pb-page">
       <PageHeader
         title={person.label}
         backLabel="Back to debts"

@@ -327,7 +327,7 @@ export function ProfilePage() {
   const meta = useLiveQuery(() => db.meta.toArray(), [], undefined)
   // Undefined until Dexie answers. Rendering the form against defaults first
   // would flash "PHP" at somebody whose ledger is in dollars.
-  if (meta === undefined) return <div className="pb-nav" />
+  if (meta === undefined) return <div className="pb-page" />
 
   const displayName = meta.find(m => m.key === 'displayName')?.value ?? ''
   const currency = meta.find(m => m.key === 'currency')?.value ?? 'PHP'

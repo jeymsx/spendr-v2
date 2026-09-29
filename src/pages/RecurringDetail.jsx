@@ -346,7 +346,7 @@ export default function RecurringDetail() {
   }
 
   return (
-    <div className="pb-nav">
+    <div className="pb-page">
       {/* ── Header: back, centred name, one door to editing ── */}
       <PageHeader
         title={rec.name}

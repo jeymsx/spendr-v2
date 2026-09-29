@@ -191,7 +191,7 @@ export default function Debts() {
         }
 
   return (
-    <div className="pb-nav">
+    <div className="pb-page">
       {/* ── Header ──
           Back, centred title, accent +. The same header Goals, Bills and
           AccountDetail use, because all four are reached from a quick-action

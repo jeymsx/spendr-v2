@@ -750,7 +750,7 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   const recentSection = (
     <>
       {/* ── Recent Transactions ──────────────────────────────────────────────── */}
-      <section className="px-5 mt-8 pb-nav">
+      <section className="px-5 mt-8 pb-page">
         <SectionHeading inset="none" gap="none" actionLabel="See all" actionTo="/transactions">Recent</SectionHeading>
         <Card radius="3xl" clip className="mt-3">
           {recentTx.length === 0 ? (

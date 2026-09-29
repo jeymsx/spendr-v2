@@ -15,16 +15,17 @@ import PageHeader from './PageHeader'
  * button on the left and nothing on the right, "centred" lands 18px left of
  * the actual centre. The spacer restores the symmetry.
  *
- * pb-nav rather than pb-10: the navbar is a fixed 80px overlay, so a page
- * short enough not to scroll has no way to get its last element out from
- * under it.
+ * pb-page, not pb-nav: the layout's page wrapper already keeps the fixed
+ * tab bar's height clear under every page (layouts/AppLayout.jsx), and this
+ * adding it a second time left 80px of nothing above the bar at the end of
+ * every subpage, where 24 is the page's own breathing room.
  *
  * The header itself is PageHeader, which the pages that lay themselves out
  * use too, and it stays pinned while the page scrolls under it.
  */
 export default function SubPage({ title, action = null, onBack, children, className = '' }) {
   return (
-    <div className={`pb-nav ${className}`}>
+    <div className={`pb-page ${className}`}>
       <PageHeader title={title} action={action} onBack={onBack} />
 
       {children}

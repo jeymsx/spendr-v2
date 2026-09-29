@@ -179,7 +179,7 @@ export default function DivideScreen({
        because nothing is in front of it.
  
        That also drops the design-ok waiver this needed as an overlay. */
-    <div className="pb-nav">
+    <div className="pb-page">
       <header className="flex items-center gap-3 px-4 pt-safe-header pb-3">
         <IconButton label="Back to the expense" onClick={onClose}>
           <IconChevronLeft />

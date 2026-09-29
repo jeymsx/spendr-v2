@@ -857,7 +857,7 @@ export default function Recurring() {
   )
 
   return (
-    <div className="pb-nav">
+    <div className="pb-page">
       {/* ── Header ──
           Back, centred title, accent +. Identical to Goals and AccountDetail,
           which is the point: all three are reached from a quick-action disc

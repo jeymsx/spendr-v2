@@ -67,14 +67,14 @@ export default function EditTransaction() {
 
   // Still reading. A flash of "not found" over a row that exists is worse
   // than a blank moment.
-  if (tx === undefined) return <div className="pb-nav" />
+  if (tx === undefined) return <div className="pb-page" />
 
   const gone = !tx
   const unsupported = !!tx && (isRefund(tx) || !['expense', 'inflow', 'transfer'].includes(tx.type))
 
   if (gone || unsupported) {
     return (
-      <div className="pb-nav">
+      <div className="pb-page">
         <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
           <IconButton label="Back" className="subpage-back" onClick={back}>
             <IconChevronLeft />
