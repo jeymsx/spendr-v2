@@ -25,9 +25,27 @@ export function useBack(fallback) {
   const to = fallback ?? parentPath(location.pathname)
 
   return useCallback(() => {
-    if (location.key === 'default') navigate(to, { replace: true })
+    if (isFirstEntry(location.key)) navigate(to, { replace: true })
     else navigate(-1)
   }, [navigate, location.key, to])
+}
+
+/**
+ * Whether this is the first page of the visit - nothing of the app's behind it.
+ *
+ * The key alone is not enough. A page that redirects on arrival (/recap to
+ * its month, /badges to Achievements) replaces the first entry, and the
+ * replacement gets a fresh key, so a cold-opened /recap looked like it had
+ * history and its Close did nothing, or left the app for whatever site the
+ * link came from. The router's own position in the history (`idx`, which a
+ * replace keeps) says it plainly.
+ *
+ * @param {string} key
+ */
+export function isFirstEntry(key) {
+  if (key === 'default') return true
+  const idx = typeof window !== 'undefined' ? window.history.state?.idx : undefined
+  return typeof idx === 'number' && idx <= 0
 }
 
 /* Where a page's parent is when the URL alone does not say: the one level up

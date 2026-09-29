@@ -1,5 +1,6 @@
-import { useState, useMemo, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { isoToDateInput } from '../utils/txDate'
@@ -233,7 +234,11 @@ export default function RecurringDetail() {
   const due  = rec ? dueStatus(rec.nextDate) : null
   const monthly = rec ? toMonthlyAmount(rec.amount, rec.frequency) : 0
 
-  const back = useCallback(() => navigate('/recurring'), [navigate])
+  /* Back to where you came from - Home's card, the list scrolled halfway -
+     not always to the list: going there by a new navigation dropped the
+     list's scroll and grew the history, so the system Back reopened this
+     page. The list when there is nothing behind (hooks/useBack.js). */
+  const back = useBack('/recurring')
 
   async function handlePost({ force = false } = {}) {
     if (!rec) return

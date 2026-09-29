@@ -106,9 +106,14 @@ const HOLD_MS = 420
 const SLOP_PX = 12
 
 export default function Navbar({ onAddClick, onQuickLog }) {
-  // A page that has just changed: what was under the finger is gone too.
+  /* A page that has just changed: what was under the finger is gone too.
+     Only on a change - not on the first render, which nothing was under. */
   const { key: locationKey } = useLocation()
-  useEffect(() => { quietTaps(350) }, [locationKey])
+  const shownKey = useRef(locationKey)
+  useEffect(() => {
+    if (shownKey.current !== locationKey) quietTaps(350)
+    shownKey.current = locationKey
+  }, [locationKey])
   const timer   = useRef(null)
   const heldRef = useRef(false)   // the hold fired: quick log is open already
   const downAt  = useRef({ x: 0, y: 0 })

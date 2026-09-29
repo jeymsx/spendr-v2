@@ -138,8 +138,27 @@ export default function AppLayout() {
   useEffect(() => {
     const el = mainRef.current
     if (!el || typeof navigator === 'undefined' || !(/** @type {any} */ (navigator).standalone)) return
-    const EDGE = 24
+    const EDGE = 20
     const TABS = new Set(['/', '/transactions', '/accounts', '/insights'])
+    /* Scrolled sideways already: a drag right there is the rail scrolling
+       back, not a way out of the page. At the rail's start it can only be
+       the swipe, which is what iOS does too. */
+    const inScrolledRail = (/** @type {EventTarget|null} */ t) => {
+      for (let n = /** @type {HTMLElement|null} */ (t instanceof HTMLElement ? t : null); n && n !== el; n = n.parentElement) {
+        if (n.scrollLeft > 0 && n.scrollWidth > n.clientWidth) return true
+      }
+      return false
+    }
+    /* What the page's own Back button does - a step back in a flow with
+       steps (New account, the import wizard), the zoom back into an
+       Insights card - so the swipe and the button never disagree. The
+       generic back only when a page has no button of its own. */
+    const pageBack = () => {
+      const btn = /** @type {HTMLButtonElement|null} */ (pageRef.current?.querySelector('header button'))
+      const label = btn?.getAttribute('aria-label') ?? ''
+      if (btn && /back|previous|leave|close/i.test(label)) btn.click()
+      else backRef.current()
+    }
     /** @type {{x: number, y: number, t: number}|null} */
     let start = null
     /** @type {'x'|'y'|null} */
@@ -151,13 +170,19 @@ export default function AppLayout() {
       if (!page) return
       page.style.transition = settle ? 'transform 240ms cubic-bezier(0.2, 0.9, 0.25, 1), box-shadow 240ms' : 'none'
       page.style.transform = x ? `translateX(${x}px)` : ''
-      page.style.boxShadow = x ? '-16px 0 32px -12px rgba(0, 0, 0, 0.35)' : ''
+      /* A hairline as well as the shadow: on a dark page over a dark ground
+         the shadow alone is invisible, and the page floats with no edge. */
+      page.style.boxShadow = x ? '-1px 0 0 rgba(148, 163, 184, 0.28), -16px 0 32px -12px rgba(0, 0, 0, 0.45)' : ''
     }
     const onStart = (/** @type {TouchEvent} */ e) => {
+      /* A second finger mid-swipe - a palm, the other thumb - calls the
+         swipe off. It used to leave the page frozen half off the screen. */
+      if (start && e.touches.length > 1) { start = null; slide(0, true); return }
       start = null
       const t = e.touches[0]
       if (leaving || e.touches.length !== 1 || t.clientX > EDGE || TABS.has(pathnameRef.current)) return
       if (document.querySelector('.sheet-overlay, [aria-modal="true"]')) return
+      if (inScrolledRail(e.target)) return
       start = { x: t.clientX, y: t.clientY, t: performance.now() }
       axis = null
       dx = 0
@@ -175,7 +200,8 @@ export default function AppLayout() {
       dx = Math.max(0, mx)
       slide(dx, false)
     }
-    const onEnd = () => {
+    const onEnd = (/** @type {TouchEvent} */ e) => {
+      if (e.touches.length > 0) return
       if (!start || axis !== 'x') { start = null; return }
       const speed = dx / Math.max(1, performance.now() - start.t)
       start = null
@@ -185,7 +211,7 @@ export default function AppLayout() {
         slide(width, true)
         setTimeout(() => {
           leaving = false
-          backRef.current()
+          pageBack()
           // If nothing navigated (a page with nowhere to go), bring it back.
           requestAnimationFrame(() => { if (pageRef.current?.style.transform) slide(0, true) })
         }, 200)
@@ -193,15 +219,22 @@ export default function AppLayout() {
         slide(0, true)
       }
     }
+    /* The system taking the touch away (a notification pulled down, a call)
+       is not a release: spring back, as iOS does with an interrupted pop. */
+    const onCancel = () => {
+      if (!start) return
+      start = null
+      slide(0, true)
+    }
     el.addEventListener('touchstart', onStart, { passive: true })
     el.addEventListener('touchmove', onMove, { passive: false })
     el.addEventListener('touchend', onEnd, { passive: true })
-    el.addEventListener('touchcancel', onEnd, { passive: true })
+    el.addEventListener('touchcancel', onCancel, { passive: true })
     return () => {
       el.removeEventListener('touchstart', onStart)
       el.removeEventListener('touchmove', onMove)
       el.removeEventListener('touchend', onEnd)
-      el.removeEventListener('touchcancel', onEnd)
+      el.removeEventListener('touchcancel', onCancel)
     }
   }, [])
 

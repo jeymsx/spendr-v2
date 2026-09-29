@@ -1,5 +1,6 @@
 import { useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { allocateGoals, isFundable, pace, monthsUntil } from '../lib/goals'
@@ -39,6 +40,8 @@ import useRates from '../hooks/useRates'
 export default function GoalDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  // Back to where you came from; the goals when there is nothing behind.
+  const back = useBack('/goals')
   const [editOpen, setEditOpen] = useState(false)
   const [confirmDel, setConfirmDel] = useState(false)
   const [working, setWorking] = useState(false)
@@ -138,7 +141,7 @@ export default function GoalDetail() {
 
   if (!goal) {
     return (
-      <SubPage title="Goal" onBack={() => navigate('/goals')}>
+      <SubPage title="Goal" onBack={back}>
         <EmptyState
           className="mt-8"
           art="notFound"
@@ -162,7 +165,7 @@ export default function GoalDetail() {
   return (
     <SubPage
       title={goal.name}
-      onBack={() => navigate('/goals')}
+      onBack={back}
       action={
         <Button variant="tint" size="xs" className="shrink-0 px-4" onClick={() => setEditOpen(true)}>
           Edit

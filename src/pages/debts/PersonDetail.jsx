@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams } from 'react-router-dom'
+import { useBack } from '../../hooks/useBack'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
@@ -46,7 +47,6 @@ import PersonSheet from './PersonSheet'
  */
 export default function PersonDetail() {
   const { key } = useParams()
-  const navigate = useNavigate()
   const { showToast } = useToast()
   const { user } = useAuth()
 
@@ -76,7 +76,11 @@ export default function PersonDetail() {
   const youOwe = net < -0.005
   const square = !theyOwe && !youOwe
 
-  const back = () => navigate('/debts')
+  /* Back to where you came from - Home's card, the list scrolled halfway -
+     not always to the list: going there by a new navigation dropped the
+     list's scroll and grew the history, so the system Back reopened this
+     page. The list when there is nothing behind (hooks/useBack.js). */
+  const back = useBack('/debts')
 
   async function handleDelete(debt) {
     setBusy(true)

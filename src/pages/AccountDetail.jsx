@@ -1,5 +1,6 @@
 import { useState, useMemo, useEffect, useRef, useCallback } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { allocateGoals } from '../lib/goals'
@@ -137,7 +138,11 @@ export default function AccountDetail() {
     [account?.currency],
   )
 
-  const back = () => navigate('/accounts')
+  /* Back to where you came from - Home's card, the list scrolled halfway -
+     not always to the list: going there by a new navigation dropped the
+     list's scroll and grew the history, so the system Back reopened this
+     page. The list when there is nothing behind (hooks/useBack.js). */
+  const back = useBack('/accounts')
 
   // Deleting from the edit sheet leaves this page pointing at a row that is
   // gone. Landing on "not found" after deleting something yourself reads as a

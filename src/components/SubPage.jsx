@@ -25,18 +25,25 @@ export default function SubPage({ title, action = null, onBack, children, classN
   const back = useBack()
   return (
     <div className={`pb-nav ${className}`}>
-      <header className="flex items-center gap-2 px-5 pt-safe-header pb-3">
+      {/* Three columns, the outer two equal while what is in them fits, so the
+          title sits in the true centre whatever is on its right - a round
+          icon, an "Edit" pill - and only gives way when something is too
+          wide to share. A flex row centred it in the space LEFT between the
+          two, which put "Goal" 10px left of centre beside an Edit pill. */}
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-5 pt-safe-header pb-3">
         {/* subpage-back: an inert hook for the desktop, which hides it where
             the page is the right half of a split view with nothing behind. */}
-        <IconButton label="Back" className="subpage-back" onClick={onBack ?? back}>
+        <IconButton label="Back" className="subpage-back justify-self-start" onClick={onBack ?? back}>
           <IconChevronLeft />
         </IconButton>
 
-        <h1 className="flex-1 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
+        <h1 className="min-w-0 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           {title}
         </h1>
 
-        {action ?? <span className="w-9 shrink-0" aria-hidden="true" />}
+        <div className="justify-self-end flex">
+          {action ?? <span className="w-9 shrink-0" aria-hidden="true" />}
+        </div>
       </header>
 
       {children}

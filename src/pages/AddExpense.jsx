@@ -537,7 +537,9 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
             className="justify-self-end px-3.5 gap-1.5"
             onClick={() => setShowTemplates(true)}
           >
-            <IconTemplate size={14} /> Templates
+            <IconTemplate size={14} />
+            {/* Words from 380px up: under that the title needs the room. */}
+            <span className="max-[379px]:sr-only">Templates</span>
           </Button>
         )}
       </header>

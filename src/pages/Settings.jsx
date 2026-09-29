@@ -1,5 +1,8 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useBack } from '../hooks/useBack'
+import IconButton from '../components/ui/IconButton'
+import { IconChevronLeft } from '../components/icons'
 
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
@@ -72,6 +75,7 @@ import { lockSummary } from '../lib/appLock'
  */
 export default function Settings() {
   const navigate = useNavigate()
+  const back = useBack('/')
   const { theme, style, accentColor } = useTheme()
   const { showToast } = useToast()
   const { user, signOut } = useAuth()
@@ -138,7 +142,14 @@ export default function Settings() {
 
   return (
     <div className="pb-10">
+      {/* A Back, as every page reached from another has: Settings opens from
+          Home's gear and lights no tab, so without one the way out was to
+          guess a tab. subpage-back is what the desktop hides, where Settings
+          is a section of its own. */}
       <div className="px-5 pt-safe-header pb-2">
+        <IconButton label="Back" className="subpage-back -ml-0.5 mb-3" onClick={back}>
+          <IconChevronLeft />
+        </IconButton>
         <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Settings</h1>
       </div>
 
