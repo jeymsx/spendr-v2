@@ -17,6 +17,7 @@ import { canPullToSync } from '../lib/pullToSync'
 import { keepStorage } from '../lib/keepStorage'
 import { useBack } from '../hooks/useBack'
 import { formGuarded } from '../lib/backGuard'
+import { entryBehind, recordNav } from '../lib/navTrail'
 import { prefersReducedMotion } from '../components/ui/motion'
 
 // Shown while a lazy route chunk loads. Sized to roughly a screen so the
@@ -125,9 +126,8 @@ export default function AppLayout() {
      Here the page you leave unmounts, and the swipe uncovered an empty
      screen. So as a page leaves, a copy of it is kept - its DOM, cloned as it
      goes, and the scroll it was left at - and the swipe shows the copy of the
-     entry behind. Which entry that is comes from the history's own order,
-     kept here by location.key; a few back is as far as a swipe ever reaches. */
-  const trail = useRef(/** @type {string[]} */ ([location.key]))
+     entry behind. Which entry that is comes from the history's own order
+     (lib/navTrail.js); a few back is as far as a swipe ever reaches. */
   const pictures = useRef(/** @type {Map<string, {node: HTMLElement, scroll: number}>} */ (new Map()))
   const behindRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   useEffect(() => { if (behindRef.current) behindRef.current.inert = true }, [])
@@ -219,10 +219,10 @@ export default function AppLayout() {
     let behind = false
     const uncover = () => {
       const layer = behindRef.current
-      const keys = trail.current
+      const behindEntry = entryBehind()
       const btn = pageRef.current?.querySelector('header button')
-      if (!layer || keys.length < 2 || /previous|step/i.test(btn?.getAttribute('aria-label') ?? '')) return false
-      const pic = pictures.current.get(keys[keys.length - 2])
+      if (!layer || !behindEntry || /previous|step/i.test(btn?.getAttribute('aria-label') ?? '')) return false
+      const pic = pictures.current.get(behindEntry.key)
       if (!pic) return false
       const scroller = /** @type {HTMLElement} */ (layer.firstElementChild)
       scroller.replaceChildren(pic.node)
@@ -361,15 +361,8 @@ export default function AppLayout() {
   useLayoutEffect(() => {
     const el = mainRef.current
     shownKey.current = location.key
-    // Which entries are behind this one: a push adds one, Back drops to it.
-    const keys = trail.current
-    if (navType === 'PUSH') keys.push(location.key)
-    else if (navType === 'REPLACE') keys[keys.length - 1] = location.key
-    else {
-      const at = keys.lastIndexOf(location.key)
-      if (at >= 0) keys.length = at + 1
-      else trail.current = [location.key]
-    }
+    // Which entries are behind this one (lib/navTrail.js): a push adds one, Back drops to it.
+    recordNav(navType, location)
     /* Before the first paint, so the fade never starts (index.css .page-enter).
        The picture the swipe uncovered stays over the real page for a moment,
        while its rows load and its scroll comes back, then goes. */

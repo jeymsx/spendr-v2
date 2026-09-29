@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import { useLeaveGuard } from '../hooks/useBackGuard'
+import { homeAfterSave } from '../lib/navTrail'
 import DiscardSheet from '../components/DiscardSheet'
 import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect, checkOverdraw, saveTemplate, syncTransferFee, updateTransaction } from '../db/txHelpers'
@@ -336,7 +337,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
       if (templateData) await saveTemplate(templateData)
       showToast('Transfer saved')
       // Home in place of the form, so back does not reopen it (AddExpense).
-      leaveGuard.leave(() => { if (onSaved) onSaved(); else navigate('/', { replace: true }) })
+      leaveGuard.leave(() => { if (onSaved) onSaved(); else homeAfterSave(navigate) })
     } catch (e) {
       console.error('[Transfer] save failed:', e)
       showToast('Failed to save transfer', 'error')

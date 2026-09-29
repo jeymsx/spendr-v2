@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import { useLeaveGuard } from '../hooks/useBackGuard'
+import { homeAfterSave } from '../lib/navTrail'
 import DiscardSheet from '../components/DiscardSheet'
 import { useCategoryGuess } from '../hooks/useCategoryGuess'
 import db, { UNSYNCED } from '../db/db'
@@ -452,7 +453,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         showToast(shares.length
           ? `Split ${splitLegs.length} ways · ${shares.length} owe you`
           : `Split across ${splitLegs.length} categories`)
-        leaveGuard.leave(() => { if (onSaved) onSaved(); else navigate('/', { replace: true }) })
+        leaveGuard.leave(() => { if (onSaved) onSaved(); else homeAfterSave(navigate) })
         return
       }
 
@@ -478,7 +479,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
               : 'Expense saved')
       // Home in place of the form: back from there is the page you added
       // from, not an empty form to fill in again.
-      leaveGuard.leave(() => { if (onSaved) onSaved(); else navigate('/', { replace: true }) })
+      leaveGuard.leave(() => { if (onSaved) onSaved(); else homeAfterSave(navigate) })
     } catch (e) {
       console.error('[AddExpense] save failed:', e)
       showToast('Failed to save expense', 'error')

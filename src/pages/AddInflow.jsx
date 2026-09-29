@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import { useLeaveGuard } from '../hooks/useBackGuard'
+import { homeAfterSave } from '../lib/navTrail'
 import DiscardSheet from '../components/DiscardSheet'
 import { useCategoryGuess } from '../hooks/useCategoryGuess'
 import db, { UNSYNCED } from '../db/db'
@@ -233,7 +234,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
       if (templateData) await saveTemplate(templateData)
       showToast('Inflow saved')
       // Home in place of the form, so back does not reopen it (AddExpense).
-      leaveGuard.leave(() => { if (onSaved) onSaved(); else navigate('/', { replace: true }) })
+      leaveGuard.leave(() => { if (onSaved) onSaved(); else homeAfterSave(navigate) })
     } catch (e) {
       console.error('[AddInflow] save failed:', e)
       showToast('Failed to save inflow', 'error')
