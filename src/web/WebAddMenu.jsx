@@ -14,6 +14,9 @@ const FLOWS = [
   { key: 'quick',    label: 'Quick log', hint: 'Type it the way you say it', sign: <IconQuickLog size={15} />, tone: 'text-primary', kbd: 'Q' },
 ]
 
+/** The menu's items, in order. @param {HTMLElement|null} menu @returns {HTMLElement[]} */
+const itemsOf = (menu) => [...(menu?.querySelectorAll('[role="menuitem"]') ?? [])].map(n => /** @type {HTMLElement} */ (n))
+
 /**
  * Add button with a flyout of the three transaction types.
  *
@@ -26,6 +29,12 @@ const FLOWS = [
  * click toggles it too, focus opens it, and it closes on Escape, outside
  * click, or the pointer leaving. The leave has a short grace period because the
  * pointer has to cross a gap between button and menu.
+ *
+ * The keyboard gets the menu-button pattern (WAI-ARIA APG): ArrowDown, Enter
+ * or Space on the button opens the menu at its first item, ArrowUp at its
+ * last; Up and Down move through it and wrap, Home and End jump; Escape
+ * closes it and gives focus back to the button. Focus alone still opens it,
+ * as hover does, without moving into it.
  *
  * The menu is portalled to document.body and positioned from the button's
  * rect. It can't simply be absolutely positioned inside the sidebar: the
@@ -52,6 +61,12 @@ export default function WebAddMenu() {
      button looked dead on its first press. A click on a menu that hover or
      focus opened keeps it open; a click on one a click opened closes it. */
   const openedBy = useRef(/** @type {'hover'|'focus'|'click'|null} */ (null))
+  /* Which item to focus once the menu is drawn, when a key asked for one
+     before it was. */
+  const focusWanted = useRef(/** @type {'first'|'last'|null} */ (null))
+  /* Focus handed back to the button by Escape or Tab must not reopen the
+     menu, which focusing the button otherwise does. */
+  const quietFocus = useRef(false)
 
   const measure = useCallback(() => {
     const r = btnRef.current?.getBoundingClientRect()
@@ -94,6 +109,50 @@ export default function WebAddMenu() {
     }
   }, [open, measure])
 
+  /** @param {'first'|'last'|number} which */
+  const focusItem = useCallback((which) => {
+    const list = itemsOf(menuRef.current)
+    if (!list.length) { if (typeof which === 'string') focusWanted.current = which; return }
+    focusWanted.current = null
+    const at = which === 'first' ? 0 : which === 'last' ? list.length - 1 : which
+    list[(at + list.length) % list.length].focus()
+  }, [])
+
+  // A key opened it: focus the item it asked for once the menu is there.
+  useEffect(() => {
+    if (open && rect && focusWanted.current) focusItem(focusWanted.current)
+  }, [open, rect, focusItem])
+
+  const backToButton = useCallback(() => {
+    quietFocus.current = true
+    btnRef.current?.focus()
+    quietFocus.current = false
+  }, [])
+
+  /** @param {import('react').KeyboardEvent} e */
+  function onButtonKey(e) {
+    if (!['ArrowDown', 'ArrowUp', 'Enter', ' '].includes(e.key)) return
+    e.preventDefault()
+    openedBy.current = 'click'
+    setOpen(true)
+    focusItem(e.key === 'ArrowUp' ? 'last' : 'first')
+  }
+
+  /** @param {import('react').KeyboardEvent} e */
+  function onMenuKey(e) {
+    const list = itemsOf(menuRef.current)
+    const at = list.indexOf(/** @type {HTMLElement} */ (document.activeElement))
+    if (e.key === 'ArrowDown') { e.preventDefault(); focusItem(at + 1) }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); focusItem(at < 0 ? list.length - 1 : at - 1) }
+    else if (e.key === 'Home') { e.preventDefault(); focusItem('first') }
+    else if (e.key === 'End') { e.preventDefault(); focusItem('last') }
+    else if (e.key === 'Escape') { e.preventDefault(); setOpen(false); backToButton() }
+    /* The menu sits at the end of the page, so Tab from it would leave the
+       app. From the button instead: the browser then moves on to whatever
+       follows (or, with Shift, precedes) the button. */
+    else if (e.key === 'Tab') { setOpen(false); backToButton() }
+  }
+
   function pick(key) {
     setOpen(false)
     openAdd(key)
@@ -113,7 +172,8 @@ export default function WebAddMenu() {
           openedBy.current = open ? null : 'click'
           setOpen(!open)
         }}
-        onFocus={() => { if (!open) openedBy.current = 'focus'; setOpen(true) }}
+        onFocus={() => { if (quietFocus.current) return; if (!open) openedBy.current = 'focus'; setOpen(true) }}
+        onKeyDown={onButtonKey}
         aria-haspopup="menu"
         aria-label="Add transaction"
         aria-expanded={open}
@@ -133,6 +193,7 @@ export default function WebAddMenu() {
           aria-label="Add transaction"
           onMouseEnter={cancelClose}
           onMouseLeave={scheduleClose}
+          onKeyDown={onMenuKey}
           className="card-solid fixed z-[240] w-[224px] p-1.5 rounded-xl"
           style={{
             top: rect.top,
@@ -144,6 +205,8 @@ export default function WebAddMenu() {
             <button
               key={f.key}
               role="menuitem"
+              // Reached by the arrow keys, not by Tab (the APG's roving focus).
+              tabIndex={-1}
               onClick={() => pick(f.key)}
               className="w-full flex items-center gap-2.5 px-2.5 h-11 rounded-lg text-left
                 hover:bg-slate-100 dark:hover:bg-white/[0.07]
