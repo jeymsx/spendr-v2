@@ -24,6 +24,7 @@
    different question, and two copies of the sRGB luminance curve is one too
    many. */
 import { parseHex, toHex, relativeLuminance } from './color'
+import { symbolOf } from './currency'
 
 // from = top-left (lighter), to = bottom-right (deeper). Both AA-safe.
 /** @type {Record<string, {from: string, to: string}>} */
@@ -332,6 +333,22 @@ function asCredit(stops, isCredit) {
 
 /** @param {Account} [account] */
 export function accountBrand(account) {
+  return withCurrency(brandOf(account), account)
+}
+
+/* A cash account draws the sign of the currency it is kept in. The cash art
+   drew the LEDGER's (BrandWatermark), so a dollar envelope in a peso ledger
+   wore a peso, and during setup - before the ledger's currency is saved - a
+   yen profile's Cash card did too. */
+/** @param {any} brand @param {Record<string, any>|null|undefined} account */
+function withCurrency(brand, account) {
+  const cur = String(account?.currency || '').toUpperCase()
+  if (!brand || !cur || (brand.key !== 'cash' && brand.mark !== 'cash')) return brand
+  return { ...brand, symbol: symbolOf(cur) }
+}
+
+/** @param {Record<string, any>|null|undefined} account */
+function brandOf(account) {
   const key = norm(account?.name)
   const isCredit = account?.type === 'credit'
 

@@ -100,3 +100,20 @@ describe('GRADIENT_PRESETS', () => {
     }
   })
 })
+
+/* The cash art drew the ledger's sign, so a dollar envelope in a peso ledger
+   wore a peso - and during setup, before the ledger's currency is saved, a
+   yen profile's Cash card did too. */
+describe('a cash card in its own currency', () => {
+  it("carries its currency's sign for the watermark", () => {
+    expect(accountBrand({ name: 'Cash', type: 'cash', currency: 'JPY' }).symbol).toBe('¥')
+    expect(accountBrand({ name: 'Cash', type: 'cash', currency: 'PHP' }).symbol).toBe('₱')
+    expect(accountBrand({ name: 'Envelope', type: 'cash', currency: 'usd' }).symbol).toBe('$')
+  })
+
+  it('leaves the other brands, and a cash card with no currency, alone', () => {
+    expect(accountBrand({ name: 'GCash', type: 'ewallet', currency: 'JPY' }).symbol).toBeUndefined()
+    expect(accountBrand({ name: 'BPI', type: 'bank', currency: 'USD' }).symbol).toBeUndefined()
+    expect(accountBrand({ name: 'Cash', type: 'cash' }).symbol).toBeUndefined()
+  })
+})

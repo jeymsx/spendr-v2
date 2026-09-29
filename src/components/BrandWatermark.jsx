@@ -133,7 +133,10 @@ export default function BrandWatermark({ brand, className = 'acct-card-watermark
   // actually named "Cash", so a custom cash account (an envelope, a tin, a
   // joint pot) would otherwise drop through to the banknote glyph, which is
   // the placeholder-looking box this art exists to replace.
-  const art = BRAND_ART[key] ?? BRAND_ART[brand?.mark]
+  const art = brand?.symbol
+    // Its own currency's sign in the cash art (lib/accountBrands.js), sized down when it is more than one letter.
+    ? { ...BRAND_ART.cash, text: String(brand.symbol), fontSize: String(brand.symbol).length <= 1 ? 58 : fontSizeFor(String(brand.symbol)) }
+    : (BRAND_ART[key] ?? BRAND_ART[brand?.mark])
 
   // Still nothing: an institution with no logo file and no drawn art gets its
   // initials, which at least identify the card. The category glyph is the last

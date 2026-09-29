@@ -30,7 +30,7 @@ export const COLOR_SWATCHES = ['#2D9DFF', '#10b981', '#f59e0b', '#ef4444', '#8b5
  */
 export const StepAccounts = forwardRef(
   /** @param {any} props @param {import('react').Ref<HTMLHeadingElement>} ref */
-  function StepAccounts({ selectedNames, onToggle, customAccounts, onAddCustom, onRemoveCustom, onNext }, ref) {
+  function StepAccounts({ selectedNames, onToggle, customAccounts, onAddCustom, onRemoveCustom, onNext, currency = 'PHP' }, ref) {
     const [more, setMore] = useState(false)
     const [query, setQuery] = useState('')
     const [adding, setAdding] = useState(false)
@@ -60,7 +60,8 @@ export const StepAccounts = forwardRef(
                     ? 'ring-2 ring-primary ring-offset-2 ring-offset-navy'
                     : ''}`}
                 >
-                  <PreviewCard draft={acct} />
+                  {/* In the currency setup keeps it in: a yen profile's GCash said PHP. */}
+                  <PreviewCard draft={{ ...acct, currency }} />
                   <span
                     className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center
                       bg-primary text-white shadow-md transition-[opacity,scale] duration-300 ${on ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}

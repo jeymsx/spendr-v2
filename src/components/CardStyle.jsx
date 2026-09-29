@@ -35,12 +35,14 @@ export function PreviewCard({ draft, large = false }) {
   // branch never fires and the preview keeps showing the house gradient while
   // the swatch row says otherwise. Every other card renderer passes the whole
   // account object and gets this for free; this one builds the argument by
-  // hand from a draft, which is exactly how the field went missing.
+  // hand from a draft, which is exactly how the field went missing. The
+  // currency too: a cash card draws its sign, and setup's yen Cash wore ₱.
   const brand = accountBrand({
     name: draft.name,
     type: draft.type,
     color: draft.color,
     customColor: draft.customColor,
+    currency: draft.currency,
   })
   const isCredit = draft.type === 'credit'
   const typeLabel = TYPE_LABEL[draft.type]

@@ -16,6 +16,7 @@ import { setNudge } from '../hooks/useNudge'
 import { installContext } from '../lib/install'
 import { useKeyboardInset } from '../hooks/useKeyboardInset'
 import { useReduceMotion } from '../hooks/useReduceMotion'
+import { useBackGuard } from '../hooks/useBackGuard'
 import { parseMoney } from '../utils/moneyInput'
 import IconButton from '../components/ui/IconButton'
 import { SPRING, EXIT } from './recap/theme'
@@ -275,6 +276,13 @@ export default function Onboarding() {
     setStep(next)
   }
   const next = () => go(1)
+  /* System Back (Android's, a browser's) steps back through setup as the
+     header's Back does, instead of leaving it for whatever page was behind
+     (lib/backGuard.js). Not from the first step, and not while it saves. */
+  useBackGuard(index > 0 && !saving && !following, () => {
+    go(-1)
+    return index - 1 > 0 ? 'stay' : undefined
+  })
 
   async function signIn() {
     if (preview) { setFakeSignedIn(true); return }
@@ -438,6 +446,7 @@ export default function Onboarding() {
             customAccounts={custom}
             onAddCustom={(/** @type {any} */ a) => setCustom(prev => [...prev, a])}
             onRemoveCustom={(/** @type {string} */ n) => setCustom(prev => prev.filter(a => a.name !== n))}
+            currency={currency}
             onNext={next}
           />
         )
