@@ -127,10 +127,9 @@ export { nextOccurrence } from './accounts/shared'
 // importing this module.
 export const nextOccurrenceDate = nextDueDate
 
-export function fmtCycleDate(date) {
-  if (!date) return ''
-  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
-}
+// In accounts/shared.jsx now, where a card's statement pages can reach it
+// without loading this page's modules.
+export { fmtCycleDate } from './accounts/shared'
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 

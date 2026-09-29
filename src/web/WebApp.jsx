@@ -51,6 +51,7 @@ const ForecastSettings = lazy(() => import('../pages/insights/ForecastSettings')
 const AccountDetail = lazy(() => import('../pages/AccountDetail'))
 const AccountNew    = lazy(() => import('../pages/AccountNew'))
 const AccountEdit   = lazy(() => import('../pages/AccountEdit'))
+const StatementHistory = lazy(() => import('../pages/accounts/StatementHistory'))
 const CategoryDetail = lazy(() => import('../pages/CategoryDetail'))
 const PersonDetail  = lazy(() => import('../pages/debts/PersonDetail'))
 const GoalDetail    = lazy(() => import('../pages/GoalDetail'))
@@ -117,6 +118,7 @@ export default function WebApp() {
                 <Route path=":id/edit" element={<AccountEdit />} />
               </Route>
 
+                <Route path=":id/statements" element={<StatementHistory />} />
               <Route path="/insights" element={<WebInsightsSection />}>
                 <Route index element={<Navigate to="/insights/trend" replace />} />
                 <Route path="trend" element={<InsightsTrend />} />

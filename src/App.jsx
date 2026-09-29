@@ -28,6 +28,7 @@ const Accounts     = lazy(() => import('./pages/Accounts'))
 const AccountDetail = lazy(() => import('./pages/AccountDetail'))
 const AccountNew    = lazy(() => import('./pages/AccountNew'))
 const AccountEdit   = lazy(() => import('./pages/AccountEdit'))
+const StatementHistory = lazy(() => import('./pages/accounts/StatementHistory'))
 const Budget        = lazy(() => import('./pages/Budget'))
 const CategoryDetail = lazy(() => import('./pages/CategoryDetail'))
 const Debts        = lazy(() => import('./pages/Debts'))
@@ -131,6 +132,7 @@ export default function App() {
               <Route path="/debts"        element={<Debts />} />
               <Route path="/debts/person/:key" element={<PersonDetail />} />
               <Route path="/goals"        element={<Goals />} />
+              <Route path="/accounts/:id/statements" element={<StatementHistory />} />
               <Route path="/goals/:id"    element={<GoalDetail />} />
               <Route path="/recurring"    element={<Recurring />} />
               {/* Before /recurring/:id, or "new" matches as an id. */}

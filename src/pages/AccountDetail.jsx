@@ -13,6 +13,7 @@ import SchemeMark from '../components/SchemeMark'
 import TxDetailSheet from '../components/TxDetailSheet'
 import LimitMeter from '../components/LimitMeter'
 import { statementDueDate, daysToDue, upcomingDueDate } from '../lib/creditBills'
+import { creditStatements } from '../lib/creditStatements'
 import { receivedAmount } from '../lib/transferLegs'
 import {
   estimateFinanceCharge, financeChargeRow, financeChargeLogged,
@@ -24,10 +25,8 @@ import { IconChevronRight } from '../components/icons'
 import {
   AccountFormSheet,
   QrViewerModal,
-  CreditTxSection,
   TYPE_LABEL,
   fmt,
-  fmtCycleDate,
   nextOccurrenceDate,
 } from './Accounts'
 import Button from '../components/ui/Button'
@@ -43,8 +42,8 @@ import {
 } from './accounts/Trend'
 import { TxList, TrendDelta } from './accounts/DetailBits'
 import CardPaymentSheet from './accounts/CardPaymentSheet'
+import CreditSections from './accounts/CreditSections'
 import OverdrawWarningSheet from '../components/OverdrawWarningSheet'
-import ProgressBar from '../components/ui/ProgressBar'
 import RollingNumber from '../components/ui/RollingNumber'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import useRates from '../hooks/useRates'
@@ -332,14 +331,12 @@ export default function AccountDetail() {
     }
   }, [account, txsWithRunning])
 
-  /* Everything ever paid INTO this card, newest first. getCreditStatus splits
-     payments by whether they land against the open statement; the card's own
-     page wants both halves as one list. */
-  const paymentHistory = useMemo(() => {
-    if (!creditData) return []
-    return [...creditData.payments, ...creditData.priorPayments]
-      .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
-  }, [creditData])
+  /* Every statement the card has closed, for the link to their history and
+     for when the last one was paid (lib/creditStatements.js). */
+  const statements = useMemo(
+    () => (account?.type === 'credit' ? creditStatements(account, txsWithRunning) : []),
+    [account, txsWithRunning],
+  )
 
   const isCredit  = account?.type === 'credit'
   /* A loan is read the way a card is - by what you owe, which goes DOWN as
@@ -784,199 +781,18 @@ export default function AccountDetail() {
       {/* ── Everything below is the detail, unchanged from the sheet ── */}
       <div className="px-5 pt-7">
         {isCredit && creditData ? (
-          <>
-            {/* ── The closed statement, as one card ───────────────────
-
-                It was three things stacked: a green "Statement balance paid"
-                or amber "Payment due" banner, a two-column tile holding the
-                statement total and the next one, and a Pay button under them.
-                Each was true and the set read as a status board - the one
-                question a card page exists to answer, "what do I owe and by
-                when", was spread across three surfaces in three type sizes.
-
-                So it is one card, in the order the question is asked: which
-                cycle, what it came to, what is left, how far through, and the
-                verb. The banners are gone because the card says both things
-                itself - a settled statement shows a full bar and "Settled",
-                an unsettled one shows the days left in its own colour. ── */}
-            <Card padding="md" className="mb-3">
-              <div className="flex items-baseline justify-between gap-3">
-                <SectionLabel inset="none" gap="none">Last billing cycle</SectionLabel>
-                <span className="text-11 tabular-nums text-slate-400 dark:text-slate-500">
-                  {fmtCycleDate(creditData.cycleStart)} – {fmtCycleDate(creditData.cycleEnd)}
-                </span>
-              </div>
-
-              {!creditData.hasStatement ? (
-                /* Neither owed nor settled. Saying so beats colouring a zero
-                   green, which would claim you had paid something off. */
-                <p className="mt-3 text-13 text-slate-500 dark:text-slate-400">
-                  Nothing was billed this cycle.
-                </p>
-              ) : (
-                <>
-                  <div className="mt-2.5 flex items-baseline justify-between gap-3">
-                    <span className="text-13 text-slate-500 dark:text-slate-400">Remaining due</span>
-                    <span className={`text-22 font-bold tabular-nums ${
-                      creditData.stmtPaid
-                        ? 'text-emerald-600 dark:text-emerald-400'
-                        : 'text-slate-900 dark:text-white'
-                    }`}>
-                      {acctFmt(creditData.stmtOutstanding)}
-                    </span>
-                  </div>
-
-                  {/* How much of the bill is behind you - while any of it is
-                      still ahead of you.
-
-                      A settled statement drops the bar and the pair under it.
-                      Full, green, over a ₱0.00 remaining and above the word
-                      "Settled", it was the same fact told three times, and a
-                      meter is for a quantity you are watching move. Once it
-                      cannot move there is nothing to watch. */}
-                  {/* What the statement asked for is what was owed when it
-                      closed - this cycle's charges and anything carried from
-                      before - and "paid" is what has gone in since. Worked from
-                      this cycle's charges alone, a card carrying an older
-                      balance read "₱0.00 paid" after a ₱3,000.50 payment, over
-                      a total smaller than what was still due. */}
-                  {!creditData.stmtPaid && (() => {
-                    const stmtTotal = creditData.stmtOutstanding + creditData.totalPayments
-                    return (
-                      <>
-                        <ProgressBar
-                          className="mt-3"
-                          value={stmtTotal > 0 ? (creditData.totalPayments / stmtTotal) * 100 : 100}
-                          fillClass="bg-primary"
-                        />
-                        <div className="mt-1.5 flex items-baseline justify-between">
-                          <span className="text-11 text-slate-400 dark:text-slate-500">
-                            {acctFmt(creditData.totalPayments)} paid
-                          </span>
-                          <span className="text-11 text-slate-400 dark:text-slate-500">
-                            {acctFmt(stmtTotal)} total
-                          </span>
-                        </div>
-                      </>
-                    )
-                  })()}
-
-                  {creditData.stmtPaid ? (
-                    <p className="mt-3 text-center text-12 font-semibold text-emerald-600 dark:text-emerald-400">
-                      Settled
-                    </p>
-                  ) : (
-                    <>
-                      {/* Overdue is its own sentence, not a negative number of
-                          days left. */}
-                      <p className="mt-3 text-center text-12 text-slate-500 dark:text-slate-400">
-                        {creditData.stmtDays == null ? (
-                          <>No due day set for this card</>
-                        ) : creditData.stmtDays < 0 ? (
-                          <span className="font-semibold text-red-500 dark:text-red-400">
-                            {Math.abs(creditData.stmtDays)} day{Math.abs(creditData.stmtDays) === 1 ? '' : 's'} overdue
-                            {' · '}was due {fmtDueDate(creditData.stmtDue)}
-                          </span>
-                        ) : (
-                          <>
-                            Payment due{' '}
-                            <span className={`font-semibold ${
-                              creditData.stmtDays <= 7
-                                ? 'text-amber-600 dark:text-amber-400'
-                                : 'text-slate-700 dark:text-slate-200'
-                            }`}>
-                              {creditData.stmtDays === 0 ? 'today' : `in ${creditData.stmtDays} day${creditData.stmtDays === 1 ? '' : 's'}`}
-                            </span>
-                            , by {fmtDueDate(creditData.stmtDue)}
-                          </>
-                        )}
-                      </p>
-
-                      <Button block className="mt-3" onClick={() => setPayOpen(true)}>
-                        Make a payment
-                      </Button>
-                    </>
-                  )}
-                </>
-              )}
-            </Card>
-
-            {/* The four stat tiles that used to sit here are gone, and every
-                figure on them survives somewhere it means more:
-
-                  Available credit   the limit meter at the top of this page,
-                                     which already reads "₱15,850.00 left"
-                  Next statement     the "Next statement" section below, with
-                                     its date range and the charges in it
-                  On later bills     the "Scheduled later" section, same
-                  Minimum due        the payment sheet, as a preset you can
-                                     tap - which is the only place it is
-                                     actually a decision rather than a number
-
-                A tile that repeats what the section under it says is not a
-                summary, it is the same sentence twice. */}
-
-            <CreditTxSection
-              onSelect={setSelectedTx}
-              catMap={catMap}
-              title="This statement"
-              dateRange={`${fmtCycleDate(creditData.cycleStart)} – ${fmtCycleDate(creditData.cycleEnd)}`}
-              txs={creditData.thisCharges}
-              total={creditData.thisTotal}
-              accountName={account.name}
-              emptyLabel="No charges this statement"
-              totalColor="text-red-500 dark:text-red-400"
-            />
-
-            {creditData.nextStatementCharges.length > 0 && (
-              <CreditTxSection
-                onSelect={setSelectedTx}
-              catMap={catMap}
-                title="Next statement"
-                dateRange={`${fmtCycleDate(creditData.nextStart)} – ${fmtCycleDate(creditData.nextCycleEnd)}`}
-                txs={creditData.nextStatementCharges}
-                total={creditData.nextStatementTotal}
-                accountName={account.name}
-                totalColor="text-slate-600 dark:text-slate-300"
-              />
-            )}
-
-            {/* Installment plans write every month up front, so these are
-                already against the limit while being nowhere near due. */}
-            {creditData.laterCharges.length > 0 && (
-              <CreditTxSection
-                onSelect={setSelectedTx}
-              catMap={catMap}
-                title="Scheduled later"
-                dateRange={`After ${fmtCycleDate(creditData.nextCycleEnd)}`}
-                txs={creditData.laterCharges}
-                total={creditData.laterTotal}
-                accountName={account.name}
-                totalColor="text-slate-500 dark:text-slate-400"
-              />
-            )}
-
-            {/* Every payment, not just the ones against the open statement.
-                `payments` is scoped to what has been paid since the cutoff,
-                because that is what settles THIS bill - which meant the list
-                emptied itself at every cycle and the question "what have I
-                paid on this card" had no answer on the card's own page.
-                priorPayments is the rest of it; together they are the
-                history. */}
-            {paymentHistory.length > 0 && (
-              <CreditTxSection
-                onSelect={setSelectedTx}
-                catMap={catMap}
-                title="Payment history"
-                txs={paymentHistory}
-                total={paymentHistory.reduce((s, tx) => s + (tx.amount ?? 0), 0)}
-                accountName={account.name}
-                totalColor="text-emerald-600 dark:text-emerald-400"
-                /* Money into the card, as each row under it says. */
-                totalSign="+"
-              />
-            )}
-          </>
+          /* The cycle that wants something from you leads, the others fold
+             away, and every statement before is a page of its own
+             (accounts/CreditSections.jsx). */
+          <CreditSections
+            account={account}
+            credit={creditData}
+            statements={statements}
+            money={acctFmt}
+            onPay={() => setPayOpen(true)}
+            onSelect={setSelectedTx}
+            catMap={catMap}
+          />
         ) : isParent ? (
           <>
             <SectionLabel gap="loose">

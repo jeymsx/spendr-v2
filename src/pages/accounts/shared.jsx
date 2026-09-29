@@ -11,6 +11,12 @@
  */
 import { fieldInputClass } from '../../components/ui/Field'
 
+/** A statement's day, "Sep 25": a cycle is recent enough to need no year. @param {Date|null|undefined} date */
+export function fmtCycleDate(date) {
+  if (!date) return ''
+  return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+}
+
 export function fmtTxDate(isoStr) {
   if (!isoStr) return ''
   const d    = new Date(isoStr)
