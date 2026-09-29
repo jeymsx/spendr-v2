@@ -8,6 +8,7 @@ import { IconTick, IconWarning, IconBell } from './icons'
 import { fmt } from '../lib/money'
 import { currencyOfAccountName } from '../lib/fxContext'
 import { quietTaps } from './ui/tapGuard'
+import { useBackGuard } from '../hooks/useBackGuard'
 
 /* Always a magnitude - this row never shows a sign - so it is fmt() of an
    absolute value, which produces the identical string.
@@ -217,6 +218,8 @@ export default function QuickLogOverlay({ onClose }) {
     setClosing(true)
     exitTimer.current = setTimeout(onClose, exitDelay())
   }, [onClose])
+  // System Back closes it, as it closes a sheet (lib/backGuard.js).
+  useBackGuard(true, () => { dismiss() })
 
   // Mounted only while open (AppLayout guards it), so the field starts empty
   // every time without a reset effect - which is what an `open` prop plus
