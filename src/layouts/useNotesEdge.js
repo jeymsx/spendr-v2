@@ -1,5 +1,37 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react'
 import { prefersReducedMotion } from '../components/ui/motion'
+
+/**
+ * Whether Notes is being drawn under the finger - kept outside React state,
+ * so that starting a swipe re-renders the drawn page and nothing else. As
+ * state in the layout it re-rendered the whole page under the finger on the
+ * swipe's first frame, which is the frame a hitch shows most.
+ */
+function createPeek() {
+  let on = false
+  const listeners = new Set()
+  return {
+    get: () => on,
+    /** @param {boolean} v */
+    set: (v) => {
+      if (v === on) return
+      on = v
+      for (const l of listeners) l()
+    },
+    /** @param {() => void} l */
+    subscribe: (l) => { listeners.add(l); return () => { listeners.delete(l) } },
+  }
+}
+
+/**
+ * Draws its children only while the swipe is drawing Notes.
+ *
+ * @param {{peek: ReturnType<typeof createPeek>, children: import('react').ReactNode}} props
+ */
+export function WhilePeeking({ peek, children }) {
+  const on = useSyncExternalStore(peek.subscribe, peek.get, () => false)
+  return on ? children : null
+}
 
 /**
  * Swipe in from the right edge of a tab and Notes slides in over it - the
@@ -36,7 +68,7 @@ import { prefersReducedMotion } from '../components/ui/motion'
  */
 export function useNotesEdge({ mainRef, pageRef, pathnameRef, onOpen }) {
   const [standalone] = useState(() => typeof navigator !== 'undefined' && !!/** @type {any} */ (navigator).standalone)
-  const [peek, setPeek] = useState(false)
+  const [peek] = useState(createPeek)
   const aheadRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const dimRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const openRef = useRef(onOpen)
@@ -53,8 +85,8 @@ export function useNotesEdge({ mainRef, pageRef, pathnameRef, onOpen }) {
       layer.style.visibility = 'hidden'
     }
     if (dim) { dim.style.transition = 'none'; dim.style.opacity = '0' }
-    setPeek(false)
-  }, [])
+    peek.set(false)
+  }, [peek])
 
   useEffect(() => { if (aheadRef.current) aheadRef.current.inert = true }, [standalone])
 
@@ -134,7 +166,7 @@ export function useNotesEdge({ mainRef, pageRef, pathnameRef, onOpen }) {
       const my = t.clientY - start.y
       if (!axis && (Math.abs(mx) > 8 || Math.abs(my) > 8)) {
         axis = Math.abs(mx) > Math.abs(my) && mx < 0 ? 'x' : 'y'
-        if (axis === 'x') setPeek(true)
+        if (axis === 'x') peek.set(true)
       }
       if (axis === 'y') { start = null; return }
       if (axis !== 'x') return
@@ -177,7 +209,7 @@ export function useNotesEdge({ mainRef, pageRef, pathnameRef, onOpen }) {
       el.removeEventListener('touchend', onEnd)
       el.removeEventListener('touchcancel', onCancel)
     }
-  }, [mainRef, pageRef, pathnameRef, standalone, reset])
+  }, [mainRef, pageRef, pathnameRef, standalone, reset, peek])
 
   /**
    * For AppLayout, as the route changes: when the swipe opened this page,

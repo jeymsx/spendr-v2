@@ -19,7 +19,7 @@ import { useBack } from '../hooks/useBack'
 import { formGuarded } from '../lib/backGuard'
 import { entryBehind, recordNav } from '../lib/navTrail'
 import { prefersReducedMotion } from '../components/ui/motion'
-import { useNotesEdge } from './useNotesEdge'
+import { useNotesEdge, WhilePeeking } from './useNotesEdge'
 
 // Notes, drawn under the finger while the right-edge swipe brings it in (useNotesEdge).
 const NotesPeek = lazy(() => import('../pages/Notes'))
@@ -581,13 +581,13 @@ export default function AppLayout() {
             aria-hidden="true"
             style={{ transform: 'translateX(100%)', visibility: 'hidden' }}
           >
-            {notesPeek && (
+            <WhilePeeking peek={notesPeek}>
               <Suspense fallback={null}>
                 <div className="swipe-ahead-page">
                   <div className="pb-nav"><NotesPeek peek /></div>
                 </div>
               </Suspense>
-            )}
+            </WhilePeeking>
           </div>
         </>
       )}
