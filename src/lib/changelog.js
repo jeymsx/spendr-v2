@@ -24,6 +24,18 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.13.2',
+    date: '2026-09-29',
+    items: [
+      { title: 'Tidier headers', desc: 'Settings\' title sits beside its Back button, as on every other page, and Templates on Add expense, Add inflow and Transfer is an icon, clear of the title.' },
+      { title: 'Less empty space', desc: 'Pages end just above the tab bar instead of leaving a gap under their last row, and captions like "Cash · Food" read as one line.' },
+      { title: 'Back after saving', desc: 'An entry started on Home returns you to that Home when saved, so the next Back works the first time.' },
+      { title: 'Escape keeps your place', desc: 'Escape or Back on a delete confirmation returns to the transaction instead of closing it.' },
+      { title: 'Setup in your currency', desc: 'A profile kept in yen or another currency shows it on every card during setup, Android\'s Back steps back through setup, and yen and won are typed without decimals.' },
+      { title: 'Keys on a computer', desc: 'The Add transaction menu works with the arrow keys, Enter and Escape.' },
+    ],
+  },
+  {
     version: '0.13.1',
     date: '2026-09-29',
     items: [
