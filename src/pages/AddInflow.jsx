@@ -221,11 +221,15 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
     <div className="flex flex-col bg-transparent pb-6">
 
       {/* ── Header ── */}
-      <header className="flex items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
-        <IconButton label="Back" onClick={() => (onCancel ? onCancel() : back())}>
+      {/* Three columns, the outer two the same width, so the title sits in
+          the true centre whatever is either side of it - a 36px back button
+          on one, the wider Templates pill (or nothing) on the other - the way
+          every SubPage title does. */}
+      <header className="grid grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-3 px-5 pt-safe-header pb-2 shrink-0">
+        <IconButton label="Back" className="justify-self-start" onClick={() => (onCancel ? onCancel() : back())}>
           <IconChevronLeft />
         </IconButton>
-        <h1 className="text-base font-semibold text-slate-800 dark:text-white flex-1">
+        <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
           {isEdit ? 'Edit Inflow' : 'Add Inflow'}
         </h1>
         {/* Templates start a new entry from a saved one, which is the
@@ -234,7 +238,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           <Button
             variant="tint"
             size="xs"
-            className="shrink-0 px-3.5 gap-1.5"
+            className="justify-self-end px-3.5 gap-1.5"
             onClick={() => setShowTemplates(true)}
           >
             <IconTemplate size={14} /> Templates

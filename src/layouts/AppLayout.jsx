@@ -15,6 +15,7 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { canPullToSync } from '../lib/pullToSync'
 import { keepStorage } from '../lib/keepStorage'
+import { useBack } from '../hooks/useBack'
 
 // Shown while a lazy route chunk loads. Sized to roughly a screen so the
 // navbar and scroll position stay stable instead of collapsing to zero height.
@@ -52,7 +53,11 @@ export default function AppLayout() {
   const [whatsNewDismissed, setWhatsNewDismissed] = useState(false)
   const location = useLocation()
   const mainRef = useRef(null)
+  const pageRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const pullRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+  const back = useBack()
+  const backRef = useRef(back)
+  useEffect(() => { backRef.current = back }, [back])
   const touchStartY = useRef(-1)
   const [pullState, setPullState] = useState('idle') // idle | pulling | ready
   const runSyncRef   = useRef(runSync)
@@ -117,6 +122,87 @@ export default function AppLayout() {
     }
     el.addEventListener('scroll', onScroll, { passive: true })
     return () => { el.removeEventListener('scroll', onScroll); cancelAnimationFrame(frame) }
+  }, [])
+
+  /* ── Swipe from the left edge to go back ──
+     What every iPhone app does on a page you reached from another, and what
+     an installed web app does not get from iOS: Safari's own edge swipe is
+     not there once Spendr is on the Home Screen. So in that mode, and only
+     there, a swipe that starts at the left edge drags the page with the
+     finger and, let go past a third of the way (or flicked), finishes the
+     slide and goes back - to the page behind, or the one above when the
+     page was opened cold (hooks/useBack.js). Android has the system's back
+     gesture, and a browser tab has its own, so neither gets a second one.
+     Not on the tabs' own pages, which have nothing to go back to, and not
+     while a sheet is up. */
+  useEffect(() => {
+    const el = mainRef.current
+    if (!el || typeof navigator === 'undefined' || !(/** @type {any} */ (navigator).standalone)) return
+    const EDGE = 24
+    const TABS = new Set(['/', '/transactions', '/accounts', '/insights'])
+    /** @type {{x: number, y: number, t: number}|null} */
+    let start = null
+    /** @type {'x'|'y'|null} */
+    let axis = null
+    let dx = 0
+    let leaving = false
+    const slide = (/** @type {number} */ x, /** @type {boolean} */ settle) => {
+      const page = pageRef.current
+      if (!page) return
+      page.style.transition = settle ? 'transform 240ms cubic-bezier(0.2, 0.9, 0.25, 1), box-shadow 240ms' : 'none'
+      page.style.transform = x ? `translateX(${x}px)` : ''
+      page.style.boxShadow = x ? '-16px 0 32px -12px rgba(0, 0, 0, 0.35)' : ''
+    }
+    const onStart = (/** @type {TouchEvent} */ e) => {
+      start = null
+      const t = e.touches[0]
+      if (leaving || e.touches.length !== 1 || t.clientX > EDGE || TABS.has(pathnameRef.current)) return
+      if (document.querySelector('.sheet-overlay, [aria-modal="true"]')) return
+      start = { x: t.clientX, y: t.clientY, t: performance.now() }
+      axis = null
+      dx = 0
+    }
+    const onMove = (/** @type {TouchEvent} */ e) => {
+      if (!start) return
+      const t = e.touches[0]
+      const mx = t.clientX - start.x
+      const my = t.clientY - start.y
+      if (!axis && (Math.abs(mx) > 8 || Math.abs(my) > 8)) axis = Math.abs(mx) > Math.abs(my) ? 'x' : 'y'
+      if (axis === 'y') { start = null; return }
+      if (axis !== 'x') return
+      // The page is being dragged, not scrolled.
+      e.preventDefault()
+      dx = Math.max(0, mx)
+      slide(dx, false)
+    }
+    const onEnd = () => {
+      if (!start || axis !== 'x') { start = null; return }
+      const speed = dx / Math.max(1, performance.now() - start.t)
+      start = null
+      const width = el.clientWidth || window.innerWidth
+      if (dx > width / 3 || (speed > 0.5 && dx > 40)) {
+        leaving = true
+        slide(width, true)
+        setTimeout(() => {
+          leaving = false
+          backRef.current()
+          // If nothing navigated (a page with nowhere to go), bring it back.
+          requestAnimationFrame(() => { if (pageRef.current?.style.transform) slide(0, true) })
+        }, 200)
+      } else {
+        slide(0, true)
+      }
+    }
+    el.addEventListener('touchstart', onStart, { passive: true })
+    el.addEventListener('touchmove', onMove, { passive: false })
+    el.addEventListener('touchend', onEnd, { passive: true })
+    el.addEventListener('touchcancel', onEnd, { passive: true })
+    return () => {
+      el.removeEventListener('touchstart', onStart)
+      el.removeEventListener('touchmove', onMove)
+      el.removeEventListener('touchend', onEnd)
+      el.removeEventListener('touchcancel', onEnd)
+    }
   }, [])
 
   // Reset scroll to top on every navigation — useLayoutEffect fires before paint
@@ -274,7 +360,7 @@ export default function AppLayout() {
         </div>
 
         {/* pb-nav ensures content isn't hidden under the fixed navbar */}
-        <div key={location.pathname} className="page-enter pb-nav">
+        <div key={location.pathname} ref={pageRef} className="page-enter pb-nav">
           {/*
             Inner Suspense boundary for the lazy route chunks. It sits inside the
             layout on purpose — suspending here keeps the Navbar mounted, so a
