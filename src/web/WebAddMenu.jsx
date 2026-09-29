@@ -34,8 +34,14 @@ const FLOWS = [
  * content — later in DOM order — paints over the menu.
  */
 export default function WebAddMenu() {
-  const { openAdd } = useAddFlow()
+  const { openAdd, isOpen: flowOpen } = useAddFlow()
   const [open, setOpen] = useState(false)
+  /* A form opened some other way - E, I, T or Q - closes the menu: it was
+     left drawn over the dialog. */
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (flowOpen) setOpen(false)
+  }, [flowOpen])
   const [rect, setRect] = useState(null)
   const wrapRef = useRef(null)
   const btnRef = useRef(null)

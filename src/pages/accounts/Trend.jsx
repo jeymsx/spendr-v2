@@ -44,7 +44,7 @@ export function TrendRangeChips({ range, onRange, ranges = TREND_RANGES }) {
             key={r.key}
             onClick={() => onRange(r.key)}
             aria-pressed={range === r.key}
-            className={`relative z-10 w-[38px] py-1.5 text-10 font-bold text-center
+            className={`relative z-10 hit-slop [--hit-x:0px] [--hit-y:-8px] w-[38px] py-1.5 text-10 font-bold text-center
               transition-colors duration-200 ${
                 range === r.key ? 'text-primary' : 'text-slate-400 dark:text-slate-500'
               }`}

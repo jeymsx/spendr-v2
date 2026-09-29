@@ -1620,58 +1620,82 @@ html { overscroll-behavior-x: none; }
    blur feathers into the page rather than stopping in a hard line, while
    the button and title above it stay sharp. Only its opacity moves.
 
-   No z-index on <main> means this 30 is in the app's root stacking order:
-   over the page's own raised bits, under the tab bar's 50 and every sheet. */
+   No z-index on <main> means this 45 is in the app's root stacking order:
+   over the page's own raised bits - the accent carousel lifts its middle
+   phone to 40 - and under the tab bar's 50 and every sheet. */
 .pinned-top {
   position: sticky;
   top: 0;
-  z-index: 30;
+  z-index: 45;
 }
+/* A crisp edge and a hairline, the way an iPhone's bar ends. It feathered
+   out over 20px below the bar, and rows passing through the feather were
+   neither covered nor clear: sliced, and legible in grey. */
 .pinned-top-frost {
   position: absolute;
-  inset: 0 0 -1.25rem 0;
+  inset: 0;
   pointer-events: none;
   opacity: 0;
   transition: opacity 180ms var(--ease-out);
-  background: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
-  /* Whole under the bar, thinning out only in the 20px below it. A fade
-     starting partway down the bar let the rows passing behind the title
-     show through sharp, a ghost of text beside it. */
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 1.25rem), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 calc(100% - 1.25rem), transparent 100%);
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 0.5px 0 rgba(15, 23, 42, 0.12);
 }
-.dark .pinned-top-frost { background: rgba(0, 0, 0, 0.35); }
+.dark .pinned-top-frost {
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08);
+}
 .pinned-top[data-under] .pinned-top-frost { opacity: 1; }
 
 /* ── The status bar's ground (layouts/AppLayout.jsx) ───────────────────
    The installed app draws under the status bar (viewport-fit=cover with a
    translucent bar), so a list scrolled up ran beneath the clock with nothing
    behind it. A page with a pinned top covers that strip itself; for the
-   rest - the tabs, Settings - this frosts it once the page has scrolled:
-   whole over the inset, feathering out over 16px below it. Both come from
-   the inset, so in a browser tab, which has none, it is nothing at all. */
+   rest - the tabs, Settings - this frosts it once the page has scrolled,
+   the height of the inset and ending on the same hairline as a pinned top.
+   In a browser tab, which has no inset, it is nothing at all. */
 .status-frost {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: calc(env(safe-area-inset-top, 0px) + min(env(safe-area-inset-top, 0px), 1rem));
-  z-index: 35;
+  height: env(safe-area-inset-top, 0px);
+  z-index: 45;
   pointer-events: none;
   opacity: 0;
   transition: opacity 180ms var(--ease-out);
-  background: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(24px);
-  backdrop-filter: blur(24px);
-  -webkit-mask-image: linear-gradient(to bottom, #000 0, #000 env(safe-area-inset-top, 0px), transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 0, #000 env(safe-area-inset-top, 0px), transparent 100%);
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(24px) saturate(160%);
+  backdrop-filter: blur(24px) saturate(160%);
+  box-shadow: 0 0.5px 0 rgba(15, 23, 42, 0.12);
 }
-.dark .status-frost { background: rgba(0, 0, 0, 0.35); }
+.dark .status-frost {
+  background: rgba(0, 0, 0, 0.4);
+  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08);
+}
 .status-frost[data-under] { opacity: 1; }
 /* own-top: a page that pins a top of its own, New account and the importer. */
 #app-main:has(.pinned-top, .own-top) ~ .status-frost { display: none; }
+
+/* ── Pull to sync, in the installed app (layouts/AppLayout.jsx) ──
+   The strip that opens as you pull is at most 56px, and under a 59px
+   status bar all of it is behind the clock: the words were never seen. So
+   there they sit just below the inset instead, over the page's own top
+   padding, while the strip still gives the pull its give. */
+@media (display-mode: standalone) {
+  .pull-hint-label {
+    position: absolute;
+    top: calc(env(safe-area-inset-top, 0px) + 6px);
+    left: 0;
+    right: 0;
+    justify-content: center;
+    z-index: 46;
+    opacity: 0;
+    transition: opacity 150ms var(--ease-out);
+  }
+  .pull-hint-label[data-pulling] { opacity: 1; }
+}
 
 /* The desktop draws its own chrome round a page: the bar stays in the flow
    there, with nothing behind it. */

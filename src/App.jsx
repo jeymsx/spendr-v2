@@ -157,6 +157,9 @@ export default function App() {
               <Route path="/settings/profile"    element={<SettingsProfile />} />
               <Route path="/settings/templates"  element={<SettingsTemplates />} />
               <Route path="/import"       element={<ImportWizard />} />
+              {/* An address that is no page - a typed or old link - lands on
+                  Home rather than an empty screen with no way out. */}
+              <Route path="*"             element={<Navigate to="/" replace />} />
             </Route>
           </Route>
         </Route>

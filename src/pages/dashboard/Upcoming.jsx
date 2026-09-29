@@ -7,7 +7,7 @@ import BillMark from '../../components/BillMark'
 import { BrandSquare } from '../accounts/HoldingTile'
 import { IconCardUI } from '../../components/icons'
 import { fmt, fmtCompact } from '../../lib/money'
-import { onDay } from '../../lib/dayWords'
+import { dayName, onDay } from '../../lib/dayWords'
 import { SAFE_WINDOW_DAYS } from '../../lib/forecast'
 import SectionHeading from '../../components/ui/SectionHeading'
 import { GlassArt } from '../../components/glass/GlassArt'
@@ -231,8 +231,9 @@ export default function UpcomingSection({ forecast, items }) {
     ?? (day0 ? new Date(day0.getFullYear(), day0.getMonth(), day0.getDate() + SAFE_WINDOW_DAYS) : null)
   const under = !short && forecast.floor > 0 && forecast.firstBelowFloor
     && (!windowEnd || forecast.firstBelowFloor.date < windowEnd) ? forecast.firstBelowFloor : null
-  const until = forecast.safeUntil
-    ? `Until payday, ${forecast.safeUntil.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}`
+  const payday = forecast.safeUntil ? dayName(forecast.safeUntil) : null
+  const until = payday
+    ? `Until payday, ${payday === 'Tomorrow' || payday === 'Today' ? payday.toLowerCase() : payday}`
     : 'For the next 2 weeks'
 
   return (

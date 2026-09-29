@@ -167,7 +167,8 @@ export function dueStatus(dateStr) {
   if (n === 1) return { days: n, label: 'Tomorrow',                tone: 'soon' }
   if (n <= 7)  return { days: n, label: `${n} days`,               tone: 'soon' }
   if (n <= 14) return { days: n, label: '1 week',                  tone: 'calm' }
-  return       { days: n, label: `${Math.round(n / 7)}w`,          tone: 'calm' }
+  // "3 weeks", not "3w", in a list that already says "6 days" and "1 week".
+  return       { days: n, label: `${Math.round(n / 7)} weeks`,     tone: 'calm' }
 }
 
 /** Class list for a `dueStatus` tone. */

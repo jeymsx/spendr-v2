@@ -165,7 +165,7 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
      which opens with the same figure in its gauge. */
   const listBody = (
     <>
-            <div className="mx-4 mb-6 rounded-2xl overflow-hidden
+            <div className="mx-5 mb-6 rounded-2xl overflow-hidden
               bg-white border border-slate-100
               dark:bg-white/[0.04] dark:border-white/[0.07]">
               {expenseCats.length === 0 ? (
@@ -279,7 +279,7 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
                 its sublabel truncates at 200px, so the half that can REDUCE a
                 limit would never have been readable there. */}
             {expenseCats.some(c => (c.budget ?? 0) > 0) && (
-              <p className="mx-4 -mt-4 mb-6 text-11 leading-snug text-slate-400 dark:text-slate-500">
+              <p className="mx-5 -mt-4 mb-6 text-11 leading-snug text-slate-400 dark:text-slate-500">
                 {/* The button's own glyph, not a lookalike character. "⟲"
                     renders as a different arrow in most faces, so the note
                     would be pointing at a control the reader cannot find. */}

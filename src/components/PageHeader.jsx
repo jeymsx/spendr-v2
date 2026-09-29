@@ -39,7 +39,10 @@ export default function PageHeader({ title = null, action = null, onBack, backLa
           {title}
         </h1>
 
-        <div className="justify-self-end flex items-center gap-1.5">
+        {/* w-max: the column is never narrower than what is in it. At 320
+            "Edit limits" was squeezed to a column 65px wide and ran 7px off
+            the screen; now the title gives way instead. */}
+        <div className="justify-self-end flex items-center gap-1.5 w-max">
           {action ?? <span className="w-9 shrink-0" aria-hidden="true" />}
         </div>
       </header>

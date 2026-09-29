@@ -171,7 +171,8 @@ export function TxRow({ tx, cat, glyph = cat, isLast }) {
   const amountCls  = isExpense  ? 'text-red-500 dark:text-red-400'
     : isInflow  ? 'text-emerald-600 dark:text-emerald-400'
     : 'text-primary'
-  const amountSign = isExpense ? '-' : isInflow ? '+' : ''
+  // U+2212, the minus the Transactions list and Next 30 days use, not a hyphen.
+  const amountSign = isExpense ? '−' : isInflow ? '+' : ''
 
   return (
     <>

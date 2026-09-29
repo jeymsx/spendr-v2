@@ -20,6 +20,7 @@ import {
   TYPE_OPTIONS, ROLE_OPTIONS, defaultRole, buildAccountRow, createAccount,
 } from './Accounts'
 import IconButton from '../components/ui/IconButton'
+import PinnedTop from '../components/ui/PinnedTop'
 import SectionLabel from '../components/ui/SectionLabel'
 import Segmented from '../components/ui/Segmented'
 import MoneyField from '../components/ui/MoneyField'
@@ -420,44 +421,15 @@ export default function AccountNew() {
           step count with it. Halfway down the bank list there was nothing on
           screen saying where you were or how to get out.
 
-          Frosted rather than filled. Every other sticky header in this app
-          uses a solid colour, but those are all inside SHEETS, where the
-          background is a known flat value. This is a page, and the page has a
-          fixed radial gradient behind it (html.dark::before) - a solid fill
-          would read as a flat patch sliding over a gradient. A translucent
-          tint over a blur frosts whatever passes beneath and needs to know
-          nothing about what that is.
+          The pinned top every page has (ui/PinnedTop.jsx): clear at rest,
+          frosted once the bank grid or the card slides under it. It had a
+          frost of its own, always on and fading out partway down the bar,
+          which left bank logos showing sharp behind the title.
 
           The progress bar comes along because it is the same chrome: it
           answers "how much is left", which is only useful while you are still
           in it. ── */}
-      <div className="own-top sticky top-0 z-20 shrink-0 pb-2">
-        {/* The frost is its OWN layer, not the wrapper's background, and that
-            is what lets it feather.
- 
-            Feathering means masking, and masking the wrapper would fade the
-            header text and the progress bar along with the blur - the mask
-            applies to the element's whole rendering, filter and content
-            alike. A separate layer behind them can be masked to nothing at
-            its bottom edge while the text above stays at full strength.
- 
-            It reaches 20px BELOW the wrapper, so the fade happens past the
-            content rather than across it: at the header's own bottom edge the
-            blur is still at full strength, and it thins out over the gap into
-            the page. Without that overhang the frost stopped mid-sentence and
-            the tiles behind it were sharply half-blurred.
- 
-            mask-image with a -webkit- twin: Safari still wants the prefix,
-            and this is a PWA on iOS. */}
-        <div
-          className="absolute inset-x-0 top-0 -bottom-5 pointer-events-none
-            backdrop-blur-xl bg-white/70 dark:bg-black/35"
-          style={{
-            maskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
-            WebkitMaskImage: 'linear-gradient(to bottom, #000 0%, #000 58%, transparent 100%)',
-          }}
-          aria-hidden="true"
-        />
+      <PinnedTop className="shrink-0 pb-2">
         <header className="relative flex items-center gap-2 px-5 pt-safe-header pb-3 shrink-0">
           <IconButton
             label={step === 0 ? 'Back to accounts' : 'Previous step'}
@@ -480,7 +452,7 @@ export default function AccountNew() {
             every other step the card stays a running preview pinned under the
             header. ── */}
         <StepProgress steps={steps} index={steps.indexOf(current)} className="relative shrink-0" />
-      </div>
+      </PinnedTop>
 
       {current === 'style' ? (
         <StyleStep draft={draft} set={set} action={actionButton} />

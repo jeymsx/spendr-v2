@@ -18,7 +18,7 @@ import db from '../../db/db'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { fmt, fmtCompact } from '../../lib/money'
 import { FORECAST_SETTINGS_PATH } from '../../lib/forecast'
-import { onDay } from '../../lib/dayWords'
+import { dayName, onDay } from '../../lib/dayWords'
 import { TrendRangeChips } from '../accounts/Trend'
 import { UpcomingRow, toUpcomingItem } from '../dashboard/Upcoming'
 import { ForecastChart } from './Charts'
@@ -120,7 +120,10 @@ export default function ForecastPage() {
   const low = forecast.lowest
   const neg = forecast.firstNegative
   const under = forecast.firstBelowFloor
-  const until = forecast.safeUntil ? `Until payday, ${short(forecast.safeUntil)}` : 'For the next 2 weeks'
+  const payday = forecast.safeUntil ? dayName(forecast.safeUntil) : null
+  const until = payday
+    ? `Until payday, ${payday === 'Tomorrow' || payday === 'Today' ? payday.toLowerCase() : payday}`
+    : 'For the next 2 weeks'
   const color = neg ? '#ef4444' : under ? '#f59e0b' : '#10b981'
   /* Occasional income is in the walk a day at a time, so it is in the pay
      too: switched on, it raised the projection while this row, and Pay

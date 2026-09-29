@@ -115,7 +115,9 @@ export default function ImportWizard() {
     <div className="page-enter min-h-screen pb-8">
       {/* Header */}
       <div className="own-top sticky top-0 z-10 bg-white dark:bg-page">
-        <div className="flex items-center gap-3 px-5 pt-safe-header pb-3">
+        {/* A <header>, so the edge swipe finds this Back and steps back
+            as it does, rather than leaving the importer (AppLayout). */}
+        <header className="flex items-center gap-3 px-5 pt-safe-header pb-3">
           <IconButton
             label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}
             onClick={() => {
@@ -134,7 +136,7 @@ export default function ImportWizard() {
               {STEP_LABELS[step]}
             </h1>
           </div>
-        </div>
+        </header>
         <div className="px-4 pb-3">
           <StepDots step={step} />
         </div>

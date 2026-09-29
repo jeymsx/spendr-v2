@@ -414,17 +414,22 @@ export default function AppLayout() {
           className="flex items-center justify-center gap-1.5 overflow-hidden text-xs font-medium text-primary/80"
           style={{ height: 0 }}
         >
-          <svg
-            width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
-            strokeLinecap="round" strokeLinejoin="round"
-            className="transition-transform duration-200"
-            style={{ transform: pullState === 'ready' ? 'rotate(180deg)' : 'none' }}
-          >
-            <path d="M12 5v14M6 13l6 6 6-6" />
-          </svg>
-          {!canSync
-            ? (pullState === 'ready' ? 'Release to sign in and sync' : 'Sync needs an account')
-            : (pullState === 'ready' ? 'Release to sync' : 'Pull to sync')}
+          {/* pull-hint-label: in the installed app this sits just under the
+              status bar (index.css), where the strip itself is still behind
+              the clock for the whole of a pull. */}
+          <span className="pull-hint-label flex items-center gap-1.5" data-pulling={pullState !== 'idle' ? '' : undefined}>
+            <svg
+              width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4"
+              strokeLinecap="round" strokeLinejoin="round"
+              className="transition-transform duration-200"
+              style={{ transform: pullState === 'ready' ? 'rotate(180deg)' : 'none' }}
+            >
+              <path d="M12 5v14M6 13l6 6 6-6" />
+            </svg>
+            {!canSync
+              ? (pullState === 'ready' ? 'Release to sign in and sync' : 'Sync needs an account')
+              : (pullState === 'ready' ? 'Release to sync' : 'Pull to sync')}
+          </span>
         </div>
 
         {/* pb-nav ensures content isn't hidden under the fixed navbar */}

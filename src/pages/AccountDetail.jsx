@@ -834,25 +834,32 @@ export default function AccountDetail() {
                       "Settled", it was the same fact told three times, and a
                       meter is for a quantity you are watching move. Once it
                       cannot move there is nothing to watch. */}
-                  {!creditData.stmtPaid && (
-                    <>
-                      <ProgressBar
-                        className="mt-3"
-                        value={creditData.thisTotal > 0
-                          ? ((creditData.thisTotal - creditData.stmtOutstanding) / creditData.thisTotal) * 100
-                          : 100}
-                        fillClass="bg-primary"
-                      />
-                      <div className="mt-1.5 flex items-baseline justify-between">
-                        <span className="text-11 text-slate-400 dark:text-slate-500">
-                          {acctFmt(Math.max(0, creditData.thisTotal - creditData.stmtOutstanding))} paid
-                        </span>
-                        <span className="text-11 text-slate-400 dark:text-slate-500">
-                          {acctFmt(creditData.thisTotal)} total
-                        </span>
-                      </div>
-                    </>
-                  )}
+                  {/* What the statement asked for is what was owed when it
+                      closed - this cycle's charges and anything carried from
+                      before - and "paid" is what has gone in since. Worked from
+                      this cycle's charges alone, a card carrying an older
+                      balance read "₱0.00 paid" after a ₱3,000.50 payment, over
+                      a total smaller than what was still due. */}
+                  {!creditData.stmtPaid && (() => {
+                    const stmtTotal = creditData.stmtOutstanding + creditData.totalPayments
+                    return (
+                      <>
+                        <ProgressBar
+                          className="mt-3"
+                          value={stmtTotal > 0 ? (creditData.totalPayments / stmtTotal) * 100 : 100}
+                          fillClass="bg-primary"
+                        />
+                        <div className="mt-1.5 flex items-baseline justify-between">
+                          <span className="text-11 text-slate-400 dark:text-slate-500">
+                            {acctFmt(creditData.totalPayments)} paid
+                          </span>
+                          <span className="text-11 text-slate-400 dark:text-slate-500">
+                            {acctFmt(stmtTotal)} total
+                          </span>
+                        </div>
+                      </>
+                    )
+                  })()}
 
                   {creditData.stmtPaid ? (
                     <p className="mt-3 text-center text-12 font-semibold text-emerald-600 dark:text-emerald-400">
@@ -965,7 +972,8 @@ export default function AccountDetail() {
                 total={paymentHistory.reduce((s, tx) => s + (tx.amount ?? 0), 0)}
                 accountName={account.name}
                 totalColor="text-emerald-600 dark:text-emerald-400"
-                totalSign="−"
+                /* Money into the card, as each row under it says. */
+                totalSign="+"
               />
             )}
           </>
