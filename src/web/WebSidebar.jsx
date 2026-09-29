@@ -7,7 +7,7 @@ import WebAddMenu from './WebAddMenu'
 import WebSyncStatus from './WebSyncStatus'
 import { WebIconHome, WebIconList, WebIconWallet, WebIconChart, WebIconImport, WebIconPhone } from './WebIcons'
 import {
-  IconBell, IconTarget, IconTrophy, IconDebt, IconBillHistory, IconSettings, IconCalc,
+  IconBell, IconTarget, IconTrophy, IconDebt, IconBillHistory, IconSettings, IconCalc, IconNotes,
 } from '../components/icons'
 import { quickActionCounts } from '../pages/dashboard/shared'
 import { useBaseCurrency } from '../context/CurrencyContext'
@@ -83,6 +83,7 @@ export default function WebSidebar() {
     { to: '/goals', label: 'Goals', Icon: IconTarget, badge: counts.goals },
     { to: '/recurring', label: 'Recurring', Icon: IconBillHistory, badge: counts.bills },
     { to: '/debts', label: 'Debts', Icon: IconDebt, badge: counts.debts },
+    { to: '/notes', label: 'Notes', Icon: IconNotes },
   ]
   /** @type {NavEntry[]} */
   const you = [

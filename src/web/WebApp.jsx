@@ -9,7 +9,7 @@ import WebFormPage from './WebFormPage'
 import {
   WebAccountsSection, AccountsIndex, WebInsightsSection, WebRecurringSection, RecurringIndex,
   WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex, WebBudgetSection, BudgetIndex,
-  WebSettingsSection,
+  WebSettingsSection, WebNotesSection, NotesIndex,
 } from './pages/WebSections'
 // The desktop's own styles: loaded with this bundle only, so a phone never
 // downloads them.
@@ -59,6 +59,8 @@ const RecurringDetail = lazy(() => import('../pages/RecurringDetail'))
 const RecurringForm   = lazy(() => import('../pages/RecurringForm'))
 
 const Notifications = lazy(() => import('../pages/Notifications'))
+const NoteEditor    = lazy(() => import('../pages/notes/NoteEditor'))
+const NotesDeleted  = lazy(() => import('../pages/notes/NotesDeleted'))
 const Achievements  = lazy(() => import('../pages/Achievements'))
 const Recap         = lazy(() => import('../pages/recap/RecapPage'))
 
@@ -116,9 +118,9 @@ export default function WebApp() {
                 <Route path="new" element={<AccountNew />} />
                 <Route path=":id" element={<AccountDetail />} />
                 <Route path=":id/edit" element={<AccountEdit />} />
+                <Route path=":id/statements" element={<StatementHistory />} />
               </Route>
 
-                <Route path=":id/statements" element={<StatementHistory />} />
               <Route path="/insights" element={<WebInsightsSection />}>
                 <Route index element={<Navigate to="/insights/trend" replace />} />
                 <Route path="trend" element={<InsightsTrend />} />
@@ -147,6 +149,11 @@ export default function WebApp() {
               <Route path="/debts" element={<WebDebtsSection />}>
                 <Route index element={<DebtsIndex />} />
                 <Route path="person/:key" element={<PersonDetail />} />
+              </Route>
+              <Route path="/notes" element={<WebNotesSection />}>
+                <Route index element={<NotesIndex />} />
+                <Route path="deleted" element={<NotesDeleted />} />
+                <Route path=":id" element={<NoteEditor />} />
               </Route>
 
               {/* ── You ── */}

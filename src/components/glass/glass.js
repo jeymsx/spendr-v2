@@ -697,6 +697,15 @@ const PICTURES = {
     S(rr(26, 32, 76, 11, 5.5), { tone: 'mid', depth: [1.2, 1.6] }),
     S(rr(53, 22, 22, 12, 5), { tone: 'mid', depth: [1, 1.2] }),
   ],
+  /* A page of notes, a title line and three under it, with a pencil across
+     its corner. For Notes. */
+  note: () => [
+    S(rr(22, 22, 64, 84, 10), { t: 'rotate(-8 54 64)' }),
+    G(rr(34, 22, 66, 88, 12)),
+    X('<path d="M47 42h28" stroke="{deep}" stroke-width="5" stroke-linecap="round" opacity=".7"/>'
+      + '<path d="M47 57h40M47 69h40M47 81h24" stroke="{deep}" stroke-width="3.4" stroke-linecap="round" opacity=".5"/>'),
+    S(rr(88, 60, 13, 46, 5) + rpoly([[88.6, 104], [100.4, 104], [94.5, 115]], 2), { tone: 'mid', t: 'rotate(38 94.5 88)', depth: [1.2, 1.6] }),
+  ],
   /* A saved card with a bolt on it, the Templates button's own mark. */
   template: () => [
     S(rr(18, 26, 80, 54, 10), { t: 'rotate(-12 58 53)' }),

@@ -2877,3 +2877,190 @@ html.flat:not(.dark) .wallet-card [class~="bg-white/[0.12]"] { background-color:
 html.flat:not(.dark) .wallet-card [class~="text-amber-200/90"] { color: #b45309; }
 html.flat:not(.dark) .wallet-card > .wallet-tab { color: #64748b; }
 html.flat:not(.dark) .wallet-card > .wallet-tab:active { color: #0f172a; }
+
+/* ── A note (pages/notes/NoteEditor.jsx) ───────────────────────────────────
+   Plain, like iOS Notes: no card, no field - the words on the page, set a
+   little larger than the rest of the app because reading them is the point.
+   Title, Heading and Subheading step down from 28 to 18; Body is 17, as it
+   is on an iPhone. Lists keep their markers in the text's own colour. */
+.note-doc {
+  outline: none;
+  font-size: 17px;
+  line-height: 1.5;
+  color: #1e293b;
+  caret-color: var(--color-primary);
+  overflow-wrap: anywhere;
+  -webkit-user-select: text;
+  user-select: text;
+  /* Room to tap under the last line and land the caret at the end. */
+  min-height: 50dvh;
+  padding-bottom: 4rem;
+}
+.dark .note-doc { color: #f1f5f9; }
+.note-doc p { margin: 0; }
+.note-doc h1 { font-size: 28px; line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; margin: 0 0 6px; }
+.note-doc h2 { font-size: 22px; line-height: 1.25; font-weight: 700; letter-spacing: -0.01em; margin: 14px 0 4px; }
+.note-doc h3 { font-size: 18px; line-height: 1.3; font-weight: 600; margin: 12px 0 2px; }
+.note-doc > :first-child { margin-top: 0; }
+.note-doc ul,
+.note-doc ol { margin: 2px 0; padding-left: 1.55em; }
+.note-doc ul { list-style: disc; }
+.note-doc ul ul { list-style: circle; }
+.note-doc ul ul ul { list-style: square; }
+.note-doc ol { list-style: decimal; }
+.note-doc li > p { margin: 0; }
+/* The dashed list: a bulleted one with a dash for its marker. */
+.note-doc ul[data-kind="dash"] { list-style: none; }
+.note-doc ul[data-kind="dash"] > li { position: relative; }
+.note-doc ul[data-kind="dash"] > li::before { content: '\2013'; position: absolute; left: -1.05em; }
+/* The checklist: a round box you tap, filled with the accent once done. */
+.note-doc ul[data-type="taskList"] { list-style: none; padding-left: 0; }
+.note-doc ul[data-type="taskList"] ul[data-type="taskList"] { padding-left: 1.55em; }
+.note-doc ul[data-type="taskList"] > li { display: flex; align-items: flex-start; gap: 10px; }
+.note-doc ul[data-type="taskList"] > li > label { flex: none; display: flex; padding-top: 2px; -webkit-user-select: none; user-select: none; }
+.note-doc ul[data-type="taskList"] > li > div { flex: 1; min-width: 0; transition: color 150ms var(--ease-out); }
+.note-doc ul[data-type="taskList"] > li > label > input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  border-radius: 9999px;
+  border: 1.6px solid #cbd5e1;
+  background: transparent center / 14px no-repeat;
+  cursor: pointer;
+  transition: background-color 150ms var(--ease-out), border-color 150ms var(--ease-out);
+}
+.dark .note-doc ul[data-type="taskList"] > li > label > input[type="checkbox"] { border-color: #475569; }
+.note-doc ul[data-type="taskList"] > li > label > input[type="checkbox"]:checked {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 12.5l4.5 4.5L19 7.5'/%3E%3C/svg%3E");
+}
+.note-doc ul[data-type="taskList"] > li > label > input[type="checkbox"]:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+.note-doc li[data-checked="true"] > div { color: #94a3b8; }
+.dark .note-doc li[data-checked="true"] > div { color: #64748b; }
+.note-doc blockquote { margin: 4px 0; padding-left: 12px; border-left: 3px solid #cbd5e1; color: #475569; }
+.dark .note-doc blockquote { border-left-color: #475569; color: #cbd5e1; }
+/* Monostyled. */
+.note-doc pre {
+  margin: 6px 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #f1f5f9;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 14.5px;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+.dark .note-doc pre { background: rgba(255, 255, 255, 0.06); }
+.note-doc pre code { font: inherit; background: none; padding: 0; }
+.note-doc a { color: color-mix(in srgb, var(--color-primary) 72%, black); text-decoration: underline; text-underline-offset: 2px; }
+.dark .note-doc a { color: color-mix(in srgb, var(--color-primary) 88%, white); }
+.note-doc mark { color: inherit; border-radius: 3px; padding: 0 1px; }
+/* The first line's "Title", while there is nothing on it. */
+.note-doc .is-empty[data-placeholder]:not([data-placeholder=""])::before {
+  content: attr(data-placeholder);
+  float: left;
+  height: 0;
+  pointer-events: none;
+  color: #94a3b8;
+}
+.dark .note-doc .is-empty[data-placeholder]:not([data-placeholder=""])::before { color: #64748b; }
+
+/* ── The bar over the keyboard, while a note is being written ──────────
+   Frosted like a pinned header, with its hairline on top. Positioned from
+   script at the top of the keyboard (hooks/useKeyboardInset.js). */
+.note-toolbar {
+  position: fixed;
+  left: 0;
+  right: 0;
+  z-index: 48;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  height: 46px;
+  padding: 0 6px;
+  background: rgba(248, 250, 252, 0.86);
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  box-shadow: 0 -0.5px 0 rgba(15, 23, 42, 0.14);
+}
+.dark .note-toolbar {
+  background: rgba(13, 17, 23, 0.82);
+  box-shadow: 0 -0.5px 0 rgba(255, 255, 255, 0.1);
+}
+
+/* ── The Aa panel ───────────────────────────────────────────────────────
+   In the keyboard's place, as iOS puts it: the keyboard goes down when it
+   comes up, and back when it goes. */
+.note-format {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 60;
+  padding: 14px 16px calc(16px + env(safe-area-inset-bottom, 0px));
+  border-radius: 22px 22px 0 0;
+  box-shadow: 0 -8px 32px rgba(15, 23, 42, 0.14);
+  animation: noteFormatIn 280ms var(--ease-out);
+}
+.dark .note-format { box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.06); }
+@keyframes noteFormatIn {
+  from { transform: translateY(100%); }
+  to   { transform: translateY(0); }
+}
+html.web .note-format { position: static; animation: none; box-shadow: none; padding: 0; border-radius: 0; }
+
+/* ── Notes, coming in from the right edge (layouts/AppLayout.jsx) ──────
+   The Notes page drawn over the page it is opening from while the finger
+   drags it in, opaque, on the same ground the app sits on - so the real page
+   can take its place under it without a seam. */
+.swipe-ahead {
+  position: fixed;
+  inset: 0;
+  z-index: 46;
+  overflow: hidden;
+  background-color: #f8fafc;
+  pointer-events: none;
+  will-change: transform;
+  box-shadow: -1px 0 0 rgba(148, 163, 184, 0.28), -16px 0 32px -12px rgba(0, 0, 0, 0.3);
+}
+html.dark .swipe-ahead { background-color: #0b0f14; }
+html.dark.accent-blue:not(.flat) .swipe-ahead {
+  background-image:
+    radial-gradient(130% 90% at 50% -10%,
+      rgba(var(--color-primary-rgb), 0.13),
+      rgba(var(--color-primary-rgb), 0.07) 35%,
+      rgba(var(--color-primary-rgb), 0.02) 45%,
+      transparent 85%),
+    radial-gradient(110% 90% at 70% 90%,
+      rgba(var(--color-primary-rgb), 0.10),
+      rgba(var(--color-primary-rgb), 0.04) 55%,
+      rgba(11, 15, 20, 0.85) 80%,
+      #0b0f14 85%);
+}
+html.dark.accent-custom:not(.flat) .swipe-ahead {
+  background-image:
+    radial-gradient(130% 90% at 50% -10%,
+      rgba(var(--color-primary-rgb), 0.11),
+      rgba(var(--color-primary-rgb), 0.06) 35%,
+      rgba(var(--color-primary-rgb), 0.02) 45%,
+      transparent 85%),
+    radial-gradient(110% 90% at 70% 90%,
+      rgba(var(--color-primary-rgb), 0.09),
+      rgba(var(--color-primary-rgb), 0.03) 55%,
+      rgba(11, 15, 20, 0.85) 80%,
+      #0b0f14 85%);
+}
+.swipe-ahead-page { position: absolute; inset: 0; overflow: hidden; }
+.swipe-ahead-dim {
+  position: fixed;
+  inset: 0;
+  z-index: 45;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+}
+html.web .swipe-ahead,
+html.web .swipe-ahead-dim { display: none; }

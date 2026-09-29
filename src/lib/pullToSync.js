@@ -28,6 +28,8 @@ const NO_PULL = [
   // Adding and editing things that hold it
   '/accounts/new', '/accounts/:id/edit',
   '/recurring/new', '/recurring/:id/edit',
+  // Writing a note
+  '/notes/:id',
   // Wizards and settings
   '/import',
   '/settings', '/settings/*',

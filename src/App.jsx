@@ -58,6 +58,9 @@ const SettingsAppLock    = lazy(() => import('./pages/settings/AppLock'))
 const SettingsProfile    = lazy(() => import('./pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 const SettingsTemplates  = lazy(() => import('./pages/Settings').then(m => ({ default: m.TemplatesPage })))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
+const Notes        = lazy(() => import('./pages/Notes'))
+const NoteEditor   = lazy(() => import('./pages/notes/NoteEditor'))
+const NotesDeleted = lazy(() => import('./pages/notes/NotesDeleted'))
 const Onboarding   = lazy(() => import('./pages/Onboarding'))
 const Login        = lazy(() => import('./pages/Login'))
 
@@ -129,10 +132,10 @@ export default function App() {
               <Route path="/accounts/new" element={<AccountNew />} />
               <Route path="/accounts/:id" element={<AccountDetail />} />
               <Route path="/accounts/:id/edit" element={<AccountEdit />} />
+              <Route path="/accounts/:id/statements" element={<StatementHistory />} />
               <Route path="/debts"        element={<Debts />} />
               <Route path="/debts/person/:key" element={<PersonDetail />} />
               <Route path="/goals"        element={<Goals />} />
-              <Route path="/accounts/:id/statements" element={<StatementHistory />} />
               <Route path="/goals/:id"    element={<GoalDetail />} />
               <Route path="/recurring"    element={<Recurring />} />
               {/* Before /recurring/:id, or "new" matches as an id. */}
@@ -159,6 +162,10 @@ export default function App() {
               <Route path="/settings/profile"    element={<SettingsProfile />} />
               <Route path="/settings/templates"  element={<SettingsTemplates />} />
               <Route path="/import"       element={<ImportWizard />} />
+              {/* Notes. Before /notes/:id, or "deleted" matches as an id. */}
+              <Route path="/notes"         element={<Notes />} />
+              <Route path="/notes/deleted" element={<NotesDeleted />} />
+              <Route path="/notes/:id"     element={<NoteEditor />} />
               {/* An address that is no page - a typed or old link - lands on
                   Home rather than an empty screen with no way out. */}
               <Route path="*"             element={<Navigate to="/" replace />} />

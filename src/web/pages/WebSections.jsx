@@ -21,6 +21,7 @@ const Debts     = lazy(() => import('../../pages/Debts'))
 const Goals     = lazy(() => import('../../pages/Goals'))
 const Budget    = lazy(() => import('../../pages/Budget'))
 const Settings  = lazy(() => import('../../pages/Settings'))
+const Notes     = lazy(() => import('../../pages/Notes'))
 
 /** The id in the address at `pattern`, or null. @param {string} pattern @param {string} pathname */
 function paramOf(pattern, pathname, key = 'id') {
@@ -135,6 +136,37 @@ export function DebtsIndex() {
   const any = useAnyToPick(() => db.debts.count())
   if (!any) return null
   return <WebPaneEmpty art="scale" title="Pick someone to see it here" body="Everything between the two of you, and what is still open." />
+}
+
+// ── Notes ────────────────────────────────────────────────────────────────────
+
+/* Notes as the Mac's Notes has them: the list on the left, the note open on
+   the right. Recently deleted opens on the right too, with its way back. */
+export function WebNotesSection() {
+  const { pathname } = useLocation()
+  const id = paramOf('/notes/:id', pathname)
+  return (
+    <WebSplit
+      label="Notes"
+      list={<Notes />}
+      listWidth={380}
+      detailWidth={780}
+      selected={id && id !== 'deleted' ? byId(`note-${id}`) : null}
+      isRoot={(p) => !!matchPath('/notes/:id', p) && !p.endsWith('/deleted')}
+    />
+  )
+}
+
+/** Opens the newest note - a pinned one first - as a mail app opens the first message. */
+export function NotesIndex() {
+  const first = useLiveQuery(async () => {
+    const all = await db.notes.orderBy('editedAt').reverse().toArray()
+    const live = all.filter(n => !n.deletedAt && (n.text ?? '').trim())
+    return live.find(n => n.pinned) ?? live[0] ?? false
+  }, [], undefined)
+  // None at all: the list says so itself.
+  if (!first) return null
+  return <Navigate to={`/notes/${first.id}`} replace />
 }
 
 // ── Goals ────────────────────────────────────────────────────────────────────
