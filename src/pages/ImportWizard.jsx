@@ -3,7 +3,9 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import Button from '../components/ui/Button'
 import IconButton from '../components/ui/IconButton'
 import Divider from '../components/ui/Divider'
-import { IconArrowLeft, IconSuccess, StepDots } from './import/shared'
+import { IconSuccess, StepDots } from './import/shared'
+import { IconChevronLeft } from '../components/icons'
+import { useBack } from '../hooks/useBack'
 import { StepFilePicker } from './import/StepFilePicker'
 import { StepPreview, StepOpeningBalances } from './import/StepPreview'
 import { StepConfirm } from './import/StepConfirm'
@@ -57,6 +59,10 @@ export default function ImportWizard() {
   const navigate = useNavigate()
   const location = useLocation()
   const fromOnboarding = location.state?.from === 'onboarding'
+  /* Out of the importer the way you came in - back to Settings with its
+     place kept, or up to it when the importer was opened cold - rather than
+     a new trip to /settings that grew the history. */
+  const leave = useBack('/settings')
   const [step,            setStep]            = useState(1)
   const [rows,            setRows]            = useState(null)
   const [isLegacy,        setIsLegacy]        = useState(false)
@@ -113,11 +119,12 @@ export default function ImportWizard() {
           <IconButton
             label={step === 1 || step === 5 ? 'Leave the importer' : 'Back to the previous step'}
             onClick={() => {
-              if (step === 1 || step === 5) navigate(fromOnboarding ? '/' : '/settings')
+              if (step === 1 || step === 5) { if (fromOnboarding) navigate('/'); else leave() }
               else setStep(s => s - 1)
             }}
           >
-            <IconArrowLeft />
+            {/* The same chevron as every other Back. */}
+            <IconChevronLeft />
           </IconButton>
           <div className="flex-1">
             <p className="text-xs font-semibold text-slate-400 dark:text-slate-500">
