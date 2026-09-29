@@ -431,7 +431,7 @@ export default function AccountNew() {
           The progress bar comes along because it is the same chrome: it
           answers "how much is left", which is only useful while you are still
           in it. ── */}
-      <div className="sticky top-0 z-20 shrink-0 pb-2">
+      <div className="own-top sticky top-0 z-20 shrink-0 pb-2">
         {/* The frost is its OWN layer, not the wrapper's background, and that
             is what lets it feather.
  

@@ -1670,7 +1670,8 @@ html { overscroll-behavior-x: none; }
 }
 .dark .status-frost { background: rgba(0, 0, 0, 0.35); }
 .status-frost[data-under] { opacity: 1; }
-#app-main:has(.pinned-top) ~ .status-frost { display: none; }
+/* own-top: a page that pins a top of its own, New account and the importer. */
+#app-main:has(.pinned-top, .own-top) ~ .status-frost { display: none; }
 
 /* The desktop draws its own chrome round a page: the bar stays in the flow
    there, with nothing behind it. */
