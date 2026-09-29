@@ -1908,6 +1908,14 @@ html.web .sheet-panel-exit .w-10.h-1 {
   display: none;
 }
 
+/* The handle took the top 28px, so without it the title sat 1px from the
+   modal's edge against 20px on every other side. The grab zone keeps the
+   side padding's 20px on top instead. */
+html.web .sheet-panel .sheet-grab,
+html.web .sheet-panel-exit .sheet-grab {
+  padding-top: 1.25rem;
+}
+
 /* Wider windows get a slightly wider modal — a category manager with a grid
    inside is cramped at 600px on a 1500px screen. */
 @media (min-width: 1440px) {

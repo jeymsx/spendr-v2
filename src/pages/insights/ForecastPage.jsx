@@ -122,12 +122,18 @@ export default function ForecastPage() {
   const under = forecast.firstBelowFloor
   const until = forecast.safeUntil ? `Until payday, ${short(forecast.safeUntil)}` : 'For the next 2 weeks'
   const color = neg ? '#ef4444' : under ? '#f59e0b' : '#10b981'
-  const payAhead = forecast.events.filter(e => e.kind === 'income' && e.counted).reduce((s, e) => s + e.amount, 0)
+  /* Occasional income is in the walk a day at a time, so it is in the pay
+     too: switched on, it raised the projection while this row, and Pay
+     ahead in the settings, left it out. */
+  const occasional = forecast.dailyIncome > 0 ? Math.round(forecast.dailyIncome * forecast.horizonDays * 100) / 100 : 0
+  const payAhead = forecast.events.filter(e => e.kind === 'income' && e.counted).reduce((s, e) => s + e.amount, 0) + occasional
   const learned = forecast.streams.length > 0
-  const paySub = !forecast.hasIncome
+  const paySource = !forecast.hasIncome
     ? (settings.income === 'recurring' ? 'None on Recurring yet' : 'None found yet')
     : learned && settings.income === 'history' ? 'Found in your history'
       : learned ? 'Recurring, and found in your history' : 'From Recurring'
+  const paySub = !occasional ? paySource
+    : forecast.hasIncome ? `${paySource}, and occasional income` : 'Occasional income, spread out'
   const spendSub = settings.spend === 'custom' ? 'Set by you'
     : settings.spend === 'cautious' ? 'A busier week than usual, per day' : 'Your usual week, per day'
   const tuneIt = () => navigate(FORECAST_SETTINGS_PATH)

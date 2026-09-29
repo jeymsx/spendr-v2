@@ -84,9 +84,10 @@ export default function ForecastSettings() {
   }
 
   const history = settings.income !== 'recurring'
+  // With occasional income, as the Forecast page counts it.
   const payAhead = forecast.events
     .filter(e => e.kind === 'income' && e.counted)
-    .reduce((s, e) => s + e.amount, 0)
+    .reduce((s, e) => s + e.amount, 0) + (forecast.dailyIncome > 0 ? forecast.dailyIncome * forecast.horizonDays : 0)
   const tight = forecast.lowest
   const today = new Date(); today.setHours(0, 0, 0, 0)
   const spendHint = settings.spend === 'custom'
