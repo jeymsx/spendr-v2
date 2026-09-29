@@ -271,16 +271,11 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           {/* Templates start a new entry from a saved one, which is the
               opposite of editing a particular row. */}
           {!isEdit && (
-            <Button
-              variant="tint"
-              size="xs"
-              className="justify-self-end px-3.5 gap-1.5"
-              onClick={() => setShowTemplates(true)}
-            >
-              <IconTemplate size={14} />
-              {/* Words from 380px up: under that the title needs the room. */}
-              <span className="max-[379px]:sr-only">Templates</span>
-            </Button>
+            /* An icon, as the Back beside it is. "Templates" in words sat hard
+               against the centred title on a narrow phone. */
+            <IconButton label="Templates" className="justify-self-end" onClick={() => setShowTemplates(true)}>
+              <IconTemplate size={17} />
+            </IconButton>
           )}
         </header>
       </PinnedTop>

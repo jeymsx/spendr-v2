@@ -1,8 +1,7 @@
 import { useState, useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
-import IconButton from '../components/ui/IconButton'
-import { IconChevronLeft } from '../components/icons'
+import PageHeader from '../components/PageHeader'
 
 import { useTheme } from '../context/ThemeContext'
 import { useAuth } from '../context/AuthContext'
@@ -142,16 +141,12 @@ export default function Settings() {
 
   return (
     <div className="pb-10">
-      {/* A Back, as every page reached from another has: Settings opens from
-          Home's gear and lights no tab, so without one the way out was to
-          guess a tab. subpage-back is what the desktop hides, where Settings
-          is a section of its own. */}
-      <div className="px-5 pt-safe-header pb-2">
-        <IconButton label="Back" className="subpage-back -ml-0.5 mb-3" onClick={back}>
-          <IconChevronLeft />
-        </IconButton>
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Settings</h1>
-      </div>
+      {/* The header every subpage has: Back, and the title beside it in the
+          centre, pinned while the page scrolls. It was a Back button with a
+          large title under it, the one page drawn that way. subpage-back (in
+          PageHeader) is what the desktop hides, where Settings is a section
+          of its own. */}
+      <PageHeader title="Settings" onBack={back} />
 
       <ProfileHero
         name={displayName || user?.email?.split('@')[0] || 'Your Name'}
