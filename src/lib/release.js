@@ -32,18 +32,13 @@ export const RELEASE_DATE = '2026-09-30'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'notes',
-    title: 'Notes hold still',
-    desc: 'On an iPhone, a note and its header stay where they are when the keyboard opens, and the line you are typing stays above it.',
-  },
-  {
     icon: 'compose',
-    title: 'Formatting in the header',
-    desc: 'Aa, the checklist and Done sit at the top while you write, clear of the keyboard. Aa still swaps the keyboard for the formatting panel.',
+    title: 'Forms hold still',
+    desc: 'Adding or editing an expense, inflow, transfer or account on an iPhone, the page and its header stay put when the keyboard opens, and the field you tap moves up clear of it.',
   },
   {
     icon: 'phone',
-    title: 'Pages settle after typing',
-    desc: 'If iOS leaves a page pushed up once the keyboard closes, it drops back into place, tab bar and all.',
+    title: 'The tab bar keeps out of the way',
+    desc: 'While you type, the tab bar stays hidden instead of riding up over the keyboard.',
   },
 ]

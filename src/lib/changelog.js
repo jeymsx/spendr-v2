@@ -24,6 +24,15 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.14.1',
+    date: '2026-09-30',
+    items: [
+      { title: 'Notes hold still', desc: 'On an iPhone, a note and its header stay where they are when the keyboard opens, and the line you are typing stays above it.' },
+      { title: 'Formatting in the header', desc: 'Aa, the checklist and Done sit at the top while you write, clear of the keyboard. Aa still swaps the keyboard for the formatting panel.' },
+      { title: 'Pages settle after typing', desc: 'If iOS leaves a page pushed up once the keyboard closes, it drops back into place, tab bar and all.' },
+    ],
+  },
+  {
     version: '0.14.0',
     date: '2026-09-30',
     items: [
