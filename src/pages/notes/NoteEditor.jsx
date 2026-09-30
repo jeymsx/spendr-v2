@@ -17,7 +17,8 @@ import IconButton from '../../components/ui/IconButton'
 import Sheet from '../../components/ui/Sheet'
 import { NOTE_EXTENSIONS } from './extensions'
 import FormatControls, { formatCommands, useFormatState } from './FormatControls'
-import { keepCaretClear, rememberKeyboard } from './keyboardRoom'
+import { keepCaretClear } from './keyboardRoom'
+import { rememberKeyboard } from '../../lib/keyboard'
 import { IconBin, IconChecklist, IconMore, IconPin, IconShare } from './icons'
 
 /**
@@ -159,6 +160,8 @@ function NoteBody({ note, back, fresh }) {
         'aria-label': 'Note',
         autocapitalize: 'sentences',
         spellcheck: 'true',
+        // Its own caret, kept clear here (keyboardRoom.js), not by the pages' guard.
+        'data-own-keyboard': '',
       },
       /* Keeping the caret in view. On a phone, clear of the header and the
          keyboard, by scrolling the note alone: ProseMirror's own way ends by
@@ -303,9 +306,9 @@ function NoteBody({ note, back, fresh }) {
     if (desktop || !editor) return
     const vv = window.visualViewport
     if (!vv) return
-    let undone = 0
+    let undone = -Infinity
     const onChange = () => {
-      rememberKeyboard()
+      rememberKeyboard('text')
       if (editor.isDestroyed || !editor.isFocused) return
       if (Math.abs(vv.scale - 1) > 0.01) return
       if (vv.offsetTop > 1 && performance.now() - undone > 300) {

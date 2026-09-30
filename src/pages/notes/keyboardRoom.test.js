@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { forgetKeyboard, keepCaretClear, keyboardIsUp, rememberKeyboard, visibleSlice } from './keyboardRoom'
+import { keepCaretClear } from './keyboardRoom'
+import { forgetKeyboard, rememberKeyboard } from '../../lib/keyboard'
 
 /**
  * The arithmetic of keeping a note's caret clear of the keyboard, against a
@@ -79,44 +80,6 @@ describe('keyboardRoom', () => {
     document.body.innerHTML = ''
   })
 
-  describe('visibleSlice', () => {
-    it('is the whole window with no visualViewport', () => {
-      Object.defineProperty(window, 'visualViewport', { value: undefined, configurable: true, writable: true })
-      expect(visibleSlice()).toEqual({ top: 0, bottom: WIN_H })
-    })
-
-    it('ends at the keyboard', () => {
-      install({ height: 470 })
-      expect(visibleSlice()).toEqual({ top: 0, bottom: 470 })
-    })
-
-    /** Safari measures from what is visible, so a page iOS scrolled up starts at 0. */
-    it('starts at 0 in Safari with the page scrolled up', () => {
-      install({ height: 470, offsetTop: 120, pageTop: 120 })
-      docTop(-120)
-      expect(visibleSlice()).toEqual({ top: 0, bottom: 470 })
-    })
-
-    /** Chrome measures from the layout viewport, so the same scroll starts lower. */
-    it('starts lower in Chrome with the visible part scrolled down', () => {
-      install({ height: 470, offsetTop: 120, pageTop: 120 })
-      docTop(0)
-      expect(visibleSlice()).toEqual({ top: 120, bottom: 590 })
-    })
-  })
-
-  describe('keyboardIsUp', () => {
-    it('is up with the bottom of the window covered', () => {
-      install({ height: 470 })
-      expect(keyboardIsUp()).toBe(true)
-    })
-
-    it('is down for a sliver, like the Safari toolbar', () => {
-      install({ height: WIN_H - 40 })
-      expect(keyboardIsUp()).toBe(false)
-    })
-  })
-
   describe('keepCaretClear, with the keyboard up', () => {
     it('scrolls a caret near the keyboard up, leaving room under it', () => {
       install({ height: 470 })
@@ -171,17 +134,6 @@ describe('keyboardRoom', () => {
       expect(scroller.scrollTop).toBe(500 + 700 - (470 - 56))
     })
 
-    it('remembers across launches', () => {
-      touchScreen(true)
-      const vv = install({ height: 470 })
-      rememberKeyboard()
-      forgetKeyboard()
-      vv.height = WIN_H
-      const { view, scroller } = note({ caret: { top: 675, bottom: 700 } })
-      keepCaretClear(view)
-      expect(scroller.scrollTop).toBe(500 + 700 - (470 - 56))
-    })
-
     it('does not use last time at another width', () => {
       touchScreen(true)
       const vv = install({ height: 470 })
@@ -191,13 +143,6 @@ describe('keyboardRoom', () => {
       const { view, scroller } = note({ caret: { top: 675, bottom: 700 } })
       keepCaretClear(view)
       expect(scroller.scrollTop).toBe(500 + 700 - 366)
-    })
-
-    it('keeps nothing while pinch-zoomed', () => {
-      touchScreen(true)
-      install({ height: 300, scale: 2 })
-      rememberKeyboard()
-      expect(localStorage.getItem('spendr-keyboard-room')).toBeNull()
     })
 
     it('goes by where a touch landed, not the old selection', () => {

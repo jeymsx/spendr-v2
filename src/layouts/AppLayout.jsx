@@ -16,7 +16,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { canPullToSync } from '../lib/pullToSync'
 import { keepStorage } from '../lib/keepStorage'
 import { useBack } from '../hooks/useBack'
-import { useKeyboardSettle } from '../hooks/useKeyboardSettle'
+import { useKeyboardGuard } from '../hooks/useKeyboardGuard'
 import { formGuarded } from '../lib/backGuard'
 import { entryBehind, recordNav } from '../lib/navTrail'
 import { prefersReducedMotion } from '../components/ui/motion'
@@ -42,8 +42,8 @@ export default function AppLayout() {
   const { user } = useAuth()
   const { showToast } = useToast()
   const navigate = useNavigate()
-  // A page iOS left scrolled after its keyboard went, put back (useKeyboardSettle.js).
-  useKeyboardSettle()
+  // The page kept still while you type, and put back if iOS moved it (useKeyboardGuard.js).
+  useKeyboardGuard()
 
   /**
    * Whether pulling can actually do anything.

@@ -2984,6 +2984,18 @@ html.note-writing .note-doc {
    which the keyboard leaves scrollable by its own height. */
 html.note-writing #app-main { overscroll-behavior-y: contain; }
 
+/* ── A field on a page has the keyboard, on a phone (hooks/useKeyboardGuard.js)
+   Room under the page to scroll the field up into. iOS centres a focused
+   field in the room above the keyboard by moving the whole page, so the
+   page moves the field there itself - and a short form has no scroll to do
+   that with. Past the end of the page, where only a deliberate drag finds it. */
+html.field-typing #app-main > .page-enter::after {
+  content: '';
+  display: block;
+  height: 60dvh;
+}
+html.field-typing #app-main { overscroll-behavior-y: contain; }
+
 /* ── The Aa panel ───────────────────────────────────────────────────────
    In the keyboard's place, as iOS puts it: the keyboard goes down when it
    comes up, and back when it goes. */
