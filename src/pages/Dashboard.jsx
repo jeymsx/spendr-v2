@@ -16,7 +16,6 @@ import { txMonthKey } from '../utils/txDate'
 import { cardGradient } from '../lib/accentTheme'
 import IconButton from '../components/ui/IconButton'
 import BellButton from '../components/BellButton'
-import { IconNotes } from '../components/icons'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
 import { fmt, fmtCompact, baseSymbol, fmtHidden } from '../lib/money'
@@ -426,12 +425,10 @@ export default function Dashboard({ layout = 'phone' } = {}) {
         </div>
         {/* Two discs of the same paint and size, so the pair reads as one
             row. The bell took the badges trophy's place - see BellButton. */}
-        {/* Notes first: plans for payday are written from here. On an iPhone
-            with Spendr installed, a swipe in from the right edge opens it too. */}
+        {/* No way into Notes here, on purpose: for now it is found by a swipe
+            in from the right edge, in the installed iPhone app
+            (layouts/useNotesEdge.js). */}
         <div className="flex items-center gap-1.5 shrink-0">
-          <IconButton label="Notes" onClick={() => navigate('/notes')}>
-            <IconNotes />
-          </IconButton>
           <BellButton />
           <IconButton label="Settings" onClick={() => navigate('/settings')}>
             <IconSettings />
