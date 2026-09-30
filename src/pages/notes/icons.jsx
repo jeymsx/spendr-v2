@@ -114,11 +114,3 @@ export function IconMarker({ size }) {
 }
 
 /** Down, and away: the keyboard. @param {{size?: number}} props */
-export function IconKeyboardDown({ size }) {
-  return (
-    <Drawn size={size}>
-      <rect x="3" y="4" width="18" height="11" rx="2.5" />
-      <path d="M7 8h.01M10.5 8h.01M14 8h.01M17 8h.01M8 11.5h8M9 19l3 2.5 3-2.5" />
-    </Drawn>
-  )
-}

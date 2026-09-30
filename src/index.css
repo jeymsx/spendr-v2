@@ -2968,28 +2968,21 @@ html.flat:not(.dark) .wallet-card > .wallet-tab:active { color: #0f172a; }
 }
 .dark .note-doc .is-empty[data-placeholder]:not([data-placeholder=""])::before { color: #64748b; }
 
-/* ── The bar over the keyboard, while a note is being written ──────────
-   Frosted like a pinned header, with its hairline on top. Positioned from
-   script at the top of the keyboard (hooks/useKeyboardInset.js). */
-.note-toolbar {
-  position: fixed;
-  left: 0;
-  right: 0;
-  z-index: 48;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-  height: 46px;
-  padding: 0 6px;
-  background: rgba(248, 250, 252, 0.86);
-  -webkit-backdrop-filter: blur(20px) saturate(160%);
-  backdrop-filter: blur(20px) saturate(160%);
-  box-shadow: 0 -0.5px 0 rgba(15, 23, 42, 0.14);
+/* ── While a note is being written, on a phone (NoteEditor.jsx) ─────────
+   Taller than the room above the keyboard, whatever it holds. iOS centres
+   the whole of what is being edited in that room when it fits, sliding the
+   page and its header up with it, and leaves it where it is when it does
+   not. The room under the last line is where that line scrolls to, clear of
+   the keyboard (pages/notes/keyboardRoom.js). On focus as well as with the
+   class, because iOS measures the note before the class is on. */
+html:not(.web) .note-doc:focus,
+html.note-writing .note-doc {
+  min-height: 70dvh;
+  padding-bottom: 50dvh;
 }
-.dark .note-toolbar {
-  background: rgba(13, 17, 23, 0.82);
-  box-shadow: 0 -0.5px 0 rgba(255, 255, 255, 0.1);
-}
+/* A drag past the note's end stays in the note. It carried on to the page,
+   which the keyboard leaves scrollable by its own height. */
+html.note-writing #app-main { overscroll-behavior-y: contain; }
 
 /* ── The Aa panel ───────────────────────────────────────────────────────
    In the keyboard's place, as iOS puts it: the keyboard goes down when it

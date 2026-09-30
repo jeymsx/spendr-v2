@@ -4,7 +4,6 @@ import { EditorContent, useEditor } from '@tiptap/react'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useBack } from '../../hooks/useBack'
-import { useKeyboardInset } from '../../hooks/useKeyboardInset'
 import { useToast } from '../../context/ToastContext'
 import { discardIfBlank, restoreNote, saveNote, setPinned, trashNote, daysLeft } from '../../lib/notes'
 import { noteStamp } from '../../lib/noteText'
@@ -17,11 +16,9 @@ import EmptyState from '../../components/ui/EmptyState'
 import IconButton from '../../components/ui/IconButton'
 import Sheet from '../../components/ui/Sheet'
 import { NOTE_EXTENSIONS } from './extensions'
-import FormatControls, { NoteButton, formatCommands, useFormatState } from './FormatControls'
-import {
-  IconBin, IconBullets, IconChecklist, IconIndent, IconKeyboardDown, IconMore, IconNumbered,
-  IconOutdent, IconPin, IconShare, IconUndo,
-} from './icons'
+import FormatControls, { formatCommands, useFormatState } from './FormatControls'
+import { keepCaretClear, rememberKeyboard } from './keyboardRoom'
+import { IconBin, IconChecklist, IconMore, IconPin, IconShare } from './icons'
 
 /**
  * One note, open: the words on the page and nothing else, as iOS Notes has
@@ -30,10 +27,16 @@ import {
  *
  * ── On a phone ──
  *
- * While you write, a bar sits on the keyboard with what is reached for most
- * (Aa, a checklist, the lists, indenting, undo) and Done goes in the header,
- * as on an iPhone. Aa swaps the keyboard for the formatting panel; the
- * panel's X, or a tap on the note, swaps it back.
+ * While you write, the header holds Aa, a checklist and Done. Aa swaps the
+ * keyboard for the formatting panel, as on an iPhone; Aa again, the panel's
+ * X, or a tap on the note swaps it back.
+ *
+ * They were a bar on the keyboard, and nothing of ours can sit there on an
+ * iPhone. iOS puts its own ^ v ✓ bar on the keyboard, which a web page
+ * cannot remove, and the installed app reports the screen short by the
+ * status bar, so a bar placed from the screen's height landed behind iOS's.
+ * The header is also the part of the page iOS can be kept from moving while
+ * you type (keyboardRoom.js).
  *
  * ── On a computer ──
  *
@@ -57,6 +60,9 @@ import {
 
 /** How long typing pauses before the note is written, in ms. */
 const SAVE_AFTER = 400
+
+/** How long after a touch the focus it brings still counts as that touch's, in ms. */
+const TAP_FRESH = 1000
 
 /** Editors open on each note, for the blank-note check. */
 const openEditors = new Map()
@@ -105,13 +111,16 @@ function NoteBody({ note, back, fresh }) {
   const noteId = /** @type {number} */ (note.id)
   const navigate = useNavigate()
   const { showToast } = useToast()
-  const kb = useKeyboardInset()
   const [desktop] = useState(onDesktop)
   const readOnly = !!note.deletedAt
 
   const [focused, setFocused] = useState(false)
   const [formatOpen, setFormatOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+
+  /* Where the last touch on the note landed. The caret is going there, but
+     the focus arrives before the selection has moved (keyboardRoom.js). */
+  const tap = useRef(/** @type {{x: number, y: number, at: number}|null} */ (null))
 
   /* What the last save wrote, the document as it stands, whether anything
      is waiting to be written, and the write in flight. */
@@ -151,7 +160,12 @@ function NoteBody({ note, back, fresh }) {
         autocapitalize: 'sentences',
         spellcheck: 'true',
       },
-      // Keep the caret clear of the bar on the keyboard and the header.
+      /* Keeping the caret in view. On a phone, clear of the header and the
+         keyboard, by scrolling the note alone: ProseMirror's own way ends by
+         scrolling the window, and on an iPhone that slides the whole page
+         (keyboardRoom.js). On a computer, ProseMirror's way, clear of the bar
+         above the note. */
+      handleScrollToSelection: (view) => !desktop && keepCaretClear(view),
       scrollMargin: { top: 90, bottom: 80, left: 0, right: 0 },
       scrollThreshold: { top: 90, bottom: 80, left: 0, right: 0 },
     },
@@ -161,7 +175,16 @@ function NoteBody({ note, back, fresh }) {
       if (timer.current) clearTimeout(timer.current)
       timer.current = setTimeout(() => { flushRef.current() }, SAVE_AFTER)
     },
-    onFocus: () => { setFocused(true); setFormatOpen(false) },
+    onFocus: ({ editor: e }) => {
+      setFocused(true)
+      setFormatOpen(false)
+      if (desktop) return
+      /* The caret above where the keyboard is about to be, before it is up,
+         so iOS finds nothing to scroll the page for (keyboardRoom.js). */
+      const touched = tap.current && performance.now() - tap.current.at < TAP_FRESH ? tap.current : null
+      tap.current = null
+      keepCaretClear(e.view, touched)
+    },
     onBlur: () => { setFocused(false); flushRef.current() },
   })
 
@@ -254,7 +277,50 @@ function NoteBody({ note, back, fresh }) {
     setFormatOpen(false)
   }
 
-  const writing = focused && !readOnly && !desktop
+  /* Done: the keyboard or the panel down, whichever is up. */
+  function done() {
+    setFormatOpen(false)
+    editor?.commands.blur()
+  }
+
+  const writing = (focused || formatOpen) && !readOnly && !desktop
+
+  /* While you write: the note taller than the room above the keyboard, and a
+     drag past its end kept in it rather than moving the page (index.css,
+     html.note-writing). */
+  useEffect(() => {
+    if (!writing) return
+    const root = document.documentElement
+    root.classList.add('note-writing')
+    return () => root.classList.remove('note-writing')
+  }, [writing])
+
+  /* The keyboard, as it comes and goes. Its height is kept for the next time
+     it opens. If iOS scrolled the page anyway, the page goes back and the note
+     scrolls instead - not more than once a beat, so a scroll iOS insists on
+     is never fought over. */
+  useEffect(() => {
+    if (desktop || !editor) return
+    const vv = window.visualViewport
+    if (!vv) return
+    let undone = 0
+    const onChange = () => {
+      rememberKeyboard()
+      if (editor.isDestroyed || !editor.isFocused) return
+      if (Math.abs(vv.scale - 1) > 0.01) return
+      if (vv.offsetTop > 1 && performance.now() - undone > 300) {
+        undone = performance.now()
+        window.scrollTo(0, 0)
+      }
+      keepCaretClear(editor.view)
+    }
+    vv.addEventListener('resize', onChange)
+    vv.addEventListener('scroll', onChange)
+    return () => {
+      vv.removeEventListener('resize', onChange)
+      vv.removeEventListener('scroll', onChange)
+    }
+  }, [editor, desktop])
 
   return (
     <div className="pb-page">
@@ -262,8 +328,14 @@ function NoteBody({ note, back, fresh }) {
         title={<span className="sr-only">{note.title || 'New note'}</span>}
         backLabel="Back to notes"
         onBack={back}
-        action={writing ? (
-          <Button variant="tint" size="xs" className="px-4" onClick={() => editor?.commands.blur()}>Done</Button>
+        action={writing && editor ? (
+          <WritingActions
+            editor={editor}
+            focused={focused}
+            formatOpen={formatOpen}
+            onFormat={formatOpen ? closeFormat : openFormat}
+            onDone={done}
+          />
         ) : (
           <IconButton label="Note options" onClick={() => setMenuOpen(true)}>
             <IconMore size={19} />
@@ -292,25 +364,19 @@ function NoteBody({ note, back, fresh }) {
         {noteStamp(note.editedAt)}
       </p>
 
-      <div className="px-5" onClick={(e) => {
-        // A tap under the last line: the caret at the end, as on an iPhone.
-        if (!editor || readOnly || e.target !== e.currentTarget) return
-        editor.commands.focus('end')
-      }}>
+      <div
+        className="px-5"
+        onPointerDownCapture={(e) => {
+          if (e.pointerType !== 'mouse') tap.current = { x: e.clientX, y: e.clientY, at: performance.now() }
+        }}
+        onClick={(e) => {
+          // A tap under the last line: the caret at the end, as on an iPhone.
+          if (!editor || readOnly || e.target !== e.currentTarget) return
+          editor.commands.focus('end')
+        }}
+      >
         <EditorContent editor={editor} />
       </div>
-
-      {/* Room for the bar on the keyboard, so the last line can scroll clear of it. */}
-      {writing && <div aria-hidden="true" style={{ height: 56 }} />}
-
-      {writing && editor && (
-        <KeyboardBar
-          editor={editor}
-          bottom={kb.open ? kb.inset : null}
-          onFormat={openFormat}
-          onDone={() => editor.commands.blur()}
-        />
-      )}
 
       {formatOpen && editor && !desktop && (
         <FormatPanel editor={editor} onClose={closeFormat} />
@@ -355,32 +421,47 @@ function MenuRow({ label, onPress, danger = false, children }) {
 }
 
 /**
- * The bar on the keyboard.
+ * Refuses the mouse-down, which is what moves the focus - so a tap on a
+ * header button leaves the caret and the keyboard where they are, as the
+ * note's other buttons do (FormatControls.jsx NoteButton).
  *
- * @param {{editor: import('@tiptap/react').Editor, bottom: number|null, onFormat: () => void, onDone: () => void}} props
- *   bottom: where the keyboard's top is, or null with none up - then the bar
- *   sits on the tab bar, as it does with a keyboard plugged in
+ * @param {import('react').MouseEvent} e
  */
-function KeyboardBar({ editor, bottom, onFormat, onDone }) {
+const keepFocus = (e) => e.preventDefault()
+
+/**
+ * The header while a note is written on a phone: Aa, a checklist, Done.
+ *
+ * @param {{editor: import('@tiptap/react').Editor, focused: boolean, formatOpen: boolean, onFormat: () => void, onDone: () => void}} props
+ *   focused: the keyboard is up, and the checklist keeps the caret in the
+ *   note. With the panel up instead, it works on the selection and leaves
+ *   the keyboard down.
+ */
+function WritingActions({ editor, focused, formatOpen, onFormat, onDone }) {
   const st = useFormatState(editor)
-  const cmd = formatCommands(editor, st, true)
-  if (!st) return null
+  const cmd = formatCommands(editor, st, focused)
   return (
-    <div
-      className="note-toolbar"
-      role="toolbar"
-      aria-label="Formatting"
-      style={{ bottom: bottom ?? 'calc(5rem + env(safe-area-inset-bottom, 0px))' }}
-    >
-      <NoteButton label="Format" onPress={onFormat} className="flex-1 h-10 text-15 font-semibold">Aa</NoteButton>
-      <NoteButton label="Checklist" active={st.task} onPress={cmd.task} className="flex-1 h-10"><IconChecklist /></NoteButton>
-      <NoteButton label="Bulleted list" active={st.bullet} onPress={cmd.bullet} className="flex-1 h-10"><IconBullets /></NoteButton>
-      <NoteButton label="Numbered list" active={st.ordered} onPress={cmd.ordered} className="flex-1 h-10"><IconNumbered /></NoteButton>
-      <NoteButton label="Outdent" disabled={!st.canLift} onPress={cmd.outdent} className="flex-1 h-10"><IconOutdent /></NoteButton>
-      <NoteButton label="Indent" disabled={!st.canSink} onPress={cmd.indent} className="flex-1 h-10"><IconIndent /></NoteButton>
-      <NoteButton label="Undo" disabled={!st.canUndo} onPress={cmd.undo} className="flex-1 h-10"><IconUndo /></NoteButton>
-      <NoteButton label="Hide keyboard" onPress={onDone} className="flex-1 h-10"><IconKeyboardDown /></NoteButton>
-    </div>
+    <>
+      <IconButton
+        label="Format"
+        aria-pressed={formatOpen}
+        variant={formatOpen ? 'primary' : 'surface'}
+        onMouseDown={keepFocus}
+        onClick={onFormat}
+      >
+        <span aria-hidden="true" className="text-15 font-semibold leading-none">Aa</span>
+      </IconButton>
+      <IconButton
+        label="Checklist"
+        aria-pressed={!!st?.task}
+        variant={st?.task ? 'primary' : 'surface'}
+        onMouseDown={keepFocus}
+        onClick={cmd.task}
+      >
+        <IconChecklist size={18} />
+      </IconButton>
+      <Button variant="tint" size="xs" className="px-4" onClick={onDone}>Done</Button>
+    </>
   )
 }
 

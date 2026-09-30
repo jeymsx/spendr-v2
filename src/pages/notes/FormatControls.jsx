@@ -112,7 +112,7 @@ export function formatCommands(editor, st, focus) {
  * default moves the focus, on a computer and on an iPhone alike (iOS sends it
  * after the touch ends). Refusing the pointer-down instead cost WebKit the
  * tap itself - a touch whose pointer-down was cancelled never became a click,
- * and the bar on the keyboard did nothing in Safari's engine.
+ * and the note's buttons did nothing in Safari's engine.
  */
 export function NoteButton({ label, active = false, disabled = false, onPress, className = '', children }) {
   return (
