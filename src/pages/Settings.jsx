@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import PageHeader from '../components/PageHeader'
@@ -9,6 +9,7 @@ import { useSyncManager } from '../components/SyncManager'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
+import { toggleProbe } from '../components/ViewportProbe'
 import { IconTemplate, IconInfo, IconWarning, IconRates, IconTrash } from '../components/icons'
 import { TRASH_DAYS } from '../db/trash'
 import { useAchievements } from '../context/AchievementContext'
@@ -77,6 +78,16 @@ export default function Settings() {
   const back = useBack('/')
   const { theme, style, accentColor } = useTheme()
   const { showToast } = useToast()
+
+  /* The version, tapped five times inside two seconds. */
+  const versionTaps = useRef(/** @type {number[]} */ ([]))
+  function tapVersion() {
+    const now = Date.now()
+    versionTaps.current = [...versionTaps.current.filter(t => now - t < 2000), now]
+    if (versionTaps.current.length < 5) return
+    versionTaps.current = []
+    showToast(toggleProbe() ? 'Viewport readout on' : 'Viewport readout off')
+  }
   const { user, signOut } = useAuth()
   const { status: syncStatus } = useSyncManager()
   const reminders = useReminderSettings(user)
@@ -351,7 +362,9 @@ export default function Settings() {
           Spendr is an independent tool and is not affiliated with any financial institutions mentioned within the app.
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500">
-          © {new Date().getFullYear()} James Sablay · v{APP_VERSION}
+          {/* Five taps on the version: the keyboard readout, on or off
+              (components/ViewportProbe.jsx). Not a control, on purpose. */}
+          © {new Date().getFullYear()} James Sablay · <span onClick={tapVersion}>v{APP_VERSION}</span>
           {' · '}
           <button
             type="button"

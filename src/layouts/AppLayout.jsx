@@ -21,6 +21,7 @@ import { formGuarded } from '../lib/backGuard'
 import { entryBehind, recordNav } from '../lib/navTrail'
 import { prefersReducedMotion } from '../components/ui/motion'
 import { useNotesEdge, WhilePeeking } from './useNotesEdge'
+import { ViewportProbeGate } from '../components/ViewportProbe'
 
 // Notes, drawn under the finger while the right-edge swipe brings it in (useNotesEdge).
 const NotesPeek = lazy(() => import('../pages/Notes'))
@@ -608,6 +609,10 @@ export default function AppLayout() {
 
       {/* Renders nothing until something is actually earned. */}
       <Moments />
+
+      {/* The screen's numbers, for a screenshot - hidden until switched on
+          from Settings (components/ViewportProbe.jsx). */}
+      <ViewportProbeGate />
     </div>
     </AchievementProvider>
   )
