@@ -1,4 +1,7 @@
 import { useState, useEffect } from 'react'
+import { KEYBOARD_MIN, keyboardIsUp } from '../lib/keyboard'
+
+export { KEYBOARD_MIN }
 
 /**
  * Where the visible part of the screen ends, once the keyboard is over it.
@@ -28,10 +31,11 @@ import { useState, useEffect } from 'react'
  *
  * `inset` is what is left underneath - the keyboard, plus whatever browser
  * furniture is down there - in the same coordinates a fixed element is
- * positioned in. `open` is inset past a threshold, because the visual
- * viewport also moves by a few pixels for reasons that are not a keyboard,
- * and a navbar that flickers on a two-pixel wobble is worse than one that
- * ignores it.
+ * positioned in. `open` is lib/keyboard.js's keyboardIsUp: inset past a
+ * threshold, because the visual viewport also moves by a few pixels for
+ * reasons that are not a keyboard, or - with a field focused - the visible
+ * slice well short of the tallest it has been, because an installed app on
+ * iOS 26 can shrink the whole page for the keyboard, leaving no inset at all.
  *
  * ── Not a duplicate of QuickLogOverlay's readViewport ──
  *
@@ -43,9 +47,6 @@ import { useState, useEffect } from 'react'
  *
  * @returns {{top: number, height: number, inset: number, open: boolean}}
  */
-
-/** Below this, it is browser furniture or a rounding wobble, not a keyboard. */
-export const KEYBOARD_MIN = 80
 
 function readViewport() {
   if (typeof window === 'undefined') {
@@ -62,7 +63,7 @@ function readViewport() {
     top: Math.round(vv.offsetTop),
     height: Math.round(vv.height),
     inset,
-    open: inset >= KEYBOARD_MIN,
+    open: keyboardIsUp(),
   }
 }
 

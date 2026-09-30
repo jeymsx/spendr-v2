@@ -78,6 +78,60 @@ describe('keyboard', () => {
       install({ height: WIN_H - 40 })
       expect(keyboardIsUp()).toBe(false)
     })
+
+    describe('with a field focused', () => {
+      /** @type {HTMLInputElement} */
+      let field
+      beforeEach(() => {
+        field = document.createElement('input')
+        document.body.appendChild(field)
+        field.focus()
+      })
+      afterEach(() => { field.remove() })
+
+      /* An installed app on iOS 26 can shrink the page itself: innerHeight
+         falls with the visible part, and nothing is covered. */
+      it('is up when the whole page shrinks for the keyboard', () => {
+        const vv = install({ height: WIN_H })
+        expect(keyboardIsUp()).toBe(false)
+        window.innerHeight = 470
+        vv.height = 470
+        expect(keyboardIsUp()).toBe(true)
+      })
+
+      /* iOS scrolling the page up by the keyboard's height leaves the visible
+         part ending at the page's bottom. */
+      it('is up with the page scrolled up by the whole keyboard', () => {
+        const vv = install({ height: WIN_H })
+        keyboardIsUp()
+        Object.assign(vv, { height: 470, offsetTop: WIN_H - 470, pageTop: WIN_H - 470 })
+        expect(keyboardIsUp()).toBe(true)
+      })
+
+      it('is down for a toolbar sliding in', () => {
+        const vv = install({ height: WIN_H })
+        keyboardIsUp()
+        vv.height = WIN_H - 60
+        expect(keyboardIsUp()).toBe(false)
+      })
+
+      it('measures again at a new width', () => {
+        const vv = install({ height: WIN_H })
+        keyboardIsUp()
+        window.innerWidth = 844
+        window.innerHeight = 390
+        vv.height = 390
+        expect(keyboardIsUp()).toBe(false)
+      })
+    })
+
+    it('is down for a shrunk page with nothing focused', () => {
+      const vv = install({ height: WIN_H })
+      keyboardIsUp()
+      window.innerHeight = 470
+      vv.height = 470
+      expect(keyboardIsUp()).toBe(false)
+    })
   })
 
   describe('keyboardKind', () => {
@@ -131,6 +185,12 @@ describe('keyboard', () => {
       expect(expectedRoom('pad')).toBe(WIN_H / 2)
     })
 
+    it('leaves behind what 0.14.2 kept, which could be the number pad kept as the letters', () => {
+      localStorage.setItem('spendr-keyboard-room', JSON.stringify({ w: WIN_W, text: 560, pad: 560 }))
+      expect(expectedRoom('text')).toBe(WIN_H / 2)
+      expect(expectedRoom('pad')).toBe(WIN_H / 2)
+    })
+
     it('is not last time at another width', () => {
       install({ height: 470 })
       rememberKeyboard('text')
@@ -144,19 +204,19 @@ describe('keyboard', () => {
       window.innerWidth = 844
       vv.height = 200
       rememberKeyboard('text')
-      expect(JSON.parse(localStorage.getItem('spendr-keyboard-room') ?? '{}')).toEqual({ w: 844, text: 200 })
+      expect(JSON.parse(localStorage.getItem('spendr-keyboard-rooms') ?? '{}')).toEqual({ w: 844, text: 200 })
     })
 
     it('keeps nothing with no keyboard up', () => {
       install({ height: WIN_H })
       rememberKeyboard('text')
-      expect(localStorage.getItem('spendr-keyboard-room')).toBeNull()
+      expect(localStorage.getItem('spendr-keyboard-rooms')).toBeNull()
     })
 
     it('keeps nothing while pinch-zoomed', () => {
       install({ height: 300, scale: 2 })
       rememberKeyboard('text')
-      expect(localStorage.getItem('spendr-keyboard-room')).toBeNull()
+      expect(localStorage.getItem('spendr-keyboard-rooms')).toBeNull()
     })
   })
 })

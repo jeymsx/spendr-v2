@@ -29,7 +29,7 @@ function fakeViewport() {
     /** @param {string} t @param {Function} fn */
     removeEventListener: (t, fn) => { listeners[t] = (listeners[t] ?? []).filter(f => f !== fn) },
     /** @param {string} t */
-    fire(t) { for (const fn of listeners[t] ?? []) fn() },
+    fire(t) { for (const fn of listeners[t] ?? []) fn({ type: t }) },
     count: () => Object.values(listeners).reduce((n, l) => n + l.length, 0),
   }
 }
@@ -120,19 +120,48 @@ describe('useKeyboardGuard', () => {
 
     it('goes by the room a number pad left last time, for an amount', () => {
       renderHook(() => useKeyboardGuard())
-      const { els, scrolled } = page({ amount: { top: 600, html: '<input type="text" inputmode="decimal">' } })
+      const { main, els, scrolled } = page({ amount: { top: 600, html: '<input type="text" inputmode="decimal">' } })
       vv.height = 560
       els.amount.focus()
       vv.fire('resize')
       // Up now, and kept for next time.
-      expect(JSON.parse(localStorage.getItem('spendr-keyboard-room') ?? '{}')).toMatchObject({ w: WIN_W, pad: 560 })
+      expect(JSON.parse(localStorage.getItem('spendr-keyboard-rooms') ?? '{}')).toMatchObject({ w: WIN_W, pad: 560 })
       els.amount.blur()
       vi.advanceTimersByTime(RELEASE_AFTER)
       vv.height = WIN_H
       vv.fire('resize')
-      const before = scrolled()
+      main.scrollTop = 0
       els.amount.focus()
-      expect(scrolled() - before).toBeCloseTo((600 + 22 - before) - (280 - 8), 0)
+      // Its middle, 622, up to the middle of the pad's 560 less 8.
+      expect(scrolled()).toBe(622 - (280 - 8))
+    })
+
+    /* The add forms focus the amount as they open, so the number pad is up
+       when the description is tapped - and iOS centres the description again,
+       for the letters, which leave less room than the pad. */
+    it('centres a field again when the focus moves with a keyboard up, for its own keyboard', () => {
+      localStorage.setItem('spendr-keyboard-rooms', JSON.stringify({ w: WIN_W, text: 470, pad: 560 }))
+      renderHook(() => useKeyboardGuard())
+      const { els, scrolled } = page({ amount: { top: 150, html: '<input type="text" inputmode="decimal">' }, desc: { top: 400 } })
+      els.amount.focus()
+      vv.height = 560
+      vv.fire('resize')
+      expect(scrolled()).toBe(0)
+      els.desc.focus()
+      // The letters' 470, not the pad's 560: its middle, 422, up to 235 less 8.
+      expect(scrolled()).toBe(422 - (235 - 8))
+    })
+
+    it('does not take the number pad for the letters just after the focus moves', () => {
+      localStorage.setItem('spendr-keyboard-rooms', JSON.stringify({ w: WIN_W, text: 470, pad: 560 }))
+      renderHook(() => useKeyboardGuard())
+      const { els } = page({ amount: { top: 150, html: '<input type="text" inputmode="decimal">' }, desc: { top: 400 } })
+      els.amount.focus()
+      vv.height = 560
+      vv.fire('resize')
+      els.desc.focus()
+      vv.fire('scroll')
+      expect(JSON.parse(localStorage.getItem('spendr-keyboard-rooms') ?? '{}')).toMatchObject({ text: 470, pad: 560 })
     })
 
     it('never goes up under the header', () => {
