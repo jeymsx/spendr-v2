@@ -33,12 +33,12 @@ export const RELEASE_DATE = '2026-09-30'
 export const RELEASE_NOTES = [
   {
     icon: 'compose',
-    title: 'Forms hold still',
-    desc: 'Adding or editing an expense, inflow, transfer or account on an iPhone, the page and its header stay put when the keyboard opens, and the field you tap moves up clear of it.',
+    title: 'Field to field, holding still',
+    desc: 'Going from the amount to the description, or between any two fields, the page no longer slides up as the number pad gives way to the letters.',
   },
   {
     icon: 'phone',
-    title: 'The tab bar keeps out of the way',
-    desc: 'While you type, the tab bar stays hidden instead of riding up over the keyboard.',
+    title: 'The tab bar stays down',
+    desc: 'It no longer rides up on the keyboard, on any page, whichever way iOS makes room for the keyboard.',
   },
 ]

@@ -24,6 +24,14 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.14.2',
+    date: '2026-09-30',
+    items: [
+      { title: 'Forms hold still', desc: 'Adding or editing an expense, inflow, transfer or account on an iPhone, the page and its header stay put when the keyboard opens, and the field you tap moves up clear of it.' },
+      { title: 'The tab bar keeps out of the way', desc: 'While you type, the tab bar stays hidden instead of riding up over the keyboard.' },
+    ],
+  },
+  {
     version: '0.14.1',
     date: '2026-09-30',
     items: [
