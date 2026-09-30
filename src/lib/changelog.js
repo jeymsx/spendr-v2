@@ -24,6 +24,16 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.14.0',
+    date: '2026-09-30',
+    items: [
+      { title: 'Notes', desc: 'Plans for payday, lists, ideas: write them with headings, bullets, numbered lists and checklists. Open Notes from the page icon on Home.' },
+      { title: 'Swipe in from the right', desc: 'In the installed app on an iPhone, swipe in from the right edge of a tab to open Notes, the way the left edge goes back.' },
+      { title: 'Credit cards, tidied', desc: 'A card leads with what it wants from you now: the statement you owe, or once that is paid, the cycle you are spending in. The rest folds away.' },
+      { title: 'Statement history', desc: 'Every statement a card has closed, with its charges and the payments that settled it.' },
+    ],
+  },
+  {
     version: '0.13.2',
     date: '2026-09-29',
     items: [

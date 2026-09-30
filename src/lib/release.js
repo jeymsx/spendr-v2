@@ -33,22 +33,17 @@ export const RELEASE_DATE = '2026-09-30'
 export const RELEASE_NOTES = [
   {
     icon: 'notes',
-    title: 'Notes',
-    desc: 'Plans for payday, lists, ideas: write them with headings, bullets, numbered lists and checklists. Open Notes from the page icon on Home.',
+    title: 'Notes hold still',
+    desc: 'On an iPhone, a note and its header stay where they are when the keyboard opens, and the line you are typing stays above it.',
   },
   {
-    icon: 'transfer',
-    title: 'Swipe in from the right',
-    desc: 'In the installed app on an iPhone, swipe in from the right edge of a tab to open Notes, the way the left edge goes back.',
+    icon: 'compose',
+    title: 'Formatting in the header',
+    desc: 'Aa, the checklist and Done sit at the top while you write, clear of the keyboard. Aa still swaps the keyboard for the formatting panel.',
   },
   {
-    icon: 'card',
-    title: 'Credit cards, tidied',
-    desc: 'A card leads with what it wants from you now: the statement you owe, or once that is paid, the cycle you are spending in. The rest folds away.',
-  },
-  {
-    icon: 'receipt',
-    title: 'Statement history',
-    desc: 'Every statement a card has closed, with its charges and the payments that settled it.',
+    icon: 'phone',
+    title: 'Pages settle after typing',
+    desc: 'If iOS leaves a page pushed up once the keyboard closes, it drops back into place, tab bar and all.',
   },
 ]
