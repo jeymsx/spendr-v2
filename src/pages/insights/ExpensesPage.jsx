@@ -15,6 +15,7 @@ import { PeriodControls } from './PeriodBar'
 import { periodPhrase, usePeriod } from './period'
 import { useInsightsData } from './useInsightsData'
 import { useArrival, useZoomBack } from './zoom'
+import { editTransaction } from '../../lib/editTransaction'
 
 /**
  * Every expense in the period, biggest first.
@@ -68,7 +69,7 @@ export default function ExpensesPage() {
       </div>
 
       <TxDetailSheet
-        onEdit={(t) => navigate(`/transactions/${t.id}/edit`)}
+        onEdit={(t) => editTransaction(navigate, t, () => setSelected(null))}
         open={!!selected}
         onClose={() => setSelected(null)}
         transaction={selected}

@@ -13,6 +13,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import { SkeletonList } from '../../components/ui/Skeleton'
 import { StatementBody, StatusPill } from './CreditSections'
 import { fmtCycleDate } from './shared'
+import { editTransaction } from '../../lib/editTransaction'
 
 /**
  * Every statement a card has closed, newest first, each folded to its dates,
@@ -121,7 +122,7 @@ export default function StatementHistory() {
       )}
 
       <TxDetailSheet
-        onEdit={(/** @type {any} */ t) => navigate(`/transactions/${t.id}/edit`)}
+        onEdit={(/** @type {any} */ t) => editTransaction(navigate, t, () => setSelectedTx(null))}
         open={!!selectedTx}
         onClose={() => setSelectedTx(null)}
         transaction={selectedTx}

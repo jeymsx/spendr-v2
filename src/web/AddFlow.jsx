@@ -1,9 +1,11 @@
 import { createContext, useContext, useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
+import { handleEditTransaction } from '../lib/editTransaction'
 
 const AddExpense = lazy(() => import('../pages/AddExpense'))
 const AddInflow  = lazy(() => import('../pages/AddInflow'))
 const Transfer   = lazy(() => import('../pages/Transfer'))
+const EditTransaction = lazy(() => import('../pages/EditTransaction'))
 const QuickLogOverlay = lazy(() => import('../components/QuickLogOverlay'))
 
 /** .card-solid is the page cards' material, composited opaque — see index.css. */
@@ -40,13 +42,18 @@ export function useAddFlow() {
  * purely to ask which kind of transaction this is.
  */
 export function AddFlowProvider({ children }) {
-  const [flow, setFlow] = useState(null)   // null | 'expense' | 'inflow' | 'transfer' | 'quick'
+  const [flow, setFlow] = useState(null)   // null | 'expense' | 'inflow' | 'transfer' | 'quick' | 'edit'
+  /* The transaction open to edit, for 'edit': editing opens over the page
+     too, rather than as the phone's page of its own (lib/editTransaction.js). */
+  const [editId, setEditId] = useState(/** @type {number|null} */ (null))
   const location = useLocation()
   const navigate = useNavigate()
   /** The address asked for the quick log (below), and the next page opens it. */
   const quickNext = useRef(false)
 
   const openAdd = useCallback((type) => setFlow(type ?? 'expense'), [])
+
+  useEffect(() => handleEditTransaction((id) => { setEditId(id); setFlow('edit') }), [])
   const closeAdd = useCallback(() => setFlow(null), [])
 
   // Belt and braces: the forms are handed onCancel/onSaved so they close the
@@ -104,6 +111,7 @@ export function AddFlowProvider({ children }) {
     : flow === 'inflow' ? AddInflow
     : flow === 'transfer' ? Transfer
     : null
+  const editing = flow === 'edit' && editId != null
 
   return (
     <AddFlowContext.Provider value={{ openAdd, closeAdd, isOpen: !!flow }}>
@@ -116,11 +124,11 @@ export function AddFlowProvider({ children }) {
         </Suspense>
       )}
 
-      {flow && Form && (
+      {flow && (Form || editing) && (
         <div
           role="dialog"
           aria-modal="true"
-          aria-label={`Add ${flow}`}
+          aria-label={editing ? 'Edit transaction' : `Add ${flow}`}
           className="fixed inset-0 z-[220] flex items-center justify-center p-6"
         >
           {/* Clicking away cancels. aria-hidden because the dialog's own
@@ -142,7 +150,9 @@ export function AddFlowProvider({ children }) {
             }>
               {/* Closing the overlay is not a navigation: the page underneath
                   stays exactly where it was, and its history is untouched. */}
-              <Form onCancel={closeAdd} onSaved={closeAdd} />
+              {editing
+                ? <EditTransaction id={editId} onDone={closeAdd} />
+                : Form && <Form onCancel={closeAdd} onSaved={closeAdd} />}
             </Suspense>
           </div>
         </div>

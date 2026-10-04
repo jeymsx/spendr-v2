@@ -55,6 +55,7 @@ import { payLoan, recordValue } from '../db/accountWrites'
 import UpdateValueSheet from './accounts/UpdateValueSheet'
 import LoanPaySheet from './accounts/LoanPaySheet'
 import { BrandSquare } from './accounts/HoldingTile'
+import { editTransaction } from '../lib/editTransaction'
 
 /**
  * One account, as a page rather than a sheet.
@@ -985,7 +986,7 @@ export default function AccountDetail() {
       <TxDetailSheet
         /* Editing opens the form that created it, not five rows in a
            panel. See components/TxDetailSheet.jsx onEdit. */
-        onEdit={(t) => navigate(`/transactions/${t.id}/edit`)}
+        onEdit={(t) => editTransaction(navigate, t, () => setSelectedTx(null))}
         open={!!selectedTx}
         onClose={() => setSelectedTx(null)}
         transaction={selectedTx}

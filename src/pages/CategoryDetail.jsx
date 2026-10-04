@@ -28,6 +28,7 @@ import { ListEnd, useInfiniteList } from '../components/ui/InfiniteList'
 
 const NO_ROWS = /** @type {Array<Record<string, any>>} */ ([])
 import { effectiveLimit } from '../lib/rollover'
+import { editTransaction } from '../lib/editTransaction'
 
 /**
  * One category.
@@ -328,7 +329,7 @@ export default function CategoryDetail() {
       <TxDetailSheet
         /* Editing opens the form that created it, not five rows in a
            panel. See components/TxDetailSheet.jsx onEdit. */
-        onEdit={(t) => navigate(`/transactions/${t.id}/edit`)}
+        onEdit={(t) => editTransaction(navigate, t, () => setSelectedTx(null))}
         open={!!selectedTx}
         onClose={() => setSelectedTx(null)}
         transaction={selectedTx}

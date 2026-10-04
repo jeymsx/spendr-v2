@@ -35,6 +35,7 @@ import LedgerSkeleton from './transactions/ListSkeleton'
 import { searchEverything, txMatches } from '../lib/search'
 import { foldLoanPayments, unfoldLoanPayment } from '../lib/loans'
 import { baseSymbol } from '../lib/money'
+import { editTransaction } from '../lib/editTransaction'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -519,7 +520,7 @@ export default function Transactions() {
       <TxDetailSheet
         /* Editing opens the form that created it, not five rows in a
            panel. See components/TxDetailSheet.jsx onEdit. */
-        onEdit={(t) => navigate(`/transactions/${t.id}/edit`)}
+        onEdit={(t) => editTransaction(navigate, t, () => setSelectedTx(null))}
         open={!!selectedTx}
         onClose={() => setSelectedTx(null)}
         transaction={selectedTx}

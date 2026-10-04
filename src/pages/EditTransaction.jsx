@@ -51,9 +51,16 @@ import { IconChevronLeft } from '../components/icons'
  * because which form you are looking at is chosen by the type. Delete and
  * re-enter, which is one gesture more and no ambiguity.
  */
-export default function EditTransaction() {
-  const { id } = useParams()
-  const back = useBack()
+/**
+ * @param {{id?: number, onDone?: () => void}} [props]  the desktop opens it
+ *   over a page (src/web/AddFlow.jsx, lib/editTransaction.js): the row by id
+ *   rather than the address, and closing rather than going back
+ */
+export default function EditTransaction({ id: idProp, onDone } = {}) {
+  const params = useParams()
+  const id = idProp ?? params.id
+  const goBack = useBack()
+  const back = onDone ?? goBack
 
   /* `?? null` matters: Dexie resolves a MISS to undefined, and undefined is
      also what this starts as while the read is in flight. Without it a
