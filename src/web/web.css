@@ -371,3 +371,90 @@ html.web .note-bar-select { background-color: rgba(15, 23, 42, 0.05); }
 html.web.dark .note-bar-select { background-color: rgba(255, 255, 255, 0.06); }
 html.web .note-bar button:not(:disabled):not([aria-pressed='true']):hover { background: rgba(15, 23, 42, 0.06); }
 html.web.dark .note-bar button:not(:disabled):not([aria-pressed='true']):hover { background: rgba(255, 255, 255, 0.07); }
+
+/* ── A list's title, at the left ────────────────────────────────────────────
+   The phone's subpages (components/PageHeader) centre their title between a
+   back button and an action. As a list on the left - Budget, Goals,
+   Recurring, Debts, Notes, Settings - or a page the sidebar opens, it sat in
+   the middle at 16px, while Accounts, Transactions and Insights title theirs
+   at the left at 20px. All of them read as Accounts now: the back button is
+   gone (the sidebar is the way out), the title takes its place. */
+html.web .web-pane-list .page-header,
+html.web .web-scroll[data-top='true'] .page-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  /* At least the 36px of a button, so a title with none beside it
+     (Notifications) sits on the same line as one with. */
+  grid-auto-rows: minmax(2.25rem, auto);
+  padding-bottom: 1rem;
+}
+html.web .web-pane-list .page-header > .subpage-back,
+html.web .web-scroll[data-top='true'] .page-header > .subpage-back { display: none; }
+html.web .web-pane-list .page-header-title,
+html.web .web-scroll[data-top='true'] .page-header-title {
+  text-align: left;
+  padding: 0;
+  font-size: 1.25rem;
+  line-height: 1.75rem;
+  letter-spacing: -0.025em;
+  color: rgb(15 23 42);
+}
+html.web.dark .web-pane-list .page-header-title,
+html.web.dark .web-scroll[data-top='true'] .page-header-title { color: #fff; }
+
+/* ── Transactions' month (pages/WebTransactions.jsx) ───────────────────── */
+html.web .web-tx-add {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  height: 2.25rem;
+  padding: 0 0.85rem 0 0.7rem;
+  border-radius: 9999px;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: rgb(30 41 59);
+  background: #fff;
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  box-shadow: 0 1px 2px rgba(15, 23, 42, 0.05);
+  transition: background-color 120ms, border-color 120ms, transform 120ms;
+}
+html.web .web-tx-add:hover { background: rgb(248 250 252); border-color: rgba(15, 23, 42, 0.14); }
+html.web .web-tx-add:active { transform: scale(0.97); }
+html.web .web-tx-add:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+html.web.dark .web-tx-add {
+  color: rgb(241 245 249);
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.08);
+  box-shadow: none;
+}
+html.web.dark .web-tx-add:hover { background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.14); }
+
+/* ── Achievements (pages/WebAchievements.jsx) ───────────────────────────────
+   The collection picked on the left is ringed as a split view's open row
+   is. On the right there is room: badges five across, milestones two. */
+html.web .web-ach-tab.is-on {
+  box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 70%, transparent);
+  background-color: rgba(var(--color-primary-rgb), 0.08);
+  border-radius: 16px;
+}
+html.web .web-ach-badges > .grid { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 0.75rem; padding-inline: 1.25rem; }
+html.web .web-ach-milestones > .flex-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; }
+html.web .web-ach-challenges section > .flex-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+@media (max-width: 1179px) {
+  html.web .web-ach-badges > .grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  html.web .web-ach-milestones > .flex-col,
+  html.web .web-ach-challenges section > .flex-col { grid-template-columns: minmax(0, 1fr); }
+}
+
+/* ── The bell's panel (NotificationsPopover) ────────────────────────────────
+   Drops from the bell, growing from its corner: quick, no overshoot. */
+html.web .web-bell-pop {
+  transform-origin: top right;
+  animation: web-pop-in 160ms cubic-bezier(0.2, 0.9, 0.3, 1);
+}
+@keyframes web-pop-in {
+  from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+  to { opacity: 1; transform: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  html.web .web-bell-pop { animation: none; }
+}

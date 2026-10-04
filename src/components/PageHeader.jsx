@@ -28,14 +28,16 @@ export default function PageHeader({ title = null, action = null, onBack, backLa
   const back = useBack()
   return (
     <PinnedTop>
-      <header className="relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-5 pt-safe-header pb-3">
+      {/* page-header, page-header-title: inert hooks for the desktop, which
+          sets a list's title at the left, as Accounts and Transactions do (web.css). */}
+      <header className="page-header relative grid grid-cols-[1fr_auto_1fr] items-center gap-2 px-5 pt-safe-header pb-3">
         {/* subpage-back: an inert hook for the desktop, which hides it where
             the page is the right half of a split view with nothing behind. */}
         <IconButton label={backLabel} className="subpage-back justify-self-start" onClick={onBack ?? back}>
           <IconChevronLeft />
         </IconButton>
 
-        <h1 className="min-w-0 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
+        <h1 className="page-header-title min-w-0 text-center text-base font-semibold text-slate-800 dark:text-white truncate px-1">
           {title}
         </h1>
 

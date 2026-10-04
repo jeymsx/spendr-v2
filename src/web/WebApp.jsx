@@ -9,7 +9,7 @@ import WebFormPage from './WebFormPage'
 import {
   WebAccountsSection, AccountsIndex, WebInsightsSection, WebRecurringSection, RecurringIndex,
   WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex, WebBudgetSection, BudgetIndex,
-  WebSettingsSection, WebNotesSection, NotesIndex,
+  WebSettingsSection, WebNotesSection, NotesIndex, WebTransactionsSection,
 } from './pages/WebSections'
 // The desktop's own styles: loaded with this bundle only, so a phone never
 // downloads them.
@@ -34,7 +34,7 @@ const Onboarding = lazy(() => import('../pages/Onboarding'))
 const WebHome      = lazy(() => import('./pages/WebHome'))
 const WebImport    = lazy(() => import('./pages/WebImport'))
 
-const Transactions    = lazy(() => import('../pages/Transactions'))
+const TransactionsSummary = lazy(() => import('./pages/WebTransactions'))
 const RecentlyDeleted = lazy(() => import('../pages/transactions/RecentlyDeleted'))
 const EditTransaction = lazy(() => import('../pages/EditTransaction'))
 const AddExpense   = lazy(() => import('../pages/AddExpense'))
@@ -61,7 +61,7 @@ const RecurringForm   = lazy(() => import('../pages/RecurringForm'))
 const Notifications = lazy(() => import('../pages/Notifications'))
 const NoteEditor    = lazy(() => import('../pages/notes/NoteEditor'))
 const NotesDeleted  = lazy(() => import('../pages/notes/NotesDeleted'))
-const Achievements  = lazy(() => import('../pages/Achievements'))
+const WebAchievements = lazy(() => import('./pages/WebAchievements'))
 const Recap         = lazy(() => import('../pages/recap/RecapPage'))
 
 const SettingsAccent = lazy(() => import('../pages/SettingsAccent'))
@@ -113,8 +113,10 @@ export default function WebApp() {
               <Route path="/" element={<WebHome />} />
 
               {/* ── Money ── */}
-              <Route path="/transactions" element={<Column><Transactions /></Column>} />
-              <Route path="/transactions/deleted" element={<Column><RecentlyDeleted /></Column>} />
+              <Route path="/transactions" element={<WebTransactionsSection />}>
+                <Route index element={<TransactionsSummary />} />
+                <Route path="deleted" element={<RecentlyDeleted />} />
+              </Route>
               <Route path="/transactions/:id/edit" element={<Form><EditTransaction /></Form>} />
               <Route path="/expense"  element={<Form><AddExpense /></Form>} />
               <Route path="/inflow"   element={<Form><AddInflow /></Form>} />
@@ -165,7 +167,7 @@ export default function WebApp() {
 
               {/* ── You ── */}
               <Route path="/notifications" element={<Column top><Notifications /></Column>} />
-              <Route path="/achievements" element={<Column top><Achievements /></Column>} />
+              <Route path="/achievements" element={<WebAchievements />} />
               <Route path="/badges" element={<Navigate to="/achievements?tab=badges" replace />} />
               <Route path="/recap" element={<Column><Recap /></Column>} />
               <Route path="/recap/:month" element={<Column><Recap /></Column>} />
