@@ -339,6 +339,12 @@ function NoteBody({ note, back, fresh }) {
             onFormat={formatOpen ? closeFormat : openFormat}
             onDone={done}
           />
+        ) : desktop ? (
+          <NoteMenu open={menuOpen} onOpen={() => setMenuOpen(true)} onClose={() => setMenuOpen(false)}>
+            <NoteMenuItem onPress={togglePin} label={note.pinned ? 'Unpin note' : 'Pin note'}><IconPin size={17} /></NoteMenuItem>
+            {canShare && <NoteMenuItem onPress={share} label="Share"><IconShare size={17} /></NoteMenuItem>}
+            <NoteMenuItem onPress={remove} label="Delete note" danger><IconBin size={17} /></NoteMenuItem>
+          </NoteMenu>
         ) : (
           <IconButton label="Note options" onClick={() => setMenuOpen(true)}>
             <IconMore size={19} />
@@ -385,7 +391,9 @@ function NoteBody({ note, back, fresh }) {
         <FormatPanel editor={editor} onClose={closeFormat} />
       )}
 
-      <Sheet open={menuOpen} onClose={() => setMenuOpen(false)} ariaLabel="Note options">
+      {/* The phone's options rise from the bottom; the desktop's drop from
+          the button (NoteMenu, in the header). */}
+      <Sheet open={menuOpen && !desktop} onClose={() => setMenuOpen(false)} ariaLabel="Note options">
         <Card clip className="mb-2">
           <MenuRow onPress={togglePin} label={note.pinned ? 'Unpin note' : 'Pin note'}>
             <IconPin size={19} />
@@ -405,6 +413,84 @@ function NoteBody({ note, back, fresh }) {
         </Card>
       </Sheet>
     </div>
+  )
+}
+
+/**
+ * The note's options on a computer: a menu dropping from the button, as a
+ * Mac app's would, not a sheet rising from the bottom of the window. Closes
+ * on a pick, on Escape, and on a click anywhere else; the arrow keys move
+ * through it.
+ *
+ * @param {{open: boolean, onOpen: () => void, onClose: () => void, children: import('react').ReactNode}} props
+ */
+function NoteMenu({ open, onOpen, onClose, children }) {
+  const box = useRef(/** @type {HTMLDivElement|null} */ (null))
+
+  useEffect(() => {
+    if (!open) return
+    const el = box.current
+    const first = /** @type {HTMLButtonElement|null} */ (el?.querySelector('[role="menuitem"]'))
+    first?.focus()
+    const onDown = (/** @type {MouseEvent} */ e) => {
+      if (el && !el.contains(/** @type {Node} */ (e.target))) onClose()
+    }
+    const onKey = (/** @type {KeyboardEvent} */ e) => {
+      if (e.key === 'Escape') { e.preventDefault(); onClose(); return }
+      if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return
+      e.preventDefault()
+      const rows = /** @type {HTMLButtonElement[]} */ ([...(el?.querySelectorAll('[role="menuitem"]') ?? [])])
+      const at = rows.indexOf(/** @type {HTMLButtonElement} */ (document.activeElement))
+      const next = e.key === 'ArrowDown' ? (at + 1) % rows.length : (at - 1 + rows.length) % rows.length
+      rows[next]?.focus()
+    }
+    document.addEventListener('mousedown', onDown)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDown)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [open, onClose])
+
+  return (
+    <div ref={box} className="relative">
+      <IconButton
+        label="Note options"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        onClick={open ? onClose : onOpen}
+      >
+        <IconMore size={19} />
+      </IconButton>
+      {open && (
+        <div role="menu" aria-label="Note options" className="note-menu card-solid absolute right-0 top-full mt-2 z-30 w-[208px] p-1.5 rounded-xl">
+          {children}
+        </div>
+      )}
+    </div>
+  )
+}
+
+/**
+ * A row of NoteMenu. Each option closes the menu itself, as it does the
+ * phone's sheet.
+ *
+ * @param {{label: string, onPress: () => void, danger?: boolean, children: import('react').ReactNode}} props
+ */
+function NoteMenuItem({ label, onPress, danger = false, children }) {
+  return (
+    <button
+      type="button"
+      role="menuitem"
+      onClick={onPress}
+      className={`w-full flex items-center gap-2.5 px-2.5 h-10 rounded-lg text-left text-13 font-medium
+        hover:bg-slate-100 dark:hover:bg-white/[0.07] focus-visible:bg-slate-100 dark:focus-visible:bg-white/[0.07]
+        outline-none transition-colors duration-100
+        ${danger ? 'text-red-600 dark:text-red-400' : 'text-slate-800 dark:text-slate-100'}`}
+    >
+      <span className={danger ? '' : 'text-slate-500 dark:text-slate-400'}>{children}</span>
+      {label}
+    </button>
   )
 }
 
