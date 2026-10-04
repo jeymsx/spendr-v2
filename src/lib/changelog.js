@@ -24,6 +24,15 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.15.0',
+    date: '2026-10-04',
+    items: [
+      { title: 'A sidebar that folds', desc: 'On a computer, the button beside Spendr folds the sidebar to its icons. Point at the logo and click to open it again.' },
+      { title: 'Edit in place', desc: 'On a computer, editing a transaction opens over the page you were on, and the transaction itself shows in a tidier, narrower window.' },
+      { title: 'Pages that line up', desc: 'Every list and the page beside it divide at the same place, Home shows five cards and a way to the rest, and hovering a row no longer lights it up white in dark mode.' },
+    ],
+  },
+  {
     version: '0.14.3',
     date: '2026-09-30',
     items: [
