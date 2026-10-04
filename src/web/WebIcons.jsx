@@ -116,3 +116,13 @@ export function WebIconPhone() {
     </svg>
   )
 }
+
+/** The sidebar itself: a window with its left panel ruled off. */
+export function WebIconSidebar() {
+  return (
+    <svg {...P}>
+      <rect x="3" y="4" width="18" height="16" rx="3" />
+      <line x1="9" y1="4" x2="9" y2="20" />
+    </svg>
+  )
+}

@@ -16,6 +16,16 @@ import ErrorBoundary from '../../components/ErrorBoundary'
  * In a split view that is the LIST pane, the one those pages live in.
  */
 
+/**
+ * Every split view's two widths: the list, and the most the page beside it
+ * stretches to. One pair for Accounts, Insights, Budget, Goals, Recurring,
+ * Debts, Notes and Settings, so moving between them the line between the
+ * halves stays where it was. The single-column pages start at the same left
+ * edge and run to the same width as a list and its page together.
+ */
+export const LIST_WIDTH = 400
+export const DETAIL_WIDTH = 800
+
 function PaneSpinner() {
   return (
     <div className="flex items-center justify-center min-h-[50dvh]">
@@ -32,16 +42,20 @@ function PaneSpinner() {
  * the phone it hangs off Home, so it has a back button, and here it is a
  * place of its own with nothing to go back to.
  *
- * @param {{width?: number, children: import('react').ReactNode, className?: string, pad?: boolean, top?: boolean}} props
+ * `start`: the column sits at the left, where a split view's list does,
+ * rather than in the middle of the window - a page the sidebar opens, read
+ * beside the others, kept its own place.
+ *
+ * @param {{width?: number, children: import('react').ReactNode, className?: string, pad?: boolean, top?: boolean, start?: boolean}} props
  */
-export function WebScroll({ width = 1200, children, className = '', pad = true, top = false }) {
+export function WebScroll({ width = 1200, children, className = '', pad = true, top = false, start = false }) {
   const ref = useRef(/** @type {HTMLDivElement|null} */ (null))
   const location = useLocation()
   // A new page starts at its top, as the phone's do.
   useLayoutEffect(() => { if (ref.current) ref.current.scrollTop = 0 }, [location.pathname])
   return (
     <div id="app-main" ref={ref} className="web-scroll h-full overflow-y-auto overflow-x-hidden" data-top={top ? 'true' : undefined}>
-      <div className={`web-column mx-auto w-full ${pad ? 'px-8 py-6' : ''} ${className}`} style={{ maxWidth: width }}>
+      <div className={`web-column ${start ? '' : 'mx-auto'} w-full ${pad ? 'px-8 py-6' : ''} ${className}`} style={{ maxWidth: width }}>
         {children}
       </div>
     </div>
@@ -71,15 +85,17 @@ export function WebScroll({ width = 1200, children, className = '', pad = true, 
  *          isRoot?: (pathname: string) => boolean, selected?: string|null,
  *          label?: string}} props
  */
-export function WebSplit({ list, listWidth = 420, detailWidth = 760, isRoot = () => true, selected = null, label }) {
+export function WebSplit({ list, listWidth = LIST_WIDTH, detailWidth = DETAIL_WIDTH, isRoot = () => true, selected = null, label }) {
   const location = useLocation()
   const detailRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   useLayoutEffect(() => { if (detailRef.current) detailRef.current.scrollTop = 0 }, [location.pathname])
   return (
     <div className="web-split h-full flex">
       {selected && (
-        // Inside the row's own corners: rows sit in cards that clip.
-        <style>{`.web-pane-list ${selected}{outline:2px solid color-mix(in srgb, var(--color-primary) 70%, transparent);outline-offset:-2px;background-color:rgba(var(--color-primary-rgb),0.08)}`}</style>
+        /* A ring drawn inside the row, rounded like the card it sits in. An
+           outline was square, and the card's rounded corners clipped it -
+           a lone note's ring lost its corners. */
+        <style>{`.web-pane-list ${selected}{border-radius:16px;box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 70%, transparent);background-color:rgba(var(--color-primary-rgb),0.08)}`}</style>
       )}
       <div
         id="app-main"

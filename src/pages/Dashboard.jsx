@@ -657,7 +657,12 @@ export default function Dashboard({ layout = 'phone' } = {}) {
             const cardAccts   = allAccts
               .filter(a => (parentNames.has(a.name) || !a.parentName) && isEverydayAccount(a))
               .sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
-            return cardAccts.map(acct => {
+            /* The desktop's grid shows five, and its sixth place says how many
+               more there are, opening Accounts: a grid of every card pushed
+               Recent below the fold. The phone's rail scrolls to them all. */
+            const shown = layout === 'desktop' && cardAccts.length > 5 ? cardAccts.slice(0, 5) : cardAccts
+            const more = cardAccts.length - shown.length
+            return [...shown.map(acct => {
               const isParent = parentNames.has(acct.name)
               const displayAcct = isParent
                 ? { ...acct, balance: parentCombinedBal[acct.name] ?? acct.balance }
@@ -671,7 +676,12 @@ export default function Dashboard({ layout = 'phone' } = {}) {
                   stmt={creditStmtMap[acct.name]}
                 />
               )
-            })
+            }), more > 0 && (
+              <Link key="more" to="/accounts" className="home-accounts-more">
+                <span className="text-13 font-semibold">View all accounts</span>
+                <span className="text-11">{more} more</span>
+              </Link>
+            )]
           })()}
           {/* spacer so last card doesn't clip under scroll fade */}
           <div className="shrink-0 w-1" />

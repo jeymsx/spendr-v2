@@ -7,6 +7,8 @@
 /* ── Sidebar ─────────────────────────────────────────────────────────────── */
 
 html.web .web-sidebar {
+  width: 248px;
+  transition: width 0.22s var(--ease-out);
   border-right: 1px solid rgba(15, 23, 42, 0.07);
   background: rgba(255, 255, 255, 0.72);
   backdrop-filter: blur(20px) saturate(140%);
@@ -29,6 +31,47 @@ html.web .web-brand {
   -webkit-user-drag: none;
   user-select: none;
 }
+
+/* The mark and the name, with the button that folds the sidebar beside
+   them (WebSidebar). */
+html.web .web-brand-row { padding: 1.5rem 1rem 1.25rem 1.25rem; }
+html.web .web-sidebar-fold,
+html.web .web-brand-toggle {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 0.75rem;
+  color: rgb(100 116 139);
+  transition: background-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+html.web .web-sidebar-fold { width: 2rem; height: 2rem; }
+html.web .web-sidebar-fold:hover { background: rgba(15, 23, 42, 0.06); color: rgb(15 23 42); }
+html.web.dark .web-sidebar-fold { color: rgb(148 163 184); }
+html.web.dark .web-sidebar-fold:hover { background: rgba(255, 255, 255, 0.06); color: rgb(226 232 240); }
+html.web .web-sidebar-fold:focus-visible,
+html.web .web-brand-toggle:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* Folded, the mark is the way back: under the pointer it gives way to the
+   sidebar's icon, which is what it does. */
+html.web .web-brand-toggle { position: relative; width: 2.75rem; height: 2.75rem; }
+html.web .web-brand-swap {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s var(--ease-out);
+}
+html.web .web-brand-toggle .web-brand { transition: opacity 0.15s var(--ease-out); }
+html.web .web-brand-toggle:hover .web-brand,
+html.web .web-brand-toggle:focus-visible .web-brand { opacity: 0; }
+html.web .web-brand-toggle:hover .web-brand-swap,
+html.web .web-brand-toggle:focus-visible .web-brand-swap { opacity: 1; }
+html.web .web-brand-toggle:hover { background: rgba(15, 23, 42, 0.06); color: rgb(15 23 42); }
+html.web.dark .web-brand-toggle { color: rgb(148 163 184); }
+html.web.dark .web-brand-toggle:hover { background: rgba(255, 255, 255, 0.06); color: rgb(226 232 240); }
 
 html.web .web-nav-heading {
   margin: 1.1rem 0.75rem 0.35rem;
@@ -120,9 +163,12 @@ html.web .web-scroll[data-top='true'] .subpage-back { visibility: hidden; }
 
 /* ── Pointer ────────────────────────────────────────────────────────────────
    The phone's rows answer a press (active:bg-…). Under a cursor they answer
-   hovering too, with the same tint, a step fainter. */
-html.web [class*='active:bg-slate-50']:hover:not(:disabled) { background-color: rgb(248 250 252 / 0.8); }
-html.web.dark [class*='dark:active:bg-white/[0.04]']:hover:not(:disabled) { background-color: rgb(255 255 255 / 0.03); }
+   hovering too, with the same tint, a step fainter. Light and dark apart:
+   a row written `enabled:active:bg-slate-50 dark:enabled:active:bg-…`
+   matched only the light rule, and in dark mode lit up near-white. */
+html.web:not(.dark) [class*='active:bg-slate-50']:hover:not(:disabled) { background-color: rgb(248 250 252 / 0.8); }
+html.web.dark [class*='active:bg-white/']:hover:not(:disabled),
+html.web.dark [class*='active:bg-slate-50']:hover:not(:disabled) { background-color: rgb(255 255 255 / 0.035); }
 
 /* Scrollbars as thin as the phone's are absent: a window still needs one. */
 html.web .web-scroll,
@@ -240,28 +286,53 @@ html.web .home-desktop .home-accounts-rail {
 html.web .home-desktop .home-accounts-rail > .acct-card { width: auto; }
 html.web .home-desktop .home-accounts-rail > .shrink-0.w-1 { display: none; }
 
-/* ── Narrower windows ───────────────────────────────────────────────────────
-   Under 1280px a list and its page side by side leave the page a phone's
-   width, so the sidebar folds to its icons (each keeps its name as a
-   tooltip) and the list pane narrows. */
-@media (max-width: 1279px) {
-  html.web .web-sidebar { width: 76px; }
-  html.web .web-sidebar .web-brand-text,
-  html.web .web-sidebar .web-nav-heading,
-  html.web .web-sidebar .web-add-label,
-  html.web .web-sidebar .web-nav-item > span:not(.web-nav-icon):not(.web-nav-badge) { display: none; }
-  html.web .web-sidebar .web-nav-heading + .web-nav-item { margin-top: 0.75rem; }
-  html.web .web-sidebar .web-nav-item { justify-content: center; padding: 0; position: relative; }
-  html.web .web-sidebar .web-nav-badge {
-    position: absolute;
-    top: 0.2rem;
-    right: 0.5rem;
-    min-width: 1rem;
-    height: 1rem;
-    padding: 0 0.25rem;
-    line-height: 1rem;
-    font-size: 0.625rem;
-  }
+/* The sixth place: how many more cards there are, opening Accounts. */
+html.web .home-accounts-more {
+  min-height: 7.5rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.2rem;
+  border-radius: 1rem;
+  border: 1.5px dashed rgba(15, 23, 42, 0.16);
+  color: rgb(71 85 105);
+  transition: background-color 0.15s var(--ease-out), border-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
+}
+html.web .home-accounts-more:hover {
+  border-color: rgba(var(--color-primary-rgb), 0.55);
+  background: rgba(var(--color-primary-rgb), 0.06);
+  color: var(--color-primary);
+}
+html.web.dark .home-accounts-more { border-color: rgba(255, 255, 255, 0.14); color: rgb(148 163 184); }
+html.web.dark .home-accounts-more:hover { border-color: rgba(var(--color-primary-rgb), 0.6); color: var(--color-primary); }
+html.web .home-accounts-more:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 2px; }
+
+/* ── The sidebar, folded ─────────────────────────────────────────────────────
+   Its icons only, each keeping its name as a tooltip (WebSidebar). Folded by
+   the button beside the name, or from the start on a window under 1280px,
+   where a list and its page side by side would leave the page a phone's
+   width. */
+html.web .web-sidebar.is-collapsed { width: 76px; }
+html.web .web-sidebar.is-collapsed .web-brand-row { justify-content: center; padding: 1.25rem 0 1rem; }
+html.web .web-sidebar.is-collapsed .web-nav-heading,
+html.web .web-sidebar.is-collapsed .web-add-label,
+html.web .web-sidebar.is-collapsed .web-nav-item > span:not(.web-nav-icon):not(.web-nav-badge) { display: none; }
+html.web .web-sidebar.is-collapsed .web-nav-heading + .web-nav-item { margin-top: 0.75rem; }
+html.web .web-sidebar.is-collapsed .web-nav-item { justify-content: center; padding: 0; position: relative; }
+html.web .web-sidebar.is-collapsed .web-nav-badge {
+  position: absolute;
+  top: 0.2rem;
+  right: 0.5rem;
+  min-width: 1rem;
+  height: 1rem;
+  padding: 0 0.25rem;
+  line-height: 1rem;
+  font-size: 0.625rem;
+}
+
+/* A narrow window gives the list less, so its page keeps enough. */
+@media (max-width: 1179px) {
   html.web .web-pane-list { width: 360px !important; }
 }
 
@@ -278,3 +349,25 @@ html.web .quick-log {
   row-gap: 1.5rem;
 }
 html.web .quick-log-go { position: static; justify-self: end; }
+
+/* ── A note's formatting bar (pages/notes/NoteEditor.jsx, FormatControls) ──
+   One row, on a raised strip that stays at the top of the note as it
+   scrolls: it was two rows on a dark band the width of the page. */
+html.web .note-desk-bar {
+  padding: 0.3rem;
+  border-radius: 0.875rem;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(15, 23, 42, 0.07);
+  box-shadow: 0 6px 18px -10px rgba(15, 23, 42, 0.25);
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+}
+html.web.dark .note-desk-bar {
+  background: rgba(20, 28, 41, 0.82);
+  border-color: rgba(255, 255, 255, 0.07);
+  box-shadow: 0 10px 24px -12px rgba(0, 0, 0, 0.6);
+}
+html.web .note-bar-select { background-color: rgba(15, 23, 42, 0.05); }
+html.web.dark .note-bar-select { background-color: rgba(255, 255, 255, 0.06); }
+html.web .note-bar button:not(:disabled):not([aria-pressed='true']):hover { background: rgba(15, 23, 42, 0.06); }
+html.web.dark .note-bar button:not(:disabled):not([aria-pressed='true']):hover { background: rgba(255, 255, 255, 0.07); }

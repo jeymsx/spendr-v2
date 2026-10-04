@@ -87,8 +87,6 @@ export function WebInsightsSection() {
     <WebSplit
       label="Insights"
       list={<Insights />}
-      listWidth={440}
-      detailWidth={820}
       selected={page ? `[data-zoom="${page}"]` : null}
       /* A page one step past an Insights card has a card to go back to:
          keep its back button, which the root pages hide. */
@@ -149,8 +147,6 @@ export function WebNotesSection() {
     <WebSplit
       label="Notes"
       list={<Notes />}
-      listWidth={380}
-      detailWidth={780}
       selected={id && id !== 'deleted' ? byId(`note-${id}`) : null}
       isRoot={(p) => !!matchPath('/notes/:id', p) && !p.endsWith('/deleted')}
     />
@@ -192,7 +188,6 @@ export function WebBudgetSection() {
     <WebSplit
       label="Budget"
       list={<Budget />}
-      listWidth={460}
       selected={name ? byId(`category-${decodeURIComponent(name)}`) : null}
     />
   )
@@ -210,5 +205,5 @@ export function BudgetIndex() {
 export function WebSettingsSection() {
   const { pathname } = useLocation()
   const page = paramOf('/settings/:page', pathname, 'page')
-  return <WebSplit label="Settings" list={<Settings />} selected={page ? byId(`settings-${page}`) : null} detailWidth={680} />
+  return <WebSplit label="Settings" list={<Settings />} selected={page ? byId(`settings-${page}`) : null} />
 }

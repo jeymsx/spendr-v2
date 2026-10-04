@@ -3,7 +3,7 @@ import { cx } from '../../components/ui/cx'
 import { HIGHLIGHTS } from './extensions'
 import {
   IconBold, IconItalic, IconUnderline, IconStrike, IconBullets, IconDashes, IconNumbered,
-  IconChecklist, IconIndent, IconOutdent, IconQuote, IconUndo, IconRedo,
+  IconChecklist, IconIndent, IconOutdent, IconQuote,
 } from './icons'
 
 /**
@@ -167,19 +167,21 @@ export default function FormatControls({ editor, layout }) {
     { key: 'task', label: 'Checklist', on: st.task, Icon: IconChecklist, run: cmd.task },
   ]
 
+  // A row of small dots in the desktop's bar; thumb-sized in the phone's panel.
+  const dot = layout === 'bar' ? 'w-5 h-5' : 'w-7 h-7'
   const swatches = (
-    <div className="flex items-center gap-2" role="group" aria-label="Highlight">
+    <div className={cx('flex items-center', layout === 'bar' ? 'gap-1.5 px-1' : 'gap-2')} role="group" aria-label="Highlight">
       <button
         type="button"
         aria-label="No highlight"
         aria-pressed={!st.highlight}
         onMouseDown={e => e.preventDefault()}
         onClick={() => cmd.highlight(null)}
-        className={cx('press press-icon w-7 h-7 rounded-full shrink-0 border flex items-center justify-center',
+        className={cx('press press-icon rounded-full shrink-0 border flex items-center justify-center', dot,
           'border-slate-300 dark:border-slate-600 text-slate-400 dark:text-slate-500',
           !st.highlight && 'ring-2 ring-primary ring-offset-2 ring-offset-white dark:ring-offset-[#111820]')}
       >
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 19 19 5" /></svg>
+        <svg width={layout === 'bar' ? 11 : 14} height={layout === 'bar' ? 11 : 14} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M5 19 19 5" /></svg>
       </button>
       {HIGHLIGHTS.map(h => (
         <button
@@ -190,7 +192,7 @@ export default function FormatControls({ editor, layout }) {
           onMouseDown={e => e.preventDefault()}
           onClick={() => cmd.highlight(st.highlight === h.color ? null : h.color)}
           disabled={!st.canMark}
-          className={cx('press press-icon w-7 h-7 rounded-full shrink-0 disabled:opacity-35',
+          className={cx('press press-icon rounded-full shrink-0 disabled:opacity-35', dot,
             st.highlight === h.color && 'ring-2 ring-primary ring-offset-2 ring-offset-white dark:ring-offset-[#111820]')}
           style={{ background: h.color.replace(/[\d.]+\)$/, '0.85)') }}
         />
@@ -200,35 +202,34 @@ export default function FormatControls({ editor, layout }) {
 
   if (layout === 'bar') {
     return (
-      <div className="flex flex-wrap items-center gap-1" role="toolbar" aria-label="Formatting">
+      <div className="note-bar flex items-center gap-0.5 overflow-x-auto no-scrollbar" role="toolbar" aria-label="Formatting">
         <select
           aria-label="Paragraph style"
           value={STYLES.find(x => x.on)?.key ?? 'body'}
           onChange={e => STYLES.find(x => x.key === e.target.value)?.run()}
-          className="h-9 pl-3 pr-8 rounded-xl text-13 font-medium bg-slate-100 dark:bg-white/[0.07] text-slate-700 dark:text-slate-200 border-0 outline-none"
+          className="note-bar-select shrink-0 w-[124px] h-8 pl-3 pr-7 rounded-lg text-13 font-medium text-slate-700 dark:text-slate-200 border-0 outline-none"
         >
           {STYLES.map(x => <option key={x.key} value={x.key}>{x.label}</option>)}
         </select>
-        <span className="w-px h-6 mx-1 bg-slate-200 dark:bg-white/[0.1]" aria-hidden="true" />
+        <span className="shrink-0 w-px h-5 mx-1.5 bg-slate-200 dark:bg-white/[0.1]" aria-hidden="true" />
         {MARKS.map(m => (
-          <NoteButton key={m.key} label={m.label} active={m.on} disabled={!st.canMark} onPress={m.run} className="w-9 h-9">
-            <m.Icon size={18} />
+          <NoteButton key={m.key} label={m.label} active={m.on} disabled={!st.canMark} onPress={m.run} className="w-8 h-8 shrink-0">
+            <m.Icon size={17} />
           </NoteButton>
         ))}
-        <span className="w-px h-6 mx-1 bg-slate-200 dark:bg-white/[0.1]" aria-hidden="true" />
+        <span className="shrink-0 w-px h-5 mx-1.5 bg-slate-200 dark:bg-white/[0.1]" aria-hidden="true" />
         {LISTS.map(m => (
-          <NoteButton key={m.key} label={m.label} active={m.on} onPress={m.run} className="w-9 h-9">
-            <m.Icon size={18} />
+          <NoteButton key={m.key} label={m.label} active={m.on} onPress={m.run} className="w-8 h-8 shrink-0">
+            <m.Icon size={17} />
           </NoteButton>
         ))}
-        <NoteButton label="Outdent" disabled={!st.canLift} onPress={cmd.outdent} className="w-9 h-9"><IconOutdent size={18} /></NoteButton>
-        <NoteButton label="Indent" disabled={!st.canSink} onPress={cmd.indent} className="w-9 h-9"><IconIndent size={18} /></NoteButton>
-        <NoteButton label="Quote" active={st.quote} onPress={cmd.quote} className="w-9 h-9"><IconQuote size={18} /></NoteButton>
-        <span className="w-px h-6 mx-1 bg-slate-200 dark:bg-white/[0.1]" aria-hidden="true" />
+        <NoteButton label="Outdent" disabled={!st.canLift} onPress={cmd.outdent} className="w-8 h-8 shrink-0"><IconOutdent size={17} /></NoteButton>
+        <NoteButton label="Indent" disabled={!st.canSink} onPress={cmd.indent} className="w-8 h-8 shrink-0"><IconIndent size={17} /></NoteButton>
+        <NoteButton label="Quote" active={st.quote} onPress={cmd.quote} className="w-8 h-8 shrink-0"><IconQuote size={17} /></NoteButton>
+        <span className="shrink-0 w-px h-5 mx-1.5 bg-slate-200 dark:bg-white/[0.1]" aria-hidden="true" />
         {swatches}
-        <span className="flex-1" />
-        <NoteButton label="Undo" disabled={!st.canUndo} onPress={cmd.undo} className="w-9 h-9"><IconUndo size={18} /></NoteButton>
-        <NoteButton label="Redo" disabled={!st.canRedo} onPress={cmd.redo} className="w-9 h-9"><IconRedo size={18} /></NoteButton>
+        {/* No undo or redo here: Ctrl+Z and Ctrl+Shift+Z, as in a Mac's
+            Notes, and the one row the bar has room for keeps the rest. */}
       </div>
     )
   }

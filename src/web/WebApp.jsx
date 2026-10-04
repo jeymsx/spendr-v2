@@ -4,7 +4,7 @@ import { OnboardingGuard } from '../App'
 import SyncManager from '../components/SyncManager'
 import WebLayout from './WebLayout'
 import WebToaster from './WebToaster'
-import { WebScroll } from './components/WebPane'
+import { WebScroll, DETAIL_WIDTH } from './components/WebPane'
 import WebFormPage from './WebFormPage'
 import {
   WebAccountsSection, AccountsIndex, WebInsightsSection, WebRecurringSection, RecurringIndex,
@@ -85,8 +85,15 @@ function LoadingScreen() {
   )
 }
 
-/** A single-task page: one centred column. @param {{width?: number, top?: boolean, children: import('react').ReactNode}} props */
-const Column = ({ width = 680, top = false, children }) => <WebScroll width={width} top={top}>{children}</WebScroll>
+/**
+ * A page of one column: from the left edge a split view's list starts at
+ * (no padding of its own - the page brings its own, as a list does), as wide
+ * as a split view's page, so moving from Accounts to Notifications nothing
+ * jumps to the middle of the window.
+ *
+ * @param {{width?: number, top?: boolean, children: import('react').ReactNode}} props
+ */
+const Column = ({ width = DETAIL_WIDTH, top = false, children }) => <WebScroll width={width} top={top} start pad={false}>{children}</WebScroll>
 /** A form in a card, centred (WebFormPage). @param {{width?: number, children: import('react').ReactNode}} props */
 const Form = ({ width = 600, children }) => <WebScroll width={width + 64}><WebFormPage width={width}>{children}</WebFormPage></WebScroll>
 
@@ -106,7 +113,7 @@ export default function WebApp() {
               <Route path="/" element={<WebHome />} />
 
               {/* ── Money ── */}
-              <Route path="/transactions" element={<Column width={780}><Transactions /></Column>} />
+              <Route path="/transactions" element={<Column><Transactions /></Column>} />
               <Route path="/transactions/deleted" element={<Column><RecentlyDeleted /></Column>} />
               <Route path="/transactions/:id/edit" element={<Form><EditTransaction /></Form>} />
               <Route path="/expense"  element={<Form><AddExpense /></Form>} />
@@ -158,7 +165,7 @@ export default function WebApp() {
 
               {/* ── You ── */}
               <Route path="/notifications" element={<Column top><Notifications /></Column>} />
-              <Route path="/achievements" element={<Column width={760} top><Achievements /></Column>} />
+              <Route path="/achievements" element={<Column top><Achievements /></Column>} />
               <Route path="/badges" element={<Navigate to="/achievements?tab=badges" replace />} />
               <Route path="/recap" element={<Column><Recap /></Column>} />
               <Route path="/recap/:month" element={<Column><Recap /></Column>} />

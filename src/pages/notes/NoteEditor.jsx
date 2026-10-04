@@ -358,7 +358,7 @@ function NoteBody({ note, back, fresh }) {
       )}
 
       {desktop && editor && !readOnly && (
-        <div className="sticky top-0 z-10 mx-5 mb-3 py-2 bg-page/95 backdrop-blur border-b border-slate-100 dark:border-white/[0.07]">
+        <div className="note-desk-bar sticky top-0 z-10 mx-5 mb-3">
           <FormatControls editor={editor} layout="bar" />
         </div>
       )}

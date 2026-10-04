@@ -1934,7 +1934,7 @@ html.web .sheet-panel-exit {
   top: 50%;
   right: auto;
   bottom: auto;
-  width: min(600px, calc(100vw - 4rem));
+  width: min(520px, calc(100vw - 4rem));
   max-height: min(84vh, 900px);
   border-radius: 20px;
   box-shadow: 0 24px 64px rgba(0, 0, 0, 0.34);
@@ -1970,13 +1970,13 @@ html.web .sheet-panel-exit .sheet-grab {
   padding-top: 1.25rem;
 }
 
-/* Wider windows get a slightly wider modal — a category manager with a grid
-   inside is cramped at 600px on a 1500px screen. */
-@media (min-width: 1440px) {
-  html.web .sheet-panel,
-  html.web .sheet-panel-exit {
-    width: min(680px, calc(100vw - 6rem));
-  }
+/* 520px: a transaction's details, a confirmation, a picker - a modal the
+   width of what is in it. It was 680px on a wide screen, and a transaction's
+   four lines sat at its two far edges. A sheet holding a grid asks for more
+   by carrying .sheet-wide. */
+html.web .sheet-panel:has(.sheet-wide),
+html.web .sheet-panel-exit:has(.sheet-wide) {
+  width: min(680px, calc(100vw - 6rem));
 }
 
 /* The CSV importer is reused whole inside a desktop card, and it brings its

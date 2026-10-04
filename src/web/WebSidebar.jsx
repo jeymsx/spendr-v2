@@ -1,11 +1,11 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import db from '../db/db'
 import { setViewMode } from './useViewMode'
 import WebAddMenu from './WebAddMenu'
 import WebSyncStatus from './WebSyncStatus'
-import { WebIconHome, WebIconList, WebIconWallet, WebIconChart, WebIconImport, WebIconPhone } from './WebIcons'
+import { WebIconHome, WebIconList, WebIconWallet, WebIconChart, WebIconImport, WebIconPhone, WebIconSidebar } from './WebIcons'
 import {
   IconBell, IconTarget, IconTrophy, IconDebt, IconBillHistory, IconSettings, IconCalc, IconNotes,
 } from '../components/icons'
@@ -29,6 +29,21 @@ import useRates from '../hooks/useRates'
  *   also?: string}} NavEntry  `also`: another address that is this section too
  */
 
+/** Where the sidebar's folded or open state is kept, per browser. */
+const COLLAPSE_KEY = 'spendr-sidebar'
+
+/**
+ * Folded to its icons, or open: what was last chosen, and before anything
+ * was, folded on a window too narrow to give a list and its page room.
+ */
+function initiallyCollapsed() {
+  try {
+    const saved = localStorage.getItem(COLLAPSE_KEY)
+    if (saved) return saved === 'collapsed'
+  } catch { /* storage off */ }
+  return typeof window !== 'undefined' && window.innerWidth < 1280
+}
+
 /** @param {NavEntry & {end?: boolean}} props */
 function NavItem({ to, label, Icon, badge = 0, end = false, also }) {
   const { pathname } = useLocation()
@@ -51,6 +66,12 @@ function NavItem({ to, label, Icon, badge = 0, end = false, also }) {
 }
 
 export default function WebSidebar() {
+  const [collapsed, setCollapsed] = useState(initiallyCollapsed)
+  const toggle = () => setCollapsed(c => {
+    const next = !c
+    try { localStorage.setItem(COLLAPSE_KEY, next ? 'collapsed' : 'open') } catch { /* storage off */ }
+    return next
+  })
   const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
   /* Only a name you gave. Home can fall back to "Good morning, there!", but
      under the logo "there" reads as a label for nothing. */
@@ -94,15 +115,29 @@ export default function WebSidebar() {
   ]
 
   return (
-    <aside className="web-sidebar shrink-0 w-[248px] h-full flex flex-col">
+    <aside className={`web-sidebar shrink-0 h-full flex flex-col${collapsed ? ' is-collapsed' : ''}`}>
       {/* The mark, as the sign-in screen, the lock screen and Settings show
-          it - not a letter in a tile. */}
-      <div className="px-5 pt-6 pb-5 flex items-center gap-2.5">
-        <img src="/icons/icon-192.png" alt="" width={36} height={36} className="web-brand" />
-        <div className="web-brand-text min-w-0">
-          <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
-          {name && <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>}
-        </div>
+          it - not a letter in a tile. Folded, the mark is the way to unfold:
+          under the pointer it turns into the sidebar's icon. Open, the
+          sidebar's icon beside the name folds it. */}
+      <div className="web-brand-row flex items-center gap-2.5">
+        {collapsed ? (
+          <button type="button" className="web-brand-toggle" onClick={toggle} aria-label="Open the sidebar" title="Open the sidebar">
+            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="web-brand" />
+            <span className="web-brand-swap" aria-hidden="true"><WebIconSidebar /></span>
+          </button>
+        ) : (
+          <>
+            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="web-brand" />
+            <div className="web-brand-text flex-1 min-w-0">
+              <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
+              {name && <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>}
+            </div>
+            <button type="button" className="web-sidebar-fold" onClick={toggle} aria-label="Close the sidebar" title="Close the sidebar">
+              <WebIconSidebar />
+            </button>
+          </>
+        )}
       </div>
 
       <div className="px-4 pb-4">
