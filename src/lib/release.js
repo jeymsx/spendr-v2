@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-09-30'
+export const RELEASE_DATE = '2026-10-04'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,13 +32,18 @@ export const RELEASE_DATE = '2026-09-30'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'compose',
-    title: 'Field to field, holding still',
-    desc: 'Going from the amount to the description, or between any two fields, the page no longer slides up as the number pad gives way to the letters.',
+    icon: 'desktop',
+    title: 'A sidebar that folds',
+    desc: 'On a computer, the button beside Spendr folds the sidebar to its icons. Point at the logo and click to open it again.',
   },
   {
-    icon: 'phone',
-    title: 'The tab bar stays down',
-    desc: 'It no longer rides up on the keyboard, on any page, whichever way iOS makes room for the keyboard.',
+    icon: 'compose',
+    title: 'Edit in place',
+    desc: 'On a computer, editing a transaction opens over the page you were on, and the transaction itself shows in a tidier, narrower window.',
+  },
+  {
+    icon: 'wallet',
+    title: 'Pages that line up',
+    desc: 'Every list and the page beside it divide at the same place, Home shows five cards and a way to the rest, and hovering a row no longer lights it up white in dark mode.',
   },
 ]

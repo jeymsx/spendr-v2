@@ -24,6 +24,14 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.14.3',
+    date: '2026-09-30',
+    items: [
+      { title: 'Field to field, holding still', desc: 'Going from the amount to the description, or between any two fields, the page no longer slides up as the number pad gives way to the letters.' },
+      { title: 'The tab bar stays down', desc: 'It no longer rides up on the keyboard, on any page, whichever way iOS makes room for the keyboard.' },
+    ],
+  },
+  {
     version: '0.14.2',
     date: '2026-09-30',
     items: [
