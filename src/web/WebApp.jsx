@@ -6,10 +6,11 @@ import WebLayout from './WebLayout'
 import WebToaster from './WebToaster'
 import { WebScroll, DETAIL_WIDTH } from './components/WebPane'
 import WebFormPage from './WebFormPage'
+import PhonePage from './ui/PhonePage'
 import {
   WebAccountsSection, AccountsIndex, WebInsightsSection, WebRecurringSection, RecurringIndex,
   WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex, WebBudgetSection, BudgetIndex,
-  WebSettingsSection, WebNotesSection, NotesIndex, WebTransactionsSection,
+  WebSettingsSection, WebNotesSection, NotesIndex,
 } from './pages/WebSections'
 // The desktop's own styles: loaded with this bundle only, so a phone never
 // downloads them.
@@ -35,7 +36,7 @@ const Onboarding = lazy(() => import('../pages/Onboarding'))
 const WebHome      = lazy(() => import('./pages/WebHome'))
 const WebImport    = lazy(() => import('./pages/WebImport'))
 
-const TransactionsSummary = lazy(() => import('./pages/WebTransactions'))
+const WebTransactions = lazy(() => import('./pages/WebTransactions'))
 const RecentlyDeleted = lazy(() => import('../pages/transactions/RecentlyDeleted'))
 const EditTransaction = lazy(() => import('../pages/EditTransaction'))
 const AddExpense   = lazy(() => import('../pages/AddExpense'))
@@ -114,10 +115,8 @@ export default function WebApp() {
               <Route path="/" element={<WebHome />} />
 
               {/* ── Money ── */}
-              <Route path="/transactions" element={<WebTransactionsSection />}>
-                <Route index element={<TransactionsSummary />} />
-                <Route path="deleted" element={<RecentlyDeleted />} />
-              </Route>
+              <Route path="/transactions" element={<WebTransactions />} />
+              <Route path="/transactions/deleted" element={<PhonePage><RecentlyDeleted /></PhonePage>} />
               <Route path="/transactions/:id/edit" element={<Form><EditTransaction /></Form>} />
               <Route path="/expense"  element={<Form><AddExpense /></Form>} />
               <Route path="/inflow"   element={<Form><AddInflow /></Form>} />

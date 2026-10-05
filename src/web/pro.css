@@ -47,6 +47,7 @@ html.web {
   --d-sidebar: 236px;
 }
 html.web.dark {
+  color-scheme: dark;
   --d-bg: #0d0e11;
   --d-panel: #15161a;
   --d-sunken: #1b1c21;
@@ -221,7 +222,8 @@ html.web .d-search-trigger:focus-visible { outline: none; box-shadow: var(--d-ri
 
 /* Page: a scrolling area with a header and a body, the same gutters on every page. */
 html.web .d-page { height: 100%; overflow-y: auto; overflow-x: hidden; }
-html.web .d-page-inner { margin: 0 auto; padding: 24px var(--d-gutter) 48px; }
+/* Every page starts at the same left edge, beside the sidebar - none centred. */
+html.web .d-page-inner { margin: 0; padding: 24px var(--d-gutter) 48px; }
 html.web .d-page-head {
   display: flex;
   align-items: flex-end;
@@ -307,6 +309,9 @@ html.web .d-input {
   transition: border-color 0.12s, box-shadow 0.12s;
 }
 html.web.dark .d-input { background: var(--d-sunken); }
+/* The phone sets every field to 16px so iOS does not zoom into it; a desktop has no such zoom. */
+html.web .d-input, html.web .d-palette-input { font-size: 13px !important; }
+html.web .d-palette-input { font-size: 15px !important; }
 html.web .d-input::placeholder { color: var(--d-text-3); }
 html.web .d-input:focus { outline: none; border-color: var(--d-accent); box-shadow: var(--d-ring); }
 html.web .d-input-wrap { position: relative; display: flex; align-items: center; }
@@ -500,6 +505,8 @@ html.web .d-menu-label { padding: 6px 10px 4px; font-size: 11px; font-weight: 60
 
 /* Stat. */
 html.web .d-stat-label { font-size: 12.5px; font-weight: 500; color: var(--d-text-2); }
+html.web .d-stat-value.d-neg { color: var(--d-neg); }
+html.web .d-stat-value.d-pos { color: var(--d-pos); }
 html.web .d-stat-value { margin-top: 6px; font-size: 24px; line-height: 30px; font-weight: 650; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--d-text); }
 html.web .d-stat-note { margin-top: 4px; font-size: 12px; color: var(--d-text-3); }
 
@@ -569,3 +576,35 @@ html.web .d-skel { border-radius: 6px; background: linear-gradient(90deg, var(--
 @media (prefers-reduced-motion: reduce) {
   html.web .d-pop, html.web .d-drawer, html.web .d-drawer-scrim { animation: none; }
 }
+
+/* ── A phone page in the desktop's frame (ui/PhonePage.jsx) ───────────────
+   Its own header becomes a desktop header: the title at the left at 22px,
+   the back button a small bordered square beside it. The phone pads its
+   content 20px; the frame pads 8px, so together they make the 28px gutter. */
+html.web .d-phone { padding-left: 8px; padding-right: 8px; }
+html.web .d-phone .pinned-top { position: static; }
+html.web .d-phone .page-header {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 0 20px 18px;
+  min-height: 36px;
+}
+html.web .d-phone .page-header-title {
+  text-align: left;
+  padding: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  color: var(--d-text);
+}
+html.web .d-phone .page-header > .subpage-back {
+  width: 32px;
+  height: 32px;
+  border-radius: var(--d-r);
+  background: var(--d-panel);
+  border: 1px solid var(--d-border-strong);
+  box-shadow: none;
+  color: var(--d-text-2);
+}
+html.web .d-phone .page-header > .subpage-back:hover { background: var(--d-subtle); color: var(--d-text); }

@@ -14,7 +14,6 @@ import { WebSplit, WebPaneEmpty } from '../components/WebPane'
  * anything is picked.
  */
 
-const Transactions = lazy(() => import('../../pages/Transactions'))
 const Accounts  = lazy(() => import('../../pages/Accounts'))
 const Insights  = lazy(() => import('../../pages/Insights'))
 const Recurring = lazy(() => import('../../pages/Recurring'))
@@ -46,21 +45,6 @@ const byId = (id) => (id == null ? null : `[data-web-id="${String(id).replace(/[
  */
 function useAnyToPick(count) {
   return useLiveQuery(async () => (await count()) > 0, [], undefined)
-}
-
-// ── Transactions ─────────────────────────────────────────────────────────────
-
-/* The list on the left like every other section's, and on the right what the
-   month adds up to (TransactionsSummary, WebTransactions.jsx) - or Recently
-   deleted, with its way back to the month. */
-export function WebTransactionsSection() {
-  return (
-    <WebSplit
-      label="Transactions"
-      list={<Transactions />}
-      isRoot={(p) => p === '/transactions'}
-    />
-  )
 }
 
 // ── Accounts ─────────────────────────────────────────────────────────────────

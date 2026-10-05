@@ -219,7 +219,7 @@ function CommandPalette({ initial, onClose }) {
             aria-expanded="true"
             aria-controls="d-palette-list"
             aria-activedescendant={items[active] ? `d-cmd-${active}` : undefined}
-            className="flex-1 bg-transparent outline-none text-[15px] text-[var(--d-text)] placeholder:text-[var(--d-text-3)]"
+            className="d-palette-input flex-1 bg-transparent outline-none text-[15px] text-[var(--d-text)] placeholder:text-[var(--d-text-3)]"
           />
           <kbd className="d-kbd">Esc</kbd>
         </div>

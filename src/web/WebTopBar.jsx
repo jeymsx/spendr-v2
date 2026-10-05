@@ -90,7 +90,7 @@ function Bell() {
         onMouseEnter={() => { import('./NotificationsPopover') }}
       />
       {unread > 0 && (
-        <span aria-hidden="true" className="pointer-events-none absolute top-1 right-1 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-10 font-semibold leading-4 text-center tabular-nums ring-2 ring-[var(--d-panel)]">
+        <span aria-hidden="true" className="pointer-events-none absolute -top-0.5 -right-0.5 min-w-[16px] h-4 px-1 rounded-full bg-red-500 text-white text-10 font-semibold leading-4 text-center tabular-nums ring-2 ring-[var(--d-panel)]">
           {unread > 9 ? '9+' : unread}
         </span>
       )}

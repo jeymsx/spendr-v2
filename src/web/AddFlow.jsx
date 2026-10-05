@@ -37,8 +37,8 @@ export function useAddFlow() {
  * a save navigates to "/" and the overlay drops away, and back acts as cancel.
  * The /expense, /inflow and /transfer routes still exist for deep links.
  *
- * There is no type-picker dialog: WebAddMenu in the sidebar reveals the three
- * types on hover and calls openAdd(type) directly, so nothing opens a modal
+ * There is no type-picker dialog: the Add menu in the top bar (WebTopBar)
+ * lists the types and calls openAdd(type) directly, so nothing opens a modal
  * purely to ask which kind of transaction this is.
  */
 export function AddFlowProvider({ children }) {
@@ -80,8 +80,8 @@ export function AddFlowProvider({ children }) {
   }, [location.key, location.search, location.pathname, navigate])
 
   /* One key from anywhere, as a desktop app would have it: E, I, T and Q
-     open the expense, inflow, transfer and quick-log forms (WebAddMenu
-     shows each beside its name). Not while typing, not with a modifier
+     open the expense, inflow, transfer and quick-log forms (the top bar's
+     Add menu shows each beside its name). Not while typing, not with a modifier
      held (Ctrl+T is the browser's), and not over a sheet or dialog. */
   useEffect(() => {
     if (flow) return
