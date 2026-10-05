@@ -1,5 +1,6 @@
 import { useId, useMemo } from 'react'
 import { glassBadgeSvg, glassSvg, svgUrl } from './glass'
+import { useIsDark } from '../../context/ThemeContext'
 
 /**
  * A glass picture on the page.
@@ -13,15 +14,21 @@ import { glassBadgeSvg, glassSvg, svgUrl } from './glass'
  * the classes glass.js puts on each layer and the keyframes in index.css.
  * Inline pictures share one document, so each gets its own id prefix.
  *
+ * The soft shadow under each picture is drawn in dark mode only. On a light
+ * page it read as a smudge under every medallion and illustration, the same
+ * grey lift the cards dropped there. (Share pictures drawn to a canvas build
+ * their SVG directly and keep it.)
+ *
  * @param {{name: string, hue?: string, size?: number, animate?: boolean, float?: boolean,
  *          locked?: boolean, className?: string, style?: import('react').CSSProperties}} props
  */
 export function GlassArt({ name, hue, size = 96, animate = false, float = false, locked = false, className = '', style }) {
   const rid = useId().replace(/[^a-z0-9]/gi, '')
   const live = animate || float
+  const shadow = useIsDark()
   const svg = useMemo(
-    () => glassSvg(name, { hue, locked, id: live ? `ga${rid}` : 'ga' }),
-    [name, hue, locked, live, rid],
+    () => glassSvg(name, { hue, locked, shadow, id: live ? `ga${rid}` : 'ga' }),
+    [name, hue, locked, shadow, live, rid],
   )
   return <Picture svg={svg} size={size} live={live} animate={animate} float={float} className={className} style={style} />
 }
@@ -37,9 +44,10 @@ export function GlassArt({ name, hue, size = 96, animate = false, float = false,
 export function GlassBadge({ glyph, hue, shape = 'hex', level, size = 72, locked = false, animate = false, float = false, className = '', style }) {
   const rid = useId().replace(/[^a-z0-9]/gi, '')
   const live = animate || float
+  const shadow = useIsDark()
   const svg = useMemo(
-    () => glassBadgeSvg({ glyph, hue, shape, level, locked, id: live ? `gb${rid}` : 'gb' }),
-    [glyph, hue, shape, level, locked, live, rid],
+    () => glassBadgeSvg({ glyph, hue, shape, level, locked, shadow, id: live ? `gb${rid}` : 'gb' }),
+    [glyph, hue, shape, level, locked, shadow, live, rid],
   )
   return <Picture svg={svg} size={size} live={live} animate={animate} float={float} className={className} style={style} />
 }

@@ -88,7 +88,8 @@ export default function WrappedCard({ month, className = '' }) {
 
   const cardShadow = mode === 'dark'
     ? '0 14px 34px -18px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.16)'
-    : '0 14px 30px -18px rgba(15, 23, 42, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+    // Flat on a light page, as the Highlights beside it are.
+    : 'inset 0 1px 0 rgba(255, 255, 255, 0.2)'
 
   return (
     <MotionConfig reducedMotion={reduce ? 'always' : 'never'}>

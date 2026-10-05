@@ -75,7 +75,8 @@ export default function Highlights({ items }) {
   if (!shown.length) return null
   const shadow = dark
     ? '0 12px 28px -16px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.16)'
-    : '0 12px 26px -16px rgba(15, 23, 42, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.2)'
+    // Flat on a light page: a drop shadow there read as a grey smudge under each card.
+    : 'inset 0 1px 0 rgba(255, 255, 255, 0.2)'
   return (
     <section>
       <SectionHeading>Highlights</SectionHeading>

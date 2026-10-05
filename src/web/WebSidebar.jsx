@@ -7,7 +7,7 @@ import WebAddMenu from './WebAddMenu'
 import WebSyncStatus from './WebSyncStatus'
 import { WebIconHome, WebIconList, WebIconWallet, WebIconChart, WebIconImport, WebIconPhone, WebIconSidebar } from './WebIcons'
 import {
-  IconBell, IconTarget, IconTrophy, IconDebt, IconBillHistory, IconSettings, IconCalc, IconNotes,
+  IconTarget, IconTrophy, IconDebt, IconBillHistory, IconSettings, IconCalc, IconNotes,
 } from '../components/icons'
 import { quickActionCounts } from '../pages/dashboard/shared'
 import { useBaseCurrency } from '../context/CurrencyContext'
@@ -20,8 +20,11 @@ import useRates from '../hooks/useRates'
  * (Goals, Debts, Recurring) and the discs in its header (the bell, Settings).
  * A landscape screen has the room to list them all, so nothing is two taps
  * away. The badges are the phone's own: Home's quick-action counts (the same
- * rule - only what you can act on, and acting clears it) and the bell's
- * unread count.
+ * rule - only what you can act on, and acting clears it).
+ *
+ * Notifications are the one exception: the bell on Home opens them in a
+ * panel (NotificationsPopover), so a sidebar entry was a second way to the
+ * same list. /notifications is still there, behind the panel's "See all".
  */
 
 /**
@@ -76,7 +79,6 @@ export default function WebSidebar() {
   /* Only a name you gave. Home can fall back to "Good morning, there!", but
      under the logo "there" reads as a label for nothing. */
   const name = nameMeta?.value?.trim() || ''
-  const unread = useLiveQuery(() => db.notifications.where('read').equals(0).count(), [], 0)
 
   // The phone's quick-action badges, read the same way (dashboard/shared.js).
   const recurring = useLiveQuery(() => db.recurring.toArray(), [], [])
@@ -108,7 +110,6 @@ export default function WebSidebar() {
   ]
   /** @type {NavEntry[]} */
   const you = [
-    { to: '/notifications', label: 'Notifications', Icon: IconBell, badge: unread },
     { to: '/achievements', label: 'Achievements', Icon: IconTrophy },
     { to: '/import', label: 'Import', Icon: WebIconImport },
     { to: '/settings', label: 'Settings', Icon: IconSettings },

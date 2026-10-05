@@ -1004,6 +1004,80 @@ html.dark body {
   .acct-card.acct-card-sorting { rotate: 0deg; scale: 1; }
 }
 
+/* ── The cards and the wallet in light mode ──────────────────────────────────
+   Everything above was tuned on the dark page, where a card has to throw a
+   near-black shadow to read as lifted at all and grain hides in the dark.
+   On a near-white page the same recipe looked dirty: a grey halo round every
+   card, a smudge where each card in a stack overlaps the one behind, and
+   grain greying the brand colour.
+
+   So on paper:
+   - No drop shadow. A coloured card on white stands out on its colour
+     alone; the inset rim keeps the moulded edge. Only a card being carried
+     to a new place lifts, tinted its own deep colour rather than grey.
+   - The gradient runs only part of the way to the deep stop, so a card is
+     its brand colour rather than a brand colour falling into navy.
+   - No grain, which greyed the colour - and the face a step lighter
+     (OKLCH lightness +0.06, chroma and hue kept, so brighter rather than
+     paler). The stops were solved dark enough to carry the grain; with it
+     gone there was room. Measured as rendered, white on the lightest 2% of
+     every brand's text band, text hidden: 5.9-7.1:1 before, 4.7-5.6:1
+     after (MariBank lowest). At +0.07 MariBank was down to 4.54, so +0.06
+     keeps a margin. The second stop is still the darker one.
+
+   :where() keeps these at the specificity of the rules they replace, so the
+   pressed, carried and tilted states below still win as they do in dark. */
+:where(html:not(.dark)) .acct-card {
+  background-image:
+    var(--card-pattern, none),
+    linear-gradient(135deg,
+      var(--card-from, #3f4a5a) 0%,
+      color-mix(in oklab, var(--card-from, #3f4a5a) 55%, var(--card-to, #26303c)) 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+:where(html:not(.dark)) .acct-card::before { display: none; }
+/* Gated: with var() inside, a browser without relative colours would accept
+   the declaration and then drop it at computed time, leaving no face at all. */
+@supports (color: oklch(from red l c h)) {
+  :where(html:not(.dark)) .acct-card {
+    background-image:
+      var(--card-pattern, none),
+      linear-gradient(135deg,
+        oklch(from var(--card-from, #3f4a5a) calc(l + 0.06) c h) 0%,
+        oklch(from color-mix(in oklab, var(--card-from, #3f4a5a) 55%, var(--card-to, #26303c)) calc(l + 0.06) c h) 100%);
+  }
+}
+:where(html:not(.dark)) .acct-card:active {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.24),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.10);
+}
+:where(html:not(.dark)) .acct-card.acct-card-dragging {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.26),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 8px 16px -6px color-mix(in srgb, var(--card-to, #26303c) 35%, transparent),
+    0 26px 40px -18px color-mix(in srgb, var(--card-to, #26303c) 70%, transparent);
+}
+:where(html:not(.dark)) .card-tilt > .acct-card {
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+}
+
+/* The wallet: no lift, as the cards, and the base settles far less -
+   darkening the bottom fifth was what turned its lower half dull grey-blue
+   on a white page. Grain halved for the same reason the cards lose theirs. */
+:where(html:not(.dark)) .wallet { filter: none; }
+:where(html:not(.dark)) .wallet-card::before { opacity: 0.05; }
+:where(html:not(.dark)) .wallet-card::after {
+  background:
+    radial-gradient(125% 72% at 50% -12%, rgba(255, 255, 255, 0.18) 0%, rgba(255, 255, 255, 0) 68%),
+    linear-gradient(180deg, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.07) 100%);
+}
+
 /* ── Colour swatch, selected ─────────────────────────────────────────────────
    A ring in the swatch's OWN colour with a gap of page background between it
    and the circle - the radio-button treatment, rather than a single accent

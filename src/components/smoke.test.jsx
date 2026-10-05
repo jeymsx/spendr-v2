@@ -33,6 +33,7 @@ vi.mock('../db/db', () => ({
 }))
 vi.mock('../context/ThemeContext', () => ({
   useTheme: () => ({ theme: 'dark', toggleTheme: () => {}, accentColor: '#2D9DFF' }),
+  useIsDark: () => true,
 }))
 vi.mock('../context/ToastContext', () => ({
   useToast: () => ({ showToast: () => {}, dismiss: () => {} }),

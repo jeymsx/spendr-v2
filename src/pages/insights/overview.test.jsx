@@ -15,7 +15,7 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 
 vi.mock('../../db/db', () => ({ default: {}, dbReady: Promise.resolve() }))
 /* An empty period draws a glass picture, in the accent. */
-vi.mock('../../context/ThemeContext', () => ({ useTheme: () => ({ theme: 'light', accentColor: '#2D9DFF' }) }))
+vi.mock('../../context/ThemeContext', () => ({ useTheme: () => ({ theme: 'light', accentColor: '#2D9DFF' }), useIsDark: () => false }))
 
 const { StatPair, CategoryLegend, DonutHero } = await import('./Summary')
 const { sparkPath } = await import('./Explore')

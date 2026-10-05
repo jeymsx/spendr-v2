@@ -119,3 +119,6 @@ export const useTheme = () => {
   if (!ctx) throw new Error('useTheme must be used inside ThemeProvider')
   return ctx
 }
+
+/** Whether the app is dark - false outside a ThemeProvider, for leaf pictures rendered alone (tests, previews). */
+export const useIsDark = () => useContext(ThemeContext)?.theme === 'dark'
