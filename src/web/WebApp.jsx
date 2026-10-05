@@ -9,7 +9,7 @@ import WebFormPage from './WebFormPage'
 import PhonePage from './ui/PhonePage'
 import {
   WebInsightsSection, WebRecurringSection, RecurringIndex,
-  WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex, WebBudgetSection, BudgetIndex,
+  WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex,
   WebSettingsSection, WebNotesSection, NotesIndex,
 } from './pages/WebSections'
 // The desktop's own styles: loaded with this bundle only, so a phone never
@@ -55,7 +55,8 @@ const WebAccountDetail = lazy(() => import('./pages/WebAccountDetail'))
 const AccountNew    = lazy(() => import('../pages/AccountNew'))
 const AccountEdit   = lazy(() => import('../pages/AccountEdit'))
 const StatementHistory = lazy(() => import('../pages/accounts/StatementHistory'))
-const CategoryDetail = lazy(() => import('../pages/CategoryDetail'))
+const WebBudget = lazy(() => import('./pages/WebBudget'))
+const WebCategory = lazy(() => import('./pages/WebCategory'))
 const PersonDetail  = lazy(() => import('../pages/debts/PersonDetail'))
 const GoalDetail    = lazy(() => import('../pages/GoalDetail'))
 const RecurringDetail = lazy(() => import('../pages/RecurringDetail'))
@@ -140,10 +141,8 @@ export default function WebApp() {
               </Route>
 
               {/* ── Plans ── */}
-              <Route element={<WebBudgetSection />}>
-                <Route path="/budget" element={<BudgetIndex />} />
-                <Route path="/categories/:name" element={<CategoryDetail />} />
-              </Route>
+              <Route path="/budget" element={<WebBudget />} />
+              <Route path="/categories/:name" element={<WebCategory />} />
               <Route path="/goals" element={<WebGoalsSection />}>
                 <Route index element={<GoalsIndex />} />
                 <Route path=":id" element={<GoalDetail />} />
