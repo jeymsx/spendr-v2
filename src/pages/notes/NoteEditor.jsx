@@ -172,7 +172,12 @@ function NoteBody({ note, back, fresh }) {
       scrollMargin: { top: 90, bottom: 80, left: 0, right: 0 },
       scrollThreshold: { top: 90, bottom: 80, left: 0, right: 0 },
     },
-    onUpdate: ({ editor: e }) => {
+    onUpdate: ({ editor: e, transaction }) => {
+      /* Only a change to the document is something to save. Tiptap also
+         emits an update with no change in it - setEditable does, below, as
+         the note opens - and saving that stamped editedAt on every note
+         merely opened, so opening one moved it to the top of the list. */
+      if (transaction && !transaction.docChanged) return
       latest.current = e.getJSON()
       dirty.current = true
       if (timer.current) clearTimeout(timer.current)
@@ -199,7 +204,8 @@ function NoteBody({ note, back, fresh }) {
   }, [editor]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Put in Recently deleted, or put back, while open.
-  useEffect(() => { editor?.setEditable(!readOnly) }, [editor, readOnly])
+  // false: no update event, which would read as an edit (see onUpdate).
+  useEffect(() => { editor?.setEditable(!readOnly, false) }, [editor, readOnly])
 
   // A newer copy from another device, taken when nothing here is waiting.
   useEffect(() => {
