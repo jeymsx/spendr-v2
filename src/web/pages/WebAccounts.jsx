@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { CardsSkeleton, RowsSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { AccountCard } from '../../pages/dashboard/Tiles'
 import { useNavigate } from 'react-router-dom'
 import { TYPE_LABEL, INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
@@ -69,13 +70,16 @@ export default function WebAccounts() {
         </>
       }
     >
-      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-        <Stat label="Net worth" value={<Money value={breakdown.total} />} note="What you have, less what you owe" />
-        <Stat label="You have" value={fmt(have)} note="Spending, savings and investments" />
-        <Stat label="You owe" value={owe ? `−${fmt(owe)}` : fmt(0)} note="Cards and loans" />
-        <Stat label="Credit available" value={fmt(available)} note={creditRows.length ? `Across ${creditRows.length} ${creditRows.length === 1 ? 'card' : 'cards'}` : 'No cards'} />
-      </div>
+      {loading ? <StatsSkeleton /> : (
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8">
+          <Stat label="Net worth" value={<Money value={breakdown.total} />} note="What you have, less what you owe" />
+          <Stat label="You have" value={fmt(have)} note="Spending, savings and investments" />
+          <Stat label="You owe" value={owe ? `−${fmt(owe)}` : fmt(0)} note="Cards and loans" />
+          <Stat label="Credit available" value={fmt(available)} note={creditRows.length ? `Across ${creditRows.length} ${creditRows.length === 1 ? 'card' : 'cards'}` : 'No cards'} />
+        </div>
+      )}
 
+      {view === 'cards' && loading && <><CardsSkeleton cards={4} /><CardsSkeleton cards={2} /></>}
       {view === 'cards' && !loading && (
         groups.length === 0 ? (
           <Panel><Empty icon={<IWallet size={20} />} title="No accounts yet" body="Add your cash, a bank, an e-wallet or a card." action={<Btn variant="primary" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} /></Panel>
@@ -100,7 +104,7 @@ export default function WebAccounts() {
           rows={loading ? [] : rows}
           rowKey={(r) => r.acct.id}
           onRowClick={(r) => navigate(`/accounts/${r.acct.id}`)}
-          empty={loading ? <div className="h-40" /> : (
+          empty={loading ? <RowsSkeleton /> : (
             <Empty icon={<IWallet size={18} />} title="No accounts yet" body="Add your cash, a bank, an e-wallet or a card." action={<Btn size="sm" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} />
           )}
           columns={[

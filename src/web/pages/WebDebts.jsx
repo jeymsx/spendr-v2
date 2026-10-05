@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { RowsSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -69,12 +70,14 @@ export default function WebDebts() {
         </>
       }
     >
-      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-        <Stat label="Owed to you" value={fmt(totals.owed)} tone={totals.owed ? 'pos' : null} note="Still to come back" />
-        <Stat label="You owe" value={fmt(totals.owe)} tone={totals.owe ? 'neg' : null} note="Still to pay" />
-        <Stat label="Net" value={`${totals.net >= 0 ? '+' : '−'}${fmt(Math.abs(totals.net))}`} tone={totals.net > 0 ? 'pos' : totals.net < 0 ? 'neg' : null} note={totals.net >= 0 ? 'In your favour' : 'Against you'} />
-        <Stat label="Overdue" value={String(totals.overdue)} tone={totals.overdue ? 'neg' : null} note={totals.dueWeek ? `${totals.dueWeek} more due this week` : 'Nothing due this week'} />
-      </div>
+      {loading ? <StatsSkeleton /> : (
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8">
+          <Stat label="Owed to you" value={fmt(totals.owed)} tone={totals.owed ? 'pos' : null} note="Still to come back" />
+          <Stat label="You owe" value={fmt(totals.owe)} tone={totals.owe ? 'neg' : null} note="Still to pay" />
+          <Stat label="Net" value={`${totals.net >= 0 ? '+' : '−'}${fmt(Math.abs(totals.net))}`} tone={totals.net > 0 ? 'pos' : totals.net < 0 ? 'neg' : null} note={totals.net >= 0 ? 'In your favour' : 'Against you'} />
+          <Stat label="Overdue" value={String(totals.overdue)} tone={totals.overdue ? 'neg' : null} note={totals.dueWeek ? `${totals.dueWeek} more due this week` : 'Nothing due this week'} />
+        </div>
+      )}
 
       <Tabs className="mb-4" label="Show" value={view} onChange={setView} tabs={[
         { value: 'all', label: 'Everyone' },
@@ -87,7 +90,7 @@ export default function WebDebts() {
           rows={loading ? [] : people}
           rowKey={(p) => p.key}
           onRowClick={(p) => navigate(`/debts/person/${encodeURIComponent(p.key)}`)}
-          empty={loading ? <div className="h-40" /> : (
+          empty={loading ? <RowsSkeleton /> : (
             <Empty icon={<IUsers size={20} />} title="No debts" body="Money lent or borrowed, between you and the people you know." action={<Btn variant="primary" onClick={() => setFormOpen(true)}>Add one</Btn>} />
           )}
           columns={[

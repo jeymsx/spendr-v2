@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
+import { usePageTitle } from '../../lib/pageTitle'
+import { DetailSkeleton } from '../ui/Skeletons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -43,6 +45,7 @@ export default function WebDebtPerson() {
 
   const allDebts = useLiveQuery(() => db.debts.toArray(), [], undefined)
   const person = useMemo(() => byPerson(allDebts ?? []).find(p => p.key === decodeURIComponent(key ?? '')) ?? null, [allDebts, key])
+  usePageTitle(person?.label)
   const rows = useMemo(() => [...(person?.rows ?? [])].sort((a, b) => String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''))), [person])
   const archived = rows.length > 0 && rows.every(d => d.archivedAt)
   const confirmDebt = rows.find(d => d.id === confirmId) ?? null
@@ -88,7 +91,7 @@ export default function WebDebtPerson() {
   const closeDel = useCallback(() => { if (!busy) setConfirmId(null) }, [busy])
 
   const eyebrow = <Link to="/debts" className="inline-flex items-center gap-1 hover:text-[var(--d-text)]"><IChevronLeft size={13} />Debts</Link>
-  if (allDebts === undefined) return <Page eyebrow={eyebrow} title=" "><div className="h-40" /></Page>
+  if (allDebts === undefined) return <Page eyebrow={eyebrow}><DetailSkeleton /></Page>
   if (!person) {
     return (
       <Page eyebrow={eyebrow} title="Nobody here">

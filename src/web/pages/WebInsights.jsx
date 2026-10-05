@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { BoardSkeleton, ChartPanelSkeleton, PanelSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -95,9 +96,14 @@ export default function WebInsights() {
         value={view}
         onChange={(v) => navigate(v === 'overview' ? '/insights' : `/insights/${v}`)}
       />
-      {view === 'overview' && <Overview data={data} period={period} />}
-      {view === 'spending' && <Spending data={data} period={period} />}
-      {view === 'trend' && <Trend data={data} period={period} />}
+      {/* Nothing here says "nothing spent" before the month has been read. */}
+      {periodBound && data.loading ? <BoardSkeleton split="7/5" /> : (
+        <>
+          {view === 'overview' && <Overview data={data} period={period} />}
+          {view === 'spending' && <Spending data={data} period={period} />}
+          {view === 'trend' && <Trend data={data} period={period} />}
+        </>
+      )}
       {view === 'net-worth' && <NetWorth />}
       {view === 'forecast' && <Forecast />}
     </Page>
@@ -459,6 +465,7 @@ function NetWorth() {
   const chart = series.data.map(d => ({ label: d.day, value: d.value }))
   const change = chart.length > 1 ? chart[chart.length - 1].value - chart[0].value : 0
   const best = ends.reduce((b, m) => (m.change != null && (b == null || m.change > b.change) ? m : b), /** @type {any} */ (null))
+  if (series.loading) return <><StatsSkeleton count={3} /><ChartPanelSkeleton height={300} className="mb-5" /><PanelSkeleton rows={6} /></>
   return (
     <>
       <div className="grid grid-cols-3 gap-5 mb-8">
@@ -517,7 +524,7 @@ function Forecast() {
     return [...past, ...ahead]
   }, [forecast, showBand])
 
-  if (!forecast) return <div className="h-60" />
+  if (!forecast) return <><StatsSkeleton /><ChartPanelSkeleton height={300} className="mb-5" /><PanelSkeleton rows={5} /></>
   const neg = forecast.firstNegative
   const low = forecast.lowest
   const color = neg ? '#ef4444' : forecast.firstBelowFloor ? '#f59e0b' : '#10b981'

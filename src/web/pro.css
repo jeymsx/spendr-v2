@@ -700,6 +700,8 @@ html.web .d-swatch { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0
 /* Skeleton. */
 html.web .d-skel { border-radius: 10px; background: linear-gradient(90deg, var(--d-sunken), var(--d-hover), var(--d-sunken)); background-size: 200% 100%; animation: d-skel 1.2s ease-in-out infinite; }
 @keyframes d-skel { from { background-position: 100% 0; } to { background-position: -100% 0; } }
+html.web.reduce-motion .d-skel { animation: none; }
+@media (prefers-reduced-motion: reduce) { html.web .d-skel { animation: none; } }
 
 /* A hero card in the accent: the net worth, as the phone's wallet is. */
 html.web .d-hero {

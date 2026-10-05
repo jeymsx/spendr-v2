@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { BoardSkeleton } from '../ui/Skeletons'
 import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -58,7 +59,7 @@ export default function WebGoals() {
         </>
       }
     >
-      {!loading && active.length === 0 && archived.length === 0 ? (
+      {loading ? <BoardSkeleton /> : active.length === 0 && archived.length === 0 ? (
         <Panel>
           <Empty icon={<ITarget size={20} />} title="No goals yet" body="Name what you are saving for, set the amount, and point it at the account holding the money."
             action={<Btn variant="primary" onClick={() => setFormOpen(true)}>Add your first goal</Btn>} />

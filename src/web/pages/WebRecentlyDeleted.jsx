@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
+import { RowsSkeleton } from '../ui/Skeletons'
 import { Link } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -158,7 +159,7 @@ export default function WebRecentlyDeleted({ inPane = false }) {
         rowKey={(r) => r.id}
         selected={live}
         onSelectedChange={setSelected}
-        empty={entries === undefined ? <div className="h-40" /> : (
+        empty={entries === undefined ? <RowsSkeleton /> : (
           <div className="py-12 flex flex-col items-center text-center">
             <EmptyArt name="trash" size={88} />
             <p className="mt-2 text-15 font-semibold text-[var(--d-text)]">Nothing deleted</p>

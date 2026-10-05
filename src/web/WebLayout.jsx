@@ -11,13 +11,12 @@ import { AddFlowProvider } from './AddFlow'
 import { AchievementProvider } from '../context/AchievementContext'
 import Moments from '../components/achievements/Moments'
 import { keepStorage } from '../lib/keepStorage'
+import { PageSkeleton } from './ui/Skeletons'
 
+/* A page's code arriving: the outline of a page - a title, figures, two
+   panels - rather than a spinner in the middle of the window. */
 function PageFallback() {
-  return (
-    <div className="flex items-center justify-center h-full">
-      <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
-    </div>
-  )
+  return <PageSkeleton />
 }
 
 /**

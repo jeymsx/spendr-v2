@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
+import { usePageTitle } from '../../lib/pageTitle'
+import { DetailSkeleton } from '../ui/Skeletons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -44,6 +46,7 @@ export default function WebGoal() {
 
   const alloc = useMemo(() => allocateGoals({ goals: goalRows ?? [], accounts: accounts ?? [], base, rates }), [goalRows, accounts, base, rates])
   const goal = alloc.goals.find(g => g.id === Number(id))
+  usePageTitle(goal?.name)
   const loading = goalRows === undefined || accounts === undefined
 
   const funding = useMemo(() => {
@@ -91,7 +94,7 @@ export default function WebGoal() {
 
   const eyebrow = <Link to="/goals" className="inline-flex items-center gap-1 hover:text-[var(--d-text)]"><IChevronLeft size={13} />Goals</Link>
 
-  if (loading) return <Page eyebrow={eyebrow} title=" "><div className="h-40" /></Page>
+  if (loading) return <Page eyebrow={eyebrow}><DetailSkeleton /></Page>
   if (!goal) {
     return (
       <Page eyebrow={eyebrow} title="Goal not found">

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { RowsSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -16,7 +17,7 @@ import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { Segmented } from '../ui/controls'
-import { Stat, CategoryTile, Progress, Empty } from '../ui/display'
+import { Stat, CategoryTile, Progress, Empty, Skeleton } from '../ui/display'
 import { Bars } from '../ui/charts'
 import { shortDate, TxDescription, TxAccount, TxAmount } from './txParts'
 import { IChevronLeft, IEdit, IList } from '../ui/icons'
@@ -85,7 +86,9 @@ export default function WebCategory() {
   const pct = limit ? (monthTotal / limit) * 100 : 0
   const left = limit - monthTotal
 
-  if (categories && !cat && catTxs.length === 0) {
+  // Its figures, chart and rows wait for the ledger, so none says nothing first.
+  const loading = categories === undefined || transactions === undefined
+  if (!loading && !cat && catTxs.length === 0) {
     return (
       <Page title={name}>
         <Panel><Empty title="Nothing filed under this" body="It may have been renamed or deleted." action={<Btn onClick={() => navigate('/budget')}>Back to budget</Btn>} /></Panel>
@@ -100,30 +103,32 @@ export default function WebCategory() {
       subtitle={isInflow ? 'Money coming in' : limit ? `${fmt(limit)} a month` : 'No monthly limit'}
       actions={!isInflow && <Btn variant="secondary" icon={<IEdit size={14} />} onClick={() => navigate('/settings/budgets')}>{limit ? 'Edit limit' : 'Set a limit'}</Btn>}
     >
-      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-        <Stat label={`${verb} this month`} value={fmt(monthTotal)} note={limit ? `${Math.round(pct)}% of the limit` : ' '}>
-          {limit > 0 && <Progress className="mt-3" value={pct} color={pct > 100 ? 'var(--d-neg)' : pct > 85 ? 'var(--d-warn)' : cat?.color} />}
-        </Stat>
-        <Stat label={limit ? (left < 0 ? 'Over' : 'Left') : 'Limit'} value={limit ? fmt(Math.abs(left)) : '—'} tone={limit && left < 0 ? 'neg' : null} note={limit ? `Of ${fmt(limit)}` : 'Set one in Budget limits'} />
-        <Stat label="Usually" value={fmt(usual)} note={past.length ? `A month, over ${past.length} ${past.length === 1 ? 'month' : 'months'}` : 'Not enough history yet'} />
-        <Stat label="Transactions" value={catTxs.length.toLocaleString()} note={catTxs[0] ? `Last on ${shortDate(catTxs[0].date)}` : 'None yet'} />
-      </div>
+      {loading ? <StatsSkeleton /> : (
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8">
+          <Stat label={`${verb} this month`} value={fmt(monthTotal)} note={limit ? `${Math.round(pct)}% of the limit` : ' '}>
+            {limit > 0 && <Progress className="mt-3" value={pct} color={pct > 100 ? 'var(--d-neg)' : pct > 85 ? 'var(--d-warn)' : cat?.color} />}
+          </Stat>
+          <Stat label={limit ? (left < 0 ? 'Over' : 'Left') : 'Limit'} value={limit ? fmt(Math.abs(left)) : '—'} tone={limit && left < 0 ? 'neg' : null} note={limit ? `Of ${fmt(limit)}` : 'Set one in Budget limits'} />
+          <Stat label="Usually" value={fmt(usual)} note={past.length ? `A month, over ${past.length} ${past.length === 1 ? 'month' : 'months'}` : 'Not enough history yet'} />
+          <Stat label="Transactions" value={catTxs.length.toLocaleString()} note={catTxs[0] ? `Last on ${shortDate(catTxs[0].date)}` : 'None yet'} />
+        </div>
+      )}
 
       <Panel
         className="mb-5"
         title={`${verb} by month`}
         actions={<Segmented label="Span" value={span} onChange={setSpan} options={[{ value: '6', label: '6 months' }, { value: '12', label: '12 months' }]} />}
       >
-        <Bars data={months} height={220} color={cat?.color ?? 'var(--d-accent)'} valueLabel={verb} />
+        {loading ? <Skeleton className="h-[220px] rounded-[14px]" /> : <Bars data={months} height={220} color={cat?.color ?? 'var(--d-accent)'} valueLabel={verb} />}
       </Panel>
 
-      <Panel title="Transactions" meta={`${rows.length.toLocaleString()} rows`} flush>
+      <Panel title="Transactions" meta={loading ? null : `${rows.length.toLocaleString()} rows`} flush>
         <DataTable
           label={`Transactions in ${name}`}
           rows={rows}
           rowKey={(t) => t.id}
           onRowClick={(t) => setSelected(t)}
-          empty={<Empty icon={<IList size={20} />} title="Nothing filed under this yet" />}
+          empty={loading ? <RowsSkeleton /> : <Empty icon={<IList size={20} />} title="Nothing filed under this yet" />}
           columns={[
             { key: 'date', header: 'Date', width: 100, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
             { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={catMap} /> },

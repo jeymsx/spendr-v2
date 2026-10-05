@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useState } from 'react'
+import { usePageTitle } from '../../lib/pageTitle'
+import { RowsSkeleton, DetailSkeleton } from '../ui/Skeletons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -48,6 +50,7 @@ export default function WebRecurringItem() {
   const [deleting, setDeleting] = useState(false)
 
   const rec = useLiveQuery(() => (Number.isFinite(recId) ? db.recurring.get(recId).then(r => r ?? null) : Promise.resolve(null)), [recId], undefined)
+  usePageTitle(rec?.name)
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], [])
   const income = rec?.type === 'inflow'
@@ -120,7 +123,7 @@ export default function WebRecurringItem() {
   const closeDel = useCallback(() => { if (!deleting) setConfirmDel(false) }, [deleting])
 
   const eyebrow = <Link to="/recurring" className="inline-flex items-center gap-1 hover:text-[var(--d-text)]"><IChevronLeft size={13} />Recurring</Link>
-  if (rec === undefined) return <Page eyebrow={eyebrow} title=" "><div className="h-40" /></Page>
+  if (rec === undefined) return <Page eyebrow={eyebrow}><DetailSkeleton /></Page>
   if (!rec) {
     return (
       <Page eyebrow={eyebrow} title="Not found">
@@ -181,7 +184,7 @@ export default function WebRecurringItem() {
             rows={charges === undefined ? [] : history}
             rowKey={(t) => t.id}
             onRowClick={(t) => navigate(`/transactions?tx=${t.id}`)}
-            empty={charges === undefined ? <div className="h-24" /> : (
+            empty={charges === undefined ? <RowsSkeleton rows={4} /> : (
               <Empty title={income ? 'Nothing received yet' : 'Nothing charged yet'} body={income ? 'Each one you mark received shows here.' : 'Charges appear here once posted.'} />
             )}
             columns={[

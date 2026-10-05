@@ -1,6 +1,7 @@
 import { lazy, Suspense, useEffect } from 'react'
 import { useViewMode } from './web/useViewMode'
 import App from './App'
+import { PageTitle } from './lib/pageTitle'
 
 // Lazy so a phone never downloads the desktop UI, and vice versa is free
 // because App is the eager default.
@@ -35,12 +36,21 @@ export default function Shell() {
     return () => root.classList.remove('web')
   }, [mode])
 
+  // The browser tab names the page, in either layout (lib/pageTitle.js).
   if (mode === 'desktop') {
     return (
-      <Suspense fallback={<Booting />}>
-        <WebApp />
-      </Suspense>
+      <>
+        <PageTitle />
+        <Suspense fallback={<Booting />}>
+          <WebApp />
+        </Suspense>
+      </>
     )
   }
-  return <App />
+  return (
+    <>
+      <PageTitle />
+      <App />
+    </>
+  )
 }

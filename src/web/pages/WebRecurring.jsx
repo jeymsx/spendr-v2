@@ -1,4 +1,5 @@
 import { useCallback, useMemo, useState } from 'react'
+import { RowsSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -119,12 +120,14 @@ export default function WebRecurring() {
       subtitle={loading ? ' ' : `${active.length} active · ${all.length - active.length} paused`}
       actions={<Btn variant="primary" icon={<IPlus size={15} />} onClick={() => navigate('/recurring/new')}>New</Btn>}
     >
-      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-        <Stat label="Bills a month" value={fmt(monthlyBills)} note={`${bills.length} active ${bills.length === 1 ? 'bill' : 'bills'} · ${fmt(monthlyBills * 12)} a year`} />
-        <Stat label="Income a month" value={fmt(monthlyIncome)} tone={monthlyIncome ? 'pos' : null} note={monthlyIncome ? 'From recurring pay' : 'No recurring income yet'} />
-        <Stat label="Due now" value={String(dueNow.length)} tone={dueNow.length ? 'neg' : null} note={dueNow.length ? 'Date arrived, not yet posted' : 'Nothing waiting'} />
-        <Stat label="This week" value={String(thisWeek.length)} tone={thisWeek.length ? 'warn' : null} note={thisWeek.length ? `${fmt(thisWeek.reduce((s, r) => s + (r.amount ?? 0), 0))} in the next 7 days` : 'Nothing in the next 7 days'} />
-      </div>
+      {loading ? <StatsSkeleton /> : (
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8">
+          <Stat label="Bills a month" value={fmt(monthlyBills)} note={`${bills.length} active ${bills.length === 1 ? 'bill' : 'bills'} · ${fmt(monthlyBills * 12)} a year`} />
+          <Stat label="Income a month" value={fmt(monthlyIncome)} tone={monthlyIncome ? 'pos' : null} note={monthlyIncome ? 'From recurring pay' : 'No recurring income yet'} />
+          <Stat label="Due now" value={String(dueNow.length)} tone={dueNow.length ? 'neg' : null} note={dueNow.length ? 'Date arrived, not yet posted' : 'Nothing waiting'} />
+          <Stat label="This week" value={String(thisWeek.length)} tone={thisWeek.length ? 'warn' : null} note={thisWeek.length ? `${fmt(thisWeek.reduce((s, r) => s + (r.amount ?? 0), 0))} in the next 7 days` : 'Nothing in the next 7 days'} />
+        </div>
+      )}
 
       <div className="grid grid-cols-12 gap-5">
         <div className={`${sideItems ? 'col-span-8 d-stack' : 'col-span-12'} min-w-0`}>
@@ -141,7 +144,7 @@ export default function WebRecurring() {
               rowKey={(r) => r.id}
               onRowClick={(r) => navigate(`/recurring/${r.id}`)}
               rowClassName={(r) => (r.active ? '' : 'opacity-60')}
-              empty={loading ? <div className="h-40" /> : (
+              empty={loading ? <RowsSkeleton /> : (
                 <Empty icon={<IRepeat size={20} />} title={tab === 'income' ? 'No recurring income' : tab === 'paused' ? 'Nothing paused' : 'No recurring bills'}
                   body="Add the bills and pay that come round every month or week." action={<Btn variant="primary" onClick={() => navigate('/recurring/new')}>Add one</Btn>} />
               )}

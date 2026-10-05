@@ -1,4 +1,6 @@
 import { useCallback, useMemo, useRef, useState } from 'react'
+import { usePageTitle } from '../../lib/pageTitle'
+import { DetailSkeleton } from '../ui/Skeletons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import db, { UNSYNCED } from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -63,6 +65,7 @@ export default function WebAccountDetail() {
   const base = useBaseCurrency()
   const { table: rates } = useRates()
   const account = (accounts ?? []).find(a => String(a.id) === String(id)) ?? null
+  usePageTitle(account?.name)
   const name = account?.name
 
   const [trendRange, setTrendRange] = useState('3m')
@@ -216,7 +219,7 @@ export default function WebAccountDetail() {
     }
   }, [account, lateInfo, showToast])
 
-  if (!accounts) return <Page><div className="h-40" /></Page>
+  if (!accounts) return <Page><DetailSkeleton /></Page>
   if (!account) {
     return (
       <Page title="Account not found">

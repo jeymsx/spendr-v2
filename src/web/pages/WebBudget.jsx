@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { RowsSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -152,14 +153,16 @@ export default function WebBudget() {
         </>
       }
     >
-      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-        <Stat label="Spent" value={fmt(totals.spent)} note={totals.limit ? `${Math.round(totals.pct)}% of ${fmt(totals.limit)}` : 'No limits set'}>
-          {totals.limit > 0 && <Progress className="mt-3" value={totals.pct} color={totals.pct > 100 ? 'var(--d-neg)' : totals.pct > 85 ? 'var(--d-warn)' : undefined} />}
-        </Stat>
-        <Stat label={totals.left < 0 ? 'Over' : 'Left'} value={fmt(Math.abs(totals.left))} tone={totals.left < 0 ? 'neg' : null} note={over ? `${over} ${over === 1 ? 'category is' : 'categories are'} over` : 'Every category within its limit'} />
-        <Stat label={isNow ? 'Days left' : 'Days'} value={isNow ? String(daysLeft) : String(daysInMonth)} note={isNow ? `${fmt(perDay)} a day to stay within` : 'The month is over'} />
-        <Stat label="Without a limit" value={fmt(totals.other)} note={unbudgeted.length ? `${unbudgeted.length} ${unbudgeted.length === 1 ? 'category' : 'categories'} spent with no limit` : 'Nothing spent outside a limit'} />
-      </div>
+      {loading ? <StatsSkeleton /> : (
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8">
+          <Stat label="Spent" value={fmt(totals.spent)} note={totals.limit ? `${Math.round(totals.pct)}% of ${fmt(totals.limit)}` : 'No limits set'}>
+            {totals.limit > 0 && <Progress className="mt-3" value={totals.pct} color={totals.pct > 100 ? 'var(--d-neg)' : totals.pct > 85 ? 'var(--d-warn)' : undefined} />}
+          </Stat>
+          <Stat label={totals.left < 0 ? 'Over' : 'Left'} value={fmt(Math.abs(totals.left))} tone={totals.left < 0 ? 'neg' : null} note={over ? `${over} ${over === 1 ? 'category is' : 'categories are'} over` : 'Every category within its limit'} />
+          <Stat label={isNow ? 'Days left' : 'Days'} value={isNow ? String(daysLeft) : String(daysInMonth)} note={isNow ? `${fmt(perDay)} a day to stay within` : 'The month is over'} />
+          <Stat label="Without a limit" value={fmt(totals.other)} note={unbudgeted.length ? `${unbudgeted.length} ${unbudgeted.length === 1 ? 'category' : 'categories'} spent with no limit` : 'Nothing spent outside a limit'} />
+        </div>
+      )}
 
       {isNow && leftovers.total > 0 && !alreadySwept && (
         <div className="d-panel mb-6 px-6 py-5 flex items-center gap-4" style={{ borderColor: 'rgba(var(--color-primary-rgb), 0.3)', background: 'rgba(var(--color-primary-rgb), 0.05)' }}>
@@ -180,7 +183,7 @@ export default function WebBudget() {
             rows={loading ? [] : rows}
             rowKey={(c) => c.id ?? c.name}
             onRowClick={(c) => navigate(`/categories/${encodeURIComponent(c.name)}`)}
-            empty={loading ? <div className="h-40" /> : (
+            empty={loading ? <RowsSkeleton /> : (
               <Empty icon={<IGauge size={20} />} title="No limits yet" body="Give a category a monthly limit and track it here." action={<Btn variant="primary" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
             )}
             columns={[

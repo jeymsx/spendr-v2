@@ -125,7 +125,7 @@ export function CategoryTile({ cat, size = 'md', className = '' }) {
   )
 }
 
-/** A grey block standing in for something loading. @param {{className?: string}} props */
-export function Skeleton({ className = '' }) {
-  return <span className={`d-skel block ${className}`} aria-hidden="true" />
+/** A grey block standing in for something loading. @param {{className?: string, style?: import('react').CSSProperties}} props */
+export function Skeleton({ className = '', style }) {
+  return <span className={`d-skel block ${className}`} style={style} aria-hidden="true" />
 }

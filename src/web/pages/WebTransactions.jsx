@@ -1,4 +1,5 @@
 import { useCallback, useDeferredValue, useMemo, useState } from 'react'
+import { RowsSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { Link, useNavigate, useSearchParams } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -290,12 +291,14 @@ export default function WebTransactions() {
         </>
       }
     >
-      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-        <Stat label="Spent" value={fmt(totals.spent)} note={narrowed ? 'In the filtered rows' : 'All time'} />
-        <Stat label="Came in" value={fmt(totals.earned)} note={narrowed ? 'In the filtered rows' : 'All time'} />
-        <Stat label="Net" value={`${totals.net < 0 ? '−' : totals.net > 0 ? '+' : ''}${fmt(Math.abs(totals.net))}`} tone={totals.net < 0 ? 'neg' : totals.net > 0 ? 'pos' : null} note="Came in less spent" />
-        <Stat label="Average spend" value={fmt(avgPerDay(filtered, totals.spent))} note="Per day over the rows shown" />
-      </div>
+      {loading ? <StatsSkeleton /> : (
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8">
+          <Stat label="Spent" value={fmt(totals.spent)} note={narrowed ? 'In the filtered rows' : 'All time'} />
+          <Stat label="Came in" value={fmt(totals.earned)} note={narrowed ? 'In the filtered rows' : 'All time'} />
+          <Stat label="Net" value={`${totals.net < 0 ? '−' : totals.net > 0 ? '+' : ''}${fmt(Math.abs(totals.net))}`} tone={totals.net < 0 ? 'neg' : totals.net > 0 ? 'pos' : null} note="Came in less spent" />
+          <Stat label="Average spend" value={fmt(avgPerDay(filtered, totals.spent))} note="Per day over the rows shown" />
+        </div>
+      )}
 
       <Panel flush className="overflow-visible">
         {selectedRows.length > 0 ? (
@@ -338,7 +341,7 @@ export default function WebTransactions() {
             onRowClick={openRow}
             activeKey={openId}
             resetKey={filterKey}
-            empty={loading ? <div className="h-40" /> : narrowed ? (
+            empty={loading ? <RowsSkeleton /> : narrowed ? (
               <Empty icon={<ISearch size={18} />} title="Nothing matches" body="Try another search, or clear the filters." action={<Btn size="sm" onClick={() => { setSearch(''); setFilters(NO_FILTERS) }}>Clear filters</Btn>} />
             ) : (
               <Empty icon={<IList size={18} />} title="No transactions yet" body="Add one from the Add button, or import a CSV." />

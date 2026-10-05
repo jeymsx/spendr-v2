@@ -1,4 +1,5 @@
 import { Suspense } from 'react'
+import { PaneSkeleton } from '../ui/Skeletons'
 import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { APP_VERSION } from '../../lib/release'
 import Page from '../ui/Page'
@@ -80,7 +81,7 @@ export default function WebSettings() {
           ))}
         </nav>
         <div className="d-twopane-main min-w-0">
-          <Suspense fallback={<div className="h-40" />}>
+          <Suspense fallback={<PaneSkeleton />}>
             <Outlet />
           </Suspense>
         </div>

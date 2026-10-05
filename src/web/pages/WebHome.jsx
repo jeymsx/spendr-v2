@@ -24,7 +24,8 @@ import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { Segmented } from '../ui/controls'
-import { Stat, Money, AccountTile, CategoryTile, Progress, Empty } from '../ui/display'
+import { Stat, Money, AccountTile, CategoryTile, Progress, Empty, Skeleton } from '../ui/display'
+import { CardSkeleton, RowsSkeleton, StatCardSkeleton } from '../ui/Skeletons'
 import { AreaTrend } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxCategoryText } from './txParts'
 import { IChevronRight, IWallet, IList, ICalendar, IGauge } from '../ui/icons'
@@ -106,6 +107,8 @@ export default function WebHome() {
   const [gridRef, cols] = useColumns(184, 16)
   const shownCards = cards.length <= cols ? cards : cards.slice(0, Math.max(1, cols - 1))
   const budgetLeft = budget.total - budget.spent
+  // The figures wait for every read they are made of, so none shows a zero first.
+  const waiting = loading || month.loading || !forecast
 
   return (
     <Page
@@ -141,10 +144,10 @@ export default function WebHome() {
               <div className="pt-5">
                 <div className="wallet-pocket px-7 pt-6 pb-5">
                   <div className="grid grid-cols-4 gap-3">
-                    <Pile label="Spending" value={breakdown.spending} />
-                    <Pile label="Savings" value={breakdown.savings} />
-                    <Pile label="Investments" value={breakdown.invested} />
-                    <Pile label="You owe" value={breakdown.credit + breakdown.loans} owed />
+                    <Pile label="Spending" value={breakdown.spending} loading={loading} />
+                    <Pile label="Savings" value={breakdown.savings} loading={loading} />
+                    <Pile label="Investments" value={breakdown.invested} loading={loading} />
+                    <Pile label="You owe" value={breakdown.credit + breakdown.loans} owed loading={loading} />
                   </div>
                 </div>
               </div>
@@ -168,28 +171,32 @@ export default function WebHome() {
         </div>
 
         <div className="col-span-7 grid grid-cols-2 gap-5">
-          <Stat
-            label={`Spent in ${monthName}`}
-            value={fmt(month.totalSpent)}
-            note={!spentChange || !month.previous ? ' ' : spentChange.same ? `Same as ${month.previous.label}` : `${spentChange.up ? '↑' : '↓'} ${spentChange.pct}% vs ${month.previous.label}`}
-          />
-          <Stat
-            label={`Came in, ${monthName}`}
-            value={fmt(month.totalEarned)}
-            note={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))} after spending`}
-          />
-          <Stat
-            label="Safe to spend"
-            value={safe == null ? '—' : fmt(Math.max(0, safe))}
-            tone={forecast?.firstNegative ? 'neg' : null}
-            note={forecast?.firstNegative ? 'You may run short before payday' : payday ? `Until payday, ${payday}` : 'For the next 2 weeks'}
-          />
-          <Stat
-            label="Budget left"
-            value={budget.total ? fmt(Math.abs(budgetLeft)) : '—'}
-            tone={budget.total && budgetLeft < 0 ? 'neg' : null}
-            note={budget.total ? (budgetLeft < 0 ? 'Over the month’s limits' : `${Math.round(budget.pct)}% of ${fmt(budget.total)} used`) : 'No limits set'}
-          />
+          {waiting ? [0, 1, 2, 3].map(i => <StatCardSkeleton key={i} />) : (
+            <>
+              <Stat
+                label={`Spent in ${monthName}`}
+                value={fmt(month.totalSpent)}
+                note={!spentChange || !month.previous ? ' ' : spentChange.same ? `Same as ${month.previous.label}` : `${spentChange.up ? '↑' : '↓'} ${spentChange.pct}% vs ${month.previous.label}`}
+              />
+              <Stat
+                label={`Came in, ${monthName}`}
+                value={fmt(month.totalEarned)}
+                note={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))} after spending`}
+              />
+              <Stat
+                label="Safe to spend"
+                value={safe == null ? '—' : fmt(Math.max(0, safe))}
+                tone={forecast?.firstNegative ? 'neg' : null}
+                note={forecast?.firstNegative ? 'You may run short before payday' : payday ? `Until payday, ${payday}` : 'For the next 2 weeks'}
+              />
+              <Stat
+                label="Budget left"
+                value={budget.total ? fmt(Math.abs(budgetLeft)) : '—'}
+                tone={budget.total && budgetLeft < 0 ? 'neg' : null}
+                note={budget.total ? (budgetLeft < 0 ? 'Over the month’s limits' : `${Math.round(budget.pct)}% of ${fmt(budget.total)} used`) : 'No limits set'}
+              />
+            </>
+          )}
         </div>
       </div>
 
@@ -202,10 +209,11 @@ export default function WebHome() {
           <Panel><Empty icon={<IWallet size={20} />} title="No accounts yet" body="Add your cash, a bank or an e-wallet." action={<Btn variant="primary" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} /></Panel>
         ) : (
           <div ref={gridRef} className="d-card-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+            {loading && Array.from({ length: cols }, (_, i) => <CardSkeleton key={i} />)}
             {shownCards.map(a => (
               <AccountCard key={a.id} acct={a} hidden={false} stmt={credit[a.name]} onClick={() => navigate(`/accounts/${a.id}`)} />
             ))}
-            {cards.length > shownCards.length ? (
+            {loading ? null : cards.length > shownCards.length ? (
               <Link to="/accounts" className="d-card-more" style={{ aspectRatio: '1.45' }}>
                 View all accounts
                 <span className="text-12 font-medium text-[var(--d-text-3)]">{cards.length - shownCards.length} more</span>
@@ -226,7 +234,7 @@ export default function WebHome() {
           meta={rangeChange == null ? null : `${rangeChange >= 0 ? '+' : '−'}${fmt(Math.abs(rangeChange))} ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`}
           actions={<Segmented label="Range" value={range} onChange={setRange} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}
         >
-          {chart.length > 1 ? <AreaTrend data={chart} height={260} valueLabel="Net worth" /> : <div className="h-[260px]" />}
+          {chart.length > 1 ? <AreaTrend data={chart} height={260} valueLabel="Net worth" /> : series.loading ? <Skeleton className="h-[260px] rounded-[14px]" /> : <div className="h-[260px]" />}
         </Panel>
       <Panel
         className="col-span-4 d-side"
@@ -234,7 +242,7 @@ export default function WebHome() {
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/forecast')}>Forecast</Btn>}
           flush
         >
-          {!forecast || forecast.events.length === 0 ? (
+          {!forecast ? <RowsSkeleton rows={5} /> : forecast.events.length === 0 ? (
             <Empty icon={<ICalendar size={18} />} title="Nothing due" body="Bills, pay and card statements show here." />
           ) : (
             <div className="py-1">
@@ -278,7 +286,7 @@ export default function WebHome() {
             rows={recent}
             rowKey={(t) => t.id}
             onRowClick={(t) => navigate(`/transactions?tx=${t.id}`)}
-            empty={<Empty icon={<IList size={18} />} title="Nothing yet" body="Your newest transactions show here." />}
+            empty={loading ? <RowsSkeleton rows={5} /> : <Empty icon={<IList size={18} />} title="Nothing yet" body="Your newest transactions show here." />}
             columns={[
               { key: 'date', header: 'Date', width: 84, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
               { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={catMap} /> },
@@ -336,12 +344,12 @@ export default function WebHome() {
   )
 }
 
-/** One of the piles along the foot of the net worth card. @param {{label: string, value: number, owed?: boolean}} props */
-function Pile({ label, value, owed = false }) {
+/** One of the piles along the foot of the net worth card. @param {{label: string, value: number, owed?: boolean, loading?: boolean}} props */
+function Pile({ label, value, owed = false, loading = false }) {
   return (
     <div className="min-w-0">
       <div className="text-12 font-medium text-white/65 truncate">{label}</div>
-      <div className="mt-1 text-14 font-semibold d-num truncate text-white">{owed && value ? '−' : ''}{fmt(Math.abs(value || 0))}</div>
+      <div className="mt-1 text-14 font-semibold d-num truncate text-white">{loading ? '—' : `${owed && value ? '−' : ''}${fmt(Math.abs(value || 0))}`}</div>
     </div>
   )
 }
