@@ -1,3 +1,4 @@
+import PickSelect from '../../components/ui/PickSelect'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sheet from '../../components/ui/Sheet'
@@ -276,14 +277,16 @@ export function RemindersSheet({ r }) {
                 {/* A native select: the phone's own wheel on an iPhone, its
                     own list on Android, and quarter hours only - the sender
                     runs every fifteen minutes (lib/nudge.js). */}
-                <select
+                <PickSelect
                   value={r.checkIn}
                   onChange={e => setNudge(e.target.value)}
+                  aria-label="Check-in time"
                   className="text-13 font-semibold tabular-nums px-2.5 py-1 rounded-lg appearance-none text-right
                     bg-white dark:bg-white/[0.07] text-slate-700 dark:text-slate-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
-                >
-                  {NUDGE_TIMES.map(t => <option key={t} value={t}>{nudgeLabel(t)}</option>)}
-                </select>
+                  options={NUDGE_TIMES.map(t => ({ value: t, label: nudgeLabel(t) }))}
+                  menuWidth={160}
+                  align="end"
+                />
               </label>
             </>
           )}

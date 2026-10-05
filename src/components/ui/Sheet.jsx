@@ -459,11 +459,19 @@ export default function Sheet({
             )}
 
             {shown.title && (
-              <div className="shrink-0 flex items-center justify-between gap-3 px-5 pb-3">
+              <div className="sheet-head shrink-0 flex items-center justify-between gap-3 px-5 pb-3">
                 <h3 id={titleId} className="text-17 font-semibold text-slate-900 dark:text-white">
                   {shown.title}
                 </h3>
                 {shown.titleAction}
+                {/* A close button for a computer, where a modal has one at
+                    its corner; display: none on a phone (index.css), which
+                    closes by a swipe, the scrim or Back. */}
+                {!shown.titleAction && dismissible && (
+                  <button type="button" className="sheet-close" aria-label="Close" onClick={attemptClose}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+                  </button>
+                )}
               </div>
             )}
           </div>
@@ -477,7 +485,7 @@ export default function Sheet({
         </FadeScroller>
 
         {shown.footer && (
-          <div className={cx('shrink-0 px-5 pt-3', bottomPad)}>
+          <div className={cx('sheet-foot shrink-0 px-5 pt-3', bottomPad)}>
             {shown.footer}
           </div>
         )}

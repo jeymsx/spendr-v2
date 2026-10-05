@@ -1,3 +1,4 @@
+import PickSelect from '../../components/ui/PickSelect'
 import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
@@ -290,16 +291,17 @@ function ModeSelect({ value, onChange, dark }) {
       >
         <path d="M6 9l6 6 6-6" />
       </svg>
-      <select
+      <PickSelect
+        overlay
         value={value}
         onChange={e => onChange(e.target.value)}
         aria-label="How net worth adds up accounts in different currencies"
         className="absolute inset-0 w-full h-full opacity-0"
         style={{ colorScheme: dark ? 'dark' : 'light' }}
-      >
-        <option value="converted">Combined</option>
-        <option value="separated">Separate</option>
-      </select>
+        options={[{ value: 'converted', label: 'Combined' }, { value: 'separated', label: 'Separate' }]}
+        menuWidth={180}
+        align="end"
+      />
     </span>
   )
 }

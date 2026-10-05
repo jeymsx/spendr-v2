@@ -1,3 +1,4 @@
+import PickSelect from '../../components/ui/PickSelect'
 import { forwardRef, useState } from 'react'
 import Button from '../../components/ui/Button'
 import { NUDGE_TIMES, nudgeLabel } from '../../lib/nudge'
@@ -112,13 +113,15 @@ export const StepStayOnTrack = forwardRef(
             <span className="flex-1 text-14 text-slate-300">Another time</span>
             {/* The phone's own picker, quarter hours only: reminders go out
                 on the quarter (lib/nudge.js). */}
-            <select
+            <PickSelect
               value={time}
               onChange={e => onTime(e.target.value)}
+              aria-label="Check-in time"
               className="bg-transparent text-14 font-semibold text-white tabular-nums text-right appearance-none outline-none"
-            >
-              {NUDGE_TIMES.map(t => <option key={t} value={t} className="text-slate-900">{nudgeLabel(t)}</option>)}
-            </select>
+              options={NUDGE_TIMES.map(t => ({ value: t, label: nudgeLabel(t), className: 'text-slate-900' }))}
+              menuWidth={160}
+              align="end"
+            />
           </label>
           {note && <p className="text-13 leading-snug text-amber-400" role="status">{note}</p>}
         </StepBody>

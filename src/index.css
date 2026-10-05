@@ -2044,6 +2044,40 @@ html.web .sheet-panel-exit .sheet-grab {
   padding-top: 1.25rem;
 }
 
+/* A modal on a computer: the title at its top left with a close button in
+   the corner, the body and footer on the same 24px margin, and the footer's
+   pair of buttons at the right at their own width rather than splitting the
+   width between them - a desktop dialog's shape rather than a phone sheet's.
+   The phone keeps its full-width buttons; .sheet-close is hidden there. */
+.sheet-close { display: none; }
+html.web .sheet-panel .sheet-head,
+html.web .sheet-panel-exit .sheet-head { padding: 0 20px 14px 24px; }
+html.web .sheet-panel .sheet-head > h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.015em; }
+html.web .sheet-close {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  margin-right: -4px;
+  border-radius: 999px;
+  flex-shrink: 0;
+  color: rgb(100 116 139);
+  transition: background-color 0.15s, color 0.15s;
+}
+html.web .sheet-close:hover { background: rgba(var(--color-primary-rgb), 0.08); color: rgb(15 23 42); }
+html.web.dark .sheet-close:hover { color: #fff; }
+html.web .sheet-close:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.28); }
+html.web .sheet-panel [data-sheet-body],
+html.web .sheet-panel-exit [data-sheet-body] { padding-left: 24px; padding-right: 24px; }
+html.web .sheet-panel .sheet-foot,
+html.web .sheet-panel-exit .sheet-foot { padding: 14px 24px 18px; border-top: 1px solid rgba(15, 23, 42, 0.07); }
+html.web.dark .sheet-panel .sheet-foot { border-top-color: rgba(255, 255, 255, 0.07); }
+html.web .sheet-panel .sheet-foot > .flex:not(.flex-col),
+html.web .sheet-panel-exit .sheet-foot > .flex:not(.flex-col) { justify-content: flex-end; }
+html.web .sheet-panel .sheet-foot > .flex:not(.flex-col) > *,
+html.web .sheet-panel-exit .sheet-foot > .flex:not(.flex-col) > * { flex: 0 0 auto; min-width: 112px; padding-left: 20px; padding-right: 20px; }
+
 /* 520px: a transaction's details, a confirmation, a picker - a modal the
    width of what is in it. It was 680px on a wide screen, and a transaction's
    four lines sat at its two far edges. A sheet holding a grid asks for more

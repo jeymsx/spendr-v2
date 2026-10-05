@@ -1,3 +1,4 @@
+import PickSelect from './ui/PickSelect'
 import { useMemo } from 'react'
 import { useTheme } from '../context/ThemeContext'
 import CategoryGlyph from './CategoryGlyph'
@@ -73,18 +74,15 @@ function CategoryChipSelect({ categories, value, onChange, dark, label }) {
       >
         <path d="M6 9l6 6 6-6" />
       </svg>
-      <select
+      <PickSelect
+        overlay
         value={value}
         onChange={e => onChange(e.target.value)}
         aria-label={label}
         className="absolute inset-0 w-full h-full opacity-0"
         style={{ colorScheme: dark ? 'dark' : 'light' }}
-      >
-        <option value="">the whole purchase</option>
-        {categories.map(c => (
-          <option key={c.id ?? c.name} value={c.name}>{c.name}</option>
-        ))}
-      </select>
+        options={[{ value: '', label: 'the whole purchase' }, ...categories.map(c => ({ value: c.name, label: c.name }))]}
+      />
     </span>
   )
 }

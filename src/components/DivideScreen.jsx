@@ -1,3 +1,4 @@
+import PickSelect from './ui/PickSelect'
 import { useEffect, useMemo, useState } from 'react'
 import Segmented from './ui/Segmented'
 import Button from './ui/Button'
@@ -72,19 +73,16 @@ import { useBackGuard } from '../hooks/useBackGuard'
 function CategorySelect({ categories, value, onChange, label }) {
   const { theme } = useTheme()
   return (
-    <select
+    <PickSelect
       value={value ?? ''}
       onChange={e => onChange(categories.find(c => c.name === e.target.value))}
       aria-label={label}
       className="flex-1 min-w-0 bg-transparent outline-none text-14 font-semibold
         text-slate-800 dark:text-white"
       style={{ colorScheme: theme === 'dark' ? 'dark' : 'light' }}
-    >
-      {!value && <option value="">Choose a category</option>}
-      {categories.map(c => (
-        <option key={c.id ?? c.name} value={c.name}>{c.name}</option>
-      ))}
-    </select>
+      placeholder="Choose a category"
+      options={categories.map(c => ({ value: c.name, label: c.name }))}
+    />
   )
 }
 

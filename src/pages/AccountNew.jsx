@@ -10,6 +10,7 @@ import { INVESTMENT_KINDS } from '../lib/accountMeta'
 import { monthsToClear, rateLabel, solveMonthlyRate } from '../lib/loans'
 import { createInvestment } from '../db/accountWrites'
 import Field from '../components/ui/Field'
+import PickSelect from '../components/ui/PickSelect'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
 import {
   ColorRail,
@@ -597,7 +598,7 @@ export default function AccountNew() {
                 the select simply ends where the chevron begins instead of
                 needing a right padding sized to clear it by hand. */}
             <div className={fieldFrame()}>
-              <select
+              <PickSelect
                 value={draft.type}
                 onChange={e => {
                   const v = e.target.value
@@ -608,14 +609,12 @@ export default function AccountNew() {
                     scheme: v === 'cash' ? '' : draft.scheme,
                   })
                 }}
+                aria-label="Type"
                 className="flex-1 min-w-0 bg-transparent outline-none appearance-none cursor-pointer
                   text-16 font-medium text-slate-800 dark:text-white
                   [color-scheme:light] dark:[color-scheme:dark]"
-              >
-                {TYPE_OPTIONS.map(t => (
-                  <option key={t.value} value={t.value}>{t.label}</option>
-                ))}
-              </select>
+                options={TYPE_OPTIONS.map(t => ({ value: t.value, label: t.label }))}
+              />
               <span
                 className="shrink-0 pointer-events-none text-slate-400 dark:text-slate-500"
                 aria-hidden="true"

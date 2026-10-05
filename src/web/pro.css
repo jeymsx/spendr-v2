@@ -629,6 +629,33 @@ html.web .d-drawer-head { display: flex; align-items: center; justify-content: s
 html.web .d-drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 28px; }
 html.web .d-drawer-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 16px 28px; border-top: 1px solid var(--d-border); flex-shrink: 0; }
 
+/* A phone page opened as a panel (ui/RouteDrawer): the panel's own head
+   shrinks to its × in the corner, and the phone page's header becomes the
+   panel's title row under it - title at the left, its action (a Delete)
+   beside the ×, its back button gone (the × is the way out, and goes back
+   the same way). The phone's full-height roots and pinned tops let go. */
+html.web .d-drawer:has(.d-drawer-phone) .d-drawer-head { position: absolute; top: 0; right: 0; height: 64px; padding: 0 12px; border: 0; background: transparent; z-index: 3; }
+html.web .d-drawer:has(.d-drawer-phone) .d-drawer-body { padding: 0 0 20px; }
+html.web .d-drawer-phone .pinned-top { position: sticky; top: 0; z-index: 2; background: var(--d-panel); }
+html.web .d-drawer-phone [class*='min-h-[calc(100dvh'],
+html.web .d-drawer-phone .min-h-screen { min-height: 0 !important; }
+html.web .d-drawer-phone .pb-nav,
+html.web .d-drawer-phone .pb-page { padding-bottom: 8px; }
+html.web .d-drawer-phone .page-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  min-height: 64px;
+  padding: 0 64px 0 28px;
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--d-border);
+}
+html.web .d-drawer-phone .page-header > .subpage-back { display: none; }
+html.web .d-drawer-phone .page-header-title { text-align: left; padding: 0; font-size: 17px; line-height: 24px; font-weight: 700; letter-spacing: -0.015em; color: var(--d-text); }
+/* The new-account wizard's own step header (back a step, the count): kept,
+   its title at the left, clear of the ×. */
+html.web .d-drawer-phone .pinned-top > header { padding-top: 14px; padding-right: 64px; }
+html.web .d-drawer-phone .pinned-top > header h1 { text-align: left; font-size: 17px; font-weight: 700; }
+
 /* Definition rows in a drawer or panel: label left, value right. */
 /* Every row the same height, whatever is in it - a word, a tile, a pill -
    so the gaps between them are even; a long value grows from the top. */

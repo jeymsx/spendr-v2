@@ -42,6 +42,8 @@ const AddInflow    = lazy(() => import('../pages/AddInflow'))
 const Transfer     = lazy(() => import('../pages/Transfer'))
 
 const WebInsights = lazy(() => import('./pages/WebInsights'))
+/* A phone form or list as a panel over the page it belongs to. */
+const RouteDrawer = lazy(() => import('./ui/RouteDrawer'))
 const ForecastSettings = lazy(() => import('../pages/insights/ForecastSettings'))
 
 const WebAccounts = lazy(() => import('./pages/WebAccounts'))
@@ -116,13 +118,13 @@ export default function WebApp() {
               <Route path="/transfer" element={<Form><Transfer /></Form>} />
 
               <Route path="/accounts" element={<WebAccounts />} />
-              <Route path="/accounts/new" element={<PhonePage><AccountNew /></PhonePage>} />
+              <Route path="/accounts/new" element={<RouteDrawer label="New account" fallback="/accounts" width={600} under={<WebAccounts />}><AccountNew /></RouteDrawer>} />
               <Route path="/accounts/:id" element={<WebAccountDetail />} />
-              <Route path="/accounts/:id/edit" element={<PhonePage><AccountEdit /></PhonePage>} />
-              <Route path="/accounts/:id/statements" element={<PhonePage><StatementHistory /></PhonePage>} />
+              <Route path="/accounts/:id/edit" element={<RouteDrawer label="Edit account" under={<WebAccountDetail />}><AccountEdit /></RouteDrawer>} />
+              <Route path="/accounts/:id/statements" element={<RouteDrawer label="Statement history" under={<WebAccountDetail />}><StatementHistory /></RouteDrawer>} />
 
               <Route path="/insights" element={<WebInsights />} />
-              <Route path="/insights/forecast/settings" element={<PhonePage><ForecastSettings /></PhonePage>} />
+              <Route path="/insights/forecast/settings" element={<RouteDrawer label="Forecast settings" fallback="/insights/forecast" under={<WebInsights />}><ForecastSettings /></RouteDrawer>} />
               {/* The phone's Insights pages, each a view of the desktop's one page. */}
               <Route path="/insights/trend" element={<WebInsights />} />
               <Route path="/insights/expenses" element={<WebInsights />} />
@@ -137,9 +139,9 @@ export default function WebApp() {
               <Route path="/goals" element={<WebGoals />} />
               <Route path="/goals/:id" element={<PhonePage><GoalDetail /></PhonePage>} />
               <Route path="/recurring" element={<WebRecurring />} />
-              <Route path="/recurring/new" element={<PhonePage><RecurringForm /></PhonePage>} />
+              <Route path="/recurring/new" element={<RouteDrawer label="New recurring" fallback="/recurring" under={<WebRecurring />}><RecurringForm /></RouteDrawer>} />
               <Route path="/recurring/:id" element={<PhonePage><RecurringDetail /></PhonePage>} />
-              <Route path="/recurring/:id/edit" element={<PhonePage><RecurringForm /></PhonePage>} />
+              <Route path="/recurring/:id/edit" element={<RouteDrawer label="Edit recurring" under={<WebRecurring />}><RecurringForm /></RouteDrawer>} />
               <Route path="/debts" element={<WebDebts />} />
               <Route path="/debts/person/:key" element={<PhonePage><PersonDetail /></PhonePage>} />
               <Route path="/notes" element={<WebNotes />}>
