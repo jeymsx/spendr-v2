@@ -393,9 +393,10 @@ html.web .web-pane-list .page-header-title,
 html.web .web-scroll[data-top='true'] .page-header-title {
   text-align: left;
   padding: 0;
-  font-size: 1.25rem;
-  line-height: 1.75rem;
-  letter-spacing: -0.025em;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
   color: rgb(15 23 42);
 }
 html.web.dark .web-pane-list .page-header-title,

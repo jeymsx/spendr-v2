@@ -4,9 +4,10 @@ import { OnboardingGuard } from '../App'
 import SyncManager from '../components/SyncManager'
 import WebLayout from './WebLayout'
 import WebToaster from './WebToaster'
-import { WebScroll, DETAIL_WIDTH } from './components/WebPane'
+import { WebScroll } from './components/WebPane'
 import WebFormPage from './WebFormPage'
 import PhonePage from './ui/PhonePage'
+import Page from './ui/Page'
 import {
   WebSettingsSection, WebNotesSection, NotesIndex,
 } from './pages/WebSections'
@@ -86,15 +87,6 @@ function LoadingScreen() {
   )
 }
 
-/**
- * A page of one column: from the left edge a split view's list starts at
- * (no padding of its own - the page brings its own, as a list does), as wide
- * as a split view's page, so moving from Accounts to Notifications nothing
- * jumps to the middle of the window.
- *
- * @param {{width?: number, top?: boolean, children: import('react').ReactNode}} props
- */
-const Column = ({ width = DETAIL_WIDTH, top = false, children }) => <WebScroll width={width} top={top} start pad={false}>{children}</WebScroll>
 /** A form in a card, centred (WebFormPage). @param {{width?: number, children: import('react').ReactNode}} props */
 const Form = ({ width = 600, children }) => <WebScroll width={width + 64}><WebFormPage width={width}>{children}</WebFormPage></WebScroll>
 
@@ -129,7 +121,13 @@ export default function WebApp() {
 
               <Route path="/insights" element={<WebInsights />} />
               <Route path="/insights/forecast/settings" element={<PhonePage><ForecastSettings /></PhonePage>} />
-              <Route path="/insights/:page" element={<WebInsights />} />
+              {/* The phone's Insights pages, each a view of the desktop's one page. */}
+              <Route path="/insights/trend" element={<WebInsights />} />
+              <Route path="/insights/expenses" element={<WebInsights />} />
+              <Route path="/insights/accounts" element={<WebInsights />} />
+              <Route path="/insights/net-worth" element={<WebInsights />} />
+              <Route path="/insights/forecast" element={<WebInsights />} />
+              <Route path="/insights/spending" element={<WebInsights />} />
 
               {/* ── Plans ── */}
               <Route path="/budget" element={<WebBudget />} />
@@ -149,12 +147,12 @@ export default function WebApp() {
               </Route>
 
               {/* ── You ── */}
-              <Route path="/notifications" element={<Column top><Notifications /></Column>} />
+              <Route path="/notifications" element={<PhonePage top width={880}><Notifications /></PhonePage>} />
               <Route path="/achievements" element={<WebAchievements />} />
               <Route path="/badges" element={<Navigate to="/achievements?tab=badges" replace />} />
-              <Route path="/recap" element={<Column><Recap /></Column>} />
-              <Route path="/recap/:month" element={<Column><Recap /></Column>} />
-              <Route path="/import" element={<WebScroll width={1200}><WebImport /></WebScroll>} />
+              <Route path="/recap" element={<PhonePage width={880}><Recap /></PhonePage>} />
+              <Route path="/recap/:month" element={<PhonePage width={880}><Recap /></PhonePage>} />
+              <Route path="/import" element={<Page><WebImport /></Page>} />
 
               <Route path="/settings" element={<WebSettingsSection />}>
                 <Route index element={<Navigate to="/settings/preferences" replace />} />

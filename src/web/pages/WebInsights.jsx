@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { Link, useNavigate, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import useForecast from '../../hooks/useForecast'
@@ -50,7 +50,7 @@ const VIEWS = [
 const FROM_PHONE = /** @type {Record<string, string>} */ ({ expenses: 'spending', accounts: 'spending' })
 
 export default function WebInsights() {
-  const { page } = useParams()
+  const page = useLocation().pathname.split('/')[2]
   const navigate = useNavigate()
   const view = FROM_PHONE[page ?? ''] ?? (VIEWS.some(v => v.value === page) ? /** @type {string} */ (page) : 'overview')
   const { period, setRange, setMonth } = usePeriod()

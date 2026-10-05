@@ -690,3 +690,20 @@ html.web .d-phone .page-header > .subpage-back:hover { background: var(--d-hover
    a step down on the figure and the name. */
 html.web .d-card-grid .acct-card[data-compact] .text-17 { font-size: 15.5px; }
 html.web .d-card-grid .acct-card[data-compact] .text-13 { font-size: 12.5px; }
+html.web .d-phone.is-top .page-header { grid-template-columns: minmax(0, 1fr) auto; }
+html.web .d-phone.is-top .page-header > .subpage-back { display: none; }
+
+/* The right half of a split view (Settings, Notes): its phone header's
+   title at the left at 22px, like the list's beside it. */
+html.web .web-pane-detail .page-header { grid-template-columns: auto minmax(0, 1fr) auto; gap: 12px; padding-bottom: 18px; }
+html.web .web-pane-detail .page-header-title {
+  text-align: left;
+  padding: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--d-text);
+}
+html.web .web-pane-detail[data-root='true'] .page-header > .subpage-back { display: none; }
+html.web .web-pane-detail[data-root='true'] .page-header { grid-template-columns: minmax(0, 1fr) auto; }

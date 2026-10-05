@@ -56,11 +56,11 @@ export default function WebImport() {
   return (
     <>
       {/* The phone's page heading, as every desktop page has it now. */}
-      <header className="mb-6">
-        <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Import</h1>
-        <p className="text-13 text-slate-500 dark:text-slate-400 mt-1">
-          Bring transactions in from a CSV file. Nothing is written until the last step.
-        </p>
+      <header className="d-page-head">
+        <div>
+          <h1 className="d-title">Import</h1>
+          <p className="d-subtitle">Bring transactions in from a CSV file. Nothing is written until the last step.</p>
+        </div>
       </header>
 
       <div className="flex flex-col xl:flex-row gap-6 xl:items-start min-w-0">

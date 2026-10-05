@@ -100,7 +100,7 @@ export default function WebAchievements() {
         {/* A 36px row, as every list's title sits in beside its button, so the titles line up across sections. */}
         <div className="px-5 pt-safe-header pb-4">
           <div className="min-h-9 flex items-center justify-between">
-            <h1 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">Achievements</h1>
+            <h1 className="text-[22px] leading-7 font-bold tracking-[-0.02em] text-slate-900 dark:text-white">Achievements</h1>
             <InfoButton title="How achievements work" onOpen={() => setGuide(true)} />
           </div>
         </div>
@@ -160,7 +160,7 @@ export default function WebAchievements() {
         <div className="mx-auto w-full pb-10" style={{ maxWidth: DETAIL_WIDTH }}>
           <div className="px-5 pt-safe-header pb-4">
             <div className="min-h-9 flex items-center">
-              <h2 className="text-xl font-semibold tracking-tight text-slate-900 dark:text-white">{current.label}</h2>
+              <h2 className="text-[22px] leading-7 font-bold tracking-[-0.02em] text-slate-900 dark:text-white">{current.label}</h2>
             </div>
             <p className="-mt-0.5 text-13 text-slate-500 dark:text-slate-400">{current.about}</p>
           </div>
