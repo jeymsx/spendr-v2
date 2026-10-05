@@ -4,19 +4,21 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import { moveToTrash, restoreFromTrash } from '../../db/trash'
-import { recategorize, refile } from '../../db/txHelpers'
+import { recategorize, refile, postRefund } from '../../db/txHelpers'
 import { findInstallmentGroup, isInstallmentRow } from '../../utils/installments'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { isoToDateInput } from '../../utils/txDate'
 import { txMatches } from '../../lib/search'
 import { foldLoanPayments, unfoldLoanPayment, interestCarried, isLoanPayment } from '../../lib/loans'
-import { amountDisplay, isRefund } from '../../lib/txMoney'
+import { amountDisplay, isRefund, refundableAmount } from '../../lib/txMoney'
+import { isAdjustment } from '../../lib/flows'
 import { txGlyphCat, txRowWords } from '../../lib/txRow'
 import { txBase, currencyOfTx } from '../../lib/fxContext'
 import { editTransaction } from '../../lib/editTransaction'
 import { fmt } from '../../lib/money'
 import { inDateRange, canRecategorize, DATE_OPTS, fmtTime } from '../../pages/transactions/shared'
 import TxDetailSheet from '../../components/TxDetailSheet'
+import RefundSheet from '../../components/RefundSheet'
 import { shortDate, moneyOf, totalsOf, TxDescription, TxAccount, TxAmount } from './txParts'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
@@ -28,7 +30,7 @@ import Dialog from '../ui/Dialog'
 import { Segmented, SearchInput } from '../ui/controls'
 import { Amount, AccountTile, CategoryTile, Empty, Stat } from '../ui/display'
 import {
-  ICalendar, IChevronDown, IDownload, IUpload, ITrash, IEdit, ITag, IX, IWallet, IList, ITransfer, IExternal, ISearch,
+  ICalendar, IChevronDown, IDownload, IUpload, ITrash, IEdit, ITag, IX, IWallet, IList, ITransfer, ISearch, IUndo,
 } from '../ui/icons'
 
 /**
@@ -102,6 +104,8 @@ export default function WebTransactions() {
   const [selected, setSelected] = useState(/** @type {Set<string|number>} */ (new Set()))
   const [confirmDelete, setConfirmDelete] = useState(/** @type {Array<Record<string, any>>|null} */ (null))
   const [sheet, setSheet] = useState(/** @type {{tx: Record<string, any>, startWith: 'detail'|'delete'}|null} */ (null))
+  const [refundTx, setRefundTx] = useState(/** @type {Record<string, any>|null} */ (null))
+  const [refunding, setRefunding] = useState(false)
 
   const catMap = useMemo(() => Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
   const acctMap = useMemo(() => Object.fromEntries((accounts ?? []).map(a => [a.name, a])), [accounts])
@@ -364,7 +368,8 @@ export default function WebTransactions() {
         onEdit={(t) => editTransaction(navigate, t, closeRow)}
         onDelete={(t) => askDelete([t])}
         onRefile={(t, c) => refileRows([t], c)}
-        onMore={(t) => setSheet({ tx: t, startWith: 'detail' })}
+        onRefund={(t) => setRefundTx(t)}
+        refundable={!!openTx && canRefundTx(openTx, txAll ?? [])}
       />
 
       <Dialog
@@ -381,6 +386,29 @@ export default function WebTransactions() {
         They go to Recently deleted for 30 days, with their balances put back. Linked rows (a refund, a fee, a loan payment's other half) go with them.
       </Dialog>
 
+      <RefundSheet
+        open={!!refundTx}
+        onClose={() => setRefundTx(null)}
+        tx={refundTx}
+        allTxs={txAll ?? []}
+        accounts={accounts ?? []}
+        saving={refunding}
+        onRefund={async (/** @type {any} */ { amount, toAccount }) => {
+          if (!refundTx) return
+          setRefunding(true)
+          try {
+            await postRefund({ originalTxId: refundTx.txId, amount, toAccount })
+            showToast(`Refund of ${fmt(amount, currencyOfTx(refundTx))} logged`)
+            setRefundTx(null)
+          } catch (e) {
+            console.error('[WebTransactions] refund failed:', e)
+            showToast('Could not log the refund', 'error')
+          } finally {
+            setRefunding(false)
+          }
+        }}
+      />
+
       <TxDetailSheet
         open={!!sheet}
         onClose={() => setSheet(null)}
@@ -392,6 +420,18 @@ export default function WebTransactions() {
       />
     </Page>
   )
+}
+
+/**
+ * Whether a row can be refunded, by the phone's rule (components/
+ * TxDetailSheet): an expense of its own - not a refund, not a correction -
+ * with something of it still not come back.
+ *
+ * @param {Record<string, any>} tx
+ * @param {Array<Record<string, any>>} all
+ */
+function canRefundTx(tx, all) {
+  return tx.type === 'expense' && !!tx.txId && !isRefund(tx) && !isAdjustment(tx) && refundableAmount(tx, all) > 0
 }
 
 /** Spending per day across the span the rows cover. @param {Array<Record<string, any>>} rows @param {number} spent */
@@ -606,9 +646,9 @@ function BulkBar({ rows, categories, onClear, onRefile, onDelete }) {
  * @param {{tx: Record<string, any>|null, catMap: Record<string, any>, acctMap: Record<string, any>,
  *          categories: Array<Record<string, any>>, onClose: () => void, onEdit: (t: Record<string, any>) => void,
  *          onDelete: (t: Record<string, any>) => void, onRefile: (t: Record<string, any>, c: Record<string, any>) => void,
- *          onMore: (t: Record<string, any>) => void}} props
+ *          onRefund: (t: Record<string, any>) => void, refundable: boolean}} props
  */
-function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, onRefile, onMore }) {
+function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, onRefile, onRefund, refundable }) {
   const row = tx ? unfoldLoanPayment(tx) : null
   const m = tx ? moneyOf(tx) : null
   const cat = tx ? txGlyphCat(tx, catMap) : null
@@ -622,7 +662,7 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
       footer={tx && (
         <>
           <Btn variant="danger" icon={<ITrash size={14} />} onClick={() => onDelete(tx)} className="mr-auto">Delete</Btn>
-          <Btn variant="ghost" icon={<IExternal size={14} />} onClick={() => onMore(tx)}>More</Btn>
+          {refundable && <Btn variant="secondary" icon={<IUndo size={14} />} onClick={() => onRefund(tx)}>Refund</Btn>}
           <Btn variant="primary" icon={<IEdit size={14} />} onClick={() => onEdit(tx)}>Edit</Btn>
         </>
       )}
@@ -658,13 +698,13 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
             )}
             <dt>Date</dt>
             <dd>{new Date(tx.date).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })} · {fmtTime(tx.date)}</dd>
-            {row.description && (<><dt>Note</dt><dd className="break-words">{row.description}</dd></>)}
+            {row.description && (<><dt>Note</dt><dd><span className="break-words min-w-0">{row.description}</span></dd></>)}
             {isInstallmentRow(tx) && (<><dt>Plan</dt><dd>One payment of an installment plan</dd></>)}
             {tx.splitId && (<><dt>Split</dt><dd>Shared with others</dd></>)}
             {isRefund(tx) && (<><dt>Refund</dt><dd>Money back on an earlier purchase</dd></>)}
           </dl>
           <p className="mt-6 text-12 d-cell-faint">
-            <Link to="/transactions/deleted" className="d-link">Recently deleted</Link> keeps a deleted row for 30 days. More shows refunds, splits and the full history.
+            A deleted row stays in <Link to="/transactions/deleted" className="d-link">Recently deleted</Link> for 30 days, with its balance put back.
           </p>
         </div>
       )}

@@ -34,15 +34,6 @@ const MINUS = '−'
  * and defeats memo entirely. The rail handles clicks by delegation.
  */
 const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
-  const isDark = theme === 'dark'
-  const panel = {
-    background: isDark ? 'rgba(40,60,95,0.22)' : '#ffffff',
-    border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
-  }
-  const dim  = isDark ? 'rgba(255,255,255,0.13)' : '#e2e8f0'
-  const ink  = isDark ? '#ffffff' : '#0f172a'
-  const mute = isDark ? 'rgba(255,255,255,0.42)' : '#94a3b8'
-
   return (
     <button
       type="button"
@@ -75,84 +66,108 @@ const AccentPreview = memo(function AccentPreview({ hex, name, theme }) {
           scroll frame; no transition, because a transition fights a value
           that is already changing continuously. */}
       <div data-tilt className="will-change-transform">
-      <div
-        className="accent-frame rounded-[26px] overflow-hidden p-3 flex flex-col gap-2"
-        style={{ background: isDark ? '#0b0f14' : '#f8fafc' }}
-        aria-hidden="true"
-      >
-        {/* The net-worth card: the largest accent surface in the app. */}
-        <div className="rounded-2xl px-3 pt-2.5 pb-3" style={{ background: cardGradient(hex, theme) }}>
-          <p className="text-[6.5px] font-semibold text-white/60">Net worth</p>
-          <p className="text-17 font-semibold tracking-tight text-white mt-0.5">{baseSymbol()}33,571</p>
-          <div className="flex gap-2.5 mt-1.5">
-            <span className="text-[6px] text-white/50">Spending</span>
-            <span className="text-[6px] text-white/50">Savings</span>
-            <span className="text-[6px] text-white/50">Credit</span>
-          </div>
-        </div>
-
-        {/* Budget, with an accent bar and an accent link. */}
-        <div className="rounded-xl px-2.5 py-2" style={panel}>
-          <div className="flex items-baseline justify-between">
-            <span className="text-[7px] font-semibold" style={{ color: ink }}>Budget</span>
-            <span className="text-[6.5px] font-semibold" style={{ color: hex }}>See all</span>
-          </div>
-          <div className="h-1 rounded-full mt-1.5 overflow-hidden" style={{ background: dim }}>
-            <div className="h-full rounded-full" style={{ width: '65%', background: hex }} />
-          </div>
-        </div>
-
-        {/* Two transaction rows, so the card is tall enough to read as a
-            screen rather than a swatch with decorations - and the second one
-            is an inflow, which is where the accent shows on an amount. */}
-        <div className="rounded-xl overflow-hidden" style={panel}>
-          {[
-            { n: 'Breakfast', s: 'Cash',  a: MINUS + baseSymbol() + '300', accent: false },
-            { n: 'Salary',    s: 'BPI',   a: '+' + baseSymbol() + '42,000', accent: true },
-          ].map((t, i) => (
-            <div
-              key={t.n}
-              className="flex items-center gap-2 px-2 py-1.5"
-              style={i === 0 ? { borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' } : undefined}
-            >
-              <span className="w-4 h-4 rounded-md shrink-0" style={{ background: dim }} />
-              <span className="flex-1 min-w-0">
-                <span className="block text-[7px] font-semibold truncate" style={{ color: ink }}>{t.n}</span>
-                <span className="block text-[6px]" style={{ color: mute }}>{t.s}</span>
-              </span>
-              <span
-                className="text-[7px] font-semibold shrink-0"
-                style={{ color: t.accent ? hex : mute }}
-              >
-                {t.a}
-              </span>
-            </div>
-          ))}
-        </div>
-
-        {/* The primary button. */}
-        <div
-          className="rounded-xl py-1.5 text-center text-[7.5px] font-semibold text-white"
-          style={{ background: hex }}
-        >
-          Add expense
-        </div>
-
-        {/* The navbar, one tab active. */}
-        <div className="rounded-xl px-2 py-1.5 flex items-center justify-around" style={panel}>
-          {[0, 1, 2, 3].map(i => (
-            <span
-              key={i}
-              className="w-3.5 h-3.5 rounded-md"
-              style={{ background: i === 0 ? hex : dim }}
-            />
-          ))}
-        </div>
-      </div>
+        <AccentScreen hex={hex} theme={theme} />
       </div>
     </button>
   )
 })
+
+/**
+ * The picture itself: a miniature of the app in one accent and theme - the
+ * net-worth card, the budget bar, two rows, the primary button, the tab bar.
+ * Inert and aria-hidden; whatever holds it is the control. AccentPreview
+ * holds it in the swiped deck here, and the desktop's accent page
+ * (web/pages/WebSettingsAccent) in a grid.
+ *
+ * @param {{hex: string, theme: string}} props
+ */
+export function AccentScreen({ hex, theme }) {
+  const isDark = theme === 'dark'
+  const panel = {
+    background: isDark ? 'rgba(40,60,95,0.22)' : '#ffffff',
+    border: isDark ? '1px solid rgba(255,255,255,0.06)' : '1px solid rgba(0,0,0,0.06)',
+  }
+  const dim  = isDark ? 'rgba(255,255,255,0.13)' : '#e2e8f0'
+  const ink  = isDark ? '#ffffff' : '#0f172a'
+  const mute = isDark ? 'rgba(255,255,255,0.42)' : '#94a3b8'
+
+  return (
+    <div
+      className="accent-frame rounded-[26px] overflow-hidden p-3 flex flex-col gap-2"
+      style={{ background: isDark ? '#0b0f14' : '#f8fafc' }}
+      aria-hidden="true"
+    >
+      {/* The net-worth card: the largest accent surface in the app. */}
+      <div className="rounded-2xl px-3 pt-2.5 pb-3" style={{ background: cardGradient(hex, theme) }}>
+        <p className="text-[6.5px] font-semibold text-white/60">Net worth</p>
+        <p className="text-17 font-semibold tracking-tight text-white mt-0.5">{baseSymbol()}33,571</p>
+        <div className="flex gap-2.5 mt-1.5">
+          <span className="text-[6px] text-white/50">Spending</span>
+          <span className="text-[6px] text-white/50">Savings</span>
+          <span className="text-[6px] text-white/50">Credit</span>
+        </div>
+      </div>
+
+      {/* Budget, with an accent bar and an accent link. */}
+      <div className="rounded-xl px-2.5 py-2" style={panel}>
+        <div className="flex items-baseline justify-between">
+          <span className="text-[7px] font-semibold" style={{ color: ink }}>Budget</span>
+          <span className="text-[6.5px] font-semibold" style={{ color: hex }}>See all</span>
+        </div>
+        <div className="h-1 rounded-full mt-1.5 overflow-hidden" style={{ background: dim }}>
+          <div className="h-full rounded-full" style={{ width: '65%', background: hex }} />
+        </div>
+      </div>
+
+      {/* Two transaction rows, so the card is tall enough to read as a
+          screen rather than a swatch with decorations - and the second one
+          is an inflow, which is where the accent shows on an amount. */}
+      <div className="rounded-xl overflow-hidden" style={panel}>
+        {[
+          { n: 'Breakfast', s: 'Cash',  a: MINUS + baseSymbol() + '300', accent: false },
+          { n: 'Salary',    s: 'BPI',   a: '+' + baseSymbol() + '42,000', accent: true },
+        ].map((t, i) => (
+          <div
+            key={t.n}
+            className="flex items-center gap-2 px-2 py-1.5"
+            style={i === 0 ? { borderBottom: isDark ? '1px solid rgba(255,255,255,0.05)' : '1px solid rgba(0,0,0,0.05)' } : undefined}
+          >
+            <span className="w-4 h-4 rounded-md shrink-0" style={{ background: dim }} />
+            <span className="flex-1 min-w-0">
+              <span className="block text-[7px] font-semibold truncate" style={{ color: ink }}>{t.n}</span>
+              <span className="block text-[6px]" style={{ color: mute }}>{t.s}</span>
+            </span>
+            <span
+              className="text-[7px] font-semibold shrink-0"
+              style={{ color: t.accent ? hex : mute }}
+            >
+              {t.a}
+            </span>
+          </div>
+        ))}
+      </div>
+
+      {/* The primary button. */}
+      <div
+        className="rounded-xl py-1.5 text-center text-[7.5px] font-semibold text-white"
+        style={{ background: hex }}
+      >
+        Add expense
+      </div>
+
+      {/* The navbar, one tab active. */}
+      <div className="rounded-xl px-2 py-1.5 flex items-center justify-around" style={panel}>
+        {[0, 1, 2, 3].map(i => (
+          <span
+            key={i}
+            className="w-3.5 h-3.5 rounded-md"
+            style={{ background: i === 0 ? hex : dim }}
+          />
+        ))}
+      </div>
+    </div>
+  )
+}
 
 export default function SettingsAccent() {
   const { accentColor, setAccentColor, theme } = useTheme()

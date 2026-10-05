@@ -118,6 +118,8 @@ html.web .sheet-panel-exit {
 }
 
 html.web * { scrollbar-width: thin; scrollbar-color: var(--d-border-strong) transparent; }
+/* ...except where the phone hides one on purpose (a rail, the notes bar). */
+html.web .no-scrollbar { scrollbar-width: none; }
 html.web .d-num { font-variant-numeric: tabular-nums; }
 
 /* ── 3. Shell ──────────────────────────────────────────────────────────── */
@@ -149,12 +151,12 @@ html.web .d-brand-name { font-size: 18px; font-weight: 700; letter-spacing: -0.0
 
 html.web .d-nav { padding: 8px 12px 12px; display: flex; flex-direction: column; gap: 2px; }
 html.web .d-sidebar.is-collapsed .d-nav { padding: 8px 12px; align-items: stretch; }
+/* Headings in sentence case, as every label in the app is: capitals shout,
+   and in a column of them every heading weighs the same. */
 html.web .d-nav-heading {
   margin: 18px 12px 6px;
-  font-size: 11.5px;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-size: 13px;
+  font-weight: 600;
   color: var(--d-text-3);
 }
 html.web .d-sidebar.is-collapsed .d-nav-heading { height: 1px; margin: 12px 8px; overflow: hidden; color: transparent; background: var(--d-border); }
@@ -252,11 +254,9 @@ html.web .d-title { font-size: 30px; line-height: 36px; font-weight: 700; letter
 html.web .d-title .d-light { font-weight: 400; color: var(--d-text-2); }
 html.web .d-subtitle { margin-top: 6px; font-size: 15px; color: var(--d-text-2); }
 html.web .d-eyebrow {
-  font-size: 12.5px;
+  font-size: 14px;
   line-height: 1.2;
-  font-weight: 650;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
+  font-weight: 600;
   color: var(--d-ink);
   margin-bottom: 8px;
 }
@@ -309,11 +309,9 @@ html.web .d-btn-sm { height: 34px; padding: 0 14px; font-size: 13px; }
 html.web .d-btn-lg { height: 46px; padding: 0 22px; font-size: 15px; }
 html.web .d-btn-icon { width: var(--d-control); padding: 0; }
 html.web .d-btn-sm.d-btn-icon { width: 34px; }
-html.web .d-btn-primary {
-  background: var(--d-accent);
-  color: #fff;
-  box-shadow: 0 8px 20px -10px rgba(var(--color-primary-rgb), 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.2);
-}
+/* Flat in light mode, as the cards are; in dark a soft glow of its own colour. */
+html.web .d-btn-primary { background: var(--d-accent); color: #fff; }
+html.web.dark .d-btn-primary { box-shadow: 0 8px 20px -10px rgba(var(--color-primary-rgb), 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 html.web .d-btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--d-accent) 90%, #000); }
 html.web .d-btn-secondary { background: var(--d-panel); border-color: var(--d-border-strong); color: var(--d-text); }
 html.web .d-btn-secondary:hover:not(:disabled) { background: var(--d-hover); border-color: rgba(var(--color-primary-rgb), 0.35); }
@@ -368,7 +366,13 @@ html.web.dark .d-kbd { background: rgba(255, 255, 255, 0.05); }
 
 /* Segmented control: the phone's pill switch. */
 html.web .d-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--d-sunken); }
+/* A flex box, so a label with an icon in it sits in the middle: an inline
+   label rides the line's baseline, which leaves it high. */
 html.web .d-seg-item {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
   height: 32px;
   padding: 0 14px;
   border-radius: 999px;
@@ -546,6 +550,8 @@ html.web .d-badge-pos { background: color-mix(in srgb, var(--d-pos) 13%, transpa
 html.web .d-badge-neg { background: color-mix(in srgb, var(--d-neg) 13%, transparent); color: var(--d-neg); }
 html.web .d-badge-warn { background: color-mix(in srgb, var(--d-warn) 15%, transparent); color: var(--d-warn); }
 html.web .d-badge-accent { background: rgba(var(--color-primary-rgb), 0.12); color: var(--d-ink); }
+/* A chip under a page's title: the line's size, a little more room. */
+html.web .d-badge-lg { height: 28px; padding: 0 12px; gap: 6px; font-size: 13px; }
 
 /* Menus and popovers. */
 html.web .d-pop {
@@ -579,7 +585,7 @@ html.web .d-menu-item.is-danger { color: var(--d-neg); }
 html.web .d-menu-item.is-danger > svg { color: var(--d-neg); }
 html.web .d-menu-item[aria-checked='true'] { font-weight: 600; color: var(--d-ink); }
 html.web .d-menu-sep { height: 1px; margin: 6px 8px; background: var(--d-border); }
-html.web .d-menu-label { padding: 8px 12px 4px; font-size: 11.5px; font-weight: 650; letter-spacing: 0.08em; text-transform: uppercase; color: var(--d-text-3); }
+html.web .d-menu-label { padding: 10px 12px 4px; font-size: 13px; font-weight: 600; color: var(--d-text-3); }
 
 /* Stat: a figure in a card - big, bold, the phone's hero numbers. */
 html.web .d-stat-label { font-size: 13.5px; font-weight: 500; color: var(--d-text-2); }
@@ -617,9 +623,11 @@ html.web .d-drawer-body { flex: 1; min-height: 0; overflow-y: auto; padding: 28p
 html.web .d-drawer-foot { display: flex; align-items: center; justify-content: flex-end; gap: 10px; padding: 16px 28px; border-top: 1px solid var(--d-border); flex-shrink: 0; }
 
 /* Definition rows in a drawer or panel: label left, value right. */
-html.web .d-dl { display: grid; grid-template-columns: 120px 1fr; row-gap: 16px; column-gap: 16px; font-size: 14px; }
-html.web .d-dl dt { color: var(--d-text-3); }
-html.web .d-dl dd { color: var(--d-text); min-width: 0; }
+/* Every row the same height, whatever is in it - a word, a tile, a pill -
+   so the gaps between them are even; a long value grows from the top. */
+html.web .d-dl { display: grid; grid-template-columns: 120px 1fr; row-gap: 6px; column-gap: 16px; align-items: start; font-size: 14px; }
+html.web .d-dl dt { color: var(--d-text-3); min-height: 36px; display: flex; align-items: center; }
+html.web .d-dl dd { color: var(--d-text); min-width: 0; min-height: 36px; display: flex; align-items: center; gap: 8px; }
 
 /* Empty state. */
 html.web .d-empty { padding: 56px 24px; text-align: center; }
@@ -640,6 +648,7 @@ html.web .d-tile {
 }
 html.web .d-tile-sm { width: 30px; height: 30px; border-radius: 10px; }
 html.web .d-tile-lg { width: 48px; height: 48px; border-radius: 15px; }
+html.web .d-tile-xl { width: 64px; height: 64px; border-radius: 20px; }
 
 html.web .d-divider { height: 1px; background: var(--d-border); }
 html.web .d-link { color: var(--d-ink); font-weight: 600; }
@@ -765,7 +774,8 @@ html.web .web-pane-detail[data-root='true'] .page-header { grid-template-columns
    the main pane has its header made the pane's title; in the side pane the
    page's own title already says it, so the phone's goes. */
 html.web .d-twopane { display: grid; grid-template-columns: var(--side, 300px) minmax(0, 1fr); gap: 24px; align-items: start; }
-html.web .d-twopane-side { position: sticky; top: 0; max-height: calc(100dvh - var(--d-topbar) - 64px); overflow-y: auto; }
+/* Stuck, it keeps the page's own gap below the top bar rather than meeting it. */
+html.web .d-twopane-side { position: sticky; top: 24px; max-height: calc(100dvh - var(--d-topbar) - 48px); overflow-y: auto; }
 html.web .d-twopane-side .d-nav-item { height: 40px; font-size: 14px; }
 html.web .d-twopane-list { margin: 0 -20px; }
 html.web .d-twopane-list .page-header { display: none; }
@@ -786,10 +796,140 @@ html.web .d-twopane-main .page-header-title {
   letter-spacing: -0.02em;
   color: var(--d-text);
 }
-/* Settings' overview is the phone's Settings page, whose own title the page's repeats. */
-html.web .d-twopane-main.is-index .page-header { display: none; }
 html.web .d-twopane-main .pb-page,
 html.web .d-twopane-main .pb-nav { padding-bottom: 8px; }
+/* A desktop page in the right half has the same title the phone's get above. */
+html.web .d-pane-head { padding: 0 20px 18px; }
+html.web .d-pane-title { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--d-text); }
+html.web .d-pane-sub { margin-top: 4px; font-size: 14px; color: var(--d-text-2); }
+
+/* ── Settings' overview (pages/WebSettingsOverview): your profile, then one
+   list - each section's name at the left, its settings down the right, each
+   on a line with where it stands. One panel read down, as a form is. */
+/* The profile: your initial, your name, and its buttons at the end - or,
+   in a narrow pane, under your name. Container queries here, since it is
+   the pane's width that decides, not the window's. */
+html.web .d-set-profile { container-type: inline-size; }
+html.web .d-set-profile-row { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; column-gap: 20px; row-gap: 16px; padding: 24px; }
+html.web .d-set-profile-actions { display: flex; align-items: center; gap: 8px; }
+@container (max-width: 560px) {
+  html.web .d-set-profile-row { grid-template-columns: auto minmax(0, 1fr); }
+  html.web .d-set-profile-actions { grid-column: 2; }
+}
+html.web .d-set-name { font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.025em; color: var(--d-text); }
+html.web .d-set-ach {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 14px 24px;
+  border-top: 1px solid var(--d-border);
+  text-align: left;
+  transition: background-color 0.15s;
+}
+html.web .d-set-ach:hover { background: var(--d-hover); }
+html.web .d-set-ach:focus-visible { outline: none; box-shadow: inset var(--d-ring); }
+
+html.web .d-set-list { container-type: inline-size; }
+html.web .d-set-section { display: grid; grid-template-columns: 200px minmax(0, 1fr); column-gap: 24px; padding: 18px 16px 18px 24px; }
+html.web .d-set-section + .d-set-section { border-top: 1px solid var(--d-border); }
+html.web .d-set-section-head { padding-top: 13px; }
+html.web .d-set-section-title { font-size: 15px; font-weight: 650; color: var(--d-text); }
+html.web .d-set-section-note { margin-top: 3px; font-size: 13px; line-height: 1.45; color: var(--d-text-3); }
+@container (max-width: 600px) {
+  html.web .d-set-section { grid-template-columns: minmax(0, 1fr); row-gap: 6px; padding: 18px 12px; }
+  html.web .d-set-section-head { padding: 0 12px; }
+}
+/* A line: icon, name, where it stands, and a chevron when it opens a page;
+   rounded under the pointer, a hairline between - which gives way beside
+   the line being pointed at. */
+html.web .d-set-line {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 50px;
+  padding: 7px 12px;
+  border-radius: 14px;
+  text-align: left;
+  transition: background-color 0.15s;
+}
+html.web .d-set-line + .d-set-line::before { content: ''; position: absolute; top: 0; left: 41px; right: 12px; height: 1px; background: var(--d-border); transition: opacity 0.15s; }
+html.web button.d-set-line:hover { background: var(--d-hover); }
+html.web button.d-set-line:hover::before,
+html.web button.d-set-line:hover + .d-set-line::before { opacity: 0; }
+html.web button.d-set-line:focus-visible { outline: none; box-shadow: var(--d-ring); }
+html.web .d-set-line-icon { display: inline-flex; color: var(--d-text-3); }
+html.web .d-set-line-label { flex: 1; min-width: 0; font-size: 14px; font-weight: 550; color: var(--d-text); }
+html.web .d-set-line-sub { margin-top: 1px; font-size: 13px; color: var(--d-text-3); }
+html.web .d-set-line-value { display: flex; align-items: center; justify-content: flex-end; gap: 7px; min-width: 0; max-width: 58%; font-size: 14px; color: var(--d-text-2); }
+html.web .d-set-line-value.d-warn { color: var(--d-warn); }
+html.web .d-set-line-value.d-neg { color: var(--d-neg); }
+html.web .d-set-line-go { color: var(--d-text-3); }
+html.web .d-set-swatch { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+
+/* ── The privacy policy and the terms (pages/WebSettingsPolicy): numbered
+   sections, a hairline between. */
+html.web .d-policy-section { display: flex; gap: 14px; align-items: flex-start; padding: 18px 0; }
+html.web .d-policy-section + .d-policy-section { border-top: 1px solid var(--d-border); }
+html.web .d-policy-num { width: 26px; height: 26px; flex-shrink: 0; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 700; background: rgba(var(--color-primary-rgb), 0.12); color: var(--d-ink); }
+html.web .d-policy-head { font-size: 15px; font-weight: 650; color: var(--d-text); line-height: 26px; }
+html.web .d-policy-body { margin-top: 4px; max-width: 68ch; font-size: 14px; line-height: 1.6; color: var(--d-text-2); }
+
+/* ── Accent colour (pages/WebSettingsAccent): the accents in one line, each
+   a miniature of the app; the one in use is ringed in its own colour. The
+   line's padding is room for that ring and the lift on hover, which an
+   overflow-x box would otherwise clip. */
+html.web .d-accent-line { position: relative; display: flex; gap: 18px; padding: 22px 24px 24px; }
+html.web .d-accent { flex: 0 0 156px; display: flex; flex-direction: column; align-items: stretch; min-width: 0; text-align: left; border-radius: 26px; }
+html.web .d-accent:focus-visible { outline: none; }
+html.web .d-accent .accent-frame { transition: box-shadow 0.18s var(--ease-out), translate 0.25s var(--ease-out); }
+html.web .d-accent:hover .accent-frame { translate: 0 -2px; }
+html.web .d-accent.is-on .accent-frame { box-shadow: 0 0 0 3px var(--d-panel), 0 0 0 5px var(--swatch); }
+html.web .d-accent:focus-visible .accent-frame { box-shadow: 0 0 0 3px var(--d-panel), 0 0 0 5px var(--swatch), 0 0 0 9px rgba(var(--color-primary-rgb), 0.22); }
+html.web .d-accent-name { margin-top: 14px; padding: 0 4px; display: flex; align-items: center; gap: 6px; font-size: 15px; font-weight: 650; color: var(--d-text); }
+html.web .d-accent.is-on .d-accent-name { color: var(--d-ink); }
+html.web .d-accent-hint { margin-top: 2px; padding: 0 4px; font-size: 12.5px; line-height: 1.4; color: var(--d-text-3); }
 /* The note: its card is the page, so it runs the height of the window. */
 html.web .d-note-card { min-height: calc(100dvh - var(--d-topbar) - 200px); padding-top: 18px; }
 html.web .d-note-card .page-header { padding-top: 0; }
+/* One line, not two: the note's options button at the end of its formatting
+   bar. The header (with the ⋯) keeps its place in the page but takes no
+   height, and rides along when the bar sticks to the top. Only with a bar -
+   a note in Recently deleted has none, and keeps its header row. */
+html.web .d-note-card:has(.note-desk-bar) .pinned-top { position: sticky; top: 0; height: 0; z-index: 12; }
+html.web .d-note-card:has(.note-desk-bar) .page-header {
+  position: absolute;
+  top: 3px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  padding: 0;
+  min-height: 0;
+}
+html.web .d-note-card:has(.note-desk-bar) .note-desk-bar { margin-right: 60px; }
+
+/* A rail's soft edges (ui/Feather): the end with more to scroll to fades
+   out, an end at its limit is left sharp. Registered so the fade eases in
+   rather than snapping as you reach an end. */
+@property --d-fl { syntax: '<length>'; inherits: true; initial-value: 0px; }
+@property --d-fr { syntax: '<length>'; inherits: true; initial-value: 0px; }
+html.web .d-feather { transition: --d-fl 0.2s var(--ease-out), --d-fr 0.2s var(--ease-out); }
+html.web .d-feather[data-start='false'] { --d-fl: var(--feather, 64px); }
+html.web .d-feather[data-end='false'] { --d-fr: var(--feather, 64px); }
+html.web .d-feather .overflow-x-auto {
+  -webkit-mask-image: linear-gradient(to right, transparent 0, #000 var(--d-fl), #000 calc(100% - var(--d-fr)), transparent 100%);
+  mask-image: linear-gradient(to right, transparent 0, #000 var(--d-fl), #000 calc(100% - var(--d-fr)), transparent 100%);
+}
+
+/* Home's Budget gauge (components/BudgetGauge): its figure sized to the
+   panel it is in rather than fixed at the phone's 32px. */
+html.web .d-gauge { container-type: inline-size; }
+html.web .d-gauge .text-32 { font-size: clamp(22px, 10.5cqw, 32px); }
+html.web .d-gauge .tabular-nums { white-space: nowrap; }
+
+/* Home's wallet (pages/WebHome): the desktop cards' 24px corners, its
+   stitching 10px inside them. */
+html.web .d-home-wallet .wallet-card { border-radius: 24px; }
+html.web .d-home-wallet .wallet-stitch { border-radius: 14px; }

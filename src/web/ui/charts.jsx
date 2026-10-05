@@ -90,13 +90,13 @@ export function AreaTrend({ data, color = 'var(--d-accent)', height = 220, curre
 /**
  * Money in and out side by side, one pair of bars per period.
  *
- * @param {{data: Array<{label: string, income: number, expense: number}>, height?: number, currency?: string}} props
+ * @param {{data: Array<{label: string, income: number, expense: number}>, height?: number|string, currency?: string}} props
  */
 export function InOutBars({ data, height = 220, currency }) {
   const max = Math.max(1, ...data.flatMap(d => [d.income, d.expense]))
   const { ceil, ticks } = niceAxis(0, max)
   return (
-    <div className="[&_*]:outline-none">
+    <div className={`[&_*]:outline-none ${typeof height === 'string' ? 'h-full' : ''}`}>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barGap={3} barCategoryGap="28%">
           <CartesianGrid vertical={false} stroke={GRID} />
@@ -122,7 +122,7 @@ export function InOutBars({ data, height = 220, currency }) {
 /**
  * One series of bars - a day's spending across a month.
  *
- * @param {{data: Array<{label: string, value: number}>, height?: number, currency?: string, color?: string, valueLabel?: string}} props
+ * @param {{data: Array<{label: string, value: number}>, height?: number|string, currency?: string, color?: string, valueLabel?: string}} props
  */
 export function Bars({ data, height = 200, currency, color = 'var(--d-accent)', valueLabel = 'Spent' }) {
   const max = Math.max(1, ...data.map(d => d.value))
@@ -130,7 +130,7 @@ export function Bars({ data, height = 200, currency, color = 'var(--d-accent)', 
   const last = data.length - 1
   const every = Math.max(1, Math.ceil(data.length / 8))
   return (
-    <div className="[&_*]:outline-none">
+    <div className={`[&_*]:outline-none ${typeof height === 'string' ? 'h-full' : ''}`}>
       <ResponsiveContainer width="100%" height={height}>
         <BarChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="22%">
           <CartesianGrid vertical={false} stroke={GRID} />

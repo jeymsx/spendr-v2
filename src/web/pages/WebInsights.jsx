@@ -13,9 +13,12 @@ import Highlights from '../../pages/insights/Highlights'
 import { FORECAST_SETTINGS_PATH } from '../../lib/forecast'
 import { editTransaction } from '../../lib/editTransaction'
 import { useBaseCurrency } from '../../context/CurrencyContext'
-import { fmt } from '../../lib/money'
+import { fmt, fmtCompact } from '../../lib/money'
 import TxDetailSheet from '../../components/TxDetailSheet'
 import Page from '../ui/Page'
+import Feather from '../ui/Feather'
+import Sankey from '../ui/Sankey'
+import { txBase } from '../../lib/fxContext'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
@@ -117,6 +120,55 @@ function Figures({ data, period }) {
   )
 }
 
+const INCOME_COLOURS = ['#0f9f7a', '#14b8a6', '#0891b2', '#22c55e', '#65a30d', '#0d9488']
+
+/**
+ * The period's money as a flow: what came in (by what it was, the biggest
+ * six and the rest together) - and, when more went out than came in, the
+ * difference drawn from what you already had - into one total, out to the
+ * categories it was spent on, and what was kept when less went out.
+ *
+ * Both sides are useInsightsData's own figures (income and spending by
+ * lib/flows, in the ledger's currency), so they add up to the Spent and
+ * Came in above.
+ *
+ * @param {{data: Data, period: any}} props
+ */
+function CashFlow({ data, period }) {
+  const flow = useMemo(() => {
+    /** @type {Map<string, {value: number, color: string}>} */
+    const byName = new Map()
+    for (const t of data.inflows) {
+      const name = String(t.description || t.category || 'Income').trim() || 'Income'
+      const at = byName.get(name) ?? { value: 0, color: data.catMap[t.category]?.color ?? '' }
+      at.value += txBase(t)
+      byName.set(name, at)
+    }
+    const ins = [...byName.entries()].map(([name, v]) => ({ name, value: v.value })).filter(n => n.value > 0.005).sort((a, b) => b.value - a.value)
+    /** @type {Array<{name: string, value: number, color: string}>} */
+    const sources = ins.slice(0, 6).map((n, i) => ({ ...n, color: INCOME_COLOURS[i % INCOME_COLOURS.length] }))
+    const restIn = ins.slice(6).reduce((s, n) => s + n.value, 0)
+    if (restIn > 0.005) sources.push({ name: 'Other income', value: restIn, color: '#94a3b8' })
+    const outs = data.categorySegments.filter(c => c.value > 0.005)
+    const targets = outs.slice(0, 8).map(c => ({ name: c.name, value: c.value, color: c.color }))
+    const restOut = outs.slice(8).reduce((s, c) => s + c.value, 0)
+    if (restOut > 0.005) targets.push({ name: 'Everything else', value: restOut, color: '#94a3b8' })
+    const inTotal = sources.reduce((s, n) => s + n.value, 0)
+    const outTotal = targets.reduce((s, n) => s + n.value, 0)
+    if (outTotal - inTotal > 0.005) sources.push({ name: 'From savings', value: outTotal - inTotal, color: '#c27803' })
+    if (inTotal - outTotal > 0.005) targets.push({ name: 'Kept', value: inTotal - outTotal, color: '#059669' })
+    return { sources, targets, inTotal, outTotal }
+  }, [data.inflows, data.categorySegments, data.catMap])
+
+  if (!flow.sources.length && !flow.targets.length) return null
+  const rows = Math.max(flow.sources.length, flow.targets.length)
+  return (
+    <Panel className="mb-8" title="Cash flow" meta={`${periodName(period)}: where the money came from, and where it went`}>
+      <Sankey sources={flow.sources} targets={flow.targets} middle="Money in" height={Math.max(300, Math.min(480, rows * 46 + 60))} />
+    </Panel>
+  )
+}
+
 /** Where the money went: a ring, and the categories beside it. @param {{data: Data, limit?: number}} props */
 function CategoryBreakdown({ data, limit = 8 }) {
   const navigate = useNavigate()
@@ -125,17 +177,26 @@ function CategoryBreakdown({ data, limit = 8 }) {
   const shown = segs.slice(0, limit)
   const rest = segs.slice(limit).reduce((s, c) => s + c.value, 0)
   const activeSeg = segs.find(s => s.name === active)
+  const size = limit > 5 ? 208 : 176
+  /* The figure fits the hole: the ring's inside is 70% of it across, and a
+     bold tabular figure is about 0.6em a character - so it is sized to the
+     hole and its own length, 22px at most. A long one goes compact first. */
+  const value = activeSeg ? activeSeg.value : data.totalSpent
+  const full = fmt(value)
+  const figure = full.length > 11 ? fmtCompact(value) : full
+  const room = size * 0.7 * 0.8
+  const fs = Math.max(13, Math.min(22, Math.floor(room / (figure.length * 0.6))))
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5">
       <Ring
         data={segs.map(s => ({ name: s.name, value: s.value, color: s.color }))}
-        size={limit > 5 ? 208 : 176}
+        size={size}
         active={active}
         onActive={setActive}
         center={
           <>
-            <span className="text-12 font-medium text-[var(--d-text-3)]">{activeSeg ? activeSeg.name : 'Spent'}</span>
-            <span className="text-[22px] leading-7 font-bold tracking-tight d-num text-[var(--d-text)]">{fmt(activeSeg ? activeSeg.value : data.totalSpent)}</span>
+            <span className="text-12 font-medium text-[var(--d-text-3)] truncate" style={{ maxWidth: room }}>{activeSeg ? activeSeg.name : 'Spent'}</span>
+            <span className="font-bold tracking-tight d-num text-[var(--d-text)] whitespace-nowrap" style={{ fontSize: fs, lineHeight: 1.25 }}>{figure}</span>
           </>
         }
       />
@@ -163,7 +224,7 @@ function CategoryBreakdown({ data, limit = 8 }) {
 }
 
 /** The period's movement: day by day for a week or a month, month by month for longer. @param {{data: Data, period: any, height?: number}} props */
-function MovementChart({ data, period, height = 240 }) {
+function MovementChart({ data, period, height = /** @type {number|string} */ (240) }) {
   if (period.range === '1m' || period.range === '7d') {
     return <Bars data={data.daily.map(d => ({ label: String(d.day), value: d.expense }))} height={height} valueLabel="Spent" />
   }
@@ -178,17 +239,23 @@ function Overview({ data, period }) {
   return (
     <>
       <Figures data={data} period={period} />
+      <CashFlow data={data} period={period} />
       <div className="grid grid-cols-12 gap-5 mb-8">
         <Panel className="col-span-7" title="Where it went" meta={data.categorySegments.length ? `${data.categorySegments.length} categories` : null}
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/spending')}>Spending</Btn>}>
           <CategoryBreakdown data={data} />
         </Panel>
-        <Panel className="col-span-5" title={daily ? 'Day by day' : 'Month by month'}
+        {/* As tall as Where it went beside it, however many categories that
+            lists: the chart fills its panel (drawn in a box laid over the
+            body, so its own height never decides the row's), 232px at least. */}
+        <Panel className="col-span-5 flex flex-col" bodyClassName="relative flex-1 min-h-[260px]" title={daily ? 'Day by day' : 'Month by month'}
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/trend')}>Trend</Btn>}>
-          <MovementChart data={data} period={period} height={232} />
+          <div className="absolute left-6 right-6 top-1 bottom-6">
+            <MovementChart data={data} period={period} height="100%" />
+          </div>
         </Panel>
       </div>
-      {data.trivia.length > 0 && <div className="-mx-5 mb-8 web-highlights"><Highlights items={data.trivia} /></div>}
+      {data.trivia.length > 0 && <Feather className="-mx-5 mb-8 web-highlights"><Highlights items={data.trivia} /></Feather>}
       <div className="grid grid-cols-12 gap-5">
         <Panel className="col-span-7" title="Top expenses" flush
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/spending')}>All</Btn>}>

@@ -77,14 +77,14 @@ export default function WebGoals() {
 
           <div className="grid grid-cols-12 gap-5">
             <div className="col-span-8 min-w-0">
-              <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+              <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
                 {active.map(g => <GoalCard key={g.id} goal={g} today={today} onOpen={() => navigate(`/goals/${g.id}`)} />)}
               </div>
               {archived.length > 0 && (
                 <div className="mt-8">
                   <Btn variant="ghost" onClick={() => setShowArchived(s => !s)}>{showArchived ? 'Hide' : 'Show'} {archived.length} archived</Btn>
                   {showArchived && (
-                    <div className="grid gap-5 mt-4" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))' }}>
+                    <div className="grid gap-5 mt-4" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
                       {archived.map(g => <GoalCard key={g.id} goal={g} today={today} muted onOpen={() => navigate(`/goals/${g.id}`)} />)}
                     </div>
                   )}

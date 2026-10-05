@@ -239,6 +239,7 @@ export const GLYPHS = {
   week: '<rect x="3.2" y="5.4" width="17.6" height="15.4" rx="2.6"/><path d="M3.2 10.2h17.6"/><path d="M8 3.2v4M16 3.2v4"/><path d="M7.4 14.2h2M11 14.2h2M14.6 14.2h2M7.4 17.4h2"/>',
   pen: '<path d="M4 20l1-4.2L15.8 5a2.2 2.2 0 0 1 3.2 3.2L8.2 19z"/><path d="M13.8 7l3.2 3.2"/>',
   down: '<path d="M12 4.4v15.2M6 13.6l6 6 6-6"/>',
+  up: '<path d="M12 19.6V4.4M6 10.4l6-6 6 6"/>',
   people: '<circle cx="9" cy="8.4" r="3.4"/><path d="M2.8 19.8a6.2 6.2 0 0 1 12.4 0"/><path d="M15.4 5.2a3.2 3.2 0 0 1 0 6.3"/><path d="M17.8 14a5.6 5.6 0 0 1 3.4 5.8"/>',
   globe: '<circle cx="12" cy="12" r="9.3"/><path d="M2.7 12h18.6"/><path d="M12 2.7c2.5 2.6 3.8 5.7 3.8 9.3s-1.3 6.7-3.8 9.3c-2.5-2.6-3.8-5.7-3.8-9.3S9.5 5.3 12 2.7z"/>',
   bank: '<path d="M3.4 9.2 12 4l8.6 5.2z"/><path d="M5.4 9.6v7.6M9.8 9.6v7.6M14.2 9.6v7.6M18.6 9.6v7.6M3.4 19.8h17.2"/>',
@@ -401,6 +402,10 @@ const MONEY_BAG = 'M50 42C38 52 25 66 25 85C25 103 42 111 64 111C86 111 103 103 
 const HEART = 'M64 104C44 90 24 74 24 52A20 20 0 0 1 64 42A20 20 0 0 1 104 52C104 74 84 90 64 104Z'
 const BELL = 'M64 22C49 22 40 34 40 50V71L32 83C30.5 85.5 32 88 35 88H93C96 88 97.5 85.5 96 83L88 71V50C88 34 79 22 64 22Z'
 const BIN = rpoly([[34, 46], [94, 46], [88, 110], [40, 110]], 9)
+/* A cloud: three bumps - a small one at the left, the tall one in the
+   middle, one between at the right - over a flat foot, as one outline so the
+   pane draws one rim. The arcs meet where the circles cross. */
+const CLOUD = 'M42 92H86A18 18 0 1 0 85.23 56.02A24 24 0 0 0 38.04 60.5A16 16 0 0 0 42 92Z'
 
 /**
  * A ring with a hole in it: the outer circle one way round and the inner the
@@ -742,6 +747,13 @@ const PICTURES = {
     S(rr(68, 22, 38, 38, 11), { tone: 'mid' }),
     S(rr(22, 68, 38, 38, 11), { tone: 'mid' }),
     G(rr(62, 62, 46, 46, 13)),
+  ],
+  /* A cloud with an arrow rising into it, over a solid one set back. For
+     cloud sync, before it is on. */
+  cloud: () => [
+    S(CLOUD, { t: 'rotate(-8 64 66) translate(-10 -14)' }),
+    G(CLOUD, { t: 'translate(4 10)' }),
+    Y('up', { x: 68, y: 80, s: 1.2, w: 2.4 }),
   ],
   /* A globe on a glass disc, for money from elsewhere: exchange rates. */
   globe: () => [

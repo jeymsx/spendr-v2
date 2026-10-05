@@ -128,7 +128,7 @@ export function useReminderSettings(user) {
 }
 
 /** @param {ReturnType<typeof useReminderSettings>} r */
-function sublabelFor(r) {
+export function sublabelFor(r) {
   if (!r.user) return 'Sign in to get them'
   if (r.on) return 'On for this device'
   if (r.support === 'ios-install') return 'Add Spendr to your Home Screen first'

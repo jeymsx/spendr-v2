@@ -91,14 +91,14 @@ export function Progress({ value, color, className = '', label }) {
  * An account's tile: its brand gradient with its mark - the card face,
  * shrunk to a chip that sits beside its name in a row.
  *
- * @param {{account: Record<string, any>|null|undefined, size?: 'sm'|'md'|'lg', className?: string}} props
+ * @param {{account: Record<string, any>|null|undefined, size?: 'sm'|'md'|'lg'|'xl', className?: string}} props
  */
 export function AccountTile({ account, size = 'md', className = '' }) {
   const brand = account ? accountBrand(account) : null
-  const px = size === 'sm' ? 14 : size === 'lg' ? 22 : 17
+  const px = size === 'sm' ? 14 : size === 'lg' ? 22 : size === 'xl' ? 30 : 17
   return (
     <span
-      className={`d-tile ${size === 'sm' ? 'd-tile-sm' : size === 'lg' ? 'd-tile-lg' : ''} ${className}`}
+      className={`d-tile ${size === 'sm' ? 'd-tile-sm' : size === 'lg' ? 'd-tile-lg' : size === 'xl' ? 'd-tile-xl' : ''} ${className}`}
       style={{ background: brand ? `linear-gradient(135deg, ${brand.from}, ${brand.to})` : '#64748b' }}
       aria-hidden="true"
     >

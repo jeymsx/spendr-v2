@@ -29,7 +29,7 @@ export default function ChangelogPage() {
               Version {release.version}
             </h2>
             {i === 0 && (
-              <span className="text-10 font-bold uppercase tracking-wider px-1.5 py-0.5 rounded-md bg-primary/10 dark:bg-primary/20 accent-ink">
+              <span className="text-11 font-semibold px-2 py-0.5 rounded-full bg-primary/10 dark:bg-primary/20 accent-ink">
                 Latest
               </span>
             )}

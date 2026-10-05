@@ -15,6 +15,10 @@ import { txBase } from '../../lib/fxContext'
 import { fmt } from '../../lib/money'
 import { useAccountsView } from '../data/accounts'
 import { AccountCard } from '../../pages/dashboard/Tiles'
+import { useWalletClip, TAB_H } from '../../pages/dashboard/wallet'
+import { cardGradient } from '../../lib/accentTheme'
+import BudgetGauge from '../../components/BudgetGauge'
+import { useTheme } from '../../context/ThemeContext'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
@@ -38,6 +42,8 @@ import { IChevronRight, IWallet, IList, ICalendar, IGauge } from '../ui/icons'
  * the forecast's safe to spend and next 30 days (useForecast), Home's
  * budget and Recent rules.
  */
+const WALLET_CORNERS = { top: 24, bottom: 24 }
+
 export default function WebHome() {
   const navigate = useNavigate()
   const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
@@ -48,6 +54,12 @@ export default function WebHome() {
   const month = useInsightsData(period)
   const { forecast } = useForecast(30)
   const [range, setRange] = useState('6m')
+  const { accentColor, theme } = useTheme()
+  // The phone's silhouette with the desktop cards' 24px corners.
+  const [walletRef, walletClip] = useWalletClip(WALLET_CORNERS)
+  const [pilesOpen, setPilesOpen] = useState(() => {
+    try { return localStorage.getItem('netWorthBreakdown') !== 'closed' } catch { return true }
+  })
   const series = useNetWorthSeries(range)
 
   const { current: nwNow, txs: nwTxs, debts: nwDebts, includeDebts: nwInclude } = series
@@ -101,24 +113,59 @@ export default function WebHome() {
       title={<><span className="d-light">{getGreeting()}{name ? ',' : ''}</span>{name ? ` ${name}!` : ''}</>}
     >
       <div className="grid grid-cols-12 gap-5 mb-8">
-        <section className="d-hero col-span-5 px-7 py-6 flex flex-col" aria-label="Net worth">
-          <div className="text-13 font-semibold text-white/70">Net worth</div>
-          <div className="mt-1.5 text-[36px] leading-[42px] font-bold tracking-[-0.03em] d-num">{loading ? '—' : <Money value={breakdown.total} />}</div>
-          {thisMonthChange != null && (
-            <div className="mt-3">
-              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-white/15 text-12 font-semibold d-num">
-                {thisMonthChange >= 0 ? '+' : '−'}{fmt(Math.abs(thisMonthChange))} this month
-              </span>
+        {/* The phone's wallet: its silhouette (the tab hanging off the foot,
+            pages/dashboard/wallet.jsx), its stitching and its pocket, in the
+            accent - the one card on the page that is a thing rather than a
+            figure. The tab folds the piles away, as on the phone. */}
+        {/* The body ends level with the cards beside it; the tab hangs below,
+            into the gap before Accounts. */}
+        <div className="wallet d-home-wallet col-span-5 flex min-w-0" style={{ marginBottom: -TAB_H }}>
+          <section
+            ref={walletRef}
+            className="wallet-card w-full px-7 pt-6 flex flex-col text-white"
+            style={{ background: cardGradient(accentColor, theme), clipPath: walletClip }}
+            aria-label="Net worth"
+          >
+            <span className="wallet-stitch" aria-hidden="true" />
+            <div className="text-13 font-semibold text-white/70">Net worth</div>
+            <div className="mt-1.5 text-[36px] leading-[42px] font-bold tracking-[-0.03em] d-num">{loading ? '—' : <Money value={breakdown.total} />}</div>
+            {thisMonthChange != null && (
+              <div className="mt-3">
+                <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-white/15 text-12 font-semibold d-num">
+                  {thisMonthChange >= 0 ? '+' : '−'}{fmt(Math.abs(thisMonthChange))} this month
+                </span>
+              </div>
+            )}
+            <div className="flex-1" />
+            <div className="wallet-fold -mx-7" data-open={pilesOpen}>
+              <div className="pt-5">
+                <div className="wallet-pocket px-7 pt-6 pb-5">
+                  <div className="grid grid-cols-4 gap-3">
+                    <Pile label="Spending" value={breakdown.spending} />
+                    <Pile label="Savings" value={breakdown.savings} />
+                    <Pile label="Investments" value={breakdown.invested} />
+                    <Pile label="You owe" value={breakdown.credit + breakdown.loans} owed />
+                  </div>
+                </div>
+              </div>
             </div>
-          )}
-          <div className="flex-1" />
-          <div className="grid grid-cols-4 gap-3 mt-6 pt-4 border-t border-white/20">
-            <Pile label="Spending" value={breakdown.spending} />
-            <Pile label="Savings" value={breakdown.savings} />
-            <Pile label="Investments" value={breakdown.invested} />
-            <Pile label="You owe" value={breakdown.credit + breakdown.loans} owed />
-          </div>
-        </section>
+            <button
+              type="button"
+              className="wallet-tab"
+              aria-expanded={pilesOpen}
+              aria-label={pilesOpen ? 'Hide the breakdown' : 'Show the breakdown'}
+              onClick={() => setPilesOpen(v => {
+                const next = !v
+                try { localStorage.setItem('netWorthBreakdown', next ? 'open' : 'closed') } catch { /* private mode */ }
+                return next
+              })}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M6 9l6 6 6-6" />
+              </svg>
+            </button>
+          </section>
+        </div>
 
         <div className="col-span-7 grid grid-cols-2 gap-5">
           <Stat
@@ -142,9 +189,7 @@ export default function WebHome() {
             value={budget.total ? fmt(Math.abs(budgetLeft)) : '—'}
             tone={budget.total && budgetLeft < 0 ? 'neg' : null}
             note={budget.total ? (budgetLeft < 0 ? 'Over the month’s limits' : `${Math.round(budget.pct)}% of ${fmt(budget.total)} used`) : 'No limits set'}
-          >
-            {budget.total > 0 && <Progress className="mt-3" value={budget.pct} color={budget.pct > 100 ? 'var(--d-neg)' : budget.pct > 85 ? 'var(--d-warn)' : undefined} />}
-          </Stat>
+          />
         </div>
       </div>
 
@@ -200,7 +245,7 @@ export default function WebHome() {
                 return (
                   <div key={e.key} className="flex items-center gap-3 h-11 px-4">
                     <span className="w-9 shrink-0 text-center leading-tight">
-                      <span className="block text-10 font-semibold uppercase text-[var(--d-text-3)]">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
+                      <span className="block text-11 font-semibold text-[var(--d-text-3)]">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
                       <span className="block text-14 font-semibold text-[var(--d-text)] d-num">{d.getDate()}</span>
                     </span>
                     {e.kind === 'card' || e.kind === 'loan'
@@ -223,7 +268,7 @@ export default function WebHome() {
 
       <div className="grid grid-cols-12 gap-5">
         <Panel
-          className="col-span-8"
+          className="col-span-7 xl:col-span-8"
           title="Recent transactions"
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/transactions')}>All</Btn>}
           flush
@@ -243,7 +288,7 @@ export default function WebHome() {
           />
         </Panel>
 
-        <div className="col-span-4 flex flex-col gap-5 min-w-0">
+        <div className="col-span-5 xl:col-span-4 flex flex-col gap-5 min-w-0">
           <Panel
             title="Budget"
             meta={budget.total ? `${Math.round(budget.pct)}% used` : null}
@@ -253,12 +298,18 @@ export default function WebHome() {
               <Empty className="!py-6" icon={<IGauge size={18} />} title="No limits set" body="Give a category a monthly limit to track it here." action={<Btn size="sm" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
             ) : (
               <>
-                <div className="flex items-baseline justify-between mb-2">
-                  <span className="text-13 text-[var(--d-text-2)]"><Money value={budget.spent} className="font-semibold text-[var(--d-text)]" /> of <Money value={budget.total} /></span>
-                  <span className={`text-12 font-medium ${budget.spent > budget.total ? 'd-neg' : 'text-[var(--d-text-3)]'}`}>{fmt(Math.abs(budget.total - budget.spent))} {budget.spent > budget.total ? 'over' : 'left'}</span>
-                </div>
-                <Progress value={budget.pct} color={budget.pct > 100 ? 'var(--d-neg)' : budget.pct > 85 ? 'var(--d-warn)' : undefined} label="Budget used" />
-                <div className="mt-4 flex flex-col gap-3">
+                {/* The phone's Budget gauge: the month's spending as a fan
+                    of ticks, the amount inside it. Five columns of twelve
+                    below 1280px, so the fan has room for its figure. */}
+                <BudgetGauge
+                  className="mt-1 d-gauge"
+                  accent={accentColor}
+                  pct={budget.pct}
+                  amount={fmt(budget.spent)}
+                  leftNote={`${fmt(Math.abs(budget.total - budget.spent))} ${budget.spent > budget.total ? 'over' : 'left'}`}
+                  rightNote={`${fmt(budget.total)} limit`}
+                />
+                <div className="mt-5 flex flex-col gap-3">
                   {budget.rows.slice(0, 4).map(c => {
                     const pct = (c.spent / c.budget) * 100
                     return (
@@ -289,8 +340,8 @@ export default function WebHome() {
 function Pile({ label, value, owed = false }) {
   return (
     <div className="min-w-0">
-      <div className="text-11 font-medium text-white/65 truncate">{label}</div>
-      <div className="mt-0.5 text-13 font-semibold d-num truncate text-white">{owed && value ? '−' : ''}{fmt(Math.abs(value || 0))}</div>
+      <div className="text-12 font-medium text-white/65 truncate">{label}</div>
+      <div className="mt-1 text-14 font-semibold d-num truncate text-white">{owed && value ? '−' : ''}{fmt(Math.abs(value || 0))}</div>
     </div>
   )
 }

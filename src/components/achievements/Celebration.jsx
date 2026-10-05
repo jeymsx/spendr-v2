@@ -201,7 +201,7 @@ export default function Celebration({ item, mode = 'earned', locked = false, how
 
           {/* What it is. */}
           <div className="relative w-full max-w-[360px] flex flex-col items-center text-center pb-2">
-            <span className={`celebrate-rise inline-flex items-center h-7 px-3 rounded-full text-11 font-bold uppercase tracking-[0.14em] ${dark ? 'bg-white/10 text-white/85' : 'bg-white/80 text-slate-700'}`} style={{ animationDelay: '420ms' }}>
+            <span className={`celebrate-rise inline-flex items-center h-7 px-3 rounded-full text-12 font-semibold ${dark ? 'bg-white/10 text-white/85' : 'bg-white/80 text-slate-700'}`} style={{ animationDelay: '420ms' }}>
               {eyebrow}
             </span>
             <h1 id={titleId} className={`celebrate-rise mt-3 text-34 leading-[1.08] font-bold tracking-tight text-balance ${ink}`} style={{ animationDelay: '500ms' }}>

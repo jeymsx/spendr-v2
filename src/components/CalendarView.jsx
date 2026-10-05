@@ -179,7 +179,7 @@ export default function CalendarView({
           {DOW_LABELS.map(d => (
             <div
               key={d}
-              className="py-2.5 text-center text-10 font-bold tracking-wider uppercase text-slate-400 dark:text-slate-500"
+              className="py-2.5 text-center text-11 font-semibold text-slate-400 dark:text-slate-500"
             >
               {d}
             </div>

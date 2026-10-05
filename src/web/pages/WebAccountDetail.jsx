@@ -16,7 +16,7 @@ import { allocateGoals } from '../../lib/goals'
 import { investmentStatus, valuedAgo } from '../../lib/investments'
 import { loanStatus, foldLoanPayments } from '../../lib/loans'
 import { TREND_RANGES, buildTrend, DAY_MS } from '../../lib/trend'
-import { TYPE_LABEL, INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
+import { TYPE_LABEL, INVESTMENT_KIND_LABEL, bucketOf } from '../../lib/accountMeta'
 import { accountBrand } from '../../lib/accountBrands'
 import { editTransaction } from '../../lib/editTransaction'
 import { fmt } from '../../lib/money'
@@ -35,7 +35,7 @@ import { Segmented } from '../ui/controls'
 import { Stat, Money, AccountTile, Progress, Empty } from '../ui/display'
 import { AreaTrend } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxCategoryText } from './txParts'
-import { IEdit, IMore, IPlus, ITransfer, IChevronLeft, IList, IAlert, IRefresh, ICalendar } from '../ui/icons'
+import { IEdit, IMore, IPlus, ITransfer, IChevronLeft, IList, IAlert, IRefresh, ICalendar, IWallet, IPhone, IBank, ICard, IChart, IGlobe } from '../ui/icons'
 
 const RANGES = TREND_RANGES.filter(r => ['1m', '3m', '6m', '1y', 'all'].includes(r.key))
 
@@ -237,13 +237,9 @@ export default function WebAccountDetail() {
   return (
     <Page
       eyebrow={<Link to="/accounts" className="inline-flex items-center gap-1 hover:text-[var(--d-text)]"><IChevronLeft size={13} />Accounts</Link>}
-      title={
-        <span className="flex items-center gap-3">
-          <AccountTile account={account} size="lg" />
-          <span className="truncate">{account.name}</span>
-        </span>
-      }
-      subtitle={[typeLabel, account.parentName ? `Part of ${account.parentName}` : null, cur !== base ? cur : null].filter(Boolean).join(' · ')}
+      media={<AccountTile account={account} size="xl" />}
+      title={account.name}
+      subtitle={<AccountChips account={account} typeLabel={typeLabel} cur={cur} base={base} parentId={(accounts ?? []).find(a => a.name === account.parentName)?.id} />}
       actions={
         <>
           {isCredit && <Btn variant="primary" onClick={() => setPayOpen(true)}>Pay card</Btn>}
@@ -318,7 +314,7 @@ export default function WebAccountDetail() {
         )}
         {!isCredit && !isLoan && !isInvestment && (
           <>
-            <Stat label="Balance" value={<Money value={account.balance ?? 0} currency={cur} />} note={brand ? typeLabel : ' '} />
+            <Stat label="Balance" value={<Money value={account.balance ?? 0} currency={cur} />} note="Right now" />
             <MonthStats txs={acctTxs} name={account.name} cur={cur} />
             <Stat label="Promised to goals" value={fmt(goalSplit?.assigned ?? 0, cur)} note={goalSplit?.goals?.length ? `${goalSplit.goals.length} ${goalSplit.goals.length === 1 ? 'goal' : 'goals'} · ${fmt(goalSplit.unassigned ?? 0, cur)} free` : 'No goals draw on it'} />
           </>
@@ -444,5 +440,36 @@ function MonthStats({ txs, name, cur }) {
       <Stat label="In this month" value={fmt(into, cur)} note="Inflows and transfers in" />
       <Stat label="Out this month" value={fmt(out, cur)} note="Spending and transfers out" />
     </>
+  )
+}
+
+/* Each kind of account's mark, for its chip. */
+const TYPE_ICON = /** @type {Record<string, (p: {size?: number}) => import('react').ReactElement>} */ ({
+  cash: IWallet, ewallet: IPhone, savings: IBank, bank: IBank, credit: ICard, investment: IChart, loan: ICalendar,
+})
+const BUCKET_LABEL = /** @type {Record<string, string>} */ ({ spending: 'Spending money', savings: 'Savings' })
+
+/**
+ * What the account is, as chips under its name rather than a line of plain
+ * text: its kind with its mark, what its money counts as (for the two kinds
+ * that can be either), its currency when it is not the ledger's, and the
+ * account it sits under, which opens it.
+ *
+ * @param {{account: Record<string, any>, typeLabel: string, cur: string, base: string, parentId?: number}} props
+ */
+function AccountChips({ account, typeLabel, cur, base, parentId }) {
+  const Icon = TYPE_ICON[account.type] ?? IBank
+  const bucket = BUCKET_LABEL[bucketOf(account)]
+  return (
+    <span className="mt-1 flex flex-wrap items-center gap-2">
+      <span className="d-badge d-badge-accent d-badge-lg"><Icon size={13} />{typeLabel}</span>
+      {bucket && bucket !== typeLabel && <span className="d-badge d-badge-lg">{bucket}</span>}
+      {cur !== base && <span className="d-badge d-badge-lg"><IGlobe size={13} />{cur}</span>}
+      {account.parentName && (
+        parentId != null
+          ? <Link to={`/accounts/${parentId}`} className="d-badge d-badge-lg hover:text-[var(--d-text)]">Part of {account.parentName}</Link>
+          : <span className="d-badge d-badge-lg">Part of {account.parentName}</span>
+      )}
+    </span>
   )
 }

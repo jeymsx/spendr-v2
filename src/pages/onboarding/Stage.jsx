@@ -150,7 +150,7 @@ function Face({ a, drawn, hue, reduce }) {
           <img src="/apple-touch-icon.png" alt="" width={40} height={40} className="w-10 h-10 rounded-[11px] shrink-0" />
           <span className="min-w-0 flex-1">
             <span className="flex items-center justify-between gap-2">
-              <span className="text-12 font-semibold uppercase tracking-wide text-white/60">Spendr</span>
+              <span className="text-12 font-semibold text-white/60">Spendr</span>
               <span className="text-12 text-white/50">{a.time}</span>
             </span>
             <span className="block text-15 font-semibold text-white leading-snug mt-0.5">Anything to log today?</span>

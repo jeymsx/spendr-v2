@@ -29,7 +29,7 @@ export default function WebNotes() {
       {id && id !== 'deleted' && (
         <style>{`.d-twopane-side [data-web-id="note-${String(id).replace(/["\\]/g, '')}"]{border-radius:16px;box-shadow:inset 0 0 0 2px color-mix(in srgb, var(--color-primary) 70%, transparent);background-color:rgba(var(--color-primary-rgb),0.08)}`}</style>
       )}
-      <div className="d-twopane d-notes" style={{ '--side': '340px' }}>
+      <div className="d-twopane d-notes" style={{ '--side': '300px' }}>
         <div className="d-twopane-side d-twopane-list min-w-0">
           <Suspense fallback={<div className="h-40" />}><Notes /></Suspense>
         </div>

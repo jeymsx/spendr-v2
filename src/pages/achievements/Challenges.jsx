@@ -77,7 +77,7 @@ export default function Challenges({ state, categories, onViewWon }) {
                   <span className="block text-13 font-semibold text-slate-800 dark:text-slate-100 truncate">{row.def.name}</span>
                   <span className="block text-11 text-slate-500 dark:text-slate-400">{fmtWindow(row.startDay, row.endDay)}</span>
                 </span>
-                <span className={`shrink-0 text-11 font-bold uppercase tracking-wider ${
+                <span className={`shrink-0 text-12 font-semibold ${
                   row.status === 'won' ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-500 dark:text-slate-400'
                 }`}>
                   {row.status === 'won' ? 'Won' : row.status === 'quit' ? 'Gave up' : 'Missed'}

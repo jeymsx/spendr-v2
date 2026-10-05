@@ -38,6 +38,19 @@ const DELAY_OPTIONS = [
  * minute should not be able to leave themselves one.
  */
 export default function AppLockPage() {
+  return (
+    <SubPage title="App lock">
+      <AppLockSections />
+    </SubPage>
+  )
+}
+
+/**
+ * The page's body without its page: the switch, Lock after and the ways back
+ * in. The desktop shows it inside Preferences (web/pages/WebSettingsPreferences),
+ * where a lock that is mostly one switch does not need a page of its own.
+ */
+export function AppLockSections() {
   const lock = useAppLock()
   const { showToast } = useToast()
   const config = lock.config
@@ -58,7 +71,7 @@ export default function AppLockPage() {
   }, [supported])
 
   return (
-    <SubPage title="App lock">
+    <>
       <div className="mt-2 mb-8">
         <SectionCard>
           <SettingsRow
@@ -145,7 +158,7 @@ export default function AppLockPage() {
       )}
 
       <LockSheet flow={flow} onClose={() => setFlow(null)} />
-    </SubPage>
+    </>
   )
 }
 

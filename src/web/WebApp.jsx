@@ -66,18 +66,18 @@ const Recap         = lazy(() => import('../pages/recap/RecapPage'))
 
 const WebSettings = lazy(() => import('./pages/WebSettings'))
 const WebNotes = lazy(() => import('./pages/WebNotes'))
-const SettingsOverview = lazy(() => import('../pages/Settings'))
-const SettingsAccent = lazy(() => import('../pages/SettingsAccent'))
+const SettingsOverview = lazy(() => import('./pages/WebSettingsOverview'))
+const SettingsAccent = lazy(() => import('./pages/WebSettingsAccent'))
+const SettingsPolicy = lazy(() => import('./pages/WebSettingsPolicy'))
+const SettingsPrefsDesk = lazy(() => import('./pages/WebSettingsPreferences'))
 const SettingsCategories = lazy(() => import('../pages/Settings').then(m => ({ default: m.CategoriesPage })))
 const SettingsBudgets    = lazy(() => import('../pages/Settings').then(m => ({ default: m.BudgetsPage })))
 const SettingsTemplates  = lazy(() => import('../pages/Settings').then(m => ({ default: m.TemplatesPage })))
 const SettingsRates      = lazy(() => import('../pages/settings/Rates'))
-const SettingsPreferences = lazy(() => import('../pages/settings/Preferences'))
 const SettingsSync       = lazy(() => import('../pages/settings/Sync'))
 const SettingsReports    = lazy(() => import('../pages/settings/Reports'))
 const SettingsBackup     = lazy(() => import('../pages/settings/BackupRestore'))
 const SettingsChangelog  = lazy(() => import('../pages/settings/Changelog'))
-const SettingsAppLock    = lazy(() => import('../pages/settings/AppLock'))
 const SettingsProfile    = lazy(() => import('../pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 
 function LoadingScreen() {
@@ -158,17 +158,21 @@ export default function WebApp() {
               <Route path="/settings" element={<WebSettings />}>
                 <Route index element={<SettingsOverview />} />
                 <Route path="profile" element={<SettingsProfile />} />
-                <Route path="preferences" element={<SettingsPreferences />} />
+                <Route path="preferences" element={<SettingsPrefsDesk />} />
                 <Route path="sync" element={<SettingsSync />} />
                 <Route path="reports" element={<SettingsReports />} />
                 <Route path="backup" element={<SettingsBackup />} />
                 <Route path="changelog" element={<SettingsChangelog />} />
-                <Route path="app-lock" element={<SettingsAppLock />} />
+                {/* Part of Preferences on a computer. */}
+                <Route path="app-lock" element={<Navigate to="/settings/preferences" replace />} />
                 <Route path="accent" element={<SettingsAccent />} />
                 <Route path="categories" element={<SettingsCategories />} />
                 <Route path="budgets" element={<SettingsBudgets />} />
                 <Route path="rates" element={<SettingsRates />} />
                 <Route path="templates" element={<SettingsTemplates />} />
+                <Route path="deleted" element={<RecentlyDeleted />} />
+                <Route path="privacy" element={<SettingsPolicy type="privacy" />} />
+                <Route path="terms" element={<SettingsPolicy type="terms" />} />
                 <Route path="*" element={<Navigate to="/settings" replace />} />
               </Route>
 

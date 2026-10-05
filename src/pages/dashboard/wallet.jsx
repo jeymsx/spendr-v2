@@ -25,7 +25,9 @@ export const FILLET = 8      // the concave curve where tab meets body
 export const R_TOP = 28
 const R_BOT = 20
 
-export function walletPath(w, h) {
+/* `rTop` and `rBot` are the body's corners - the phone's 28 and 20 unless a
+   caller asks for others (the desktop's Home matches its 24px cards). */
+export function walletPath(w, h, rTop = R_TOP, rBot = R_BOT) {
   const tabW = Math.min(TAB_W, w * 0.34)
   const base = h - TAB_H                 // the body's bottom edge
   const left = (w - tabW) / 2
@@ -35,11 +37,11 @@ export function walletPath(w, h) {
   // Clockwise from the top-left corner. Fillets use sweep-flag 0 so they
   // curve INTO the corner; every other arc is a convex corner at sweep 1.
   return [
-    `M${n(R_TOP)} 0`,
-    `H${n(w - R_TOP)}`,
-    `A${R_TOP} ${R_TOP} 0 0 1 ${n(w)} ${R_TOP}`,
-    `V${n(base - R_BOT)}`,
-    `A${R_BOT} ${R_BOT} 0 0 1 ${n(w - R_BOT)} ${n(base)}`,
+    `M${n(rTop)} 0`,
+    `H${n(w - rTop)}`,
+    `A${rTop} ${rTop} 0 0 1 ${n(w)} ${rTop}`,
+    `V${n(base - rBot)}`,
+    `A${rBot} ${rBot} 0 0 1 ${n(w - rBot)} ${n(base)}`,
     `H${n(right + FILLET)}`,
     `A${FILLET} ${FILLET} 0 0 0 ${n(right)} ${n(base + FILLET)}`,
     `V${n(h - TAB_R)}`,
@@ -48,10 +50,10 @@ export function walletPath(w, h) {
     `A${TAB_R} ${TAB_R} 0 0 1 ${n(left)} ${n(h - TAB_R)}`,
     `V${n(base + FILLET)}`,
     `A${FILLET} ${FILLET} 0 0 0 ${n(left - FILLET)} ${n(base)}`,
-    `H${R_BOT}`,
-    `A${R_BOT} ${R_BOT} 0 0 1 0 ${n(base - R_BOT)}`,
-    `V${R_TOP}`,
-    `A${R_TOP} ${R_TOP} 0 0 1 ${R_TOP} 0`,
+    `H${rBot}`,
+    `A${rBot} ${rBot} 0 0 1 0 ${n(base - rBot)}`,
+    `V${rTop}`,
+    `A${rTop} ${rTop} 0 0 1 ${rTop} 0`,
     'Z',
   ].join('')
 }
@@ -96,7 +98,10 @@ export function rememberedWalletHeight() {
  * card appeared. A callback ref fires on every attach and detach, so it cannot
  * miss a node that arrives late.
  */
-export function useWalletClip() {
+/** @param {{top?: number, bottom?: number}} [corners] */
+export function useWalletClip(corners = {}) {
+  const rTop = corners.top ?? R_TOP
+  const rBot = corners.bottom ?? R_BOT
   const [box, setBox] = useState(null)
   const roRef = useRef(null)
 
@@ -108,7 +113,7 @@ export function useWalletClip() {
     const apply = (w, h) => {
       // The tab needs somewhere to hang; below that, skip the clip entirely
       // and let border-radius stand in.
-      if (w <= 80 || h <= TAB_H + R_TOP + R_BOT) return
+      if (w <= 80 || h <= TAB_H + rTop + rBot) return
       setBox(prev => (prev && prev.w === w && prev.h === h ? prev : { w, h }))
       try { localStorage.setItem(WALLET_H_KEY, String(Math.round(h))) }
       catch { /* private mode */ }
@@ -130,13 +135,13 @@ export function useWalletClip() {
     })
     ro.observe(el)
     roRef.current = ro
-  }, [])
+  }, [rTop, rBot])
 
   useEffect(() => () => roRef.current?.disconnect(), [])
 
   const clipPath = useMemo(
-    () => (box ? `path("${walletPath(box.w, box.h)}")` : undefined),
-    [box],
+    () => (box ? `path("${walletPath(box.w, box.h, rTop, rBot)}")` : undefined),
+    [box, rTop, rBot],
   )
   return [ref, clipPath]
 }

@@ -118,7 +118,7 @@ export default function Guide({ open, onClose, state }) {
         <div key={step} className="guide-step" style={/** @type {import('react').CSSProperties} */ ({ '--dir': dir })}>
           <div className="h-[176px] flex items-center justify-center" aria-hidden="true">{s.visual}</div>
           <div className="px-6 text-center" aria-live="polite">
-            <p className="text-11 font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+            <p className="text-12 font-semibold text-slate-400 dark:text-slate-500">
               {step + 1} of {steps.length}
             </p>
             <h2 id={titleId} className="mt-1 text-22 leading-tight font-bold tracking-tight text-slate-900 dark:text-white">{s.title}</h2>
@@ -285,7 +285,7 @@ function DaysPicture() {
             }`}
             style={{ animationDelay: `${0.15 + i * 0.14}s` }}
           >
-            <span className="text-11 font-bold uppercase tracking-wide opacity-80">{name(d.key)}</span>
+            <span className="text-12 font-semibold opacity-80">{name(d.key)}</span>
             {d.state === 'done' && (
               <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5" /></svg>
             )}

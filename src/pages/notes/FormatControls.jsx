@@ -1,6 +1,9 @@
 import { useEditorState } from '@tiptap/react'
 import { cx } from '../../components/ui/cx'
 import { HIGHLIGHTS } from './extensions'
+/* The desktop's menu, for the desktop's bar only (layout 'bar'): the phone's
+   panel never draws it. */
+import Popover, { MenuItem } from '../../web/ui/Popover'
 import {
   IconBold, IconItalic, IconUnderline, IconStrike, IconBullets, IconDashes, IconNumbered,
   IconChecklist, IconIndent, IconOutdent, IconQuote,
@@ -203,14 +206,30 @@ export default function FormatControls({ editor, layout }) {
   if (layout === 'bar') {
     return (
       <div className="note-bar flex items-center gap-0.5 overflow-x-auto no-scrollbar" role="toolbar" aria-label="Formatting">
-        <select
-          aria-label="Paragraph style"
-          value={STYLES.find(x => x.on)?.key ?? 'body'}
-          onChange={e => STYLES.find(x => x.key === e.target.value)?.run()}
-          className="note-bar-select shrink-0 w-[124px] h-8 pl-3 pr-7 rounded-lg text-13 font-medium text-slate-700 dark:text-slate-200 border-0 outline-none"
+        {/* The desktop's own menu, not the browser's: each style drawn as
+            itself, the one in use ticked. Picking the one already on does
+            nothing - its command would toggle it back to Body. */}
+        <Popover
+          role="menu"
+          width={200}
+          label="Paragraph style"
+          trigger={(
+            <button
+              type="button"
+              aria-label={`Paragraph style: ${(STYLES.find(x => x.on) ?? STYLES[3]).label}`}
+              className="note-bar-select shrink-0 w-[124px] h-8 pl-3 pr-2 rounded-lg flex items-center justify-between gap-1 text-13 font-medium text-slate-700 dark:text-slate-200 outline-none"
+            >
+              <span className="truncate">{(STYLES.find(x => x.on) ?? STYLES[3]).label}</span>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 opacity-60"><path d="m6 9 6 6 6-6" /></svg>
+            </button>
+          )}
         >
-          {STYLES.map(x => <option key={x.key} value={x.key}>{x.label}</option>)}
-        </select>
+          {STYLES.map(x => (
+            <MenuItem key={x.key} checked={x.on} onSelect={() => { if (!x.on) x.run() }}>
+              <span className={x.cls}>{x.label}</span>
+            </MenuItem>
+          ))}
+        </Popover>
         <span className="shrink-0 w-px h-5 mx-1.5 bg-slate-200 dark:bg-white/[0.1]" aria-hidden="true" />
         {MARKS.map(m => (
           <NoteButton key={m.key} label={m.label} active={m.on} disabled={!st.canMark} onPress={m.run} className="w-8 h-8 shrink-0">
