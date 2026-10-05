@@ -658,6 +658,10 @@ html.web .d-drawer-phone .page-header-title { text-align: left; padding: 0; font
    its title at the left, clear of the ×. */
 html.web .d-drawer-phone .pinned-top > header { padding-top: 14px; padding-right: 64px; }
 html.web .d-drawer-phone .pinned-top > header h1 { text-align: left; font-size: 17px; font-weight: 700; }
+/* The add forms' header (back | title | templates, a grid): the × is the way
+   out, so its back button goes and the title moves to the left. */
+html.web .d-drawer-phone .pinned-top > header.grid { grid-template-columns: minmax(0, 1fr) auto; padding-left: 28px; }
+html.web .d-drawer-phone .pinned-top > header.grid > :first-child { display: none; }
 
 /* Definition rows in a drawer or panel: label left, value right. */
 /* Every row the same height, whatever is in it - a word, a tile, a pill -
@@ -974,6 +978,12 @@ html.web .d-ach-card .d-stat-note { margin-bottom: 16px; }
 html.web .d-ach-card.is-button { transition: border-color 0.15s; }
 html.web .d-ach-card.is-button:hover { border-color: rgba(var(--color-primary-rgb), 0.35); }
 html.web .d-ach-card.is-button:focus-visible { outline: none; box-shadow: var(--d-ring); }
+
+/* A goal's "Funded by" accounts (pages/goals/shared AccountPickRail): the
+   phone's swipeable rail ran off the dialog's right edge here, so on a
+   computer it wraps, as many across as fit. */
+html.web .account-pick-rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); overflow: visible; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
+html.web .account-pick-rail > button { width: auto; }
 
 /* ── Notifications (pages/WebNotifications): a day's heading, then its rows. */
 html.web .d-notif-day { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px 8px; font-size: 13px; font-weight: 600; color: var(--d-text-3); }

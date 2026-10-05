@@ -1,11 +1,9 @@
-import { lazy, Suspense } from 'react'
-import { Routes, Route, Navigate } from 'react-router-dom'
+import { lazy, Suspense, useState } from 'react'
+import { Routes, Route, Navigate, useLocation, matchPath } from 'react-router-dom'
 import { OnboardingGuard } from '../App'
 import SyncManager from '../components/SyncManager'
 import WebLayout from './WebLayout'
 import WebToaster from './WebToaster'
-import { WebScroll } from './components/WebPane'
-import WebFormPage from './WebFormPage'
 import PhonePage from './ui/PhonePage'
 import Page from './ui/Page'
 import { NotesIndex } from './pages/WebSections'
@@ -91,14 +89,32 @@ function LoadingScreen() {
   )
 }
 
-/** A form in a card, centred (WebFormPage). @param {{width?: number, children: import('react').ReactNode}} props */
-const Form = ({ width = 600, children }) => <WebScroll width={width + 64}><WebFormPage width={width}>{children}</WebFormPage></WebScroll>
+/* The add and edit forms, as panels over a page. Opened from a page (an
+   account's Transfer, a card's Pay, a link), the page you were on stays
+   underneath and live; opened cold (a reload, a bookmark), Home or
+   Transactions does. */
+const FORM_ROUTES = [
+  { path: '/expense', label: 'Add expense', el: <AddExpense /> },
+  { path: '/inflow', label: 'Add inflow', el: <AddInflow /> },
+  { path: '/transfer', label: 'Transfer', el: <Transfer /> },
+  { path: '/transactions/:id/edit', label: 'Edit transaction', el: <EditTransaction /> },
+]
 
 export default function WebApp() {
+  /* While a form is open, the routes below render the page that was open
+     before it (`page`), and the form is a panel over it - the
+     background-location pattern. A form opened with nothing before it
+     renders over its fallback page instead (its own route, below). */
+  const location = useLocation()
+  const onForm = FORM_ROUTES.some(r => matchPath(r.path, location.pathname))
+  const [page, setPage] = useState(/** @type {ReturnType<typeof useLocation>|null} */ (null))
+  if (!onForm && page?.key !== location.key) setPage(location)
+  const under = onForm && page ? page : null
+
   return (
     <Suspense fallback={<LoadingScreen />}>
       <WebToaster />
-      <Routes>
+      <Routes location={under ?? location}>
         <Route path="/login"      element={<Login />} />
         <Route path="/onboarding" element={<Onboarding />} />
 
@@ -112,10 +128,10 @@ export default function WebApp() {
               {/* ── Money ── */}
               <Route path="/transactions" element={<WebTransactions />} />
               <Route path="/transactions/deleted" element={<RecentlyDeleted />} />
-              <Route path="/transactions/:id/edit" element={<Form><EditTransaction /></Form>} />
-              <Route path="/expense"  element={<Form><AddExpense /></Form>} />
-              <Route path="/inflow"   element={<Form><AddInflow /></Form>} />
-              <Route path="/transfer" element={<Form><Transfer /></Form>} />
+              <Route path="/transactions/:id/edit" element={<RouteDrawer label="Edit transaction" fallback="/transactions" under={<WebTransactions />}><EditTransaction /></RouteDrawer>} />
+              <Route path="/expense"  element={<RouteDrawer label="Add expense" fallback="/" under={<WebHome />}><AddExpense /></RouteDrawer>} />
+              <Route path="/inflow"   element={<RouteDrawer label="Add inflow" fallback="/" under={<WebHome />}><AddInflow /></RouteDrawer>} />
+              <Route path="/transfer" element={<RouteDrawer label="Transfer" fallback="/" under={<WebHome />}><Transfer /></RouteDrawer>} />
 
               <Route path="/accounts" element={<WebAccounts />} />
               <Route path="/accounts/new" element={<RouteDrawer label="New account" fallback="/accounts" width={600} under={<WebAccounts />}><AccountNew /></RouteDrawer>} />
@@ -184,6 +200,12 @@ export default function WebApp() {
           </Route>
         </Route>
       </Routes>
+      {/* The form itself, at the address actually open, over the page. */}
+      {under && (
+        <Routes location={location}>
+          {FORM_ROUTES.map(r => <Route key={r.path} path={r.path} element={<RouteDrawer label={r.label}>{r.el}</RouteDrawer>} />)}
+        </Routes>
+      )}
     </Suspense>
   )
 }

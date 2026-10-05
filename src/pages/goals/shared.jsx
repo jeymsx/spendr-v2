@@ -228,7 +228,9 @@ export function AccountPickRail({
   }, [revealOn, picked])
 
   return (
-    <Rail ref={railRef} className="gap-2.5 -mx-5 px-5 py-1">
+    /* account-pick-rail: on a computer the rail is a grid that wraps
+       (web/pro.css) - in a dialog's width it ran off the right edge. */
+    <Rail ref={railRef} className="account-pick-rail gap-2.5 -mx-5 px-5 py-1">
       {accounts.map(a => {
         const on = picked.includes(a.name)
         return (

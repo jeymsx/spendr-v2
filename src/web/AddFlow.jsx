@@ -1,15 +1,13 @@
 import { createContext, useContext, useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { handleEditTransaction } from '../lib/editTransaction'
+import Drawer from './ui/Drawer'
 
 const AddExpense = lazy(() => import('../pages/AddExpense'))
 const AddInflow  = lazy(() => import('../pages/AddInflow'))
 const Transfer   = lazy(() => import('../pages/Transfer'))
 const EditTransaction = lazy(() => import('../pages/EditTransaction'))
 const QuickLogOverlay = lazy(() => import('../components/QuickLogOverlay'))
-
-/** .card-solid is the page cards' material, composited opaque — see index.css. */
-const OPAQUE_SURFACE = 'card-solid rounded-2xl'
 
 const AddFlowContext = createContext(null)
 
@@ -50,6 +48,8 @@ export function AddFlowProvider({ children }) {
   const navigate = useNavigate()
   /** The address asked for the quick log (below), and the next page opens it. */
   const quickNext = useRef(false)
+  /** The page the overlay was last closed or opened against. */
+  const lastPath = useRef(location.pathname)
 
   const openAdd = useCallback((type) => setFlow(type ?? 'expense'), [])
 
@@ -75,7 +75,14 @@ export function AddFlowProvider({ children }) {
       navigate({ pathname: location.pathname, search: rest ? `?${rest}` : '' }, { replace: true })
       return
     }
-    setFlow(quickNext.current ? 'quick' : null)
+    /* A change of page closes the overlay; a change of query on the same page
+       does not. Editing from a transaction's panel closes that panel - which
+       takes `?tx=` off the address - in the same moment it opens the edit,
+       and that closed the edit as it opened. */
+    const samePage = lastPath.current === location.pathname
+    lastPath.current = location.pathname
+    if (quickNext.current) setFlow('quick')
+    else if (!samePage) setFlow(null)
     quickNext.current = false
   }, [location.key, location.search, location.pathname, navigate])
 
@@ -100,13 +107,6 @@ export function AddFlowProvider({ children }) {
     return () => window.removeEventListener('keydown', onKey)
   }, [flow])
 
-  useEffect(() => {
-    if (!flow) return
-    const onKey = (e) => { if (e.key === 'Escape') setFlow(null) }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [flow])
-
   const Form = flow === 'expense' ? AddExpense
     : flow === 'inflow' ? AddInflow
     : flow === 'transfer' ? Transfer
@@ -124,38 +124,24 @@ export function AddFlowProvider({ children }) {
         </Suspense>
       )}
 
+      {/* A panel docked to the right, over the page, as every desktop form
+          opens (ui/RouteDrawer, ui/Drawer): Escape, the scrim and the × close
+          it, and closing is not a navigation - the page underneath stays
+          exactly where it was. */}
       {flow && (Form || editing) && (
-        <div
-          role="dialog"
-          aria-modal="true"
-          aria-label={editing ? 'Edit transaction' : `Add ${flow}`}
-          className="fixed inset-0 z-[220] flex items-center justify-center p-6"
-        >
-          {/* Clicking away cancels. aria-hidden because the dialog's own
-              header already offers a labelled way out. */}
-          <button
-            aria-hidden="true"
-            tabIndex={-1}
-            onClick={closeAdd}
-            className="absolute inset-0 bg-black/50 backdrop-blur-sm cursor-default"
-          />
-          <div
-            className={`relative w-full max-w-[560px] max-h-[88vh] overflow-y-auto
-              no-scrollbar ${OPAQUE_SURFACE}`}
-          >
+        <Drawer open onClose={closeAdd} label={editing ? 'Edit transaction' : `Add ${flow}`} width={560}>
+          <div className="d-drawer-phone">
             <Suspense fallback={
               <div className="flex items-center justify-center py-20">
                 <div className="w-7 h-7 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
               </div>
             }>
-              {/* Closing the overlay is not a navigation: the page underneath
-                  stays exactly where it was, and its history is untouched. */}
               {editing
                 ? <EditTransaction id={editId} onDone={closeAdd} />
                 : Form && <Form onCancel={closeAdd} onSaved={closeAdd} />}
             </Suspense>
           </div>
-        </div>
+        </Drawer>
       )}
     </AddFlowContext.Provider>
   )
