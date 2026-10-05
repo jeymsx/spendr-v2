@@ -281,7 +281,9 @@ html.web .d-panel-head {
   padding: 0 24px;
 }
 html.web .d-panel-head.is-bare { min-height: 56px; }
-html.web .d-panel-title { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; color: var(--d-text); }
+/* The title keeps its width and the meta line beside it gives way first;
+   the title only truncates when it alone is wider than the head. */
+html.web .d-panel-title { font-size: 17px; font-weight: 700; letter-spacing: -0.015em; color: var(--d-text); flex-shrink: 0; max-width: 100%; }
 html.web .d-panel-meta { font-size: 13px; color: var(--d-text-3); }
 html.web .d-panel-body { padding: 4px 24px 24px; }
 html.web .d-panel-foot { padding: 14px 24px; border-top: 1px solid var(--d-border); }
@@ -596,7 +598,9 @@ html.web .d-stat-value.d-neg { color: var(--d-neg); }
 html.web .d-stat-value.d-pos { color: var(--d-pos); }
 html.web .d-stat-value.d-warn { color: var(--d-warn); }
 html.web .d-stat-value { margin-top: 6px; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--d-text); }
-html.web .d-stat-note { margin-top: 6px; font-size: 13px; color: var(--d-text-3); }
+/* Two lines before it gives up, rather than one: on a narrow card the
+   line under a figure was cut mid-word ("Spending, savings and investme…"). */
+html.web .d-stat-note { margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--d-text-3); white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 
 /* Progress: the phone's rounded bar. */
 html.web .d-progress { height: 8px; border-radius: 999px; background: var(--d-sunken); overflow: hidden; }
@@ -770,6 +774,36 @@ html.web .web-pane-detail[data-root='true'] .page-header { grid-template-columns
 @media (max-width: 1279px) {
   html.web .d-stat-value { font-size: 22px; line-height: 28px; }
   html.web .d-stat-note { font-size: 12px; }
+}
+/* A narrow window with the sidebar open (under 1280px, the page about
+   800px across): a row of four figures becomes two by two, and a page's
+   main column and its side column go 7 and 5 rather than 8 and 4, so the
+   side panels have room for their titles and figures. With the sidebar
+   folded the page has its width back, and the four stay four. */
+@media (max-width: 1279px) {
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-stats > .col-span-2 { grid-column: span 2 / span 2; }
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-main { grid-column: span 7 / span 7; }
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-side { grid-column: span 5 / span 5; }
+  /* A table too wide for seven columns (Budget's) takes the row, and the
+     side panels go under it, side by side. */
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-stack { grid-column: span 12 / span 12; }
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-stack-side { grid-column: span 12 / span 12; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; padding-top: 0; }
+  /* The range switch beside a chart's title, and Transactions' filters,
+     tighter: the filters drop their leading icons, which their labels
+     already say. */
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-panel-head .d-seg-item { padding: 0 9px; }
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-toolbar .d-btn-sm:not(.d-btn-icon) > svg:first-child { display: none; }
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-toolbar .d-btn-sm > span.truncate { max-width: 92px; }
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-toolbar .d-input-wrap { min-width: 120px; }
+  /* A table's optional columns (DataTable `optional`) step out - the
+     account or category a row's description already shows - so the rest
+     fit their panel rather than running under the one beside it. */
+  html.web:has(.d-sidebar:not(.is-collapsed)) .d-col-opt { display: none; }
+}
+/* Recurring's table is wide for its column even with the sidebar folded. */
+@media (max-width: 1179px) {
+  html.web .d-recurring .d-col-opt { display: none; }
 }
 
 /* ── Two panes in a page: Settings' sections and the one open, Notes' list

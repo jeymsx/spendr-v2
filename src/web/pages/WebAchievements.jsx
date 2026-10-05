@@ -83,7 +83,7 @@ export default function WebAchievements() {
       {state.loading ? (
         <div className="grid grid-cols-4 gap-5 mb-8">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[136px] rounded-[24px]" />)}</div>
       ) : (
-        <div className="grid grid-cols-4 gap-5 mb-8 items-stretch">
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8 items-stretch">
           <Stat label="Earned so far" value={`${state.earnedCount} of ${state.total}`} note={`${levels} levels and ${badgesEarned} badges`}>
             <Progress className="mt-3" value={state.total ? (state.earnedCount / state.total) * 100 : 0} />
           </Stat>

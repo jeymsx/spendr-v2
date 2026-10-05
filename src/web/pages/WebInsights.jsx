@@ -111,7 +111,7 @@ function Figures({ data, period }) {
   /** @param {any} c */
   const vs = (c) => (!c || !data.previous ? ' ' : c.same ? `Same as ${data.previous.label}` : `${c.up ? '↑' : '↓'} ${c.pct}% vs ${data.previous.label}`)
   return (
-    <div className="grid grid-cols-4 gap-5 mb-8">
+    <div className="d-stats grid grid-cols-4 gap-5 mb-8">
       <Stat label="Spent" value={fmt(data.totalSpent)} note={vs(spentChange)} />
       <Stat label="Came in" value={fmt(data.totalEarned)} note={vs(earnedChange)} />
       <Stat label="Net" value={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}`} tone={net < 0 ? 'neg' : net > 0 ? 'pos' : null} note={net < 0 ? 'More went out than came in' : 'Kept from what came in'} />
@@ -490,7 +490,7 @@ function Forecast() {
   const color = neg ? '#ef4444' : forecast.firstBelowFloor ? '#f59e0b' : '#10b981'
   return (
     <>
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         <Stat label="Safe to spend" value={fmt(Math.max(0, forecast.safeToSpend ?? 0))} tone={neg ? 'neg' : null}
           note={forecast.safeUntil ? `Until payday, ${short(new Date(forecast.safeUntil))}` : 'For the next 2 weeks'} />
         <Stat label="Lowest point" value={low ? <Money value={low.balance} colour /> : '—'} note={low ? `On ${short(low.date)}` : ' '} />

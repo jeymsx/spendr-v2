@@ -221,7 +221,7 @@ export default function WebHome() {
 
       <div className="grid grid-cols-12 gap-5 mb-5">
         <Panel
-          className="col-span-8"
+          className="col-span-8 d-main"
           title="Net worth over time"
           meta={rangeChange == null ? null : `${rangeChange >= 0 ? '+' : '−'}${fmt(Math.abs(rangeChange))} ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`}
           actions={<Segmented label="Range" value={range} onChange={setRange} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}
@@ -229,7 +229,7 @@ export default function WebHome() {
           {chart.length > 1 ? <AreaTrend data={chart} height={260} valueLabel="Net worth" /> : <div className="h-[260px]" />}
         </Panel>
       <Panel
-        className="col-span-4"
+        className="col-span-4 d-side"
         title="Next 30 days"
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/forecast')}>Forecast</Btn>}
           flush
@@ -282,7 +282,7 @@ export default function WebHome() {
             columns={[
               { key: 'date', header: 'Date', width: 84, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
               { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={catMap} /> },
-              { key: 'cat', header: 'Category', width: 150, render: (t) => <TxCategoryText tx={t} catMap={catMap} /> },
+              { key: 'cat', header: 'Category', width: 150, optional: true, render: (t) => <TxCategoryText tx={t} catMap={catMap} /> },
               { key: 'amt', header: 'Amount', width: 130, align: 'right', render: (t) => <TxAmount tx={t} /> },
             ]}
           />

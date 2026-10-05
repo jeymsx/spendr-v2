@@ -108,9 +108,9 @@ export default function WebRecentlyDeleted({ inPane = false }) {
         </span>
       ),
     },
-    { key: 'acct', header: 'Account', width: 150, render: (/** @type {any} */ r) => <TxAccount tx={r.lead} acctMap={acctMap} /> },
+    { key: 'acct', header: 'Account', width: 150, optional: true, render: (/** @type {any} */ r) => <TxAccount tx={r.lead} acctMap={acctMap} /> },
     {
-      key: 'left', header: 'Kept', width: 96,
+      key: 'left', header: 'Kept', width: 96, optional: true,
       render: (/** @type {any} */ r) => (
         <span className={`d-badge ${r.daysLeft <= 3 ? 'd-badge-warn' : ''}`}>{r.daysLeft <= 1 ? 'Last day' : `${r.daysLeft} days`}</span>
       ),

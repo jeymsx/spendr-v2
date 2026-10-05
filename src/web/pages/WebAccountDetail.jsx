@@ -278,7 +278,7 @@ export default function WebAccountDetail() {
         </div>
       )}
 
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         {isCredit && creditData && (
           <>
             <Stat label="Owed now" value={<Money value={creditData.currentBalance ?? 0} currency={cur} />} tone={(creditData.currentBalance ?? 0) > 0 ? 'neg' : null}

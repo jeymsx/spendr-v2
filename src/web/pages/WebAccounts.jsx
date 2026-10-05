@@ -69,7 +69,7 @@ export default function WebAccounts() {
         </>
       }
     >
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         <Stat label="Net worth" value={<Money value={breakdown.total} />} note="What you have, less what you owe" />
         <Stat label="You have" value={fmt(have)} note="Spending, savings and investments" />
         <Stat label="You owe" value={owe ? `−${fmt(owe)}` : fmt(0)} note="Cards and loans" />

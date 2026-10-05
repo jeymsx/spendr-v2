@@ -66,7 +66,7 @@ export default function WebGoals() {
         </Panel>
       ) : (
         <>
-          <div className="grid grid-cols-4 gap-5 mb-8">
+          <div className="d-stats grid grid-cols-4 gap-5 mb-8">
             <Stat label="Saved toward goals" value={fmt(t.saved ?? 0)} note={`Of ${fmt(t.target ?? 0)}`}>
               <Progress className="mt-3" value={t.pct ?? 0} />
             </Stat>
@@ -76,7 +76,7 @@ export default function WebGoals() {
           </div>
 
           <div className="grid grid-cols-12 gap-5">
-            <div className="col-span-8 min-w-0">
+            <div className="col-span-8 d-main min-w-0">
               <div className="grid gap-5" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))' }}>
                 {active.map(g => <GoalCard key={g.id} goal={g} today={today} onOpen={() => navigate(`/goals/${g.id}`)} />)}
               </div>
@@ -92,7 +92,7 @@ export default function WebGoals() {
               )}
             </div>
 
-            <Panel className="col-span-4 self-start" title="Where the money sits" flush>
+            <Panel className="col-span-4 d-side self-start" title="Where the money sits" flush>
               <div className="pb-3">
                 {funding.map(([name, s]) => (
                   <div key={name} className="px-6 py-3">

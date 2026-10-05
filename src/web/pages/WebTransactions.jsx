@@ -290,7 +290,7 @@ export default function WebTransactions() {
         </>
       }
     >
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         <Stat label="Spent" value={fmt(totals.spent)} note={narrowed ? 'In the filtered rows' : 'All time'} />
         <Stat label="Came in" value={fmt(totals.earned)} note={narrowed ? 'In the filtered rows' : 'All time'} />
         <Stat label="Net" value={`${totals.net < 0 ? '−' : totals.net > 0 ? '+' : ''}${fmt(Math.abs(totals.net))}`} tone={totals.net < 0 ? 'neg' : totals.net > 0 ? 'pos' : null} note="Came in less spent" />

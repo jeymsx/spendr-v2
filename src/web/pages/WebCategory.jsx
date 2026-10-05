@@ -100,7 +100,7 @@ export default function WebCategory() {
       subtitle={isInflow ? 'Money coming in' : limit ? `${fmt(limit)} a month` : 'No monthly limit'}
       actions={!isInflow && <Btn variant="secondary" icon={<IEdit size={14} />} onClick={() => navigate('/settings/budgets')}>{limit ? 'Edit limit' : 'Set a limit'}</Btn>}
     >
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         <Stat label={`${verb} this month`} value={fmt(monthTotal)} note={limit ? `${Math.round(pct)}% of the limit` : ' '}>
           {limit > 0 && <Progress className="mt-3" value={pct} color={pct > 100 ? 'var(--d-neg)' : pct > 85 ? 'var(--d-warn)' : cat?.color} />}
         </Stat>

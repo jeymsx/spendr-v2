@@ -19,7 +19,7 @@ import { IArrowDown, IArrowUp } from './icons'
  * @template T
  * @typedef {{key: string, header?: import('react').ReactNode, width?: number|string, align?: 'left'|'right'|'center',
  *            sortable?: boolean, render: (row: T) => import('react').ReactNode, className?: string,
- *            title?: string}} Column
+ *            title?: string, optional?: boolean}} Column
  */
 
 /**
@@ -98,7 +98,7 @@ export default function DataTable({
     <table className="d-table" aria-label={label} onKeyDown={onKey}>
       <colgroup>
         {selectable && <col style={{ width: 44 }} />}
-        {columns.map(c => <col key={c.key} style={{ width: c.width }} />)}
+        {columns.map(c => <col key={c.key} style={{ width: c.width }} className={c.optional ? 'd-col-opt' : undefined} />)}
       </colgroup>
       <thead>
         <tr>
@@ -121,7 +121,7 @@ export default function DataTable({
               <th
                 key={c.key}
                 style={{ top: stickyTop }}
-                className={`${c.align === 'right' ? 'is-num' : ''} ${can ? 'is-sortable' : ''} ${sorted ? 'is-sorted' : ''} ${c.className ?? ''}`}
+                className={`${c.align === 'right' ? 'is-num' : ''} ${can ? 'is-sortable' : ''} ${sorted ? 'is-sorted' : ''} ${c.optional ? 'd-col-opt' : ''} ${c.className ?? ''}`}
                 aria-sort={sorted ? (sort?.dir === 'asc' ? 'ascending' : 'descending') : undefined}
                 onClick={can ? () => onSort?.(c.key) : undefined}
                 title={c.title}
@@ -186,7 +186,7 @@ export default function DataTable({
                 </td>
               )}
               {columns.map(c => (
-                <td key={c.key} className={`${c.align === 'right' ? 'is-num' : ''} ${c.className ?? ''}`}>
+                <td key={c.key} className={`${c.align === 'right' ? 'is-num' : ''} ${c.optional ? 'd-col-opt' : ''} ${c.className ?? ''}`}>
                   {c.render(row)}
                 </td>
               ))}

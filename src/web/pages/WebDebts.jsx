@@ -69,7 +69,7 @@ export default function WebDebts() {
         </>
       }
     >
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         <Stat label="Owed to you" value={fmt(totals.owed)} tone={totals.owed ? 'pos' : null} note="Still to come back" />
         <Stat label="You owe" value={fmt(totals.owe)} tone={totals.owe ? 'neg' : null} note="Still to pay" />
         <Stat label="Net" value={`${totals.net >= 0 ? '+' : '−'}${fmt(Math.abs(totals.net))}`} tone={totals.net > 0 ? 'pos' : totals.net < 0 ? 'neg' : null} note={totals.net >= 0 ? 'In your favour' : 'Against you'} />

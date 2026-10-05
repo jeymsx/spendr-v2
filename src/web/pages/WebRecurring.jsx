@@ -119,7 +119,7 @@ export default function WebRecurring() {
       subtitle={loading ? ' ' : `${active.length} active · ${all.length - active.length} paused`}
       actions={<Btn variant="primary" icon={<IPlus size={15} />} onClick={() => navigate('/recurring/new')}>New</Btn>}
     >
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         <Stat label="Bills a month" value={fmt(monthlyBills)} note={`${bills.length} active ${bills.length === 1 ? 'bill' : 'bills'} · ${fmt(monthlyBills * 12)} a year`} />
         <Stat label="Income a month" value={fmt(monthlyIncome)} tone={monthlyIncome ? 'pos' : null} note={monthlyIncome ? 'From recurring pay' : 'No recurring income yet'} />
         <Stat label="Due now" value={String(dueNow.length)} tone={dueNow.length ? 'neg' : null} note={dueNow.length ? 'Date arrived, not yet posted' : 'Nothing waiting'} />
@@ -127,14 +127,14 @@ export default function WebRecurring() {
       </div>
 
       <div className="grid grid-cols-12 gap-5">
-        <div className={`${sideItems ? 'col-span-8' : 'col-span-12'} min-w-0`}>
+        <div className={`${sideItems ? 'col-span-8 d-stack' : 'col-span-12'} min-w-0`}>
           <Tabs className="mb-4" label="Show" value={tab} onChange={setTab} tabs={[
             { value: 'bills', label: 'Bills', count: all.filter(r => !isIncomeRecurring(r)).length },
             { value: 'income', label: 'Income', count: all.filter(isIncomeRecurring).length },
             { value: 'paused', label: 'Paused', count: all.length - active.length },
             { value: 'all', label: 'All', count: all.length },
           ]} />
-          <Panel flush>
+          <Panel flush className="d-recurring">
             <DataTable
               label="Recurring"
               rows={loading ? [] : rows}
@@ -157,7 +157,7 @@ export default function WebRecurring() {
                     </span>
                   ),
                 },
-                { key: 'freq', header: 'Repeats', width: 130, render: (r) => <span className="d-cell-muted">{FREQ_LABEL[r.frequency] ?? r.frequency}</span> },
+                { key: 'freq', header: 'Repeats', width: 130, optional: true, render: (r) => <span className="d-cell-muted">{FREQ_LABEL[r.frequency] ?? r.frequency}</span> },
                 {
                   key: 'next', header: 'Next', width: 170,
                   render: (r) => {
@@ -171,7 +171,7 @@ export default function WebRecurring() {
                     )
                   },
                 },
-                { key: 'acct', header: 'Account', width: 170, render: (r) => <span className="flex items-center gap-2 min-w-0"><AccountTile account={acctMap[r.account] ?? { name: r.account }} size="sm" /><span className="truncate d-cell-muted">{r.account}</span></span> },
+                { key: 'acct', header: 'Account', width: 170, optional: true, render: (r) => <span className="flex items-center gap-2 min-w-0"><AccountTile account={acctMap[r.account] ?? { name: r.account }} size="sm" /><span className="truncate d-cell-muted">{r.account}</span></span> },
                 { key: 'amt', header: 'Amount', width: 130, align: 'right', render: (r) => <span className={`d-num font-semibold ${isIncomeRecurring(r) ? 'd-pos' : ''}`}>{isIncomeRecurring(r) ? '+' : ''}{fmt(r.amount ?? 0)}</span> },
                 {
                   key: 'act', header: '', width: 110, align: 'right',
@@ -187,7 +187,7 @@ export default function WebRecurring() {
         </div>
 
         {sideItems > 0 && (
-          <div className="col-span-4 flex flex-col gap-5 min-w-0 pt-[54px]">
+          <div className="col-span-4 d-stack-side flex flex-col gap-5 min-w-0 pt-[54px]">
             {cardBills.length > 0 && (
               <Panel title="Card statements" flush>
                 <div className="pb-2">

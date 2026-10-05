@@ -152,7 +152,7 @@ export default function WebBudget() {
         </>
       }
     >
-      <div className="grid grid-cols-4 gap-5 mb-8">
+      <div className="d-stats grid grid-cols-4 gap-5 mb-8">
         <Stat label="Spent" value={fmt(totals.spent)} note={totals.limit ? `${Math.round(totals.pct)}% of ${fmt(totals.limit)}` : 'No limits set'}>
           {totals.limit > 0 && <Progress className="mt-3" value={totals.pct} color={totals.pct > 100 ? 'var(--d-neg)' : totals.pct > 85 ? 'var(--d-warn)' : undefined} />}
         </Stat>
@@ -174,7 +174,7 @@ export default function WebBudget() {
       )}
 
       <div className="grid grid-cols-12 gap-5">
-        <Panel className="col-span-8" title="By category" meta={rows.length ? `${rows.length} with a limit` : null} flush>
+        <Panel className="col-span-8 d-stack" title="By category" meta={rows.length ? `${rows.length} with a limit` : null} flush>
           <DataTable
             label="Budget by category"
             rows={loading ? [] : rows}
@@ -195,7 +195,7 @@ export default function WebBudget() {
                 ),
               },
               {
-                key: 'progress', header: 'Used', width: 220,
+                key: 'progress', header: 'Used', width: '26%',
                 render: (c) => (
                   <span className="flex items-center gap-3">
                     <Progress className="flex-1" value={c.pct} color={c.pct > 100 ? 'var(--d-neg)' : c.pct > 85 ? 'var(--d-warn)' : c.color} />
@@ -203,10 +203,10 @@ export default function WebBudget() {
                   </span>
                 ),
               },
-              { key: 'spent', header: 'Spent', width: 130, align: 'right', render: (c) => <span className="d-num font-medium">{fmt(c.spent)}</span> },
-              { key: 'limit', header: 'Limit', width: 130, align: 'right', render: (c) => <span className="d-num d-cell-muted">{fmt(c.limit)}</span> },
+              { key: 'spent', header: 'Spent', width: 116, align: 'right', render: (c) => <span className="d-num font-medium">{fmt(c.spent)}</span> },
+              { key: 'limit', header: 'Limit', width: 116, align: 'right', render: (c) => <span className="d-num d-cell-muted">{fmt(c.limit)}</span> },
               {
-                key: 'left', header: 'Left', width: 130, align: 'right',
+                key: 'left', header: 'Left', width: 116, align: 'right',
                 render: (c) => <span className={`d-num font-semibold ${c.left < 0 ? 'd-neg' : 'd-pos'}`}>{c.left < 0 ? '−' : ''}{fmt(Math.abs(c.left))}</span>,
               },
             ]}
@@ -222,7 +222,7 @@ export default function WebBudget() {
           />
         </Panel>
 
-        <div className="col-span-4 flex flex-col gap-5 min-w-0">
+        <div className="col-span-4 d-stack-side flex flex-col gap-5 min-w-0">
           <Panel title="Last 6 months" meta="Spent in limited categories">
             <Bars data={history} height={190} valueLabel="Spent" />
           </Panel>
