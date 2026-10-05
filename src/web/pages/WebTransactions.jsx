@@ -12,12 +12,12 @@ import { txMatches } from '../../lib/search'
 import { foldLoanPayments, unfoldLoanPayment, interestCarried, isLoanPayment } from '../../lib/loans'
 import { amountDisplay, isRefund } from '../../lib/txMoney'
 import { txGlyphCat, txRowWords } from '../../lib/txRow'
-import { isSpend, isIncome } from '../../lib/flows'
 import { txBase, currencyOfTx } from '../../lib/fxContext'
 import { editTransaction } from '../../lib/editTransaction'
 import { fmt } from '../../lib/money'
 import { inDateRange, canRecategorize, DATE_OPTS, fmtTime } from '../../pages/transactions/shared'
 import TxDetailSheet from '../../components/TxDetailSheet'
+import { shortDate, moneyOf, totalsOf, TxDescription, TxAccount, TxAmount } from './txParts'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
@@ -73,31 +73,6 @@ function dayLabel(key) {
   if (d.getTime() === yest.getTime()) return `Yesterday · ${date}`
   if (d > now) return `${date} · Upcoming`
   return date
-}
-
-/** @param {string} iso */
-function shortDate(iso) {
-  const d = new Date(iso)
-  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', ...(d.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }) })
-}
-
-/** What a row's money did, for its colour and sign. @param {Record<string, any>} row */
-function moneyOf(row) {
-  const tx = unfoldLoanPayment(row)
-  const { magnitude, tone, currency } = amountDisplay(tx)
-  const kind = /** @type {'out'|'in'|'refund'|'transfer'} */ (tone)
-  return { value: magnitude + interestCarried(row), currency, kind }
-}
-
-/** Spent and came in, over rows in the ledger's currency. @param {Array<Record<string, any>>} rows */
-function totalsOf(rows) {
-  let spent = 0
-  let earned = 0
-  for (const t of rows) {
-    if (isSpend(t)) spent += txBase(t)
-    else if (isIncome(t)) earned += txBase(t)
-  }
-  return { spent, earned, net: earned - spent }
 }
 
 export default function WebTransactions() {
@@ -277,23 +252,7 @@ export default function WebTransactions() {
     },
     {
       key: 'description', header: 'Description', sortable: true,
-      render: (/** @type {any} */ t) => {
-        const cat = catMap[t.category]
-        const glyph = txGlyphCat(t, catMap)
-        const { title } = txRowWords(t, cat)
-        return (
-          <span className="flex items-center gap-2.5 min-w-0">
-            {t.type === 'transfer'
-              ? <span className="d-tile d-tile-sm" style={{ background: 'var(--d-sunken)', color: 'var(--d-text-2)' }}><ITransfer size={13} /></span>
-              : <CategoryTile cat={glyph} size="sm" />}
-            <span className="truncate font-medium">{title}</span>
-            {isRefund(t) && <span className="d-badge d-badge-pos">Refund</span>}
-            {isInstallmentRow(t) && <span className="d-badge">Plan</span>}
-            {t.splitId && <span className="d-badge">Split</span>}
-            {(t.date ?? '') > scheduledCutoff() && <span className="d-badge d-badge-accent">Upcoming</span>}
-          </span>
-        )
-      },
+      render: (/** @type {any} */ t) => <TxDescription tx={t} catMap={catMap} />,
     },
     {
       key: 'category', header: 'Category', width: 190, sortable: true,
@@ -301,31 +260,11 @@ export default function WebTransactions() {
     },
     {
       key: 'account', header: 'Account', width: 220, sortable: true,
-      render: (/** @type {any} */ t) => {
-        const row = unfoldLoanPayment(t)
-        if (row.type === 'transfer') {
-          return (
-            <span className="flex items-center gap-1.5 min-w-0 d-cell-muted">
-              <span className="truncate">{row.fromAccount}</span>
-              <span className="d-cell-faint">→</span>
-              <span className="truncate">{row.toAccount}</span>
-            </span>
-          )
-        }
-        return (
-          <span className="flex items-center gap-2 min-w-0">
-            <AccountTile account={acctMap[row.account] ?? { name: row.account }} size="sm" />
-            <span className="truncate d-cell-muted">{row.account}</span>
-          </span>
-        )
-      },
+      render: (/** @type {any} */ t) => <TxAccount tx={t} acctMap={acctMap} />,
     },
     {
       key: 'amount', header: 'Amount', width: 140, align: /** @type {const} */ ('right'), sortable: true,
-      render: (/** @type {any} */ t) => {
-        const m = moneyOf(t)
-        return <Amount value={m.value} currency={m.currency} kind={m.kind} className="font-semibold" />
-      },
+      render: (/** @type {any} */ t) => <TxAmount tx={t} />,
     },
   ], [sort.key, catMap, acctMap, categories, refileRows])
 
