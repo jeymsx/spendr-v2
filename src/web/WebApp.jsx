@@ -27,7 +27,8 @@ import './pro.css'
  */
 
 // Public routes are full-screen flows in both UIs, used unchanged.
-const Login      = lazy(() => import('../pages/Login'))
+/* The desktop's own sign-in (two halves); the phone's is centred. */
+const Login      = lazy(() => import('./pages/WebLogin'))
 const Onboarding = lazy(() => import('../pages/Onboarding'))
 
 const WebHome      = lazy(() => import('./pages/WebHome'))

@@ -872,6 +872,29 @@ html.web .d-set-line-value.d-neg { color: var(--d-neg); }
 html.web .d-set-line-go { color: var(--d-text-3); }
 html.web .d-set-swatch { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
 
+/* ── Signing in (pages/WebLogin): Spendr at the left, on a deep ground in
+   the accent whatever the theme, points drifting across it (a canvas); the
+   sign-in at the right, on the theme's own panel. */
+html.web .d-login { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); min-height: 100dvh; background: var(--d-panel); }
+html.web .d-login-brand { position: relative; isolation: isolate; overflow: hidden; display: flex; flex-direction: column; justify-content: center; padding: 48px; color: #fff; background: color-mix(in srgb, var(--color-primary) 16%, #0b0f14); }
+html.web .d-login-particles { position: absolute; inset: 0; z-index: -1; width: 100%; height: 100%; }
+html.web .d-login-stage { position: relative; height: 320px; flex: none; }
+html.web .d-login-art { position: absolute; left: 50%; top: 50%; }
+html.web .d-login-art.is-front { margin: -130px 0 0 -118px; z-index: 2; }
+html.web .d-login-art.is-back { margin: -170px 0 0 52px; z-index: 1; --gx-float-delay: -1.6s; }
+html.web .d-login-art.is-side { margin: 26px 0 0 -196px; z-index: 3; --gx-float-delay: -2.9s; }
+html.web .d-login-copy { max-width: 440px; margin: 8px auto 0; text-align: center; }
+html.web .d-login-wordmark { font-size: 56px; line-height: 1; font-weight: 600; letter-spacing: -0.035em; }
+html.web .d-login-lede { margin-top: 16px; font-size: 18px; line-height: 1.5; font-weight: 400; color: rgba(255, 255, 255, 0.66); }
+html.web .d-login-side { display: flex; align-items: center; justify-content: center; padding: 48px; }
+html.web .d-login-form { width: 100%; max-width: 400px; }
+html.web .d-login-h1 { margin-top: 4px; font-size: 36px; line-height: 1.1; font-weight: 700; letter-spacing: -0.03em; color: var(--d-text); }
+html.web .d-login-sub { margin-top: 12px; font-size: 15px; line-height: 1.55; color: var(--d-text-2); }
+html.web .d-login-google { height: 52px; font-size: 15px; gap: 10px; }
+html.web .d-login-or { display: flex; align-items: center; gap: 12px; margin: 22px 0; font-size: 13px; color: var(--d-text-3); }
+html.web .d-login-or::before,
+html.web .d-login-or::after { content: ''; flex: 1; height: 1px; background: var(--d-border); }
+
 /* ── The privacy policy and the terms (pages/WebSettingsPolicy): numbered
    sections, a hairline between. */
 html.web .d-policy-section { display: flex; gap: 14px; align-items: flex-start; padding: 18px 0; }

@@ -4,7 +4,7 @@ import { useBack } from '../hooks/useBack'
 import { useAuth } from '../context/AuthContext'
 import Button from '../components/ui/Button'
 
-function GoogleIcon() {
+export function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">
       <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4" />
@@ -15,9 +15,13 @@ function GoogleIcon() {
   )
 }
 
-export default function Login() {
+/**
+ * Signing in with Google, and leaving for Home once there is a session - the
+ * sign-in screen's logic without its looks, so the desktop's own screen
+ * (web/pages/WebLogin) signs in the same way.
+ */
+export function useGoogleLogin() {
   const navigate = useNavigate()
-  const back = useBack()
   const { session, loading, signInWithGoogle } = useAuth()
   const [signingIn, setSigningIn] = useState(false)
   const [error,     setError]     = useState(null)
@@ -42,6 +46,13 @@ export default function Login() {
       setSigningIn(false)
     }
   }
+
+  return { loading, signingIn, error, handleGoogleSignIn }
+}
+
+export default function Login() {
+  const back = useBack()
+  const { loading, signingIn, error, handleGoogleSignIn } = useGoogleLogin()
 
   if (loading) {
     return (
