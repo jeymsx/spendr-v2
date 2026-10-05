@@ -8,8 +8,6 @@ import { WebScroll, DETAIL_WIDTH } from './components/WebPane'
 import WebFormPage from './WebFormPage'
 import PhonePage from './ui/PhonePage'
 import {
-  WebRecurringSection, RecurringIndex,
-  WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex,
   WebSettingsSection, WebNotesSection, NotesIndex,
 } from './pages/WebSections'
 // The desktop's own styles: loaded with this bundle only, so a phone never
@@ -55,6 +53,9 @@ const WebBudget = lazy(() => import('./pages/WebBudget'))
 const WebCategory = lazy(() => import('./pages/WebCategory'))
 const PersonDetail  = lazy(() => import('../pages/debts/PersonDetail'))
 const GoalDetail    = lazy(() => import('../pages/GoalDetail'))
+const WebGoals = lazy(() => import('./pages/WebGoals'))
+const WebRecurring = lazy(() => import('./pages/WebRecurring'))
+const WebDebts = lazy(() => import('./pages/WebDebts'))
 const RecurringDetail = lazy(() => import('../pages/RecurringDetail'))
 const RecurringForm   = lazy(() => import('../pages/RecurringForm'))
 
@@ -133,20 +134,14 @@ export default function WebApp() {
               {/* ── Plans ── */}
               <Route path="/budget" element={<WebBudget />} />
               <Route path="/categories/:name" element={<WebCategory />} />
-              <Route path="/goals" element={<WebGoalsSection />}>
-                <Route index element={<GoalsIndex />} />
-                <Route path=":id" element={<GoalDetail />} />
-              </Route>
-              <Route path="/recurring" element={<WebRecurringSection />}>
-                <Route index element={<RecurringIndex />} />
-                <Route path="new" element={<RecurringForm />} />
-                <Route path=":id" element={<RecurringDetail />} />
-                <Route path=":id/edit" element={<RecurringForm />} />
-              </Route>
-              <Route path="/debts" element={<WebDebtsSection />}>
-                <Route index element={<DebtsIndex />} />
-                <Route path="person/:key" element={<PersonDetail />} />
-              </Route>
+              <Route path="/goals" element={<WebGoals />} />
+              <Route path="/goals/:id" element={<PhonePage><GoalDetail /></PhonePage>} />
+              <Route path="/recurring" element={<WebRecurring />} />
+              <Route path="/recurring/new" element={<PhonePage><RecurringForm /></PhonePage>} />
+              <Route path="/recurring/:id" element={<PhonePage><RecurringDetail /></PhonePage>} />
+              <Route path="/recurring/:id/edit" element={<PhonePage><RecurringForm /></PhonePage>} />
+              <Route path="/debts" element={<WebDebts />} />
+              <Route path="/debts/person/:key" element={<PhonePage><PersonDetail /></PhonePage>} />
               <Route path="/notes" element={<WebNotesSection />}>
                 <Route index element={<NotesIndex />} />
                 <Route path="deleted" element={<NotesDeleted />} />
