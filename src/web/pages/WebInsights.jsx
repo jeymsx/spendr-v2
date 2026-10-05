@@ -15,6 +15,10 @@ import { editTransaction } from '../../lib/editTransaction'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { fmt, fmtCompact } from '../../lib/money'
 import TxDetailSheet from '../../components/TxDetailSheet'
+import { useRecapMonth } from '../../pages/recap/useRecapMonth'
+import { artUrl } from '../../pages/recap/assets'
+import { cardGradient } from '../../lib/accentTheme'
+import { useTheme } from '../../context/ThemeContext'
 import Page from '../ui/Page'
 import Feather from '../ui/Feather'
 import Sankey from '../ui/Sankey'
@@ -108,6 +112,7 @@ function Figures({ data, period }) {
   const earnedChange = data.previous ? changeOf(data.totalEarned, data.previous.earned) : null
   const net = data.totalEarned - data.totalSpent
   const top = data.categorySegments[0]
+  const recapMonth = useRecapMonth(period.range === '1m' ? monthOfPeriod(period) : null)
   /** @param {any} c */
   const vs = (c) => (!c || !data.previous ? ' ' : c.same ? `Same as ${data.previous.label}` : `${c.up ? '↑' : '↓'} ${c.pct}% vs ${data.previous.label}`)
   return (
@@ -115,8 +120,36 @@ function Figures({ data, period }) {
       <Stat label="Spent" value={fmt(data.totalSpent)} note={vs(spentChange)} />
       <Stat label="Came in" value={fmt(data.totalEarned)} note={vs(earnedChange)} />
       <Stat label="Net" value={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}`} tone={net < 0 ? 'neg' : net > 0 ? 'pos' : null} note={net < 0 ? 'More went out than came in' : 'Kept from what came in'} />
-      <Stat label="Biggest category" value={top ? fmt(top.value) : '—'} note={top ? `${top.name}, ${Math.round((top.value / (data.totalSpent || 1)) * 100)}% of spending` : `Nothing spent ${periodPhrase(period)}`} />
+      {/* Wrapped where there is a finished month to watch - the one shown,
+          or the last one - and the biggest category until there is. */}
+      {recapMonth
+        ? <WrappedTile month={recapMonth} />
+        : <Stat label="Biggest category" value={top ? fmt(top.value) : '—'} note={top ? `${top.name}, ${Math.round((top.value / (data.totalSpent || 1)) * 100)}% of spending` : `Nothing spent ${periodPhrase(period)}`} />}
     </div>
+  )
+}
+
+/**
+ * The month's Wrapped, as the fourth figure: a card in the accent - the
+ * wallet's own gradient (lib/accentTheme) - with Wrapped's gift on it,
+ * opening the story. The phone has it as a row under its Insights figures
+ * (pages/insights/WrappedLink); this is the desktop's way in, beside the
+ * bell's monthly notification.
+ *
+ * @param {{month: string}} props
+ */
+function WrappedTile({ month }) {
+  const { accentColor, theme } = useTheme()
+  const [y, m] = month.split('-').map(Number)
+  const d = new Date(y, m - 1, 1)
+  const name = d.toLocaleDateString('en-US', d.getFullYear() === new Date().getFullYear() ? { month: 'long' } : { month: 'long', year: 'numeric' })
+  return (
+    <Link to={`/recap/${month}`} className="d-wrapped-tile" style={{ background: cardGradient(accentColor, theme) }} aria-label={`${name} Wrapped: watch your month as a story`}>
+      <span className="d-wrapped-label">Wrapped</span>
+      <span className="d-wrapped-value">{name}</span>
+      <span className="d-wrapped-note">Watch the story <IChevronRight size={13} /></span>
+      <img src={artUrl('wrapped-gift', accentColor)} alt="" width={84} height={84} className="d-wrapped-art" draggable={false} />
+    </Link>
   )
 }
 

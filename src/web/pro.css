@@ -985,6 +985,32 @@ html.web .d-ach-card.is-button:focus-visible { outline: none; box-shadow: var(--
 html.web .account-pick-rail { display: grid; grid-template-columns: repeat(auto-fill, minmax(116px, 1fr)); overflow: visible; margin-left: 0; margin-right: 0; padding-left: 0; padding-right: 0; }
 html.web .account-pick-rail > button { width: auto; }
 
+/* Insights' Wrapped card (pages/WebInsights WrappedTile): a figure card in
+   the wallet's gradient, Wrapped's gift tucked into its corner. */
+html.web .d-wrapped-tile {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 20px 24px;
+  border-radius: var(--d-r-lg);
+  color: #fff;
+  transition: translate 0.2s var(--ease-out), box-shadow 0.2s;
+}
+html.web .d-wrapped-tile:hover { translate: 0 -2px; }
+html.web .d-wrapped-tile:focus-visible { outline: none; box-shadow: var(--d-ring); }
+html.web .d-wrapped-label { font-size: 13.5px; font-weight: 500; color: rgba(255, 255, 255, 0.78); }
+/* The words stay clear of the gift in the corner. */
+html.web .d-wrapped-tile > span { padding-right: 68px; }
+html.web .d-wrapped-value { margin-top: 10px; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; }
+html.web .d-wrapped-note { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.86); }
+html.web .d-wrapped-art { position: absolute; right: -4px; bottom: -8px; z-index: -1; width: 80px; height: 80px; rotate: -8deg; }
+@media (max-width: 1279px) {
+  html.web .d-wrapped-value { font-size: 22px; line-height: 28px; }
+}
+
 /* ── Notifications (pages/WebNotifications): a day's heading, then its rows. */
 html.web .d-notif-day { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px 8px; font-size: 13px; font-weight: 600; color: var(--d-text-3); }
 html.web .d-notif-row { width: 100%; display: flex; align-items: flex-start; gap: 14px; padding: 12px 24px; text-align: left; transition: background-color 0.15s; }
