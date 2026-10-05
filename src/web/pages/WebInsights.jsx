@@ -257,7 +257,10 @@ function Overview({ data, period }) {
       </div>
       {data.trivia.length > 0 && <Feather className="-mx-5 mb-8 web-highlights"><Highlights items={data.trivia} /></Feather>}
       <div className="grid grid-cols-12 gap-5">
-        <Panel className="col-span-7" title="Top expenses" flush
+        {/* A table cannot stretch, so it keeps its own height (self-start)
+            rather than standing in a stretched, half-empty card; the panel
+            beside it fills to the taller of the two. */}
+        <Panel className="col-span-7 self-start" title="Top expenses" flush
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/spending')}>All</Btn>}>
           <DataTable
             label="Top expenses"
@@ -272,7 +275,8 @@ function Overview({ data, period }) {
             ]}
           />
         </Panel>
-        <Panel className="col-span-5" title="By account">
+        {/* As tall as Top expenses beside it: its rows spread to fill (d-fill-rows). */}
+        <Panel className="col-span-5 flex flex-col" bodyClassName="flex-1" title="By account">
           <AccountBreakdown data={data} />
         </Panel>
       </div>
@@ -288,7 +292,7 @@ function AccountBreakdown({ data }) {
   const max = Math.max(1, ...rows.map(r => r.value))
   if (!rows.length) return <div className="text-14 text-[var(--d-text-2)]">Nothing spent from any account.</div>
   return (
-    <div className="flex flex-col gap-4">
+    <div className="d-fill-rows">
       {rows.slice(0, 7).map(r => (
         <div key={r.name}>
           <div className="flex items-center gap-3 mb-1.5">
@@ -317,7 +321,7 @@ function Spending({ data, period }) {
     <>
       <Figures data={data} period={period} />
       <div className="grid grid-cols-12 gap-5 mb-8">
-        <Panel className="col-span-7" title="By category" flush>
+        <Panel className="col-span-7 self-start" title="By category" flush>
           <DataTable
             label="Spending by category"
             rows={data.categorySegments}
@@ -338,9 +342,10 @@ function Spending({ data, period }) {
             ]}
           />
         </Panel>
+        {/* The column as tall as By category beside it: By account takes the rest. */}
         <div className="col-span-5 flex flex-col gap-5">
           <Panel title="Where it went"><CategoryBreakdown data={data} limit={5} /></Panel>
-          <Panel title="By account"><AccountBreakdown data={data} /></Panel>
+          <Panel className="flex-1 flex flex-col" bodyClassName="flex-1" title="By account"><AccountBreakdown data={data} /></Panel>
         </div>
       </div>
       <Panel title="Every expense" meta={`${data.rankedExpenses.length.toLocaleString()} rows, biggest first`} flush>

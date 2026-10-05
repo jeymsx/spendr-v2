@@ -35,7 +35,7 @@ const WebHome      = lazy(() => import('./pages/WebHome'))
 const WebImport    = lazy(() => import('./pages/WebImport'))
 
 const WebTransactions = lazy(() => import('./pages/WebTransactions'))
-const RecentlyDeleted = lazy(() => import('../pages/transactions/RecentlyDeleted'))
+const RecentlyDeleted = lazy(() => import('./pages/WebRecentlyDeleted'))
 const EditTransaction = lazy(() => import('../pages/EditTransaction'))
 const AddExpense   = lazy(() => import('../pages/AddExpense'))
 const AddInflow    = lazy(() => import('../pages/AddInflow'))
@@ -109,7 +109,7 @@ export default function WebApp() {
 
               {/* ── Money ── */}
               <Route path="/transactions" element={<WebTransactions />} />
-              <Route path="/transactions/deleted" element={<PhonePage><RecentlyDeleted /></PhonePage>} />
+              <Route path="/transactions/deleted" element={<RecentlyDeleted />} />
               <Route path="/transactions/:id/edit" element={<Form><EditTransaction /></Form>} />
               <Route path="/expense"  element={<Form><AddExpense /></Form>} />
               <Route path="/inflow"   element={<Form><AddInflow /></Form>} />
@@ -171,7 +171,7 @@ export default function WebApp() {
                 <Route path="budgets" element={<SettingsBudgets />} />
                 <Route path="rates" element={<SettingsRates />} />
                 <Route path="templates" element={<SettingsTemplates />} />
-                <Route path="deleted" element={<RecentlyDeleted />} />
+                <Route path="deleted" element={<RecentlyDeleted inPane />} />
                 <Route path="privacy" element={<SettingsPolicy type="privacy" />} />
                 <Route path="terms" element={<SettingsPolicy type="terms" />} />
                 <Route path="*" element={<Navigate to="/settings" replace />} />

@@ -8,6 +8,8 @@ export default {
     extend: {
       colors: {
         primary: 'var(--color-primary, #2D9DFF)',
+        /* Text on the accent: white, or ink on a pale accent (ThemeContext, onAccent). */
+        'on-primary': 'var(--color-on-primary, #ffffff)',
         'primary-dark': 'var(--color-primary, #2D9DFF)',
         navy: '#0b0f14',
         /* The app's three surfaces. Defined in index.css and swapped under

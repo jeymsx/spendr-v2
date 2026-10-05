@@ -120,7 +120,7 @@ function Steps({ steps }) {
         >
           <span
             className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center transition-colors duration-500 ${i === active
-              ? 'bg-primary text-white'
+              ? 'bg-primary text-on-primary'
               : 'bg-white text-primary dark:bg-white/[0.08] dark:text-primary'}`}
           >
             {s.icon}

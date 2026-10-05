@@ -47,7 +47,7 @@ export function QuickTypeFilter({ typeFilter, setTypeFilter, onOpenFilters, acti
         </svg>
         Filter
         {activeFilterCount > 0 && (
-          <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-white
+          <span className="min-w-[16px] h-4 px-1 rounded-full bg-primary text-on-primary
             text-10 font-bold flex items-center justify-center tabular-nums">
             {activeFilterCount}
           </span>

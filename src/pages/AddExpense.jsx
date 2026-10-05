@@ -721,7 +721,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
                     'shrink-0 px-3.5 h-[38px] rounded-full text-xs font-semibold',
                     'border transition-colors duration-150 active:scale-95',
                     !termIsCustom && installMonths === n
-                      ? 'bg-primary border-primary text-white'
+                      ? 'bg-primary border-primary text-on-primary'
                       : 'bg-white dark:bg-primary/[0.07] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-primary/[0.14]',
                   ].join(' ')}
                 >
@@ -734,7 +734,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
                   'shrink-0 px-3.5 h-[38px] rounded-full text-xs font-semibold',
                   'border transition-colors duration-150 active:scale-95',
                   termIsCustom
-                    ? 'bg-primary border-primary text-white'
+                    ? 'bg-primary border-primary text-on-primary'
                     : 'bg-white dark:bg-primary/[0.07] text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-primary/[0.14]',
                 ].join(' ')}
               >

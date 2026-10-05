@@ -13,10 +13,27 @@ function hexToRgb(hex) {
   ]
 }
 
+/**
+ * The text that goes on the accent: white, unless the accent is so light
+ * that white on it falls under 2.5:1 - Honey, Amber, Sage, Lagoon - when it
+ * is the app's ink instead. Not the higher of the two every time: Azure
+ * reads 2.9:1 against white and 6:1 against ink, and Spendr's blue button
+ * has always been white on blue. The threshold keeps that, and turns the
+ * pale accents that were genuinely hard to read.
+ *
+ * @param {[number, number, number]} rgb
+ */
+export function onAccent([r, g, b]) {
+  const lin = (/** @type {number} */ c) => { const v = c / 255; return v <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4 }
+  const L = 0.2126 * lin(r) + 0.7152 * lin(g) + 0.0722 * lin(b)
+  return 1.05 / (L + 0.05) >= 2.5 ? '#ffffff' : '#0f172a'
+}
+
 function applyAccent(color) {
   const [r, g, b] = hexToRgb(color)
   document.documentElement.style.setProperty('--color-primary', color)
   document.documentElement.style.setProperty('--color-primary-rgb', `${r}, ${g}, ${b}`)
+  document.documentElement.style.setProperty('--color-on-primary', onAccent([r, g, b]))
   const root = document.documentElement
   if (color === '#2D9DFF') {
     root.classList.remove('accent-custom')

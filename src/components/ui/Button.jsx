@@ -42,7 +42,7 @@ const PRESS = 'press'
 
 const VARIANT = {
   /** The one thing this screen is for. */
-  primary: 'bg-primary text-white active:bg-primary/90',
+  primary: 'bg-primary text-on-primary active:bg-primary/90',
   /** Its companion: Cancel, Not now, Back. */
   secondary: 'bg-slate-100 text-slate-600 active:bg-slate-200 ' +
     'dark:bg-white/[0.06] dark:text-slate-300 dark:active:bg-white/[0.10]',

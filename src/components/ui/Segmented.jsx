@@ -60,7 +60,7 @@ export default function Segmented({ options, value, onChange }) {
           className={`relative z-10 flex-1 py-2 text-13 font-semibold rounded-full
             transition-colors duration-150 ${
               value === o.value
-                ? 'text-white'
+                ? 'text-on-primary'
                 : 'text-slate-500 dark:text-slate-400'
             }`}
         >

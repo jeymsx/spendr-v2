@@ -279,7 +279,7 @@ function DaysPicture() {
         <div key={d.key} className="flex flex-col items-center gap-2 w-[84px]">
           <div
             className={`guide-light-in w-16 h-16 rounded-2xl flex flex-col items-center justify-center ${
-              d.state === 'done' ? 'bg-primary text-white'
+              d.state === 'done' ? 'bg-primary text-on-primary'
                 : d.state === 'settling' ? 'bg-primary/[0.14] text-primary border border-dashed border-primary/50'
                   : 'border border-dashed border-slate-300 text-slate-500 dark:border-white/[0.18] dark:text-slate-400'
             }`}

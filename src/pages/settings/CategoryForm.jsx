@@ -247,7 +247,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
                       className={[
                         'py-3 rounded-full text-sm font-semibold transition-all duration-75 active:scale-[0.97]',
                         type === o.value
-                          ? 'bg-primary text-white'
+                          ? 'bg-primary text-on-primary'
                           : 'bg-slate-100 dark:bg-white/[0.07] text-slate-500 dark:text-slate-400',
                       ].join(' ')}>
                       {o.label}

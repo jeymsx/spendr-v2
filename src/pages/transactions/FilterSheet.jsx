@@ -67,7 +67,7 @@ export function FilterModal({
         <span className="flex items-center gap-2">
           Filters
           {activeCount > 0 && (
-            <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-10 font-bold text-white">
+            <span className="w-5 h-5 rounded-full bg-primary flex items-center justify-center text-10 font-bold text-on-primary">
               {activeCount}
             </span>
           )}
@@ -122,7 +122,7 @@ export function FilterModal({
                     'py-2.5 rounded-xl text-xs font-semibold transition-colors duration-150 active:scale-95',
                     span,
                     dateRange === o.value
-                      ? 'bg-primary text-white'
+                      ? 'bg-primary text-on-primary'
                       : 'bg-slate-100 dark:bg-white/[0.07] text-slate-600 dark:text-slate-400',
                   ].join(' ')}
                 >

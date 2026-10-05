@@ -64,7 +64,7 @@ export const StepAccounts = forwardRef(
                   <PreviewCard draft={{ ...acct, currency }} />
                   <span
                     className={`absolute -top-1.5 -right-1.5 w-6 h-6 rounded-full flex items-center justify-center
-                      bg-primary text-white shadow-md transition-[opacity,scale] duration-300 ${on ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
+                      bg-primary text-on-primary shadow-md transition-[opacity,scale] duration-300 ${on ? 'opacity-100 scale-100' : 'opacity-0 scale-50'}`}
                     aria-hidden="true"
                   >
                     <IconTick size={12} />

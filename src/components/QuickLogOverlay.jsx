@@ -571,7 +571,7 @@ export default function QuickLogOverlay({ onClose }) {
           aria-label={`Review ${dest.verb.toLowerCase()}`}
           style={{ bottom: `calc(${Math.round(keyboardInset)}px + 1.5rem)` }}
           className="quick-log-go pointer-events-auto absolute right-6
-            w-14 h-14 rounded-full bg-primary text-white
+            w-14 h-14 rounded-full bg-primary text-on-primary
             flex items-center justify-center
             shadow-[0_8px_28px_-8px_rgba(0,0,0,0.55)]
             disabled:opacity-25 disabled:shadow-none

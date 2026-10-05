@@ -313,7 +313,7 @@ html.web .d-btn-lg { height: 46px; padding: 0 22px; font-size: 15px; }
 html.web .d-btn-icon { width: var(--d-control); padding: 0; }
 html.web .d-btn-sm.d-btn-icon { width: 34px; }
 /* Flat in light mode, as the cards are; in dark a soft glow of its own colour. */
-html.web .d-btn-primary { background: var(--d-accent); color: #fff; }
+html.web .d-btn-primary { background: var(--d-accent); color: var(--color-on-primary, #fff); }
 html.web.dark .d-btn-primary { box-shadow: 0 8px 20px -10px rgba(var(--color-primary-rgb), 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 html.web .d-btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--d-accent) 90%, #000); }
 html.web .d-btn-secondary { background: var(--d-panel); border-color: var(--d-border-strong); color: var(--d-text); }
@@ -871,6 +871,13 @@ html.web .d-set-line-value.d-warn { color: var(--d-warn); }
 html.web .d-set-line-value.d-neg { color: var(--d-neg); }
 html.web .d-set-line-go { color: var(--d-text-3); }
 html.web .d-set-swatch { width: 10px; height: 10px; border-radius: 999px; flex-shrink: 0; }
+
+/* Rows that spread to fill their panel when it is stretched to the height
+   of the one beside it - each growing to 64px at most, so a short list
+   does not come apart. Grid's own sizing does the spreading: a track with a
+   fixed maximum takes free space up to it. */
+html.web .d-fill-rows { display: grid; grid-auto-rows: minmax(min-content, 64px); align-content: start; row-gap: 12px; height: 100%; }
+html.web .d-fill-rows > * { display: flex; flex-direction: column; justify-content: center; }
 
 /* ── Signing in (pages/WebLogin): Spendr at the left, on a deep ground in
    the accent whatever the theme, points drifting across it (a canvas); the

@@ -138,7 +138,7 @@ function AccountMenu() {
       align="end"
       width={248}
       trigger={
-        <button type="button" className="ml-1 w-9 h-9 rounded-full flex items-center justify-center text-14 font-bold text-white focus-visible:outline-none focus-visible:shadow-[var(--d-ring)]" style={{ background: 'var(--d-accent)' }} aria-label="Your account">
+        <button type="button" className="ml-1 w-9 h-9 rounded-full flex items-center justify-center text-14 font-bold text-on-primary focus-visible:outline-none focus-visible:shadow-[var(--d-ring)]" style={{ background: 'var(--d-accent)' }} aria-label="Your account">
           {initial}
         </button>
       }

@@ -54,7 +54,7 @@ const VARIANT = {
     'dark:bg-primary/[0.10] dark:text-white dark:border-primary/[0.20] ' +
     'dark:shadow-[inset_0_1px_0_rgba(var(--color-primary-rgb),0.12)]',
   /** Filled with the accent - an add button, a confirm. */
-  primary: 'bg-primary text-white',
+  primary: 'bg-primary text-on-primary',
   /** A washed accent, for a secondary action that still wants the colour. */
   tint: 'bg-primary/[0.08] text-primary dark:bg-primary/[0.14]',
   /** Destructive. */

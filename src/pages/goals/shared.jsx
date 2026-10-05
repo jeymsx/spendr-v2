@@ -256,7 +256,7 @@ export function AccountPickRail({
                 'absolute top-2.5 right-2.5 w-[18px] h-[18px] rounded-full',
                 'flex items-center justify-center transition-colors duration-100',
                 on
-                  ? 'bg-primary text-white'
+                  ? 'bg-primary text-on-primary'
                   : 'border border-slate-200 dark:border-white/[0.12]',
               )}
               aria-hidden="true"
