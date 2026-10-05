@@ -14,6 +14,7 @@ import {
 // The desktop's own styles: loaded with this bundle only, so a phone never
 // downloads them.
 import './web.css'
+import './pro.css'
 
 /**
  * The desktop app: every route the phone has, rendering the phone's page.

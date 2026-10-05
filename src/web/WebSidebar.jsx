@@ -2,43 +2,33 @@ import { useMemo, useState } from 'react'
 import { NavLink, useLocation } from 'react-router-dom'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import db from '../db/db'
-import { setViewMode } from './useViewMode'
-import WebAddMenu from './WebAddMenu'
-import WebSyncStatus from './WebSyncStatus'
-import { WebIconHome, WebIconList, WebIconWallet, WebIconChart, WebIconImport, WebIconPhone, WebIconSidebar } from './WebIcons'
-import {
-  IconTarget, IconTrophy, IconDebt, IconBillHistory, IconSettings, IconCalc, IconNotes,
-} from '../components/icons'
 import { quickActionCounts } from '../pages/dashboard/shared'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import useRates from '../hooks/useRates'
+import {
+  IHome, IList, IWallet, IChart, IGauge, ITarget, IRepeat, IUsers, INote, ITrophy, IImport, ISettings, ISidebar,
+} from './ui/icons'
 
 /**
- * The desktop's navigation: every place the phone can reach, in one column.
+ * The desktop's navigation: every section in one quiet column.
  *
- * On the phone, four are tabs and the rest hang off Home - its quick actions
- * (Goals, Debts, Recurring) and the discs in its header (the bell, Settings).
- * A landscape screen has the room to list them all, so nothing is two taps
- * away. The badges are the phone's own: Home's quick-action counts (the same
- * rule - only what you can act on, and acting clears it).
+ * Grouped as the app thinks of them - your money, your plans, the rest -
+ * with Settings at the foot. The badges are the phone's own (Home's
+ * quick-action counts: only what you can act on, and acting clears them).
+ * Adding, searching, notifications and your account live in the top bar.
  *
- * Notifications are the one exception: the bell on Home opens them in a
- * panel (NotificationsPopover), so a sidebar entry was a second way to the
- * same list. /notifications is still there, behind the panel's "See all".
+ * Folds to its icons (the button beside the name, or the logo when folded),
+ * remembered per browser; folded by default on a window under 1280px.
  */
 
 /**
- * @typedef {{to: string, label: string, Icon: import('react').ComponentType<any>, badge?: number,
+ * @typedef {{to: string, label: string, Icon: import('react').ComponentType<{size?: number}>, badge?: number,
  *   also?: string}} NavEntry  `also`: another address that is this section too
  */
 
 /** Where the sidebar's folded or open state is kept, per browser. */
 const COLLAPSE_KEY = 'spendr-sidebar'
 
-/**
- * Folded to its icons, or open: what was last chosen, and before anything
- * was, folded on a window too narrow to give a list and its page room.
- */
 function initiallyCollapsed() {
   try {
     const saved = localStorage.getItem(COLLAPSE_KEY)
@@ -55,14 +45,16 @@ function NavItem({ to, label, Icon, badge = 0, end = false, also }) {
     <NavLink
       to={to}
       end={end}
-      className={({ isActive }) => `web-nav-item${isActive || alsoHere ? ' is-active' : ''}`}
-      // The name, for the narrow sidebar that shows only the icons.
+      className={({ isActive }) => `d-nav-item${isActive || alsoHere ? ' is-active' : ''}`}
       title={label}
     >
-      <span className="web-nav-icon" aria-hidden="true"><Icon size={19} /></span>
-      <span className="flex-1 truncate">{label}</span>
+      <span className="d-nav-icon" aria-hidden="true"><Icon size={16} /></span>
+      <span className="d-nav-label flex-1 truncate">{label}</span>
       {badge > 0 && (
-        <span className="web-nav-badge" aria-label={`${badge} to see to`}>{badge > 9 ? '9+' : badge}</span>
+        <>
+          <span className="d-nav-count" aria-label={`${badge} to see to`}>{badge > 9 ? '9+' : badge}</span>
+          <span className="d-nav-dot" aria-hidden="true" />
+        </>
       )}
     </NavLink>
   )
@@ -75,10 +67,6 @@ export default function WebSidebar() {
     try { localStorage.setItem(COLLAPSE_KEY, next ? 'collapsed' : 'open') } catch { /* storage off */ }
     return next
   })
-  const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
-  /* Only a name you gave. Home can fall back to "Good morning, there!", but
-     under the logo "there" reads as a label for nothing. */
-  const name = nameMeta?.value?.trim() || ''
 
   // The phone's quick-action badges, read the same way (dashboard/shared.js).
   const recurring = useLiveQuery(() => db.recurring.toArray(), [], [])
@@ -94,71 +82,55 @@ export default function WebSidebar() {
 
   /** @type {NavEntry[]} */
   const money = [
-    { to: '/', label: 'Home', Icon: WebIconHome },
-    { to: '/transactions', label: 'Transactions', Icon: WebIconList },
-    { to: '/accounts', label: 'Accounts', Icon: WebIconWallet },
-    { to: '/insights', label: 'Insights', Icon: WebIconChart },
+    { to: '/', label: 'Home', Icon: IHome },
+    { to: '/transactions', label: 'Transactions', Icon: IList },
+    { to: '/accounts', label: 'Accounts', Icon: IWallet },
+    { to: '/insights', label: 'Insights', Icon: IChart },
   ]
   /** @type {NavEntry[]} */
   const plans = [
-    // A category's page opens beside the budget (WebSections).
-    { to: '/budget', label: 'Budget', Icon: IconCalc, also: '/categories/' },
-    { to: '/goals', label: 'Goals', Icon: IconTarget, badge: counts.goals },
-    { to: '/recurring', label: 'Recurring', Icon: IconBillHistory, badge: counts.bills },
-    { to: '/debts', label: 'Debts', Icon: IconDebt, badge: counts.debts },
-    { to: '/notes', label: 'Notes', Icon: IconNotes },
+    // A category's page is part of the budget.
+    { to: '/budget', label: 'Budget', Icon: IGauge, also: '/categories/' },
+    { to: '/goals', label: 'Goals', Icon: ITarget, badge: counts.goals },
+    { to: '/recurring', label: 'Recurring', Icon: IRepeat, badge: counts.bills },
+    { to: '/debts', label: 'Debts', Icon: IUsers, badge: counts.debts },
   ]
   /** @type {NavEntry[]} */
-  const you = [
-    { to: '/achievements', label: 'Achievements', Icon: IconTrophy },
-    { to: '/import', label: 'Import', Icon: WebIconImport },
-    { to: '/settings', label: 'Settings', Icon: IconSettings },
+  const more = [
+    { to: '/notes', label: 'Notes', Icon: INote },
+    { to: '/achievements', label: 'Achievements', Icon: ITrophy },
+    { to: '/import', label: 'Import', Icon: IImport },
   ]
 
   return (
-    <aside className={`web-sidebar shrink-0 h-full flex flex-col${collapsed ? ' is-collapsed' : ''}`}>
-      {/* The mark, as the sign-in screen, the lock screen and Settings show
-          it - not a letter in a tile. Folded, the mark is the way to unfold:
-          under the pointer it turns into the sidebar's icon. Open, the
-          sidebar's icon beside the name folds it. */}
-      <div className="web-brand-row flex items-center gap-2.5">
+    <aside className={`d-sidebar shrink-0 h-full flex flex-col${collapsed ? ' is-collapsed' : ''}`}>
+      <div className="d-brand">
         {collapsed ? (
           <button type="button" className="web-brand-toggle" onClick={toggle} aria-label="Open the sidebar" title="Open the sidebar">
-            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="web-brand" />
-            <span className="web-brand-swap" aria-hidden="true"><WebIconSidebar /></span>
+            <img src="/icons/icon-192.png" alt="" width={28} height={28} className="d-brand-logo web-brand" />
+            <span className="web-brand-swap" aria-hidden="true"><ISidebar size={18} /></span>
           </button>
         ) : (
           <>
-            <img src="/icons/icon-192.png" alt="" width={36} height={36} className="web-brand" />
-            <div className="web-brand-text flex-1 min-w-0">
-              <p className="text-sm font-semibold text-slate-800 dark:text-white leading-tight">Spendr</p>
-              {name && <p className="text-11 text-slate-500 dark:text-slate-400 truncate">{name}</p>}
-            </div>
+            <img src="/icons/icon-192.png" alt="" width={28} height={28} className="d-brand-logo" />
+            <span className="d-brand-name flex-1">Spendr</span>
             <button type="button" className="web-sidebar-fold" onClick={toggle} aria-label="Close the sidebar" title="Close the sidebar">
-              <WebIconSidebar />
+              <ISidebar size={16} />
             </button>
           </>
         )}
       </div>
 
-      <div className="px-4 pb-4">
-        <WebAddMenu />
-      </div>
-
-      <nav className="flex-1 min-h-0 overflow-y-auto no-scrollbar px-3 pb-3 flex flex-col" aria-label="Spendr">
+      <nav className="d-nav flex-1 min-h-0 overflow-y-auto no-scrollbar" aria-label="Spendr">
         {money.map(i => <NavItem key={i.to} {...i} end={i.to === '/'} />)}
-        <p className="web-nav-heading">Plans</p>
+        <p className="d-nav-heading">Plan</p>
         {plans.map(i => <NavItem key={i.to} {...i} />)}
-        <p className="web-nav-heading">You</p>
-        {you.map(i => <NavItem key={i.to} {...i} />)}
+        <p className="d-nav-heading">More</p>
+        {more.map(i => <NavItem key={i.to} {...i} />)}
       </nav>
 
-      <div className="web-sidebar-foot px-3 py-3 flex flex-col gap-1">
-        <WebSyncStatus />
-        <button type="button" onClick={() => setViewMode('mobile')} className="web-nav-item web-nav-item-quiet" title="Switch to mobile view">
-          <span className="web-nav-icon" aria-hidden="true"><WebIconPhone /></span>
-          <span className="flex-1 truncate text-left">Switch to mobile view</span>
-        </button>
+      <div className="d-sidebar-foot">
+        <NavItem to="/settings" label="Settings" Icon={ISettings} />
       </div>
     </aside>
   )

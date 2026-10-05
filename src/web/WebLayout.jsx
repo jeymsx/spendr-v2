@@ -4,6 +4,8 @@ import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import WhatsNewModal, { CURRENT_VERSION } from '../components/WhatsNewModal'
 import WebSidebar from './WebSidebar'
+import WebTopBar from './WebTopBar'
+import { CommandProvider } from './CommandPalette'
 import ErrorBoundary from '../components/ErrorBoundary'
 import { AddFlowProvider } from './AddFlow'
 import { AchievementProvider } from '../context/AchievementContext'
@@ -46,18 +48,21 @@ function Chrome() {
   const showWhatsNew = whatsNewMeta !== undefined && whatsNewMeta?.value !== CURRENT_VERSION && !whatsNewDismissed
 
   return (
-    <div className="web-shell h-[100dvh] flex overflow-hidden">
+    <div className="d-shell web-shell h-[100dvh] flex overflow-hidden">
       <WebSidebar />
 
-      <main className="web-main flex-1 min-w-0 h-full overflow-hidden relative">
-        <div key={section} className="page-enter h-full">
-          <ErrorBoundary compact resetKeys={[location.pathname]}>
-            <Suspense fallback={<PageFallback />}>
-              <Outlet />
-            </Suspense>
-          </ErrorBoundary>
-        </div>
-      </main>
+      <div className="flex-1 min-w-0 h-full flex flex-col">
+        <WebTopBar />
+        <main className="web-main flex-1 min-h-0 overflow-hidden relative">
+          <div key={section} className="page-enter h-full">
+            <ErrorBoundary compact resetKeys={[location.pathname]}>
+              <Suspense fallback={<PageFallback />}>
+                <Outlet />
+              </Suspense>
+            </ErrorBoundary>
+          </div>
+        </main>
+      </div>
 
       {showWhatsNew && <WhatsNewModal onClose={() => setWhatsNewDismissed(true)} />}
 
@@ -77,7 +82,9 @@ export default function WebLayout() {
   return (
     <AchievementProvider>
       <AddFlowProvider>
-        <Chrome />
+        <CommandProvider>
+          <Chrome />
+        </CommandProvider>
       </AddFlowProvider>
     </AchievementProvider>
   )
