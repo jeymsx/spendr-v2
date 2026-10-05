@@ -16,6 +16,7 @@ import { AccountTile, CategoryTile } from './ui/display'
 import {
   ISearch, IHome, IList, IWallet, IChart, IGauge, ITarget, IRepeat, IUsers, INote, ITrophy, IImport, ISettings,
   IArrowUpRight, IArrowDownLeft, ITransfer, IZap, IPlus, IMoon, ISun, IPhone, IRefresh, ICornerDownLeft, ITag, IBell,
+  ISliders, ILock, IPalette, IFileText,
 } from './ui/icons'
 
 /**
@@ -88,7 +89,11 @@ const PAGES = [
   { to: '/achievements', label: 'Achievements', Icon: ITrophy, keywords: 'badges streaks challenges' },
   { to: '/notifications', label: 'Notifications', Icon: IBell },
   { to: '/import', label: 'Import', Icon: IImport, keywords: 'csv' },
-  { to: '/settings/preferences', label: 'Settings', Icon: ISettings, keywords: 'preferences' },
+  { to: '/settings', label: 'Settings', Icon: ISettings, keywords: 'overview profile' },
+  { to: '/settings/preferences', label: 'Preferences', Icon: ISliders, keywords: 'settings theme dark light style' },
+  { to: '/settings/preferences#app-lock', label: 'App lock', Icon: ILock, keywords: 'settings security face id passkey pin' },
+  { to: '/settings/accent', label: 'Accent colour', Icon: IPalette, keywords: 'settings color theme' },
+  { to: '/settings/privacy', label: 'Privacy & terms', Icon: IFileText, keywords: 'settings policy legal' },
   { to: '/settings/categories', label: 'Categories', Icon: ITag, keywords: 'settings' },
   { to: '/settings/budgets', label: 'Budget limits', Icon: IGauge, keywords: 'settings edit budgets' },
   { to: '/settings/backup', label: 'Backup and restore', Icon: ISettings, keywords: 'export' },

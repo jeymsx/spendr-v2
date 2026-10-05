@@ -164,7 +164,7 @@ export default function WebApp() {
                 <Route path="backup" element={<SettingsBackup />} />
                 <Route path="changelog" element={<SettingsChangelog />} />
                 {/* Part of Preferences on a computer. */}
-                <Route path="app-lock" element={<Navigate to="/settings/preferences" replace />} />
+                <Route path="app-lock" element={<Navigate to="/settings/preferences#app-lock" replace />} />
                 <Route path="accent" element={<SettingsAccent />} />
                 <Route path="categories" element={<SettingsCategories />} />
                 <Route path="budgets" element={<SettingsBudgets />} />

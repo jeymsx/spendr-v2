@@ -199,7 +199,7 @@ export default function WebSettingsOverview() {
             value={`${theme === 'dark' ? 'Dark' : 'Light'} · ${style === 'flat' ? (theme === 'dark' ? 'Lights out' : 'Clean') : 'Vivid'}`} />
           <LinkRow icon={<IPalette size={17} />} label="Accent colour" to="/settings/accent"
             value={<><span className="d-set-swatch" style={{ background: accentColor }} aria-hidden="true" /><span className="truncate">{accent?.name ?? 'Custom'}</span></>} />
-          <LinkRow icon={<ILock size={17} />} label="App lock" to="/settings/preferences" value={lockSummary(appLock.config)} />
+          <LinkRow icon={<ILock size={17} />} label="App lock" to="/settings/preferences#app-lock" value={lockSummary(appLock.config)} />
           <LinkRow icon={<IRefresh size={17} />} label="Cloud sync" to="/settings/sync" valueTone={sync.tone}
             value={<><span className={`w-2 h-2 rounded-full shrink-0 ${sync.dot}`} aria-hidden="true" /><span className="truncate">{sync.text}</span></>} />
         </Section>

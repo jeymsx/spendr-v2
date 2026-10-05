@@ -238,7 +238,10 @@ html.web .d-search-trigger:focus-visible { outline: none; box-shadow: var(--d-ri
 /* ── 4. Primitives ─────────────────────────────────────────────────────── */
 
 /* Page: a scrolling area with a header and a body, the same gutters on every page. */
-html.web .d-page { height: 100%; overflow-y: auto; overflow-x: hidden; }
+/* The scrollbar's room is kept whether or not the page is long enough to
+   need one, so a long page (What's new, the terms) is no narrower than a
+   short one and nothing shifts sideways going between them. */
+html.web .d-page { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
 /* Centred in the main area, the same width on every page. */
 html.web .d-page-inner { margin: 0 auto; padding: 32px var(--d-gutter) 56px; }
 html.web .d-page-head {
