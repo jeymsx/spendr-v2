@@ -24,6 +24,16 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.17.0',
+    date: '2026-10-05',
+    items: [
+      { title: 'A desktop made for a desktop', desc: 'On a computer, a bar across the top searches everything (Ctrl+K), adds a transaction, and holds the bell and your settings. Every page is laid out wide, with the same rounded cards and blue as the phone.' },
+      { title: 'Transactions as a table', desc: 'Sort by any column, filter by date, account or category, pick many rows to refile or delete at once, and save what you see as a CSV.' },
+      { title: 'Every page, at a glance', desc: 'Home, Accounts, Budget, Insights, Goals, Recurring and Debts each show their figures across the top and their detail in tables and charts below.' },
+      { title: 'Cards that sit flat', desc: 'In light mode, account cards, the net worth card and the highlights lose their grey shadows, and the card colours are a little brighter.' },
+    ],
+  },
+  {
     version: '0.16.0',
     date: '2026-10-05',
     items: [

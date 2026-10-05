@@ -33,22 +33,33 @@ export const RELEASE_DATE = '2026-10-05'
 export const RELEASE_NOTES = [
   {
     icon: 'desktop',
-    title: 'A desktop made for a desktop',
-    desc: 'On a computer, a bar across the top searches everything (Ctrl+K), adds a transaction, and holds the bell and your settings. Every page is laid out wide, with the same rounded cards and blue as the phone.',
+    title: 'Forms beside the page',
+    desc: 'On a computer, adding or editing a transaction, an account or a bill opens in a panel at the right, over the page you were on. Escape takes you back to it.',
   },
   {
-    icon: 'receipt',
-    title: 'Transactions as a table',
-    desc: 'Sort by any column, filter by date, account or category, pick many rows to refile or delete at once, and save what you see as a CSV.',
+    icon: 'settings',
+    title: 'Settings, laid out for a computer',
+    desc: 'Everything at a glance in one list, App lock inside Preferences, and every accent colour in one row to pick from.',
   },
   {
-    icon: 'chart',
-    title: 'Every page, at a glance',
-    desc: 'Home, Accounts, Budget, Insights, Goals, Recurring and Debts each show their figures across the top and their detail in tables and charts below.',
+    icon: 'sparkle',
+    title: 'Wrapped in Insights',
+    desc: 'Last month\u2019s Wrapped now has a card of its own in the Insights overview, one click from the story.',
   },
   {
-    icon: 'card',
-    title: 'Cards that sit flat',
-    desc: 'In light mode, account cards, the net worth card and the highlights lose their grey shadows, and the card colours are a little brighter.',
+    icon: 'contrast',
+    title: 'Readable on every accent',
+    desc: 'Buttons in Honey, Amber, Sage and Lagoon now use dark text, so they are easy to read. On the phone too.',
+  },
+  {
+    icon: 'trash',
+    title: 'Recently deleted as a table',
+    desc: 'On a computer, put back one row or many at once, or delete them for good.',
+  },
+  {
+    icon: 'lock',
+    title: 'A new sign-in screen',
+    desc: 'On a computer, signing in shows Spendr on one side and Google on the other.',
   },
 ]
+
