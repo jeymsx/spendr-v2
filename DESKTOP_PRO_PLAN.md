@@ -61,3 +61,17 @@ phases.**
 
 - **2026-10-05.** Plan written; light-mode card work committed first
   (fbaca04).
+- **2026-10-05, phases 0-7 built.** Shell (top bar, palette, quieter sidebar),
+  Transactions table, Home dashboard, Accounts (cards or a table, and an
+  account page), Budget and categories, Insights (five views), Goals,
+  Recurring, Debts, Settings (sections beside the one open), Notes (list
+  beside the note), Achievements; every other page in the desktop frame.
+- **Direction change mid-way (the user):** keep Spendr's look - rounded 24px
+  cards and pill buttons, the blue accent, the navy dark mode with its glow,
+  big type with the weight on the name ("Good afternoon, **James!**"),
+  the account cards themselves on Home and Accounts; type a step smaller than
+  the first cut; pages centred in the main area. The tokens in pro.css carry
+  it, so it is one place to tune.
+- **QA.** Every page at 1100 and 1440, light and dark: no console errors,
+  nothing wider than its page (scripts in %TEMP%/spendr-qa: pro-sweep,
+  pro-tx, tx-bars). The phone checked unchanged (phone-bell, phone-edit).

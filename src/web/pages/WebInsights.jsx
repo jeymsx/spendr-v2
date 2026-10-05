@@ -126,10 +126,10 @@ function CategoryBreakdown({ data, limit = 8 }) {
   const rest = segs.slice(limit).reduce((s, c) => s + c.value, 0)
   const activeSeg = segs.find(s => s.name === active)
   return (
-    <div className="flex items-center gap-8">
+    <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5">
       <Ring
         data={segs.map(s => ({ name: s.name, value: s.value, color: s.color }))}
-        size={208}
+        size={limit > 5 ? 208 : 176}
         active={active}
         onActive={setActive}
         center={
@@ -139,7 +139,7 @@ function CategoryBreakdown({ data, limit = 8 }) {
           </>
         }
       />
-      <div className="flex-1 min-w-0 flex flex-col gap-1">
+      <div className="flex-1 min-w-[240px] flex flex-col gap-1">
         {shown.length === 0 && <Empty icon={<IPie size={20} />} title="Nothing spent" body="Spending shows here by category." />}
         {shown.map(s => (
           <button
@@ -153,7 +153,7 @@ function CategoryBreakdown({ data, limit = 8 }) {
             <span className="d-swatch rounded-full" style={{ background: s.color }} />
             <span className="flex-1 min-w-0 truncate text-14 text-[var(--d-text)]">{s.name}</span>
             <span className="text-13 d-num text-[var(--d-text-3)] w-12 text-right">{Math.round((s.value / (data.totalSpent || 1)) * 100)}%</span>
-            <span className="text-14 font-semibold d-num text-[var(--d-text)] w-28 text-right">{fmt(s.value)}</span>
+            <span className="text-14 font-semibold d-num text-[var(--d-text)] text-right whitespace-nowrap">{fmt(s.value)}</span>
           </button>
         ))}
         {rest > 0 && <div className="flex items-center gap-3 h-10 text-13 text-[var(--d-text-3)]"><span className="flex-1">Everything else</span><span className="d-num">{fmt(rest)}</span></div>}
