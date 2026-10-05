@@ -7,6 +7,9 @@ import SubPage from '../../components/SubPage'
 import Button from '../../components/ui/Button'
 import IconButton from '../../components/ui/IconButton'
 import Sheet from '../../components/ui/Sheet'
+/* The desktop's menu, for the month on a computer only: the phone keeps
+   the native picker, which is the wheel an iPhone does best. */
+import Popover, { MenuItem } from '../../web/ui/Popover'
 import {
   IconDownload, IconReport, RowChevron, RowIcon, SectionCard, SectionHeader, SettingsRow, buildAndDownloadCSV,
 } from './shared'
@@ -36,6 +39,8 @@ export default function ReportsPage() {
   const [making, setMaking] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [desktop] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('web'))
+  const picked = months.find(m => `${m.year}-${m.month}` === pick) ?? months[0]
 
   async function makeReport() {
     if (making) return
@@ -89,15 +94,38 @@ export default function ReportsPage() {
               </div>
             </div>
             <div className="mt-3 flex items-center gap-2 pl-[52px]">
-              <select
-                value={pick}
-                onChange={e => setPick(e.target.value)}
-                aria-label="Month"
-                className="flex-1 min-w-0 text-sm bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 outline-none"
-                style={{ colorScheme: theme === 'dark' ? 'dark' : 'light' }}
-              >
-                {months.map(m => <option key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`}>{m.label}</option>)}
-              </select>
+              {desktop ? (
+                <Popover
+                  role="menu"
+                  width={240}
+                  label="Month"
+                  trigger={(
+                    <button
+                      type="button"
+                      aria-label={`Month: ${picked.label}`}
+                      className="flex-1 min-w-0 flex items-center justify-between gap-2 text-sm text-left bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 outline-none"
+                    >
+                      <span className="truncate">{picked.label}</span>
+                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="shrink-0 opacity-60"><path d="m6 9 6 6 6-6" /></svg>
+                    </button>
+                  )}
+                >
+                  {months.map(m => {
+                    const key = `${m.year}-${m.month}`
+                    return <MenuItem key={key} checked={key === pick} onSelect={() => setPick(key)}>{m.label}</MenuItem>
+                  })}
+                </Popover>
+              ) : (
+                <select
+                  value={pick}
+                  onChange={e => setPick(e.target.value)}
+                  aria-label="Month"
+                  className="flex-1 min-w-0 text-sm bg-white dark:bg-primary/[0.07] border border-slate-200/80 dark:border-primary/[0.14] rounded-xl px-3 h-10 outline-none"
+                  style={{ colorScheme: theme === 'dark' ? 'dark' : 'light' }}
+                >
+                  {months.map(m => <option key={`${m.year}-${m.month}`} value={`${m.year}-${m.month}`}>{m.label}</option>)}
+                </select>
+              )}
               <IconButton label="Download monthly report" variant="primary" size="lg" onClick={makeReport} disabled={making}>
                 {making
                   ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
