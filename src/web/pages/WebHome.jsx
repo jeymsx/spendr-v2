@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -14,6 +14,7 @@ import { isSpend } from '../../lib/flows'
 import { txBase } from '../../lib/fxContext'
 import { fmt } from '../../lib/money'
 import { useAccountsView } from '../data/accounts'
+import { AccountCard } from '../../pages/dashboard/Tiles'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
@@ -41,7 +42,7 @@ export default function WebHome() {
   const navigate = useNavigate()
   const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
   const name = nameMeta?.value?.trim() || ''
-  const { loading, breakdown, groups, txAll, base } = useAccountsView()
+  const { loading, breakdown, groups, txAll, base, credit } = useAccountsView()
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
   const period = useMemo(() => ({ range: '1m', month: null }), [])
   const month = useInsightsData(period)
@@ -88,76 +89,141 @@ export default function WebHome() {
   const chart = series.data.map(d => ({ label: d.day, value: d.value }))
   const rangeChange = chart.length > 1 ? chart[chart.length - 1].value - chart[0].value : null
 
-  return (
-    <Page title={`${getGreeting()}${name ? `, ${name}` : ''}`} subtitle={today}>
-      <div className="grid grid-cols-4 gap-3 mb-4">
-        <Stat
-          label="Net worth"
-          value={loading ? '—' : <Money value={breakdown.total} />}
-          note={thisMonthChange == null ? 'What you have, less what you owe' : `${thisMonthChange >= 0 ? '+' : '−'}${fmt(Math.abs(thisMonthChange))} this month`}
-        />
-        <Stat
-          label={`Spent in ${monthName}`}
-          value={fmt(month.totalSpent)}
-          note={!spentChange || !month.previous ? ' ' : spentChange.same ? `Same as ${month.previous.label}` : `${spentChange.up ? '↑' : '↓'} ${spentChange.pct}% vs ${month.previous.label}`}
-        />
-        <Stat
-          label={`Came in, ${monthName}`}
-          value={fmt(month.totalEarned)}
-          note={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))} after spending`}
-        />
-        <Stat
-          label="Safe to spend"
-          value={safe == null ? '—' : fmt(Math.max(0, safe))}
-          tone={forecast?.firstNegative ? 'neg' : null}
-          note={forecast?.firstNegative ? 'You may run short before payday' : payday ? `Until payday, ${payday}` : 'For the next 2 weeks'}
-        />
-      </div>
+  const cards = groups.flatMap(g => g.rows.filter(r => r.depth === 0).map(r => r.acct))
+  // One row of cards: as many as fit, the last place given to the way to the rest.
+  const [gridRef, cols] = useColumns(184, 16)
+  const shownCards = cards.length <= cols ? cards : cards.slice(0, Math.max(1, cols - 1))
+  const budgetLeft = budget.total - budget.spent
 
-      <div className="grid grid-cols-3 gap-4 mb-4">
-        <Panel
-          className="col-span-2"
-          title="Net worth"
-          meta={rangeChange == null ? null : `${rangeChange >= 0 ? '+' : '−'}${fmt(Math.abs(rangeChange))} ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`}
-          actions={<Segmented label="Range" value={range} onChange={setRange} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}
-        >
-          {chart.length > 1 ? <AreaTrend data={chart} height={268} valueLabel="Net worth" /> : <div className="h-[268px]" />}
-          <div className="grid grid-cols-5 gap-3 mt-4 pt-4 border-t border-[var(--d-border)]">
+  return (
+    <Page
+      eyebrow={today}
+      title={<><span className="d-light">{getGreeting()}{name ? ',' : ''}</span>{name ? ` ${name}!` : ''}</>}
+    >
+      <div className="grid grid-cols-12 gap-5 mb-8">
+        <section className="d-hero col-span-5 px-7 py-6 flex flex-col" aria-label="Net worth">
+          <div className="text-13 font-semibold text-white/70">Net worth</div>
+          <div className="mt-1.5 text-[36px] leading-[42px] font-bold tracking-[-0.03em] d-num">{loading ? '—' : <Money value={breakdown.total} />}</div>
+          {thisMonthChange != null && (
+            <div className="mt-3">
+              <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-white/15 text-12 font-semibold d-num">
+                {thisMonthChange >= 0 ? '+' : '−'}{fmt(Math.abs(thisMonthChange))} this month
+              </span>
+            </div>
+          )}
+          <div className="flex-1" />
+          <div className="grid grid-cols-4 gap-3 mt-6 pt-4 border-t border-white/20">
             <Pile label="Spending" value={breakdown.spending} />
             <Pile label="Savings" value={breakdown.savings} />
             <Pile label="Investments" value={breakdown.invested} />
-            <Pile label="Credit owed" value={breakdown.credit} owed />
-            <Pile label="Loans" value={breakdown.loans} owed />
+            <Pile label="You owe" value={breakdown.credit + breakdown.loans} owed />
           </div>
-        </Panel>
+        </section>
 
-        <Panel title="Accounts" actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/accounts')}>All</Btn>} flush>
-          <div className="max-h-[424px] overflow-y-auto py-1">
-            {groups.length === 0 && !loading && (
-              <Empty icon={<IWallet size={18} />} title="No accounts yet" body="Add your cash, a bank or an e-wallet." action={<Btn size="sm" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} />
-            )}
-            {groups.map(g => (
-              <div key={g.key} className="pb-1">
-                <div className="flex items-center justify-between px-4 pt-2.5 pb-1 text-12 font-medium text-[var(--d-text-3)]">
-                  <span>{g.label}</span>
-                  <Money value={g.owed ? -g.total : g.total} className="text-[var(--d-text-2)]" />
-                </div>
-                {g.rows.filter(r => r.depth === 0).map(r => (
-                  <Link key={r.acct.id} to={`/accounts/${r.acct.id}`} className="flex items-center gap-2.5 h-10 px-4 hover:bg-[var(--d-hover)]">
-                    <AccountTile account={r.acct} size="sm" />
-                    <span className="flex-1 min-w-0 truncate text-13 text-[var(--d-text)]">{r.acct.name}</span>
-                    <Money value={g.owed ? -r.value : r.value} currency={r.currency} className="text-13 font-medium text-[var(--d-text)]" />
-                  </Link>
-                ))}
-              </div>
+        <div className="col-span-7 grid grid-cols-2 gap-5">
+          <Stat
+            label={`Spent in ${monthName}`}
+            value={fmt(month.totalSpent)}
+            note={!spentChange || !month.previous ? ' ' : spentChange.same ? `Same as ${month.previous.label}` : `${spentChange.up ? '↑' : '↓'} ${spentChange.pct}% vs ${month.previous.label}`}
+          />
+          <Stat
+            label={`Came in, ${monthName}`}
+            value={fmt(month.totalEarned)}
+            note={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))} after spending`}
+          />
+          <Stat
+            label="Safe to spend"
+            value={safe == null ? '—' : fmt(Math.max(0, safe))}
+            tone={forecast?.firstNegative ? 'neg' : null}
+            note={forecast?.firstNegative ? 'You may run short before payday' : payday ? `Until payday, ${payday}` : 'For the next 2 weeks'}
+          />
+          <Stat
+            label="Budget left"
+            value={budget.total ? fmt(Math.abs(budgetLeft)) : '—'}
+            tone={budget.total && budgetLeft < 0 ? 'neg' : null}
+            note={budget.total ? (budgetLeft < 0 ? 'Over the month’s limits' : `${Math.round(budget.pct)}% of ${fmt(budget.total)} used`) : 'No limits set'}
+          >
+            {budget.total > 0 && <Progress className="mt-3" value={budget.pct} color={budget.pct > 100 ? 'var(--d-neg)' : budget.pct > 85 ? 'var(--d-warn)' : undefined} />}
+          </Stat>
+        </div>
+      </div>
+
+      <section className="mb-8" aria-label="Accounts">
+        <div className="d-section-head">
+          <h2 className="d-section-title">Accounts</h2>
+          <Link to="/accounts" className="d-link text-14">See all</Link>
+        </div>
+        {cards.length === 0 && !loading ? (
+          <Panel><Empty icon={<IWallet size={20} />} title="No accounts yet" body="Add your cash, a bank or an e-wallet." action={<Btn variant="primary" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} /></Panel>
+        ) : (
+          <div ref={gridRef} className="d-card-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
+            {shownCards.map(a => (
+              <AccountCard key={a.id} acct={a} hidden={false} stmt={credit[a.name]} onClick={() => navigate(`/accounts/${a.id}`)} />
             ))}
+            {cards.length > shownCards.length ? (
+              <Link to="/accounts" className="d-card-more" style={{ aspectRatio: '1.45' }}>
+                View all accounts
+                <span className="text-12 font-medium text-[var(--d-text-3)]">{cards.length - shownCards.length} more</span>
+              </Link>
+            ) : shownCards.length < cols ? (
+              <Link to="/accounts/new" className="d-card-more" style={{ aspectRatio: '1.45' }}>
+                Add an account
+              </Link>
+            ) : null}
           </div>
+        )}
+      </section>
+
+      <div className="grid grid-cols-12 gap-5 mb-5">
+        <Panel
+          className="col-span-8"
+          title="Net worth over time"
+          meta={rangeChange == null ? null : `${rangeChange >= 0 ? '+' : '−'}${fmt(Math.abs(rangeChange))} ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`}
+          actions={<Segmented label="Range" value={range} onChange={setRange} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}
+        >
+          {chart.length > 1 ? <AreaTrend data={chart} height={260} valueLabel="Net worth" /> : <div className="h-[260px]" />}
+        </Panel>
+      <Panel
+        className="col-span-4"
+        title="Next 30 days"
+          actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/forecast')}>Forecast</Btn>}
+          flush
+        >
+          {!forecast || forecast.events.length === 0 ? (
+            <Empty icon={<ICalendar size={18} />} title="Nothing due" body="Bills, pay and card statements show here." />
+          ) : (
+            <div className="py-1">
+              {forecast.events.slice(0, 6).map(e => {
+                const cat = e.category ? catMap[e.category] : null
+                const acct = acctMap[e.name] ?? (e.account ? acctMap[e.account] : null)
+                const d = new Date(e.date)
+                return (
+                  <div key={e.key} className="flex items-center gap-3 h-11 px-4">
+                    <span className="w-9 shrink-0 text-center leading-tight">
+                      <span className="block text-10 font-semibold uppercase text-[var(--d-text-3)]">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
+                      <span className="block text-14 font-semibold text-[var(--d-text)] d-num">{d.getDate()}</span>
+                    </span>
+                    {e.kind === 'card' || e.kind === 'loan'
+                      ? <AccountTile account={acct ?? { name: e.name }} size="sm" />
+                      : <CategoryTile cat={cat ?? { name: e.name, color: '#94a3b8' }} size="sm" />}
+                    <span className="flex-1 min-w-0">
+                      <span className="block truncate text-13 font-medium text-[var(--d-text)]">{e.name}</span>
+                      <span className="block truncate text-11 text-[var(--d-text-3)]">
+                        {e.overdue ? <span className="d-neg font-medium">Overdue</span> : e.kind === 'card' ? 'Card statement' : e.kind === 'loan' ? 'Loan payment' : e.learned ? 'Usual pay' : (e.account ?? '')}
+                      </span>
+                    </span>
+                    <span className={`d-num text-13 font-semibold ${e.sign > 0 ? 'd-pos' : ''}`}>{e.sign > 0 ? '+' : '−'}{fmt(Math.abs(e.amount))}</span>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </Panel>
       </div>
 
-      <div className="grid grid-cols-3 gap-4">
+      <div className="grid grid-cols-12 gap-5">
         <Panel
-          className="col-span-2"
+          className="col-span-8"
           title="Recent transactions"
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/transactions')}>All</Btn>}
           flush
@@ -177,43 +243,7 @@ export default function WebHome() {
           />
         </Panel>
 
-        <div className="flex flex-col gap-4 min-w-0">
-          <Panel
-            title="Next 30 days"
-            actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/forecast')}>Forecast</Btn>}
-            flush
-          >
-            {!forecast || forecast.events.length === 0 ? (
-              <Empty icon={<ICalendar size={18} />} title="Nothing due" body="Bills, pay and card statements show here." />
-            ) : (
-              <div className="py-1">
-                {forecast.events.slice(0, 6).map(e => {
-                  const cat = e.category ? catMap[e.category] : null
-                  const acct = acctMap[e.name] ?? (e.account ? acctMap[e.account] : null)
-                  const d = new Date(e.date)
-                  return (
-                    <div key={e.key} className="flex items-center gap-3 h-11 px-4">
-                      <span className="w-9 shrink-0 text-center leading-tight">
-                        <span className="block text-10 font-semibold uppercase text-[var(--d-text-3)]">{d.toLocaleDateString(undefined, { month: 'short' })}</span>
-                        <span className="block text-14 font-semibold text-[var(--d-text)] d-num">{d.getDate()}</span>
-                      </span>
-                      {e.kind === 'card' || e.kind === 'loan'
-                        ? <AccountTile account={acct ?? { name: e.name }} size="sm" />
-                        : <CategoryTile cat={cat ?? { name: e.name, color: '#94a3b8' }} size="sm" />}
-                      <span className="flex-1 min-w-0">
-                        <span className="block truncate text-13 font-medium text-[var(--d-text)]">{e.name}</span>
-                        <span className="block truncate text-11 text-[var(--d-text-3)]">
-                          {e.overdue ? <span className="d-neg font-medium">Overdue</span> : e.kind === 'card' ? 'Card statement' : e.kind === 'loan' ? 'Loan payment' : e.learned ? 'Usual pay' : (e.account ?? '')}
-                        </span>
-                      </span>
-                      <span className={`d-num text-13 font-semibold ${e.sign > 0 ? 'd-pos' : ''}`}>{e.sign > 0 ? '+' : '−'}{fmt(Math.abs(e.amount))}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            )}
-          </Panel>
-
+        <div className="col-span-4 flex flex-col gap-5 min-w-0">
           <Panel
             title="Budget"
             meta={budget.total ? `${Math.round(budget.pct)}% used` : null}
@@ -255,12 +285,35 @@ export default function WebHome() {
   )
 }
 
-/** One of the piles under the net worth chart. @param {{label: string, value: number, owed?: boolean}} props */
+/** One of the piles along the foot of the net worth card. @param {{label: string, value: number, owed?: boolean}} props */
 function Pile({ label, value, owed = false }) {
   return (
     <div className="min-w-0">
-      <div className="text-12 text-[var(--d-text-3)] truncate">{label}</div>
-      <div className="mt-0.5 text-14 font-semibold d-num truncate text-[var(--d-text)]">{owed && value ? '−' : ''}{fmt(Math.abs(value || 0))}</div>
+      <div className="text-11 font-medium text-white/65 truncate">{label}</div>
+      <div className="mt-0.5 text-13 font-semibold d-num truncate text-white">{owed && value ? '−' : ''}{fmt(Math.abs(value || 0))}</div>
     </div>
   )
+}
+
+/**
+ * How many columns of at least `min` px fit in an element, kept up to date
+ * as it resizes.
+ *
+ * @param {number} min
+ * @param {number} gap
+ * @returns {[import('react').RefObject<HTMLDivElement|null>, number]}
+ */
+function useColumns(min, gap) {
+  const ref = useRef(/** @type {HTMLDivElement|null} */ (null))
+  const [cols, setCols] = useState(5)
+  useLayoutEffect(() => {
+    const el = ref.current
+    if (!el || typeof ResizeObserver === 'undefined') return
+    const measure = () => setCols(Math.max(2, Math.floor((el.clientWidth + gap) / (min + gap))))
+    measure()
+    const ro = new ResizeObserver(measure)
+    ro.observe(el)
+    return () => ro.disconnect()
+  }, [min, gap])
+  return [ref, cols]
 }

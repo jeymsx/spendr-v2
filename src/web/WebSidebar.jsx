@@ -48,7 +48,7 @@ function NavItem({ to, label, Icon, badge = 0, end = false, also }) {
       className={({ isActive }) => `d-nav-item${isActive || alsoHere ? ' is-active' : ''}`}
       title={label}
     >
-      <span className="d-nav-icon" aria-hidden="true"><Icon size={16} /></span>
+      <span className="d-nav-icon" aria-hidden="true"><Icon size={18} /></span>
       <span className="d-nav-label flex-1 truncate">{label}</span>
       {badge > 0 && (
         <>
@@ -107,12 +107,12 @@ export default function WebSidebar() {
       <div className="d-brand">
         {collapsed ? (
           <button type="button" className="web-brand-toggle" onClick={toggle} aria-label="Open the sidebar" title="Open the sidebar">
-            <img src="/icons/icon-192.png" alt="" width={28} height={28} className="d-brand-logo web-brand" />
+            <img src="/icons/icon-192.png" alt="" width={32} height={32} className="d-brand-logo web-brand" />
             <span className="web-brand-swap" aria-hidden="true"><ISidebar size={18} /></span>
           </button>
         ) : (
           <>
-            <img src="/icons/icon-192.png" alt="" width={28} height={28} className="d-brand-logo" />
+            <img src="/icons/icon-192.png" alt="" width={32} height={32} className="d-brand-logo" />
             <span className="d-brand-name flex-1">Spendr</span>
             <button type="button" className="web-sidebar-fold" onClick={toggle} aria-label="Close the sidebar" title="Close the sidebar">
               <ISidebar size={16} />

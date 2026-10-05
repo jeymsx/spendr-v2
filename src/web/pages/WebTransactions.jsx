@@ -285,7 +285,7 @@ export default function WebTransactions() {
         </>
       }
     >
-      <div className="grid grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-4 gap-5 mb-8">
         <Stat label="Spent" value={fmt(totals.spent)} note={narrowed ? 'In the filtered rows' : 'All time'} />
         <Stat label="Came in" value={fmt(totals.earned)} note={narrowed ? 'In the filtered rows' : 'All time'} />
         <Stat label="Net" value={`${totals.net < 0 ? '−' : totals.net > 0 ? '+' : ''}${fmt(Math.abs(totals.net))}`} tone={totals.net < 0 ? 'neg' : totals.net > 0 ? 'pos' : null} note="Came in less spent" />
@@ -419,8 +419,8 @@ function FilterBar({ search, onSearch, filters, setFilters, accounts, categories
   const visibleAccounts = accounts.filter(a => !a.archived).sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
 
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--d-border)] flex-wrap">
-      <SearchInput value={search} onChange={onSearch} placeholder="Search notes, categories, accounts, amounts" className="w-[300px]" />
+    <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[var(--d-border)] flex-wrap">
+      <SearchInput value={search} onChange={onSearch} placeholder="Search notes, categories, accounts, amounts" className="flex-1 min-w-[200px] max-w-[320px]" />
       <Segmented
         label="Type"
         value={filters.type}
@@ -539,7 +539,7 @@ function CategoryCell({ tx, categories, catMap, onPick }) {
       label={`Category for ${tx.description || label}`}
       width={230}
       trigger={
-        <button type="button" data-stop className="group inline-flex items-center gap-1.5 max-w-full h-6 px-1.5 -mx-1.5 rounded-md hover:bg-[var(--d-sunken)] text-[var(--d-text-2)] hover:text-[var(--d-text)]">
+        <button type="button" data-stop className="group inline-flex items-center gap-1.5 max-w-full h-8 px-2.5 -mx-2.5 rounded-full hover:bg-[var(--d-hover)] text-[var(--d-text-2)] hover:text-[var(--d-text)]">
           <span className="d-swatch rounded-full" style={{ background: cat?.color ?? '#94a3b8' }} />
           <span className="truncate">{label}</span>
           <IChevronDown size={12} className="opacity-0 group-hover:opacity-70 shrink-0" />
@@ -571,7 +571,7 @@ function BulkBar({ rows, categories, onClear, onRefile, onDelete }) {
     : []
   const { spent, earned } = totalsOf(rows.flatMap(r => (isLoanPayment(r) ? [unfoldLoanPayment(r)] : [r])))
   return (
-    <div className="flex items-center gap-2 px-3 py-2.5 border-b border-[var(--d-border)] bg-[var(--d-selected)]" style={{ borderTopLeftRadius: 12, borderTopRightRadius: 12 }}>
+    <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[var(--d-border)] bg-[var(--d-selected)]" style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
       <Btn size="sm" variant="ghost" icon={<IX size={14} />} label="Clear selection" onClick={onClear} />
       <span className="text-13 font-semibold text-[var(--d-text)]">{rows.length} selected</span>
       <span className="text-12 d-cell-muted d-num">

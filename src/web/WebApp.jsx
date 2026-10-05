@@ -8,7 +8,7 @@ import { WebScroll, DETAIL_WIDTH } from './components/WebPane'
 import WebFormPage from './WebFormPage'
 import PhonePage from './ui/PhonePage'
 import {
-  WebAccountsSection, AccountsIndex, WebInsightsSection, WebRecurringSection, RecurringIndex,
+  WebInsightsSection, WebRecurringSection, RecurringIndex,
   WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex, WebBudgetSection, BudgetIndex,
   WebSettingsSection, WebNotesSection, NotesIndex,
 } from './pages/WebSections'
@@ -50,7 +50,8 @@ const InsightsNetWorth = lazy(() => import('../pages/insights/NetWorthPage'))
 const InsightsForecast = lazy(() => import('../pages/insights/ForecastPage'))
 const ForecastSettings = lazy(() => import('../pages/insights/ForecastSettings'))
 
-const AccountDetail = lazy(() => import('../pages/AccountDetail'))
+const WebAccounts = lazy(() => import('./pages/WebAccounts'))
+const WebAccountDetail = lazy(() => import('./pages/WebAccountDetail'))
 const AccountNew    = lazy(() => import('../pages/AccountNew'))
 const AccountEdit   = lazy(() => import('../pages/AccountEdit'))
 const StatementHistory = lazy(() => import('../pages/accounts/StatementHistory'))
@@ -122,13 +123,11 @@ export default function WebApp() {
               <Route path="/inflow"   element={<Form><AddInflow /></Form>} />
               <Route path="/transfer" element={<Form><Transfer /></Form>} />
 
-              <Route path="/accounts" element={<WebAccountsSection />}>
-                <Route index element={<AccountsIndex />} />
-                <Route path="new" element={<AccountNew />} />
-                <Route path=":id" element={<AccountDetail />} />
-                <Route path=":id/edit" element={<AccountEdit />} />
-                <Route path=":id/statements" element={<StatementHistory />} />
-              </Route>
+              <Route path="/accounts" element={<WebAccounts />} />
+              <Route path="/accounts/new" element={<PhonePage><AccountNew /></PhonePage>} />
+              <Route path="/accounts/:id" element={<WebAccountDetail />} />
+              <Route path="/accounts/:id/edit" element={<PhonePage><AccountEdit /></PhonePage>} />
+              <Route path="/accounts/:id/statements" element={<PhonePage><StatementHistory /></PhonePage>} />
 
               <Route path="/insights" element={<WebInsightsSection />}>
                 <Route index element={<Navigate to="/insights/trend" replace />} />

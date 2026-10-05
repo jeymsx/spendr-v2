@@ -16,7 +16,7 @@ import { fmt } from '../../lib/money'
  */
 export function Stat({ label, value, note, tone = null, icon, className = '', children }) {
   return (
-    <div className={`d-panel px-4 py-3.5 ${className}`}>
+    <div className={`d-panel px-6 py-5 ${className}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="d-stat-label">{label}</span>
         {icon && <span className="text-[var(--d-text-3)]">{icon}</span>}
@@ -95,7 +95,7 @@ export function Progress({ value, color, className = '', label }) {
  */
 export function AccountTile({ account, size = 'md', className = '' }) {
   const brand = account ? accountBrand(account) : null
-  const px = size === 'sm' ? 12 : size === 'lg' ? 20 : 15
+  const px = size === 'sm' ? 14 : size === 'lg' ? 22 : 17
   return (
     <span
       className={`d-tile ${size === 'sm' ? 'd-tile-sm' : size === 'lg' ? 'd-tile-lg' : ''} ${className}`}
@@ -113,7 +113,7 @@ export function AccountTile({ account, size = 'md', className = '' }) {
  * @param {{cat: Record<string, any>|null|undefined, size?: 'sm'|'md'|'lg', className?: string}} props
  */
 export function CategoryTile({ cat, size = 'md', className = '' }) {
-  const px = size === 'sm' ? 12 : size === 'lg' ? 20 : 15
+  const px = size === 'sm' ? 14 : size === 'lg' ? 22 : 17
   return (
     <span
       className={`d-tile cat-tile ${size === 'sm' ? 'd-tile-sm' : size === 'lg' ? 'd-tile-lg' : ''} ${className}`}
