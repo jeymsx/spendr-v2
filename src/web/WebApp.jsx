@@ -8,7 +8,7 @@ import { WebScroll, DETAIL_WIDTH } from './components/WebPane'
 import WebFormPage from './WebFormPage'
 import PhonePage from './ui/PhonePage'
 import {
-  WebInsightsSection, WebRecurringSection, RecurringIndex,
+  WebRecurringSection, RecurringIndex,
   WebDebtsSection, DebtsIndex, WebGoalsSection, GoalsIndex,
   WebSettingsSection, WebNotesSection, NotesIndex,
 } from './pages/WebSections'
@@ -43,11 +43,7 @@ const AddExpense   = lazy(() => import('../pages/AddExpense'))
 const AddInflow    = lazy(() => import('../pages/AddInflow'))
 const Transfer     = lazy(() => import('../pages/Transfer'))
 
-const InsightsTrend    = lazy(() => import('../pages/insights/TrendPage'))
-const InsightsExpenses = lazy(() => import('../pages/insights/ExpensesPage'))
-const InsightsAccounts = lazy(() => import('../pages/insights/AccountsPage'))
-const InsightsNetWorth = lazy(() => import('../pages/insights/NetWorthPage'))
-const InsightsForecast = lazy(() => import('../pages/insights/ForecastPage'))
+const WebInsights = lazy(() => import('./pages/WebInsights'))
 const ForecastSettings = lazy(() => import('../pages/insights/ForecastSettings'))
 
 const WebAccounts = lazy(() => import('./pages/WebAccounts'))
@@ -130,15 +126,9 @@ export default function WebApp() {
               <Route path="/accounts/:id/edit" element={<PhonePage><AccountEdit /></PhonePage>} />
               <Route path="/accounts/:id/statements" element={<PhonePage><StatementHistory /></PhonePage>} />
 
-              <Route path="/insights" element={<WebInsightsSection />}>
-                <Route index element={<Navigate to="/insights/trend" replace />} />
-                <Route path="trend" element={<InsightsTrend />} />
-                <Route path="expenses" element={<InsightsExpenses />} />
-                <Route path="accounts" element={<InsightsAccounts />} />
-                <Route path="net-worth" element={<InsightsNetWorth />} />
-                <Route path="forecast" element={<InsightsForecast />} />
-                <Route path="forecast/settings" element={<ForecastSettings />} />
-              </Route>
+              <Route path="/insights" element={<WebInsights />} />
+              <Route path="/insights/forecast/settings" element={<PhonePage><ForecastSettings /></PhonePage>} />
+              <Route path="/insights/:page" element={<WebInsights />} />
 
               {/* ── Plans ── */}
               <Route path="/budget" element={<WebBudget />} />
