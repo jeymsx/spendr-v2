@@ -8,9 +8,7 @@ import { WebScroll } from './components/WebPane'
 import WebFormPage from './WebFormPage'
 import PhonePage from './ui/PhonePage'
 import Page from './ui/Page'
-import {
-  WebSettingsSection, WebNotesSection, NotesIndex,
-} from './pages/WebSections'
+import { NotesIndex } from './pages/WebSections'
 // The desktop's own styles: loaded with this bundle only, so a phone never
 // downloads them.
 import './web.css'
@@ -66,6 +64,9 @@ const NotesDeleted  = lazy(() => import('../pages/notes/NotesDeleted'))
 const WebAchievements = lazy(() => import('./pages/WebAchievements'))
 const Recap         = lazy(() => import('../pages/recap/RecapPage'))
 
+const WebSettings = lazy(() => import('./pages/WebSettings'))
+const WebNotes = lazy(() => import('./pages/WebNotes'))
+const SettingsOverview = lazy(() => import('../pages/Settings'))
 const SettingsAccent = lazy(() => import('../pages/SettingsAccent'))
 const SettingsCategories = lazy(() => import('../pages/Settings').then(m => ({ default: m.CategoriesPage })))
 const SettingsBudgets    = lazy(() => import('../pages/Settings').then(m => ({ default: m.BudgetsPage })))
@@ -140,7 +141,7 @@ export default function WebApp() {
               <Route path="/recurring/:id/edit" element={<PhonePage><RecurringForm /></PhonePage>} />
               <Route path="/debts" element={<WebDebts />} />
               <Route path="/debts/person/:key" element={<PhonePage><PersonDetail /></PhonePage>} />
-              <Route path="/notes" element={<WebNotesSection />}>
+              <Route path="/notes" element={<WebNotes />}>
                 <Route index element={<NotesIndex />} />
                 <Route path="deleted" element={<NotesDeleted />} />
                 <Route path=":id" element={<NoteEditor />} />
@@ -154,8 +155,8 @@ export default function WebApp() {
               <Route path="/recap/:month" element={<PhonePage width={880}><Recap /></PhonePage>} />
               <Route path="/import" element={<Page><WebImport /></Page>} />
 
-              <Route path="/settings" element={<WebSettingsSection />}>
-                <Route index element={<Navigate to="/settings/preferences" replace />} />
+              <Route path="/settings" element={<WebSettings />}>
+                <Route index element={<SettingsOverview />} />
                 <Route path="profile" element={<SettingsProfile />} />
                 <Route path="preferences" element={<SettingsPreferences />} />
                 <Route path="sync" element={<SettingsSync />} />
@@ -168,7 +169,7 @@ export default function WebApp() {
                 <Route path="budgets" element={<SettingsBudgets />} />
                 <Route path="rates" element={<SettingsRates />} />
                 <Route path="templates" element={<SettingsTemplates />} />
-                <Route path="*" element={<Navigate to="/settings/preferences" replace />} />
+                <Route path="*" element={<Navigate to="/settings" replace />} />
               </Route>
 
               <Route path="*" element={<Navigate to="/" replace />} />

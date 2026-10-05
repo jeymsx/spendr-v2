@@ -24,6 +24,16 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.16.0',
+    date: '2026-10-05',
+    items: [
+      { title: 'Notifications from the bell', desc: 'On a computer, the bell on Home opens your latest notifications in a panel under it. See all still opens the full list.' },
+      { title: 'Transactions, with its month', desc: 'On a computer, what the month spent and brought in, day by day and by category, sits beside the list, with buttons to add more.' },
+      { title: 'Achievements, laid out wide', desc: 'On a computer, your count and streaks sit on the left, and challenges, milestones or badges fill the rest of the window.' },
+      { title: 'Titles that line up', desc: 'Every page on a computer has its title at the top left, the same size, as Accounts and Transactions already did.' },
+    ],
+  },
+  {
     version: '0.15.0',
     date: '2026-10-04',
     items: [

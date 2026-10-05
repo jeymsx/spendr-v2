@@ -28,7 +28,7 @@ import Dialog from '../ui/Dialog'
 import { Segmented, SearchInput } from '../ui/controls'
 import { Amount, AccountTile, CategoryTile, Empty, Stat } from '../ui/display'
 import {
-  ICalendar, IChevronDown, IDownload, ITrash, IEdit, ITag, IX, IWallet, IList, ITransfer, IExternal, ISearch,
+  ICalendar, IChevronDown, IDownload, IUpload, ITrash, IEdit, ITag, IX, IWallet, IList, ITransfer, IExternal, ISearch,
 } from '../ui/icons'
 
 /**
@@ -281,6 +281,7 @@ export default function WebTransactions() {
               Recently deleted <span className="d-cell-faint d-num">{trashCount}</span>
             </Btn>
           )}
+          <Btn variant="secondary" icon={<IUpload size={15} />} onClick={() => navigate('/import')}>Import</Btn>
           <Btn variant="secondary" icon={<IDownload size={15} />} disabled={!filtered.length} onClick={() => exportCsv(shown, catMap)}>Export CSV</Btn>
         </>
       }
@@ -419,8 +420,8 @@ function FilterBar({ search, onSearch, filters, setFilters, accounts, categories
   const visibleAccounts = accounts.filter(a => !a.archived).sort((a, b) => (a.sort_order ?? 9999) - (b.sort_order ?? 9999))
 
   return (
-    <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[var(--d-border)] flex-wrap">
-      <SearchInput value={search} onChange={onSearch} placeholder="Search notes, categories, accounts, amounts" className="flex-1 min-w-[200px] max-w-[320px]" />
+    <div className="d-toolbar">
+      <SearchInput value={search} onChange={onSearch} placeholder="Search notes, categories, accounts, amounts" className="flex-1 min-w-[150px] max-w-[320px]" />
       <Segmented
         label="Type"
         value={filters.type}
@@ -459,7 +460,7 @@ function FilterBar({ search, onSearch, filters, setFilters, accounts, categories
         width={260}
         trigger={
           <Btn size="sm" variant={filters.accounts.length ? 'secondary' : 'ghost'} icon={<IWallet size={14} />} iconRight={<IChevronDown size={13} />}>
-            {filters.accounts.length === 0 ? 'All accounts' : filters.accounts.length === 1 ? filters.accounts[0] : `${filters.accounts.length} accounts`}
+            <span className="truncate">{filters.accounts.length === 0 ? 'All accounts' : filters.accounts.length === 1 ? filters.accounts[0] : `${filters.accounts.length} accounts`}</span>
           </Btn>
         }
       >
@@ -489,7 +490,7 @@ function FilterBar({ search, onSearch, filters, setFilters, accounts, categories
           width={240}
           trigger={
             <Btn size="sm" variant={filters.category ? 'secondary' : 'ghost'} icon={<ITag size={14} />} iconRight={<IChevronDown size={13} />}>
-              {filters.category ?? 'All categories'}
+              <span className="truncate">{filters.category ?? 'All categories'}</span>
             </Btn>
           }
         >
@@ -571,7 +572,7 @@ function BulkBar({ rows, categories, onClear, onRefile, onDelete }) {
     : []
   const { spent, earned } = totalsOf(rows.flatMap(r => (isLoanPayment(r) ? [unfoldLoanPayment(r)] : [r])))
   return (
-    <div className="flex items-center gap-2.5 px-5 py-4 border-b border-[var(--d-border)] bg-[var(--d-selected)]" style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
+    <div className="d-toolbar bg-[var(--d-selected)]" style={{ borderTopLeftRadius: 24, borderTopRightRadius: 24 }}>
       <Btn size="sm" variant="ghost" icon={<IX size={14} />} label="Clear selection" onClick={onClear} />
       <span className="text-13 font-semibold text-[var(--d-text)]">{rows.length} selected</span>
       <span className="text-12 d-cell-muted d-num">

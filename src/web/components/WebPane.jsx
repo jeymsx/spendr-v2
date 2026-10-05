@@ -1,7 +1,5 @@
 import { Suspense, useLayoutEffect, useRef } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
-import { GlassArt } from '../../components/glass/GlassArt'
-import { useTheme } from '../../context/ThemeContext'
 import ErrorBoundary from '../../components/ErrorBoundary'
 
 /**
@@ -118,24 +116,6 @@ export function WebSplit({ list, listWidth = LIST_WIDTH, detailWidth = DETAIL_WI
           </ErrorBoundary>
         </div>
       </div>
-    </div>
-  )
-}
-
-/**
- * The right half of a split view before anything is picked: a picture and a
- * line saying what goes here.
- *
- * @param {{art: string, title: string, body?: string, children?: import('react').ReactNode}} props
- */
-export function WebPaneEmpty({ art, title, body, children }) {
-  const { accentColor } = useTheme()
-  return (
-    <div className="h-full min-h-[70dvh] flex flex-col items-center justify-center text-center px-10">
-      <GlassArt name={art} hue={accentColor} size={132} animate />
-      <p className="mt-4 text-17 font-semibold text-slate-800 dark:text-white">{title}</p>
-      {body && <p className="mt-1.5 max-w-[320px] text-13 text-slate-500 dark:text-slate-400 text-balance">{body}</p>}
-      {children && <div className="mt-5">{children}</div>}
     </div>
   )
 }

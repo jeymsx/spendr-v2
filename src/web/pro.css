@@ -468,12 +468,58 @@ html.web .d-panel > div > .d-table th:last-child,
 html.web .d-panel > .d-table th:last-child { border-top-right-radius: var(--d-r-lg); }
 html.web .d-cell-muted { color: var(--d-text-2); }
 html.web .d-cell-faint { color: var(--d-text-3); }
+/* The checkbox, drawn rather than the browser's: a rounded square in the
+   card's hairline, filled with the accent and a white tick (or a dash, for
+   "some of these") when on. The browser's own was a sharp grey box that got
+   a black focus outline on every click. */
 html.web .d-check {
-  width: 17px;
-  height: 17px;
-  border-radius: 5px;
-  accent-color: var(--d-accent);
+  appearance: none;
+  -webkit-appearance: none;
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  border-radius: 6px;
+  border: 1.5px solid var(--d-border-strong);
+  background: var(--d-panel) center / 12px 12px no-repeat;
   vertical-align: middle;
+  cursor: pointer;
+  transition: background-color 0.12s, border-color 0.12s, box-shadow 0.12s;
+}
+html.web.dark .d-check { border-color: rgba(255, 255, 255, 0.22); background-color: rgba(255, 255, 255, 0.03); }
+html.web .d-check:hover { border-color: rgba(var(--color-primary-rgb), 0.65); }
+html.web .d-check:checked,
+html.web .d-check:indeterminate {
+  border-color: var(--d-accent);
+  background-color: var(--d-accent);
+}
+html.web .d-check:checked {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E");
+}
+html.web .d-check:indeterminate {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round'%3E%3Cpath d='M6 12h12'/%3E%3C/svg%3E");
+}
+html.web .d-check:focus { outline: none; }
+html.web .d-check:focus-visible { box-shadow: var(--d-ring); }
+
+/* The bar over a table - its filters, or what to do with the rows picked -
+   one height whichever is showing, so the table does not jump. */
+html.web .d-toolbar {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  min-height: 72px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--d-border);
+}
+/* On a narrower window the filters tighten rather than wrap to a second
+   row - which would make the bar taller than the selection bar. */
+@media (max-width: 1279px) {
+  html.web .d-toolbar { flex-wrap: nowrap; gap: 8px; padding: 14px 16px; }
+  html.web .d-toolbar .d-seg-item { padding: 0 10px; }
+  html.web .d-toolbar .d-btn-sm { padding: 0 10px; }
+  html.web .d-toolbar .d-btn-sm > span.truncate { max-width: 110px; }
 }
 
 /* Money. */
@@ -707,3 +753,43 @@ html.web .web-pane-detail .page-header-title {
 }
 html.web .web-pane-detail[data-root='true'] .page-header > .subpage-back { display: none; }
 html.web .web-pane-detail[data-root='true'] .page-header { grid-template-columns: minmax(0, 1fr) auto; }
+
+/* A narrower window: the figures a size smaller, so four still fit across. */
+@media (max-width: 1279px) {
+  html.web .d-stat-value { font-size: 22px; line-height: 28px; }
+  html.web .d-stat-note { font-size: 12px; }
+}
+
+/* ── Two panes in a page: Settings' sections and the one open, Notes' list
+   and the note (pages/WebSettings, pages/WebNotes). The phone page shown in
+   the main pane has its header made the pane's title; in the side pane the
+   page's own title already says it, so the phone's goes. */
+html.web .d-twopane { display: grid; grid-template-columns: var(--side, 300px) minmax(0, 1fr); gap: 24px; align-items: start; }
+html.web .d-twopane-side { position: sticky; top: 0; max-height: calc(100dvh - var(--d-topbar) - 64px); overflow-y: auto; }
+html.web .d-twopane-side .d-nav-item { height: 40px; font-size: 14px; }
+html.web .d-twopane-list { margin: 0 -20px; }
+html.web .d-twopane-list .page-header { display: none; }
+html.web .d-twopane-main .pinned-top { position: static; }
+html.web .d-twopane-main .page-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 0 20px 18px;
+  min-height: 40px;
+}
+html.web .d-twopane-main .page-header > .subpage-back { display: none; }
+html.web .d-twopane-main .page-header-title {
+  text-align: left;
+  padding: 0;
+  font-size: 22px;
+  line-height: 28px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--d-text);
+}
+/* Settings' overview is the phone's Settings page, whose own title the page's repeats. */
+html.web .d-twopane-main.is-index .page-header { display: none; }
+html.web .d-twopane-main .pb-page,
+html.web .d-twopane-main .pb-nav { padding-bottom: 8px; }
+/* The note: its card is the page, so it runs the height of the window. */
+html.web .d-note-card { min-height: calc(100dvh - var(--d-topbar) - 200px); padding-top: 18px; }
+html.web .d-note-card .page-header { padding-top: 0; }

@@ -32,23 +32,23 @@ export const RELEASE_DATE = '2026-10-05'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'bell',
-    title: 'Notifications from the bell',
-    desc: 'On a computer, the bell on Home opens your latest notifications in a panel under it. See all still opens the full list.',
+    icon: 'desktop',
+    title: 'A desktop made for a desktop',
+    desc: 'On a computer, a bar across the top searches everything (Ctrl+K), adds a transaction, and holds the bell and your settings. Every page is laid out wide, with the same rounded cards and blue as the phone.',
+  },
+  {
+    icon: 'receipt',
+    title: 'Transactions as a table',
+    desc: 'Sort by any column, filter by date, account or category, pick many rows to refile or delete at once, and save what you see as a CSV.',
   },
   {
     icon: 'chart',
-    title: 'Transactions, with its month',
-    desc: 'On a computer, what the month spent and brought in, day by day and by category, sits beside the list, with buttons to add more.',
+    title: 'Every page, at a glance',
+    desc: 'Home, Accounts, Budget, Insights, Goals, Recurring and Debts each show their figures across the top and their detail in tables and charts below.',
   },
   {
-    icon: 'trophy',
-    title: 'Achievements, laid out wide',
-    desc: 'On a computer, your count and streaks sit on the left, and challenges, milestones or badges fill the rest of the window.',
-  },
-  {
-    icon: 'desktop',
-    title: 'Titles that line up',
-    desc: 'Every page on a computer has its title at the top left, the same size, as Accounts and Transactions already did.',
+    icon: 'card',
+    title: 'Cards that sit flat',
+    desc: 'In light mode, account cards, the net worth card and the highlights lose their grey shadows, and the card colours are a little brighter.',
   },
 ]

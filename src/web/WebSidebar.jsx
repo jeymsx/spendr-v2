@@ -6,7 +6,7 @@ import { quickActionCounts } from '../pages/dashboard/shared'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import useRates from '../hooks/useRates'
 import {
-  IHome, IList, IWallet, IChart, IGauge, ITarget, IRepeat, IUsers, INote, ITrophy, IImport, ISettings, ISidebar,
+  IHome, IList, IWallet, IChart, IGauge, ITarget, IRepeat, IUsers, INote, ITrophy, ISettings, ISidebar,
 } from './ui/icons'
 
 /**
@@ -15,7 +15,8 @@ import {
  * Grouped as the app thinks of them - your money, your plans, the rest -
  * with Settings at the foot. The badges are the phone's own (Home's
  * quick-action counts: only what you can act on, and acting clears them).
- * Adding, searching, notifications and your account live in the top bar.
+ * Adding, searching, notifications and your account live in the top bar;
+ * importing a CSV is on Transactions, beside exporting one.
  *
  * Folds to its icons (the button beside the name, or the logo when folded),
  * remembered per browser; folded by default on a window under 1280px.
@@ -99,7 +100,6 @@ export default function WebSidebar() {
   const more = [
     { to: '/notes', label: 'Notes', Icon: INote },
     { to: '/achievements', label: 'Achievements', Icon: ITrophy },
-    { to: '/import', label: 'Import', Icon: IImport },
   ]
 
   return (
