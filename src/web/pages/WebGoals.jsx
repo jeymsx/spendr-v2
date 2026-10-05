@@ -138,7 +138,7 @@ function GoalCard({ goal, today, onOpen, muted = false }) {
   return (
     <button type="button" onClick={onOpen} className="d-panel text-left px-6 py-5 flex items-center gap-5 hover:border-[rgba(var(--color-primary-rgb),0.35)] transition-colors">
       <GoalRing pct={goal.pct} complete={goal.complete} muted={muted} size={84} stroke={7}>
-        <span className="text-[22px] leading-none" aria-hidden="true">{goal.icon ?? '🎯'}</span>
+        <span className="text-[22px] leading-none" aria-hidden="true">{goal.icon || '🎯'}</span>
       </GoalRing>
       <span className="flex-1 min-w-0">
         <span className="block truncate text-16 font-semibold text-[var(--d-text)]">{goal.name}</span>

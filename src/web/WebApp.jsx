@@ -53,15 +53,15 @@ const AccountEdit   = lazy(() => import('../pages/AccountEdit'))
 const StatementHistory = lazy(() => import('../pages/accounts/StatementHistory'))
 const WebBudget = lazy(() => import('./pages/WebBudget'))
 const WebCategory = lazy(() => import('./pages/WebCategory'))
-const PersonDetail  = lazy(() => import('../pages/debts/PersonDetail'))
-const GoalDetail    = lazy(() => import('../pages/GoalDetail'))
+const WebDebtPerson = lazy(() => import('./pages/WebDebtPerson'))
+const WebGoal = lazy(() => import('./pages/WebGoal'))
 const WebGoals = lazy(() => import('./pages/WebGoals'))
 const WebRecurring = lazy(() => import('./pages/WebRecurring'))
 const WebDebts = lazy(() => import('./pages/WebDebts'))
-const RecurringDetail = lazy(() => import('../pages/RecurringDetail'))
+const WebRecurringItem = lazy(() => import('./pages/WebRecurringItem'))
 const RecurringForm   = lazy(() => import('../pages/RecurringForm'))
 
-const Notifications = lazy(() => import('../pages/Notifications'))
+const WebNotifications = lazy(() => import('./pages/WebNotifications'))
 const NoteEditor    = lazy(() => import('../pages/notes/NoteEditor'))
 const NotesDeleted  = lazy(() => import('../pages/notes/NotesDeleted'))
 const WebAchievements = lazy(() => import('./pages/WebAchievements'))
@@ -137,13 +137,13 @@ export default function WebApp() {
               <Route path="/budget" element={<WebBudget />} />
               <Route path="/categories/:name" element={<WebCategory />} />
               <Route path="/goals" element={<WebGoals />} />
-              <Route path="/goals/:id" element={<PhonePage><GoalDetail /></PhonePage>} />
+              <Route path="/goals/:id" element={<WebGoal />} />
               <Route path="/recurring" element={<WebRecurring />} />
               <Route path="/recurring/new" element={<RouteDrawer label="New recurring" fallback="/recurring" under={<WebRecurring />}><RecurringForm /></RouteDrawer>} />
-              <Route path="/recurring/:id" element={<PhonePage><RecurringDetail /></PhonePage>} />
-              <Route path="/recurring/:id/edit" element={<RouteDrawer label="Edit recurring" under={<WebRecurring />}><RecurringForm /></RouteDrawer>} />
+              <Route path="/recurring/:id" element={<WebRecurringItem />} />
+              <Route path="/recurring/:id/edit" element={<RouteDrawer label="Edit recurring" under={<WebRecurringItem />}><RecurringForm /></RouteDrawer>} />
               <Route path="/debts" element={<WebDebts />} />
-              <Route path="/debts/person/:key" element={<PhonePage><PersonDetail /></PhonePage>} />
+              <Route path="/debts/person/:key" element={<WebDebtPerson />} />
               <Route path="/notes" element={<WebNotes />}>
                 <Route index element={<NotesIndex />} />
                 <Route path="deleted" element={<NotesDeleted />} />
@@ -151,7 +151,7 @@ export default function WebApp() {
               </Route>
 
               {/* ── You ── */}
-              <Route path="/notifications" element={<PhonePage top width={880}><Notifications /></PhonePage>} />
+              <Route path="/notifications" element={<WebNotifications />} />
               <Route path="/achievements" element={<WebAchievements />} />
               <Route path="/badges" element={<Navigate to="/achievements?tab=badges" replace />} />
               <Route path="/recap" element={<PhonePage width={880}><Recap /></PhonePage>} />

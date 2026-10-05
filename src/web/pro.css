@@ -963,6 +963,23 @@ html.web .d-login-or { display: flex; align-items: center; gap: 12px; margin: 22
 html.web .d-login-or::before,
 html.web .d-login-or::after { content: ''; flex: 1; height: 1px; background: var(--d-border); }
 
+/* ── Achievements' four cards (pages/WebAchievements AchCard): one shape,
+   the bar at the foot of each, level across the row. */
+html.web .d-ach-card { display: flex; flex-direction: column; align-items: stretch; gap: 0; min-height: 168px; padding: 20px 24px 22px; text-align: left; }
+html.web .d-ach-card .d-progress { margin-top: auto; }
+html.web .d-ach-card .d-stat-note { margin-bottom: 16px; }
+html.web .d-ach-card.is-button { transition: border-color 0.15s; }
+html.web .d-ach-card.is-button:hover { border-color: rgba(var(--color-primary-rgb), 0.35); }
+html.web .d-ach-card.is-button:focus-visible { outline: none; box-shadow: var(--d-ring); }
+
+/* ── Notifications (pages/WebNotifications): a day's heading, then its rows. */
+html.web .d-notif-day { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 18px 24px 8px; font-size: 13px; font-weight: 600; color: var(--d-text-3); }
+html.web .d-notif-row { width: 100%; display: flex; align-items: flex-start; gap: 14px; padding: 12px 24px; text-align: left; transition: background-color 0.15s; }
+html.web .d-notif-row:not(:disabled):hover { background: var(--d-hover); }
+html.web .d-notif-row:focus-visible { outline: none; box-shadow: inset var(--d-ring); }
+html.web .d-notif-row:disabled { cursor: default; }
+html.web section:last-child > ul > li:last-child > .d-notif-row { padding-bottom: 18px; }
+
 /* ── The privacy policy and the terms (pages/WebSettingsPolicy): numbered
    sections, a hairline between. */
 html.web .d-policy-section { display: flex; gap: 14px; align-items: flex-start; padding: 18px 0; }
