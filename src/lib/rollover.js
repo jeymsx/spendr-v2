@@ -142,6 +142,11 @@ export function effectiveLimit({ cat, txs, month, globalDefault = false }) {
  * already kept its leftover - sweeping it too would move the same money
  * twice.
  *
+ * And only a month you spent in at all. With no spending logged that month -
+ * limits set today, a ledger begun this month, a month not logged - every
+ * limit is "under" by all of itself, and the sweep would offer to keep the
+ * whole budget as money saved that never was.
+ *
  * @param {object} input
  * @param {Array<Record<string, any>>} input.categories
  * @param {Array<Record<string, any>>} input.txs
@@ -149,6 +154,7 @@ export function effectiveLimit({ cat, txs, month, globalDefault = false }) {
  * @param {boolean} [input.globalDefault]
  */
 export function sweepable({ categories, txs, month, globalDefault = false }) {
+  if (!(txs ?? []).some(tx => isSpend(tx) && monthKey(tx.date) === month)) return { rows: [], total: 0 }
   const out = []
   for (const cat of categories ?? []) {
     const limit = cat.budget ?? 0

@@ -154,6 +154,19 @@ describe('sweepable', () => {
     expect(rows.some(r => r.name === 'Others')).toBe(false)
   })
 
+  /** Limits set today over an empty month are not money saved. */
+  it('says nothing for a month with no spending logged', () => {
+    expect(sweepable({ categories, txs: [], month: '2026-08' })).toEqual({ rows: [], total: 0 })
+    // Spending in other months only.
+    expect(sweepable({ categories, txs: [spend('2026-07', 100), spend('2026-09', 100)], month: '2026-08' }))
+      .toEqual({ rows: [], total: 0 })
+  })
+
+  it('counts a month spent in, even where it was all outside the limits', () => {
+    const { total } = sweepable({ categories, txs: [spend('2026-08', 10, 'Others')], month: '2026-08' })
+    expect(total).toBe(8000)
+  })
+
   it('says nothing for a month where everything was spent', () => {
     const all = [spend('2026-08', 5000, 'Groceries'), spend('2026-08', 2000, 'Transpo'),
                  spend('2026-08', 1000, 'Bills')]
