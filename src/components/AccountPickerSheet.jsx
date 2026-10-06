@@ -6,6 +6,10 @@ import BrandMark from './BrandMark'
 import Card from './ui/Card'
 import Sheet from './ui/Sheet'
 import { fmt } from '../lib/money'
+/* On a computer the picker is a menu under the field that opened it, not a
+   sheet in the middle of the window (web/ui/AccountMenu). The phone never
+   draws it. */
+import AccountMenu, { useOpener } from '../web/ui/AccountMenu'
 
 
 /**
@@ -50,6 +54,12 @@ export function AccountChip({ acct, size = 'md' }) {
 
 export default function AccountPickerSheet({ open, onClose, accounts, selected, onSelect, exclude = [] }) {
   const creditAvailMap = useCreditAvailMap(accounts)
+  // The row that opened it, on a computer; null on a phone, and then nothing changes.
+  const opener = useOpener(open)
+  if (opener === undefined) return null
+  if (opener) {
+    return <AccountMenu open={open} anchor={opener} onClose={onClose} accounts={accounts} selected={selected} onSelect={onSelect} exclude={exclude} creditAvailMap={creditAvailMap} />
+  }
 
   /* Sheet owns the overlay, the panel, the handle, the scroll lock, Escape,
      the focus trap and the exit animation. Picking closes it the ordinary

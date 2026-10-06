@@ -689,6 +689,26 @@ html.web .d-menu-item.is-danger { color: var(--d-neg); }
 html.web .d-menu-item.is-danger > svg { color: var(--d-neg); }
 html.web .d-menu-item[aria-checked='true'] { font-weight: 600; color: var(--d-ink); }
 html.web .d-menu-sep { height: 1px; margin: 6px 8px; background: var(--d-border); }
+/* An account to pick (ui/AccountMenu): its card face, name and kind, its balance. */
+html.web .d-acct-item {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 14px;
+  text-align: left;
+  color: var(--d-text);
+  transition: background-color 0.12s;
+}
+html.web .d-acct-item.is-child { padding-left: 34px; }
+html.web .d-acct-item:hover,
+html.web .d-acct-item:focus-visible { background: var(--d-hover); outline: none; }
+html.web .d-acct-item[aria-checked='true'] { background: var(--d-selected); }
+html.web .d-acct-name { display: block; font-size: 14px; font-weight: 600; line-height: 20px; }
+html.web .d-acct-item.is-child .d-acct-name { font-weight: 500; }
+html.web .d-acct-sub { display: block; font-size: 12px; line-height: 16px; color: var(--d-text-3); }
+html.web .d-acct-bal { display: block; font-size: 14px; font-weight: 600; line-height: 20px; text-align: right; font-variant-numeric: tabular-nums; }
 html.web .d-menu-label { padding: 10px 12px 4px; font-size: 13px; font-weight: 600; color: var(--d-text-3); }
 
 /* Stat: a figure in a card - big, bold, the phone's hero numbers. */

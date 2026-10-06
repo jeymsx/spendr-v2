@@ -19,14 +19,21 @@ export const usePopover = () => useContext(PopoverCtx)
  *
  * `trigger` is an element (a Btn, usually); it gets the ref, the click and
  * the aria attributes. `children` is the content, or a function of `close`.
+ * Or, for a picker its caller opens itself (a phone sheet's `open`, shown as
+ * a menu on a computer): no trigger, an `anchor` element to drop from, and
+ * `open` and `onOpenChange` from the caller.
  *
- * @param {{trigger: import('react').ReactElement, children: import('react').ReactNode | ((close: () => void) => import('react').ReactNode),
+ * A menu's checked item (or else its first) has the focus as it opens - a
+ * frame later, since the popover is drawn hidden for its first frame, to be
+ * measured, and nothing hidden takes focus.
+ *
+ * @param {{trigger?: import('react').ReactElement, anchor?: HTMLElement|null, children: import('react').ReactNode | ((close: () => void) => import('react').ReactNode),
  *          align?: 'start'|'end', width?: number, role?: 'menu'|'dialog'|'listbox', label?: string,
  *          className?: string, open?: boolean, onOpenChange?: (open: boolean) => void, offset?: number,
  *          focusFirst?: boolean}} props
  */
 export default function Popover({
-  trigger, children, align = 'start', width, role = 'dialog', label, className = '',
+  trigger, anchor = null, children, align = 'start', width, role = 'dialog', label, className = '',
   open: openProp, onOpenChange, offset = 6, focusFirst = role === 'menu',
 }) {
   const [openState, setOpenState] = useState(false)
@@ -35,6 +42,8 @@ export default function Popover({
   const close = useCallback(() => setOpen(false), [setOpen])
   const triggerRef = useRef(/** @type {HTMLElement|null} */ (null))
   const setTrigger = useCallback((/** @type {HTMLElement|null} */ node) => { triggerRef.current = node }, [])
+  // An anchor stands where a trigger would: it is what the popover drops from and returns focus to.
+  useLayoutEffect(() => { if (anchor) triggerRef.current = anchor }, [anchor])
   const popRef = useRef(/** @type {HTMLDivElement|null} */ (null))
   const popId = `d-pop-${useId().replace(/[^a-z0-9]/gi, '')}`
   const { owner } = useContext(PopoverCtx)
@@ -58,9 +67,15 @@ export default function Popover({
 
   useEffect(() => {
     if (!open) return
+    let raf = 0
     if (focusFirst) {
-      const first = /** @type {HTMLElement|null} */ (popRef.current?.querySelector('[role^="menuitem"]:not([disabled]), [role="option"]') ?? null)
-      first?.focus({ preventScroll: true })
+      raf = requestAnimationFrame(() => {
+        const pop = popRef.current
+        const first = /** @type {HTMLElement|null} */ (pop?.querySelector('[role^="menuitem"][aria-checked="true"]:not([disabled])')
+          ?? pop?.querySelector('[role^="menuitem"]:not([disabled]), [role="option"]') ?? null)
+        first?.focus({ preventScroll: true })
+        first?.scrollIntoView?.({ block: 'nearest' })
+      })
     }
     const onDown = (/** @type {MouseEvent} */ e) => {
       const t = /** @type {Node} */ (e.target)
@@ -79,6 +94,7 @@ export default function Popover({
     window.addEventListener('resize', onReflow)
     window.addEventListener('scroll', onReflow, true)
     return () => {
+      cancelAnimationFrame(raf)
       document.removeEventListener('mousedown', onDown)
       window.removeEventListener('resize', onReflow)
       window.removeEventListener('scroll', onReflow, true)
@@ -104,10 +120,10 @@ export default function Popover({
     else if (e.key === 'Tab') close()
   }
 
-  const t = trigger.props
+  const t = trigger?.props ?? {}
   // The callbacks handed to the trigger read refs when they run, not now.
   // eslint-disable-next-line react-hooks/refs
-  const triggerEl = cloneElement(trigger, {
+  const triggerEl = trigger && cloneElement(trigger, {
     // The trigger's own ref, if it had one, is not kept: none of the callers set one.
     ref: setTrigger,
     onClick: (/** @type {import('react').MouseEvent} */ e) => { t.onClick?.(e); setOpen(!open) },
