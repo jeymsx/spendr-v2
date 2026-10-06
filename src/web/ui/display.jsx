@@ -3,6 +3,7 @@ import { EmptyArt } from '../../components/ui/EmptyState'
 import BrandMark from '../../components/BrandMark'
 import { accountBrand } from '../../lib/accountBrands'
 import { fmt } from '../../lib/money'
+import { useFitText } from './fitText'
 
 /**
  * Small display pieces every desktop page shares: a figure, an amount, an
@@ -16,13 +17,15 @@ import { fmt } from '../../lib/money'
  *          tone?: 'pos'|'neg'|'warn'|null, icon?: import('react').ReactNode, className?: string, children?: import('react').ReactNode}} props
  */
 export function Stat({ label, value, note, tone = null, icon, className = '', children }) {
+  // A long figure steps its type down to fit rather than losing its end (ui/fitText).
+  const fitRef = useFitText(18)
   return (
     <div className={`d-panel px-6 py-5 ${className}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="d-stat-label">{label}</span>
         {icon && <span className="text-[var(--d-text-3)]">{icon}</span>}
       </div>
-      <div className={`d-stat-value truncate ${tone ? `d-${tone}` : ''}`}>{value}</div>
+      <div ref={/** @type {any} */ (fitRef)} className={`d-stat-value truncate ${tone ? `d-${tone}` : ''}`}>{value}</div>
       {note && <div className="d-stat-note truncate">{note}</div>}
       {children}
     </div>
