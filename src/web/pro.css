@@ -264,10 +264,14 @@ html.web .d-page { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar
    own to hide the cut. Two strips over the top of the page: one blurs what
    is under it, less and less further down; over it, the window's own ground
    (--d-ground, pinned to the viewport as the dark glow is, so the two meet
-   without a seam) fades out sooner. 24px: inside a page's 32px top padding,
-   so nothing at rest is touched, and clear of a pane stuck at 24px. The
-   scrollbar is left out of both. Not a mask on the page itself: that would
-   clip a phone sheet opened inside it to the page's box. */
+   without a seam) fades out sooner. The scrollbar is left out of both.
+   Not a mask on the page itself: that would clip a phone sheet opened
+   inside it to the page's box.
+
+   56px deep where the browser can tie the strips to the page's scroll
+   (below): they come in over the first 56px a page scrolls, so a page at
+   rest is untouched. Elsewhere they stay, 24px deep - inside a page's
+   32px top padding, so nothing at rest is touched there either. */
 html.web { --d-ground: #f6f8fb; }
 html.web.dark { --d-ground: var(--glow, linear-gradient(transparent, transparent)), #0b0f14; }
 html.web.flat.dark { --d-ground: #0b0f14; }
@@ -283,17 +287,30 @@ html.web .web-main::after {
   pointer-events: none;
 }
 html.web .web-main::before {
-  -webkit-backdrop-filter: blur(6px);
-  backdrop-filter: blur(6px);
-  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
-  mask-image: linear-gradient(to bottom, #000, transparent);
+  -webkit-backdrop-filter: blur(8px);
+  backdrop-filter: blur(8px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 25%, transparent);
+  mask-image: linear-gradient(to bottom, #000 25%, transparent);
 }
 html.web .web-main::after {
   background: var(--d-ground);
   background-attachment: fixed;
-  -webkit-mask-image: linear-gradient(to bottom, #000 15%, transparent 75%);
-  mask-image: linear-gradient(to bottom, #000 15%, transparent 75%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 20%, transparent 85%);
+  mask-image: linear-gradient(to bottom, #000 20%, transparent 85%);
 }
+@supports (animation-timeline: scroll()) {
+  html.web .web-main { timeline-scope: --d-page-scroll; }
+  html.web .d-page { scroll-timeline: --d-page-scroll block; }
+  html.web .web-main::before,
+  html.web .web-main::after {
+    height: 56px;
+    animation: d-top-fade linear both;
+    animation-timeline: --d-page-scroll;
+    animation-range: 0 56px;
+  }
+  html.web .web-main::before { -webkit-backdrop-filter: blur(16px); backdrop-filter: blur(16px); }
+}
+@keyframes d-top-fade { from { opacity: 0; } to { opacity: 1; } }
 /* Centred in the main area, the same width on every page. */
 html.web .d-page-inner { margin: 0 auto; padding: 32px var(--d-gutter) 56px; }
 html.web .d-page-head {
@@ -909,8 +926,12 @@ html.web .web-pane-detail[data-root='true'] .page-header { grid-template-columns
    the main pane has its header made the pane's title; in the side pane the
    page's own title already says it, so the phone's goes. */
 html.web .d-twopane { display: grid; grid-template-columns: var(--side, 300px) minmax(0, 1fr); gap: 24px; align-items: start; }
-/* Stuck, it keeps the page's own gap below the top bar rather than meeting it. */
+/* Stuck, it keeps the page's own gap below the top bar rather than meeting it -
+   and below the fade over a scrolled page (.web-main::before), where there is one. */
 html.web .d-twopane-side { position: sticky; top: 24px; max-height: calc(100dvh - var(--d-topbar) - 48px); overflow-y: auto; }
+@supports (animation-timeline: scroll()) {
+  html.web .d-twopane-side { top: 64px; max-height: calc(100dvh - var(--d-topbar) - 88px); }
+}
 html.web .d-twopane-side .d-nav-item { height: 40px; font-size: 14px; }
 html.web .d-twopane-list { margin: 0 -20px; }
 html.web .d-twopane-list .page-header { display: none; }
