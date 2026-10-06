@@ -57,9 +57,9 @@ export function RowsSkeleton({ rows = 6 }) {
   )
 }
 
-/** One account card, at the real ones' shape (pages/dashboard/Tiles AccountCard). */
+/** One account card, at the real ones' shape on a computer (pro.css .d-card-grid). */
 export function CardSkeleton() {
-  return <Skeleton className="rounded-[18px]" style={{ aspectRatio: '1.45' }} />
+  return <Skeleton className="rounded-[18px]" style={{ aspectRatio: '1.586' }} />
 }
 
 /**

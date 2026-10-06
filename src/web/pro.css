@@ -437,8 +437,10 @@ html.web .d-kbd {
 }
 html.web.dark .d-kbd { background: rgba(255, 255, 255, 0.05); }
 
-/* Segmented control: the phone's pill switch. */
-html.web .d-seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 999px; background: var(--d-sunken); }
+/* Segmented control: the phone's pill switch. The height and type of a
+   button (--d-control, 14px), so beside one - Accounts' Cards and List by
+   New account, Insights' periods by its arrows - the two line up. */
+html.web .d-seg { display: inline-flex; padding: 4px; gap: 2px; border-radius: 999px; background: var(--d-sunken); }
 /* A flex box, so a label with an icon in it sits in the middle: an inline
    label rides the line's baseline, which leaves it high. */
 html.web .d-seg-item {
@@ -446,10 +448,10 @@ html.web .d-seg-item {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  height: 32px;
+  height: calc(var(--d-control) - 8px);
   padding: 0 14px;
   border-radius: 999px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 600;
   color: var(--d-text-2);
   transition: background-color 0.2s var(--ease-out), color 0.2s var(--ease-out), box-shadow 0.2s var(--ease-out);
@@ -862,7 +864,10 @@ html.web .d-hero > * { position: relative; z-index: 1; }
 
 /* The account cards in a grid (the phone's card faces, filling their column). */
 html.web .d-card-grid { display: grid; gap: 16px; }
-html.web .d-card-grid > .acct-card { width: auto !important; }
+/* A real card's shape on a computer - ID-1, 85.6 x 54mm, 1.586 - where
+   the phone's is a little taller (1.45) to give a narrow card's balance room
+   (pages/dashboard/Tiles AccountCard). Over its inline ratio, hence !important. */
+html.web .d-card-grid > .acct-card { width: auto !important; aspect-ratio: 1.586 !important; }
 html.web .d-card-more {
   display: flex;
   flex-direction: column;

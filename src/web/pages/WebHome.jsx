@@ -214,12 +214,12 @@ export default function WebHome() {
               <AccountCard key={a.id} acct={a} hidden={false} stmt={credit[a.name]} onClick={() => navigate(`/accounts/${a.id}`)} />
             ))}
             {loading ? null : cards.length > shownCards.length ? (
-              <Link to="/accounts" className="d-card-more" style={{ aspectRatio: '1.45' }}>
+              <Link to="/accounts" className="d-card-more" style={{ aspectRatio: '1.586' }}>
                 View all accounts
                 <span className="text-12 font-medium text-[var(--d-text-3)]">{cards.length - shownCards.length} more</span>
               </Link>
             ) : shownCards.length < cols ? (
-              <Link to="/accounts/new" className="d-card-more" style={{ aspectRatio: '1.45' }}>
+              <Link to="/accounts/new" className="d-card-more" style={{ aspectRatio: '1.586' }}>
                 Add an account
               </Link>
             ) : null}
@@ -288,7 +288,7 @@ export default function WebHome() {
             onRowClick={(t) => navigate(`/transactions?tx=${t.id}`)}
             empty={loading ? <RowsSkeleton rows={5} /> : <Empty art="ledger" size="sm" title="Nothing yet" body="Your newest transactions show here." />}
             columns={[
-              { key: 'date', header: 'Date', width: 84, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
+              { key: 'date', header: 'Date', width: 96, render: (t) => <span className="d-cell-muted d-num whitespace-nowrap">{shortDate(t.date)}</span> },
               { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={catMap} /> },
               { key: 'cat', header: 'Category', width: 150, optional: true, render: (t) => <TxCategoryText tx={t} catMap={catMap} /> },
               { key: 'amt', header: 'Amount', width: 130, align: 'right', render: (t) => <TxAmount tx={t} /> },
@@ -296,28 +296,36 @@ export default function WebHome() {
           />
         </Panel>
 
+        {/* As tall as the transactions beside it: the panel stretches to the
+            row, and its categories spread evenly into the room. */}
         <div className="col-span-5 xl:col-span-4 flex flex-col gap-5 min-w-0">
           <Panel
+            className="flex-1 flex flex-col"
+            bodyClassName="flex-1 flex flex-col"
             title="Budget"
             meta={budget.total ? `${Math.round(budget.pct)}% used` : null}
             actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/budget')}>Budget</Btn>}
           >
             {budget.total === 0 ? (
-              <Empty art="gauge" size="sm" title="No limits set" body="Give a category a monthly limit to track it here." action={<Btn size="sm" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
+              <div className="flex-1 flex items-center justify-center">
+                <Empty art="gauge" size="sm" title="No limits set" body="Give a category a monthly limit to track it here." action={<Btn size="sm" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
+              </div>
             ) : (
               <>
                 {/* The phone's Budget gauge: the month's spending as a fan
                     of ticks, the amount inside it. Five columns of twelve
-                    below 1280px, so the fan has room for its figure. */}
+                    below 1280px, so the fan has room for its figure. Full
+                    width: in the panel's column its auto margins would
+                    otherwise shrink it to nothing. */}
                 <BudgetGauge
-                  className="mt-1 d-gauge"
+                  className="mt-1 d-gauge shrink-0 w-full"
                   accent={accentColor}
                   pct={budget.pct}
                   amount={fmt(budget.spent)}
                   leftNote={`${fmt(Math.abs(budget.total - budget.spent))} ${budget.spent > budget.total ? 'over' : 'left'}`}
                   rightNote={`${fmt(budget.total)} limit`}
                 />
-                <div className="mt-5 flex flex-col gap-3">
+                <div className="mt-4 flex-1 flex flex-col justify-evenly gap-3">
                   {budget.rows.slice(0, 4).map(c => {
                     const pct = (c.spent / c.budget) * 100
                     return (
