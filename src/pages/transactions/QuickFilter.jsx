@@ -1,4 +1,5 @@
 import FadeScroller from '../../components/FadeScroller'
+import DateInput from '../../components/ui/DateInput'
 import Divider from '../../components/ui/Divider'
 import { TYPE_OPTS } from './shared'
 
@@ -146,8 +147,7 @@ export function DateRow({ label, value, onChange, isLast = false }) {
             picker is already up (iOS) is a no-op. Chrome 99+, Safari 16+,
             Firefox 101+; older engines throw, and on those versions the
             native tap-to-open is what you already had. */}
-        <input
-          type="date"
+        <DateInput overlay align="end"
           value={value}
           onChange={onChange}
           onClick={openPicker}

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
+import DateInput from '../components/ui/DateInput'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import { useLeaveGuard } from '../hooks/useBackGuard'
@@ -369,8 +370,8 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           <SectionLabel>Date</SectionLabel>
           <div className={fieldFrame()}>
             <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconCalendar /></span>
-            <input
-              type="date"
+            <DateInput
+              aria-label="Date"
               value={date}
               max={localDateStr(new Date())}
               onChange={e => e.target.value && setDate(e.target.value)}

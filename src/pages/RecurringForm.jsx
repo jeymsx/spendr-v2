@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
+import DateInput from '../components/ui/DateInput'
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import { useBackGuard, useLeaveGuard } from '../hooks/useBackGuard'
@@ -522,8 +523,7 @@ export default function RecurringForm() {
                     })
                     : 'Pick a date'}
                 </span>
-                <input
-                  type="date"
+                <DateInput overlay
                   value={nextDate}
                   onChange={e => {
                     const v = e.target.value

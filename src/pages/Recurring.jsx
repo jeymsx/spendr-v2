@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect } from 'react'
+import DateInput from '../components/ui/DateInput'
 import { useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import BillSpots from './recurring/BillSpots'
@@ -597,8 +598,8 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
           {/* Next date */}
           <div>
             <SectionLabel>Next due date</SectionLabel>
-            <input
-              type="date"
+            <DateInput
+              aria-label="Next due date"
               value={nextDate}
               onChange={e => { setNextDate(e.target.value); setErrors(p => ({ ...p, nextDate: null })) }}
               className={[

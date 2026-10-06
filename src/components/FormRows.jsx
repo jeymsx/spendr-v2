@@ -1,4 +1,5 @@
 import Card from './ui/Card'
+import DateInput from './ui/DateInput'
 import Divider from './ui/Divider'
 
 /**
@@ -76,8 +77,7 @@ export function RowDate({ value, onChange, display }) {
           press - clicking the field itself just focuses a segment, and the
           indicator is invisible here, so on desktop this row read as dead.
           iOS Safari opens on any tap, so it was a web-only hole. */}
-      <input
-        type="date"
+      <DateInput overlay align="end"
         value={value}
         onChange={onChange}
         onClick={e => { try { e.currentTarget.showPicker?.() } catch { /* older engine */ } }}

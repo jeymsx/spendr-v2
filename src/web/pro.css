@@ -633,6 +633,37 @@ html.web .d-pop {
   box-shadow: var(--d-shadow-pop);
   animation: d-pop-in 0.16s var(--ease-out);
 }
+/* A date field's calendar (ui/DatePanel). */
+html.web .d-cal { width: 300px; padding: 14px 14px 10px; }
+html.web .d-cal-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+html.web .d-cal-title { font-size: 15px; font-weight: 600; color: var(--d-text); }
+html.web .d-cal-step { width: 32px; height: 32px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: var(--d-text-2); transition: background-color 0.12s, color 0.12s; }
+html.web .d-cal-step:hover:not(:disabled) { background: var(--d-hover); color: var(--d-text); }
+html.web .d-cal-step:disabled { opacity: 0.35; }
+html.web .d-cal-step:focus-visible { outline: none; box-shadow: var(--d-ring); }
+html.web .d-cal-grid { display: grid; grid-template-columns: repeat(7, 36px); justify-content: space-between; row-gap: 2px; }
+html.web .d-cal-dow { height: 30px; display: flex; align-items: center; justify-content: center; font-size: 12px; font-weight: 500; color: var(--d-text-3); }
+html.web .d-cal-day {
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+  color: var(--d-text);
+  transition: background-color 0.12s, color 0.12s;
+}
+html.web .d-cal-day:hover:not(:disabled) { background: var(--d-hover); }
+html.web .d-cal-day.is-out { color: var(--d-text-3); }
+html.web .d-cal-day.is-today { color: var(--d-ink); font-weight: 600; box-shadow: inset 0 0 0 1.5px rgba(var(--color-primary-rgb), 0.45); }
+html.web .d-cal-day.is-on,
+html.web .d-cal-day.is-on:hover { background: var(--d-accent); color: var(--color-on-primary, #fff); font-weight: 600; box-shadow: none; }
+html.web .d-cal-day:disabled { opacity: 0.3; }
+html.web .d-cal-day:focus-visible { outline: none; box-shadow: var(--d-ring); }
+html.web .d-cal-foot { display: flex; justify-content: space-between; margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--d-border); }
 @keyframes d-pop-in {
   from { opacity: 0; transform: translateY(-4px) scale(0.98); }
   to { opacity: 1; transform: none; }

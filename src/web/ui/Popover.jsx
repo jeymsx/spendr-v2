@@ -1,8 +1,9 @@
-import { cloneElement, createContext, useCallback, useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { cloneElement, createContext, useCallback, useContext, useEffect, useId, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 
-/** What a menu item needs from the menu it is in: a way to close it. */
-const PopoverCtx = createContext({ close: () => {} })
+/** What a menu item needs from the menu it is in: a way to close it - and,
+ *  for a popover opened from inside this one, whose it is (`owner`). */
+const PopoverCtx = createContext(/** @type {{close: () => void, owner: string|null}} */ ({ close: () => {}, owner: null }))
 export const usePopover = () => useContext(PopoverCtx)
 
 /**
@@ -12,7 +13,9 @@ export const usePopover = () => useContext(PopoverCtx)
  * Portalled to the body and placed from the trigger's rect - below it, or
  * above when there is no room - so no panel's overflow or stacking clips it.
  * Closes on Escape (focus goes back to the trigger), on a press outside, and
- * on Tab out of a menu. A menu's items move with the arrow keys, Home and End.
+ * on Tab out of a menu. A popover opened from inside another (a date field in
+ * a filter) is portalled too, so is not inside the outer one's box: a press
+ * in it is still not "outside" the outer, which stays open under it. A menu's items move with the arrow keys, Home and End.
  *
  * `trigger` is an element (a Btn, usually); it gets the ref, the click and
  * the aria attributes. `children` is the content, or a function of `close`.
@@ -33,6 +36,8 @@ export default function Popover({
   const triggerRef = useRef(/** @type {HTMLElement|null} */ (null))
   const setTrigger = useCallback((/** @type {HTMLElement|null} */ node) => { triggerRef.current = node }, [])
   const popRef = useRef(/** @type {HTMLDivElement|null} */ (null))
+  const popId = `d-pop-${useId().replace(/[^a-z0-9]/gi, '')}`
+  const { owner } = useContext(PopoverCtx)
   const [pos, setPos] = useState(/** @type {{top: number, left: number}|null} */ (null))
 
   const place = useCallback(() => {
@@ -60,6 +65,13 @@ export default function Popover({
     const onDown = (/** @type {MouseEvent} */ e) => {
       const t = /** @type {Node} */ (e.target)
       if (popRef.current?.contains(t) || triggerRef.current?.contains(t)) return
+      // In a popover opened from this one, or from one opened from it: still inside.
+      let pop = /** @type {HTMLElement|null} */ (/** @type {any} */ (t).closest?.('.d-pop') ?? null)
+      while (pop && pop !== popRef.current) {
+        const up = /** @type {HTMLElement} */ (pop).dataset.owner
+        pop = up ? document.getElementById(up) : null
+      }
+      if (pop) return
       close()
     }
     const onReflow = () => place()
@@ -107,9 +119,11 @@ export default function Popover({
     <>
       {triggerEl}
       {open && createPortal(
-        <PopoverCtx.Provider value={{ close }}>
+        <PopoverCtx.Provider value={{ close, owner: popId }}>
           <div
             ref={popRef}
+            id={popId}
+            data-owner={owner ?? undefined}
             role={role}
             aria-label={label}
             onKeyDown={onKey}

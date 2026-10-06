@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect, useId } from 'react'
+import DateInput from '../../components/ui/DateInput'
 import db from '../../db/db'
 import { useToast } from '../../context/ToastContext'
 import { parseMoney, numToMoneyStr, moneyChangeHandler } from '../../utils/moneyInput'
@@ -229,9 +230,8 @@ export default function GoalFormSheet({
                     Clear
                   </button>
                 )}
-                <input
+                <DateInput overlay
                   id={`${uid}-date`}
-                  type="date"
                   value={targetDate}
                   onChange={e => setTargetDate(e.target.value)}
                   onClick={e => { try { e.currentTarget.showPicker?.() } catch { /* older engine */ } }}
