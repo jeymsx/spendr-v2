@@ -19,20 +19,20 @@ import DatePanel from '../../web/ui/DatePanel'
  *
  * On a computer the input's className goes on a button in its place, so it
  * sits in the same frame and type, showing the day written out ("Tue, Oct 6,
- * 2026"; `short` drops the weekday). `overlay` is for the input laid
- * invisibly over a date drawn by the caller (a form row, the goal's target
- * date): the button is the same invisible layer, and the calendar drops from
- * the row it covers. `align` lines the calendar up with the trigger's start
+ * 2026"; `numeric` writes it 10/06/2026, for a field with little room).
+ * `overlay` is for the input laid invisibly over a date drawn by the caller
+ * (a form row, the goal's target date): the button is the same invisible
+ * layer, and the calendar drops from the row it covers. `align` lines the calendar up with the trigger's start
  * or end; `clearable` adds a way back to no date.
  *
  * @param {{value: string, onChange: (e: {target: {value: string}}) => void, min?: string, max?: string,
  *          className?: string, style?: import('react').CSSProperties, id?: string, 'aria-label'?: string,
  *          onClick?: (e: import('react').MouseEvent<HTMLInputElement>) => void,
- *          overlay?: boolean, short?: boolean, align?: 'start'|'end', clearable?: boolean, placeholder?: string}} props
+ *          overlay?: boolean, numeric?: boolean, align?: 'start'|'end', clearable?: boolean, placeholder?: string}} props
  */
 export default function DateInput({
   value, onChange, min, max, className = '', style, id, 'aria-label': ariaLabel, onClick,
-  overlay = false, short = false, align = 'start', clearable = false, placeholder = 'Pick a date',
+  overlay = false, numeric = false, align = 'start', clearable = false, placeholder = 'Pick a date',
 }) {
   const [desktop] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('web'))
 
@@ -54,8 +54,8 @@ export default function DateInput({
   }
 
   const shown = value
-    ? new Date(`${value}T00:00:00`).toLocaleDateString('en-PH', short
-      ? { month: 'short', day: 'numeric', year: 'numeric' }
+    ? new Date(`${value}T00:00:00`).toLocaleDateString('en-PH', numeric
+      ? { month: '2-digit', day: '2-digit', year: 'numeric' }
       : { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })
     : placeholder
   return (

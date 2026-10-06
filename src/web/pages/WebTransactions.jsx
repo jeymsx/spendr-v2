@@ -488,9 +488,9 @@ function FilterBar({ search, onSearch, filters, setFilters, accounts, categories
             <div className="px-2.5 pt-1.5 pb-2">
               <div className="text-12 font-medium text-[var(--d-text-2)] mb-1.5">Custom range</div>
               <div className="flex items-center gap-1.5">
-                <DateInput short clearable className="d-input flex-1 min-w-0 text-13" aria-label="From" placeholder="From" max={filters.to || undefined} value={filters.from} onChange={e => setFilters({ range: 'custom', from: e.target.value })} />
+                <DateInput numeric clearable className="d-input flex-1 min-w-0 text-13 whitespace-nowrap tabular-nums" style={{ paddingInline: 12 }} aria-label="From" placeholder="From" max={filters.to || undefined} value={filters.from} onChange={e => setFilters({ range: 'custom', from: e.target.value })} />
                 <span className="d-cell-faint">–</span>
-                <DateInput short clearable align="end" className="d-input flex-1 min-w-0 text-13" aria-label="To" placeholder="To" min={filters.from || undefined} value={filters.to} onChange={e => setFilters({ range: 'custom', to: e.target.value })} />
+                <DateInput numeric clearable align="end" className="d-input flex-1 min-w-0 text-13 whitespace-nowrap tabular-nums" style={{ paddingInline: 12 }} aria-label="To" placeholder="To" min={filters.from || undefined} value={filters.to} onChange={e => setFilters({ range: 'custom', to: e.target.value })} />
               </div>
             </div>
           </div>
