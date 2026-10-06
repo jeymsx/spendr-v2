@@ -67,9 +67,10 @@ function SyncIndicator() {
       onClick={() => (signedIn ? runSync() : navigate('/settings/sync'))}
       className="d-btn d-btn-ghost d-btn-sm gap-2 text-12 font-medium"
       title={signedIn ? 'Sync now' : 'Sign in to sync between devices'}
+      aria-label={text}
     >
       <span className={`w-1.5 h-1.5 rounded-full ${dot}`} aria-hidden="true" />
-      {text}
+      <span className="d-sync-label">{text}</span>
     </button>
   )
 }

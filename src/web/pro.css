@@ -234,6 +234,16 @@ html.web .d-search-trigger {
 }
 html.web .d-search-trigger:hover { border-color: var(--d-border-strong); }
 html.web .d-search-trigger:focus-visible { outline: none; box-shadow: var(--d-ring); }
+/* The desktop layout chosen on a narrow screen (Preferences, Layout - a
+   tablet, or a phone): the bar keeps every control on screen, your menu
+   most of all, since it holds the way back to the phone's layout. Search
+   is its icon, the sync state its dot. */
+@media (max-width: 760px) {
+  html.web .d-topbar { gap: 6px; padding: 0 12px; }
+  html.web .d-search-trigger { width: 42px; flex-shrink: 0; justify-content: center; padding: 0; }
+  html.web .d-search-trigger > :not(svg) { display: none; }
+  html.web .d-topbar .d-sync-label { display: none; }
+}
 
 /* ── 4. Primitives ─────────────────────────────────────────────────────── */
 
@@ -871,6 +881,13 @@ html.web .d-twopane-main .page-header-title {
 }
 html.web .d-twopane-main .pb-page,
 html.web .d-twopane-main .pb-nav { padding-bottom: 8px; }
+/* The desktop layout on a narrow screen (see the top bar's): the two
+   halves stack, so the right one is under the left rather than off the
+   screen - Preferences, and its Layout row, can be reached. */
+@media (max-width: 760px) {
+  html.web .d-twopane { grid-template-columns: minmax(0, 1fr); }
+  html.web .d-twopane-side { position: static; max-height: none; }
+}
 /* A desktop page in the right half has the same title the phone's get above. */
 html.web .d-pane-head { padding: 0 20px 18px; }
 html.web .d-pane-title { font-size: 22px; line-height: 28px; font-weight: 700; letter-spacing: -0.02em; color: var(--d-text); }

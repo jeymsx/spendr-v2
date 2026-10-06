@@ -171,15 +171,24 @@ export default function Preferences() {
                 }
                 label="Net worth"
                 sublabel="Across currencies"
-                right={<ModeSelect value={netWorthMode} onChange={(/** @type {string} */ v) => put('netWorthMode', v)} dark={dark} />}
+                right={(
+                  <PillSelect
+                    value={netWorthMode}
+                    onChange={(/** @type {string} */ v) => put('netWorthMode', v)}
+                    dark={dark}
+                    label="How net worth adds up accounts in different currencies"
+                    options={[{ value: 'converted', label: 'Combined' }, { value: 'separated', label: 'Separate' }]}
+                  />
+                )}
               />
             </>
           )}
 
           <RowDivider />
-          {/* Without this, choosing "switch to mobile" in the desktop sidebar
-              was a one-way door: the preference is stored per-device in
-              localStorage, and nothing else could clear it. */}
+          {/* Which layout this device shows (web/useViewMode, kept per device).
+              A choice of three rather than a switch: the switch only ever
+              went one way from where you stood - a phone set to the desktop
+              layout had no row that would bring the phone's back. */}
           <SettingsRow
             iconEl={
               <RowIcon color="blue">
@@ -190,14 +199,17 @@ export default function Preferences() {
                 </svg>
               </RowIcon>
             }
-            label="Desktop layout"
-            sublabel={view === 'mobile' ? 'Always mobile' : 'Automatic on wide screens'}
-            right={<RowChevron />}
-            onTap={() => {
-              const next = view === 'mobile' ? 'auto' : 'desktop'
-              setView(next)
-              setViewMode(next)
-            }}
+            label="Layout"
+            sublabel={LAYOUT_HINT[view] ?? LAYOUT_HINT.auto}
+            right={(
+              <PillSelect
+                value={view}
+                onChange={(/** @type {string} */ v) => { if (v === view) return; setView(v); setViewMode(v) }}
+                dark={dark}
+                label="Layout"
+                options={[{ value: 'auto', label: 'Automatic' }, { value: 'mobile', label: 'Mobile' }, { value: 'desktop', label: 'Desktop' }]}
+              />
+            )}
           />
         </SectionCard>
       </div>
@@ -261,29 +273,39 @@ function StyleChoice({ value, current, dark, label, hint, onPick }) {
   )
 }
 
+/** What each layout does, under the row's name. */
+const LAYOUT_HINT = /** @type {Record<string, string>} */ ({
+  auto: 'Desktop on wide screens',
+  mobile: 'The phone layout, always',
+  desktop: 'The desktop layout, always',
+})
+
 /**
- * The net-worth reading, as a dropdown rather than a segmented pair.
+ * A short choice in a row, as a chip with a dropdown: the net-worth reading
+ * and the layout.
  *
- * It was a card of its own with a two-up toggle and a paragraph under it,
- * which is a lot of screen for a binary that most ledgers never see. As a row
- * in Preferences it sits with the other things that change how the app
- * behaves, and the choice is two words.
+ * The net-worth reading was a card of its own with a two-up toggle and a
+ * paragraph under it, which is a lot of screen for a binary that most ledgers
+ * never see. As a row in Preferences it sits with the other things that
+ * change how the app behaves, and the choice is two words.
  *
  * The select is laid over the chip at zero opacity rather than styled with
  * appearance-none - the same trick as the category chip in PeopleSplit, and
  * for the same two reasons: it keeps the native option list, the iOS wheel,
  * type-ahead and VoiceOver, while giving complete control of the closed
  * state and sidestepping every browser's own idea of a select arrow.
+ *
+ * @param {{value: string, onChange: (v: string) => void, dark: boolean, label: string,
+ *          options: Array<{value: string, label: string}>}} props
  */
-function ModeSelect({ value, onChange, dark }) {
-  const LABEL = { converted: 'Combined', separated: 'Separate' }
+function PillSelect({ value, onChange, dark, label, options }) {
   return (
     <span
       className="relative inline-flex items-center gap-1 pl-3 pr-6 py-1.5 rounded-full
         text-12 font-semibold bg-slate-100 dark:bg-white/[0.07]
         text-slate-700 dark:text-slate-200"
     >
-      {LABEL[value] ?? LABEL.converted}
+      {(options.find(o => o.value === value) ?? options[0]).label}
       <svg
         className="absolute right-2 text-slate-400 dark:text-slate-500"
         width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -295,10 +317,10 @@ function ModeSelect({ value, onChange, dark }) {
         overlay
         value={value}
         onChange={e => onChange(e.target.value)}
-        aria-label="How net worth adds up accounts in different currencies"
+        aria-label={label}
         className="absolute inset-0 w-full h-full opacity-0"
         style={{ colorScheme: dark ? 'dark' : 'light' }}
-        options={[{ value: 'converted', label: 'Combined' }, { value: 'separated', label: 'Separate' }]}
+        options={options}
         menuWidth={180}
         align="end"
       />
