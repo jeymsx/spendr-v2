@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { useLocation } from 'react-router-dom'
+import { usePageScroll } from './pageScroll'
 
 /**
  * A phone page shown in the desktop's frame: a settings page, a form, a
@@ -18,7 +19,7 @@ import { useLocation } from 'react-router-dom'
 export default function PhonePage({ children, width = 760, top = false }) {
   const ref = useRef(/** @type {HTMLDivElement|null} */ (null))
   const { pathname } = useLocation()
-  useLayoutEffect(() => { if (ref.current) ref.current.scrollTop = 0 }, [pathname])
+  usePageScroll(ref, pathname)
   return (
     <div id="app-main" ref={ref} className="d-page">
       <div className={`d-page-inner d-phone${top ? ' is-top' : ''}`} style={{ maxWidth: width }}>{children}</div>

@@ -1,5 +1,6 @@
-import { useLayoutEffect, useRef } from 'react'
+import { useRef } from 'react'
 import { useLocation } from 'react-router-dom'
+import { usePageScroll } from './pageScroll'
 
 /**
  * A desktop page: the area under the top bar that scrolls, with the same
@@ -22,8 +23,8 @@ export default function Page({ title, subtitle, eyebrow, actions, media, width =
   const ref = useRef(/** @type {HTMLDivElement|null} */ (null))
   const location = useLocation()
   const top = scrollKey ?? location.pathname
-  // A new page starts at its top.
-  useLayoutEffect(() => { if (ref.current) ref.current.scrollTop = 0 }, [top])
+  // A new page starts at its top; Back lands where you left it (ui/pageScroll).
+  usePageScroll(ref, top)
   return (
     <div id="app-main" ref={ref} className="d-page">
       <div className={`d-page-inner ${className}`} style={{ maxWidth: width }}>
