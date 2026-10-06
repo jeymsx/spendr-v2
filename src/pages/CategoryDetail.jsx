@@ -29,6 +29,7 @@ import { ListEnd, useInfiniteList } from '../components/ui/InfiniteList'
 const NO_ROWS = /** @type {Array<Record<string, any>>} */ ([])
 import { effectiveLimit } from '../lib/rollover'
 import { editTransaction } from '../lib/editTransaction'
+import { foldPlans, spendingRows } from '../utils/installments'
 
 /**
  * One category.
@@ -97,9 +98,17 @@ export default function CategoryDetail() {
   const catTxs = useMemo(() => {
     if (!transactions) return null
     const cutoff = scheduledCutoff()
-    return transactions
+    // An installment plan as its purchase, once (utils/installments).
+    return foldPlans(transactions
       .filter(t => t.category === name && (t.date ?? '') <= cutoff)
-      .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
+      .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))), transactions)
+  }, [transactions, name])
+  /* The figures read the same rows as spending: a plan's whole price the
+     month it was bought, the later months nothing. */
+  const spendTxs = useMemo(() => {
+    if (!transactions) return null
+    const cutoff = scheduledCutoff()
+    return spendingRows(transactions).filter(t => t.category === name && (t.date ?? '') <= cutoff)
   }, [transactions, name])
 
   // An inflow category counts money arriving. Same arithmetic, different word
@@ -113,17 +122,17 @@ export default function CategoryDetail() {
   const counts = isInflow ? isIncome : isSpend
   const monthKeyNow = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
   const monthTotal = useMemo(() => {
-    if (!catTxs) return 0
-    return catTxs
+    if (!spendTxs) return 0
+    return spendTxs
       .filter(t => counts(t) && txMonthKey(t.date) === monthKeyNow)
       .reduce((sum, t) => sum + txBase(t), 0)
-  }, [catTxs, counts, monthKeyNow])
+  }, [spendTxs, counts, monthKeyNow])
 
   /* What the chart and its "usual" line are drawn from: the same rows less
      balance corrections and investment value updates, which are filed under a
      category but are neither income nor spending (lib/flows.js). They stay in
      the list below, where they explain a balance. */
-  const flowTxs = useMemo(() => (catTxs ?? []).filter(t => !isAdjustment(t)), [catTxs])
+  const flowTxs = useMemo(() => (spendTxs ?? []).filter(t => !isAdjustment(t)), [spendTxs])
   // The list below, a page at a time as you scroll (ui/InfiniteList).
   const pagedTxs = useInfiniteList(catTxs ?? NO_ROWS, { resetKey: name })
 

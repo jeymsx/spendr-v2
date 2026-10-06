@@ -1,10 +1,11 @@
-import { isInstallmentRow } from '../../utils/installments'
+import { isInstallmentRow, planFactor } from '../../utils/installments'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { unfoldLoanPayment, interestCarried } from '../../lib/loans'
 import { amountDisplay, isRefund } from '../../lib/txMoney'
-import { txGlyphCat, txRowWords } from '../../lib/txRow'
+import { txGlyphCat, txRowWords, planWords } from '../../lib/txRow'
 import { isSpend, isIncome } from '../../lib/flows'
-import { txBase } from '../../lib/fxContext'
+import { txBase, currencyOfTx } from '../../lib/fxContext'
+import { fmt } from '../../lib/money'
 import { Amount, AccountTile, CategoryTile } from '../ui/display'
 import { ITransfer } from '../ui/icons'
 
@@ -32,7 +33,8 @@ export function moneyOf(row, account = null) {
   const tx = unfoldLoanPayment(row)
   const { magnitude, tone, currency } = amountDisplay(tx, { account })
   const kind = /** @type {'out'|'in'|'refund'|'transfer'} */ (tone)
-  return { value: magnitude + interestCarried(row), currency, kind }
+  // An installment plan's purchase: its whole price, not its first payment (utils/installments).
+  return { value: magnitude * planFactor(row) + interestCarried(row), currency, kind }
 }
 
 /** Spent and came in, in the ledger's currency. @param {Array<Record<string, any>>} rows */
@@ -40,7 +42,7 @@ export function totalsOf(rows) {
   let spent = 0
   let earned = 0
   for (const t of rows) {
-    if (isSpend(t)) spent += txBase(t)
+    if (isSpend(t)) spent += txBase(t) * planFactor(t)
     else if (isIncome(t)) earned += txBase(t)
   }
   return { spent, earned, net: earned - spent }
@@ -55,7 +57,8 @@ export function totalsOf(rows) {
 export function TxDescription({ tx, catMap }) {
   const cat = catMap[tx.category]
   const glyph = txGlyphCat(tx, catMap)
-  const { title } = txRowWords(tx, cat)
+  const plan = planWords(tx)
+  const title = plan?.title ?? txRowWords(tx, cat).title
   return (
     <span className="flex items-center gap-2.5 min-w-0">
       {tx.type === 'transfer'
@@ -63,7 +66,9 @@ export function TxDescription({ tx, catMap }) {
         : <CategoryTile cat={glyph} size="sm" />}
       <span className="truncate font-medium">{title}</span>
       {isRefund(tx) && <span className="d-badge d-badge-pos">Refund</span>}
-      {isInstallmentRow(tx) && <span className="d-badge">Plan</span>}
+      {plan
+        ? <span className="d-badge d-num">{fmt(plan.each, currencyOfTx(tx))} × {plan.count}</span>
+        : isInstallmentRow(tx) && <span className="d-badge">Plan</span>}
       {tx.splitId && <span className="d-badge">Split</span>}
       {(tx.date ?? '') > scheduledCutoff() && <span className="d-badge d-badge-accent">Upcoming</span>}
     </span>

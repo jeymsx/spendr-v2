@@ -3,7 +3,7 @@ import db, { UNSYNCED } from '../db/db'
 import { postRefund } from '../db/txHelpers'
 import { reverseBalanceEffect, applyBalanceEffect } from '../db/txHelpers'
 import { moveToTrash, restoreFromTrash } from '../db/trash'
-import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
+import { findInstallmentGroup, isInstallmentRow, storedRow } from '../utils/installments'
 import { isoToDateInput, dateInputToIso } from '../utils/txDate'
 import { isRefund, refundedAmount, refundableAmount, splitGroup, splitTotal } from '../lib/txMoney'
 import { outstanding, isSettled } from '../lib/people'
@@ -71,7 +71,7 @@ function fmtTime(isoStr) {
 // ── Main component ─────────────────────────────────────────────────────────────
 
 export default function TxDetailSheet({
-  open, onClose, transaction: tx, accounts = [], categories = [], zIndex = 100,
+  open, onClose, transaction: txGiven, accounts = [], categories = [], zIndex = 100,
   /**
    * Hand the whole edit off instead of opening the rows below.
    *
@@ -89,6 +89,9 @@ export default function TxDetailSheet({
    */
   startWith = 'detail',
 }) {
+  /* The row as stored: a list hands over an installment plan drawn whole
+     (utils/installments), and nothing drawn may be edited or written back. */
+  const tx = useMemo(() => storedRow(txGiven), [txGiven])
   /* The record the panel keeps showing while it slides away - see the note
      above `rec`. State rather than a ref, because a ref read during render is
      not something the component re-renders for, and the compiler is right to

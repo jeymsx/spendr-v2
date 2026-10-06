@@ -4,6 +4,7 @@ import { getFxContext, txBase } from './fxContext'
 import { effectiveLimit } from './rollover'
 import { fmt } from './money'
 import { isIncome, isSpend } from './flows'
+import { spendingRows } from '../utils/installments'
 
 /**
  * Challenges: something you choose to take on, for a set time.
@@ -125,7 +126,8 @@ export function ledgerByDay(transactions) {
   const logged = new Set()
   /** @type {Ledger['months']} */
   const months = new Map()
-  for (const t of list) {
+  // An installment plan is spent in full the day it was bought (utils/installments).
+  for (const t of spendingRows(list)) {
     const d = isoToDateInput(t?.date ?? '')
     if (!d) continue
     logged.add(d)
@@ -504,7 +506,7 @@ function judgeBudgetMonth(ctx, row) {
   const cats = limited(categories)
   let inside = 0
   for (const cat of cats) {
-    const rows = transactions.filter(t => isSpend(t) && t.category === cat.name)
+    const rows = spendingRows(transactions).filter(t => isSpend(t) && t.category === cat.name)
     const { effective } = effectiveLimit({ cat, txs: rows, month, globalDefault: globalRollover })
     const spent = rows
       .filter(t => (isoToDateInput(t.date ?? '') || '').slice(0, 7) === month && isoToDateInput(t.date ?? '') <= now)

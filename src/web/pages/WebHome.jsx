@@ -30,6 +30,7 @@ import { useFitText } from '../ui/fitText'
 import { AreaTrend } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxCategoryText } from './txParts'
 import { IChevronRight } from '../ui/icons'
+import { foldPlans, spendingRows } from '../../utils/installments'
 
 /**
  * Home on a computer: where the money stands, at a glance.
@@ -75,7 +76,8 @@ export default function WebHome() {
 
   const recent = useMemo(() => {
     const cutoff = scheduledCutoff()
-    return foldLoanPayments(txAll.filter(t => (t.date ?? '') <= cutoff).sort((a, b) => (b.date ?? '').localeCompare(a.date ?? ''))).slice(0, 8)
+    // An installment plan as its purchase, once (utils/installments).
+    return foldLoanPayments(foldPlans(txAll.filter(t => (t.date ?? '') <= cutoff).sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')), txAll)).slice(0, 8)
   }, [txAll])
 
   const budget = useMemo(() => {
@@ -83,7 +85,7 @@ export default function WebHome() {
     const cutoff = scheduledCutoff()
     /** @type {Record<string, number>} */
     const spentBy = {}
-    for (const t of txAll) {
+    for (const t of spendingRows(txAll)) {
       if (isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff) spentBy[t.category] = (spentBy[t.category] ?? 0) + txBase(t)
     }
     const rows = (categories ?? []).filter(c => c.budget > 0).map(c => ({ ...c, spent: spentBy[c.name] ?? 0 }))

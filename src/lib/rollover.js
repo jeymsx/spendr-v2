@@ -28,6 +28,7 @@
 
 import { txBase } from './fxContext'
 import { isSpend } from './flows'
+import { spendingRows } from '../utils/installments'
 
 /** "2026-09" for a Date or a month key.
  *  @param {Date|string|number} d */
@@ -70,7 +71,8 @@ export function rollsOver(cat, globalDefault = false) {
 export function spendByMonth(txs, categoryName) {
   /** @type {Record<string, number>} */
   const out = {}
-  for (const tx of txs ?? []) {
+  // An installment plan is spent in full the month it was bought (utils/installments).
+  for (const tx of spendingRows(txs ?? [])) {
     if (!isSpend(tx) || tx.category !== categoryName) continue
     const k = monthKey(tx.date)
     out[k] = Math.round(((out[k] ?? 0) + txBase(tx)) * 100) / 100
@@ -154,7 +156,7 @@ export function effectiveLimit({ cat, txs, month, globalDefault = false }) {
  * @param {boolean} [input.globalDefault]
  */
 export function sweepable({ categories, txs, month, globalDefault = false }) {
-  if (!(txs ?? []).some(tx => isSpend(tx) && monthKey(tx.date) === month)) return { rows: [], total: 0 }
+  if (!spendingRows(txs ?? []).some(tx => isSpend(tx) && monthKey(tx.date) === month)) return { rows: [], total: 0 }
   const out = []
   for (const cat of categories ?? []) {
     const limit = cat.budget ?? 0

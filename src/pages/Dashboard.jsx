@@ -48,6 +48,7 @@ import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
 import { useRecapMonth } from './recap/useRecapMonth'
 import LazyWrappedCard, { preloadWrappedCard } from './recap/LazyWrappedCard'
 import { isEverydayAccount } from '../lib/accountMeta'
+import { foldPlans, spendingRows } from '../utils/installments'
 
 // ── Main component ─────────────────────────────────────────────────────────────
 
@@ -203,9 +204,10 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   const recentTx = useMemo(() => {
     const cutoff = scheduledCutoff()
     // A loan payment is one of the five, not two (lib/loans.js).
-    return foldLoanPayments((txAll || [])
+    // An installment plan as its purchase, once (utils/installments).
+    return foldLoanPayments(foldPlans((txAll || [])
       .filter(t => (t.date ?? '') <= cutoff)
-      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')))
+      .sort((a, b) => (b.date ?? '').localeCompare(a.date ?? '')), txAll || []))
       // Five. Ten was half a screen of scrolling for a list whose whole job
       // is "does anything here look wrong", and "See all" is right there. A
       // desktop column has the height for eight.
@@ -225,7 +227,7 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   const monthExpenses = useMemo(() => {
     const pfx = monthPrefix()
     const cutoff = scheduledCutoff()
-    return (txAll || []).filter(t =>
+    return spendingRows(txAll || []).filter(t =>
       isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 

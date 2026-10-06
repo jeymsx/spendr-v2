@@ -8,6 +8,7 @@ import { addMonths, monthKeyOf, monthName, parseMonth } from './recap'
 import { isFlowRow } from './flows'
 import { loanStatus } from './loans'
 import { nudgeReminders } from './nudge'
+import { spendingRows } from '../utils/installments'
 
 /**
  * The reminders a ledger is owed, worked out on the device.
@@ -241,7 +242,7 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
   /** @type {Reminder[]} */
   const recaps = []
   for (const month of [addMonths(monthKeyOf(now), -1), monthKeyOf(now)]) {
-    const logged = transactions.some(t =>
+    const logged = spendingRows(transactions).some(t =>
       isFlowRow(t) && (t.date ?? '') <= nowIso && txMonthKey(t.date) === month)
     if (!logged) continue
     const { year, month: m } = parseMonth(month)

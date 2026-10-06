@@ -7,6 +7,7 @@ import { getFxContext, txBase } from './fxContext'
 import { toBase } from './fx'
 import { isSpend } from './flows'
 import { isLiquid } from './accountMeta'
+import { spendingRows } from '../utils/installments'
 
 /**
  * Achievements: badges, milestones and challenges, under one roof.
@@ -139,7 +140,8 @@ export function noSpendStreak({ transactions, activeDays = [], today }) {
   const spent = new Set()
   const logged = new Set()
   let first = ''
-  for (const t of transactions ?? []) {
+  // A plan's later payments are the card's doing, not a day you logged or spent (utils/installments).
+  for (const t of spendingRows(transactions ?? [])) {
     const d = isoToDateInput(t.date ?? '')
     if (!d || d > now) continue
     logged.add(d)

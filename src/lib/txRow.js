@@ -103,3 +103,18 @@ export function txRowWords(tx, cat) {
   }
   return { title: tx.description || tx.category || '—', where: tx.account ?? '', kind }
 }
+
+/**
+ * An installment plan's purchase as a list names it (utils/installments
+ * foldPlans, spendingRows): its name without the "(1/12)" its first payment
+ * carries, its monthly payment and its term. Null for any other row - a
+ * card's own page lists each payment, and those keep their "(2/12)".
+ *
+ * @param {Record<string, any>|null|undefined} row
+ * @returns {{title: string, each: number, count: number, billed: number|null}|null}
+ */
+export function planWords(row) {
+  const p = row?.plan
+  if (!p?.lead) return null
+  return { title: p.name || row?.category || '—', each: p.each, count: p.count, billed: p.billed ?? null }
+}

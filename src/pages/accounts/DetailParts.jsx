@@ -6,7 +6,7 @@
  * while, and these stayed behind.
  */
 import CategoryGlyph from '../../components/CategoryGlyph'
-import { txGlyphCat, txKindLabel } from '../../lib/txRow'
+import { txGlyphCat, txKindLabel, planWords } from '../../lib/txRow'
 import { interestCarried, isLoanPayment, unfoldLoanPayment } from '../../lib/loans'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
@@ -15,6 +15,7 @@ import { fmt } from '../../lib/money'
 import { amountDisplay, TONE_CLASS, isRefund } from '../../lib/txMoney'
 import { fmtTxDate, fmtTxTime } from './shared'
 import { currencyOfAccountName } from '../../lib/fxContext'
+import { planFactor } from '../../utils/installments'
 
 // ── Account detail sheet ───────────────────────────────────────────────────────
 
@@ -103,8 +104,10 @@ export function DetailTxRow({
      takes the account so a transfer is still signed by the side being
      looked at. */
   const { sign, magnitude: own, tone, currency } = amountDisplay(tx, { account: accountName })
-  // The whole payment: what left the account, interest and all.
-  const magnitude = own + interestCarried(row)
+  // The whole payment: what left the account, interest and all - or, in a
+  // category's list, an installment plan's whole price (utils/installments).
+  const magnitude = own * planFactor(row) + interestCarried(row)
+  const plan = planWords(row)
   const isOneSided = tx.type !== 'transfer' && tx.account !== accountName
   const color = isOneSided ? 'text-slate-600 dark:text-slate-300' : TONE_CLASS[tone]
 
@@ -114,7 +117,7 @@ export function DetailTxRow({
   /* A loan payment is titled with the loan, from the account that paid it,
      and simply "Loan payment" on the loan's own page - its note, "Loan
      payment · Car Loan", named the loan a second time on both. */
-  const label = labelOverride ?? (loan ? (onLoanPage ? 'Loan payment' : tx.toAccount) : tx.description || (isTransfer
+  const label = labelOverride ?? plan?.title ?? (loan ? (onLoanPage ? 'Loan payment' : tx.toAccount) : tx.description || (isTransfer
     ? (tx.fromAccount === accountName ? `To ${tx.toAccount ?? ''}` : `From ${tx.fromAccount ?? ''}`)
     : (tx.category ?? '—')))
 

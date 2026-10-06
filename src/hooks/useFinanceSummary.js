@@ -12,6 +12,7 @@ import { isSpend } from '../lib/flows'
 import { bucketOf } from '../lib/accountMeta'
 import { netWorthBreakdown } from '../lib/netWorth'
 import useNetWorthDebts from './useNetWorthDebts'
+import { spendingRows } from '../utils/installments'
 
 /**
  * The figures every overview screen needs, derived once.
@@ -64,7 +65,8 @@ export function useFinanceSummary() {
     const n = new Date()
     const pfx = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}`
     const cutoff = scheduledCutoff()
-    return (txAll ?? []).filter(t =>
+    // An installment plan is spent in full the month it was bought (utils/installments).
+    return spendingRows(txAll ?? []).filter(t =>
       isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 

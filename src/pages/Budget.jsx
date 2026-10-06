@@ -28,6 +28,7 @@ import SweepSheet from './budget/SweepSheet'
 import { postCardPayment } from '../db/txHelpers'
 import { txBase } from '../lib/fxContext'
 import { isSpend } from '../lib/flows'
+import { spendingRows } from '../utils/installments'
 
 /**
  * The month's budget, in full.
@@ -289,7 +290,8 @@ export default function Budget() {
   const monthExpenses = useMemo(() => {
     const pfx = monthPrefix(now)
     const cutoff = scheduledCutoff()
-    return (transactions ?? []).filter(t =>
+    // An installment plan is spent in full the month it was bought (utils/installments).
+    return spendingRows(transactions ?? []).filter(t =>
       isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [transactions, now])
 

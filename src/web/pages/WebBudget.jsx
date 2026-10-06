@@ -18,6 +18,7 @@ import DataTable from '../ui/DataTable'
 import { Stat, CategoryTile, Progress, Empty } from '../ui/display'
 import { Bars } from '../ui/charts'
 import { IChevronLeft, IChevronRight, IEdit, ISparkle } from '../ui/icons'
+import { spendingRows } from '../../utils/installments'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -68,7 +69,8 @@ export default function WebBudget() {
     const cutoff = scheduledCutoff()
     /** @type {Record<string, number>} */
     const m = {}
-    for (const t of transactions ?? []) {
+    // An installment plan is spent in full the month it was bought (utils/installments).
+    for (const t of spendingRows(transactions ?? [])) {
       if (!isSpend(t) || monthKey(t.date) !== month || (t.date ?? '') > cutoff) continue
       m[t.category] = (m[t.category] ?? 0) + txBase(t)
     }
@@ -112,7 +114,7 @@ export default function WebBudget() {
     const cutoff = scheduledCutoff()
     /** @type {Record<string, number>} */
     const by = {}
-    for (const t of transactions ?? []) {
+    for (const t of spendingRows(transactions ?? [])) {
       if (!isSpend(t) || !limited.has(t.category) || (t.date ?? '') > cutoff) continue
       const k = monthKey(t.date)
       by[k] = (by[k] ?? 0) + txBase(t)

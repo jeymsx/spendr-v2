@@ -7,6 +7,7 @@ import { txBase } from '../../lib/fxContext'
 import { isIncome, isSpend } from '../../lib/flows'
 import { MONTHS_SHORT, periodName, periodWindow, previousWindow } from './period'
 import { generateTrivia } from './Trivia'
+import { spendingRows } from '../../utils/installments'
 
 const pad = (/** @type {number} */ n) => String(n).padStart(2, '0')
 const DAYS_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
@@ -61,7 +62,10 @@ export function useInsightsData(period) {
 
   const posted = useMemo(() => {
     const cutoff = scheduledCutoff()
-    return (rangeTxs ?? []).filter(t => (t.date ?? '') <= cutoff)
+    /* An installment plan is spent in full the month it was bought
+       (utils/installments). The rows are a window of dates, so a plan is
+       read by its labels: its "(1/N)" in the month bought, nothing later. */
+    return spendingRows(rangeTxs ?? [], { complete: false }).filter(t => (t.date ?? '') <= cutoff)
   }, [rangeTxs])
 
   const expenses = useMemo(() => posted.filter(isSpend), [posted])
@@ -73,7 +77,8 @@ export function useInsightsData(period) {
      there is nothing in it to cut off. */
   const previous = useMemo(() => {
     if (!before || !prevTxs) return null
-    return { label: before.label, spent: sumOf(prevTxs, 'expense'), earned: sumOf(prevTxs, 'inflow') }
+    const prev = spendingRows(prevTxs, { complete: false })
+    return { label: before.label, spent: sumOf(prev, 'expense'), earned: sumOf(prev, 'inflow') }
   }, [before, prevTxs])
 
   const categorySegments = useMemo(() => {

@@ -12,6 +12,7 @@ import { isIncome, isSpend } from '../lib/flows'
 import { bucketOf } from '../lib/accountMeta'
 import { debtsNetAt } from '../lib/trend'
 import { debtsCountFrom } from '../lib/netWorth'
+import { spendingRows } from './installments'
 
 // ── Formatter ──────────────────────────────────────────────────────────────────
 
@@ -39,7 +40,8 @@ export async function fetchReportData(year, month, base = '', rates = null) {
   // this month was being reported as money already gone and could flag a
   // category over budget.
   const cutoff    = scheduledCutoff()
-  const monthTxs  = allTxs.filter(tx => {
+  // An installment plan is spent in full the month it was bought (utils/installments).
+  const monthTxs  = spendingRows(allTxs).filter(tx => {
     if ((tx.date ?? '') > cutoff) return false
     const d = new Date(tx.date)
     return d >= start && d < end

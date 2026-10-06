@@ -3,6 +3,7 @@ import { isoToDateInput } from '../utils/txDate'
 import { txBase } from './fxContext'
 import { isIncome, isSpend } from './flows'
 import { isLiquid } from './accountMeta'
+import { spendingRows } from '../utils/installments'
 
 /**
  * What the app is willing to call an achievement.
@@ -189,7 +190,8 @@ export function monthStats(transactions, today) {
      Math.abs, which counted a returned ₱2,000 order as ₱4,000 of spending -
      so a month the Budget page showed inside every limit could fail Under
      Budget, and one the recap called green could miss Green Month. */
-  for (const t of transactions) {
+  // An installment plan is spent in full the month it was bought (utils/installments).
+  for (const t of spendingRows(transactions)) {
     const row = stats.get(monthKey(t.date))
     if (!row) continue
     const amt = txBase(t)

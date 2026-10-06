@@ -7,7 +7,7 @@ import { useTheme } from '../context/ThemeContext'
 import { useSyncManager } from '../components/SyncManager'
 import { useAuth } from '../context/AuthContext'
 import { searchEverything, txMatches } from '../lib/search'
-import { txRowWords } from '../lib/txRow'
+import { txRowWords, planWords } from '../lib/txRow'
 import { amountDisplay } from '../lib/txMoney'
 import { fmt } from '../lib/money'
 import { useAddFlow } from './addFlowContext'
@@ -19,6 +19,7 @@ import {
   IArrowUpRight, IArrowDownLeft, ITransfer, IZap, IPlus, IMoon, ISun, IPhone, IRefresh, ICornerDownLeft, ITag, IBell,
   ISliders, ILock, IPalette, IFileText,
 } from './ui/icons'
+import { foldPlans, planFactor } from '../utils/installments'
 
 /**
  * Search everything, go anywhere, do anything: Ctrl+K (⌘K on a Mac), or /,
@@ -165,7 +166,8 @@ function CommandPalette({ initial, onClose }) {
         }
       }
       if (query.length >= 2) {
-        const txs = data.txs.filter(t => txMatches(t, query)).slice(0, 8)
+        // An installment plan as its purchase, once (utils/installments).
+        const txs = foldPlans(data.txs).filter(t => txMatches(t, query)).slice(0, 8)
         for (const t of txs) {
           const cat = t.category ? catByName.get(t.category) : null
           const { title, where } = txRowWords(t, cat)
@@ -173,8 +175,8 @@ function CommandPalette({ initial, onClose }) {
           out.push({
             id: `tx-${t.id}`,
             group: 'Transactions',
-            label: title,
-            meta: `${sign}${fmt(magnitude, currency)} · ${where} · ${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
+            label: planWords(t)?.title ?? title,
+            meta: `${sign}${fmt(magnitude * planFactor(t), currency)} · ${where} · ${new Date(t.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`,
             icon: t.type === 'transfer' ? <ITransfer /> : <CategoryTile cat={cat ?? { name: t.category, color: '#64748b' }} size="sm" />,
             run: () => go(`/transactions?tx=${t.id}`),
           })

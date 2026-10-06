@@ -6,6 +6,7 @@ import { netWorthMoves } from './trend'
 import { achievementDef } from './achievements'
 import { isAdjustment, isFlowRow, isIncome, isSpend } from './flows'
 import { LOAN_INTEREST } from './loans'
+import { spendingRows } from '../utils/installments'
 
 /**
  * A month, looked back on: every figure the monthly recap shows.
@@ -137,7 +138,7 @@ export function recapMonths(transactions, now = new Date()) {
   const current = monthKeyOf(now)
   const nowIso = now.toISOString()
   const keys = new Set()
-  for (const t of transactions ?? []) {
+  for (const t of spendingRows(transactions ?? [])) {
     if (!isFlow(t) || (t.date ?? '') > nowIso) continue
     const k = txMonthKey(t.date)
     if (k && k < current) keys.add(k)
@@ -199,7 +200,8 @@ export function buildRecap({
      Object.prototype.valueOf on every object, so its default never applied. */
   const money = (/** @type {number} */ v) => roundMoney(v, currency)
   const nowIso = now.toISOString()
-  const posted = transactions.filter(t => t && (t.date ?? '') <= nowIso)
+  // An installment plan is spent in full the month it was bought (utils/installments).
+  const posted = spendingRows(transactions).filter(t => t && (t.date ?? '') <= nowIso)
   const inMonth = (/** @type {string} */ key) => posted.filter(t => isFlow(t) && txMonthKey(t.date) === key)
   const total = (/** @type {any[]} */ list) => money(list.reduce((s, t) => s + priceOf(t), 0))
   /* Anything logged before `key` began. A row with no usable date is not

@@ -6,6 +6,7 @@ import { debtsCountFrom, netWorthNow } from '../../lib/netWorth'
 import { txBase } from '../../lib/fxContext'
 import { RATES_META_KEY } from '../../lib/fx'
 import { isSpend } from '../../lib/flows'
+import { spendingRows } from '../../utils/installments'
 
 /**
  * Where a recap's figures come from, once.
@@ -102,7 +103,8 @@ export function useMonthIcons(month, count = 3) {
     const icon = new Map(categories.map(c => [c.name, c.icon]))
     /** @type {Map<string, number>} */
     const spent = new Map()
-    for (const t of rows) spent.set(t.category, (spent.get(t.category) ?? 0) + txBase(t))
+    // A month's window: an installment plan read by its labels (utils/installments).
+    for (const t of spendingRows(rows, { complete: false })) spent.set(t.category, (spent.get(t.category) ?? 0) + txBase(t))
     return [...spent].filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1])
       .map(([n]) => icon.get(n)).filter(Boolean).slice(0, count)
   }, [month, count], undefined)

@@ -173,3 +173,23 @@ describe('sweepable', () => {
     expect(sweepable({ categories, txs: all, month: '2026-08' })).toEqual({ rows: [], total: 0 })
   })
 })
+
+/** An installment plan is spent in full the month it was bought (utils/installments). */
+describe('an installment plan in a budget', () => {
+  const plan = Array.from({ length: 12 }, (_, i) => ({
+    type: 'expense', category: 'Gadgets', amount: 3000, installmentId: 'ph',
+    description: `Phone (${i + 1}/12)`, date: `2026-${String(1 + i).padStart(2, '0')}-10T08:00:00+08:00`,
+  }))
+
+  it('counts the whole price the month bought, and nothing in the months after', () => {
+    const by = spendByMonth(plan, 'Gadgets')
+    expect(by['2026-01']).toBe(36000)
+    expect(by['2026-02']).toBeUndefined()
+    expect(by['2026-06']).toBeUndefined()
+  })
+
+  it('is not a month spent in for the sweep when only a payment fell in it', () => {
+    const cats = [{ name: 'Gadgets', budget: 5000 }]
+    expect(sweepable({ categories: cats, txs: plan, month: '2026-03' }).total).toBe(0)
+  })
+})

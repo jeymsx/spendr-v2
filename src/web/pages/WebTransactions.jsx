@@ -7,14 +7,14 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import { moveToTrash, restoreFromTrash } from '../../db/trash'
 import { recategorize, refile, postRefund } from '../../db/txHelpers'
-import { findInstallmentGroup, isInstallmentRow } from '../../utils/installments'
+import { findInstallmentGroup, isInstallmentRow, foldPlans, planFactor } from '../../utils/installments'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { isoToDateInput } from '../../utils/txDate'
 import { txMatches } from '../../lib/search'
 import { foldLoanPayments, unfoldLoanPayment, interestCarried, isLoanPayment } from '../../lib/loans'
 import { amountDisplay, isRefund, refundableAmount } from '../../lib/txMoney'
 import { isAdjustment } from '../../lib/flows'
-import { txGlyphCat, txRowWords } from '../../lib/txRow'
+import { txGlyphCat, txRowWords, planWords } from '../../lib/txRow'
 import { txBase, currencyOfTx } from '../../lib/fxContext'
 import { editTransaction } from '../../lib/editTransaction'
 import { fmt } from '../../lib/money'
@@ -110,10 +110,14 @@ export default function WebTransactions() {
   const catMap = useMemo(() => Object.fromEntries((categories ?? []).map(c => [c.name, c])), [categories])
   const acctMap = useMemo(() => Object.fromEntries((accounts ?? []).map(a => [a.name, a])), [accounts])
 
+  /* An installment plan as its purchase, once, its whole price - and its
+     later payments, the card's, not listed (utils/installments). */
+  const folded = useMemo(() => foldPlans(txAll ?? []), [txAll])
+
   const filtered = useMemo(() => {
     const cutoff = scheduledCutoff()
     const f = filters
-    return (txAll ?? []).filter(tx => {
+    return folded.filter(tx => {
       // A charge dated ahead is committed, not spent: hidden unless searched for (as on the phone).
       if (!q && (tx.date ?? '') > cutoff) return false
       if (q && !txMatches(tx, q)) return false
@@ -123,7 +127,7 @@ export default function WebTransactions() {
       if (!inDateRange(tx, f.range, f.from, f.to)) return false
       return true
     })
-  }, [txAll, q, filters])
+  }, [folded, q, filters])
 
   // A loan payment as the one row it was; totals still read the halves.
   const shown = useMemo(() => foldLoanPayments(filtered), [filtered])
@@ -131,7 +135,7 @@ export default function WebTransactions() {
 
   const rows = useMemo(() => {
     const value = sort.key === 'date' ? (/** @type {any} */ t) => t.date
-      : sort.key === 'amount' ? (/** @type {any} */ t) => Math.abs(txBase(unfoldLoanPayment(t))) + interestCarried(t)
+      : sort.key === 'amount' ? (/** @type {any} */ t) => Math.abs(txBase(unfoldLoanPayment(t))) * planFactor(t) + interestCarried(t)
       : sort.key === 'category' ? (/** @type {any} */ t) => t.type === 'transfer' ? null : (t.category || null)
       : sort.key === 'account' ? (/** @type {any} */ t) => t.account ?? t.fromAccount
       : (/** @type {any} */ t) => txRowWords(t, catMap[t.category]).title
@@ -178,7 +182,8 @@ export default function WebTransactions() {
 
   // ?tx= opens that row beside the list.
   const openId = params.get('tx') ? Number(params.get('tx')) : null
-  const openTx = openId != null ? (txAll ?? []).find(t => t.id === openId) ?? null : null
+  // As listed, a plan's purchase whole; a payment reached by its id (a card's page links one) as it is.
+  const openTx = openId != null ? (folded.find(t => t.id === openId) ?? (txAll ?? []).find(t => t.id === openId) ?? null) : null
   const openRow = useCallback((/** @type {Record<string, any>} */ t) => {
     const next = new URLSearchParams(params)
     next.set('tx', String(t.id))
@@ -655,6 +660,7 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
   const m = tx ? moneyOf(tx) : null
   const cat = tx ? txGlyphCat(tx, catMap) : null
   const words = tx ? txRowWords(tx, catMap[tx.category]) : null
+  const plan = planWords(tx)
   const foreign = row && currencyOfTx(row) !== (row.baseCurrency ?? currencyOfTx(row))
   return (
     <Drawer
@@ -676,7 +682,7 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
               ? <span className="d-tile d-tile-lg" style={{ background: 'var(--d-sunken)', color: 'var(--d-text-2)' }}><ITransfer size={18} /></span>
               : <CategoryTile cat={cat} size="lg" />}
             <div className="min-w-0">
-              <div className="text-15 font-semibold text-[var(--d-text)] truncate">{words.title}</div>
+              <div className="text-15 font-semibold text-[var(--d-text)] truncate">{plan?.title ?? words.title}</div>
               <div className="text-12 d-cell-faint truncate">{words.where}{words.kind ? ` · ${words.kind}` : ''}</div>
             </div>
           </div>
@@ -700,8 +706,15 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
             )}
             <dt>Date</dt>
             <dd>{new Date(tx.date).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })} · {fmtTime(tx.date)}</dd>
-            {row.description && (<><dt>Note</dt><dd><span className="break-words min-w-0">{row.description}</span></dd></>)}
-            {isInstallmentRow(tx) && (<><dt>Plan</dt><dd>One payment of an installment plan</dd></>)}
+            {row.description && !plan && (<><dt>Note</dt><dd><span className="break-words min-w-0">{row.description}</span></dd></>)}
+            {plan ? (
+              <>
+                <dt>Plan</dt>
+                <dd className="d-num">
+                  {fmt(plan.each, m.currency)} × {plan.count}{plan.billed != null ? ` · ${plan.billed} of ${plan.count} billed` : ''}
+                </dd>
+              </>
+            ) : isInstallmentRow(tx) && (<><dt>Plan</dt><dd>One payment of an installment plan</dd></>)}
             {tx.splitId && (<><dt>Split</dt><dd>Shared with others</dd></>)}
             {isRefund(tx) && (<><dt>Refund</dt><dd>Money back on an earlier purchase</dd></>)}
           </dl>

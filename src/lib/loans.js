@@ -31,6 +31,8 @@
  * db/accountWrites.js (payLoan). Nothing here writes anything.
  */
 
+import { storedRow } from '../utils/installments'
+
 const round2 = (/** @type {number} */ n) => Math.round(n * 100) / 100
 
 /** The category a loan payment's interest is filed under, created on first use. */
@@ -147,11 +149,16 @@ export function interestCarried(row) {
  * transfer - for a sheet to open, or a delete to take (which takes its
  * interest with it: db/txHelpers.js expandDeletion).
  *
+ * An installment plan's drawn row too (utils/installments: foldPlans,
+ * spendingRows): the stored payment it stands for, without the `plan` it
+ * was drawn with, so nothing drawn is ever written back.
+ *
  * @template {Record<string, any>} T
  * @param {T & {loanInterest?: any}} row
  * @returns {T}
  */
 export function unfoldLoanPayment(row) {
+  if (row?.planOf || (row && 'plan' in row)) return storedRow(row)
   if (!row?.loanInterest) return row
   const tx = { ...row }
   delete tx.loanInterest

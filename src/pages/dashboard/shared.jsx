@@ -5,6 +5,7 @@ import { baseSymbol } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
 import { isSpend } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
+import { spendingRows } from '../../utils/installments'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -65,7 +66,7 @@ export function getContextHint(txAll, budgetCategories, upcomingRecurring) {
   if (urgentBill) return { Icon: IconBell, text: `${urgentBill.name} due ${daysAway(urgentBill) === 0 ? 'today' : 'tomorrow'}` }
 
   // Today's spending
-  const todayTotal = (txAll ?? [])
+  const todayTotal = spendingRows(txAll ?? [])
     .filter(t => isSpend(t) && isoToDateInput(t.date) === today)
     .reduce((s, t) => s + txBase(t), 0)
   if (todayTotal > 0) {

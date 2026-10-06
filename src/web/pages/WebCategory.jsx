@@ -21,6 +21,7 @@ import { Stat, CategoryTile, Progress, Empty, Skeleton } from '../ui/display'
 import { Bars } from '../ui/charts'
 import { shortDate, TxDescription, TxAccount, TxAmount } from './txParts'
 import { IChevronLeft, IEdit } from '../ui/icons'
+import { foldPlans, spendingRows } from '../../utils/installments'
 
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -49,13 +50,19 @@ export default function WebCategory() {
   const counts = isInflow ? isIncome : isSpend
   const thisMonth = monthKey(new Date())
 
+  // The list: an installment plan as its purchase, once (utils/installments).
   const catTxs = useMemo(() => {
     const cutoff = scheduledCutoff()
-    return (transactions ?? []).filter(t => t.category === name && (t.date ?? '') <= cutoff)
-      .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? '')))
+    return foldPlans((transactions ?? []).filter(t => t.category === name && (t.date ?? '') <= cutoff)
+      .sort((a, b) => String(b.date ?? '').localeCompare(String(a.date ?? ''))), transactions ?? [])
+  }, [transactions, name])
+  // The figures: a plan's whole price the month it was bought.
+  const spendTxs = useMemo(() => {
+    const cutoff = scheduledCutoff()
+    return spendingRows(transactions ?? []).filter(t => t.category === name && (t.date ?? '') <= cutoff)
   }, [transactions, name])
 
-  const monthTotal = useMemo(() => catTxs.filter(t => counts(t) && txMonthKey(t.date) === thisMonth).reduce((s, t) => s + txBase(t), 0), [catTxs, counts, thisMonth])
+  const monthTotal = useMemo(() => spendTxs.filter(t => counts(t) && txMonthKey(t.date) === thisMonth).reduce((s, t) => s + txBase(t), 0), [spendTxs, counts, thisMonth])
   const limit = useMemo(() => {
     if (!cat || isInflow || !((cat.budget ?? 0) > 0)) return 0
     return effectiveLimit({ cat, txs: transactions ?? [], month: thisMonth, globalDefault: globalRollover }).effective
@@ -64,7 +71,7 @@ export default function WebCategory() {
   const months = useMemo(() => {
     /** @type {Record<string, number>} */
     const by = {}
-    for (const t of catTxs) {
+    for (const t of spendTxs) {
       if (isAdjustment(t) || !counts(t)) continue
       const k = monthKey(t.date)
       by[k] = (by[k] ?? 0) + txBase(t)
@@ -75,7 +82,7 @@ export default function WebCategory() {
       const d = new Date(now.getFullYear(), now.getMonth() - (n - 1 - i), 1)
       return { label: `${SHORT[d.getMonth()]}${d.getMonth() === 0 ? ` ’${String(d.getFullYear()).slice(2)}` : ''}`, value: by[monthKey(d)] ?? 0 }
     })
-  }, [catTxs, counts, span])
+  }, [spendTxs, counts, span])
   const past = months.slice(0, -1).filter(m => m.value > 0)
   const usual = past.length ? past.reduce((s, m) => s + m.value, 0) / past.length : 0
 

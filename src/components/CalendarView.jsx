@@ -1,6 +1,6 @@
 import { useMemo } from 'react'
 import CategoryGlyph from './CategoryGlyph'
-import { txGlyphCat, txRowWords } from '../lib/txRow'
+import { txGlyphCat, txRowWords, planWords } from '../lib/txRow'
 import { foldLoanPayments, interestCarried, unfoldLoanPayment } from '../lib/loans'
 import { amountDisplay, TONE_CLASS } from '../lib/txMoney'
 import Card from './ui/Card'
@@ -8,6 +8,7 @@ import Divider from './ui/Divider'
 import EmptyState from './ui/EmptyState'
 import { fmt } from '../lib/money'
 import { isoToDateInput } from '../utils/txDate'
+import { planFactor } from '../utils/installments'
 
 function fmtTime(isoStr) {
   if (!isoStr) return ''
@@ -45,8 +46,13 @@ function TxRow({ tx: row, catMap, onClick }) {
   const tx = unfoldLoanPayment(row)
   const cat = catMap[tx.category]
   const glyph = txGlyphCat(tx, catMap)
-  const { title, where, kind } = txRowWords(tx, cat)
+  const words = txRowWords(tx, cat)
   const { sign, magnitude, tone, currency } = amountDisplay(tx)
+  // An installment plan's purchase: its name, its term, its whole price (utils/installments).
+  const plan = planWords(row)
+  const title = plan?.title ?? words.title
+  const { where } = words
+  const kind = plan ? `${fmt(plan.each, currency)} × ${plan.count}` : words.kind
   const cls = TONE_CLASS[tone]
   return (
     <button
@@ -71,7 +77,7 @@ function TxRow({ tx: row, catMap, onClick }) {
       </div>
       <div className="text-right shrink-0">
         <p className={`text-13 font-bold tabular-nums ${cls}`}>
-          {sign}{fmt(magnitude + interestCarried(row), currency)}
+          {sign}{fmt(magnitude * planFactor(row) + interestCarried(row), currency)}
         </p>
         <p className="text-10 text-slate-400 dark:text-slate-500 mt-0.5">{fmtTime(tx.date)}</p>
       </div>

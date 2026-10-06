@@ -13,10 +13,11 @@ import { useSwap } from '../../components/ui/useSwap'
 import { fmt, fmtHidden } from '../../lib/money'
 import { ACCOUNT_ICON, fmtDate } from './shared'
 import { currencyOfTx } from '../../lib/fxContext'
-import { txRowWords } from '../../lib/txRow'
+import { txRowWords, planWords } from '../../lib/txRow'
 import { interestCarried } from '../../lib/loans'
 import { isRefund } from '../../lib/txMoney'
 import { INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
+import { planFactor } from '../../utils/installments'
 
 // ── Account card ───────────────────────────────────────────────────────────────
 
@@ -162,7 +163,12 @@ export function BudgetSummaryTile({ totals }) {
 
 /** @param {{tx: Record<string, any>, cat?: Record<string, any>, glyph?: Record<string, any>|null, isLast?: boolean}} props */
 export function TxRow({ tx, cat, glyph = cat, isLast }) {
-  const { title, where, kind } = txRowWords(tx, cat)
+  const words = txRowWords(tx, cat)
+  // An installment plan's purchase: its name, its term, its whole price (utils/installments).
+  const plan = planWords(tx)
+  const title = plan?.title ?? words.title
+  const { where } = words
+  const kind = plan ? `${fmt(plan.each, currencyOfTx(tx))} × ${plan.count}` : words.kind
   /* A refund is a negative expense (lib/txMoney.js): money back, so it reads
      as the Transactions list reads it - green, with a plus - not as "-−". */
   const refund     = isRefund(tx)
@@ -198,7 +204,7 @@ export function TxRow({ tx, cat, glyph = cat, isLast }) {
       {/* amount + date */}
       <div className="text-right shrink-0">
         <p className={`text-sm font-semibold tabular-nums ${amountCls}`}>
-          {amountSign}{fmt(Math.abs((tx.amount ?? 0) + interestCarried(tx)), currencyOfTx(tx))}
+          {amountSign}{fmt(Math.abs((tx.amount ?? 0) * planFactor(tx) + interestCarried(tx)), currencyOfTx(tx))}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
           {fmtDate(tx.date)}

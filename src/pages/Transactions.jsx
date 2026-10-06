@@ -9,7 +9,7 @@ import SwipeRow from '../components/ui/SwipeRow'
 import { useToast } from '../context/ToastContext'
 import { moveToTrash, restoreFromTrash } from '../db/trash'
 import { recategorize, refile } from '../db/txHelpers'
-import { findInstallmentGroup, isInstallmentRow } from '../utils/installments'
+import { findInstallmentGroup, isInstallmentRow, foldPlans, planFactor } from '../utils/installments'
 import { fmt } from '../lib/money'
 import { currencyOfTx } from '../lib/fxContext'
 import CalendarView from '../components/CalendarView'
@@ -127,12 +127,16 @@ export default function Transactions() {
     debts:     wideData?.debts,
   }), [deferredSearch, accounts, categories, wideData])
 
+  /* An installment plan as its purchase, once, its whole price - and its
+     later payments, the card's, not listed (utils/installments). */
+  const foldedTx = useMemo(() => foldPlans(txAll ?? []), [txAll])
+
   const filteredTx = useMemo(() => {
     const q = deferredSearch.trim().toLowerCase()
     // Installments write their whole schedule up front; a charge dated beyond
     // today is committed, not spent, so it stays out of the history until then.
     const cutoff = scheduledCutoff()
-    return (txAll ?? []).filter(tx => {
+    return foldedTx.filter(tx => {
       /* Unless you are searching for it.
        *
        * A charge dated beyond today is committed rather than spent, so it
@@ -158,11 +162,11 @@ export default function Transactions() {
                                    !accountFilters.includes(tx.toAccount)) return false
       if (categoryFilter && tx.category !== categoryFilter) return false
       if (!inDateRange(tx, dateRange, customFrom, customTo)) return false
-      if (amountMin != null && (tx.amount ?? 0) < amountMin) return false
-      if (amountMax != null && (tx.amount ?? 0) > amountMax) return false
+      if (amountMin != null && (tx.amount ?? 0) * planFactor(tx) < amountMin) return false
+      if (amountMax != null && (tx.amount ?? 0) * planFactor(tx) > amountMax) return false
       return true
     })
-  }, [txAll, deferredSearch, typeFilter, accountFilters, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
+  }, [foldedTx, deferredSearch, typeFilter, accountFilters, categoryFilter, dateRange, customFrom, customTo, amountMin, amountMax])
 
   /* Each loan payment as the one row it was, not its two halves - see
      lib/loans.js foldLoanPayments. Only what the list draws: the calendar,

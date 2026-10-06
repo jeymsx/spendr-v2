@@ -6,8 +6,9 @@ import { applyPayment } from '../lib/people'
 import { deleteDebtRemote } from '../lib/sync'
 import { currencyOfAccountName, repriceForEdit } from '../lib/fxContext'
 import { estimateConversion } from '../lib/transferLegs'
-import { loanPairOf } from '../lib/loans'
+import { loanPairOf, unfoldLoanPayment } from '../lib/loans'
 import { TRANSFER_FEE, feeDescription, isFeeOf, isFormFeeDescription } from '../lib/transferFee'
+import { isInstallmentRow, findInstallmentGroup } from '../utils/installments'
 
 /* Re-exported: they used to live here and ten files import them from
    here. See db/balances.js for why they moved. */
@@ -420,7 +421,8 @@ export async function restoreDeletedTx(tx) {
  * @param {DeletionJournal} [journal]
  */
 export async function deleteTxGroup(txs, journal) {
-  const list = await expandDeletion((txs ?? []).filter(Boolean))
+  // Stored rows only: a list's drawn row (a folded loan payment, a plan drawn whole) is unfolded first.
+  const list = await expandDeletion((txs ?? []).filter(Boolean).map(t => unfoldLoanPayment(t)))
   if (!list.length) return 0
   if (journal) journal.txs.push(...list.map(t => ({ ...t })))
 
@@ -575,6 +577,11 @@ async function expandDeletion(list) {
       for (const leg of all) {
         if (leg.splitId === tx.splitId && !byId.has(leg.id)) byId.set(leg.id, leg)
       }
+    }
+    /* An installment plan is one purchase: a payment of it goes with every
+       other, as the sheet's "Delete whole plan" already said. */
+    if (isInstallmentRow(tx)) {
+      for (const r of findInstallmentGroup(tx, all)) if (!byId.has(r.id)) byId.set(r.id, /** @type {Transaction} */ (r))
     }
     // A loan payment's principal and its interest: one payment, two rows.
     const pair = loanPairOf(tx, all)

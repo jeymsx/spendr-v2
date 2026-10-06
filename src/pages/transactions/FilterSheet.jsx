@@ -3,7 +3,7 @@ import Card from '../../components/ui/Card'
 import SectionLabel from '../../components/ui/SectionLabel'
 import Button from '../../components/ui/Button'
 import CategoryGlyph from '../../components/CategoryGlyph'
-import { txGlyphCat, txRowWords } from '../../lib/txRow'
+import { txGlyphCat, txRowWords, planWords } from '../../lib/txRow'
 import { interestCarried, unfoldLoanPayment } from '../../lib/loans'
 import CategoryRail from '../../components/CategoryRail'
 import BrandMark from '../../components/BrandMark'
@@ -14,6 +14,7 @@ import { fmt } from '../../lib/money'
 import { DATE_OPTS, canRecategorize, txRowTone, fmtTime } from './shared'
 import { AmountRangeFilter } from './AmountRange'
 import { DateRow } from './QuickFilter'
+import { planFactor } from '../../utils/installments'
 
 // ── Filter sheet ───────────────────────────────────────────────────────────────
 
@@ -261,7 +262,9 @@ export function TxRow({ tx: row, catMap, onClick, onCategory }) {
   // A transfer, a loan payment or a correction has a tile of its own (lib/txRow).
   const glyph = txGlyphCat(tx, catMap)
   const { cls, sign, magnitude: own, currency } = txRowTone(tx)
-  const magnitude = own + interestCarried(row)
+  // An installment plan's purchase: its whole price (utils/installments).
+  const magnitude = own * planFactor(row) + interestCarried(row)
+  const plan = planWords(row)
   const tile = (
     <div
       className="cat-tile w-10 h-10 rounded-2xl flex items-center justify-center shrink-0"
@@ -291,7 +294,7 @@ export function TxRow({ tx: row, catMap, onClick, onCategory }) {
           onClick={() => onClick(tx)}
           className="row-main press press-fade flex-1 min-w-0 flex items-center gap-3 pl-3 pr-4 py-3 text-left"
         >
-          <RowBody tx={tx} cat={cat} cls={cls} sign={sign} magnitude={magnitude} currency={currency} />
+          <RowBody tx={tx} cat={cat} cls={cls} sign={sign} magnitude={magnitude} currency={currency} plan={plan} />
         </button>
       </div>
     )
@@ -306,14 +309,18 @@ export function TxRow({ tx: row, catMap, onClick, onCategory }) {
         active:bg-slate-50 dark:active:bg-white/[0.04]"
     >
       {tile}
-      <RowBody tx={tx} cat={cat} cls={cls} sign={sign} magnitude={magnitude} currency={currency} />
+      <RowBody tx={tx} cat={cat} cls={cls} sign={sign} magnitude={magnitude} currency={currency} plan={plan} />
     </button>
   )
 }
 
 /** A row's words and figure: what it was, where from, how much, when. */
-function RowBody({ tx, cat, cls, sign, magnitude, currency }) {
-  const { title, where, kind } = txRowWords(tx, cat)
+function RowBody({ tx, cat, cls, sign, magnitude, currency, plan = null }) {
+  const words = txRowWords(tx, cat)
+  // A plan's purchase: its name, and its term where its kind would be.
+  const title = plan?.title ?? words.title
+  const { where } = words
+  const kind = plan ? `${fmt(plan.each, currency)} × ${plan.count}` : words.kind
   return (
     <>
       <div className="flex-1 min-w-0">
