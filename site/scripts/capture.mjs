@@ -13,6 +13,10 @@
  * areas emulated: every page pads for the island and the home indicator as
  * it does on the phone, and Phone.astro draws the status bar into that space.
  * The desktop is 1440 x 900 at 2x. Output is WebP in src/assets/screens.
+ *
+ * The ledger ends on 28 September 2026, so the pages are shown on that
+ * evening (CAPTURE_AT): captured any later, "this month" would be a month
+ * Mika has not lived yet, and every figure on Home would be a zero.
  */
 import { chromium } from 'playwright'
 import sharp from 'sharp'
@@ -22,6 +26,7 @@ import { fileURLToPath } from 'node:url'
 const [WHICH = 'both', ONLY = ''] = process.argv.slice(2)
 const BASE = process.env.APP_BASE ?? 'http://localhost:5195'
 const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
+const CAPTURE_AT = new Date(process.env.CAPTURE_AT ?? '2026-09-28T19:30:00').getTime()
 const OUT = fileURLToPath(new URL('../src/assets/screens/', import.meta.url))
 const dump = readFileSync(new URL('./demo-ledger.json', import.meta.url), 'utf8')
 const only = new Set(ONLY.split(',').filter(Boolean))
@@ -34,6 +39,16 @@ async function open(theme, desktop = false) {
   const ctx = await browser.newContext(desktop
     ? { viewport: { width: 1440, height: 900 }, deviceScaleFactor: 2, colorScheme: theme }
     : { viewport: { width: 393, height: 852 }, deviceScaleFactor: 3, isMobile: true, hasTouch: true, colorScheme: theme })
+  // Only the date moves: timers, frames and animations keep their own time.
+  await ctx.addInitScript((at) => {
+    const Real = Date
+    const shift = at - Real.now()
+    class Shifted extends Real {
+      constructor(...a) { if (a.length) super(...a); else super(Real.now() + shift) }
+      static now() { return Real.now() + shift }
+    }
+    globalThis.Date = Shifted
+  }, CAPTURE_AT)
   const page = await ctx.newPage()
   page.on('pageerror', e => errors.add(`pageerror: ${e.message}`))
   if (!desktop) {
@@ -75,7 +90,7 @@ async function open(theme, desktop = false) {
 
 const wait = (page, ms) => page.waitForTimeout(ms)
 async function settle(page, extra = 1600) {
-  await page.waitForFunction(() => document.querySelector('h1, main') && !document.querySelector('.skeleton, .animate-spin'), null, { timeout: 20000 })
+  await page.waitForFunction(() => document.querySelector('h1, main') && !document.querySelector('.skeleton, .animate-spin, .d-skel'), null, { timeout: 20000 })
   await wait(page, extra)
   await page.evaluate(() => document.querySelector('#app-main')?.scrollTo(0, 0))
   await wait(page, 250)
