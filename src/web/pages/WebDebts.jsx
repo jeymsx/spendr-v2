@@ -13,7 +13,7 @@ import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { Tabs } from '../ui/controls'
 import { Stat, Empty } from '../ui/display'
-import { IPlus, IUsers } from '../ui/icons'
+import { IPlus } from '../ui/icons'
 import { shortDate } from './txParts'
 
 /**
@@ -91,7 +91,7 @@ export default function WebDebts() {
           rowKey={(p) => p.key}
           onRowClick={(p) => navigate(`/debts/person/${encodeURIComponent(p.key)}`)}
           empty={loading ? <RowsSkeleton /> : (
-            <Empty icon={<IUsers size={20} />} title="No debts" body="Money lent or borrowed, between you and the people you know." action={<Btn variant="primary" onClick={() => setFormOpen(true)}>Add one</Btn>} />
+            <Empty art="people" title="No debts" body="Money lent or borrowed, between you and the people you know." action={<Btn variant="primary" onClick={() => setFormOpen(true)}>Add one</Btn>} />
           )}
           columns={[
             {

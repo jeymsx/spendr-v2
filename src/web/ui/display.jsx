@@ -1,4 +1,5 @@
 import CategoryGlyph from '../../components/CategoryGlyph'
+import { EmptyArt } from '../../components/ui/EmptyState'
 import BrandMark from '../../components/BrandMark'
 import { accountBrand } from '../../lib/accountBrands'
 import { fmt } from '../../lib/money'
@@ -56,15 +57,19 @@ export function Money({ value, currency, className = '', colour = false }) {
 }
 
 /**
- * Nothing here yet: an icon in a soft square, a line saying so, a way on.
+ * Nothing here yet, as the phone says it (components/ui/EmptyState): a
+ * glass picture, a line saying what is empty, one saying what to do, and
+ * the way on - centred, in a page's panel and a table's slot alike. `art`
+ * names the picture (components/glass); `size="sm"` is the smaller one, for
+ * a table, a side panel, or anywhere the panel is not the page.
  *
- * @param {{icon?: import('react').ReactNode, title: import('react').ReactNode, body?: import('react').ReactNode,
- *          action?: import('react').ReactNode, className?: string}} props
+ * @param {{art: string, title: import('react').ReactNode, body?: import('react').ReactNode,
+ *          action?: import('react').ReactNode, size?: 'md'|'sm', className?: string}} props
  */
-export function Empty({ icon, title, body, action, className = '' }) {
+export function Empty({ art, title, body, action, size = 'md', className = '' }) {
   return (
-    <div className={`d-empty ${className}`}>
-      {icon && <div className="d-empty-icon">{icon}</div>}
+    <div className={`d-empty${size === 'sm' ? ' is-sm' : ''} ${className}`}>
+      <div className="d-empty-art"><EmptyArt name={art} size={size === 'sm' ? 64 : 88} /></div>
       <div className="d-empty-title">{title}</div>
       {body && <div className="d-empty-body">{body}</div>}
       {action && <div className="mt-4 flex justify-center">{action}</div>}

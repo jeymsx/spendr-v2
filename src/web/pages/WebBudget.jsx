@@ -17,7 +17,7 @@ import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { Stat, CategoryTile, Progress, Empty } from '../ui/display'
 import { Bars } from '../ui/charts'
-import { IChevronLeft, IChevronRight, IEdit, IGauge, ISparkle } from '../ui/icons'
+import { IChevronLeft, IChevronRight, IEdit, ISparkle } from '../ui/icons'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
 
@@ -184,7 +184,7 @@ export default function WebBudget() {
             rowKey={(c) => c.id ?? c.name}
             onRowClick={(c) => navigate(`/categories/${encodeURIComponent(c.name)}`)}
             empty={loading ? <RowsSkeleton /> : (
-              <Empty icon={<IGauge size={20} />} title="No limits yet" body="Give a category a monthly limit and track it here." action={<Btn variant="primary" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
+              <Empty art="gauge" title="No limits yet" body="Give a category a monthly limit and track it here." action={<Btn variant="primary" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
             )}
             columns={[
               {

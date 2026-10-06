@@ -20,7 +20,7 @@ import Dialog from '../ui/Dialog'
 import DataTable from '../ui/DataTable'
 import Popover, { MenuItem } from '../ui/Popover'
 import { Stat, AccountTile, CategoryTile, Empty } from '../ui/display'
-import { IChevronLeft, IEdit, IMore, ITrash, IZap, IRepeat } from '../ui/icons'
+import { IChevronLeft, IEdit, IMore, ITrash, IZap } from '../ui/icons'
 
 /** A desktop chip for a dueStatus tone. */
 const DUE_BADGE = /** @type {Record<string, string>} */ ({ late: 'd-badge-neg', soon: 'd-badge-warn', calm: '' })
@@ -123,11 +123,11 @@ export default function WebRecurringItem() {
   const closeDel = useCallback(() => { if (!deleting) setConfirmDel(false) }, [deleting])
 
   const eyebrow = <Link to="/recurring" className="inline-flex items-center gap-1 hover:text-[var(--d-text)]"><IChevronLeft size={13} />Recurring</Link>
-  if (rec === undefined) return <Page eyebrow={eyebrow}><DetailSkeleton /></Page>
+  if (rec === undefined) return <Page eyebrow={eyebrow}><DetailSkeleton kind="bill" /></Page>
   if (!rec) {
     return (
       <Page eyebrow={eyebrow} title="Not found">
-        <Panel><Empty icon={<IRepeat size={20} />} title="This isn’t here" body="It may have been deleted." action={<Btn onClick={() => navigate('/recurring')}>Back to recurring</Btn>} /></Panel>
+        <Panel><Empty art="notFound" title="This isn’t here" body="It may have been deleted." action={<Btn onClick={() => navigate('/recurring')}>Back to recurring</Btn>} /></Panel>
       </Page>
     )
   }
@@ -185,7 +185,7 @@ export default function WebRecurringItem() {
             rowKey={(t) => t.id}
             onRowClick={(t) => navigate(`/transactions?tx=${t.id}`)}
             empty={charges === undefined ? <RowsSkeleton rows={4} /> : (
-              <Empty title={income ? 'Nothing received yet' : 'Nothing charged yet'} body={income ? 'Each one you mark received shows here.' : 'Charges appear here once posted.'} />
+              <Empty art="receipt" size="sm" title={income ? 'Nothing received yet' : 'Nothing charged yet'} body={income ? 'Each one you mark received shows here.' : 'Charges appear here once posted.'} />
             )}
             columns={[
               { key: 'date', header: 'Date', render: (t) => <span className="d-num">{new Date(t.date).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span> },

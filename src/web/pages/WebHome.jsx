@@ -28,7 +28,7 @@ import { Stat, Money, AccountTile, CategoryTile, Progress, Empty, Skeleton } fro
 import { CardSkeleton, RowsSkeleton, StatCardSkeleton } from '../ui/Skeletons'
 import { AreaTrend } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxCategoryText } from './txParts'
-import { IChevronRight, IWallet, IList, ICalendar, IGauge } from '../ui/icons'
+import { IChevronRight } from '../ui/icons'
 
 /**
  * Home on a computer: where the money stands, at a glance.
@@ -131,7 +131,7 @@ export default function WebHome() {
           >
             <span className="wallet-stitch" aria-hidden="true" />
             <div className="text-13 font-semibold text-white/70">Net worth</div>
-            <div className="mt-1.5 text-[36px] leading-[42px] font-bold tracking-[-0.03em] d-num">{loading ? '—' : <Money value={breakdown.total} />}</div>
+            <div className="mt-1.5 text-[36px] leading-[42px] font-semibold tracking-[-0.025em] d-figure">{loading ? '—' : <Money value={breakdown.total} />}</div>
             {thisMonthChange != null && (
               <div className="mt-3">
                 <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-white/15 text-12 font-semibold d-num">
@@ -206,7 +206,7 @@ export default function WebHome() {
           <Link to="/accounts" className="d-link text-14">See all</Link>
         </div>
         {cards.length === 0 && !loading ? (
-          <Panel><Empty icon={<IWallet size={20} />} title="No accounts yet" body="Add your cash, a bank or an e-wallet." action={<Btn variant="primary" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} /></Panel>
+          <Panel><Empty art="wallet" size="sm" title="No accounts yet" body="Add your cash, a bank or an e-wallet." action={<Btn variant="primary" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} /></Panel>
         ) : (
           <div ref={gridRef} className="d-card-grid" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
             {loading && Array.from({ length: cols }, (_, i) => <CardSkeleton key={i} />)}
@@ -243,7 +243,7 @@ export default function WebHome() {
           flush
         >
           {!forecast ? <RowsSkeleton rows={5} /> : forecast.events.length === 0 ? (
-            <Empty icon={<ICalendar size={18} />} title="Nothing due" body="Bills, pay and card statements show here." />
+            <Empty art="calendar" size="sm" title="Nothing due" body="Bills, pay and card statements show here." />
           ) : (
             <div className="py-1">
               {forecast.events.slice(0, 6).map(e => {
@@ -286,7 +286,7 @@ export default function WebHome() {
             rows={recent}
             rowKey={(t) => t.id}
             onRowClick={(t) => navigate(`/transactions?tx=${t.id}`)}
-            empty={loading ? <RowsSkeleton rows={5} /> : <Empty icon={<IList size={18} />} title="Nothing yet" body="Your newest transactions show here." />}
+            empty={loading ? <RowsSkeleton rows={5} /> : <Empty art="ledger" size="sm" title="Nothing yet" body="Your newest transactions show here." />}
             columns={[
               { key: 'date', header: 'Date', width: 84, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
               { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={catMap} /> },
@@ -303,7 +303,7 @@ export default function WebHome() {
             actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/budget')}>Budget</Btn>}
           >
             {budget.total === 0 ? (
-              <Empty className="!py-6" icon={<IGauge size={18} />} title="No limits set" body="Give a category a monthly limit to track it here." action={<Btn size="sm" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
+              <Empty art="gauge" size="sm" title="No limits set" body="Give a category a monthly limit to track it here." action={<Btn size="sm" onClick={() => navigate('/settings/budgets')}>Set limits</Btn>} />
             ) : (
               <>
                 {/* The phone's Budget gauge: the month's spending as a fan

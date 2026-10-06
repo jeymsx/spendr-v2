@@ -14,7 +14,7 @@ import Page from '../ui/Page'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import { Stat, AccountTile, Progress, Empty, Money } from '../ui/display'
-import { IPlus, ITarget, ISliders } from '../ui/icons'
+import { IPlus, ISliders } from '../ui/icons'
 
 /**
  * Goals on a computer: every goal as a card - its ring, what is saved of
@@ -61,7 +61,7 @@ export default function WebGoals() {
     >
       {loading ? <BoardSkeleton /> : active.length === 0 && archived.length === 0 ? (
         <Panel>
-          <Empty icon={<ITarget size={20} />} title="No goals yet" body="Name what you are saving for, set the amount, and point it at the account holding the money."
+          <Empty art="target" title="No goals yet" body="Name what you are saving for, set the amount, and point it at the account holding the money."
             action={<Btn variant="primary" onClick={() => setFormOpen(true)}>Add your first goal</Btn>} />
           {(accounts ?? []).filter(isFundable).length === 0 && <p className="-mt-6 pb-8 text-center text-13 d-warn">Add a savings or spending account first: a goal is funded by one.</p>}
         </Panel>
@@ -114,7 +114,7 @@ export default function WebGoals() {
                     <span className="font-semibold d-num text-[var(--d-text)]">{fmt(idleFree)}</span> more sits in accounts no goal draws on.
                   </div>
                 )}
-                {funding.length === 0 && idleFree === 0 && <div className="px-6 pb-3 text-14 text-[var(--d-text-2)]">No account funds a goal yet.</div>}
+                {funding.length === 0 && idleFree === 0 && <Empty art="piggy" size="sm" title="No account funds a goal yet" />}
               </div>
             </Panel>
           </div>

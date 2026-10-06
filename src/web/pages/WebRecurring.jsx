@@ -21,7 +21,7 @@ import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { Tabs } from '../ui/controls'
 import { Stat, AccountTile, Empty } from '../ui/display'
-import { IPlus, IRepeat } from '../ui/icons'
+import { IPlus } from '../ui/icons'
 
 /**
  * Recurring on a computer: every bill and every pay that repeats, in one
@@ -145,7 +145,7 @@ export default function WebRecurring() {
               onRowClick={(r) => navigate(`/recurring/${r.id}`)}
               rowClassName={(r) => (r.active ? '' : 'opacity-60')}
               empty={loading ? <RowsSkeleton /> : (
-                <Empty icon={<IRepeat size={20} />} title={tab === 'income' ? 'No recurring income' : tab === 'paused' ? 'Nothing paused' : 'No recurring bills'}
+                <Empty art="repeat" title={tab === 'income' ? 'No recurring income' : tab === 'paused' ? 'Nothing paused' : 'No recurring bills'}
                   body="Add the bills and pay that come round every month or week." action={<Btn variant="primary" onClick={() => navigate('/recurring/new')}>Add one</Btn>} />
               )}
               columns={[

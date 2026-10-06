@@ -11,12 +11,13 @@ import { AddFlowProvider } from './AddFlow'
 import { AchievementProvider } from '../context/AchievementContext'
 import Moments from '../components/achievements/Moments'
 import { keepStorage } from '../lib/keepStorage'
-import { PageSkeleton } from './ui/Skeletons'
+import { RouteSkeleton } from './ui/Skeletons'
 
-/* A page's code arriving: the outline of a page - a title, figures, two
-   panels - rather than a spinner in the middle of the window. */
+/* A page's code arriving: that page's own outline - Notes' list and editor,
+   Settings' column and pane - rather than a spinner in the middle of the
+   window (ui/Skeletons RouteSkeleton). */
 function PageFallback() {
-  return <PageSkeleton />
+  return <RouteSkeleton />
 }
 
 /**

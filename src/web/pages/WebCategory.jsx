@@ -20,7 +20,7 @@ import { Segmented } from '../ui/controls'
 import { Stat, CategoryTile, Progress, Empty, Skeleton } from '../ui/display'
 import { Bars } from '../ui/charts'
 import { shortDate, TxDescription, TxAccount, TxAmount } from './txParts'
-import { IChevronLeft, IEdit, IList } from '../ui/icons'
+import { IChevronLeft, IEdit } from '../ui/icons'
 
 const SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 
@@ -91,7 +91,7 @@ export default function WebCategory() {
   if (!loading && !cat && catTxs.length === 0) {
     return (
       <Page title={name}>
-        <Panel><Empty title="Nothing filed under this" body="It may have been renamed or deleted." action={<Btn onClick={() => navigate('/budget')}>Back to budget</Btn>} /></Panel>
+        <Panel><Empty art="notFound" title="Nothing filed under this" body="It may have been renamed or deleted." action={<Btn onClick={() => navigate('/budget')}>Back to budget</Btn>} /></Panel>
       </Page>
     )
   }
@@ -128,7 +128,7 @@ export default function WebCategory() {
           rows={rows}
           rowKey={(t) => t.id}
           onRowClick={(t) => setSelected(t)}
-          empty={loading ? <RowsSkeleton /> : <Empty icon={<IList size={20} />} title="Nothing filed under this yet" />}
+          empty={loading ? <RowsSkeleton /> : <Empty art="ledger" size="sm" title="Nothing filed under this yet" />}
           columns={[
             { key: 'date', header: 'Date', width: 100, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
             { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={catMap} /> },

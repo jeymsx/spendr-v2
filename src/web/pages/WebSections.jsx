@@ -2,7 +2,7 @@ import { Navigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { Empty } from '../ui/display'
-import { INote } from '../ui/icons'
+
 
 /**
  * What the note card shows before a note is picked (pages/WebNotes).
@@ -17,6 +17,6 @@ export function NotesIndex() {
   }, [], undefined)
   if (first === undefined) return null
   // None at all: the list says so itself, and the card says what goes in it.
-  if (!first) return <Empty icon={<INote size={20} />} title="No note open" body="Pick one from the list, or start a new one." />
+  if (!first) return <Empty art="note" title="No note open" body="Pick one from the list, or start a new one." />
   return <Navigate to={`/notes/${first.id}`} replace />
 }

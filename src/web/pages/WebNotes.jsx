@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react'
-import { RowsSkeleton, PaneSkeleton } from '../ui/Skeletons'
+import { NoteListSkeleton, NoteEditorSkeleton } from '../ui/Skeletons'
 import { Outlet, matchPath, useLocation, useNavigate } from 'react-router-dom'
 import { createNote } from '../../lib/notes'
 import Page from '../ui/Page'
@@ -32,10 +32,10 @@ export default function WebNotes() {
       )}
       <div className="d-twopane d-notes" style={{ '--side': '300px' }}>
         <div className="d-twopane-side d-twopane-list min-w-0">
-          <Suspense fallback={<RowsSkeleton rows={5} />}><Notes /></Suspense>
+          <Suspense fallback={<NoteListSkeleton />}><Notes /></Suspense>
         </div>
         <div className="d-twopane-main d-panel d-note-card min-w-0">
-          <Suspense fallback={<PaneSkeleton />}><Outlet /></Suspense>
+          <Suspense fallback={<NoteEditorSkeleton />}><Outlet /></Suspense>
         </div>
       </div>
     </Page>

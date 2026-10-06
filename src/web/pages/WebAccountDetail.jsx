@@ -219,11 +219,11 @@ export default function WebAccountDetail() {
     }
   }, [account, lateInfo, showToast])
 
-  if (!accounts) return <Page><DetailSkeleton /></Page>
+  if (!accounts) return <Page><DetailSkeleton kind="account" /></Page>
   if (!account) {
     return (
       <Page title="Account not found">
-        <Panel><Empty title="This account isn’t here" body="It may have been deleted." action={<Btn onClick={() => navigate('/accounts')}>Back to accounts</Btn>} /></Panel>
+        <Panel><Empty art="notFound" title="This account isn’t here" body="It may have been deleted." action={<Btn onClick={() => navigate('/accounts')}>Back to accounts</Btn>} /></Panel>
       </Page>
     )
   }
@@ -374,7 +374,7 @@ export default function WebAccountDetail() {
           rows={rows}
           rowKey={(t) => t.id}
           onRowClick={(t) => setSelectedTx(t)}
-          empty={<Empty icon={<IList size={18} />} title="Nothing on this account yet" body="Transactions to and from it show here." />}
+          empty={<Empty art="ledger" size="sm" title="Nothing on this account yet" body="Transactions to and from it show here." />}
           columns={[
             { key: 'date', header: 'Date', width: 96, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
             { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={catMap} /> },

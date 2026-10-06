@@ -7,9 +7,9 @@ import { useToast } from '../../context/ToastContext'
 import { MissingAccountError, TRASH_DAYS, deleteForever, describeEntry, emptyTrash, purgeTrash, restoreFromTrash } from '../../db/trash'
 import { fmt } from '../../lib/money'
 import { txRowTone } from '../../pages/transactions/shared'
-import { EmptyArt } from '../../components/ui/EmptyState'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
+import { Empty } from '../ui/display'
 import Btn from '../ui/Button'
 import Dialog from '../ui/Dialog'
 import DataTable from '../ui/DataTable'
@@ -160,11 +160,7 @@ export default function WebRecentlyDeleted({ inPane = false }) {
         selected={live}
         onSelectedChange={setSelected}
         empty={entries === undefined ? <RowsSkeleton /> : (
-          <div className="py-12 flex flex-col items-center text-center">
-            <EmptyArt name="trash" size={88} />
-            <p className="mt-2 text-15 font-semibold text-[var(--d-text)]">Nothing deleted</p>
-            <p className="mt-1 text-13 text-[var(--d-text-2)]">Transactions you delete stay here for {TRASH_DAYS} days, so you can put them back.</p>
-          </div>
+          <Empty art="trash" title="Nothing deleted" body={`Transactions you delete stay here for ${TRASH_DAYS} days, so you can put them back.`} />
         )}
       />
     </Panel>

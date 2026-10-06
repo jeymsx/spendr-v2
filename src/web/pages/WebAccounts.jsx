@@ -11,7 +11,7 @@ import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { Stat, Money, AccountTile, Progress, Empty } from '../ui/display'
-import { IPlus, IWallet, IGrid, IList } from '../ui/icons'
+import { IPlus, IGrid, IList } from '../ui/icons'
 import { Segmented } from '../ui/controls'
 import { shortDate } from './txParts'
 
@@ -82,7 +82,7 @@ export default function WebAccounts() {
       {view === 'cards' && loading && <><CardsSkeleton cards={4} /><CardsSkeleton cards={2} /></>}
       {view === 'cards' && !loading && (
         groups.length === 0 ? (
-          <Panel><Empty icon={<IWallet size={20} />} title="No accounts yet" body="Add your cash, a bank, an e-wallet or a card." action={<Btn variant="primary" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} /></Panel>
+          <Panel><Empty art="wallet" title="No accounts yet" body="Add your cash, a bank, an e-wallet or a card." action={<Btn variant="primary" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} /></Panel>
         ) : groups.map(g => (
           <section key={g.key} className="mb-8" aria-label={g.label}>
             <div className="d-section-head">
@@ -105,7 +105,7 @@ export default function WebAccounts() {
           rowKey={(r) => r.acct.id}
           onRowClick={(r) => navigate(`/accounts/${r.acct.id}`)}
           empty={loading ? <RowsSkeleton /> : (
-            <Empty icon={<IWallet size={18} />} title="No accounts yet" body="Add your cash, a bank, an e-wallet or a card." action={<Btn size="sm" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} />
+            <Empty art="wallet" size="sm" title="No accounts yet" body="Add your cash, a bank, an e-wallet or a card." action={<Btn size="sm" onClick={() => navigate('/accounts/new')}>Add an account</Btn>} />
           )}
           columns={[
             {

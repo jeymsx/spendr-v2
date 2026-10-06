@@ -4,11 +4,11 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import NotificationIcon from '../../components/NotificationIcon'
 import WhatsNewModal from '../../components/WhatsNewModal'
-import { EmptyArt } from '../../components/ui/EmptyState'
 import { groupByDay, timeOf } from '../../lib/notifications'
 import { markRead } from '../../db/notifications'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
+import { Empty } from '../ui/display'
 import Btn from '../ui/Button'
 import { ICheck, IChevronRight } from '../ui/icons'
 
@@ -66,11 +66,7 @@ export default function WebNotifications() {
     >
       {rows && rows.length === 0 ? (
         <Panel>
-          <div className="py-12 flex flex-col items-center text-center">
-            <EmptyArt name="bell" size={88} />
-            <p className="mt-2 text-15 font-semibold text-[var(--d-text)]">You’re all caught up</p>
-            <p className="mt-1 text-13 text-[var(--d-text-2)]">Card due dates, bills, budget alerts and your monthly recap show up here.</p>
-          </div>
+          <Empty art="bell" title="You’re all caught up" body="Card due dates, bills, budget alerts and your monthly recap show up here." />
         </Panel>
       ) : (
         <Panel flush>

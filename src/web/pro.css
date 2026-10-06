@@ -121,20 +121,31 @@ html.web * { scrollbar-width: thin; scrollbar-color: var(--d-border-strong) tran
 /* ...except where the phone hides one on purpose (a rail, the notes bar). */
 html.web .no-scrollbar { scrollbar-width: none; }
 html.web .d-num { font-variant-numeric: tabular-nums; }
+/* A figure read on its own - a figure card's, the net worth, a donut's
+   middle - in Inter's own proportional digits. Tabular digits are for
+   columns that have to line up (.d-num, in tables); set alone they leave a
+   gap at every 1 and read loose. The account cards' rolling balances
+   (components/ui/RollingNumber) are figures of this kind too. */
+html.web .d-figure,
+html.web .d-figure .d-num,
+html.web .d-stat-value .d-num,
+html.web .acct-card .tabular-nums { font-variant-numeric: normal; }
+html.web .acct-card .font-bold.tabular-nums { font-weight: 600; }
 
 /* ── 3. Shell ──────────────────────────────────────────────────────────── */
 
 html.web .d-shell { background: var(--d-bg); }
 
+/* The sidebar and the top bar stand on the page's own ground - no panel of
+   their own, no line between them and the page - so the window reads as
+   one surface with the cards on it, rather than chrome around a page.
+   Nothing scrolls under either (each page scrolls inside .d-page), so
+   neither needs a backing to stay legible. */
 html.web .d-sidebar {
   width: var(--d-sidebar);
-  background: rgba(255, 255, 255, 0.78);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border-right: 1px solid var(--d-border);
+  background: transparent;
   transition: width 0.2s var(--ease-out);
 }
-html.web.dark .d-sidebar { background: rgba(13, 19, 30, 0.6); }
 html.web .d-sidebar.is-collapsed { width: 72px; }
 
 html.web .d-brand {
@@ -199,7 +210,7 @@ html.web .d-nav-count {
 }
 html.web .d-nav-dot { display: none; width: 8px; height: 8px; border-radius: 999px; background: #ef4444; }
 html.web .d-sidebar.is-collapsed .d-nav-dot { display: block; position: absolute; top: 8px; right: 12px; }
-html.web .d-sidebar-foot { border-top: 1px solid var(--d-border); padding: 10px 12px; }
+html.web .d-sidebar-foot { padding: 10px 12px; }
 
 html.web .d-topbar {
   height: var(--d-topbar);
@@ -208,14 +219,10 @@ html.web .d-topbar {
   align-items: center;
   gap: 10px;
   padding: 0 var(--d-gutter) 0 24px;
-  background: rgba(255, 255, 255, 0.72);
-  backdrop-filter: blur(20px) saturate(140%);
-  -webkit-backdrop-filter: blur(20px) saturate(140%);
-  border-bottom: 1px solid var(--d-border);
+  background: transparent;
   position: relative;
   z-index: 30;
 }
-html.web.dark .d-topbar { background: rgba(13, 19, 30, 0.5); }
 
 /* The search field in the top bar is a button that opens the palette. */
 html.web .d-search-trigger {
@@ -226,8 +233,8 @@ html.web .d-search-trigger {
   height: 42px;
   padding: 0 10px 0 16px;
   border-radius: 999px;
-  background: var(--d-sunken);
-  border: 1px solid transparent;
+  background: var(--d-panel);
+  border: 1px solid var(--d-border);
   color: var(--d-text-3);
   font-size: 14px;
   transition: border-color 0.15s, background-color 0.15s;
@@ -324,9 +331,8 @@ html.web .d-btn-sm { height: 34px; padding: 0 14px; font-size: 13px; }
 html.web .d-btn-lg { height: 46px; padding: 0 22px; font-size: 15px; }
 html.web .d-btn-icon { width: var(--d-control); padding: 0; }
 html.web .d-btn-sm.d-btn-icon { width: 34px; }
-/* Flat in light mode, as the cards are; in dark a soft glow of its own colour. */
+/* Flat, as the cards are, in dark as in light: no glow under it. */
 html.web .d-btn-primary { background: var(--d-accent); color: var(--color-on-primary, #fff); }
-html.web.dark .d-btn-primary { box-shadow: 0 8px 20px -10px rgba(var(--color-primary-rgb), 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.2); }
 html.web .d-btn-primary:hover:not(:disabled) { background: color-mix(in srgb, var(--d-accent) 90%, #000); }
 html.web .d-btn-secondary { background: var(--d-panel); border-color: var(--d-border-strong); color: var(--d-text); }
 html.web .d-btn-secondary:hover:not(:disabled) { background: var(--d-hover); border-color: rgba(var(--color-primary-rgb), 0.35); }
@@ -607,7 +613,7 @@ html.web .d-stat-label { font-size: 13.5px; font-weight: 500; color: var(--d-tex
 html.web .d-stat-value.d-neg { color: var(--d-neg); }
 html.web .d-stat-value.d-pos { color: var(--d-pos); }
 html.web .d-stat-value.d-warn { color: var(--d-warn); }
-html.web .d-stat-value { margin-top: 6px; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; color: var(--d-text); }
+html.web .d-stat-value { margin-top: 6px; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--d-text); }
 /* Two lines before it gives up, rather than one: on a narrow card the
    line under a figure was cut mid-word ("Spending, savings and investme…"). */
 html.web .d-stat-note { margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--d-text-3); white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
@@ -681,10 +687,16 @@ html.web .d-dl dt { color: var(--d-text-3); min-height: 36px; display: flex; ali
 html.web .d-dl dd { color: var(--d-text); min-width: 0; min-height: 36px; display: flex; align-items: center; gap: 8px; }
 
 /* Empty state. */
-html.web .d-empty { padding: 56px 24px; text-align: center; }
-html.web .d-empty-icon { width: 48px; height: 48px; margin: 0 auto 14px; border-radius: 16px; display: flex; align-items: center; justify-content: center; background: rgba(var(--color-primary-rgb), 0.1); color: var(--d-accent); }
-html.web .d-empty-title { font-size: 16px; font-weight: 650; color: var(--d-text); }
+/* Nothing here yet (ui/display Empty): the glass picture, then its two
+   lines, centred. The picture's subject fills the middle of its box, so
+   the title sits close under it and the gap you see is the usual one. */
+html.web .d-empty { padding: 36px 24px 44px; text-align: center; }
+html.web .d-empty.is-sm { padding: 20px 20px 28px; }
+html.web .d-empty-art { display: flex; justify-content: center; margin-bottom: 4px; }
+html.web .d-empty-title { font-size: 16px; font-weight: 600; color: var(--d-text); }
+html.web .d-empty.is-sm .d-empty-title { font-size: 15px; }
 html.web .d-empty-body { margin-top: 6px; font-size: 14px; color: var(--d-text-2); }
+html.web .d-empty.is-sm .d-empty-body { font-size: 13px; }
 
 /* Tiles: a brand or category mark in a rounded square, as the phone's rows have them. */
 html.web .d-tile {
@@ -708,7 +720,12 @@ html.web .d-link:hover { text-decoration: underline; text-underline-offset: 3px;
 html.web .d-swatch { width: 9px; height: 9px; border-radius: 3px; flex-shrink: 0; }
 
 /* Skeleton. */
-html.web .d-skel { border-radius: 10px; background: linear-gradient(90deg, var(--d-sunken), var(--d-hover), var(--d-sunken)); background-size: 200% 100%; animation: d-skel 1.2s ease-in-out infinite; }
+html.web .d-skel { background: linear-gradient(90deg, var(--d-sunken), var(--d-hover), var(--d-sunken)); background-size: 200% 100%; animation: d-skel 1.2s ease-in-out infinite; }
+/* The corner a shape has unless it says otherwise. In Tailwind's
+   components layer, so any rounded-* it is given (the utilities layer,
+   after it) wins, and a pill, a ring or a card can be drawn as one: a rule
+   outside the layers here would beat every utility, whatever its weight. */
+@layer components { html.web .d-skel { border-radius: 10px; } }
 @keyframes d-skel { from { background-position: 100% 0; } to { background-position: -100% 0; } }
 html.web.reduce-motion .d-skel { animation: none; }
 @media (prefers-reduced-motion: reduce) { html.web .d-skel { animation: none; } }
@@ -1023,7 +1040,7 @@ html.web .d-wrapped-tile:focus-visible { outline: none; box-shadow: var(--d-ring
 html.web .d-wrapped-label { font-size: 13.5px; font-weight: 500; color: rgba(255, 255, 255, 0.78); }
 /* The words stay clear of the gift in the corner. */
 html.web .d-wrapped-tile > span { padding-right: 68px; }
-html.web .d-wrapped-value { margin-top: 10px; font-size: 26px; line-height: 32px; font-weight: 700; letter-spacing: -0.02em; }
+html.web .d-wrapped-value { margin-top: 10px; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; }
 html.web .d-wrapped-note { margin-top: 6px; display: inline-flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; color: rgba(255, 255, 255, 0.86); }
 html.web .d-wrapped-art { position: absolute; right: -4px; bottom: -8px; z-index: -1; width: 80px; height: 80px; rotate: -8deg; }
 @media (max-width: 1279px) {

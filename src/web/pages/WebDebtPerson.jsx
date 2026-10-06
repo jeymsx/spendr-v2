@@ -19,7 +19,7 @@ import Dialog from '../ui/Dialog'
 import DataTable from '../ui/DataTable'
 import Popover, { MenuItem } from '../ui/Popover'
 import { Stat, Empty } from '../ui/display'
-import { IChevronLeft, IPlus, ITrash, IMore, IUsers, IRefresh } from '../ui/icons'
+import { IChevronLeft, IPlus, ITrash, IMore, IRefresh } from '../ui/icons'
 
 /**
  * One person in Debts on a computer: who they are and where you stand at the
@@ -91,11 +91,11 @@ export default function WebDebtPerson() {
   const closeDel = useCallback(() => { if (!busy) setConfirmId(null) }, [busy])
 
   const eyebrow = <Link to="/debts" className="inline-flex items-center gap-1 hover:text-[var(--d-text)]"><IChevronLeft size={13} />Debts</Link>
-  if (allDebts === undefined) return <Page eyebrow={eyebrow}><DetailSkeleton /></Page>
+  if (allDebts === undefined) return <Page eyebrow={eyebrow}><DetailSkeleton kind="person" /></Page>
   if (!person) {
     return (
       <Page eyebrow={eyebrow} title="Nobody here">
-        <Panel><Empty icon={<IUsers size={20} />} title="Every entry for this person has been deleted" action={<Btn onClick={() => navigate('/debts')}>Back to debts</Btn>} /></Panel>
+        <Panel><Empty art="people" title="Every entry for this person has been deleted" action={<Btn onClick={() => navigate('/debts')}>Back to debts</Btn>} /></Panel>
       </Page>
     )
   }

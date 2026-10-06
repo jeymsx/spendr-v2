@@ -30,9 +30,7 @@ import Drawer from '../ui/Drawer'
 import Dialog from '../ui/Dialog'
 import { Segmented, SearchInput } from '../ui/controls'
 import { Amount, AccountTile, CategoryTile, Empty, Stat } from '../ui/display'
-import {
-  ICalendar, IChevronDown, IDownload, IUpload, ITrash, IEdit, ITag, IX, IWallet, IList, ITransfer, ISearch, IUndo,
-} from '../ui/icons'
+import { ICalendar, IChevronDown, IDownload, IUpload, ITrash, IEdit, ITag, IX, IWallet, ITransfer, IUndo } from '../ui/icons'
 
 /**
  * Transactions on a computer: the ledger as a table.
@@ -342,9 +340,9 @@ export default function WebTransactions() {
             activeKey={openId}
             resetKey={filterKey}
             empty={loading ? <RowsSkeleton /> : narrowed ? (
-              <Empty icon={<ISearch size={18} />} title="Nothing matches" body="Try another search, or clear the filters." action={<Btn size="sm" onClick={() => { setSearch(''); setFilters(NO_FILTERS) }}>Clear filters</Btn>} />
+              <Empty art="notFound" title="Nothing matches" body="Try another search, or clear the filters." action={<Btn size="sm" onClick={() => { setSearch(''); setFilters(NO_FILTERS) }}>Clear filters</Btn>} />
             ) : (
-              <Empty icon={<IList size={18} />} title="No transactions yet" body="Add one from the Add button, or import a CSV." />
+              <Empty art="ledger" title="No transactions yet" body="Add one from the Add button, or import a CSV." />
             )}
             footer={!loading && shown.length > 0 ? (
               <tr>
@@ -681,7 +679,7 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
               <div className="text-12 d-cell-faint truncate">{words.where}{words.kind ? ` · ${words.kind}` : ''}</div>
             </div>
           </div>
-          <Amount value={m.value} currency={m.currency} kind={m.kind} className="block text-[28px] leading-9 font-semibold tracking-tight" />
+          <Amount value={m.value} currency={m.currency} kind={m.kind} className="block text-[28px] leading-9 font-semibold tracking-tight d-figure" />
           {foreign && <div className="mt-1 text-12 d-cell-faint d-num">≈ {fmt(Math.abs(txBase(row)))} in your currency</div>}
           <div className="d-divider my-5" />
           <dl className="d-dl">

@@ -17,7 +17,7 @@ import Btn from '../ui/Button'
 import Dialog from '../ui/Dialog'
 import Popover, { MenuItem, MenuSep } from '../ui/Popover'
 import { Stat, AccountTile, Progress, Empty, Money } from '../ui/display'
-import { IChevronLeft, IEdit, IMore, ITrash, ITarget, IRefresh } from '../ui/icons'
+import { IChevronLeft, IEdit, IMore, ITrash, IRefresh } from '../ui/icons'
 
 /**
  * One goal on a computer: its name and where it stands at the top, its
@@ -94,11 +94,11 @@ export default function WebGoal() {
 
   const eyebrow = <Link to="/goals" className="inline-flex items-center gap-1 hover:text-[var(--d-text)]"><IChevronLeft size={13} />Goals</Link>
 
-  if (loading) return <Page eyebrow={eyebrow}><DetailSkeleton /></Page>
+  if (loading) return <Page eyebrow={eyebrow}><DetailSkeleton kind="goal" /></Page>
   if (!goal) {
     return (
       <Page eyebrow={eyebrow} title="Goal not found">
-        <Panel><Empty icon={<ITarget size={20} />} title="This goal isn’t here" body="It may have been deleted." action={<Btn onClick={() => navigate('/goals')}>Back to goals</Btn>} /></Panel>
+        <Panel><Empty art="notFound" title="This goal isn’t here" body="It may have been deleted." action={<Btn onClick={() => navigate('/goals')}>Back to goals</Btn>} /></Panel>
       </Page>
     )
   }
@@ -155,9 +155,9 @@ export default function WebGoal() {
           <div className="flex flex-col items-center text-center pb-2">
             <GoalRing pct={goal.pct} complete={goal.complete} muted={goal.archived} size={200} stroke={13}>
               <span className="text-[52px] leading-none" aria-hidden="true">{goal.icon || '🎯'}</span>
-              <span className={`mt-2.5 text-15 font-bold d-num ${goal.complete ? 'd-pos' : 'text-[var(--d-text-3)]'}`}>{Math.round(goal.pct)}%</span>
+              <span className={`mt-2.5 text-15 font-semibold d-num ${goal.complete ? 'd-pos' : 'text-[var(--d-text-3)]'}`}>{Math.round(goal.pct)}%</span>
             </GoalRing>
-            <p className="mt-5 text-28 font-semibold tracking-tight d-num text-[var(--d-text)]">{fmt(goal.saved)}</p>
+            <p className="mt-5 text-28 font-semibold tracking-tight d-figure text-[var(--d-text)]">{fmt(goal.saved)}</p>
             <p className="mt-1 text-14 text-[var(--d-text-2)] d-num">of {fmt(goal.target)}</p>
             <p className={`mt-3 text-14 font-medium ${overdue ? 'd-neg' : goal.complete ? 'd-pos' : goal.linkedCount === 0 ? 'd-warn' : 'text-[var(--d-text-2)]'}`}>{line}</p>
           </div>

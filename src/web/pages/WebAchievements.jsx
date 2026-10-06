@@ -10,7 +10,8 @@ import Page from '../ui/Page'
 import { Tabs } from '../ui/controls'
 import { useTheme } from '../../context/ThemeContext'
 import { GlassArt } from '../../components/glass/GlassArt'
-import { Progress, Skeleton } from '../ui/display'
+import { Progress } from '../ui/display'
+import { AchCardSkeleton, ChallengeCardsSkeleton } from '../ui/Skeletons'
 
 const Celebration = lazy(() => import('../../components/achievements/Celebration'))
 
@@ -87,7 +88,7 @@ export default function WebAchievements() {
       actions={<InfoButton title="How achievements work" onOpen={() => setGuide(true)} />}
     >
       {state.loading ? (
-        <div className="grid grid-cols-4 gap-5 mb-8">{Array.from({ length: 4 }, (_, i) => <Skeleton key={i} className="h-[136px] rounded-[24px]" />)}</div>
+        <div className="d-stats grid grid-cols-4 gap-5 mb-8">{Array.from({ length: 4 }, (_, i) => <AchCardSkeleton key={i} />)}</div>
       ) : (
         <div className="d-stats grid grid-cols-4 gap-5 mb-8 items-stretch">
           <AchCard label="Earned so far" art="trophy" hue={accentColor} value={`${state.earnedCount} of ${state.total}`}
@@ -115,12 +116,7 @@ export default function WebAchievements() {
       />
 
       {/* The collection's cards while they are worked out, as many to a row as there will be. */}
-      {state.loading && (
-        <div aria-hidden="true">
-          <Skeleton className="h-3.5 w-24 mb-3" />
-          <div className="grid grid-cols-3 gap-5">{Array.from({ length: 6 }, (_, i) => <Skeleton key={i} className="h-[138px] rounded-[18px]" />)}</div>
-        </div>
-      )}
+      {state.loading && <ChallengeCardsSkeleton />}
       {!state.loading && (
         <div className={`-mx-5 web-ach-${section}`}>
           {section === 'challenges' && <Challenges state={state} categories={state.ctx?.categories ?? []} onViewWon={openWon} />}

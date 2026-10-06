@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react'
-import { BoardSkeleton, ChartPanelSkeleton, PanelSkeleton, StatsSkeleton } from '../ui/Skeletons'
+import { ChartPanelSkeleton, InsightsSkeleton, PanelSkeleton, StatsSkeleton } from '../ui/Skeletons'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -31,7 +31,7 @@ import { Segmented, Tabs } from '../ui/controls'
 import { Stat, CategoryTile, AccountTile, Progress, Empty, Money } from '../ui/display'
 import { AreaTrend, Bars, InOutBars, Ring } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxAccount } from './txParts'
-import { IChevronLeft, IChevronRight, ISliders, IPie, ICalendar } from '../ui/icons'
+import { IChevronLeft, IChevronRight, ISliders } from '../ui/icons'
 
 /**
  * Insights on a computer: the phone's Insights, read across a wide screen.
@@ -97,7 +97,7 @@ export default function WebInsights() {
         onChange={(v) => navigate(v === 'overview' ? '/insights' : `/insights/${v}`)}
       />
       {/* Nothing here says "nothing spent" before the month has been read. */}
-      {periodBound && data.loading ? <BoardSkeleton split="7/5" /> : (
+      {periodBound && data.loading ? <InsightsSkeleton /> : (
         <>
           {view === 'overview' && <Overview data={data} period={period} />}
           {view === 'spending' && <Spending data={data} period={period} />}
@@ -235,12 +235,12 @@ function CategoryBreakdown({ data, limit = 8 }) {
         center={
           <>
             <span className="text-12 font-medium text-[var(--d-text-3)] truncate" style={{ maxWidth: room }}>{activeSeg ? activeSeg.name : 'Spent'}</span>
-            <span className="font-bold tracking-tight d-num text-[var(--d-text)] whitespace-nowrap" style={{ fontSize: fs, lineHeight: 1.25 }}>{figure}</span>
+            <span className="font-semibold tracking-tight d-figure text-[var(--d-text)] whitespace-nowrap" style={{ fontSize: fs, lineHeight: 1.25 }}>{figure}</span>
           </>
         }
       />
       <div className="flex-1 min-w-[240px] flex flex-col gap-1">
-        {shown.length === 0 && <Empty icon={<IPie size={20} />} title="Nothing spent" body="Spending shows here by category." />}
+        {shown.length === 0 && <Empty art="receipt" size="sm" title="Nothing spent" body="Spending shows here by category." />}
         {shown.map(s => (
           <button
             key={s.name}
@@ -306,7 +306,7 @@ function Overview({ data, period }) {
             rows={data.rankedExpenses.slice(0, 8)}
             rowKey={(t) => t.id}
             onRowClick={(t) => setSelected(t)}
-            empty={<Empty title="No expenses" body={`Nothing spent ${periodPhrase(period)}.`} />}
+            empty={<Empty art="receipt" size="sm" title="No expenses" body={`Nothing spent ${periodPhrase(period)}.`} />}
             columns={[
               { key: 'date', header: 'Date', width: 90, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
               { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={data.catMap} /> },
@@ -329,7 +329,7 @@ function Overview({ data, period }) {
 function AccountBreakdown({ data }) {
   const rows = data.accountBreakdown
   const max = Math.max(1, ...rows.map(r => r.value))
-  if (!rows.length) return <div className="text-14 text-[var(--d-text-2)]">Nothing spent from any account.</div>
+  if (!rows.length) return <Empty art="wallet" size="sm" title="Nothing spent from any account" />
   return (
     <div className="d-fill-rows">
       {rows.slice(0, 7).map(r => (
@@ -366,7 +366,7 @@ function Spending({ data, period }) {
             rows={data.categorySegments}
             rowKey={(c) => c.name}
             onRowClick={(c) => navigate(`/categories/${encodeURIComponent(c.name)}`)}
-            empty={<Empty icon={<IPie size={20} />} title="Nothing spent" body={`Nothing spent ${periodPhrase(period)}.`} />}
+            empty={<Empty art="receipt" size="sm" title="Nothing spent" body={`Nothing spent ${periodPhrase(period)}.`} />}
             columns={[
               { key: 'name', header: 'Category', render: (c) => <span className="flex items-center gap-3 min-w-0"><CategoryTile cat={data.catMap[c.name] ?? c} size="sm" /><span className="truncate font-medium">{c.name}</span></span> },
               {
@@ -393,7 +393,7 @@ function Spending({ data, period }) {
           rows={data.rankedExpenses}
           rowKey={(t) => t.id}
           onRowClick={(t) => setSelected(t)}
-          empty={<Empty title="No expenses" body={`Nothing spent ${periodPhrase(period)}.`} />}
+          empty={<Empty art="receipt" size="sm" title="No expenses" body={`Nothing spent ${periodPhrase(period)}.`} />}
           columns={[
             { key: 'date', header: 'Date', width: 100, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
             { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={data.catMap} /> },
@@ -482,7 +482,7 @@ function NetWorth() {
           label="Net worth by month"
           rows={ends}
           rowKey={(m) => m.key}
-          empty={<Empty title="Not enough history yet" />}
+          empty={<Empty art="chartFlat" size="sm" title="Not enough history yet" />}
           columns={[
             { key: 'm', header: 'Month', render: (m) => <span className="font-medium">{monthName(m.key)}</span> },
             { key: 'v', header: 'Net worth', width: 180, align: 'right', render: (m) => <Money value={m.value} className="font-medium" /> },
@@ -554,7 +554,7 @@ function Forecast() {
           label="Coming up"
           rows={forecast.events}
           rowKey={(e) => e.key}
-          empty={<Empty icon={<ICalendar size={20} />} title="Nothing due" body="Bills, pay and card statements show here." />}
+          empty={<Empty art="calendar" size="sm" title="Nothing due" body="Bills, pay and card statements show here." />}
           columns={[
             { key: 'd', header: 'Date', width: 110, render: (e) => <span className="d-num d-cell-muted">{short(e.date)}</span> },
             {
