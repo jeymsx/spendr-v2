@@ -26,6 +26,7 @@ import DataTable from '../ui/DataTable'
 import { Segmented } from '../ui/controls'
 import { Stat, Money, AccountTile, CategoryTile, Progress, Empty, Skeleton } from '../ui/display'
 import { CardSkeleton, RowsSkeleton, StatCardSkeleton } from '../ui/Skeletons'
+import { useFitText } from '../ui/fitText'
 import { AreaTrend } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxCategoryText } from './txParts'
 import { IChevronRight } from '../ui/icons'
@@ -357,10 +358,12 @@ const NET_EMPTY = { title: 'No history yet', body: 'It draws as you log transact
 
 /** One of the piles along the foot of the net worth card. @param {{label: string, value: number, owed?: boolean, loading?: boolean}} props */
 function Pile({ label, value, owed = false, loading = false }) {
+  // Four to a row: a six-figure debt steps its type down rather than losing its end (ui/fitText).
+  const fitRef = useFitText(11)
   return (
     <div className="min-w-0">
       <div className="text-12 font-medium text-white/65 truncate">{label}</div>
-      <div className="mt-1 text-14 font-semibold d-num truncate text-white">{loading ? '—' : `${owed && value ? '−' : ''}${fmt(Math.abs(value || 0))}`}</div>
+      <div ref={/** @type {any} */ (fitRef)} className="mt-1 text-14 font-semibold d-num truncate text-white">{loading ? '—' : `${owed && value ? '−' : ''}${fmt(Math.abs(value || 0))}`}</div>
     </div>
   )
 }
