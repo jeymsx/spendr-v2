@@ -259,6 +259,41 @@ html.web .d-search-trigger:focus-visible { outline: none; box-shadow: var(--d-ri
    need one, so a long page (What's new, the terms) is no narrower than a
    short one and nothing shifts sideways going between them. */
 html.web .d-page { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar-gutter: stable; }
+/* Where a page scrolls up under the top bar it softens and fades into the
+   ground rather than stopping at a hard line - the bar has no panel of its
+   own to hide the cut. Two strips over the top of the page: one blurs what
+   is under it, less and less further down; over it, the window's own ground
+   (--d-ground, pinned to the viewport as the dark glow is, so the two meet
+   without a seam) fades out sooner. 24px: inside a page's 32px top padding,
+   so nothing at rest is touched, and clear of a pane stuck at 24px. The
+   scrollbar is left out of both. Not a mask on the page itself: that would
+   clip a phone sheet opened inside it to the page's box. */
+html.web { --d-ground: #f6f8fb; }
+html.web.dark { --d-ground: var(--glow, linear-gradient(transparent, transparent)), #0b0f14; }
+html.web.flat.dark { --d-ground: #0b0f14; }
+html.web .web-main::before,
+html.web .web-main::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 12px;
+  height: 24px;
+  z-index: 5;
+  pointer-events: none;
+}
+html.web .web-main::before {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(to bottom, #000, transparent);
+  mask-image: linear-gradient(to bottom, #000, transparent);
+}
+html.web .web-main::after {
+  background: var(--d-ground);
+  background-attachment: fixed;
+  -webkit-mask-image: linear-gradient(to bottom, #000 15%, transparent 75%);
+  mask-image: linear-gradient(to bottom, #000 15%, transparent 75%);
+}
 /* Centred in the main area, the same width on every page. */
 html.web .d-page-inner { margin: 0 auto; padding: 32px var(--d-gutter) 56px; }
 html.web .d-page-head {
