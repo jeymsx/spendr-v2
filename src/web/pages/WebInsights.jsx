@@ -225,6 +225,14 @@ function CategoryBreakdown({ data, limit = 8 }) {
   const figure = full.length > 11 ? fmtCompact(value) : full
   const room = size * 0.7 * 0.8
   const fs = Math.max(13, Math.min(22, Math.floor(room / (figure.length * 0.6))))
+  // Nothing spent: the empty state alone, not an empty ring of ₱0.00 beside it saying so.
+  if (!segs.length) {
+    return (
+      <div className="h-full flex items-center justify-center" style={{ minHeight: size }}>
+        <Empty art="receipt" size="sm" title="Nothing spent" body="Spending shows here by category." />
+      </div>
+    )
+  }
   return (
     <div className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5">
       <Ring
@@ -240,7 +248,6 @@ function CategoryBreakdown({ data, limit = 8 }) {
         }
       />
       <div className="flex-1 min-w-[240px] flex flex-col gap-1">
-        {shown.length === 0 && <Empty art="receipt" size="sm" title="Nothing spent" body="Spending shows here by category." />}
         {shown.map(s => (
           <button
             key={s.name}
