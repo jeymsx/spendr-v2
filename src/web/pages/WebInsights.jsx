@@ -265,9 +265,9 @@ function CategoryBreakdown({ data, limit = 8 }) {
 /** The period's movement: day by day for a week or a month, month by month for longer. @param {{data: Data, period: any, height?: number}} props */
 function MovementChart({ data, period, height = /** @type {number|string} */ (240) }) {
   if (period.range === '1m' || period.range === '7d') {
-    return <Bars data={data.daily.map(d => ({ label: String(d.day), value: d.expense }))} height={height} valueLabel="Spent" />
+    return <Bars data={data.daily.map(d => ({ label: String(d.day), value: d.expense }))} height={height} valueLabel="Spent" empty={{ title: `Nothing spent ${periodPhrase(period)}` }} />
   }
-  return <InOutBars data={data.multiBarData.map(d => ({ label: d.label, income: d.income, expense: d.expense }))} height={height} />
+  return <InOutBars data={data.multiBarData.map(d => ({ label: d.label, income: d.income, expense: d.expense }))} height={height} empty={{ title: `Nothing in or out ${periodPhrase(period)}` }} />
 }
 
 /** @param {{data: Data, period: any}} props */
@@ -430,13 +430,14 @@ function Trend({ data, period }) {
           </div>
           <Panel title="Day by day" actions={<Segmented label="Show" value={series} onChange={setSeries} options={[{ value: 'expenses', label: 'Spent' }, { value: 'income', label: 'Came in' }, { value: 'netflow', label: 'Net' }]} />}>
             {series === 'netflow'
-              ? <AreaTrend data={points} height={300} valueLabel="Net" />
-              : <Bars data={points} height={300} color={series === 'income' ? 'var(--d-pos)' : 'var(--d-accent)'} valueLabel={series === 'income' ? 'Came in' : 'Spent'} />}
+              ? <AreaTrend data={points} height={300} valueLabel="Net" empty={{ title: `Nothing in or out ${periodPhrase(period)}` }} />
+              : <Bars data={points} height={300} color={series === 'income' ? 'var(--d-pos)' : 'var(--d-accent)'} valueLabel={series === 'income' ? 'Came in' : 'Spent'}
+                empty={{ title: series === 'income' ? `Nothing came in ${periodPhrase(period)}` : `Nothing spent ${periodPhrase(period)}` }} />}
           </Panel>
         </>
       ) : (
         <>
-          <Panel className="mb-5" title="Month by month"><InOutBars data={data.multiBarData} height={300} /></Panel>
+          <Panel className="mb-5" title="Month by month"><InOutBars data={data.multiBarData} height={300} empty={{ title: `Nothing in or out ${periodPhrase(period)}` }} /></Panel>
           <Panel title="Each month" flush>
             <DataTable
               label="Each month"
@@ -475,7 +476,7 @@ function NetWorth() {
       </div>
       <Panel className="mb-5" title="Net worth over time"
         actions={<Segmented label="Range" value={range} onChange={(v) => setInsights({ net: v })} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}>
-        {chart.length > 1 ? <AreaTrend data={chart} height={300} valueLabel="Net worth" /> : <div className="h-[300px]" />}
+        <AreaTrend data={chart} height={300} valueLabel="Net worth" empty={{ title: 'No history yet', body: 'It draws as you log transactions.' }} />
       </Panel>
       <Panel title="Month by month" meta="At each month’s end, and how it moved" flush>
         <DataTable

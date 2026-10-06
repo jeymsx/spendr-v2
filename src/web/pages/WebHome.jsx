@@ -100,7 +100,7 @@ export default function WebHome() {
   const monthName = new Date().toLocaleDateString(undefined, { month: 'long' })
 
   const chart = series.data.map(d => ({ label: d.day, value: d.value }))
-  const rangeChange = chart.length > 1 ? chart[chart.length - 1].value - chart[0].value : null
+  const rangeChange = chart.length > 1 && chart.some(d => d.value) ? chart[chart.length - 1].value - chart[0].value : null
 
   const cards = groups.flatMap(g => g.rows.filter(r => r.depth === 0).map(r => r.acct))
   // One row of cards: as many as fit, the last place given to the way to the rest.
@@ -234,7 +234,7 @@ export default function WebHome() {
           meta={rangeChange == null ? null : `${rangeChange >= 0 ? '+' : '−'}${fmt(Math.abs(rangeChange))} ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`}
           actions={<Segmented label="Range" value={range} onChange={setRange} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}
         >
-          {chart.length > 1 ? <AreaTrend data={chart} height={260} valueLabel="Net worth" /> : series.loading ? <Skeleton className="h-[260px] rounded-[14px]" /> : <div className="h-[260px]" />}
+          {series.loading && chart.length < 2 ? <Skeleton className="h-[260px] rounded-[14px]" /> : <AreaTrend data={chart} height={260} valueLabel="Net worth" empty={NET_EMPTY} />}
         </Panel>
       <Panel
         className="col-span-4 d-side"
@@ -343,6 +343,9 @@ export default function WebHome() {
     </Page>
   )
 }
+
+/** Net worth over time, before there is any. */
+const NET_EMPTY = { title: 'No history yet', body: 'It draws as you log transactions.' }
 
 /** One of the piles along the foot of the net worth card. @param {{label: string, value: number, owed?: boolean, loading?: boolean}} props */
 function Pile({ label, value, owed = false, loading = false }) {

@@ -6,6 +6,7 @@ import {
 import { fmt, fmtCompact } from '../../lib/money'
 import { niceAxis, flatAxis } from '../../pages/insights/Charts'
 import { prefersReducedMotion } from '../../components/ui/motion'
+import { Empty } from './display'
 
 /**
  * The desktop's charts: the phone's chart kinds (Recharts), drawn at a
@@ -18,6 +19,23 @@ const GRID = 'var(--d-border)'
 
 /** @param {number} v */
 const tick = (v) => (Math.abs(v) >= 1000 ? fmtCompact(v).replace(/\.0(?=[KMB])/, '') : fmt(v).replace(/\.00$/, ''))
+
+/**
+ * What a chart says when there is nothing to draw - no points, or every
+ * point at nought - instead of a scale running from ₱0 to ₱1.50 over an
+ * empty floor: the glass picture and a line, in the chart's own height, so
+ * nothing below moves when the first figure arrives.
+ *
+ * @typedef {{title: string, body?: string}} ChartEmptyText
+ * @param {{empty?: ChartEmptyText, height: number|string}} props
+ */
+export function ChartEmpty({ empty, height }) {
+  return (
+    <div className={`flex items-center justify-center ${typeof height === 'string' ? 'h-full min-h-[200px]' : ''}`} style={typeof height === 'number' ? { height } : undefined}>
+      <Empty art="chartFlat" size="sm" title={empty?.title ?? 'Nothing to show yet'} body={empty?.body} />
+    </div>
+  )
+}
 
 /** @param {{rows: Array<{label: string, value: string, color?: string}>, title?: string}} props */
 function Tip({ title, rows }) {
@@ -41,10 +59,13 @@ function Tip({ title, rows }) {
  * A line with a soft fill under it, on an axis that spans what the line did
  * (not from zero): a balance or a net worth over time.
  *
- * @param {{data: Array<{label: string, value: number}>, color?: string, height?: number, currency?: string, valueLabel?: string}} props
+ * @param {{data: Array<{label: string, value: number}>, color?: string, height?: number, currency?: string, valueLabel?: string,
+ *          empty?: ChartEmptyText}} props
  */
-export function AreaTrend({ data, color = 'var(--d-accent)', height = 220, currency, valueLabel = 'Value' }) {
+export function AreaTrend({ data, color = 'var(--d-accent)', height = 220, currency, valueLabel = 'Value', empty }) {
   const id = useId().replace(/:/g, '')
+  // A line of noughts says nothing; a line that holds at a figure still does.
+  if (data.length < 2 || data.every(d => !d.value)) return <ChartEmpty empty={empty} height={height} />
   const values = data.map(d => d.value)
   const lo = Math.min(...values)
   const hi = Math.max(...values)
@@ -90,9 +111,11 @@ export function AreaTrend({ data, color = 'var(--d-accent)', height = 220, curre
 /**
  * Money in and out side by side, one pair of bars per period.
  *
- * @param {{data: Array<{label: string, income: number, expense: number}>, height?: number|string, currency?: string}} props
+ * @param {{data: Array<{label: string, income: number, expense: number}>, height?: number|string, currency?: string,
+ *          empty?: ChartEmptyText}} props
  */
-export function InOutBars({ data, height = 220, currency }) {
+export function InOutBars({ data, height = 220, currency, empty }) {
+  if (data.every(d => !d.income && !d.expense)) return <ChartEmpty empty={empty} height={height} />
   const max = Math.max(1, ...data.flatMap(d => [d.income, d.expense]))
   const { ceil, ticks } = niceAxis(0, max)
   return (
@@ -122,9 +145,11 @@ export function InOutBars({ data, height = 220, currency }) {
 /**
  * One series of bars - a day's spending across a month.
  *
- * @param {{data: Array<{label: string, value: number}>, height?: number|string, currency?: string, color?: string, valueLabel?: string}} props
+ * @param {{data: Array<{label: string, value: number}>, height?: number|string, currency?: string, color?: string, valueLabel?: string,
+ *          empty?: ChartEmptyText}} props
  */
-export function Bars({ data, height = 200, currency, color = 'var(--d-accent)', valueLabel = 'Spent' }) {
+export function Bars({ data, height = 200, currency, color = 'var(--d-accent)', valueLabel = 'Spent', empty }) {
+  if (data.every(d => !d.value)) return <ChartEmpty empty={empty} height={height} />
   const max = Math.max(1, ...data.map(d => d.value))
   const { ceil, ticks } = niceAxis(0, max)
   const last = data.length - 1

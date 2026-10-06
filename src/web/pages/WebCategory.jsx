@@ -119,7 +119,7 @@ export default function WebCategory() {
         title={`${verb} by month`}
         actions={<Segmented label="Span" value={span} onChange={setSpan} options={[{ value: '6', label: '6 months' }, { value: '12', label: '12 months' }]} />}
       >
-        {loading ? <Skeleton className="h-[220px] rounded-[14px]" /> : <Bars data={months} height={220} color={cat?.color ?? 'var(--d-accent)'} valueLabel={verb} />}
+        {loading ? <Skeleton className="h-[220px] rounded-[14px]" /> : <Bars data={months} height={220} color={cat?.color ?? 'var(--d-accent)'} valueLabel={verb} empty={{ title: isInflow ? 'Nothing received yet' : 'Nothing spent yet' }} />}
       </Panel>
 
       <Panel title="Transactions" meta={loading ? null : `${rows.length.toLocaleString()} rows`} flush>

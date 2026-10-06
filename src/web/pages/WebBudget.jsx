@@ -227,11 +227,11 @@ export default function WebBudget() {
 
         <div className="col-span-4 d-stack-side flex flex-col gap-5 min-w-0">
           <Panel title="Last 6 months" meta="Spent in limited categories">
-            <Bars data={history} height={190} valueLabel="Spent" />
+            <Bars data={history} height={190} valueLabel="Spent" empty={{ title: 'Nothing spent yet' }} />
           </Panel>
           <Panel title="Without a limit" meta={unbudgeted.length ? fmt(totals.other) : null} flush>
             {unbudgeted.length === 0 ? (
-              <div className="px-6 pb-6 text-14 text-[var(--d-text-2)]">Everything spent this month had a limit.</div>
+              <Empty art="allClear" size="sm" title="Everything had a limit" body="Nothing was spent outside one this month." />
             ) : (
               <div className="pb-2">
                 {unbudgeted.slice(0, 8).map(c => (

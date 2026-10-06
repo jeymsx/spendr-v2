@@ -328,10 +328,11 @@ export default function WebAccountDetail() {
         <Panel
           className={children.length || statements.length ? 'col-span-2' : 'col-span-3'}
           title={isOwed ? 'Owed over time' : isInvestment ? 'Value over time' : 'Balance over time'}
-          meta={chart.length > 1 ? `${change >= 0 ? '+' : '−'}${fmt(Math.abs(change), cur)} over ${range.label.toLowerCase() === 'all' ? 'all time' : range.label}` : null}
+          meta={chart.length > 1 && chart.some(d => d.value) ? `${change >= 0 ? '+' : '−'}${fmt(Math.abs(change), cur)} over ${range.label.toLowerCase() === 'all' ? 'all time' : range.label}` : null}
           actions={<Segmented label="Range" value={trendRange} onChange={setTrendRange} options={RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.label }))} />}
         >
-          {chart.length > 1 ? <AreaTrend data={chart} height={220} currency={cur} color={isOwed ? 'var(--d-neg)' : brand.from} valueLabel={isOwed ? 'Owed' : 'Balance'} /> : <div className="h-[220px]" />}
+          <AreaTrend data={chart} height={220} currency={cur} color={isOwed ? 'var(--d-neg)' : brand.from} valueLabel={isOwed ? 'Owed' : 'Balance'}
+            empty={{ title: 'No history yet', body: 'It draws as this account moves.' }} />
         </Panel>
 
         {(children.length > 0 || statements.length > 0) && (
