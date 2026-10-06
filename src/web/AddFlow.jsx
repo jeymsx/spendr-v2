@@ -1,22 +1,14 @@
-import { createContext, useContext, useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
+import { useState, useEffect, useRef, lazy, Suspense, useCallback } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { handleEditTransaction } from '../lib/editTransaction'
 import Drawer from './ui/Drawer'
+import { AddFlowContext } from './addFlowContext'
 
 const AddExpense = lazy(() => import('../pages/AddExpense'))
 const AddInflow  = lazy(() => import('../pages/AddInflow'))
 const Transfer   = lazy(() => import('../pages/Transfer'))
 const EditTransaction = lazy(() => import('../pages/EditTransaction'))
 const QuickLogOverlay = lazy(() => import('../components/QuickLogOverlay'))
-
-const AddFlowContext = createContext(null)
-
-/** openAdd('expense' | 'inflow' | 'transfer') opens that form over the page. */
-export function useAddFlow() {
-  const ctx = useContext(AddFlowContext)
-  if (!ctx) throw new Error('useAddFlow must be used inside AddFlowProvider')
-  return ctx
-}
 
 /**
  * Adding a transaction is an overlay on desktop, not a page.

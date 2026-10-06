@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import db from '../db/db'
@@ -10,7 +10,8 @@ import { searchEverything, txMatches } from '../lib/search'
 import { txRowWords } from '../lib/txRow'
 import { amountDisplay } from '../lib/txMoney'
 import { fmt } from '../lib/money'
-import { useAddFlow } from './AddFlow'
+import { useAddFlow } from './addFlowContext'
+import { PaletteContext } from './paletteContext'
 import { setViewMode } from './useViewMode'
 import { AccountTile, CategoryTile } from './ui/display'
 import {
@@ -30,8 +31,6 @@ import {
  * amount - and the way to all of them in Transactions.
  */
 
-const Ctx = createContext({ openPalette: (/** @type {string} */ _q = '') => {} })
-export const usePalette = () => useContext(Ctx)
 
 /** @param {{children: import('react').ReactNode}} props */
 export function CommandProvider({ children }) {
@@ -64,10 +63,10 @@ export function CommandProvider({ children }) {
   }, [])
 
   return (
-    <Ctx.Provider value={{ openPalette }}>
+    <PaletteContext.Provider value={{ openPalette }}>
       {children}
       {open && <CommandPalette initial={initial} onClose={() => setOpen(false)} />}
-    </Ctx.Provider>
+    </PaletteContext.Provider>
   )
 }
 
