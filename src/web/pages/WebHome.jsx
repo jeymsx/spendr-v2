@@ -1,4 +1,4 @@
-import { useLayoutEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -47,8 +47,12 @@ import { foldPlans, spendingRows } from '../../utils/installments'
  */
 const WALLET_CORNERS = { top: 24, bottom: 24 }
 
+const StandingNote = lazy(() => import('../../components/standing/StandingNote'))
+
 export default function WebHome() {
   const navigate = useNavigate()
+  // Where you stand, in a few sentences: found by clicking the greeting (components/standing).
+  const [noteOpen, setNoteOpen] = useState(false)
   const nameMeta = useLiveQuery(() => db.meta.get('displayName'), [], null)
   const name = nameMeta?.value?.trim() || ''
   const { loading, breakdown, groups, txAll, base, credit } = useAccountsView()
@@ -118,7 +122,12 @@ export default function WebHome() {
   return (
     <Page
       eyebrow={today}
-      title={<><span className="d-light">{getGreeting()}{name ? ',' : ''}</span>{name ? ` ${name}!` : ''}</>}
+      title={(
+        /* Nothing says it is a button, on purpose: it is a thing to find. */
+        <button type="button" onClick={() => setNoteOpen(true)} className="text-left cursor-default select-none" style={{ cursor: 'default' }}>
+          <span className="d-light">{getGreeting()}{name ? ',' : ''}</span>{name ? ` ${name}!` : ''}
+        </button>
+      )}
     >
       <div className="grid grid-cols-12 gap-5 mb-8">
         {/* The phone's wallet: its silhouette (the tab hanging off the foot,
@@ -350,6 +359,11 @@ export default function WebHome() {
         </div>
       </div>
       <p className="mt-6 text-12 text-[var(--d-text-3)]">Figures in {base}. Net worth counts every account at today’s rate.</p>
+      {noteOpen && (
+        <Suspense fallback={null}>
+          <StandingNote onClose={() => setNoteOpen(false)} />
+        </Suspense>
+      )}
     </Page>
   )
 }

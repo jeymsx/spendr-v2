@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect } from 'react'
+import { lazy, Suspense, useMemo, useState, useCallback, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { AnimatePresence } from 'motion/react'
 import { PresenceItem, useRowMotion } from '../components/ui/Presence'
@@ -50,6 +50,8 @@ import LazyWrappedCard, { preloadWrappedCard } from './recap/LazyWrappedCard'
 import { isEverydayAccount } from '../lib/accountMeta'
 import { foldPlans, spendingRows } from '../utils/installments'
 
+const StandingNote = lazy(() => import('../components/standing/StandingNote'))
+
 // ── Main component ─────────────────────────────────────────────────────────────
 
 /**
@@ -82,6 +84,8 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   const [walletRef, walletClip] = useWalletClip()
   const [quickTemplate,    setQuickTemplate]    = useState(null)
   const [quickConfirmOpen, setQuickConfirmOpen] = useState(false)
+  // Where you stand, in a few sentences: found by tapping the greeting (components/standing).
+  const [noteOpen, setNoteOpen] = useState(false)
 
   // ── Live queries ─────────────────────────────────────────────────────────────
   const accounts   = useLiveQuery(() => db.accounts.toArray())
@@ -418,10 +422,13 @@ export default function Dashboard({ layout = 'phone' } = {}) {
       <header className="flex items-start justify-between px-5 pt-safe-header pb-2">
         <div>
           <h1 className="text-xl tracking-tight text-slate-500 dark:text-slate-400">
-            {getGreeting()},{' '}
-            <span className={`font-semibold text-slate-900 dark:text-white transition-opacity duration-150 ${userMetaLoaded ? 'opacity-100' : 'opacity-0'}`}>
-              {userName}
-            </span>!
+            {/* Nothing says it is a button, on purpose: it is a thing to find. */}
+            <button type="button" onClick={() => setNoteOpen(true)} className="text-left cursor-default select-none" style={{ cursor: 'default' }}>
+              {getGreeting()},{' '}
+              <span className={`font-semibold text-slate-900 dark:text-white transition-opacity duration-150 ${userMetaLoaded ? 'opacity-100' : 'opacity-0'}`}>
+                {userName}
+              </span>!
+            </button>
           </h1>
           <ContextHint hint={getContextHint(txAll, budgetCategories, upcomingRecurring)} />
         </div>
@@ -816,6 +823,11 @@ export default function Dashboard({ layout = 'phone' } = {}) {
         onClose={() => setQuickConfirmOpen(false)}
         template={quickTemplate}
       />
+      {noteOpen && (
+        <Suspense fallback={null}>
+          <StandingNote onClose={() => setNoteOpen(false)} />
+        </Suspense>
+      )}
     </>
   )
 
