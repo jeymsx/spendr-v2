@@ -1,29 +1,19 @@
-import { useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useAuth } from '../../context/AuthContext'
-import { useToast } from '../../context/ToastContext'
 import { useSyncManager } from '../../components/SyncManager'
 import SubPage from '../../components/SubPage'
 import Button from '../../components/ui/Button'
 import EmptyState, { EmptyArt } from '../../components/ui/EmptyState'
-import { syncToSheets } from '../../lib/sheetsSync'
-import { SheetsConfigSheet } from './Profile'
-import {
-  IconSheets, IconSyncing, RowIcon, SectionCard, SectionHeader, SettingsRow, syncedLabel,
-} from './shared'
-
-/* The Sheets bridge is the owner's own Apps Script: nobody else has one to
-   point it at, so it is offered to that account only - as it always was,
-   when it sat in Settings' Sync section. */
-const SHEETS_OWNER = 'sablayjames@gmail.com'
+import { IconSyncing, syncedLabel } from './shared'
 
 /**
  * Cloud sync: whether this device is signed in, when it last synced, and the
- * one button that syncs now. It was a section on Settings holding three
- * unrelated rows - sync, push reminders and Google Sheets - and moved here
- * with the one that belongs to it; reminders went to the App group.
+ * one button that syncs now. It was a section on Settings holding unrelated
+ * rows, and moved here with the one that belongs to it; reminders went to
+ * the App group.
  *
  * Signed out, the page is the case for signing in, and the way to - the app
  * works fully offline either way, and says so. It is drawn as the app's
@@ -34,15 +24,10 @@ const SHEETS_OWNER = 'sablayjames@gmail.com'
 export default function SyncPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { showToast } = useToast()
   const { status, runSync } = useSyncManager()
   const meta = useLiveQuery(() => db.meta.toArray(), [], [])
   const read = (/** @type {string} */ key) => (meta ?? []).find(m => m.key === key)?.value ?? null
   const lastSync = read('lastSync')
-  const sheetsUrl = read('sheetsUrl')
-  const sheetsLast = read('sheetsLastSynced')
-  const [sheetsOpen, setSheetsOpen] = useState(false)
-  const [sheetsBusy, setSheetsBusy] = useState(false)
 
   const state = useMemo(() => {
     if (status === 'syncing') return { text: 'Syncing…', dot: 'bg-primary animate-pulse' }
@@ -50,20 +35,6 @@ export default function SyncPage() {
     if (lastSync) return { text: syncedLabel(lastSync), dot: 'bg-emerald-400' }
     return { text: 'Not synced yet', dot: 'bg-slate-300 dark:bg-slate-600' }
   }, [status, lastSync])
-
-  async function syncSheets(/** @type {string} */ url) {
-    if (sheetsBusy) return
-    setSheetsBusy(true)
-    try {
-      const { txCount, accountCount } = await syncToSheets(url)
-      await db.meta.put({ key: 'sheetsLastSynced', value: new Date().toISOString() })
-      showToast(`Synced ${txCount} transactions & ${accountCount} accounts to Google Sheets`, 'success')
-    } catch (e) {
-      showToast('Sync failed: ' + (/** @type {any} */ (e)?.message ?? e), 'error')
-    } finally {
-      setSheetsBusy(false)
-    }
-  }
 
   return (
     <SubPage title="Cloud sync">
@@ -92,26 +63,6 @@ export default function SyncPage() {
           action={<Button className="px-6" onClick={() => navigate('/login')}>Sign in with Google</Button>}
         />
       )}
-
-      {user?.email === SHEETS_OWNER && (
-        <div className="mb-8">
-          <SectionHeader>Integrations</SectionHeader>
-          <SectionCard>
-            <SettingsRow
-              iconEl={<RowIcon color="green"><span className={sheetsBusy ? 'animate-spin inline-flex' : 'inline-flex'}><IconSheets /></span></RowIcon>}
-              label="Google Sheets"
-              sublabel={sheetsBusy ? 'Syncing…' : sheetsLast ? syncedLabel(sheetsLast) : sheetsUrl ? 'Ready to sync' : 'Not set up'}
-              right={
-                <Button size="sm" variant="tint" className="px-4" onClick={() => (sheetsUrl ? syncSheets(sheetsUrl) : setSheetsOpen(true))} disabled={sheetsBusy}>
-                  {sheetsUrl ? 'Sync' : 'Set up'}
-                </Button>
-              }
-            />
-          </SectionCard>
-        </div>
-      )}
-
-      <SheetsConfigSheet open={sheetsOpen} onClose={() => setSheetsOpen(false)} onSync={syncSheets} syncing={sheetsBusy} />
     </SubPage>
   )
 }

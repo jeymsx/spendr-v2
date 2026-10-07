@@ -41,7 +41,7 @@
  */
 /** @type {PolicySection[]} */
 export const PRIVACY_SECTIONS = [
-  { h: null, b: 'Last updated: September 2026' },
+  { h: null, b: 'Last updated: October 2026' },
   { h: 'What is stored, and where', b: 'Everything you enter - transactions, accounts, budgets, goals, bills, templates, the people in your debts, and any account QR images - is stored on your device. It stays there unless you use one of the features listed below.' },
   { h: 'What we do not collect', b: 'No analytics, no usage tracking, no advertising identifiers. The app does not report what you do in it to anyone.' },
   { h: 'Services the app contacts', b: 'Some features need to reach another service. Each one receives your device’s IP address, the way any website does, and nothing more unless stated.' },
@@ -49,8 +49,7 @@ export const PRIVACY_SECTIONS = [
   { h: 'Exchange rates', b: 'Only if you hold an account in a currency other than your main one. The app asks fxratesapi.com, or open.er-api.com if that fails, for current rates. The request contains your main currency code (for example "PHP") and nothing else about you or your money. Rates are stored on your device.' },
   { h: 'Cloud sync', b: 'Only if you sign in with Google. Your data is then stored in a Supabase database so it can reach your other devices. Row-level security means no other user can read it, and the developer does not access it.' },
   { h: 'Reminders', b: 'Only if you turn them on, which needs cloud sync. Your device works out which card payments and bills are coming up, and stores a short reminder for each in the same database: when to send it, and its text, such as "BPI Credit due today, ₱3,000.00 to pay". If you turn on the daily check-in, it also stores one "Anything to log today?" note for each of the next two weeks, and the time you chose for it; logging something on a day withdraws that day’s note. It also stores your device’s push address. When a reminder is due, Spendr’s server sends it through your device’s push service (Apple, Google or Mozilla), encrypted so that service cannot read it. The server reads only these reminders, never your transactions or balances. Turning reminders off, or signing out, removes the device’s push address.' },
-  { h: 'Google Sheets export', b: 'Only if you connect it. When you run it, the app sends all of your transactions and account balances to the Google Apps Script address you entered. What happens to them there is governed by Google and by that script.' },
-  { h: 'Error reports', b: 'If the app crashes, a description of the error is kept on your device. It is only sent anywhere if you choose Send in Settings.' },
+  { h: 'Error reports', b: 'If the app crashes, a short description of the error is kept on your device. The app never sends it anywhere.' },
   { h: 'Deleting your data', b: 'Delete everything on this device at any time with Settings, Reset app. To have cloud-synced data removed, email jamesandgen111@gmail.com and it will be deleted.' },
   { h: 'Security', b: 'Data on your device is as secure as the device itself. Synced data is protected by Supabase and by your Google account.' },
   { h: 'Changes', b: 'This policy will be updated when what the app does changes. Continued use after an update means you accept it.' },

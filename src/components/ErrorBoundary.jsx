@@ -2,6 +2,7 @@ import { Component } from 'react'
 import Button from './ui/Button'
 import { crashReport, readCrashes, recordCrash } from '../lib/crashLog'
 import { shareOrCopy } from '../lib/share'
+import { deviceIsDeveloper } from '../lib/developer'
 import { version as APP_VERSION } from '../../package.json'
 
 /**
@@ -19,9 +20,11 @@ import { version as APP_VERSION } from '../../package.json'
  *
  * It used to log to the console and nowhere else, which on a phone means
  * nowhere at all: nobody reads the console of a home-screen app. Now each one
- * goes to the on-device log (lib/crashLog.js), and the screen offers to share
- * it - the only way a crash on somebody else's phone ever reaches the person
- * who can fix it. It stays on the device unless they tap.
+ * goes to the on-device log (lib/crashLog.js). The screen shows the error's
+ * own words and offers to share the log only on the developer's device
+ * (lib/developer.js): to anyone else a stack message and a "send error
+ * details" link are noise, and they have nobody to send it to. They get the
+ * two things that help - Try again and Reload app.
  */
 export default class ErrorBoundary extends Component {
   state = { error: null, shared: '' }
@@ -52,6 +55,7 @@ export default class ErrorBoundary extends Component {
   render() {
     const { error } = this.state
     if (!error) return this.props.children
+    const developer = deviceIsDeveloper()
 
     return (
       <div className="flex flex-col items-center justify-center px-8 text-center"
@@ -77,11 +81,13 @@ export default class ErrorBoundary extends Component {
           Your data is safe. It's stored on this device and nothing was lost.
         </p>
 
-        <p className="mt-3 max-w-[280px] px-3 py-2 rounded-xl text-11 font-mono break-words
-          bg-slate-50 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400"
-        >
-          {error?.message ?? String(error)}
-        </p>
+        {developer && (
+          <p className="mt-3 max-w-[280px] px-3 py-2 rounded-xl text-11 font-mono break-words
+            bg-slate-50 dark:bg-white/[0.04] text-slate-500 dark:text-slate-400"
+          >
+            {error?.message ?? String(error)}
+          </p>
+        )}
 
         <div className="flex items-center gap-2 mt-5">
           <Button
@@ -97,17 +103,17 @@ export default class ErrorBoundary extends Component {
           </Button>
         </div>
 
-        {/* Quiet, and under the two actions that actually fix things: this is
-            for somebody who is going to send it to whoever built the app, and
-            most people just want the Reload button. */}
-        <button
-          type="button"
-          onClick={this.share}
-          className="mt-4 text-xs font-medium text-slate-500 dark:text-slate-400 underline
-            underline-offset-2 active:opacity-60"
-        >
-          {this.state.shared || 'Send error details'}
-        </button>
+        {/* The developer's alone: to anyone else it is a link to nowhere. */}
+        {developer && (
+          <button
+            type="button"
+            onClick={this.share}
+            className="mt-4 text-xs font-medium text-slate-500 dark:text-slate-400 underline
+              underline-offset-2 active:opacity-60"
+          >
+            {this.state.shared || 'Send error details'}
+          </button>
+        )}
       </div>
     )
   }

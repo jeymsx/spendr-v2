@@ -1,8 +1,10 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { rememberDeveloper } from '../lib/developer'
 
 const AuthContext = createContext(null)
 
+/** @param {{children: import('react').ReactNode}} props */
 export function AuthProvider({ children }) {
   // undefined = still loading, null = not signed in, object = signed in
   const [session, setSession] = useState(undefined)
@@ -20,6 +22,9 @@ export function AuthProvider({ children }) {
 
     return () => subscription.unsubscribe()
   }, [])
+
+  // A device signed in as the developer is the developer's from then on (lib/developer.js).
+  useEffect(() => { rememberDeveloper(session?.user?.email) }, [session])
 
   function signInWithGoogle() {
     return supabase.auth.signInWithOAuth({

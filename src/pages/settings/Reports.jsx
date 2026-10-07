@@ -11,7 +11,7 @@ import Sheet from '../../components/ui/Sheet'
    the native picker, which is the wheel an iPhone does best. */
 import Popover, { MenuItem } from '../../web/ui/Popover'
 import {
-  IconDownload, IconReport, RowChevron, RowIcon, SectionCard, SectionHeader, SettingsRow, buildAndDownloadCSV,
+  IconDownload, IconReport, RowChevron, RowDivider, RowIcon, SectionCard, SectionHeader, SettingsRow, buildAndDownloadCSV,
 } from './shared'
 
 /** The twelve months ending with this one, newest first. */
@@ -24,9 +24,14 @@ function lastTwelveMonths() {
 }
 
 /**
- * Reports & exports: the monthly PDF, and every transaction as a CSV.
+ * Reports & exports: the monthly PDF, everything as a spreadsheet, and every
+ * transaction as a CSV.
  *
- * Both were on Settings' first screen - the report as the only row with a
+ * The spreadsheet is a file to open in Excel, or upload to Google Drive and
+ * open with Google Sheets (utils/workbook.js) - there is no connection to
+ * set up, and nothing leaves the device unless you carry the file away.
+ *
+ * The PDF and the CSV were on Settings' first screen - the report as the only row with a
  * month picker and a button in it - for things done a few times a year. Here
  * they have room to say what they are, one tap in.
  */
@@ -39,6 +44,7 @@ export default function ReportsPage() {
   const [making, setMaking] = useState(false)
   const [confirm, setConfirm] = useState(false)
   const [exporting, setExporting] = useState(false)
+  const [sheeting, setSheeting] = useState(false)
   const [desktop] = useState(() => typeof document !== 'undefined' && document.documentElement.classList.contains('web'))
   const picked = months.find(m => `${m.year}-${m.month}` === pick) ?? months[0]
 
@@ -62,6 +68,24 @@ export default function ReportsPage() {
       showToast(why ? `Report failed: ${why}` : 'Failed to generate report', 'error')
     } finally {
       setMaking(false)
+    }
+  }
+
+  async function exportWorkbook() {
+    if (sheeting) return
+    setSheeting(true)
+    try {
+      const { downloadWorkbook } = await import('../../utils/workbook.js')
+      const { how, again } = await downloadWorkbook()
+      // As the report: an iPhone's share sheet is a decision, and 'blocked' wants a fresh tap.
+      if (how === 'shared') showToast('Spreadsheet ready to save')
+      else if (how === 'downloaded') showToast('Spreadsheet downloaded')
+      else if (how === 'blocked') showToast('Your spreadsheet is ready', 'success', { actionLabel: 'Save', onAction: () => { again() } })
+    } catch (e) {
+      console.error('[Reports] spreadsheet failed:', e)
+      showToast('Could not make the spreadsheet', 'error')
+    } finally {
+      setSheeting(false)
     }
   }
 
@@ -139,6 +163,15 @@ export default function ReportsPage() {
       <div className="mb-8">
         <SectionHeader>Export</SectionHeader>
         <SectionCard>
+          <SettingsRow
+            iconEl={<RowIcon color="green"><IconDownload /></RowIcon>}
+            label="Everything as a spreadsheet"
+            sublabel={sheeting ? 'Preparing the file…' : 'Accounts, balances, transactions, budgets and more · Excel or Google Sheets'}
+            right={sheeting ? <span className="w-4 h-4 border-2 border-primary/30 border-t-primary rounded-full animate-spin" /> : <RowChevron />}
+            onTap={exportWorkbook}
+            disabled={sheeting}
+          />
+          <RowDivider />
           <SettingsRow
             iconEl={<RowIcon color="green"><IconDownload /></RowIcon>}
             label="Transactions as CSV"

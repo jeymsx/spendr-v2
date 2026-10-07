@@ -34,11 +34,12 @@ import { BudgetManagerSheet, BudgetsPage } from './settings/Budgets'
 import { RestoreBackupSheet, ResetConfirmModal } from './settings/Backup'
 import { DedupeSheet } from './settings/Dedupe'
 import { planDedupe } from '../lib/dedupe'
-import { SheetsConfigSheet, ProfileSheet } from './settings/Profile'
+import { ProfileSheet } from './settings/Profile'
 import { PolicySheet } from './settings/Policy'
 import useRates from '../hooks/useRates'
 import { rateAge } from '../lib/fx'
 import { clearCrashes, crashReport, readCrashes } from '../lib/crashLog'
+import { useIsDeveloper } from '../hooks/useIsDeveloper'
 import { shareOrCopy } from '../lib/share'
 import { isSupabaseConfigured } from '../lib/supabase'
 import { RemindersRow, RemindersSheet, useReminderSettings } from './settings/Reminders'
@@ -55,7 +56,7 @@ import { lockSummary } from '../lib/appLock'
  *
  * It had grown to eight cards and up to seventeen rows, and the groups had
  * stopped meaning anything: Manage held two settings and two places to go,
- * Sync held cloud sync, push reminders and a Sheets bridge, and restoring a
+ * Sync held cloud sync and push reminders, and restoring a
  * backup, resetting the app and signing out each had a card of their own
  * among the things you change every week.
  *
@@ -79,9 +80,13 @@ export default function Settings() {
   const { theme, style, accentColor } = useTheme()
   const { showToast } = useToast()
 
+  // The error log and the way to send it, and the keyboard readout, are for the developer (lib/developer.js).
+  const developer = useIsDeveloper()
   /* The version, tapped five times inside two seconds. */
   const versionTaps = useRef(/** @type {number[]} */ ([]))
   function tapVersion() {
+    // A tool for whoever builds the app (lib/developer.js); nothing happens for anyone else.
+    if (!developer) return
     const now = Date.now()
     versionTaps.current = [...versionTaps.current.filter(t => now - t < 2000), now]
     if (versionTaps.current.length < 5) return
@@ -321,17 +326,21 @@ export default function Settings() {
       <div className="mb-8">
         <SectionHeader>Help & about</SectionHeader>
         <SectionCard>
-          {/* Always here now, not only once something has broken: when you
-              want it is when you are telling someone that it did. With a log,
-              it says how much is in it. */}
-          <SettingsRow
-            iconEl={<RowIcon color={crashes.length ? 'red' : 'amber'}><IconFeedback /></RowIcon>}
-            label="Report a problem"
-            sublabel={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} recorded on this device` : undefined}
-            right={<RowChevron />}
-            onTap={() => setCrashesOpen(true)}
-          />
-          <RowDivider />
+          {/* The developer's: with a log, it says how much is in it. To
+              anyone else a log of stack frames, and a message to write it
+              into, is homework (lib/developer.js). */}
+          {developer && (
+            <>
+              <SettingsRow
+                iconEl={<RowIcon color={crashes.length ? 'red' : 'amber'}><IconFeedback /></RowIcon>}
+                label="Report a problem"
+                sublabel={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} recorded on this device` : undefined}
+                right={<RowChevron />}
+                onTap={() => setCrashesOpen(true)}
+              />
+              <RowDivider />
+            </>
+          )}
           <SettingsRow
             iconEl={<RowIcon color="slate"><IconFileText /></RowIcon>}
             label="Privacy & terms"
@@ -423,7 +432,7 @@ export default function Settings() {
           Everything in it stays on this phone; Send is the only way any of it
           leaves. */}
       <Sheet
-        open={crashesOpen}
+        open={developer && crashesOpen}
         onClose={() => { setCrashesOpen(false); setCrashNote('') }}
         /* A height of its own only with a log to scroll: that docks it. With
            nothing in it, it is a short card, and floats like one. */
@@ -517,6 +526,6 @@ export { ACCENT_COLORS, buildAndDownloadCSV }
 export { CategoriesPage, CategoryManagerSheet }
 export { BudgetsPage, BudgetManagerSheet }
 export { TemplatesPage, TemplateManagerSheet }
-export { ProfileSheet, SheetsConfigSheet }
+export { ProfileSheet }
 export { RestoreBackupSheet, ResetConfirmModal }
 export { PolicySheet }

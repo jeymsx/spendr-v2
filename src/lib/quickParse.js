@@ -22,7 +22,7 @@
  *
  *   4. It would send your spending to a third party. The privacy policy in
  *      Settings promises no analytics and that your financial data goes
- *      nowhere unless you turn on sync or the Sheets export - and a model
+ *      nowhere unless you turn on sync - and a model
  *      reading every line you type would break that. The promise is worth
  *      more than this feature.
  *

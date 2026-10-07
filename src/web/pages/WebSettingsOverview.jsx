@@ -15,6 +15,7 @@ import { fmtCompact } from '../../lib/money'
 import { planDedupe } from '../../lib/dedupe'
 import { LAST_BACKUP_KEY } from '../../lib/backup'
 import { clearCrashes, crashReport, readCrashes } from '../../lib/crashLog'
+import { useIsDeveloper } from '../../hooks/useIsDeveloper'
 import { shareOrCopy } from '../../lib/share'
 import { isSupabaseConfigured } from '../../lib/supabase'
 import { APP_VERSION } from '../../lib/release'
@@ -61,6 +62,8 @@ export default function WebSettingsOverview() {
   const appLock = useAppLock()
   const fx = useRates()
   const achievements = useAchievements()
+  // The error log and the way to send it are for the developer (lib/developer.js).
+  const developer = useIsDeveloper()
 
   const meta = useLiveQuery(() => db.meta.toArray(), [], [])
   const read = (/** @type {string} */ key) => (meta ?? []).find(m => m.key === key)?.value ?? null
@@ -215,7 +218,7 @@ export default function WebSettingsOverview() {
         </Section>
 
         <Section title="Data" note="Reports, backups and what you deleted.">
-          <LinkRow icon={<IDownload size={17} />} label="Reports & exports" to="/settings/reports" value="Monthly report, CSV" />
+          <LinkRow icon={<IDownload size={17} />} label="Reports & exports" to="/settings/reports" value="Monthly report, spreadsheet, CSV" />
           <LinkRow icon={<IShield size={17} />} label="Backup & restore" to="/settings/backup" value={backupLine} />
           <LinkRow icon={<ITrash size={17} />} label="Recently deleted" to="/settings/deleted"
             value={trashCount ? `${trashCount} kept ${TRASH_DAYS} days` : 'Empty'} />
@@ -224,11 +227,13 @@ export default function WebSettingsOverview() {
 
         {device.length > 0 && <Section title="This device" note="What this browser can do.">{device}</Section>}
 
-        <Section title="Help & about" note="Problems, and the fine print.">
-          <ActionRow icon={<IMessage size={17} />} label="Report a problem"
-            sub={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} recorded on this device` : 'Write one with the details filled in'}>
-            <Btn size="sm" onClick={() => setCrashesOpen(true)}>Report</Btn>
-          </ActionRow>
+        <Section title="Help & about" note={developer ? 'Problems, and the fine print.' : 'The fine print.'}>
+          {developer && (
+            <ActionRow icon={<IMessage size={17} />} label="Report a problem"
+              sub={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} recorded on this device` : 'Write one with the details filled in'}>
+              <Btn size="sm" onClick={() => setCrashesOpen(true)}>Report</Btn>
+            </ActionRow>
+          )}
           <LinkRow icon={<IFileText size={17} />} label="Privacy policy" to="/settings/privacy" value={updatedLine(PRIVACY_SECTIONS)} />
           <LinkRow icon={<IInfo size={17} />} label="Terms of use" to="/settings/terms" value={updatedLine(TERMS_SECTIONS)} />
         </Section>
@@ -245,7 +250,7 @@ export default function WebSettingsOverview() {
       </footer>
 
       <Dialog
-        open={crashesOpen}
+        open={developer && crashesOpen}
         onClose={closeCrashes}
         title="Report a problem"
         width={480}
