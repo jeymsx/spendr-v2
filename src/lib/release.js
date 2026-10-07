@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-10-05'
+export const RELEASE_DATE = '2026-10-07'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,34 +32,43 @@ export const RELEASE_DATE = '2026-10-05'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
+    icon: 'receipt',
+    title: 'Installments, counted when bought',
+    desc: 'A \u20b136,000 phone on 12 months now counts as \u20b136,000 spent the day you bought it, in that month\u2019s budget, Insights and Wrapped, and shows once in your lists instead of every month.',
+  },
+  {
+    icon: 'transfer',
+    title: 'Cash flow you can open',
+    desc: 'On a computer, press a band in Insights to see the transactions in it, group your spending by account, and save the chart as a picture.',
+  },
+  {
+    icon: 'wallet',
+    title: 'Figures with the story behind them',
+    desc: 'Accounts and Insights say more under each figure: what changed this month, how your money is split, how much of your card limit is used, and what falls due next. On a computer, Home\u2019s net worth is bigger too.',
+  },
+  {
+    icon: 'bank',
+    title: 'Menus and a calendar of Spendr\u2019s own',
+    desc: 'On a computer, point at Add and its menu opens, choosing an account drops a menu under the field, and every date field opens Spendr\u2019s own calendar.',
+  },
+  {
     icon: 'desktop',
-    title: 'Forms beside the page',
-    desc: 'On a computer, adding or editing a transaction, an account or a bill opens in a panel at the right, over the page you were on. Escape takes you back to it.',
-  },
-  {
-    icon: 'settings',
-    title: 'Settings, laid out for a computer',
-    desc: 'Everything at a glance in one list, App lock inside Preferences, and every accent colour in one row to pick from.',
-  },
-  {
-    icon: 'sparkle',
-    title: 'Wrapped in Insights',
-    desc: 'Last month\u2019s Wrapped now has a card of its own in the Insights overview, one click from the story.',
+    title: 'Pages stay where you left them',
+    desc: 'On a computer, Back puts a page where you were scrolled to, and opening Forecast settings or a form leaves the page behind it in place.',
   },
   {
     icon: 'contrast',
-    title: 'Readable on every accent',
-    desc: 'Buttons in Honey, Amber, Sage and Lagoon now use dark text, so they are easy to read. On the phone too.',
+    title: 'A calmer desktop',
+    desc: 'The sidebar and top bar share the page\u2019s own ground, buttons are flat, pages fade softly under the top bar and load as grey outlines, and each tab names its page.',
   },
   {
-    icon: 'trash',
-    title: 'Recently deleted as a table',
-    desc: 'On a computer, put back one row or many at once, or delete them for good.',
+    icon: 'phone',
+    title: 'Layout, your choice',
+    desc: 'Preferences has Layout: Automatic, Mobile or Desktop, and a phone set to Desktop has a way back.',
   },
   {
-    icon: 'lock',
-    title: 'A new sign-in screen',
-    desc: 'On a computer, signing in shows Spendr on one side and Google on the other.',
+    icon: 'chart',
+    title: 'Figures that fit, charts that tell the truth',
+    desc: 'Long figures step down to fit, an empty chart says so instead of drawing a made-up scale, and Budget no longer says you saved money in a month with nothing logged.',
   },
 ]
-

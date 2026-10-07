@@ -24,6 +24,18 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.17.1',
+    date: '2026-10-05',
+    items: [
+      { title: 'Forms beside the page', desc: 'On a computer, adding or editing a transaction, an account or a bill opens in a panel at the right, over the page you were on. Escape takes you back to it.' },
+      { title: 'Settings, laid out for a computer', desc: 'Everything at a glance in one list, App lock inside Preferences, and every accent colour in one row to pick from.' },
+      { title: 'Wrapped in Insights', desc: 'Last month\u2019s Wrapped now has a card of its own in the Insights overview, one click from the story.' },
+      { title: 'Readable on every accent', desc: 'Buttons in Honey, Amber, Sage and Lagoon now use dark text, so they are easy to read. On the phone too.' },
+      { title: 'Recently deleted as a table', desc: 'On a computer, put back one row or many at once, or delete them for good.' },
+      { title: 'A new sign-in screen', desc: 'On a computer, signing in shows Spendr on one side and Google on the other.' },
+    ],
+  },
+  {
     version: '0.17.0',
     date: '2026-10-05',
     items: [
