@@ -27,19 +27,46 @@ export const usePopover = () => useContext(PopoverCtx)
  * frame later, since the popover is drawn hidden for its first frame, to be
  * measured, and nothing hidden takes focus.
  *
+ * `hover`: a mouse over the trigger opens it, with no click, and leaving the
+ * trigger and the popover both closes it after a beat (long enough to cross
+ * the gap between them). A click on the trigger while it is open that way
+ * keeps it open - the click meant to open it - and the click after that
+ * closes it as usual. A touch has no hover, so it still opens on a tap, and
+ * a popover opened by hover does not take the focus from where it was.
+ *
  * @param {{trigger?: import('react').ReactElement, anchor?: HTMLElement|null, children: import('react').ReactNode | ((close: () => void) => import('react').ReactNode),
  *          align?: 'start'|'end', width?: number, role?: 'menu'|'dialog'|'listbox', label?: string,
  *          className?: string, open?: boolean, onOpenChange?: (open: boolean) => void, offset?: number,
- *          focusFirst?: boolean}} props
+ *          focusFirst?: boolean, hover?: boolean}} props
  */
 export default function Popover({
   trigger, anchor = null, children, align = 'start', width, role = 'dialog', label, className = '',
-  open: openProp, onOpenChange, offset = 6, focusFirst = role === 'menu',
+  open: openProp, onOpenChange, offset = 6, focusFirst = role === 'menu', hover = false,
 }) {
   const [openState, setOpenState] = useState(false)
   const open = openProp ?? openState
+  /** Opened by a hover - so it does not take the focus - and not clicked since: leaving it closes it. */
+  const byHover = useRef(false)
+  const leaveCloses = useRef(false)
+  const leaveTimer = useRef(0)
   const setOpen = useCallback((/** @type {boolean} */ v) => { setOpenState(v); onOpenChange?.(v) }, [onOpenChange])
   const close = useCallback(() => setOpen(false), [setOpen])
+  useEffect(() => { if (!open) { byHover.current = false; leaveCloses.current = false } }, [open])
+  useEffect(() => () => window.clearTimeout(leaveTimer.current), [])
+  // Only a mouse hovers; a pen or a finger passing over is not a wish to open.
+  const hoverIn = (/** @type {import('react').PointerEvent} */ e) => {
+    if (e.pointerType !== 'mouse') return
+    window.clearTimeout(leaveTimer.current)
+    if (open) return
+    byHover.current = true
+    leaveCloses.current = true
+    setOpen(true)
+  }
+  const hoverOut = (/** @type {import('react').PointerEvent} */ e) => {
+    if (e.pointerType !== 'mouse') return
+    window.clearTimeout(leaveTimer.current)
+    leaveTimer.current = window.setTimeout(() => { if (leaveCloses.current) close() }, 160)
+  }
   const triggerRef = useRef(/** @type {HTMLElement|null} */ (null))
   const setTrigger = useCallback((/** @type {HTMLElement|null} */ node) => { triggerRef.current = node }, [])
   // An anchor stands where a trigger would: it is what the popover drops from and returns focus to.
@@ -68,7 +95,7 @@ export default function Popover({
   useEffect(() => {
     if (!open) return
     let raf = 0
-    if (focusFirst) {
+    if (focusFirst && !byHover.current) {
       raf = requestAnimationFrame(() => {
         const pop = popRef.current
         const first = /** @type {HTMLElement|null} */ (pop?.querySelector('[role^="menuitem"][aria-checked="true"]:not([disabled])')
@@ -126,7 +153,16 @@ export default function Popover({
   const triggerEl = trigger && cloneElement(trigger, {
     // The trigger's own ref, if it had one, is not kept: none of the callers set one.
     ref: setTrigger,
-    onClick: (/** @type {import('react').MouseEvent} */ e) => { t.onClick?.(e); setOpen(!open) },
+    onClick: (/** @type {import('react').MouseEvent} */ e) => {
+      t.onClick?.(e)
+      // The click that was meant to open it: it stays open, and the next click closes it.
+      if (hover && leaveCloses.current) { leaveCloses.current = false; return }
+      setOpen(!open)
+    },
+    ...(hover ? {
+      onPointerEnter: (/** @type {import('react').PointerEvent} */ e) => { t.onPointerEnter?.(e); hoverIn(e) },
+      onPointerLeave: (/** @type {import('react').PointerEvent} */ e) => { t.onPointerLeave?.(e); hoverOut(e) },
+    } : {}),
     'aria-expanded': open,
     'aria-haspopup': role === 'menu' ? 'menu' : role === 'listbox' ? 'listbox' : 'dialog',
   })
@@ -143,6 +179,7 @@ export default function Popover({
             role={role}
             aria-label={label}
             onKeyDown={onKey}
+            {...(hover ? { onPointerEnter: hoverIn, onPointerLeave: hoverOut } : {})}
             className={`d-pop fixed z-[260] ${role === 'menu' ? 'd-menu' : ''} ${className}`}
             style={{ width, ...(pos ?? { top: 0, left: 0, visibility: /** @type {const} */ ('hidden') }) }}
           >

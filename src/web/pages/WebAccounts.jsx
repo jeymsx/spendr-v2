@@ -5,6 +5,8 @@ import { useNavigate } from 'react-router-dom'
 import { TYPE_LABEL, INVESTMENT_KIND_LABEL } from '../../lib/accountMeta'
 import { sumInBase } from '../../lib/fx'
 import { fmt } from '../../lib/money'
+import { nextDueDate } from '../../utils/creditCycle'
+import { useNetWorthSeries, monthEnds } from '../../pages/insights/netWorth'
 import { useAccountsView } from '../data/accounts'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
@@ -44,10 +46,50 @@ export default function WebAccounts() {
     return at
   }, [txAll])
 
-  const creditRows = groups.find(g => g.key === 'credit')?.rows ?? []
+  const creditRows = useMemo(() => groups.find(g => g.key === 'credit')?.rows ?? [], [groups])
+  const loanRows = useMemo(() => groups.find(g => g.key === 'loan')?.rows ?? [], [groups])
   const available = sumInBase(creditRows.map(r => r.acct), base, rates, (a) => credit[a.name]?.availableCredit ?? 0).total
+  const limit = sumInBase(creditRows.map(r => r.acct), base, rates, (a) => a.creditLimit ?? 0).total
   const have = breakdown.spending + breakdown.savings + breakdown.invested
   const owe = breakdown.credit + breakdown.loans
+
+  // How this month has moved net worth: the same reading as Home's wallet chip.
+  const { current: nwNow, txs: nwTxs, debts: nwDebts, includeDebts: nwInclude } = useNetWorthSeries('1m')
+  const monthChange = useMemo(() => {
+    if (nwNow == null || !nwTxs.length) return null
+    return monthEnds({ txs: nwTxs, current: nwNow, months: 1, debts: nwDebts, includeDebts: nwInclude })[0]?.change ?? null
+  }, [nwNow, nwTxs, nwDebts, nwInclude])
+
+  const notes = useMemo(() => {
+    const plural = (/** @type {number} */ n, /** @type {string} */ word) => `${n} ${word}${n === 1 ? '' : 's'}`
+    const net = monthChange == null ? 'What you have, less what you owe'
+      : Math.abs(monthChange) < 0.005 ? 'No change this month'
+      : `${monthChange > 0 ? '↑' : '↓'} ${fmt(Math.abs(monthChange))} this month`
+
+    const piles = [['spending', breakdown.spending], ['savings', breakdown.savings], ['invested', breakdown.invested]]
+      .filter(([, v]) => /** @type {number} */ (v) > 0.005)
+    // Where most of it is: the biggest pile, and its share.
+    const biggest = [...piles].sort((a, b) => /** @type {number} */ (b[1]) - /** @type {number} */ (a[1]))[0]
+    const where = biggest ? (biggest[0] === 'invested' ? 'investments' : String(biggest[0])) : ''
+    const youHave = !biggest || have <= 0 ? 'Spending, savings and investments'
+      : piles.length === 1 ? `All in ${where}`
+      : `${Math.round((/** @type {number} */ (biggest[1]) / have) * 100)}% in ${where}`
+
+    const parts = []
+    if (creditRows.length && limit > 0) parts.push(`${Math.round((breakdown.credit / limit) * 100)}% of limit`)
+    else if (creditRows.length) parts.push(plural(creditRows.length, 'card'))
+    if (loanRows.length) parts.push(plural(loanRows.length, 'loan'))
+    const youOwe = owe <= 0.005 ? 'Nothing owed' : parts.join(' · ') || 'Cards and loans'
+
+    // The card whose statement falls due first, and what is left to pay on it.
+    const due = creditRows
+      .map(r => ({ r, st: credit[r.acct.name], on: nextDueDate(r.acct.dueDate) }))
+      .filter(x => x.on && x.st?.stmtOutstanding > 0.005)
+      .sort((a, b) => +a.on - +b.on)[0]
+    const avail = due ? `${fmt(due.st.stmtOutstanding)} due ${due.on.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}`
+      : creditRows.length ? (limit > 0 ? `Of ${fmt(limit)} in limits` : `Across ${plural(creditRows.length, 'card')}`) : 'No cards'
+    return { net, youHave, youOwe, avail }
+  }, [monthChange, breakdown, have, owe, creditRows, loanRows, limit, credit])
 
   /** @type {any[]} */
   const rows = []
@@ -72,10 +114,10 @@ export default function WebAccounts() {
     >
       {loading ? <StatsSkeleton /> : (
         <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-          <Stat label="Net worth" value={<Money value={breakdown.total} />} note="What you have, less what you owe" />
-          <Stat label="You have" value={fmt(have)} note="Spending, savings and investments" />
-          <Stat label="You owe" value={owe ? `−${fmt(owe)}` : fmt(0)} note="Cards and loans" />
-          <Stat label="Credit available" value={fmt(available)} note={creditRows.length ? `Across ${creditRows.length} ${creditRows.length === 1 ? 'card' : 'cards'}` : 'No cards'} />
+          <Stat oneLine label="Net worth" value={<Money value={breakdown.total} />} note={notes.net} />
+          <Stat oneLine label="You have" value={fmt(have)} note={notes.youHave} />
+          <Stat oneLine label="You owe" value={owe ? `−${fmt(owe)}` : fmt(0)} note={notes.youOwe} />
+          <Stat oneLine label="Credit available" value={fmt(available)} note={notes.avail} />
         </div>
       )}
 

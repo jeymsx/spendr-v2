@@ -22,8 +22,7 @@ import { cardGradient } from '../../lib/accentTheme'
 import { useTheme } from '../../context/ThemeContext'
 import Page from '../ui/Page'
 import Feather from '../ui/Feather'
-import Sankey from '../ui/Sankey'
-import { txBase } from '../../lib/fxContext'
+import CashFlow from './CashFlow'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
@@ -120,12 +119,18 @@ function Figures({ data, period }) {
   const top = data.categorySegments[0]
   const recapMonth = useRecapMonth(period.range === '1m' ? monthOfPeriod(period) : null)
   /** @param {any} c */
-  const vs = (c) => (!c || !data.previous ? ' ' : c.same ? `Same as ${data.previous.label}` : `${c.up ? '↑' : '↓'} ${c.pct}% vs ${data.previous.label}`)
+  const vs = (c) => (!c || !data.previous ? '' : c.same ? `Same as ${data.previous.label}` : `${c.up ? '↑' : '↓'} ${c.pct}% vs ${data.previous.label}`)
+  // Spent and Came in say how they moved; Net says what share of the pay was kept or spent.
+  const spentNote = vs(spentChange) || ' '
+  const earnedNote = vs(earnedChange) || ' '
+  const netNote = data.totalEarned > 0
+    ? (net >= 0 ? `Kept ${Math.round((net / data.totalEarned) * 100)}% of income` : `Spent ${Math.round((data.totalSpent / data.totalEarned) * 100)}% of income`)
+    : (net < 0 ? 'Nothing came in' : ' ')
   return (
     <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-      <Stat label="Spent" value={fmt(data.totalSpent)} note={vs(spentChange)} />
-      <Stat label="Came in" value={fmt(data.totalEarned)} note={vs(earnedChange)} />
-      <Stat label="Net" value={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}`} tone={net < 0 ? 'neg' : net > 0 ? 'pos' : null} note={net < 0 ? 'More went out than came in' : 'Kept from what came in'} />
+      <Stat oneLine label="Spent" value={fmt(data.totalSpent)} note={spentNote} />
+      <Stat oneLine label="Came in" value={fmt(data.totalEarned)} note={earnedNote} />
+      <Stat oneLine label="Net" value={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}`} tone={net < 0 ? 'neg' : net > 0 ? 'pos' : null} note={netNote} />
       {/* Wrapped where there is a finished month to watch - the one shown,
           or the last one - and the biggest category until there is. */}
       {recapMonth
@@ -156,55 +161,6 @@ function WrappedTile({ month }) {
       <span className="d-wrapped-note">Watch the story <IChevronRight size={13} /></span>
       <img src={artUrl('wrapped-gift', accentColor)} alt="" width={84} height={84} className="d-wrapped-art" draggable={false} />
     </Link>
-  )
-}
-
-const INCOME_COLOURS = ['#0f9f7a', '#14b8a6', '#0891b2', '#22c55e', '#65a30d', '#0d9488']
-
-/**
- * The period's money as a flow: what came in (by what it was, the biggest
- * six and the rest together) - and, when more went out than came in, the
- * difference drawn from what you already had - into one total, out to the
- * categories it was spent on, and what was kept when less went out.
- *
- * Both sides are useInsightsData's own figures (income and spending by
- * lib/flows, in the ledger's currency), so they add up to the Spent and
- * Came in above.
- *
- * @param {{data: Data, period: any}} props
- */
-function CashFlow({ data, period }) {
-  const flow = useMemo(() => {
-    /** @type {Map<string, {value: number, color: string}>} */
-    const byName = new Map()
-    for (const t of data.inflows) {
-      const name = String(t.description || t.category || 'Income').trim() || 'Income'
-      const at = byName.get(name) ?? { value: 0, color: data.catMap[t.category]?.color ?? '' }
-      at.value += txBase(t)
-      byName.set(name, at)
-    }
-    const ins = [...byName.entries()].map(([name, v]) => ({ name, value: v.value })).filter(n => n.value > 0.005).sort((a, b) => b.value - a.value)
-    /** @type {Array<{name: string, value: number, color: string}>} */
-    const sources = ins.slice(0, 6).map((n, i) => ({ ...n, color: INCOME_COLOURS[i % INCOME_COLOURS.length] }))
-    const restIn = ins.slice(6).reduce((s, n) => s + n.value, 0)
-    if (restIn > 0.005) sources.push({ name: 'Other income', value: restIn, color: '#94a3b8' })
-    const outs = data.categorySegments.filter(c => c.value > 0.005)
-    const targets = outs.slice(0, 8).map(c => ({ name: c.name, value: c.value, color: c.color }))
-    const restOut = outs.slice(8).reduce((s, c) => s + c.value, 0)
-    if (restOut > 0.005) targets.push({ name: 'Everything else', value: restOut, color: '#94a3b8' })
-    const inTotal = sources.reduce((s, n) => s + n.value, 0)
-    const outTotal = targets.reduce((s, n) => s + n.value, 0)
-    if (outTotal - inTotal > 0.005) sources.push({ name: 'From savings', value: outTotal - inTotal, color: '#c27803' })
-    if (inTotal - outTotal > 0.005) targets.push({ name: 'Kept', value: inTotal - outTotal, color: '#059669' })
-    return { sources, targets, inTotal, outTotal }
-  }, [data.inflows, data.categorySegments, data.catMap])
-
-  if (!flow.sources.length && !flow.targets.length) return null
-  const rows = Math.max(flow.sources.length, flow.targets.length)
-  return (
-    <Panel className="mb-8" title="Cash flow" meta={`${periodName(period)}: where the money came from, and where it went`}>
-      <Sankey sources={flow.sources} targets={flow.targets} middle="Money in" height={Math.max(300, Math.min(480, rows * 46 + 60))} />
-    </Panel>
   )
 }
 
@@ -285,7 +241,7 @@ function Overview({ data, period }) {
   return (
     <>
       <Figures data={data} period={period} />
-      <CashFlow data={data} period={period} />
+      <CashFlow data={data} period={period} onPick={setSelected} />
       <div className="grid grid-cols-12 gap-5 mb-8">
         <Panel className="col-span-7" title="Where it went" meta={data.categorySegments.length ? `${data.categorySegments.length} categories` : null}
           actions={<Btn size="sm" variant="ghost" iconRight={<IChevronRight size={14} />} onClick={() => navigate('/insights/spending')}>Spending</Btn>}>
@@ -431,9 +387,9 @@ function Trend({ data, period }) {
       {daily ? (
         <>
           <div className="grid grid-cols-3 gap-5 mb-8">
-            <Stat label="Average a day" value={fmt(avg)} note={`Over ${lived.length} ${lived.length === 1 ? 'day' : 'days'} so far`} />
-            <Stat label="Biggest day" value={peak ? fmt(peak.expense) : '—'} note={peak ? peak.label : ' '} />
-            <Stat label="Days with no spending" value={String(quiet)} note={`Of ${lived.length}`} />
+            <Stat oneLine label="Average a day" value={fmt(avg)} note={`Over ${lived.length} ${lived.length === 1 ? 'day' : 'days'} so far`} />
+            <Stat oneLine label="Biggest day" value={peak ? fmt(peak.expense) : '—'} note={peak ? peak.label : ' '} />
+            <Stat oneLine label="Days with no spending" value={String(quiet)} note={`Of ${lived.length}`} />
           </div>
           <Panel title="Day by day" actions={<Segmented label="Show" value={series} onChange={setSeries} options={[{ value: 'expenses', label: 'Spent' }, { value: 'income', label: 'Came in' }, { value: 'netflow', label: 'Net' }]} />}>
             {series === 'netflow'
@@ -473,13 +429,16 @@ function NetWorth() {
   const chart = series.data.map(d => ({ label: d.day, value: d.value }))
   const change = chart.length > 1 ? chart[chart.length - 1].value - chart[0].value : 0
   const best = ends.reduce((b, m) => (m.change != null && (b == null || m.change > b.change) ? m : b), /** @type {any} */ (null))
+  // This month's move: the figure's own context.
+  const thisMonth = ends[0]?.change ?? null
   if (series.loading) return <><StatsSkeleton count={3} /><ChartPanelSkeleton height={300} className="mb-5" /><PanelSkeleton rows={6} /></>
   return (
     <>
       <div className="grid grid-cols-3 gap-5 mb-8">
-        <Stat label="Net worth now" value={current == null ? '—' : <Money value={current} />} note="Every account at today’s rate" />
-        <Stat label={`Change ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`} value={`${change >= 0 ? '+' : '−'}${fmt(Math.abs(change))}`} tone={change < 0 ? 'neg' : change > 0 ? 'pos' : null} note={chart[0] ? `From ${fmt(chart[0].value)}` : ' '} />
-        <Stat label="Best month" value={best ? `+${fmt(Math.max(0, best.change))}` : '—'} note={best ? monthName(best.key) : ' '} />
+        <Stat oneLine label="Net worth now" value={current == null ? '—' : <Money value={current} />} note={thisMonth == null ? 'Every account at today’s rate' : Math.abs(thisMonth) < 0.005 ? 'No change this month' : `${thisMonth > 0 ? '↑' : '↓'} ${fmt(Math.abs(thisMonth))} this month`} />
+        <Stat oneLine label={`Change ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`} value={`${change >= 0 ? '+' : '−'}${fmt(Math.abs(change))}`} tone={change < 0 ? 'neg' : change > 0 ? 'pos' : null}
+          note={!chart[0] ? ' ' : Math.abs(chart[0].value) > 0.005 && change !== 0 ? `${change > 0 ? '↑' : '↓'} ${Math.round((Math.abs(change) / Math.abs(chart[0].value)) * 100)}% from ${fmt(chart[0].value)}` : `From ${fmt(chart[0].value)}`} />
+        <Stat oneLine label="Best month" value={best ? `+${fmt(Math.max(0, best.change))}` : '—'} note={best ? monthName(best.key) : ' '} />
       </div>
       <Panel className="mb-5" title="Net worth over time"
         actions={<Segmented label="Range" value={range} onChange={(v) => setInsights({ net: v })} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}>

@@ -271,7 +271,13 @@ html.web .d-page { height: 100%; overflow-y: auto; overflow-x: hidden; scrollbar
    56px deep where the browser can tie the strips to the page's scroll
    (below): they come in over the first 56px a page scrolls, so a page at
    rest is untouched. Elsewhere they stay, 24px deep - inside a page's
-   32px top padding, so nothing at rest is touched there either. */
+   32px top padding, so nothing at rest is touched there either.
+
+   They start out clear (`opacity: 0`) and the scroll only brings them in. A
+   page too short to scroll has an inactive timeline, which leaves an
+   animation with no effect at all: without a base of its own the strips sat
+   at full strength over a short page (Notes, Goals, Recurring, Debts) and
+   blurred its New button and its title. */
 html.web { --d-ground: #f6f8fb; }
 html.web.dark { --d-ground: var(--glow, linear-gradient(transparent, transparent)), #0b0f14; }
 html.web.flat.dark { --d-ground: #0b0f14; }
@@ -304,6 +310,7 @@ html.web .web-main::after {
   html.web .web-main::before,
   html.web .web-main::after {
     height: 56px;
+    opacity: 0;
     animation: d-top-fade linear both;
     animation-timeline: --d-page-scroll;
     animation-range: 0 56px;
@@ -670,6 +677,36 @@ html.web .d-cal-foot { display: flex; justify-content: space-between; margin-top
   from { opacity: 0; transform: translateY(-4px) scale(0.98); }
   to { opacity: 1; transform: none; }
 }
+/* The cash-flow chart (pages/CashFlow, ui/Sankey): what is under the mouse,
+   named above it; and the panel a pressed band opens, listing what is in it. */
+html.web .d-flow-readout { display: flex; align-items: center; gap: 8px; min-height: 24px; margin-bottom: 4px; font-size: 13.5px; }
+html.web .d-sankey .d-sankey-hit { cursor: pointer; outline: none; }
+html.web .d-sankey g.d-sankey-hit:focus-visible .d-sankey-bar { stroke: var(--d-accent); stroke-width: 2.5px; }
+html.web .d-flow-pop { padding: 6px; max-width: calc(100vw - 16px); }
+html.web .d-flow-head { display: flex; align-items: center; gap: 10px; padding: 10px 12px; }
+html.web .d-flow-head .d-swatch { width: 12px; height: 12px; border-radius: 999px; }
+html.web .d-flow-note { margin: 0 12px 10px; font-size: 13px; line-height: 1.45; color: var(--d-text-2); }
+html.web .d-flow-list { max-height: 312px; overflow-y: auto; margin: 0 -6px; padding: 4px 6px 0; border-top: 1px solid var(--d-border); }
+html.web .d-flow-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0 10px 0 12px;
+  border-radius: 12px;
+  text-align: left;
+  font-size: 14px;
+  color: var(--d-text);
+  transition: background-color 0.12s;
+}
+html.web .d-flow-row:hover { background: var(--d-hover); }
+html.web .d-flow-row:focus-visible { outline: none; box-shadow: var(--d-ring); }
+html.web .d-flow-date { width: 46px; flex-shrink: 0; font-size: 12px; color: var(--d-text-3); }
+html.web .d-flow-more { padding: 10px 12px; font-size: 12.5px; color: var(--d-text-3); }
+html.web .d-flow-foot { display: flex; justify-content: flex-end; margin-top: 4px; padding: 6px 2px 0; border-top: 1px solid var(--d-border); }
+html.web .d-flow-sums { padding: 0 12px 8px; }
+html.web .d-flow-sum { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-top: 1px solid var(--d-border); font-size: 14px; }
 html.web .d-menu { padding: 6px; min-width: 220px; }
 html.web .d-menu-item {
   width: 100%;
@@ -721,6 +758,7 @@ html.web .d-stat-value.d-warn { color: var(--d-warn); }
 html.web .d-stat-value { margin-top: 6px; font-size: 26px; line-height: 32px; font-weight: 600; letter-spacing: -0.02em; color: var(--d-text); }
 /* Two lines before it gives up, rather than one: on a narrow card the
    line under a figure was cut mid-word ("Spending, savings and investme…"). */
+html.web .d-stat-note.is-one { display: block; white-space: nowrap; text-overflow: ellipsis; }
 html.web .d-stat-note { margin-top: 6px; font-size: 13px; line-height: 1.4; color: var(--d-text-3); white-space: normal; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
 
 /* Progress: the phone's rounded bar. */
@@ -882,6 +920,48 @@ html.web .d-card-more {
   transition: border-color 0.15s, color 0.15s, background-color 0.15s;
 }
 html.web .d-card-more:hover { border-color: rgba(var(--color-primary-rgb), 0.6); color: var(--d-ink); background: var(--d-hover); }
+/* "View all accounts": a card in the row, not a slot left empty. The accounts
+   that did not fit are stacked at the top of it, the way in at the foot. */
+html.web .d-card-all {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-width: 0;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px solid var(--d-border);
+  background: var(--d-panel);
+  box-shadow: var(--d-card-shadow);
+  transition: border-color 0.15s, translate 0.2s var(--ease-out);
+}
+html.web .d-card-all:hover { border-color: rgba(var(--color-primary-rgb), 0.5); translate: 0 -2px; }
+html.web .d-card-all:focus-visible { outline: none; box-shadow: var(--d-ring); }
+html.web .d-card-all-stack { display: flex; align-items: center; }
+html.web .d-card-all-stack > * { box-shadow: 0 0 0 2.5px var(--d-panel); }
+html.web .d-card-all-stack > * + * { margin-left: -8px; }
+html.web .d-card-all-rest {
+  background: var(--d-hover);
+  color: var(--d-ink);
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+html.web .d-card-all-foot { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; }
+html.web .d-card-all-title { display: block; font-size: 14px; line-height: 20px; font-weight: 600; color: var(--d-text); }
+html.web .d-card-all-sub { display: block; font-size: 12.5px; line-height: 18px; font-weight: 500; color: var(--d-text-3); }
+html.web .d-card-all-go {
+  flex-shrink: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--d-hover);
+  color: var(--d-ink);
+  transition: background-color 0.15s, translate 0.2s var(--ease-out);
+}
+html.web .d-card-all:hover .d-card-all-go { background: rgba(var(--color-primary-rgb), 0.14); translate: 2px 0; }
 
 @media (prefers-reduced-motion: reduce) {
   html.web .d-pop, html.web .d-drawer, html.web .d-drawer-scrim { animation: none; }
@@ -988,6 +1068,11 @@ html.web .d-twopane-side { position: sticky; top: 24px; max-height: calc(100dvh 
 @supports (animation-timeline: scroll()) {
   html.web .d-twopane-side { top: 64px; max-height: calc(100dvh - var(--d-topbar) - 88px); }
 }
+/* Stuck, the side column is a stacking context of its own, and a sheet opened
+   inside it (Notes' New folder) is only as high as the column - under the
+   page beside it, whose toolbar and text then showed through the scrim. While
+   a sheet is open the column takes the height the other sheets have. */
+html.web .d-twopane-side:has(.sheet-overlay) { z-index: 100; }
 html.web .d-twopane-side .d-nav-item { height: 40px; font-size: 14px; }
 html.web .d-twopane-list { margin: 0 -20px; }
 html.web .d-twopane-list .page-header { display: none; }

@@ -1822,6 +1822,9 @@ html.web .status-frost { display: none; }
   inset: var(--hit-y, -12px) var(--hit-x, -12px);
 }
 
+/* A note dragged over a folder that will take it (pages/notes/NoteFiling). */
+.note-filing [data-drop='true'] { box-shadow: inset 0 0 0 2px var(--color-primary); }
+
 /* ── Prevent iOS zoom on input focus ─────────────────── */
 input, textarea, select {
   font-size: 16px !important;
@@ -2073,9 +2076,10 @@ html.web.dark .sheet-close:hover { color: #fff; }
 html.web .sheet-close:focus-visible { outline: none; box-shadow: 0 0 0 3px rgba(var(--color-primary-rgb), 0.28); }
 html.web .sheet-panel [data-sheet-body],
 html.web .sheet-panel-exit [data-sheet-body] { padding-left: 24px; padding-right: 24px; }
+/* No rule above the footer: a hairline across the whole modal, over a button
+   that is already set apart by its own space, read as a stray line. */
 html.web .sheet-panel .sheet-foot,
-html.web .sheet-panel-exit .sheet-foot { padding: 14px 24px 18px; border-top: 1px solid rgba(15, 23, 42, 0.07); }
-html.web.dark .sheet-panel .sheet-foot { border-top-color: rgba(255, 255, 255, 0.07); }
+html.web .sheet-panel-exit .sheet-foot { padding: 14px 24px 18px; }
 html.web .sheet-panel .sheet-foot > .flex:not(.flex-col),
 html.web .sheet-panel-exit .sheet-foot > .flex:not(.flex-col) { justify-content: flex-end; }
 html.web .sheet-panel .sheet-foot > .flex:not(.flex-col) > *,

@@ -64,6 +64,8 @@ export default function WebHome() {
     try { return localStorage.getItem('netWorthBreakdown') !== 'closed' } catch { return true }
   })
   const series = useNetWorthSeries(range)
+  // The wallet's figure is the page's biggest type; a seven-figure fortune steps down to fit (ui/fitText).
+  const netWorthRef = useFitText(30)
 
   const { current: nwNow, txs: nwTxs, debts: nwDebts, includeDebts: nwInclude } = series
   const ends = useMemo(() => (nwNow == null || !nwTxs.length ? [] : monthEnds({
@@ -134,7 +136,7 @@ export default function WebHome() {
           >
             <span className="wallet-stitch" aria-hidden="true" />
             <div className="text-13 font-semibold text-white/70">Net worth</div>
-            <div className="mt-1.5 text-[36px] leading-[42px] font-semibold tracking-[-0.025em] d-figure">{loading ? '—' : <Money value={breakdown.total} />}</div>
+            <div ref={/** @type {any} */ (netWorthRef)} className="mt-2 text-[48px] leading-[54px] font-semibold tracking-[-0.03em] whitespace-nowrap d-figure">{loading ? '—' : <Money value={breakdown.total} />}</div>
             {thisMonthChange != null && (
               <div className="mt-3">
                 <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-white/15 text-12 font-semibold d-num">
@@ -217,10 +219,7 @@ export default function WebHome() {
               <AccountCard key={a.id} acct={a} hidden={false} stmt={credit[a.name]} onClick={() => navigate(`/accounts/${a.id}`)} />
             ))}
             {loading ? null : cards.length > shownCards.length ? (
-              <Link to="/accounts" className="d-card-more" style={{ aspectRatio: '1.586' }}>
-                View all accounts
-                <span className="text-12 font-medium text-[var(--d-text-3)]">{cards.length - shownCards.length} more</span>
-              </Link>
+              <MoreAccounts hidden={cards.slice(shownCards.length)} />
             ) : shownCards.length < cols ? (
               <Link to="/accounts/new" className="d-card-more" style={{ aspectRatio: '1.586' }}>
                 Add an account
@@ -357,6 +356,33 @@ export default function WebHome() {
 
 /** Net worth over time, before there is any. */
 const NET_EMPTY = { title: 'No history yet', body: 'It draws as you log transactions.' }
+
+/**
+ * The last place in the row of cards when there are more accounts than fit:
+ * a card's own shape, with the accounts that did not fit stacked on it, so it
+ * reads as the rest of the row and not as an empty slot.
+ *
+ * @param {{hidden: Record<string, any>[]}} props
+ */
+function MoreAccounts({ hidden }) {
+  const shown = hidden.slice(0, 3)
+  const rest = hidden.length - shown.length
+  return (
+    <Link to="/accounts" className="d-card-all" style={{ aspectRatio: '1.586' }} aria-label={`View all accounts, ${hidden.length} more`}>
+      <span className="d-card-all-stack" aria-hidden="true">
+        {shown.map(a => <AccountTile key={a.id} account={a} size="sm" />)}
+        {rest > 0 && <span className="d-tile d-tile-sm d-card-all-rest">+{rest}</span>}
+      </span>
+      <span className="d-card-all-foot">
+        <span className="min-w-0">
+          <span className="d-card-all-title">View all accounts</span>
+          <span className="d-card-all-sub">{hidden.length} more</span>
+        </span>
+        <span className="d-card-all-go" aria-hidden="true"><IChevronRight size={16} /></span>
+      </span>
+    </Link>
+  )
+}
 
 /** One of the piles along the foot of the net worth card. @param {{label: string, value: number, owed?: boolean, loading?: boolean}} props */
 function Pile({ label, value, owed = false, loading = false }) {

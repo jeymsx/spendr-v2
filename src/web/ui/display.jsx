@@ -11,12 +11,15 @@ import { useFitText } from './fitText'
  */
 
 /**
- * A key figure: its label, the number, a line under it.
+ * A key figure: its label, the number, a line under it. The line may take a
+ * second one where it must; `oneLine` keeps it to the one, ending in an
+ * ellipsis if it is longer than the card is wide.
  *
  * @param {{label: import('react').ReactNode, value: import('react').ReactNode, note?: import('react').ReactNode,
- *          tone?: 'pos'|'neg'|'warn'|null, icon?: import('react').ReactNode, className?: string, children?: import('react').ReactNode}} props
+ *          tone?: 'pos'|'neg'|'warn'|null, icon?: import('react').ReactNode, className?: string, children?: import('react').ReactNode,
+ *          oneLine?: boolean}} props
  */
-export function Stat({ label, value, note, tone = null, icon, className = '', children }) {
+export function Stat({ label, value, note, tone = null, icon, className = '', children, oneLine = false }) {
   // A long figure steps its type down to fit rather than losing its end (ui/fitText).
   const fitRef = useFitText(18)
   return (
@@ -26,7 +29,7 @@ export function Stat({ label, value, note, tone = null, icon, className = '', ch
         {icon && <span className="text-[var(--d-text-3)]">{icon}</span>}
       </div>
       <div ref={/** @type {any} */ (fitRef)} className={`d-stat-value truncate ${tone ? `d-${tone}` : ''}`}>{value}</div>
-      {note && <div className="d-stat-note truncate">{note}</div>}
+      {note && <div className={`d-stat-note truncate${oneLine ? ' is-one' : ''}`}>{note}</div>}
       {children}
     </div>
   )

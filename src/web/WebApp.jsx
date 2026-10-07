@@ -89,15 +89,23 @@ function LoadingScreen() {
   )
 }
 
-/* The add and edit forms, as panels over a page. Opened from a page (an
-   account's Transfer, a card's Pay, a link), the page you were on stays
-   underneath and live; opened cold (a reload, a bookmark), Home or
-   Transactions does. */
+/* The forms and settings that open as panels over a page. Opened from a page
+   (an account's Transfer, a card's Pay, a link, Forecast's settings icon),
+   the page you were on stays underneath and live - mounted, so it keeps its
+   scroll - rather than being drawn again beneath the panel; opened cold (a
+   reload, a bookmark), the page the panel belongs to is drawn under it
+   (each one's own route, below). */
 const FORM_ROUTES = [
   { path: '/expense', label: 'Add expense', el: <AddExpense /> },
   { path: '/inflow', label: 'Add inflow', el: <AddInflow /> },
   { path: '/transfer', label: 'Transfer', el: <Transfer /> },
   { path: '/transactions/:id/edit', label: 'Edit transaction', el: <EditTransaction /> },
+  { path: '/accounts/new', label: 'New account', el: <AccountNew />, width: 600 },
+  { path: '/accounts/:id/edit', label: 'Edit account', el: <AccountEdit /> },
+  { path: '/accounts/:id/statements', label: 'Statement history', el: <StatementHistory /> },
+  { path: '/insights/forecast/settings', label: 'Forecast settings', el: <ForecastSettings /> },
+  { path: '/recurring/new', label: 'New recurring', el: <RecurringForm /> },
+  { path: '/recurring/:id/edit', label: 'Edit recurring', el: <RecurringForm /> },
 ]
 
 export default function WebApp() {
@@ -203,7 +211,7 @@ export default function WebApp() {
       {/* The form itself, at the address actually open, over the page. */}
       {under && (
         <Routes location={location}>
-          {FORM_ROUTES.map(r => <Route key={r.path} path={r.path} element={<RouteDrawer label={r.label}>{r.el}</RouteDrawer>} />)}
+          {FORM_ROUTES.map(r => <Route key={r.path} path={r.path} element={<RouteDrawer label={r.label} width={r.width}>{r.el}</RouteDrawer>} />)}
         </Routes>
       )}
     </Suspense>

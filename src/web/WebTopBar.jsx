@@ -104,7 +104,7 @@ function Bell() {
   )
 }
 
-/** The one way to add anything. */
+/** The one way to add anything. It opens as the mouse reaches it, without a click. */
 function AddMenu() {
   const { openAdd } = useAddFlow()
   return (
@@ -113,6 +113,7 @@ function AddMenu() {
       label="Add"
       align="end"
       width={232}
+      hover
       trigger={<Btn variant="primary" icon={<IPlus size={15} />} iconRight={<IChevronDown size={14} className="-mr-1 opacity-80" />}>Add</Btn>}
     >
       <MenuItem icon={<IArrowUpRight />} kbd="E" onSelect={() => openAdd('expense')}>Expense</MenuItem>
