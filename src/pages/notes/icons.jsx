@@ -1,6 +1,6 @@
 import {
   Bold01, Italic01, Underline01, Strikethrough01, Dotpoints01, FlipBackward, FlipForward,
-  Pin01, Share01, DotsHorizontal, Trash01,
+  Pin01, Share01, DotsHorizontal, Trash01, Folder, FolderPlus, Tag01, Check, Plus, XClose, Sliders01, Edit03,
 } from '@untitledui/icons'
 
 /**
@@ -42,6 +42,14 @@ export const IconPin = pack(Pin01)
 export const IconShare = pack(Share01)
 export const IconMore = pack(DotsHorizontal)
 export const IconBin = pack(Trash01)
+export const IconFolder = pack(Folder)
+export const IconFolderPlus = pack(FolderPlus)
+export const IconTag = pack(Tag01)
+export const IconTick = pack(Check)
+export const IconAdd = pack(Plus)
+export const IconClose = pack(XClose)
+export const IconSliders = pack(Sliders01)
+export const IconEdit = pack(Edit03)
 
 /** 1, 2, 3 down the left of three lines. @param {{size?: number}} props */
 export function IconNumbered({ size }) {

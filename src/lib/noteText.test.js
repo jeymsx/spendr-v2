@@ -124,4 +124,20 @@ describe('noteMatches', () => {
     expect(noteMatches(n, 'tea')).toBe(false)
     expect(noteMatches(n, '   ')).toBe(true)
   })
+
+  it('counts a note\'s tags as words in it', () => {
+    const n = { title: 'Rent', text: 'Rent\nPay it', tags: ['payday', 'to-do'] }
+    expect(noteMatches(n, 'payday')).toBe(true)
+    expect(noteMatches(n, 'to-do')).toBe(true)
+    expect(noteMatches({ ...n, tags: [] }, 'payday')).toBe(false)
+  })
+
+  it('looks at the tags alone for a query that starts with #', () => {
+    const n = { title: 'Pay the bills', text: 'Pay the bills', tags: ['payday'] }
+    expect(noteMatches(n, '#pay')).toBe(true)
+    expect(noteMatches(n, '#payday')).toBe(true)
+    expect(noteMatches(n, '#bills')).toBe(false)
+    expect(noteMatches({ ...n, tags: [] }, '#pay')).toBe(false)
+    expect(noteMatches(n, '#')).toBe(true)
+  })
 })

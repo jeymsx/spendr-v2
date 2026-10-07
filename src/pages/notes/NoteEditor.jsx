@@ -19,7 +19,8 @@ import { NOTE_EXTENSIONS } from './extensions'
 import FormatControls, { formatCommands, useFormatState } from './FormatControls'
 import { keepCaretClear } from './keyboardRoom'
 import { rememberKeyboard } from '../../lib/keyboard'
-import { IconBin, IconChecklist, IconMore, IconPin, IconShare } from './icons'
+import { IconBin, IconChecklist, IconFolder, IconMore, IconPin, IconShare, IconTag } from './icons'
+import { FilingPills, MoveToFolderSheet, TagsSheet, useFolders } from './NoteFiling'
 
 /**
  * One note, open: the words on the page and nothing else, as iOS Notes has
@@ -43,6 +44,11 @@ import { IconBin, IconChecklist, IconMore, IconPin, IconShare } from './icons'
  *
  * The same controls sit in one bar above the note, and the editor never
  * loses its focus to them.
+ *
+ * ── Filed ──
+ *
+ * The note's menu has Move to folder and Tags, each a sheet (NoteFiling.jsx);
+ * where it is filed shows under its date, each opening the same sheet.
  *
  * ── Left blank, not kept ──
  *
@@ -118,6 +124,11 @@ function NoteBody({ note, back, fresh }) {
   const [focused, setFocused] = useState(false)
   const [formatOpen, setFormatOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  /** The sheet open over the note for filing it: its folder, or its tags. */
+  const [filing, setFiling] = useState(/** @type {'folder'|'tags'|null} */ (null))
+  const folders = useFolders()
+  const allNotes = useLiveQuery(() => db.notes.toArray(), [], /** @type {NoteRow[]} */ ([]))
+  const folderName = note.folder ? (folders ?? []).find(f => f.syncId === note.folder)?.name ?? null : null
 
   /* Where the last touch on the note landed. The caret is going there, but
      the focus arrives before the selection has moved (keyboardRoom.js). */
@@ -258,6 +269,12 @@ function NoteBody({ note, back, fresh }) {
     })
   }
 
+  /** @param {'folder'|'tags'} which */
+  function openFiling(which) {
+    setMenuOpen(false)
+    setFiling(which)
+  }
+
   async function togglePin() {
     setMenuOpen(false)
     await setPinned(noteId, !note.pinned)
@@ -348,6 +365,8 @@ function NoteBody({ note, back, fresh }) {
         ) : desktop ? (
           <NoteMenu open={menuOpen} onOpen={() => setMenuOpen(true)} onClose={() => setMenuOpen(false)}>
             <NoteMenuItem onPress={togglePin} label={note.pinned ? 'Unpin note' : 'Pin note'}><IconPin size={17} /></NoteMenuItem>
+            <NoteMenuItem onPress={() => openFiling('folder')} label="Move to folder"><IconFolder size={17} /></NoteMenuItem>
+            <NoteMenuItem onPress={() => openFiling('tags')} label="Tags"><IconTag size={17} /></NoteMenuItem>
             {canShare && <NoteMenuItem onPress={share} label="Share"><IconShare size={17} /></NoteMenuItem>}
             <NoteMenuItem onPress={remove} label="Delete note" danger><IconBin size={17} /></NoteMenuItem>
           </NoteMenu>
@@ -378,6 +397,8 @@ function NoteBody({ note, back, fresh }) {
       <p className="px-5 mb-3 text-center text-12 text-slate-400 dark:text-slate-500 tabular-nums">
         {noteStamp(note.editedAt)}
       </p>
+
+      <FilingPills folderName={folderName} tags={note.tags ?? []} onFolder={() => setFiling('folder')} onTags={() => setFiling('tags')} />
 
       <div
         className="px-5"
@@ -413,11 +434,22 @@ function NoteBody({ note, back, fresh }) {
             </>
           )}
           <Divider inset="row" />
+          <MenuRow onPress={() => openFiling('folder')} label="Move to folder">
+            <IconFolder size={19} />
+          </MenuRow>
+          <Divider inset="row" />
+          <MenuRow onPress={() => openFiling('tags')} label="Tags">
+            <IconTag size={19} />
+          </MenuRow>
+          <Divider inset="row" />
           <MenuRow onPress={remove} label="Delete note" danger>
             <IconBin size={19} />
           </MenuRow>
         </Card>
       </Sheet>
+
+      <MoveToFolderSheet open={filing === 'folder'} onClose={() => setFiling(null)} note={note} folders={folders ?? []} />
+      <TagsSheet open={filing === 'tags'} onClose={() => setFiling(null)} note={note} all={allNotes} />
     </div>
   )
 }

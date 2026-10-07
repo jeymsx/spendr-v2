@@ -9,7 +9,7 @@ import {
   goalToRow, rowToGoal,
   badgeToRow,
   challengeToRow, rowToChallenge, trashToRow, rowToTrash,
-  noteToRow, rowToNote,
+  noteToRow, rowToNote, folderToRow, rowToFolder,
   isPendingDelete,
   isLocalIdConflict, unknownColumnOf, columnsToDrop,
   deleteRecurringRemote,
@@ -380,10 +380,29 @@ describe('notes', () => {
   it('goes up as its document, known by its sync_id', () => {
     const row = noteToRow(local, UID)
     expect(row).toEqual({
-      user_id: UID, sync_id: 'n-1', title: 'Payday', content: doc, pinned: true,
+      user_id: UID, sync_id: 'n-1', title: 'Payday', content: doc, pinned: true, tags: [], folder_sync_id: null,
       created_at: local.createdAt, edited_at: local.editedAt, deleted_at: null, updated_at: local.updatedAt,
     })
     expect(row).not.toHaveProperty('local_id')
+  })
+
+  it("goes up filed: its tags, and its folder by the folder's sync_id", () => {
+    const row = noteToRow({ ...local, tags: ['payday', 'rent'], folder: 'f-1' }, UID)
+    expect(row).toMatchObject({ tags: ['payday', 'rent'], folder_sync_id: 'f-1' })
+    const back = rowToNote(row)
+    expect(back).toMatchObject({ tags: ['payday', 'rent'], folder: 'f-1' })
+  })
+
+  it('leaves what this device has filed alone when the row says nothing of filing', () => {
+    // A row from a server that has not had 028: no tags, no folder_sync_id.
+    const { tags: _t, folder_sync_id: _f, ...bare } = noteToRow(local, UID)
+    const back = rowToNote(bare)
+    expect(back).not.toHaveProperty('tags')
+    expect(back).not.toHaveProperty('folder')
+  })
+
+  it('reads an unfiled row as unfiled, and tags that are not a list as none', () => {
+    expect(rowToNote({ sync_id: 'n-3', content: doc, tags: null, folder_sync_id: null, updated_at: local.updatedAt })).toMatchObject({ tags: [], folder: null })
   })
 
   it('comes down with its words read off the document, marked as on the server', () => {
@@ -404,6 +423,25 @@ describe('notes', () => {
       expect(rowToNote({ sync_id: 'n-2', content, updated_at: '2026-09-30T00:00:00.000Z' }))
         .toMatchObject({ doc: { type: 'doc', content: [] }, title: '', text: '', pinned: false })
     }
+  })
+})
+
+describe('note folders', () => {
+  it('go up by their sync_id and come down marked as on the server', () => {
+    const local = { id: 2, syncId: 'f-1', name: 'Money', createdAt: '2026-10-01T00:00:00.000Z', updatedAt: '2026-10-02T00:00:00.000Z', synced: UNSYNCED }
+    const row = folderToRow(local, UID)
+    expect(row).toEqual({ user_id: UID, sync_id: 'f-1', name: 'Money', created_at: local.createdAt, updated_at: local.updatedAt })
+    expect(row).not.toHaveProperty('local_id')
+    expect(rowToFolder(row)).toMatchObject({ syncId: 'f-1', name: 'Money', updatedAt: local.updatedAt, synced: SYNCED })
+  })
+
+  it('may come down with no name, without a crash', () => {
+    expect(rowToFolder({ sync_id: 'f-2', updated_at: '2026-10-02T00:00:00.000Z' }).name).toBe('')
+  })
+
+  it('may be missing from a server that has not had 028: the columns a note gains are optional', () => {
+    expect(columnsToDrop("Could not find the 'tags' column of 'notes' in the schema cache", ['tags', 'folder_sync_id'], [], ['user_id', 'sync_id'])).toEqual(['tags'])
+    expect(columnsToDrop('column "folder_sync_id" of relation "notes" does not exist', ['tags', 'folder_sync_id'], ['tags'], ['user_id', 'sync_id'])).toEqual(['folder_sync_id'])
   })
 })
 

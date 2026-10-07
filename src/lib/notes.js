@@ -1,6 +1,7 @@
 import db, { TRASH_DAYS, UNSYNCED } from '../db/db'
 import { queueRemoteDelete } from './sync'
 import { NEW_NOTE_DOC, docText, noteTitle } from './noteText'
+import { cleanTags } from './noteFiling'
 
 /**
  * Writing notes: made, saved as you type, pinned, put in Recently deleted,
@@ -38,14 +39,18 @@ export function readNote(doc) {
  * A new, empty note. Returns its id.
  *
  * @param {Record<string, any>} [doc]  what it starts with; one empty title line if not given
+ * @param {{folder?: string|null, tags?: string[]}} [filing]  the folder it starts in (a syncId) and its tags -
+ *   a note started while a folder is open begins in it
  */
-export async function createNote(doc = NEW_NOTE_DOC) {
+export async function createNote(doc = NEW_NOTE_DOC, { folder = null, tags = [] } = {}) {
   const now = new Date().toISOString()
   // A copy: the frozen starting document must not be the one the editor holds.
   const start = JSON.parse(JSON.stringify(doc))
   return /** @type {Promise<number>} */ (db.notes.add({
     ...readNote(start),
     pinned: false,
+    folder: folder ?? null,
+    tags: cleanTags(tags),
     createdAt: now,
     editedAt: now,
     deletedAt: null,
@@ -70,6 +75,28 @@ export async function saveNote(id, doc) {
 /** @param {number} id @param {boolean} pinned */
 export async function setPinned(id, pinned) {
   await db.notes.update(id, { pinned: !!pinned, synced: UNSYNCED })
+}
+
+/**
+ * Filed in a folder, or - with null - taken out of the one it is in.
+ * Filing is not writing: the note keeps the place the list gives it.
+ *
+ * @param {number} id @param {string|null} folder  a folder's syncId
+ */
+export async function moveNote(id, folder) {
+  await db.notes.update(id, { folder: folder || null, synced: UNSYNCED })
+}
+
+/**
+ * Its tags, replaced - each tidied, none twice, as many as a note may hold
+ * (lib/noteFiling.js). Returns what was kept.
+ *
+ * @param {number} id @param {string[]} tags
+ */
+export async function setNoteTags(id, tags) {
+  const kept = cleanTags(tags)
+  await db.notes.update(id, { tags: kept, synced: UNSYNCED })
+  return kept
 }
 
 /** Into Recently deleted. @param {number} id */

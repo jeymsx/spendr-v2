@@ -392,9 +392,30 @@ export function noteToRow(r, userId) {
     title:      r.title ?? '',
     content:    r.doc && typeof r.doc === 'object' ? r.doc : {},
     pinned:     !!r.pinned,
+    /* Filing (028_note_folders.sql): the folder is named by its syncId, which
+       is the same on every device, and the tags are plain words. Until 028
+       has run the push leaves both out and retries (OPTIONAL_COLS). */
+    tags:           Array.isArray(r.tags) ? r.tags : [],
+    folder_sync_id: r.folder ?? null,
     created_at: r.createdAt ?? null,
     edited_at:  r.editedAt ?? null,
     deleted_at: r.deletedAt ?? null,
+    updated_at: r.updatedAt ?? new Date().toISOString(),
+  }
+}
+
+/**
+ * A folder of notes. See migrations/028_note_folders.sql.
+ *
+ * @param {NoteFolderRow} r
+ * @param {string} userId
+ */
+export function folderToRow(r, userId) {
+  return {
+    user_id:    userId,
+    sync_id:    r.syncId ?? null,
+    name:       r.name,
+    created_at: r.createdAt ?? null,
     updated_at: r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -642,12 +663,27 @@ export function rowToNote(row) {
     title:     noteTitle(doc),
     text:      docText(doc),
     pinned:    !!row.pinned,
+    /* Only when the server has the columns: a row from before 028 says
+       nothing about filing, and must not clear what this device has set. */
+    ...('tags' in row ? { tags: Array.isArray(row.tags) ? row.tags.map(String) : [] } : {}),
+    ...('folder_sync_id' in row ? { folder: row.folder_sync_id ?? null } : {}),
     createdAt: row.created_at ?? null,
     editedAt:  row.edited_at ?? row.updated_at ?? null,
     deletedAt: row.deleted_at ?? null,
     updatedAt: row.updated_at,
     synced:    SYNCED,
     pushed:    true,
+  }
+}
+
+/** @param {Record<string, any>} row @returns {NoteFolderRow} */
+export function rowToFolder(row) {
+  return {
+    ...syncIdOf(row),
+    name:      String(row.name ?? ''),
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at,
+    synced:    SYNCED,
   }
 }
 
@@ -917,6 +953,8 @@ export async function syncToSupabase(userId) {
   await optionalSync('challenges push', () =>
     pushTable('challenges', db.challenges, challengeToRow, userId, 'user_id,sync_id'))
   await optionalSync('trash push', () => pushTrash(userId))
+  await optionalSync('note folders push', () =>
+    pushTable('note_folders', db.note_folders, folderToRow, userId, 'user_id,sync_id'))
   await optionalSync('notes push', () => pushNotes(userId))
   await pushPreferences(userId)
 }
@@ -941,9 +979,13 @@ async function pushNotes(userId) {
   const rows = (await db.notes.toArray())
     .filter(n => n.syncId && n.synced !== SYNCED && (n.text ?? '').trim())
   if (!rows.length) return
-  const { error } = await supabase.from('notes')
-    .upsert(rows.map(r => noteToRow(r, userId)), { onConflict: 'user_id,sync_id', ignoreDuplicates: false })
-  if (error) throw new Error(`notes push: ${error.message}`)
+  const opts = { onConflict: 'user_id,sync_id', ignoreDuplicates: false }
+  const payload = rows.map(r => noteToRow(r, userId))
+  const { error } = await supabase.from('notes').upsert(payload, opts)
+  if (error) {
+    const { error: again } = await upsertWithoutUnknown('notes', payload, opts, error)
+    if (again) throw new Error(`notes push: ${again.message}`)
+  }
   await db.transaction('rw', db.notes, async () => {
     for (const r of rows) {
       const now = await db.notes.get(/** @type {number} */ (r.id))
@@ -1093,6 +1135,9 @@ const OPTIONAL_COLS = {
      right amount - it just stops opening the receivables on another
      device. */
   recurring: ['split', 'sync_id', 'type'],
+  /* 028. Until it runs, a note still syncs - its words, its pin, its bin -
+     and stays filed and tagged only on the device that did it. */
+  notes: ['tags', 'folder_sync_id'],
 }
 
 // PostgREST reports an unknown column as PGRST204 with a message naming it,
@@ -1534,6 +1579,8 @@ export async function syncFromSupabase(userId, opts = {}) {
   await optionalSync('challenges pull', () =>
     pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending, opts))
   await optionalSync('trash pull', () => pullTrash(userId, pending, opts))
+  await optionalSync('note folders pull', () =>
+    pullSimpleTable('note_folders', db.note_folders, rowToFolder, 'name', userId, null, pending, opts))
   await optionalSync('notes pull', () => pullNotes(userId, pending, opts))
 
   // Guarantee system categories exist locally even if never pushed to Supabase

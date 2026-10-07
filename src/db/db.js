@@ -25,6 +25,7 @@ import { stampTxCurrency } from '../lib/fxContext'
  *   challenges:   import('dexie').Table<ChallengeRow, number>,
  *   trash:        import('dexie').Table<Record<string, any>, number>,
  *   notes:        import('dexie').Table<NoteRow, number>,
+ *   note_folders: import('dexie').Table<NoteFolderRow, number>,
  * }} SpendrDB
  */
 
@@ -245,12 +246,26 @@ db.version(16).stores({
   notes: '++id, syncId, editedAt, deletedAt',
 })
 
+/* v17 - Folders for notes (lib/notes.js).
+ *
+ * One row per folder: its name, and the syncId a note names it by. A note
+ * holds `folder` (that syncId, or null) and `tags` (a list of words) as plain
+ * properties - neither is looked up by index, since the list reads every note
+ * anyway - so the notes table itself is not touched.
+ *
+ * Named as it is on the server (note_folders, 028_note_folders.sql) because
+ * the sync's deletion log names a table, and finds the row's copy here by
+ * that name. Synced, and in backups too. */
+db.version(17).stores({
+  note_folders: '++id, syncId',
+})
+
 /** How long Recently deleted keeps a deletion, in days. */
 export const TRASH_DAYS = 30
 
 /** The tables that carry a syncId. Exported so sync and backup agree. */
 export const SYNCED_TABLES = [
-  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes',
+  'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders',
 ]
 
 /** How a row is FILED, as opposed to what it says. Changing only these is not

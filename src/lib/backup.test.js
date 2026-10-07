@@ -35,7 +35,8 @@ const good = {
   badges: [],
   challenges: [],
   trash: [],
-  notes: [{ id: 1, title: 'Payday', text: 'Payday\nRent first', doc: { type: 'doc', content: [] } }],
+  notes: [{ id: 1, title: 'Payday', text: 'Payday\nRent first', doc: { type: 'doc', content: [] }, tags: ['payday'], folder: 'f-1' }],
+  note_folders: [{ id: 1, syncId: 'f-1', name: 'Money' }],
 }
 
 describe('inspectBackup', () => {
@@ -53,6 +54,14 @@ describe('inspectBackup', () => {
     const out = inspectBackup(older)
     expect(out.missing).toEqual(['notes'])
     expect(out.counts.notes).toBe(0)
+  })
+
+  it('counts the folders notes are filed in, and a file from before them has none', () => {
+    expect(inspectBackup(good).counts.note_folders).toBe(1)
+    const { note_folders: _gone, ...older } = good
+    const out = inspectBackup(older)
+    expect(out.missing).toEqual(['note_folders'])
+    expect(out.counts.note_folders).toBe(0)
   })
 
   it('takes the file as a string, which is how it arrives from a picker', () => {

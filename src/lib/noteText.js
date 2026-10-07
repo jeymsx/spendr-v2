@@ -157,14 +157,21 @@ export function noteGroups(notes, now = new Date()) {
 
 /**
  * Whether a note has `query` in it, ignoring case and accents: "cafe" finds
- * "Café".
+ * "Café". Its tags count as words in it, and a query that starts with # looks
+ * at the tags alone: "#pay" finds a note tagged #payday and not one that
+ * merely says "pay".
  *
- * @param {{title?: string, text?: string}} note
+ * @param {{title?: string, text?: string, tags?: string[]}} note
  * @param {string} query
  */
 export function noteMatches(note, query) {
   const fold = (/** @type {string} */ s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase()
-  const q = fold(String(query ?? '').trim())
-  if (!q) return true
-  return fold(`${note.title ?? ''}\n${note.text ?? ''}`).includes(q)
+  const raw = fold(String(query ?? '').trim())
+  if (!raw) return true
+  const tags = (note.tags ?? []).map(fold)
+  if (raw.startsWith('#')) {
+    const q = raw.replace(/^#+/, '').replace(/\s+/g, '-')
+    return !q || tags.some(t => t.startsWith(q))
+  }
+  return fold(`${note.title ?? ''}\n${note.text ?? ''}\n${tags.join(' ')}`).includes(raw)
 }

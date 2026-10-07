@@ -286,6 +286,21 @@ interface NoteRow {
   deletedAt?: string | null
   updatedAt?: string
   synced?: number
+  /** The syncId of the folder it is filed in; none when it is not (lib/notes.js). */
+  folder?: string | null
+  /** Its tags, lower case, without the #. */
+  tags?: string[]
+  [key: string]: any
+}
+
+/** A folder of notes (lib/notes.js). */
+interface NoteFolderRow {
+  id?: number
+  syncId?: string
+  name: string
+  createdAt?: string
+  updatedAt?: string
+  synced?: number
   [key: string]: any
 }
 
