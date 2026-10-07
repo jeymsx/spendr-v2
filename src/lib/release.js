@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-10-07'
+export const RELEASE_DATE = '2026-10-08'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,43 +32,23 @@ export const RELEASE_DATE = '2026-10-07'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'receipt',
-    title: 'Installments, counted when bought',
-    desc: 'A \u20b136,000 phone on 12 months now counts as \u20b136,000 spent the day you bought it, in that month\u2019s budget, Insights and Wrapped, and shows once in your lists instead of every month.',
-  },
-  {
-    icon: 'transfer',
-    title: 'Cash flow you can open',
-    desc: 'On a computer, press a band in Insights to see the transactions in it, group your spending by account, and save the chart as a picture.',
-  },
-  {
-    icon: 'wallet',
-    title: 'Figures with the story behind them',
-    desc: 'Accounts and Insights say more under each figure: what changed this month, how your money is split, how much of your card limit is used, and what falls due next. On a computer, Home\u2019s net worth is bigger too.',
-  },
-  {
-    icon: 'bank',
-    title: 'Menus and a calendar of Spendr\u2019s own',
-    desc: 'On a computer, point at Add and its menu opens, choosing an account drops a menu under the field, and every date field opens Spendr\u2019s own calendar.',
-  },
-  {
-    icon: 'desktop',
-    title: 'Pages stay where you left them',
-    desc: 'On a computer, Back puts a page where you were scrolled to, and opening Forecast settings or a form leaves the page behind it in place.',
-  },
-  {
-    icon: 'contrast',
-    title: 'A calmer desktop',
-    desc: 'The sidebar and top bar share the page\u2019s own ground, buttons are flat, pages fade softly under the top bar and load as grey outlines, and each tab names its page.',
-  },
-  {
-    icon: 'phone',
-    title: 'Layout, your choice',
-    desc: 'Preferences has Layout: Automatic, Mobile or Desktop, and a phone set to Desktop has a way back.',
-  },
-  {
     icon: 'chart',
-    title: 'Figures that fit, charts that tell the truth',
-    desc: 'Long figures step down to fit, an empty chart says so instead of drawing a made-up scale, and Budget no longer says you saved money in a month with nothing logged.',
+    title: 'Trend, your way',
+    desc: 'Every range of the Trend chart is a line, with Expenses, Income and Net flow switched on in any mix and laid over each other. On a computer, its three figures sit under the chart.',
+  },
+  {
+    icon: 'settings',
+    title: 'Trend settings',
+    desc: 'The sliders button picks a line, area or bars, and a point per day, week or month. It follows you to your other devices, like Forecast settings do.',
+  },
+  {
+    icon: 'receipt',
+    title: 'Everything as a spreadsheet',
+    desc: 'Reports now saves one spreadsheet of it all: accounts and net worth, transactions, each month, categories, budgets, bills, debts and goals, with the totals as live formulas. Open it in Excel or Google Sheets.',
+  },
+  {
+    icon: 'lock',
+    title: 'Less leaves your device',
+    desc: 'The Google Sheets connection is gone, and a crash no longer offers to send a report: its details stay on your device. The privacy policy now says so.',
   },
 ]

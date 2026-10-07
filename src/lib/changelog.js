@@ -24,6 +24,20 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.18.0',
+    date: '2026-10-07',
+    items: [
+      { title: 'Installments, counted when bought', desc: 'A \u20b136,000 phone on 12 months now counts as \u20b136,000 spent the day you bought it, in that month\u2019s budget, Insights and Wrapped, and shows once in your lists instead of every month.' },
+      { title: 'Cash flow you can open', desc: 'On a computer, press a band in Insights to see the transactions in it, group your spending by account, and save the chart as a picture.' },
+      { title: 'Figures with the story behind them', desc: 'Accounts and Insights say more under each figure: what changed this month, how your money is split, how much of your card limit is used, and what falls due next. On a computer, Home\u2019s net worth is bigger too.' },
+      { title: 'Menus and a calendar of Spendr\u2019s own', desc: 'On a computer, point at Add and its menu opens, choosing an account drops a menu under the field, and every date field opens Spendr\u2019s own calendar.' },
+      { title: 'Pages stay where you left them', desc: 'On a computer, Back puts a page where you were scrolled to, and opening Forecast settings or a form leaves the page behind it in place.' },
+      { title: 'A calmer desktop', desc: 'The sidebar and top bar share the page\u2019s own ground, buttons are flat, pages fade softly under the top bar and load as grey outlines, and each tab names its page.' },
+      { title: 'Layout, your choice', desc: 'Preferences has Layout: Automatic, Mobile or Desktop, and a phone set to Desktop has a way back.' },
+      { title: 'Figures that fit, charts that tell the truth', desc: 'Long figures step down to fit, an empty chart says so instead of drawing a made-up scale, and Budget no longer says you saved money in a month with nothing logged.' },
+    ],
+  },
+  {
     version: '0.17.1',
     date: '2026-10-05',
     items: [
