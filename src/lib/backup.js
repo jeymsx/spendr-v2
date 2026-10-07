@@ -333,7 +333,7 @@ export async function restoreBackup(raw) {
  */
 const BACKUP_META_KEYS = [
   'displayName', 'userName', 'currency', 'skipConfirm', 'budgetRollover',
-  'netWorthMode', 'netWorthDebts', 'forecastFloor', 'forecastSettings', 'dismissedBills',
+  'netWorthMode', 'netWorthDebts', 'forecastFloor', 'forecastSettings', 'trendSettings', 'dismissedBills',
 ]
 
 /**

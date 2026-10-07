@@ -43,6 +43,7 @@ const WebInsights = lazy(() => import('./pages/WebInsights'))
 /* A phone form or list as a panel over the page it belongs to. */
 const RouteDrawer = lazy(() => import('./ui/RouteDrawer'))
 const ForecastSettings = lazy(() => import('../pages/insights/ForecastSettings'))
+const TrendSettings = lazy(() => import('../pages/insights/TrendSettings'))
 
 const WebAccounts = lazy(() => import('./pages/WebAccounts'))
 const WebAccountDetail = lazy(() => import('./pages/WebAccountDetail'))
@@ -104,6 +105,7 @@ const FORM_ROUTES = [
   { path: '/accounts/:id/edit', label: 'Edit account', el: <AccountEdit /> },
   { path: '/accounts/:id/statements', label: 'Statement history', el: <StatementHistory /> },
   { path: '/insights/forecast/settings', label: 'Forecast settings', el: <ForecastSettings /> },
+  { path: '/insights/trend/settings', label: 'Trend settings', el: <TrendSettings /> },
   { path: '/recurring/new', label: 'New recurring', el: <RecurringForm /> },
   { path: '/recurring/:id/edit', label: 'Edit recurring', el: <RecurringForm /> },
 ]
@@ -149,6 +151,7 @@ export default function WebApp() {
 
               <Route path="/insights" element={<WebInsights />} />
               <Route path="/insights/forecast/settings" element={<RouteDrawer label="Forecast settings" fallback="/insights/forecast" under={<WebInsights />}><ForecastSettings /></RouteDrawer>} />
+              <Route path="/insights/trend/settings" element={<RouteDrawer label="Trend settings" fallback="/insights/trend" under={<WebInsights />}><TrendSettings /></RouteDrawer>} />
               {/* The phone's Insights pages, each a view of the desktop's one page. */}
               <Route path="/insights/trend" element={<WebInsights />} />
               <Route path="/insights/expenses" element={<WebInsights />} />

@@ -1,17 +1,22 @@
-import { useMemo } from 'react'
-import { useSearchParams } from 'react-router-dom'
+import { useMemo, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
+import { Sliders04 } from '@untitledui/icons'
 import SubPage from '../../components/SubPage'
 import Card from '../../components/ui/Card'
+import IconButton from '../../components/ui/IconButton'
 import Divider from '../../components/ui/Divider'
 import SectionHeading from '../../components/ui/SectionHeading'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { fmtCompact } from '../../lib/money'
+import { TREND_SERIES, TREND_SETTINGS_PATH } from '../../lib/trendSettings'
+import useTrendSettings from '../../hooks/useTrendSettings'
 import { txBase } from '../../lib/fxContext'
 import { PeriodControls } from './PeriodBar'
-import { changeOf, periodName, usePeriod } from './period'
-import { SpendingTrend } from './Trend'
+import { changeOf, usePeriod } from './period'
+import { SpendingTrend, trendTitle } from './Trend'
 import { TrendSkeleton } from './Skeleton'
-import { dailySeries, useInsightsData } from './useInsightsData'
+import { useInsightsData } from './useInsightsData'
+import { useTrend } from './trendData'
 import { useArrival, useZoomBack } from './zoom'
 
 /**
@@ -24,7 +29,9 @@ import { useArrival, useZoomBack } from './zoom'
  * ranges, which have no "before", each month's figures instead.
  *
  * Opened from the Trend card, or from Income or Net on the overview with
- * that series already chosen (?type=).
+ * that series already chosen (?type=). Otherwise it opens on the series the
+ * Trend settings say, and is drawn as they say - a line, a line with a fill,
+ * or bars - with the same toggle for every range.
  */
 
 const WEEKDAYS = ['Sundays', 'Mondays', 'Tuesdays', 'Wednesdays', 'Thursdays', 'Fridays', 'Saturdays']
@@ -75,17 +82,21 @@ function Fact({ label, value }) {
 
 export default function TrendPage() {
   const back = useZoomBack('/insights')
+  const navigate = useNavigate()
   const [params] = useSearchParams()
+  const { settings, ready } = useTrendSettings()
+  /* What the toggle was last set to. Held here, above the chart, so changing
+     the period does not put it back. Until it is touched the series is the
+     address's, or the settings'. */
+  const [picked, setPicked] = useState(/** @type {import('../../lib/trendSettings').TrendSeriesKey[]|null} */ (null))
+  const asked = /** @type {any} */ (params.get('type'))
+  const series = picked ?? (TREND_SERIES.includes(asked) ? [asked] : settings.series)
   const { period } = usePeriod()
   const data = useInsightsData(period)
   // Grown out of its card once its figures are in (zoom.js).
   const arrival = useArrival(!data.loading)
-  const series = useMemo(() => dailySeries(data.daily), [data.daily])
   const isArea = period.range === '1m' || period.range === '7d'
-  const title = period.range === '7d' ? 'Last 7 days'
-    : period.range === '1m' ? periodName(period)
-      : period.range === '3m' ? 'Last 3 months'
-        : period.range === '6m' ? 'Last 6 months' : 'All time'
+  const { series: trend } = useTrend(data, period, settings.grain)
 
   /* The shape of the days that have happened. */
   const facts = useMemo(() => {
@@ -108,20 +119,25 @@ export default function TrendPage() {
 
   const net = data.totalEarned - data.totalSpent
   const prev = data.previous
+  const tune = (
+    <IconButton label="Trend settings" onClick={() => navigate(TREND_SETTINGS_PATH)}>
+      <Sliders04 size={18} strokeWidth={1.8} aria-hidden="true" />
+    </IconButton>
+  )
 
   return (
-    <SubPage title="Trend" onBack={back}>
+    <SubPage title="Trend" onBack={back} action={tune}>
       <div className={arrival}>
         <PeriodControls className="mb-6" />
 
-        {data.loading ? <TrendSkeleton /> : (
+        {data.loading || !ready ? <TrendSkeleton /> : (
           <SpendingTrend
-            key={`${period.range}-${period.month ?? ''}`}
-            isArea={isArea}
+            trend={trend}
             series={series}
-            multiBarData={data.multiBarData}
-            title={title}
-            initialType={params.get('type') ?? 'expenses'}
+            onSeries={setPicked}
+            settings={settings}
+            title={trendTitle(period)}
+            animKey={`${period.range}-${period.month ?? ''}`}
           />
         )}
 

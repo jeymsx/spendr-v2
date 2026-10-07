@@ -168,4 +168,18 @@ describe('pullPreferences', () => {
     await pullPreferences('u1')
     expect(metaStore.get('forecastSettings').value.income).toBe('recurring')
   })
+
+  /* 029: the Trend chart's settings travel the same way. */
+  it('brings the trend settings across, cleaned up', async () => {
+    remote.row = { trend_settings: { chart: 'bars', series: 'netflow', average: true, bogus: 1, smooth: 'yes' }, updated_at: NEW }
+    await pullPreferences('u1')
+    expect(metaStore.get('trendSettings').value).toEqual({ chart: 'bars', series: ['netflow'], grain: 'auto', smooth: true, points: false, average: true })
+  })
+
+  it('keeps a trend chart set up here that the server has not heard about', async () => {
+    metaStore.set('trendSettings', { key: 'trendSettings', value: { chart: 'area' }, updatedAt: NEW })
+    remote.row = { trend_settings: { chart: 'bars' }, updated_at: OLD }
+    await pullPreferences('u1')
+    expect(metaStore.get('trendSettings').value.chart).toBe('area')
+  })
 })

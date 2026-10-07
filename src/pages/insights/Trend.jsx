@@ -1,8 +1,8 @@
-import { useState } from 'react'
-import { EASE_OUT } from '../../components/ui/motion'
 import EmptyState from '../../components/ui/EmptyState'
-import { CHART_COLORS, DailyAreaChart, MultiBarChart } from './Charts'
+import { TREND_SERIES } from '../../lib/trendSettings'
+import { CHART_COLORS, TREND_HEIGHT, TREND_NAMES, TrendChart } from './Charts'
 import { SectionHeading } from './shared'
+import { periodName } from './period'
 
 // ── Trend placeholder ──────────────────────────────────────────────────────────
 
@@ -11,7 +11,6 @@ export const TREND_EMPTY = {
   expenses: 'expenses',
   income:   'income',
   netflow:  'activity',
-  bars:     'activity',
 }
 
 /**
@@ -23,9 +22,9 @@ export const TREND_EMPTY = {
  * the screen. Toggling back shoved it down again. A control that makes the
  * page jump is a control people stop touching.
  *
- * So the height is passed in from the caller rather than guessed: 160 for the
- * area chart, 180 for the multi-month bars, matching each ResponsiveContainer
- * exactly. The px-5 wrapper matches too, so the box is identical either way.
+ * So the height is passed in from the caller rather than guessed - the
+ * chart's own, TREND_HEIGHT - matching its ResponsiveContainer exactly. The
+ * px-5 wrapper matches too, so the box is identical either way.
  *
  * One picture for every series: a chart with a flat line across it. It was a
  * glyph each - a line going down for expenses, up for income - which drew a
@@ -42,98 +41,86 @@ export function TrendEmpty({ kind, height }) {
   )
 }
 
-// ── Spending Trend (adaptive) ──────────────────────────────────────────────────
-
-export const CHART_TYPE_OPTS = [
-  { key: 'expenses', label: 'Expenses' },
-  { key: 'income',   label: 'Income'   },
-  { key: 'netflow',  label: 'Net flow' },
-]
+// ── Spending Trend ─────────────────────────────────────────────────────────────
 
 /**
- * The period's money over time: day by day for 7D and 1M, as expenses,
- * income or the two netted; month by month (or year by year) as paired bars
- * for the longer ranges.
- *
- * @param {{isArea: boolean, series: {expenses: Array<{day: number|string, value: number}>,
- *          income: Array<{day: number|string, value: number}>, netflow: Array<{day: number|string, value: number}>},
- *          multiBarData: Array<{label: string, income: number, expense: number}>, title: string,
- *          initialType?: string}} props
+ * What the chart is of, in the words over it.
+ * @param {{range: string, month?: number|null}} period
  */
-export function SpendingTrend({ isArea, series, multiBarData, title, initialType = 'expenses' }) {
-  const [chartType, setChartType] = useState(CHART_TYPE_OPTS.some(o => o.key === initialType) ? initialType : 'expenses')
+export function trendTitle(period) {
+  return period.range === '7d' ? 'Last 7 days'
+    : period.range === '1m' ? periodName(/** @type {any} */ (period))
+      : period.range === '3m' ? 'Last 3 months'
+        : period.range === '6m' ? 'Last 6 months' : 'All time'
+}
 
-  const activeData = isArea
-    ? series[/** @type {'expenses'|'income'|'netflow'} */ (chartType)] ?? series.expenses
-    : multiBarData
+/**
+ * The period's money over time, as the Trend settings draw it, with a chip
+ * above it for each of the lines it can show - for every range, day by day or
+ * month by month alike. Any of them can be on together, drawn over each other;
+ * one always stays on, because a chart of nothing is not an answer.
+ *
+ * What is chosen is the caller's (`series`, `onSeries`), not kept here: this
+ * used to remount whenever the period changed, and took the choice with it -
+ * go to Income, switch from 1M to 3M, and the toggle said Expenses again.
+ *
+ * @param {{trend: {expenses: import('./trendData').TrendPoint[], income: import('./trendData').TrendPoint[],
+ *          netflow: import('./trendData').TrendPoint[]},
+ *          series: import('../../lib/trendSettings').TrendSeriesKey[],
+ *          onSeries: (series: import('../../lib/trendSettings').TrendSeriesKey[]) => void,
+ *          settings: import('../../lib/trendSettings').TrendSettings, title: string, animKey?: string}} props
+ */
+export function SpendingTrend({ trend, series, onSeries, settings, title, animKey = '' }) {
+  const hasData = series.some(k => trend[k].some(p => p.value != null && p.value !== 0))
+  const toggle = (/** @type {import('../../lib/trendSettings').TrendSeriesKey} */ key) => {
+    const on = series.includes(key)
+    if (on && series.length === 1) return
+    onSeries(TREND_SERIES.filter(k => (k === key ? !on : series.includes(k))))
+  }
 
-  const hasData = isArea
-    ? activeData.some(d => d.value !== 0)
-    : multiBarData.some(d => d.expense > 0 || d.income > 0)
+  /* Bare chips, each tinted in its own line's colour when it is on - so the
+     row is the chart's key as well as its switches, and with two lines up
+     there is no legend to look away for.
 
-  const label = title
-
-  /* Bare labels and one pill that slides. No track.
- 
-     It started as a flat tint holding a flat white pill, then gained a glass
-     track with a hairline rim - which looked right in the middle and wrong at
-     both ends, because the pill's rounded edge landed a hair inside the
-     track's and read as a double outline. There is nothing for a track to do
-     here that the pill is not already doing: three equal-width adjacent
-     labels read as one control on their own, and the pill says which is on.
-     So the glass moved onto the pill and the container went away.
- 
-     Fixed-width segments are what make the travel possible. The thumb is
-     `100% / N` and moves by multiples of its own width, which only lands
-     correctly if every segment is the same size - the old auto-width px-2.5
-     buttons could not have been animated this way. 60px fits the longest
-     label, "Expenses". */
-  const activeTypeIdx = CHART_TYPE_OPTS.findIndex(o => o.key === chartType)
-  const activeColor = CHART_COLORS[chartType] ?? CHART_COLORS.expenses
-  const typeFilter = isArea && (
-    <div className="relative flex items-center">
-      <div
-        className="absolute inset-y-0 left-0 rounded-full border backdrop-blur-md pointer-events-none"
-        style={{
-          width: `calc(100% / ${CHART_TYPE_OPTS.length})`,
-          transform: `translateX(${activeTypeIdx * 100}%)`,
-          transition: `transform 0.3s ${EASE_OUT}, background-color 0.2s, border-color 0.2s`,
-          // color-mix rather than string-concatenating an alpha suffix: netflow's
-          // colour is `var(--color-primary)`, and 'var(--color-primary)' + '22'
-          // is not a colour.
-          backgroundColor: `color-mix(in srgb, ${activeColor} 16%, transparent)`,
-          borderColor: `color-mix(in srgb, ${activeColor} 40%, transparent)`,
-        }}
-      />
-      {CHART_TYPE_OPTS.map(o => (
-        <button
-          key={o.key}
-          onClick={() => setChartType(o.key)}
-          aria-pressed={chartType === o.key}
-          className={[
-            'relative z-10 w-[60px] py-1 text-10 font-semibold rounded-full',
-            'transition-colors duration-200',
-            chartType === o.key ? 'seg-active' : 'text-slate-500 dark:text-slate-400',
-          ].join(' ')}
-          style={chartType === o.key ? { '--seg-color': CHART_COLORS[o.key] } : undefined}
-        >{o.label}</button>
-      ))}
+     It began as one pill that slid between three labels, which only works
+     when exactly one is chosen. Fixed-width chips keep the row the same size
+     whatever is on, so the heading beside it never shifts; 60px fits the
+     longest label, "Expenses". */
+  const typeFilter = (
+    <div className="flex items-center gap-0.5" role="group" aria-label="Lines shown">
+      {TREND_SERIES.map(key => {
+        const on = series.includes(key)
+        const color = CHART_COLORS[key]
+        return (
+          <button
+            key={key}
+            type="button"
+            onClick={() => toggle(key)}
+            aria-pressed={on}
+            className={[
+              'w-[60px] py-1 text-10 font-semibold rounded-full border transition-colors duration-200',
+              on ? 'seg-active' : 'text-slate-500 dark:text-slate-400',
+            ].join(' ')}
+            style={{
+              ...(on ? { '--seg-color': color } : {}),
+              // color-mix rather than string-concatenating an alpha suffix: netflow's
+              // colour is `var(--color-primary)`, and 'var(--color-primary)' + '22'
+              // is not a colour.
+              backgroundColor: on ? `color-mix(in srgb, ${color} 16%, transparent)` : 'transparent',
+              borderColor: on ? `color-mix(in srgb, ${color} 40%, transparent)` : 'transparent',
+            }}
+          >{TREND_NAMES[key]}</button>
+        )
+      })}
     </div>
   )
 
   return (
     <div>
-      <SectionHeading align="center" action={typeFilter}>{label}</SectionHeading>
-      {!hasData ? (
-        <TrendEmpty
-          kind={isArea ? chartType : 'bars'}
-          height={isArea ? 160 : 180}
-        />
-      ) : isArea ? (
-        <DailyAreaChart data={activeData} chartType={chartType} />
-      ) : (
-        <MultiBarChart data={multiBarData} />
-      )}
+      <SectionHeading align="center" action={typeFilter}>{title}</SectionHeading>
+      {hasData
+        ? <TrendChart trend={trend} series={series} settings={settings} animKey={`${animKey}|${series.join()}|${settings.chart}`} />
+        : <TrendEmpty kind={series.length === 1 ? series[0] : 'netflow'} height={TREND_HEIGHT} />}
     </div>
   )
 }

@@ -96,25 +96,24 @@ function HeadingSkeleton({ action }) {
   )
 }
 
-/** Every chart on the page is a 160px ResponsiveContainer inside px-5. */
-function ChartSkeleton() {
+/** Most charts on the page are a 160px ResponsiveContainer inside px-5. */
+function ChartSkeleton({ height = 160 }) {
   return (
     <div className="px-5">
-      <Skeleton className="h-[160px] rounded-2xl" />
+      <Skeleton className="rounded-2xl" style={{ height }} />
     </div>
   )
 }
 
 /**
- * The trend, as it first opens: on 1M, so the area chart's 160px and not the
- * bars' 180. The action is the Expenses / Income / Net flow switch, three
- * 60px segments.
+ * The trend, as it first opens: the chart's 180px (TREND_HEIGHT in Charts).
+ * The action is the Expenses / Income / Net flow switch, three 60px segments.
  */
 export function TrendSkeleton() {
   return (
     <div>
       <HeadingSkeleton action={<Skeleton className="h-[23px] w-[180px] rounded-full" />} />
-      <ChartSkeleton />
+      <ChartSkeleton height={180} />
     </div>
   )
 }

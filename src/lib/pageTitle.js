@@ -28,6 +28,7 @@ const NAMES = /** @type {Array<[string, string]>} */ ([
   ['/accounts/:id', 'Account'],
   ['/accounts', 'Accounts'],
   ['/insights/forecast/settings', 'Forecast settings'],
+  ['/insights/trend/settings', 'Trend settings'],
   ['/insights/spending', 'Spending'],
   ['/insights/expenses', 'Expenses'],
   ['/insights/accounts', 'By account'],

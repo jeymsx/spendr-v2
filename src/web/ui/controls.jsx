@@ -31,6 +31,38 @@ export function Segmented({ options, value, onChange, label, className = '' }) {
 }
 
 /**
+ * The same control where any number of its options can be on at once, each
+ * pressed on its own - a set of switches that read as one. The last one on
+ * cannot be turned off, unless `none` says an empty set is fine.
+ *
+ * @template {string} V
+ * @param {{options: Array<{value: V, label: import('react').ReactNode}>, value: V[], onChange: (v: V[]) => void, label?: string, className?: string, none?: boolean}} props
+ */
+export function MultiSegmented({ options, value, onChange, label, className = '', none = false }) {
+  const toggle = (/** @type {V} */ v) => {
+    const on = value.includes(v)
+    if (on && value.length === 1 && !none) return
+    // In the options' own order, whatever order they were switched on in.
+    onChange(options.map(o => o.value).filter(x => (x === v ? !on : value.includes(x))))
+  }
+  return (
+    <div className={`d-seg ${className}`} role="group" aria-label={label}>
+      {options.map(o => (
+        <button
+          key={o.value}
+          type="button"
+          className="d-seg-item"
+          aria-pressed={value.includes(o.value)}
+          onClick={() => toggle(o.value)}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+/**
  * Tabs under a page's header: the sections of one thing.
  *
  * @template {string} V

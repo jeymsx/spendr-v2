@@ -34,6 +34,7 @@ const NO_PULL = [
   '/import',
   '/settings', '/settings/*',
   '/insights/forecast/settings',
+  '/insights/trend/settings',
 ]
 
 /**

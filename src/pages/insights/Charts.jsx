@@ -1,6 +1,7 @@
+import { useId } from 'react'
 import {
   PieChart, Pie, Cell, Tooltip, ResponsiveContainer,
-  BarChart, Bar, XAxis, YAxis, CartesianGrid,
+  Bar, XAxis, YAxis, CartesianGrid,
   AreaChart, Area, ReferenceLine, ReferenceDot,
   ComposedChart, Line,
 } from 'recharts'
@@ -8,6 +9,7 @@ import CategoryGlyph from '../../components/CategoryGlyph'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { fmt, fmtCompact } from '../../lib/money'
 import { prefersReducedMotion } from '../../components/ui/motion'
+import { TREND_SERIES } from '../../lib/trendSettings'
 
 // ── Chart: Donut ───────────────────────────────────────────────────────────────
 
@@ -67,7 +69,7 @@ export function DonutChart({ segments, total, animKey, selected, onSelect, capti
   )
 }
 
-// ── Chart: Area (daily / 7D) ───────────────────────────────────────────────────
+// ── Chart: Trend ───────────────────────────────────────────────────────────────
 
 export const CHART_COLORS = {
   expenses: '#ef4444',
@@ -75,55 +77,134 @@ export const CHART_COLORS = {
   netflow:  'var(--color-primary)',
 }
 
-export function DailyAreaChart({ data, chartType = 'expenses' }) {
-  const color      = CHART_COLORS[chartType] ?? CHART_COLORS.expenses
-  const gradId     = `dailyGrad-${chartType}`
-  const yTickFmt   = v => v >= 1000 ? `${(v/1000).toFixed(0)}K` : v
-  const labelEvery = Math.ceil(data.length / 8)
-  const last = data.length - 1
+/** The Trend chart's height - its empty state holds exactly this much too. */
+export const TREND_HEIGHT = 180
+
+/**
+ * Round figures for the side of the Trend chart: zero, and steps above it -
+ * and below it when a net figure went under. Nothing is drawn below zero for
+ * a series that never went there, which niceAxis alone would add.
+ *
+ * Exported for Charts.test.js.
+ *
+ * @param {number[]} values  the figures the chart draws; may be empty
+ */
+export function trendAxis(values) {
+  const lo = Math.min(0, ...values)
+  const hi = Math.max(0, ...values)
+  if (hi - lo < 1) return flatAxis(0)
+  const nice = niceAxis(lo, hi)
+  const floor = lo === 0 ? 0 : nice.floor
+  const ceil = hi === 0 ? 0 : nice.ceil
+  return { floor, ceil, ticks: nice.ticks.filter(t => t >= floor && t <= ceil) }
+}
+
+export const TREND_NAMES = { expenses: 'Expenses', income: 'Income', netflow: 'Net flow' }
+
+/**
+ * The period's money over time, as a line, a line with a fill, or bars -
+ * whichever the Trend settings say (lib/trendSettings.js) - for one or more
+ * of the three series, drawn over each other on one scale. One chart for every
+ * range, so the same toggle and the same settings work for a week of days and
+ * for six months.
+ *
+ * The caller keys it (`animKey`) on the period and the settings, so a change
+ * to either draws the chart afresh rather than morphing the old one into it:
+ * a half-finished morph is how the previous series' colour got left on screen.
+ *
+ * @param {{trend: {expenses: import('./trendData').TrendPoint[], income: import('./trendData').TrendPoint[], netflow: import('./trendData').TrendPoint[]},
+ *          series: import('../../lib/trendSettings').TrendSeriesKey[],
+ *          settings: import('../../lib/trendSettings').TrendSettings, animKey?: string}} props
+ */
+export function TrendChart({ trend, series, settings, animKey = '' }) {
+  const uid = useId().replace(/:/g, '')
+  const { chart, smooth, points: dots, average } = settings
+  const keys = TREND_SERIES.filter(k => series.includes(k))
+  const multi = keys.length > 1
+  /* One row per point with a column per line, which is what lets Recharts
+     draw them on one axis and one tooltip. */
+  const rows = trend[keys[0] ?? 'expenses'].map((p, i) => ({
+    tick: p.tick, label: p.label,
+    .../** @type {Record<string, number|null>} */ (Object.fromEntries(keys.map(k => [k, trend[k][i].value]))),
+  }))
+  const known = (/** @type {string} */ k) => rows.flatMap(r => { const v = /** @type {any} */ (r)[k]; return v == null ? [] : [/** @type {number} */ (v)] })
+  const all = keys.flatMap(known)
+  const { floor, ceil, ticks } = trendAxis(all)
+  const curve = smooth ? 'monotone' : 'linear'
+  const animate = !prefersReducedMotion()
+  const labelEvery = Math.ceil(rows.length / 8)
+  const last = rows.length - 1
   const xTick = ({ x, y, payload }) => {
-    /* The last day is always labelled, so a regular label that lands just
+    /* The last point is always labelled, so a regular label that lands just
        before it is dropped - on a 30-day month "29" and "30" sat on top of
        each other and read as "2930". */
     const regular = payload.index % labelEvery === 0 && last - payload.index >= labelEvery / 2
     if (!regular && payload.index !== last) return null
     // Anchored inward at the right edge, or "30" is cut to "3".
-    const anchor = payload.index === last ? 'end' : 'middle'
-    return <text x={x} y={y+12} textAnchor={anchor} fontSize={10} fill="#94a3b8">{payload.value}</text>
+    const anchor = payload.index === last && chart !== 'bars' ? 'end' : 'middle'
+    return <text x={x} y={y + 12} textAnchor={anchor} fontSize={10} fill="#94a3b8">{payload.value}</text>
   }
+  // A line's last point sits on the right edge, so its dot needs a little room or it is cut in half.
+  const edge = chart === 'bars' ? 0 : 6
+  const lead = CHART_COLORS[keys[0] ?? 'expenses']
   return (
     <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
-      <ResponsiveContainer width="100%" height={160}>
-        <AreaChart data={data} margin={{ top: 10, right: 0, left: -8, bottom: 0 }}>
+      <ResponsiveContainer width="100%" height={TREND_HEIGHT}>
+        <ComposedChart key={animKey} data={rows} margin={{ top: 10, right: edge, left: -8, bottom: 0 }} barCategoryGap="22%" barGap={1}>
           <defs>
-            <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%"   stopColor={color} stopOpacity={0.25} />
-              <stop offset="100%" stopColor={color} stopOpacity={0} />
-            </linearGradient>
+            {keys.map(k => (
+              <linearGradient key={k} id={`trendGrad-${uid}-${k}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%"   stopColor={CHART_COLORS[k]} stopOpacity={multi ? 0.16 : 0.25} />
+                <stop offset="100%" stopColor={CHART_COLORS[k]} stopOpacity={0} />
+              </linearGradient>
+            ))}
           </defs>
           <CartesianGrid strokeDasharray="4 3" vertical={false} stroke="rgba(148,163,184,0.12)" />
-          <XAxis dataKey="day" tick={xTick} axisLine={false} tickLine={false} interval={0} />
-          <YAxis tickFormatter={yTickFmt} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40} />
+          <XAxis dataKey="tick" tick={xTick} axisLine={false} tickLine={false} interval={0} />
+          <YAxis domain={[floor, ceil]} ticks={ticks} interval={0} tickFormatter={compactTick} tick={{ fontSize: 10, fill: '#94a3b8' }}
+            axisLine={false} tickLine={false} width={axisWidth(ticks)} />
+          {floor < 0 && ceil > 0 && <ReferenceLine y={0} stroke="rgba(148,163,184,0.4)" />}
           <Tooltip
-            content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null
-              const val = payload[0].value
+            content={({ active, payload }) => {
+              const p = active ? payload?.[0]?.payload : null
+              if (!p || keys.every(k => p[k] == null)) return null
               return (
                 <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
-                  <p className="font-semibold mb-0.5" style={{ color }}>{label}</p>
-                  <p className="font-medium text-slate-700 dark:text-white">{val < 0 ? '−' : ''}{fmtCompact(Math.abs(val))}</p>
+                  <p className="font-semibold mb-0.5 text-slate-600 dark:text-slate-300">{p.label}</p>
+                  {keys.map(k => p[k] == null ? null : (
+                    <p key={k} className="flex items-baseline justify-between gap-3 font-medium">
+                      <span style={{ color: CHART_COLORS[k] }}>{TREND_NAMES[k]}</span>
+                      <span className="text-slate-700 dark:text-white tabular-nums">{p[k] < 0 ? '−' : ''}{fmtCompact(Math.abs(p[k]))}</span>
+                    </p>
+                  ))}
                 </div>
               )
             }}
-            cursor={{ stroke: color, strokeWidth: 1, strokeDasharray: '4 2' }}
+            cursor={chart === 'bars' ? { fill: 'rgba(148,163,184,0.08)' } : { stroke: lead, strokeWidth: 1, strokeDasharray: '4 2' }}
           />
-          <Area type="monotone" dataKey="value"
-            stroke={color} strokeWidth={2.5}
-            fill={`url(#${gradId})`} dot={false} baseValue={0}
-            activeDot={{ r: 5, fill: color, stroke: 'white', strokeWidth: 2 }}
-            isAnimationActive={!prefersReducedMotion()} animationDuration={800}
-          />
-        </AreaChart>
+          {average && keys.map(k => known(k).length > 0 && (
+            <ReferenceLine key={`avg-${k}`} y={known(k).reduce((s, v) => s + v, 0) / known(k).length}
+              stroke={CHART_COLORS[k]} strokeOpacity={0.7} strokeDasharray="5 4"
+              /* Said in words only when there is one line to say it of: three
+                 labels on top of each other say nothing. */
+              label={multi ? undefined : { value: `Average ${fmtCompact(known(k).reduce((s, v) => s + v, 0) / known(k).length)}`, position: 'insideTopRight', fontSize: 10, fill: CHART_COLORS[k] }} />
+          ))}
+          {chart === 'bars' && keys.map(k => (
+            <Bar key={k} dataKey={k} fill={CHART_COLORS[k]} fillOpacity={0.85} radius={[4, 4, 0, 0]} maxBarSize={28}
+              activeBar={{ stroke: 'none', fillOpacity: 1 }} isAnimationActive={animate} animationDuration={600} />
+          ))}
+          {chart === 'area' && keys.map(k => (
+            <Area key={k} type={curve} dataKey={k} stroke={CHART_COLORS[k]} strokeWidth={multi ? 2 : 2.5} fill={`url(#trendGrad-${uid}-${k})`} baseValue={0}
+              // A single point has no line to draw; a dot is all there is to show.
+              dot={dots || known(k).length < 2 ? { r: 3, fill: CHART_COLORS[k], strokeWidth: 0 } : false}
+              activeDot={{ r: 5, fill: CHART_COLORS[k], stroke: 'white', strokeWidth: 2 }} isAnimationActive={animate} animationDuration={800} />
+          ))}
+          {chart === 'line' && keys.map(k => (
+            <Line key={k} type={curve} dataKey={k} stroke={CHART_COLORS[k]} strokeWidth={multi ? 2 : 2.5}
+              dot={dots || known(k).length < 2 ? { r: 3, fill: CHART_COLORS[k], strokeWidth: 0 } : false}
+              activeDot={{ r: 5, fill: CHART_COLORS[k], stroke: 'white', strokeWidth: 2 }} isAnimationActive={animate} animationDuration={800} />
+          ))}
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   )
@@ -406,41 +487,6 @@ export function ForecastChart({ data, todayIndex, color, currency, rangeKey, flo
           </span>
         )}
       </div>
-    </div>
-  )
-}
-
-// ── Chart: Multi-month bars (3M / 6M) ─────────────────────────────────────────
-
-export function MultiBarChart({ data }) {
-  const yTickFmt = v => v >= 1000 ? `${(v/1000).toFixed(0)}K` : v
-  return (
-    <div className="[&_*]:outline-none [&_*]:focus:outline-none px-5">
-      <ResponsiveContainer width="100%" height={180}>
-        <BarChart data={data} margin={{ top: 8, right: 0, left: -8, bottom: 0 }} barCategoryGap="28%" barGap={2}>
-          <CartesianGrid strokeDasharray="4 3" vertical={false} stroke="rgba(148,163,184,0.12)" />
-          <XAxis dataKey="label" tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} />
-          <YAxis tickFormatter={yTickFmt} tick={{ fontSize: 10, fill: '#94a3b8' }} axisLine={false} tickLine={false} width={40} />
-          <Tooltip
-            content={({ active, payload, label }) => {
-              if (!active || !payload?.length) return null
-              return (
-                <div className="bg-lifted border border-slate-200 dark:border-white/10 rounded-2xl px-3 py-2 shadow-lg text-xs">
-                  <p className="font-semibold text-slate-600 dark:text-slate-300 mb-1">{label}</p>
-                  {payload.map(p => (
-                    <p key={p.dataKey} className="font-medium" style={{ color: p.fill }}>
-                      {p.dataKey === 'income' ? 'Income' : 'Expense'}: {fmtCompact(p.value)}
-                    </p>
-                  ))}
-                </div>
-              )
-            }}
-            cursor={{ fill: 'rgba(148,163,184,0.08)' }}
-          />
-          <Bar dataKey="income"  fill="#22c55e" fillOpacity={0.85} radius={[4,4,0,0]} isAnimationActive={!prefersReducedMotion()} animationDuration={600} activeBar={{ stroke: 'none', fillOpacity: 1 }} />
-          <Bar dataKey="expense" fill="#ef4444" fillOpacity={0.85} radius={[4,4,0,0]} isAnimationActive={!prefersReducedMotion()} animationDuration={600} activeBar={{ stroke: 'none', fillOpacity: 1 }} />
-        </BarChart>
-      </ResponsiveContainer>
     </div>
   )
 }

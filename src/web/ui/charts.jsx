@@ -1,11 +1,12 @@
 import { useId } from 'react'
 import {
-  AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
+  AreaChart, Area, BarChart, Bar, ComposedChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine,
   PieChart, Pie, Cell,
 } from 'recharts'
 import { fmt, fmtCompact } from '../../lib/money'
-import { niceAxis, flatAxis } from '../../pages/insights/Charts'
+import { niceAxis, flatAxis, trendAxis } from '../../pages/insights/Charts'
 import { prefersReducedMotion } from '../../components/ui/motion'
+import { TREND_SERIES } from '../../lib/trendSettings'
 import { Empty } from './display'
 
 /**
@@ -103,6 +104,101 @@ export function AreaTrend({ data, color = 'var(--d-accent)', height = 220, curre
             isAnimationActive={!prefersReducedMotion()} animationDuration={600}
           />
         </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+/** The colour of each Trend line - the same three the phone draws, in the desktop's own tones. */
+export const TREND_COLORS = { expenses: 'var(--d-neg)', income: 'var(--d-pos)', netflow: 'var(--d-accent)' }
+/** What each is called on the desktop: what it is, as the cards above say it. */
+export const TREND_WORDS = { expenses: 'Spent', income: 'Came in', netflow: 'Net' }
+
+/**
+ * The Trend chart: one or more series of money over time, drawn over each
+ * other as lines, lines with a fill, or bars - as the Trend settings say
+ * (lib/trendSettings.js), the same ones the phone's Trend page reads. A point
+ * of null is a day that has not happened yet, and is left empty.
+ *
+ * @param {{trend: {expenses: import('../../pages/insights/trendData').TrendPoint[], income: import('../../pages/insights/trendData').TrendPoint[],
+ *            netflow: import('../../pages/insights/trendData').TrendPoint[]},
+ *          series: import('../../lib/trendSettings').TrendSeriesKey[], settings: import('../../lib/trendSettings').TrendSettings,
+ *          height?: number, currency?: string, empty?: ChartEmptyText}} props
+ */
+export function TrendPlot({ trend, series, settings, height = 300, currency, empty }) {
+  const id = useId().replace(/:/g, '')
+  const { chart, smooth, points: dots, average } = settings
+  const keys = TREND_SERIES.filter(k => series.includes(k))
+  const multi = keys.length > 1
+  const rows = trend[keys[0] ?? 'expenses'].map((p, i) => ({
+    tick: p.tick, label: p.label,
+    .../** @type {Record<string, number|null>} */ (Object.fromEntries(keys.map(k => [k, trend[k][i].value]))),
+  }))
+  const known = (/** @type {string} */ k) => rows.flatMap(r => { const v = /** @type {any} */ (r)[k]; return v == null ? [] : [/** @type {number} */ (v)] })
+  const all = keys.flatMap(known)
+  if (!all.some(v => v)) return <ChartEmpty empty={empty} height={height} />
+  const { floor, ceil, ticks } = trendAxis(all)
+  const curve = smooth ? 'monotone' : 'linear'
+  const last = rows.length - 1
+  const every = Math.max(1, Math.ceil(rows.length / 8))
+  const animate = !prefersReducedMotion()
+  return (
+    <div className="[&_*]:outline-none">
+      <ResponsiveContainer width="100%" height={height}>
+        <ComposedChart data={rows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }} barCategoryGap="22%" barGap={2}>
+          <defs>
+            {keys.map(k => (
+              <linearGradient key={k} id={`t${id}${k}`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={TREND_COLORS[k]} stopOpacity={multi ? 0.12 : 0.18} />
+                <stop offset="100%" stopColor={TREND_COLORS[k]} stopOpacity={0} />
+              </linearGradient>
+            ))}
+          </defs>
+          <CartesianGrid vertical={false} stroke={GRID} />
+          <XAxis
+            dataKey="tick" axisLine={false} tickLine={false} interval={0} height={24}
+            tick={({ x, y, payload }) => {
+              /* The last point is always labelled, so a regular label that
+                 lands just before it is dropped rather than run into it. */
+              const shown = payload.index === last || (payload.index % every === 0 && last - payload.index >= every / 2)
+              if (!shown) return <g />
+              const anchor = payload.index === last && chart !== 'bars' ? 'end' : payload.index === 0 && chart !== 'bars' ? 'start' : 'middle'
+              return <text x={x} y={y + 14} textAnchor={anchor} {...AXIS}>{payload.value}</text>
+            }}
+          />
+          <YAxis domain={[floor, ceil]} ticks={ticks} interval={0} tickFormatter={tick} tick={AXIS} axisLine={false} tickLine={false} width={56} />
+          {floor < 0 && ceil > 0 && <ReferenceLine y={0} stroke="var(--d-border-strong)" />}
+          <Tooltip
+            cursor={chart === 'bars' ? { fill: 'var(--d-hover)' } : { stroke: 'var(--d-border-strong)', strokeWidth: 1 }}
+            content={({ active, payload }) => {
+              const p = active ? payload?.[0]?.payload : null
+              if (!p || keys.every(k => p[k] == null)) return null
+              return <Tip title={String(p.label)} rows={keys.flatMap(k => (p[k] == null ? [] : [{
+                label: TREND_WORDS[k], value: fmt(Number(p[k]), currency), color: multi ? TREND_COLORS[k] : undefined,
+              }]))} />
+            }}
+          />
+          {average && keys.map(k => known(k).length > 0 && (
+            <ReferenceLine key={`avg-${k}`} y={known(k).reduce((s, v) => s + v, 0) / known(k).length}
+              stroke={TREND_COLORS[k]} strokeOpacity={0.7} strokeDasharray="5 4"
+              /* Said in words only when there is one line to say it of: three labels on top of each other say nothing. */
+              label={multi ? undefined : { value: `Average ${fmtCompact(known(k).reduce((s, v) => s + v, 0) / known(k).length)}`, position: 'insideTopRight', fontSize: 11, fill: TREND_COLORS[k] }} />
+          ))}
+          {chart === 'bars' && keys.map(k => (
+            <Bar key={k} dataKey={k} fill={TREND_COLORS[k]} radius={[3, 3, 0, 0]} maxBarSize={22} isAnimationActive={animate} />
+          ))}
+          {chart === 'area' && keys.map(k => (
+            <Area key={k} type={curve} dataKey={k} stroke={TREND_COLORS[k]} strokeWidth={2} fill={`url(#t${id}${k})`} baseValue={0}
+              // One point has no line to draw; a dot is all there is to show.
+              dot={dots || known(k).length < 2 ? { r: 3, fill: TREND_COLORS[k], stroke: 'var(--d-panel)', strokeWidth: 1.5 } : false}
+              activeDot={{ r: 4, fill: TREND_COLORS[k], stroke: 'var(--d-panel)', strokeWidth: 2 }} isAnimationActive={animate} animationDuration={600} />
+          ))}
+          {chart === 'line' && keys.map(k => (
+            <Line key={k} type={curve} dataKey={k} stroke={TREND_COLORS[k]} strokeWidth={2}
+              dot={dots || known(k).length < 2 ? { r: 3, fill: TREND_COLORS[k], stroke: 'var(--d-panel)', strokeWidth: 1.5 } : false}
+              activeDot={{ r: 4, fill: TREND_COLORS[k], stroke: 'var(--d-panel)', strokeWidth: 2 }} isAnimationActive={animate} animationDuration={600} />
+          ))}
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   )

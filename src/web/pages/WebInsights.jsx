@@ -4,7 +4,8 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import useForecast from '../../hooks/useForecast'
-import { useInsightsData, dailySeries } from '../../pages/insights/useInsightsData'
+import { useInsightsData } from '../../pages/insights/useInsightsData'
+import { grainTitle, useTrend } from '../../pages/insights/trendData'
 import {
   RANGES, AHEAD_RANGES, MONTHS, changeOf, monthOfPeriod, periodName, periodPhrase, usePeriod, useInsightsState, setInsights,
 } from '../../pages/insights/period'
@@ -12,6 +13,8 @@ import { useNetWorthSeries, monthEnds, NET_RANGES, NET_RANGE_WORDS } from '../..
 import { ForecastChart } from '../../pages/insights/Charts'
 import Highlights from '../../pages/insights/Highlights'
 import { FORECAST_SETTINGS_PATH } from '../../lib/forecast'
+import { TREND_SETTINGS_PATH } from '../../lib/trendSettings'
+import useTrendSettings from '../../hooks/useTrendSettings'
 import { editTransaction } from '../../lib/editTransaction'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { fmt, fmtCompact } from '../../lib/money'
@@ -26,9 +29,9 @@ import CashFlow from './CashFlow'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
-import { Segmented, Tabs } from '../ui/controls'
+import { MultiSegmented, Segmented, Tabs } from '../ui/controls'
 import { Stat, CategoryTile, AccountTile, Progress, Empty, Money } from '../ui/display'
-import { AreaTrend, Bars, InOutBars, Ring } from '../ui/charts'
+import { AreaTrend, Bars, InOutBars, Ring, TREND_COLORS, TrendPlot } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxAccount } from './txParts'
 import { IChevronLeft, IChevronRight, ISliders } from '../ui/icons'
 
@@ -373,48 +376,59 @@ function Spending({ data, period }) {
 
 /** @param {{data: Data, period: any}} props */
 function Trend({ data, period }) {
+  const navigate = useNavigate()
   const daily = period.range === '1m' || period.range === '7d'
-  const [series, setSeries] = useState('expenses')
-  const s = useMemo(() => dailySeries(data.daily), [data.daily])
-  const points = (series === 'income' ? s.income : series === 'netflow' ? s.netflow : s.expenses).map(p => ({ label: String(p.day), value: p.value }))
+  const { settings } = useTrendSettings()
+  /* What the toggle was last set to, kept across periods: until it is
+     touched, the chart opens on what the Trend settings say. */
+  const [picked, setPicked] = useState(/** @type {import('../../lib/trendSettings').TrendSeriesKey[]|null} */ (null))
+  const series = picked ?? settings.series
+  const { series: trend, grain } = useTrend(data, period, settings.grain)
   const lived = data.lived
   const avg = lived.length ? lived.reduce((t, d) => t + d.expense, 0) / lived.length : 0
   const peak = lived.reduce((p, d) => (d.expense > (p?.expense ?? 0) ? d : p), /** @type {any} */ (null))
   const quiet = lived.filter(d => d.expense === 0).length
+  const phrase = periodPhrase(period)
+  const empty = { title: series.length > 1 ? `Nothing in or out ${phrase}` : series[0] === 'income' ? `Nothing came in ${phrase}` : series[0] === 'expenses' ? `Nothing spent ${phrase}` : `Nothing in or out ${phrase}` }
+  const key = (/** @type {import('../../lib/trendSettings').TrendSeriesKey} */ k, /** @type {string} */ text) => (
+    <span className="inline-flex items-center gap-1.5"><span className="d-swatch" style={{ background: TREND_COLORS[k] }} />{text}</span>
+  )
   return (
     <>
       <Figures data={data} period={period} />
+      <Panel className="mb-5" title={grainTitle(grain, period.range, data.multiBarData)}
+        actions={
+          <>
+            <MultiSegmented label="Show" value={series} onChange={setPicked}
+              options={[{ value: 'expenses', label: key('expenses', 'Spent') }, { value: 'income', label: key('income', 'Came in') }, { value: 'netflow', label: key('netflow', 'Net') }]} />
+            <Btn variant="ghost" icon={<ISliders size={16} />} label="Trend settings" onClick={() => navigate(TREND_SETTINGS_PATH)} />
+          </>
+        }>
+        {/* Drawn afresh for each period, lines and style, never morphed from the last: a half-finished morph is how a stale line got left on screen. */}
+        <TrendPlot
+          key={`${period.range}-${period.month ?? ''}-${series.join()}-${settings.chart}-${grain}`}
+          trend={trend} series={series} settings={settings} height={300} empty={empty} />
+      </Panel>
       {daily ? (
-        <>
-          <div className="grid grid-cols-3 gap-5 mb-8">
-            <Stat oneLine label="Average a day" value={fmt(avg)} note={`Over ${lived.length} ${lived.length === 1 ? 'day' : 'days'} so far`} />
-            <Stat oneLine label="Biggest day" value={peak ? fmt(peak.expense) : '—'} note={peak ? peak.label : ' '} />
-            <Stat oneLine label="Days with no spending" value={String(quiet)} note={`Of ${lived.length}`} />
-          </div>
-          <Panel title="Day by day" actions={<Segmented label="Show" value={series} onChange={setSeries} options={[{ value: 'expenses', label: 'Spent' }, { value: 'income', label: 'Came in' }, { value: 'netflow', label: 'Net' }]} />}>
-            {series === 'netflow'
-              ? <AreaTrend data={points} height={300} valueLabel="Net" empty={{ title: `Nothing in or out ${periodPhrase(period)}` }} />
-              : <Bars data={points} height={300} color={series === 'income' ? 'var(--d-pos)' : 'var(--d-accent)'} valueLabel={series === 'income' ? 'Came in' : 'Spent'}
-                empty={{ title: series === 'income' ? `Nothing came in ${periodPhrase(period)}` : `Nothing spent ${periodPhrase(period)}` }} />}
-          </Panel>
-        </>
+        <div className="grid grid-cols-3 gap-5">
+          <Stat oneLine label="Average a day" value={fmt(avg)} note={`Over ${lived.length} ${lived.length === 1 ? 'day' : 'days'} so far`} />
+          <Stat oneLine label="Biggest day" value={peak ? fmt(peak.expense) : '—'} note={peak ? peak.label : ' '} />
+          <Stat oneLine label="Days with no spending" value={String(quiet)} note={`Of ${lived.length}`} />
+        </div>
       ) : (
-        <>
-          <Panel className="mb-5" title="Month by month"><InOutBars data={data.multiBarData} height={300} empty={{ title: `Nothing in or out ${periodPhrase(period)}` }} /></Panel>
-          <Panel title="Each month" flush>
-            <DataTable
-              label="Each month"
-              rows={[...data.multiBarData].reverse()}
-              rowKey={(r) => r.label}
-              columns={[
-                { key: 'm', header: 'Month', render: (r) => <span className="font-medium">{r.label}</span> },
-                { key: 'in', header: 'Came in', width: 160, align: 'right', render: (r) => <span className="d-num d-pos">{fmt(r.income)}</span> },
-                { key: 'out', header: 'Spent', width: 160, align: 'right', render: (r) => <span className="d-num">{fmt(r.expense)}</span> },
-                { key: 'net', header: 'Net', width: 160, align: 'right', render: (r) => { const n = r.income - r.expense; return <span className={`d-num font-semibold ${n < 0 ? 'd-neg' : 'd-pos'}`}>{n < 0 ? '−' : '+'}{fmt(Math.abs(n))}</span> } },
-              ]}
-            />
-          </Panel>
-        </>
+        <Panel title="Each month" flush>
+          <DataTable
+            label="Each month"
+            rows={[...data.multiBarData].reverse()}
+            rowKey={(r) => r.label}
+            columns={[
+              { key: 'm', header: 'Month', render: (r) => <span className="font-medium">{r.label}</span> },
+              { key: 'in', header: 'Came in', width: 160, align: 'right', render: (r) => <span className="d-num d-pos">{fmt(r.income)}</span> },
+              { key: 'out', header: 'Spent', width: 160, align: 'right', render: (r) => <span className="d-num">{fmt(r.expense)}</span> },
+              { key: 'net', header: 'Net', width: 160, align: 'right', render: (r) => { const n = r.income - r.expense; return <span className={`d-num font-semibold ${n < 0 ? 'd-neg' : 'd-pos'}`}>{n < 0 ? '−' : '+'}{fmt(Math.abs(n))}</span> } },
+            ]}
+          />
+        </Panel>
       )}
     </>
   )

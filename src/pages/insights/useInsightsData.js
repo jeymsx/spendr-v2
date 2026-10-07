@@ -217,17 +217,3 @@ export function useInsightsData(period) {
     categorySegments, daily, lived, multiBarData, rankedExpenses, accountBreakdown, trivia,
   }
 }
-
-/**
- * The Trend chart's three series from the day-by-day rows: what went out,
- * what came in, and the difference.
- *
- * @param {Array<{day: number|string, expense: number, income: number}>} daily
- */
-export function dailySeries(daily) {
-  return {
-    expenses: daily.map(d => ({ day: d.day, value: d.expense })),
-    income: daily.map(d => ({ day: d.day, value: d.income })),
-    netflow: daily.map(d => ({ day: d.day, value: d.income - d.expense })),
-  }
-}

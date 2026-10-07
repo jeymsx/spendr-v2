@@ -9,6 +9,7 @@ import { SYNCED_WITH_KEY, accountHasData, deviceStanding, localOnlyDeltas } from
 import { SYSTEM_CATS } from './phCategories'
 import { NUDGE_KEY } from './nudge'
 import { FORECAST_FLOOR_KEY, FORECAST_SETTINGS_KEY, readForecastSettings } from './forecastSettings'
+import { TREND_SETTINGS_KEY, readTrendSettings } from './trendSettings'
 import { docText, noteTitle } from './noteText'
 
 // ── Pending remote deletes ────────────────────────────────────────────────────
@@ -707,7 +708,7 @@ export function rowToTrash(row) {
 
 /** @param {string} userId */
 async function pushPreferences(userId) {
-  const [nameMeta, currencyMeta, skipMeta, rolloverMeta, nudgeMeta, forecastMeta, floorMeta] = await Promise.all([
+  const [nameMeta, currencyMeta, skipMeta, rolloverMeta, nudgeMeta, forecastMeta, floorMeta, trendMeta] = await Promise.all([
     db.meta.get('displayName'),
     db.meta.get('currency'),
     db.meta.get('skipConfirm'),
@@ -715,6 +716,7 @@ async function pushPreferences(userId) {
     db.meta.get(NUDGE_KEY),
     db.meta.get(FORECAST_SETTINGS_KEY),
     db.meta.get(FORECAST_FLOOR_KEY),
+    db.meta.get(TREND_SETTINGS_KEY),
   ])
   const accentColor = localStorage.getItem('accentColor') ?? '#2D9DFF'
   /* 'spendr-theme' - ThemeContext namespaces its key. Theme and accent both
@@ -727,7 +729,7 @@ async function pushPreferences(userId) {
      defeats the comparison on the other side the moment two devices are in
      play - the second device's pull would always lose to whichever one
      synced last, regardless of who actually changed a setting. */
-  const localTs = [nameMeta, currencyMeta, skipMeta, rolloverMeta, nudgeMeta, forecastMeta, floorMeta]
+  const localTs = [nameMeta, currencyMeta, skipMeta, rolloverMeta, nudgeMeta, forecastMeta, floorMeta, trendMeta]
     .map(m => (m?.updatedAt ? new Date(m.updatedAt).getTime() : 0))
     .reduce((a, b) => Math.max(a, b), 0)
   const row = {
@@ -751,6 +753,8 @@ async function pushPreferences(userId) {
        the laptop tell you the same thing about the next 30 days. */
     forecast_settings: forecastMeta?.value ?? null,
     forecast_floor:    floorMeta?.value ?? null,
+    /* 029. How the Trend chart is drawn. */
+    trend_settings:    trendMeta?.value ?? null,
     updated_at:   new Date(localTs || Date.now()).toISOString(),
   }
   const { error } = await supabase
@@ -844,6 +848,10 @@ export async function pullPreferences(userId, { first = false } = {}) {
   }
   if (data.forecast_floor != null && Number.isFinite(Number(data.forecast_floor)) && !(await localIsNewer(FORECAST_FLOOR_KEY))) {
     await db.meta.put({ key: FORECAST_FLOOR_KEY, value: Math.max(0, Number(data.forecast_floor)), updatedAt: data.updated_at })
+  }
+  // The same: checked on the way in, so a row from a newer version cannot break the chart.
+  if (data.trend_settings != null && !(await localIsNewer(TREND_SETTINGS_KEY))) {
+    await db.meta.put({ key: TREND_SETTINGS_KEY, value: readTrendSettings(data.trend_settings), updatedAt: data.updated_at })
   }
 }
 
@@ -1129,7 +1137,7 @@ const OPTIONAL_COLS = {
   ],
   /* 024's daily_nudge too. Until it runs, the check-in's time stays on the
      device it was set on. */
-  user_preferences: ['theme', 'budget_rollover', 'daily_nudge', 'forecast_settings', 'forecast_floor'],
+  user_preferences: ['theme', 'budget_rollover', 'daily_nudge', 'forecast_settings', 'forecast_floor', 'trend_settings'],
   debts: ['source_tx_id', 'source_category', 'sync_id', 'archived_at'],
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another
