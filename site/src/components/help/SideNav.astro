@@ -1,0 +1,62 @@
+---
+/**
+ * The list beside a help page on a wide screen: the other articles in the
+ * topic, or the other topics, with the one you're on marked. On a phone it
+ * follows the page instead.
+ */
+import Icon from '../Icon.astro'
+
+interface Item { href: string; label: string; current?: boolean; icon?: string }
+interface Props {
+  label: string
+  title: string
+  titleHref?: string
+  titleIcon?: string
+  items: Item[]
+  class?: string
+}
+const { label, title, titleHref, titleIcon, items, class: cls = '' } = Astro.props
+---
+<nav aria-label={label} class:list={['side', cls]}>
+  {titleHref ? (
+    <a href={titleHref} class="side-title press press-fade">
+      {titleIcon && <span class="cat-tile grid size-8 shrink-0 place-items-center rounded-[10px]" style="--cat:#2D9DFF"><Icon name={titleIcon} size={17} stroke={2} /></span>}
+      <span class="min-w-0">{title}</span>
+    </a>
+  ) : (
+    <p class="side-title">{title}</p>
+  )}
+  <ul class="side-list">
+    {items.map(it => (
+      <li>
+        <a href={it.href} aria-current={it.current ? 'page' : undefined} class="side-link press press-fade">
+          {it.icon && <Icon name={it.icon} size={18} stroke={1.9} class="side-icon" />}
+          <span class="min-w-0">{it.label}</span>
+        </a>
+      </li>
+    ))}
+  </ul>
+</nav>
+
+<style>
+  .side-title {
+    display: flex; align-items: center; gap: 10px; padding: 6px 12px 6px 6px; margin-bottom: 6px;
+    border-radius: 14px; font-weight: 650; font-size: 0.9375rem; letter-spacing: -0.01em;
+  }
+  p.side-title { padding-left: 12px; color: var(--muted); font-weight: 600; }
+  a.side-title:hover { background: rgba(15, 23, 42, 0.04); }
+  :global(.dark) a.side-title:hover { background: rgba(255, 255, 255, 0.04); }
+  .side-list { display: grid; gap: 2px; }
+  .side-link {
+    display: flex; align-items: flex-start; gap: 10px; padding: 9px 12px; border-radius: 14px;
+    font-size: 0.9375rem; line-height: 1.4; color: var(--muted-on-tint);
+  }
+  .side-link:hover { color: var(--text); background: rgba(15, 23, 42, 0.04); }
+  :global(.dark) .side-link:hover { background: rgba(255, 255, 255, 0.04); }
+  .side-link[aria-current='page'] {
+    color: var(--ink); font-weight: 600;
+    background: color-mix(in srgb, var(--color-primary) 10%, transparent);
+  }
+  :global(.dark) .side-link[aria-current='page'] { background: color-mix(in srgb, var(--color-primary) 14%, transparent); }
+  .side-link :global(.side-icon) { flex: none; margin-top: 1px; }
+</style>

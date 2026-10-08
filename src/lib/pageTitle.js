@@ -53,6 +53,8 @@ const NAMES = /** @type {Array<[string, string]>} */ ([
   ['/recap/*', 'Wrapped'],
   ['/recap', 'Wrapped'],
   ['/import', 'Import'],
+  ['/help/*', 'Help'],
+  ['/help', 'Help'],
   ['/settings/profile', 'Profile'],
   ['/settings/preferences', 'Preferences'],
   ['/settings/sync', 'Cloud sync'],

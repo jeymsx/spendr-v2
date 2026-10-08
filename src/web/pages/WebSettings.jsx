@@ -4,7 +4,7 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { APP_VERSION } from '../../lib/release'
 import Page from '../ui/Page'
 import {
-  ISettings, IUser, ISliders, IRefresh, ITag, IGauge, IZap, IGlobe, IDownload, IShield, ISparkle, ITrash, IFileText,
+  ISettings, IUser, ISliders, IRefresh, ITag, IGauge, IZap, IGlobe, IDownload, IShield, ISparkle, ITrash, IFileText, IHelp,
 } from '../ui/icons'
 
 /**
@@ -55,6 +55,8 @@ const GROUPS = [
   {
     label: 'About',
     items: [
+      // Its own page, wide, rather than a pane in here (pages/WebHelp).
+      { to: '/help', label: 'Help centre', Icon: IHelp },
       { to: '/settings/changelog', label: 'What’s new', Icon: ISparkle },
       { to: '/settings/privacy', label: 'Privacy & terms', Icon: IFileText, also: ['/settings/terms'] },
     ],

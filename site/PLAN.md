@@ -32,7 +32,7 @@ The website's "Open Spendr" buttons link to the app. Nothing redirects.
    - the app's own curves (`--ease-out`, `--ease-sheet`, `--ease-settle`), which settle with no bounce
    - no glows, no confetti; Wrapped's panel is the one loud place, as in the app
    - everything off under `prefers-reduced-motion`
-4. **One source of truth.** The changelog, the release notes, the Privacy and Terms text, the achievements, the bank list and the glass art are imported from the app (`src/lib/changelog.js`, `src/lib/release.js`, `src/lib/policy.js`, `src/lib/achievements.js`, `src/lib/challenges.js`, `src/lib/phAccounts.js`, `src/components/glass/glass.js`), so the site can't drift from the app. The only copy is the eight accent names, in `src/data/app.ts`, because they live in a React module.
+4. **One source of truth.** The changelog, the release notes, the Privacy and Terms text, the achievements, the bank list, the help articles and the glass art are imported from the app (`src/lib/changelog.js`, `src/lib/release.js`, `src/lib/policy.js`, `src/lib/achievements.js`, `src/lib/challenges.js`, `src/lib/phAccounts.js`, `src/lib/help.js`, `src/lib/helpSearch.js`, `src/components/glass/glass.js`), so the site can't drift from the app. The only copy is the eight accent names, in `src/data/app.ts`, because they live in a React module.
 5. **Fast and honest to share:**
    - static HTML, CSS inlined, about 6 KB of script
    - no analytics, no cookies
@@ -47,6 +47,11 @@ The website's "Open Spendr" buttons link to the app. Nothing redirects.
 - **`/install`:** iPhone and iPad, Android, and a computer, with the visitor's own device marked.
 - **`/changelog`:** every release, from the app's own changelog.
 - **`/privacy`, `/terms`:** from the app's own text, word for word.
+- **`/help`:** the help centre, from the app's own articles (`src/lib/help.js`), so the site and the app's /help say the same thing. "How can we help?" on a blue panel with the search and quick help links, the ten topics, popular questions, and "Still stuck?" with the email.
+  - **`/help/topic/<id>`:** a topic's articles as rows, with every topic beside them on wide screens.
+  - **`/help/<id>`:** one article, at the address the app links to: breadcrumbs, the body (steps, tips, screens in a phone or the browser window, "open in Spendr" buttons), related questions, and the rest of its topic in a sidebar.
+  - **`/help/search?q=`:** every result, read from the address and kept in it as you type; not indexed, not in the sitemap.
+  - Search is the app's own `src/lib/helpSearch.js`, so the same words find the same answers. Its script (`scripts/helpSearch.ts`) fetches the articles only when someone reaches for the field. The field is an ARIA combobox: arrows, Enter, Escape.
 - **`/404`**
 
 ## Home, top to bottom

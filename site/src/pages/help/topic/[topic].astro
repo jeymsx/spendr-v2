@@ -1,0 +1,75 @@
+---
+/** One topic: its articles as rows, with every other topic beside them. */
+import Help from '../../../layouts/Help.astro'
+import Icon from '../../../components/Icon.astro'
+import HelpTop from '../../../components/help/HelpTop.astro'
+import ArticleList from '../../../components/help/ArticleList.astro'
+import SideNav from '../../../components/help/SideNav.astro'
+import StillStuck from '../../../components/help/StillStuck.astro'
+import { topics, articlesIn, topicIcon, countLabel, type HelpTopic } from '../../../data/help'
+
+export function getStaticPaths() {
+  return topics.map(t => ({ params: { topic: t.id }, props: { t } }))
+}
+
+interface Props { t: HelpTopic }
+const { t } = Astro.props
+const list = articlesIn(t.id)
+const lowerFirst = (s: string) => s.charAt(0).toLowerCase() + s.slice(1)
+---
+<Help
+  title={`${t.title} · Help`}
+  description={`Help with ${lowerFirst(t.title)}: ${lowerFirst(t.blurb)}`}
+  trail={[{ label: 'Help', href: '/help' }, { label: t.title, href: `/help/topic/${t.id}` }]}
+>
+  <HelpTop crumbs={[{ label: 'Help', href: '/help' }, { label: t.title }]} />
+
+  <div class="container-site help-split pb-20 pt-10 sm:pb-28 sm:pt-14">
+    <div class="help-main min-w-0">
+      <header class="topic-head">
+        <span class="cat-tile hero-in grid size-14 shrink-0 place-items-center rounded-[18px]" style="--cat:#2D9DFF">
+          <Icon name={topicIcon(t)} size={28} stroke={1.8} />
+        </span>
+        <div class="min-w-0">
+          <h1 class="help-h1 hero-in" style="--d:60ms">{t.title}</h1>
+          <p class="lede hero-in mt-3 max-w-[36rem]" style="--d:120ms">{t.blurb}</p>
+          <p class="hero-in mt-3 text-[0.875rem] font-semibold text-muted" style="--d:150ms">{countLabel(list.length)}</p>
+        </div>
+      </header>
+
+      {list.length > 0 ? (
+        <ArticleList articles={list} class="hero-in mt-8 sm:mt-10" style="--d:180ms" />
+      ) : (
+        <div class="surface hero-in mt-8 rounded-[var(--radius-card)] p-6 sm:mt-10 sm:p-8" style="--d:180ms">
+          <p class="font-semibold">No articles here yet.</p>
+          <p class="mt-1 text-[0.9375rem] leading-relaxed text-muted">
+            Try the search above, or a <a href="/help#help-topics" class="font-semibold text-ink underline decoration-[color-mix(in_srgb,var(--color-primary)_40%,transparent)] underline-offset-2">different topic</a>.
+          </p>
+        </div>
+      )}
+
+      <div class="mt-10"><StillStuck compact /></div>
+    </div>
+
+    <aside class="help-aside">
+      <SideNav
+        label="Help topics"
+        title="All topics"
+        items={topics.map(o => ({ href: `/help/topic/${o.id}`, label: o.title, icon: topicIcon(o), current: o.id === t.id }))}
+      />
+    </aside>
+  </div>
+</Help>
+
+<style>
+  .topic-head { display: grid; gap: 18px; }
+  @media (min-width: 640px) { .topic-head { grid-template-columns: auto 1fr; gap: 22px; align-items: start; } }
+
+  .help-split { display: grid; gap: 48px; }
+  .help-aside { border-top: 1px solid var(--hairline); padding-top: 32px; }
+  @media (min-width: 1024px) {
+    .help-split { grid-template-columns: 250px minmax(0, 1fr); gap: 56px; }
+    .help-main { grid-column: 2; grid-row: 1; max-width: 50rem; }
+    .help-aside { grid-column: 1; grid-row: 1; border-top: 0; padding-top: 0; position: sticky; top: 96px; align-self: start; }
+  }
+</style>

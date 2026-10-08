@@ -1,0 +1,127 @@
+---
+/**
+ * An article's body, block by block: paragraphs, numbered steps, a tip in a
+ * tinted box, a screen from the app (in a phone, or in a browser window for
+ * the computer layout), and a button that opens the app at that place.
+ */
+import Icon from '../Icon.astro'
+import Phone from '../Phone.astro'
+import Shot from '../Shot.astro'
+import { APP_URL, APP_HOST } from '../../config'
+import { hasShot, isOnColor, isWide, shotAlt, type HelpBlock } from '../../data/help'
+
+interface Props { blocks: HelpBlock[]; articleId: string }
+const { blocks, articleId } = Astro.props
+
+for (const b of blocks) {
+  if ('shot' in b && !hasShot(b.shot)) {
+    console.warn(`[help] ${articleId}: no capture called "${b.shot}" in src/assets/screens; the picture is left out.`)
+  }
+}
+---
+<div class="help-body">
+  {blocks.map(b => {
+    if ('p' in b) return <p class="hb-p">{b.p}</p>
+    if ('steps' in b) return (
+      <ol class="hb-steps" role="list">
+        {b.steps.map((s, i) => (
+          <li class="hb-step">
+            <span class="hb-num tabular" aria-hidden="true">{i + 1}</span>
+            <span class="hb-step-text">{s}</span>
+          </li>
+        ))}
+      </ol>
+    )
+    if ('tip' in b) return (
+      <div class="hb-tip" role="note">
+        <span class="hb-tip-icon" aria-hidden="true"><Icon name="bulb" size={20} stroke={1.9} /></span>
+        <p><span class="sr-only">Tip: </span>{b.tip}</p>
+      </div>
+    )
+    if ('shot' in b) {
+      if (!hasShot(b.shot)) return null
+      return isWide(b.shot) ? (
+        <figure class="hb-figure hb-wide">
+          <div class="window">
+            <div class="window-bar" aria-hidden="true">
+              <span class="flex gap-2"><i class="hb-dot bg-[#ff5f57]"></i><i class="hb-dot bg-[#febc2e]"></i><i class="hb-dot bg-[#28c840]"></i></span>
+              <span class="hb-url"><Icon name="lock" size={12} stroke={2.2} />{APP_HOST}</span>
+              <span></span>
+            </div>
+            <Shot name={b.shot} alt={shotAlt(b.shot)} sizes="(min-width: 1024px) 760px, 92vw" widths={[640, 960, 1280, 1600]} />
+          </div>
+          {b.caption && <figcaption class="hb-caption">{b.caption}</figcaption>}
+        </figure>
+      ) : (
+        <figure class="hb-figure">
+          <Phone
+            shot={b.shot}
+            alt={shotAlt(b.shot)}
+            width="min(64vw, 270px)"
+            sizes="(min-width: 640px) 270px, 64vw"
+            onColor={isOnColor(b.shot)}
+          />
+          {b.caption && <figcaption class="hb-caption">{b.caption}</figcaption>}
+        </figure>
+      )
+    }
+    if ('go' in b) return (
+      <p class="hb-go-wrap">
+        <a href={`${APP_URL}${b.go}`} class="btn hb-go press">
+          {b.label}
+          <Icon name="arrow-up-right" size={18} stroke={2.2} />
+        </a>
+      </p>
+    )
+    return null
+  })}
+</div>
+
+<style>
+  .help-body { display: grid; gap: 22px; font-size: 1.0625rem; line-height: 1.7; }
+  .hb-p { color: var(--text); }
+
+  .hb-steps { display: grid; gap: 14px; margin-block: 2px; }
+  .hb-step { display: flex; gap: 14px; align-items: flex-start; }
+  .hb-num {
+    display: grid; place-items: center; width: 28px; height: 28px; margin-top: 1px; border-radius: 999px; flex: none;
+    font-size: 0.8125rem; font-weight: 700; line-height: 1; color: var(--ink);
+    background: color-mix(in srgb, var(--color-primary) 13%, transparent);
+  }
+  .hb-step-text { padding-top: 1px; min-width: 0; }
+
+  .hb-tip {
+    display: flex; gap: 14px; align-items: flex-start;
+    padding: 16px 18px; border-radius: var(--radius-tile);
+    background: color-mix(in srgb, var(--color-primary) 8%, transparent);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--color-primary) 18%, transparent);
+    font-size: 1rem; line-height: 1.6;
+  }
+  :global(.dark) .hb-tip { background: color-mix(in srgb, var(--color-primary) 11%, transparent); }
+  .hb-tip-icon { display: grid; place-items: center; flex: none; margin-top: 1px; color: var(--ink); }
+
+  .hb-figure { display: grid; justify-items: center; gap: 14px; margin-block: 14px; }
+  .hb-wide { justify-items: stretch; }
+  .hb-wide :global(picture), .hb-wide :global(img) { width: 100%; height: auto; }
+  .hb-caption { max-width: 32rem; text-align: center; justify-self: center; font-size: 0.875rem; line-height: 1.5; color: var(--muted); }
+  .hb-dot { display: block; width: 10px; height: 10px; border-radius: 999px; }
+  .hb-url {
+    display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px;
+    font-size: 0.75rem; font-weight: 500; color: var(--muted-on-tint); background: rgba(15, 23, 42, 0.05);
+  }
+  :global(.dark) .hb-url { background: rgba(255, 255, 255, 0.06); }
+  @media (max-width: 479px) {
+    .window-bar { height: 32px; }
+    .hb-url { display: none; }
+  }
+
+  /* A smaller fill than the hero's, so it takes the deeper accent: white
+     15px text needs the 4.7:1 that --color-primary-deep gives. */
+  .hb-go-wrap { margin-top: 4px; }
+  .hb-go {
+    min-height: 48px; padding-inline: 1.25rem 1.1rem; white-space: normal; text-align: left;
+    color: #fff; background: var(--color-primary-deep);
+    box-shadow: 0 10px 22px -14px rgba(26, 115, 217, 0.9), inset 0 1px 0 rgba(255, 255, 255, 0.18);
+  }
+  .hb-go:hover { background: #1765c2; }
+</style>

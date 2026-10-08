@@ -1,0 +1,81 @@
+---
+/**
+ * One answer, at /help/<id>: the same address the app uses, so a link from
+ * the app lands here. The question, its one-line answer, the body, what to
+ * read next, and the rest of its topic beside it.
+ */
+import Help from '../../layouts/Help.astro'
+import HelpTop from '../../components/help/HelpTop.astro'
+import HelpBody from '../../components/help/HelpBody.astro'
+import ArticleList from '../../components/help/ArticleList.astro'
+import SideNav from '../../components/help/SideNav.astro'
+import StillStuck from '../../components/help/StillStuck.astro'
+import { articles, articlesIn, topic, topicIcon, relatedTo, type HelpArticle, type HelpTopic } from '../../data/help'
+
+export function getStaticPaths() {
+  // /help/search is the results page, so an article can't have that id.
+  const taken = new Set(['search'])
+  return articles
+    .filter(a => {
+      if (taken.has(a.id)) console.warn(`[help] "${a.id}" is a help centre page's address; that article is left out.`)
+      return !taken.has(a.id)
+    })
+    .map(a => ({ params: { article: a.id }, props: { a, t: topic(a.topic) } }))
+}
+
+interface Props { a: HelpArticle; t: HelpTopic | null }
+const { a, t } = Astro.props
+const related = relatedTo(a)
+const siblings = t ? articlesIn(t.id) : []
+const crumbs = [
+  { label: 'Help', href: '/help' },
+  ...(t ? [{ label: t.title, href: `/help/topic/${t.id}` }] : []),
+  { label: a.title, href: `/help/${a.id}` },
+]
+---
+<Help title={a.title} description={a.summary} trail={crumbs}>
+  <HelpTop crumbs={crumbs} />
+
+  <div class="container-site help-split pb-20 pt-10 sm:pb-28 sm:pt-14">
+    <article class="help-main min-w-0" aria-labelledby="article-title">
+      <header>
+        <h1 id="article-title" class="help-h1 hero-in max-w-[22ch]">{a.title}</h1>
+        <p class="lede hero-in mt-4 max-w-[40rem]" style="--d:60ms">{a.summary}</p>
+      </header>
+      <div class="hero-in mt-8 max-w-[42rem] border-t hairline pt-8 sm:mt-10 sm:pt-10" style="--d:120ms">
+        <HelpBody blocks={a.body} articleId={a.id} />
+      </div>
+
+      {related.length > 0 && (
+        <section class="mt-14 max-w-[42rem] sm:mt-16" aria-labelledby="related-title">
+          <h2 id="related-title" class="text-[1.25rem] font-bold tracking-[-0.02em]">Related questions</h2>
+          <ArticleList articles={related} class="mt-4" />
+        </section>
+      )}
+
+      <div class="mt-10 max-w-[42rem]"><StillStuck compact /></div>
+    </article>
+
+    {t && siblings.length > 0 && (
+      <aside class="help-aside">
+        <SideNav
+          label={`Articles in ${t.title}`}
+          title={t.title}
+          titleHref={`/help/topic/${t.id}`}
+          titleIcon={topicIcon(t)}
+          items={siblings.map(s => ({ href: `/help/${s.id}`, label: s.title, current: s.id === a.id }))}
+        />
+      </aside>
+    )}
+  </div>
+</Help>
+
+<style>
+  .help-split { display: grid; gap: 48px; }
+  .help-aside { border-top: 1px solid var(--hairline); padding-top: 32px; }
+  @media (min-width: 1024px) {
+    .help-split { grid-template-columns: 250px minmax(0, 1fr); gap: 56px; }
+    .help-main { grid-column: 2; grid-row: 1; }
+    .help-aside { grid-column: 1; grid-row: 1; border-top: 0; padding-top: 0; position: sticky; top: 96px; align-self: start; }
+  }
+</style>

@@ -1,0 +1,145 @@
+---
+/**
+ * The help centre's front: ask, on the blue panel, with a few answers to
+ * press without typing; then every topic; then the questions asked most; then
+ * a person to write to. The words are the app's own (src/lib/help.js).
+ */
+import Help from '../../layouts/Help.astro'
+import Icon from '../../components/Icon.astro'
+import HelpSearch from '../../components/help/HelpSearch.astro'
+import ArticleList from '../../components/help/ArticleList.astro'
+import StillStuck from '../../components/help/StillStuck.astro'
+import { topics, articlesIn, popular, quick, topicIcon, countLabel } from '../../data/help'
+---
+<Help
+  title="Help centre"
+  description="Answers to your questions about Spendr: setting up, logging money in and out, cards, budgets, bills, goals, Insights, sync and settings."
+>
+  <section class="help-hero-wrap relative z-10 pt-3 sm:pt-6" aria-labelledby="help-title">
+    <div class="container-site">
+      <div class="help-hero hero-in rounded-[var(--radius-panel)] px-4 pb-10 pt-12 text-center sm:px-10 sm:pb-14 sm:pt-16 lg:pb-16 lg:pt-20">
+        <h1 id="help-title" class="h-display">How can we help?</h1>
+        <p class="hero-sub mx-auto mt-4 max-w-[38rem]">Answers for every part of Spendr, on your phone or your computer.</p>
+        <div class="mx-auto mt-8 max-w-[42rem]">
+          <HelpSearch size="hero" id="help-q" />
+        </div>
+        {quick.length > 0 && (
+          <div class="quick mx-auto mt-6 max-w-[48rem]">
+            <p id="quick-label" class="quick-label">Quick help</p>
+            <ul class="quick-list" aria-labelledby="quick-label">
+              {quick.map(a => (
+                <li><a href={`/help/${a.id}`} class="quick-link press">{a.title}</a></li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    </div>
+  </section>
+
+  <section id="help-topics" class="scroll-mt-24 pt-14 sm:pt-20" aria-labelledby="topics-title">
+    <div class="container-site">
+      <h2 id="topics-title" class="help-h2" data-reveal>Browse by topic</h2>
+      {/* On a phone the topics are rows on one card, the way the app lists
+          things; from 640 up each is a tile of its own. */}
+      <ul class="topic-grid max-sm:surface mt-6 sm:mt-7" data-reveal style="--d:60ms">
+        {topics.map(t => {
+          const n = articlesIn(t.id).length
+          return (
+            <li>
+              <a href={`/help/topic/${t.id}`} class="sm:surface topic-tile press">
+                <span class="cat-tile topic-icon grid place-items-center" style="--cat:#2D9DFF">
+                  <Icon name={topicIcon(t)} size={24} stroke={1.8} />
+                </span>
+                <span class="min-w-0 flex-1">
+                  <span class="topic-title">{t.title}</span>
+                  <span class="topic-blurb">{t.blurb}</span>
+                  <span class:list={['topic-count', n === 0 && 'is-empty']}>{countLabel(n)}</span>
+                </span>
+                <Icon name="chevron-right" size={18} stroke={2} class="topic-chev" />
+              </a>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
+  </section>
+
+  {popular.length > 0 && (
+    <section class="pt-16 sm:pt-24" aria-labelledby="popular-title">
+      <div class="container-site grid gap-8 lg:grid-cols-[0.8fr_1.2fr] lg:gap-16">
+        <div>
+          <h2 id="popular-title" class="help-h2" data-reveal>Popular questions</h2>
+          <p class="lede mt-4 max-w-[26rem]" data-reveal style="--d:60ms">The questions people ask first.</p>
+        </div>
+        <div data-reveal style="--d:100ms">
+          <ArticleList articles={popular} />
+        </div>
+      </div>
+    </section>
+  )}
+
+  <StillStuck />
+</Help>
+
+<style>
+  /* Spendr's accent, deep enough that white text on it reads at 4.7:1, the
+     way GCash's help centre opens on its blue. In dark mode the same blue is
+     pressed toward the navy page, so it glows less than it would. */
+  .help-hero {
+    color: #fff;
+    background: var(--color-primary-deep);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.08), 0 30px 70px -48px rgba(2, 8, 23, 0.55);
+  }
+  :global(.dark) .help-hero {
+    background: color-mix(in srgb, var(--color-primary-deep) 58%, #0b0f14);
+    box-shadow: inset 0 0 0 1px rgba(45, 157, 255, 0.22), 0 30px 70px -44px rgba(0, 0, 0, 0.8);
+  }
+  .help-hero :global(:focus-visible) { outline-color: #fff; }
+  .hero-sub { font-size: clamp(1.0625rem, 1rem + 0.3vw, 1.1875rem); line-height: 1.5; color: #fff; opacity: 0.92; }
+
+  .quick { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 10px 12px; }
+  .quick-label { font-size: 0.875rem; font-weight: 650; color: #fff; }
+  .quick-list { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; }
+  .quick-link {
+    display: inline-flex; align-items: center; min-height: 36px; padding: 6px 14px; border-radius: 999px;
+    font-size: 0.875rem; font-weight: 600; line-height: 1.3; color: #fff; text-align: center;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.42);
+  }
+  .quick-link:hover { background: rgba(255, 255, 255, 0.12); box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.6); }
+
+  .topic-grid { display: grid; }
+  .topic-grid > li { display: flex; }
+  .topic-tile { display: flex; align-items: flex-start; gap: 16px; width: 100%; --press-scale: 0.985; }
+  .topic-icon { width: 48px; height: 48px; border-radius: 15px; flex: none; }
+  .topic-title { display: block; font-weight: 650; font-size: 1.0625rem; line-height: 1.3; letter-spacing: -0.015em; }
+  .topic-blurb { display: block; margin-top: 4px; font-size: 0.9375rem; line-height: 1.5; color: var(--muted); }
+  .topic-count { display: block; margin-top: 10px; font-size: 0.8125rem; font-weight: 650; color: var(--ink); }
+  .topic-count.is-empty { color: var(--muted); font-weight: 550; }
+  .topic-tile :global(.topic-chev) { display: none; }
+
+  @media (max-width: 639px) {
+    .topic-grid { padding: 6px; border-radius: var(--radius-card); }
+    .topic-grid > li + li { position: relative; }
+    .topic-grid > li + li::before {
+      content: ''; position: absolute; left: 16px; right: 16px; top: 0; height: 1px; background: var(--hairline);
+    }
+    .topic-tile { align-items: center; gap: 14px; padding: 14px 10px 14px 12px; border-radius: 18px; --press-scale: 1; }
+    .topic-tile:hover { background: rgba(15, 23, 42, 0.035); }
+    :global(.dark) .topic-tile:hover { background: rgba(255, 255, 255, 0.035); }
+    .topic-icon { width: 44px; height: 44px; border-radius: 14px; }
+    .topic-title { font-size: 1rem; }
+    .topic-blurb { margin-top: 2px; font-size: 0.875rem; line-height: 1.45; }
+    .topic-count { margin-top: 5px; font-size: 0.75rem; }
+    .topic-tile :global(.topic-chev) { display: block; flex: none; color: var(--muted); }
+  }
+  @media (min-width: 640px) {
+    .topic-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; }
+    .topic-tile { padding: 18px; border-radius: var(--radius-card); }
+    .topic-tile:hover { border-color: color-mix(in srgb, var(--color-primary) 38%, transparent); }
+  }
+  @media (min-width: 1280px) {
+    .topic-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .topic-tile { flex-direction: column; gap: 18px; padding: 22px 20px 20px; }
+  }
+</style>

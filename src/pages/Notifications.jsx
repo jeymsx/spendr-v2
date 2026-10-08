@@ -10,6 +10,8 @@ import NotificationIcon from '../components/NotificationIcon'
 import WhatsNewModal from '../components/WhatsNewModal'
 import { groupByDay, timeOf } from '../lib/notifications'
 import { markRead } from '../db/notifications'
+import useGettingStarted, { useShowChecklistParam } from '../hooks/useGettingStarted'
+import GettingStartedPin from '../components/gettingStarted/GettingStartedPin'
 
 /** How long unread rows keep their dot on the way in, before they are marked read. */
 const MARK_READ_AFTER_MS = 1200
@@ -32,6 +34,9 @@ const MARK_READ_AFTER_MS = 1200
  */
 export default function Notifications() {
   const navigate = useNavigate()
+  const gettingStarted = useGettingStarted()
+  // The help centre's way of bringing the list back (?checklist=show).
+  useShowChecklistParam()
   const rows = useLiveQuery(() => db.notifications.orderBy('at').reverse().toArray(), [], undefined)
   const [whatsNewOpen, setWhatsNewOpen] = useState(false)
 
@@ -66,12 +71,14 @@ export default function Notifications() {
 
   return (
     <SubPage title="Notifications">
+      {/* The Getting started list lives here, pinned above the news (lib/gettingStarted.js). */}
+      <GettingStartedPin gs={gettingStarted} className="px-5 mt-1 mb-2" />
       {rows && rows.length === 0 && (
         <EmptyState
           className="mt-10"
           art="bell"
           title="You're all caught up"
-          body="Card due dates, bills, budget alerts and your monthly recap will show up here."
+          body="Due dates, bills, budget alerts, badges and your monthly Wrapped show up here."
         />
       )}
 

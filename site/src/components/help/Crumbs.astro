@@ -1,0 +1,33 @@
+---
+/**
+ * Help › Topic › Article. The last one is where you are, so it isn't a link,
+ * and on a phone it's cut short rather than wrapping, since the title it
+ * names is right below it.
+ */
+import Icon from '../Icon.astro'
+
+interface Props { items: { label: string; href?: string }[] }
+const { items } = Astro.props
+---
+<nav aria-label="Breadcrumb" class="crumbs-nav">
+  <ol class="crumbs">
+    {items.map((c, i) => (
+      <li class:list={['crumb', i === items.length - 1 && 'is-last']}>
+        {i > 0 && <Icon name="chevron-right" size={14} stroke={2.2} class="crumb-sep" />}
+        {c.href && i < items.length - 1
+          ? <a href={c.href} class="crumb-link">{c.label}</a>
+          : <span aria-current="page" class="crumb-here">{c.label}</span>}
+      </li>
+    ))}
+  </ol>
+</nav>
+
+<style>
+  .crumbs { display: flex; align-items: center; min-width: 0; font-size: 0.875rem; font-weight: 500; color: var(--muted); }
+  .crumb { display: flex; align-items: center; flex: none; min-width: 0; }
+  .crumb.is-last { flex: 0 1 auto; }
+  .crumb :global(.crumb-sep) { margin-inline: 6px; flex: none; opacity: 0.7; }
+  .crumb-link { border-radius: 6px; padding-block: 4px; transition: color 0.2s var(--ease-out); }
+  .crumb-link:hover { color: var(--text); text-decoration: underline; text-underline-offset: 3px; text-decoration-color: var(--hairline); }
+  .crumb-here { color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+</style>

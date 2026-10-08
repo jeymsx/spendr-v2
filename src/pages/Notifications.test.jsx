@@ -39,6 +39,8 @@ vi.mock('../db/db', () => ({
       orderBy: () => ({ reverse: () => ({ toArray: async () => [...ROWS].sort((x, y) => y.at.localeCompare(x.at)) }) }),
       where: () => ({ equals: () => ({ primaryKeys: async () => ROWS.filter(r => r.read === 0).map(r => r.id) }) }),
     },
+    // No Getting started list on this device (hooks/useGettingStarted).
+    meta: { get: async () => undefined },
   },
 }))
 vi.mock('../db/notifications', () => ({ markRead: async () => {} }))

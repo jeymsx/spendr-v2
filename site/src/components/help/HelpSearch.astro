@@ -1,0 +1,196 @@
+---
+/**
+ * The help centre's search field. `hero` is the big pill on the blue panel
+ * of /help; `compact` sits at the top of every other help page. In `suggest`
+ * mode answers drop down under it as you type (scripts/helpSearch.ts); in
+ * `page` mode the results page below it does the showing.
+ *
+ * It's a plain GET form to /help/search, so Enter works with no script at all.
+ */
+import Icon from '../Icon.astro'
+
+interface Props {
+  size?: 'hero' | 'compact'
+  mode?: 'suggest' | 'page'
+  /** The input's id, unique on the page. */
+  id?: string
+  value?: string
+}
+
+const { size = 'compact', mode = 'suggest', id = 'help-q', value = '' } = Astro.props
+const listId = `${id}-list`
+const hero = size === 'hero'
+const combo = mode === 'suggest'
+  ? { role: 'combobox', 'aria-autocomplete': 'list', 'aria-expanded': 'false', 'aria-controls': listId } as const
+  : {}
+---
+<form
+  role="search"
+  action="/help/search"
+  method="get"
+  class:list={['hs', hero ? 'hs-hero' : 'hs-compact']}
+  data-help-search
+  data-mode={mode}
+>
+  <label for={id} class="sr-only">Search the help centre</label>
+  <div class="hs-field">
+    <span class="hs-icon" aria-hidden="true"><Icon name="search" size={hero ? 22 : 18} stroke={2.1} /></span>
+    <input
+      id={id}
+      name="q"
+      type="search"
+      value={value}
+      class="hs-input"
+      placeholder={hero ? 'Search questions, like how to add a bill' : 'Search help'}
+      data-placeholder-short={hero ? 'Search, like adding a bill' : undefined}
+      autocomplete="off"
+      autocapitalize="off"
+      spellcheck="false"
+      enterkeyhint="search"
+      {...combo}
+    />
+    <button type="button" class="hs-clear press" data-hs-clear aria-label="Clear search" hidden>
+      <Icon name="x" size={hero ? 18 : 16} stroke={2.2} />
+    </button>
+  </div>
+  {mode === 'suggest' && (
+    <div class="hs-pop surface-solid" data-hs-pop hidden>
+      <div role="listbox" id={listId} aria-label="Answers" class="hs-list" data-hs-list></div>
+      <p class="hs-none" data-hs-none hidden></p>
+    </div>
+  )}
+  {mode === 'suggest' && <p class="sr-only" role="status" data-hs-status></p>}
+</form>
+
+<script>
+  import { initHelpSearch } from '../../scripts/helpSearch'
+  initHelpSearch()
+</script>
+
+<style is:global>
+  .hs { position: relative; text-align: left; }
+  .hs-field { position: relative; display: flex; align-items: center; }
+  .hs-icon { position: absolute; left: 16px; display: grid; place-items: center; color: var(--muted); pointer-events: none; }
+  .hs-input {
+    width: 100%;
+    min-width: 0;
+    appearance: none;
+    -webkit-appearance: none;
+    height: 48px;
+    padding: 0 46px 0 44px;
+    border-radius: 999px;
+    font: inherit;
+    /* 16px at the least, or an iPhone zooms the page in on focus. */
+    font-size: 1rem;
+    color: var(--text);
+    text-overflow: ellipsis;
+    background: #ffffff;
+    border: 1px solid rgba(15, 23, 42, 0.1);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 1px 2px rgba(0, 0, 0, 0.03);
+    transition: border-color 0.25s var(--ease-out), box-shadow 0.25s var(--ease-out);
+  }
+  .hs-input::placeholder { color: var(--muted); opacity: 1; }
+  /* Empty, there's no clear button to make room for. */
+  .hs-input:placeholder-shown { padding-right: 16px; }
+  .hs-input::-webkit-search-cancel-button,
+  .hs-input::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
+  .hs-input:hover { border-color: rgba(15, 23, 42, 0.18); }
+  .hs-input:focus { border-color: color-mix(in srgb, var(--color-primary) 60%, transparent); }
+  .dark .hs-input {
+    background: rgba(40, 60, 95, 0.22);
+    border-color: rgba(45, 157, 255, 0.14);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  }
+  .dark .hs-input:hover { border-color: rgba(45, 157, 255, 0.26); }
+
+  .hs-clear {
+    position: absolute; right: 6px; display: grid; place-items: center;
+    width: 36px; height: 36px; border-radius: 999px; color: var(--muted);
+    --press-scale: 0.9;
+  }
+  .hs-clear:hover { color: var(--text); background: rgba(15, 23, 42, 0.06); }
+  .dark .hs-clear:hover { background: rgba(255, 255, 255, 0.08); }
+  .hs-clear[hidden] { display: none; }
+
+  /* The hero's: a big white pill on the blue panel. */
+  .hs-hero .hs-input {
+    height: 60px;
+    padding: 0 56px 0 54px;
+    border: 0;
+    color: #0f172a;
+    background: #ffffff;
+    box-shadow: 0 14px 34px -16px rgba(2, 8, 23, 0.55), 0 2px 6px rgba(2, 8, 23, 0.08);
+  }
+  .hs-hero .hs-input::placeholder { color: #64748b; }
+  .hs-hero .hs-input:placeholder-shown { padding-right: 20px; }
+  .hs-hero .hs-icon { left: 20px; color: #64748b; }
+  .hs-hero .hs-clear { right: 10px; width: 40px; height: 40px; color: #64748b; }
+  .hs-hero .hs-clear:hover { color: #0f172a; background: rgba(15, 23, 42, 0.06); }
+  .hs-hero .hs-input:focus-visible { outline-color: #ffffff; }
+  .dark .hs-hero .hs-input {
+    color: #f1f5f9;
+    background: #121a26;
+    box-shadow: 0 14px 34px -16px rgba(0, 0, 0, 0.7), inset 0 0 0 1px rgba(255, 255, 255, 0.08);
+  }
+  .dark .hs-hero .hs-input::placeholder, .dark .hs-hero .hs-icon, .dark .hs-hero .hs-clear { color: #94a3b8; }
+  .dark .hs-hero .hs-clear:hover { color: #f1f5f9; background: rgba(255, 255, 255, 0.08); }
+  @media (min-width: 640px) {
+    .hs-hero .hs-input { height: 64px; font-size: 1.0625rem; padding-left: 58px; }
+    .hs-hero .hs-icon { left: 22px; }
+  }
+
+  /* The answers, on the opaque card that floats over the page. */
+  .hs-pop {
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: calc(100% + 8px);
+    z-index: 30;
+    padding: 6px;
+    border-radius: 22px;
+    max-height: min(62vh, 520px);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    color: var(--text);
+    opacity: 0;
+    translate: 0 -6px;
+    filter: blur(4px);
+  }
+  .hs-pop[data-open] {
+    opacity: 1; translate: none; filter: none;
+    transition: opacity 0.22s var(--ease-out), translate 0.36s var(--ease-sheet), filter 0.22s var(--ease-out);
+  }
+  .hs-pop[hidden] { display: none; }
+  .hs-opt {
+    display: block;
+    padding: 11px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+  }
+  .hs-opt[aria-selected='true'] { background: color-mix(in srgb, var(--color-primary) 10%, transparent); }
+  .dark .hs-opt[aria-selected='true'] { background: color-mix(in srgb, var(--color-primary) 16%, transparent); }
+  .hs-opt-title { display: block; font-weight: 600; font-size: 0.96875rem; line-height: 1.35; letter-spacing: -0.01em; }
+  .hs-opt-title mark { background: none; color: var(--ink); font-weight: 700; }
+  .hs-opt-meta {
+    display: -webkit-box; margin-top: 2px; font-size: 0.84375rem; line-height: 1.4; color: var(--muted);
+    -webkit-box-orient: vertical; -webkit-line-clamp: 1; line-clamp: 1; overflow: hidden;
+  }
+  /* On a phone the answer gets two lines, and the topic makes way for it. */
+  @media (max-width: 639px) {
+    .hs-opt-meta { -webkit-line-clamp: 2; line-clamp: 2; }
+    .hs-opt-topic { display: none; }
+  }
+  .hs-all {
+    display: flex; align-items: center; gap: 10px;
+    margin-top: 4px; font-size: 0.90625rem; font-weight: 600; color: var(--ink);
+    position: relative;
+  }
+  .hs-all::before {
+    content: ''; position: absolute; left: 14px; right: 14px; top: -3px; height: 1px; background: var(--hairline);
+  }
+  .hs-none { padding: 14px 16px; font-size: 0.9375rem; line-height: 1.5; color: var(--muted); }
+  .hs-none a { color: var(--ink); font-weight: 600; text-decoration: underline; text-underline-offset: 3px; text-decoration-color: color-mix(in srgb, var(--color-primary) 40%, transparent); }
+  @media (prefers-reduced-motion: reduce) {
+    .hs-pop, .hs-pop[data-open] { transition: none; translate: none; filter: none; }
+  }
+</style>

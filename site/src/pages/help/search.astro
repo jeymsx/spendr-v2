@@ -1,0 +1,135 @@
+---
+/**
+ * Every answer for what was typed, at /help/search?q=. The page is static;
+ * its script reads the words from the address, fills the field and lists
+ * what the app's own search finds, and keeps listing as the words change.
+ */
+import Help from '../../layouts/Help.astro'
+import Icon from '../../components/Icon.astro'
+import HelpTop from '../../components/help/HelpTop.astro'
+import HelpSearch from '../../components/help/HelpSearch.astro'
+import ArticleList from '../../components/help/ArticleList.astro'
+import StillStuck from '../../components/help/StillStuck.astro'
+import { popular, topics, topicIcon } from '../../data/help'
+---
+<Help title="Search help" description="Search Spendr’s help centre for answers about the app." noindex>
+  <HelpTop crumbs={[{ label: 'Help', href: '/help' }, { label: 'Search' }]} search={false} />
+
+  <div class="container-site pb-20 pt-8 sm:pb-28 sm:pt-12">
+    <div class="max-w-[48rem]">
+      <h1 class="help-h1 hero-in">Search results</h1>
+      <div class="hero-in mt-6" style="--d:60ms">
+        <HelpSearch size="compact" mode="page" id="help-q-page" />
+      </div>
+
+      <p class="mt-6 min-h-[1.5em] text-[0.9375rem] font-medium text-muted" role="status" data-results-status></p>
+      <ul class="surface help-list mt-3" data-results hidden></ul>
+
+      <div data-results-empty hidden>
+        <p class="font-semibold text-[1.0625rem]" data-empty-title>What are you looking for?</p>
+        <p class="mt-1 text-[0.9375rem] leading-relaxed text-muted" data-empty-text>Type a question above, or start with one of these.</p>
+        {popular.length > 0 && <ArticleList articles={popular} class="mt-5" />}
+        <a href="/help#help-topics" class="btn btn-secondary press mt-6 !min-h-11 !text-[0.9375rem]">
+          Browse every topic <Icon name="arrow-right" size={17} stroke={2.2} />
+        </a>
+      </div>
+
+      <noscript>
+        <p class="font-semibold">Search needs JavaScript, which is off in this browser.</p>
+        <p class="mt-1 text-[0.9375rem] leading-relaxed text-muted">Every answer is still a click away, by topic:</p>
+        <ul class="mt-4 grid gap-2">
+          {topics.map(t => (
+            <li><a href={`/help/topic/${t.id}`} class="inline-flex items-center gap-2 font-semibold text-ink"><Icon name={topicIcon(t)} size={18} />{t.title}</a></li>
+          ))}
+        </ul>
+      </noscript>
+
+      <div class="mt-12"><StillStuck compact /></div>
+    </div>
+  </div>
+</Help>
+
+<script>
+  import { loadEngine, marked, articleHref, wireClear } from '../../scripts/helpSearch'
+
+  const form = document.querySelector<HTMLFormElement>('form[data-help-search][data-mode="page"]')
+  const input = form?.querySelector<HTMLInputElement>('input[name="q"]')
+  const list = document.querySelector<HTMLUListElement>('[data-results]')
+  const status = document.querySelector<HTMLElement>('[data-results-status]')
+  const empty = document.querySelector<HTMLElement>('[data-results-empty]')
+  const emptyTitle = document.querySelector<HTMLElement>('[data-empty-title]')
+  const emptyText = document.querySelector<HTMLElement>('[data-empty-text]')
+
+  if (form && input && list && status && empty && emptyTitle && emptyText) {
+    const esc = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
+    const chevron = '<svg class="help-row-chev" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 6l6 6l-6 6"/></svg>'
+    const baseTitle = document.title
+    let run = 0
+
+    const show = async () => {
+      const q = input.value.trim()
+      const mine = ++run
+      document.title = q ? `“${q}” · ${baseTitle}` : baseTitle
+      if (!q) {
+        list.hidden = true
+        list.innerHTML = ''
+        status.textContent = ''
+        emptyTitle.textContent = 'What are you looking for?'
+        emptyText.textContent = 'Type a question above, or start with one of these.'
+        empty.hidden = false
+        return
+      }
+      const { search, topicTitle } = await loadEngine()
+      if (mine !== run) return
+      const hits = search(q, 50)
+      list.innerHTML = hits.map(h => `
+        <li>
+          <a href="${articleHref(h.id)}" class="help-row press press-fade">
+            <span class="help-row-text">
+              <span class="help-row-title">${marked(h.title, q)}</span>
+              <span class="help-row-sum">${esc(h.summary)}</span>
+              <span class="help-row-topic">${esc(topicTitle(h.topic))}</span>
+            </span>
+            ${chevron}
+          </a>
+        </li>`).join('')
+      list.hidden = hits.length === 0
+      status.textContent = hits.length
+        ? `${hits.length} ${hits.length === 1 ? 'article' : 'articles'} for “${q}”`
+        : `No articles for “${q}”`
+      emptyTitle.textContent = 'Try fewer words, or other ones.'
+      emptyText.textContent = 'The name the app uses for a thing often finds it. Or start with one of these.'
+      empty.hidden = hits.length > 0
+    }
+
+    // The address keeps the words, so a refresh or Back finds the same list.
+    let urlTimer = 0
+    const keepInAddress = () => {
+      window.clearTimeout(urlTimer)
+      urlTimer = window.setTimeout(() => {
+        const q = input.value.trim()
+        const url = q ? `?q=${encodeURIComponent(q)}` : window.location.pathname
+        history.replaceState(history.state, '', url)
+      }, 300)
+    }
+
+    let queued = 0
+    input.addEventListener('input', () => {
+      cancelAnimationFrame(queued)
+      queued = requestAnimationFrame(() => { void show() })
+      keepInAddress()
+    })
+    form.addEventListener('submit', e => {
+      e.preventDefault()
+      void show()
+      keepInAddress()
+      // On a phone, put the keyboard away so the answers can be seen.
+      if (window.matchMedia('(pointer: coarse)').matches) input.blur()
+    })
+    wireClear(form, input, () => { void show(); keepInAddress() })
+
+    input.value = new URLSearchParams(window.location.search).get('q') ?? ''
+    input.dispatchEvent(new Event('input'))
+    if (!input.value) input.focus()
+  }
+</script>

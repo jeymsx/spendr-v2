@@ -67,6 +67,7 @@ const WebAchievements = lazy(() => import('./pages/WebAchievements'))
 const Recap         = lazy(() => import('../pages/recap/RecapPage'))
 
 const WebSettings = lazy(() => import('./pages/WebSettings'))
+const WebHelp = lazy(() => import('./pages/WebHelp'))
 const WebNotes = lazy(() => import('./pages/WebNotes'))
 const SettingsOverview = lazy(() => import('./pages/WebSettingsOverview'))
 const SettingsAccent = lazy(() => import('./pages/WebSettingsAccent'))
@@ -184,6 +185,11 @@ export default function WebApp() {
               <Route path="/recap" element={<PhonePage width={880}><Recap /></PhonePage>} />
               <Route path="/recap/:month" element={<PhonePage width={880}><Recap /></PhonePage>} />
               <Route path="/import" element={<Page><WebImport /></Page>} />
+              {/* The help centre (lib/help.js): /help/<id> is an answer, the same
+                  address the website gives it. */}
+              <Route path="/help" element={<WebHelp />} />
+              <Route path="/help/topic/:topicId" element={<WebHelp />} />
+              <Route path="/help/:articleId" element={<WebHelp />} />
 
               <Route path="/settings" element={<WebSettings />}>
                 <Route index element={<SettingsOverview />} />

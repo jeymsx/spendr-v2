@@ -59,6 +59,9 @@ const SettingsAppLock    = lazy(() => import('./pages/settings/AppLock'))
 const SettingsProfile    = lazy(() => import('./pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 const SettingsTemplates  = lazy(() => import('./pages/Settings').then(m => ({ default: m.TemplatesPage })))
 const ImportWizard = lazy(() => import('./pages/ImportWizard'))
+const HelpHome     = lazy(() => import('./pages/help/Help'))
+const HelpTopic    = lazy(() => import('./pages/help/Help').then(m => ({ default: m.HelpTopicPage })))
+const HelpArticle  = lazy(() => import('./pages/help/Help').then(m => ({ default: m.HelpArticlePage })))
 const Notes        = lazy(() => import('./pages/Notes'))
 const NoteEditor   = lazy(() => import('./pages/notes/NoteEditor'))
 const NotesDeleted = lazy(() => import('./pages/notes/NotesDeleted'))
@@ -164,6 +167,11 @@ export default function App() {
               <Route path="/settings/profile"    element={<SettingsProfile />} />
               <Route path="/settings/templates"  element={<SettingsTemplates />} />
               <Route path="/import"       element={<ImportWizard />} />
+              {/* The help centre (lib/help.js). /help/<id> is an answer: the same
+                  address the website gives it. */}
+              <Route path="/help"                 element={<HelpHome />} />
+              <Route path="/help/topic/:topicId"  element={<HelpTopic />} />
+              <Route path="/help/:articleId"      element={<HelpArticle />} />
               {/* Notes. Before /notes/:id, or "deleted" matches as an id. */}
               <Route path="/notes"         element={<Notes />} />
               <Route path="/notes/deleted" element={<NotesDeleted />} />

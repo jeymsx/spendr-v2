@@ -56,6 +56,9 @@ const PARENT = [
   [/^\/debts\/person\/[^/]+$/, '/debts'],
   [/^\/categories\/[^/]+$/, '/budget'],
   [/^\/badges$/, '/achievements'],
+  // The help centre is opened from Settings; a topic's parent is the centre, not /help/topic.
+  [/^\/help$/, '/settings'],
+  [/^\/help\/topic\/[^/]+$/, '/help'],
 ]
 
 /**

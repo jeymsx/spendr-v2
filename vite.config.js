@@ -28,6 +28,15 @@ export default defineConfig({
           'vendor-dexie':    ['dexie'],
           'vendor-dnd':      ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
         },
+        /* The help centre's screenshots (pages/help/helpShots.js) are the
+           website's captures. Filed apart, under assets/help/, so the precache
+           below can leave them out by folder. */
+        assetFileNames: (info) => {
+          const from = [...(info.originalFileNames ?? [])].join(' ').replace(/\\/g, '/')
+          return from.includes('site/src/assets/screens/')
+            ? 'assets/help/[name]-[hash][extname]'
+            : 'assets/[name]-[hash][extname]'
+        },
       },
     },
     // Modern target — smaller output, no legacy polyfills
@@ -103,6 +112,8 @@ export default defineConfig({
         globIgnores: [
           '**/react-pdf.browser-*.js', '**/flags/*.svg',
           '**/inter-cyrillic*', '**/inter-greek*', '**/inter-vietnamese*', '**/*.woff',
+          // …and the help centre's screenshots: a few megabytes most people never open.
+          '**/assets/help/**',
         ],
         /* The push and notification-click handlers. A separate file pulled
            into the generated worker, because generateSW writes the worker
@@ -130,6 +141,16 @@ export default defineConfig({
             options: {
               cacheName: 'country-flags',
               expiration: { maxEntries: 80 },
+              cacheableResponse: { statuses: [0, 200] },
+            },
+          },
+          {
+            // The help centre's screenshots: fetched when an answer shows one, then kept.
+            urlPattern: /\/assets\/help\/[^/]+\.webp$/,
+            handler: 'CacheFirst',
+            options: {
+              cacheName: 'help-shots',
+              expiration: { maxEntries: 40 },
               cacheableResponse: { statuses: [0, 200] },
             },
           },

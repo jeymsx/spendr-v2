@@ -1,0 +1,42 @@
+---
+/**
+ * Every help centre page: the site's own layout, the help headings, and the
+ * breadcrumb trail as structured data for search engines.
+ */
+import Base from './Base.astro'
+
+interface Props {
+  title: string
+  description: string
+  noindex?: boolean
+  /** The trail to this page, for search engines: Help, then the topic, then the article. */
+  trail?: { label: string; href: string }[]
+}
+const { title, description, noindex = false, trail } = Astro.props
+const ld = trail && trail.length > 1 ? JSON.stringify({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: trail.map((t, i) => ({
+    '@type': 'ListItem', position: i + 1, name: t.label, item: new URL(t.href, Astro.site).href,
+  })),
+}) : null
+---
+<Base title={title} description={description} noindex={noindex}>
+  {ld && <script is:inline type="application/ld+json" slot="head" set:html={ld} />}
+  <slot />
+</Base>
+
+<style is:global>
+  .help-h1 {
+    font-size: clamp(2rem, 1.45rem + 2.2vw, 3rem);
+    line-height: 1.08;
+    font-weight: 750;
+    letter-spacing: -0.032em;
+  }
+  .help-h2 {
+    font-size: clamp(1.5rem, 1.25rem + 1vw, 2rem);
+    line-height: 1.12;
+    font-weight: 750;
+    letter-spacing: -0.028em;
+  }
+</style>

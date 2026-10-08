@@ -20,7 +20,8 @@ export default defineConfig({
   trailingSlash: 'never',
   devToolbar: { enabled: false },
   integrations: [
-    sitemap({ filter: page => !page.endsWith('/404') }),
+    // The help centre's results page is a search box, not content.
+    sitemap({ filter: page => !page.endsWith('/404') && !page.endsWith('/help/search') }),
   ],
   vite: {
     plugins: [tailwindcss()],

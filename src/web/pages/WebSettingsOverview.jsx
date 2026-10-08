@@ -30,7 +30,7 @@ import Dialog from '../ui/Dialog'
 import { Progress } from '../ui/display'
 import {
   IBell, IChevronRight, ICopy, IDownload, IEdit, IFileText, IGauge, IGlobe, IInfo, ILock, ILogOut, IMessage, IMonitor,
-  IPalette, IRefresh, IShield, ISliders, ISparkle, ITag, ITrash, ITrophy, IZap,
+  IPalette, IRefresh, IShield, ISliders, ISparkle, ITag, ITrash, ITrophy, IZap, IHelp,
 } from '../ui/icons'
 
 /**
@@ -85,7 +85,7 @@ export default function WebSettingsOverview() {
   const closeCrashes = useCallback(() => { setCrashesOpen(false); setCrashNote('') }, [])
   const closeSignOut = useCallback(() => setSignOutOpen(false), [])
 
-  const name = read('displayName') || user?.email?.split('@')[0] || 'Your Name'
+  const name = read('displayName') || user?.email?.split('@')[0] || 'You'
   const currency = read('currency') ?? 'PHP'
   const letter = (name || 'S').trim().charAt(0).toUpperCase() || 'S'
 
@@ -198,7 +198,7 @@ export default function WebSettingsOverview() {
       {/* ── Every section and where it stands, in one list ── */}
       <div className="mx-5 mt-6 d-panel d-set-list">
         <Section title="App" note="How Spendr looks, locks and syncs.">
-          <LinkRow icon={<ISliders size={17} />} label="Appearance" to="/settings/preferences"
+          <LinkRow icon={<ISliders size={17} />} label="Preferences" to="/settings/preferences"
             value={`${theme === 'dark' ? 'Dark' : 'Light'} · ${style === 'flat' ? (theme === 'dark' ? 'Lights out' : 'Clean') : 'Vivid'}`} />
           <LinkRow icon={<IPalette size={17} />} label="Accent colour" to="/settings/accent"
             value={<><span className="d-set-swatch" style={{ background: accentColor }} aria-hidden="true" /><span className="truncate">{accent?.name ?? 'Custom'}</span></>} />
@@ -227,7 +227,8 @@ export default function WebSettingsOverview() {
 
         {device.length > 0 && <Section title="This device" note="What this browser can do.">{device}</Section>}
 
-        <Section title="Help & about" note={developer ? 'Problems, and the fine print.' : 'The fine print.'}>
+        <Section title="Help & about" note={developer ? 'Answers, problems, and the fine print.' : 'Answers, and the fine print.'}>
+          <LinkRow icon={<IHelp size={17} />} label="Help centre" to="/help" value="Search every question" />
           {developer && (
             <ActionRow icon={<IMessage size={17} />} label="Report a problem"
               sub={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} recorded on this device` : 'Write one with the details filled in'}>

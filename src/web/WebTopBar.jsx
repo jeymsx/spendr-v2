@@ -14,7 +14,7 @@ import Popover, { MenuItem, MenuSep, MenuLabel } from './ui/Popover'
 import { MOD } from './ui/controls'
 import {
   ISearch, IPlus, IChevronDown, IBell, IArrowUpRight, IArrowDownLeft, ITransfer, IZap, IUser, ISettings,
-  ISun, IMoon, IPhone, IRefresh,
+  ISun, IMoon, IPhone, IRefresh, IHelp,
 } from './ui/icons'
 
 const NotificationsPopover = lazy(() => import('./NotificationsPopover'))
@@ -151,8 +151,9 @@ function AccountMenu() {
       </div>
       <MenuSep />
       <MenuItem icon={<IUser />} onSelect={() => navigate('/settings/profile')}>Profile</MenuItem>
-      <MenuItem icon={<ISettings />} onSelect={() => navigate('/settings/preferences')}>Settings</MenuItem>
+      <MenuItem icon={<ISettings />} onSelect={() => navigate('/settings')}>Settings</MenuItem>
       <MenuItem icon={<IRefresh />} onSelect={() => navigate('/settings/sync')}>{user?.id ? 'Sync' : 'Sign in to sync'}</MenuItem>
+      <MenuItem icon={<IHelp />} onSelect={() => navigate('/help')}>Help centre</MenuItem>
       <MenuSep />
       <MenuLabel>Theme</MenuLabel>
       <MenuItem icon={<ISun />} checked={theme !== 'dark'} onSelect={() => setTheme('light')}>Light</MenuItem>

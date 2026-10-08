@@ -18,8 +18,11 @@ import {
   ISearch, IHome, IList, IWallet, IChart, IGauge, ITarget, IRepeat, IUsers, INote, ITrophy, IImport, ISettings,
   IArrowUpRight, IArrowDownLeft, ITransfer, IZap, IPlus, IMoon, ISun, IPhone, IRefresh, ICornerDownLeft, ITag, IBell,
   ISliders, ILock, IPalette, IFileText,
+  IHelp,
 } from './ui/icons'
 import { foldPlans, planFactor } from '../utils/installments'
+import { searchHelp } from '../lib/helpSearch'
+import { helpTopic } from '../lib/help'
 
 /**
  * Search everything, go anywhere, do anything: Ctrl+K (⌘K on a Mac), or /,
@@ -98,6 +101,7 @@ const PAGES = [
   { to: '/settings/budgets', label: 'Budget limits', Icon: IGauge, keywords: 'settings edit budgets' },
   { to: '/settings/backup', label: 'Backup and restore', Icon: ISettings, keywords: 'export' },
   { to: '/settings/sync', label: 'Sync', Icon: IRefresh, keywords: 'sign in account cloud' },
+  { to: '/help', label: 'Help centre', Icon: IHelp, keywords: 'faq support questions how answers' },
 ]
 
 /** @param {string} s @param {string} q */
@@ -185,6 +189,12 @@ function CommandPalette({ initial, onClose }) {
           id: 'tx-all', group: 'Transactions', label: `Search all transactions for “${q.trim()}”`, icon: <ISearch />,
           run: () => go(`/transactions?q=${encodeURIComponent(q.trim())}`),
         })
+      }
+    }
+    // A question, not a thing in the ledger: the help centre's answers to it (lib/help.js).
+    if (query.length >= 3) {
+      for (const a of searchHelp(query, { limit: 3 })) {
+        out.push({ id: `help-${a.id}`, group: 'Help', label: a.title, meta: helpTopic(a.topic)?.title, icon: <IHelp />, run: () => go(`/help/${a.id}`) })
       }
     }
     return out

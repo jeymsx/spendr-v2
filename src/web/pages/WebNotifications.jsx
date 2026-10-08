@@ -11,6 +11,8 @@ import Panel from '../ui/Panel'
 import { Empty } from '../ui/display'
 import Btn from '../ui/Button'
 import { ICheck, IChevronRight } from '../ui/icons'
+import useGettingStarted, { useShowChecklistParam } from '../../hooks/useGettingStarted'
+import GettingStartedPanel from './GettingStartedPanel'
 
 /** How long the page is open before what was new on arrival is marked read. */
 const MARK_READ_AFTER_MS = 1200
@@ -26,6 +28,9 @@ const MARK_READ_AFTER_MS = 1200
  */
 export default function WebNotifications() {
   const navigate = useNavigate()
+  const gettingStarted = useGettingStarted()
+  // The help centre's way of bringing the list back (?checklist=show).
+  useShowChecklistParam()
   const rows = useLiveQuery(() => db.notifications.orderBy('at').reverse().toArray(), [], undefined)
   const [whatsNewOpen, setWhatsNewOpen] = useState(false)
   const [newIds, setNewIds] = useState(/** @type {Set<string>} */ (new Set()))
@@ -64,9 +69,12 @@ export default function WebNotifications() {
       width={980}
       actions={unread > 0 ? <Btn icon={<ICheck size={14} />} onClick={markAll}>Mark all read</Btn> : null}
     >
+      {/* The Getting started list lives here, pinned above the news (lib/gettingStarted.js);
+          done, it says so until it is put away. */}
+      {gettingStarted.ready && <GettingStartedPanel gs={gettingStarted} className="mb-5" />}
       {rows && rows.length === 0 ? (
         <Panel>
-          <Empty art="bell" title="You’re all caught up" body="Card due dates, bills, budget alerts and your monthly recap show up here." />
+          <Empty art="bell" title="You’re all caught up" body="Due dates, bills, budget alerts, badges and your monthly Wrapped show up here." />
         </Panel>
       ) : (
         <Panel flush>

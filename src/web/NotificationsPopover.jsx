@@ -7,6 +7,9 @@ import NotificationIcon from '../components/NotificationIcon'
 import WhatsNewModal from '../components/WhatsNewModal'
 import { groupByDay, timeOf } from '../lib/notifications'
 import { markRead } from '../db/notifications'
+import useGettingStarted from '../hooks/useGettingStarted'
+import { GoalRing } from '../pages/goals/shared'
+import { IconChevronRight } from '../components/icons'
 
 /** How many of the newest it shows; "See all" opens the rest. */
 const SHOWN = 12
@@ -29,6 +32,7 @@ const MARK_READ_AFTER_MS = 1200
  */
 export default function NotificationsPopover({ onClose }) {
   const navigate = useNavigate()
+  const gettingStarted = useGettingStarted()
   const panel = useRef(/** @type {HTMLDivElement|null} */ (null))
   const rows = useLiveQuery(() => db.notifications.orderBy('at').reverse().limit(SHOWN).toArray(), [], undefined)
   const total = useLiveQuery(() => db.notifications.count(), [], 0)
@@ -101,11 +105,35 @@ export default function NotificationsPopover({ onClose }) {
       </div>
       <Divider />
 
+      {/* Getting started, pinned above the news while it is unfinished
+          (lib/gettingStarted.js). In full on the Notifications page, so this goes there. */}
+      {gettingStarted.on && !gettingStarted.complete && (
+        <div className="px-1.5 pt-1.5">
+          <button
+            type="button"
+            onClick={() => { onClose(); navigate('/notifications') }}
+            className="w-full flex items-center gap-3 px-2.5 py-2.5 rounded-xl text-left bg-primary/[0.06] dark:bg-primary/[0.10]
+              hover:bg-primary/[0.10] dark:hover:bg-primary/[0.14] focus-visible:bg-primary/[0.10] outline-none transition-colors duration-100"
+          >
+            <GoalRing pct={(gettingStarted.doneCount / gettingStarted.total) * 100} size={40} stroke={4}>
+              <span className="text-10 font-bold tabular-nums text-slate-900 dark:text-white">{gettingStarted.doneCount}/{gettingStarted.total}</span>
+            </GoalRing>
+            <span className="flex-1 min-w-0">
+              <span className="block text-13 font-semibold text-slate-800 dark:text-slate-100">Getting started</span>
+              <span className="block mt-0.5 text-12 text-slate-500 dark:text-slate-400 truncate">
+                {gettingStarted.next ? `Next: ${gettingStarted.next.title}` : `${gettingStarted.doneCount} of ${gettingStarted.total} done`}
+              </span>
+            </span>
+            <span className="text-slate-400 dark:text-slate-500 shrink-0"><IconChevronRight size={16} /></span>
+          </button>
+        </div>
+      )}
+
       <div className="overflow-y-auto overscroll-contain max-h-[min(540px,70vh)] pb-1.5">
         {rows && rows.length === 0 && (
           <div className="px-6 py-10 text-center">
             <p className="text-13 font-semibold text-slate-800 dark:text-slate-100">You&rsquo;re all caught up</p>
-            <p className="mt-1 text-12 text-slate-500 dark:text-slate-400 text-balance">Card due dates, bills, budget alerts and your monthly recap will show up here.</p>
+            <p className="mt-1 text-12 text-slate-500 dark:text-slate-400 text-balance">Due dates, bills, budget alerts, badges and your monthly Wrapped show up here.</p>
           </div>
         )}
         {groups.map(g => (

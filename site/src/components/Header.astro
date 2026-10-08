@@ -8,9 +8,12 @@ const NAV = [
   { href: '/features', label: 'Features' },
   { href: '/install', label: 'Install' },
   { href: '/changelog', label: 'What’s new' },
+  { href: '/help', label: 'Help' },
   { href: '/privacy', label: 'Privacy' },
 ]
 const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
+// A section's pages count as it too: an article is still Help.
+const isHere = (href: string) => here === href || here.startsWith(`${href}/`)
 ---
 <div data-header-sentinel class="absolute top-0 h-px w-px" aria-hidden="true"></div>
 <header data-header class="site-header sticky top-0 z-50">
@@ -25,7 +28,7 @@ const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
           <li>
             <a
               href={n.href}
-              aria-current={here === n.href ? 'page' : undefined}
+              aria-current={isHere(n.href) ? 'page' : undefined}
               class="nav-link press rounded-full px-3.5 py-2 text-[0.9375rem] font-medium text-muted hover:text-[var(--text)]"
             >{n.label}</a>
           </li>
@@ -62,8 +65,8 @@ const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
             <li class="menu-item" style={`--i:${i}`}>
               <a
                 href={n.href}
-                aria-current={here === n.href ? 'page' : undefined}
-                class="press press-fade flex items-center justify-between rounded-[20px] px-4 py-3.5 text-[1.1875rem] font-semibold tracking-[-0.01em] hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
+                aria-current={isHere(n.href) ? 'page' : undefined}
+                class="menu-link press press-fade flex items-center justify-between rounded-[20px] px-4 py-3.5 text-[1.1875rem] font-semibold tracking-[-0.01em] hover:bg-black/[0.04] dark:hover:bg-white/[0.05]"
               >
                 {n.label}
                 <Icon name="chevron-right" size={18} class="text-muted" />
@@ -72,7 +75,7 @@ const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
           ))}
         </ul>
       </nav>
-      <div class="menu-item px-2 pb-2 pt-3" style="--i:4">
+      <div class="menu-item px-2 pb-2 pt-3" style={`--i:${NAV.length}`}>
         <a href={APP_URL} class="btn btn-primary press w-full">
           Open Spendr
           <Icon name="arrow-up-right" size={20} stroke={2.2} />
@@ -97,6 +100,11 @@ const here = Astro.url.pathname.replace(/\.html$/, '').replace(/\/$/, '') || '/'
   }
   .nav-link[aria-current='page'] { color: var(--text); background: rgba(15, 23, 42, 0.05); }
   :global(.dark) .nav-link[aria-current='page'] { background: rgba(255, 255, 255, 0.07); }
+  /* The phone menu's current page: the same soft fill, on the whole row, with
+     its chevron in the text colour rather than the muted one. */
+  .menu-link[aria-current='page'] { background: rgba(15, 23, 42, 0.05); }
+  :global(.dark) .menu-link[aria-current='page'] { background: rgba(255, 255, 255, 0.07); }
+  .menu-link[aria-current='page'] :global(svg) { color: var(--text); }
 
   /* Two bars that become a cross, rotating about their middles. */
   .menu-glyph { position: relative; width: 18px; height: 12px; display: block; }

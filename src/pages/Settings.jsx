@@ -11,6 +11,7 @@ import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { toggleProbe } from '../components/ViewportProbe'
 import { IconTemplate, IconInfo, IconWarning, IconRates, IconTrash } from '../components/icons'
+import HelpGlyph from '../components/help/HelpGlyph'
 import { TRASH_DAYS } from '../db/trash'
 import { useAchievements } from '../context/AchievementContext'
 import Button from '../components/ui/Button'
@@ -165,7 +166,7 @@ export default function Settings() {
       <PageHeader title="Settings" onBack={back} />
 
       <ProfileHero
-        name={displayName || user?.email?.split('@')[0] || 'Your Name'}
+        name={displayName || user?.email?.split('@')[0] || 'You'}
         email={user?.email ?? null}
         currency={currency}
         onOpen={() => navigate('/settings/profile')}
@@ -342,6 +343,14 @@ export default function Settings() {
             </>
           )}
           <SettingsRow
+            iconEl={<RowIcon color="blue"><HelpGlyph name="help" size={17} /></RowIcon>}
+            label="Help centre"
+            sublabel="Answers to everything Spendr does"
+            right={<RowChevron />}
+            onTap={() => navigate('/help')}
+          />
+          <RowDivider />
+          <SettingsRow
             iconEl={<RowIcon color="slate"><IconFileText /></RowIcon>}
             label="Privacy & terms"
             right={<RowChevron />}
@@ -380,7 +389,7 @@ export default function Settings() {
             onClick={() => navigate('/settings/changelog')}
             className="relative hit-slop [--hit-x:-8px] font-semibold accent-ink underline-offset-2 active:underline"
           >
-            Changelog
+            What’s new
           </button>
         </p>
       </div>

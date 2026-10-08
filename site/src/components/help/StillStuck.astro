@@ -1,0 +1,52 @@
+---
+/** The way out when no answer fits: an email to the person who makes Spendr. */
+import Icon from '../Icon.astro'
+import { APP_URL, CONTACT_EMAIL } from '../../config'
+
+interface Props { compact?: boolean }
+const { compact = false } = Astro.props
+---
+{compact ? (
+  <p class="stuck-line text-[0.9375rem] leading-relaxed text-muted">
+    Still stuck? Email <a href={`mailto:${CONTACT_EMAIL}`} class="stuck-mail">{CONTACT_EMAIL}</a> and say what you were trying to do.
+  </p>
+) : (
+  <section class="py-14 sm:py-20" aria-labelledby="stuck-title">
+    <div class="container-site">
+      <div class="surface stuck rounded-[var(--radius-panel)] p-5 sm:p-10" data-reveal>
+        <span class="cat-tile grid size-12 shrink-0 place-items-center rounded-[16px]" style="--cat:#2D9DFF">
+          <Icon name="mail" size={24} stroke={1.8} />
+        </span>
+        <div class="min-w-0">
+          <h2 id="stuck-title" class="help-h2">Still stuck?</h2>
+          <p class="mt-3 max-w-[34rem] text-[1.0625rem] leading-relaxed text-muted">
+            Email <a href={`mailto:${CONTACT_EMAIL}`} class="stuck-mail">{CONTACT_EMAIL}</a> and say what you
+            were trying to do. A screenshot helps.
+          </p>
+        </div>
+        <div class="stuck-actions flex flex-wrap gap-3">
+          <a href={`mailto:${CONTACT_EMAIL}`} class="btn btn-secondary press !min-h-12 !px-5 !text-[0.9375rem]">
+            <Icon name="mail" size={18} stroke={2} />
+            Email
+          </a>
+          <a href={APP_URL} class="btn btn-neutral press min-h-12">
+            Open Spendr
+            <Icon name="arrow-up-right" size={18} stroke={2.1} />
+          </a>
+        </div>
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .stuck { display: grid; gap: 20px; }
+  @media (min-width: 900px) {
+    .stuck { grid-template-columns: auto 1fr auto; align-items: center; gap: 28px; }
+  }
+  .stuck-mail {
+    color: var(--ink); font-weight: 600; overflow-wrap: anywhere;
+    text-decoration: underline; text-underline-offset: 3px;
+    text-decoration-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  }
+</style>

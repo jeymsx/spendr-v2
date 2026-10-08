@@ -1,0 +1,32 @@
+---
+/**
+ * The top of a help page under the help centre's front: the search, small,
+ * and where you are. Side by side on a wide screen; on a phone the search
+ * comes first, full width, with the trail under it.
+ */
+import Crumbs from './Crumbs.astro'
+import HelpSearch from './HelpSearch.astro'
+
+interface Props {
+  crumbs: { label: string; href?: string }[]
+  /** Leave the search out (the results page has its own, bigger). */
+  search?: boolean
+}
+const { crumbs, search = true } = Astro.props
+---
+<div class="help-top relative z-10 pt-5 sm:pt-8">
+  <div class:list={['container-site help-top-grid', search && 'has-search']}>
+    {search && <div class="help-top-search"><HelpSearch size="compact" id="help-q-top" /></div>}
+    <div class="help-top-crumbs"><Crumbs items={crumbs} /></div>
+  </div>
+</div>
+
+<style>
+  .help-top-grid { display: grid; gap: 18px; }
+  .help-top-crumbs { min-width: 0; }
+  @media (min-width: 900px) {
+    .help-top-grid.has-search { grid-template-columns: minmax(0, 1fr) 360px; align-items: center; gap: 32px; }
+    .has-search .help-top-search { grid-column: 2; grid-row: 1; }
+    .has-search .help-top-crumbs { grid-column: 1; grid-row: 1; }
+  }
+</style>
