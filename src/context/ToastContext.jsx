@@ -34,18 +34,28 @@ const VARIANTS = {
   error:   { Icon: IconX,       iconClass: 'text-red-400 dark:text-red-500'        },
 }
 
+/**
+ * The phone's toast: one bar over the tab bar.
+ *
+ * A toast that is going keeps its words and its icon until it has faded -
+ * they used to vanish at once, leaving a shrunken dark pill with a tick in it
+ * for the length of the fade. One that replaces another does not snap: the
+ * new words come in over a short blur (index.css `.toast-swap`), keyed by the
+ * toast, while the bar itself stays put.
+ */
 function GlobalToast({ toast, onAction }) {
   const v = VARIANTS[toast?.type ?? 'success']
-  const hasAction = !!toast?.actionLabel
+  const shown = !!toast && !toast.leaving
+  const hasAction = shown && !!toast?.actionLabel
 
   return (
     <div
       className={`toast-host fixed bottom-28 inset-x-0 z-[650] flex justify-center px-6
         transition-all duration-300
-        ${toast ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}
+        ${shown ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-3'}
         ${hasAction ? '' : 'pointer-events-none'}`}
     >
-      <div className="flex items-center gap-2.5 px-5 py-3 rounded-2xl max-w-full
+      <div key={toast?.id ?? 0} className="toast-swap flex items-center gap-2.5 px-5 py-3 rounded-2xl max-w-full
         bg-slate-900 dark:bg-white
         shadow-[0_8px_32px_rgba(0,0,0,0.28)]">
         {v && <span className={`${v.iconClass} shrink-0`}><v.Icon size={16} /></span>}
@@ -55,9 +65,10 @@ function GlobalToast({ toast, onAction }) {
         <p role="status" className="text-sm font-semibold text-white dark:text-slate-900 break-words leading-snug">
           {toast?.message}
         </p>
-        {hasAction && (
+        {toast?.actionLabel && (
           <button
             onClick={onAction}
+            tabIndex={hasAction ? 0 : -1}
             className="shrink-0 ml-1 px-3 py-1 -my-1 rounded-xl text-sm font-bold
               text-primary bg-white/[0.12] dark:bg-slate-900/[0.08]
               active:scale-95 transition-transform duration-75"
@@ -101,7 +112,8 @@ export function ToastProvider({ children }) {
     const ms = duration
       ?? (actionLabel ? 6000 : type === 'error' ? 4000 : 2500)
     timerRef.current = setTimeout(() => {
-      setToast(t => (t?.id === id ? null : t))
+      // Going, not gone: it fades with its words still in it.
+      setToast(t => (t?.id === id ? { ...t, leaving: true } : t))
       actionRef.current = null
     }, ms)
   }, [])
@@ -110,7 +122,7 @@ export function ToastProvider({ children }) {
     presenter?.dismiss()
     if (timerRef.current) clearTimeout(timerRef.current)
     actionRef.current = null
-    setToast(null)
+    setToast(t => (t ? { ...t, leaving: true } : t))
   }, [])
 
   // Clear before running, so a double-tapped action can only fire once.

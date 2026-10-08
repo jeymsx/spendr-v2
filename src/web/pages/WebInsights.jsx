@@ -135,8 +135,12 @@ function Figures({ data, period }) {
       <Stat oneLine label="Came in" value={<Roll id="insights:earned" value={data.totalEarned} />} note={earnedNote} />
       <Stat oneLine label="Net" value={<Roll id="insights:net" value={net} format={signedFmt} />} tone={net < 0 ? 'neg' : net > 0 ? 'pos' : null} note={netNote} />
       {/* Wrapped where there is a finished month to watch - the one shown,
-          or the last one - and the biggest category until there is. */}
-      {recapMonth
+          or the last one - and the biggest category when there is none. While
+          that is being looked up, an empty place: the category card is not
+          drawn first and then covered. */}
+      {recapMonth === undefined
+        ? <div aria-hidden="true" />
+        : recapMonth
         ? <WrappedTile month={recapMonth} />
         : <Stat label="Biggest category" value={top ? <Roll id="insights:top-category" value={top.value} /> : '—'} note={top ? `${top.name}, ${Math.round((top.value / (data.totalSpent || 1)) * 100)}% of spending` : `Nothing spent ${periodPhrase(period)}`} />}
     </div>

@@ -13,13 +13,15 @@ import { useEffect, useRef, useState } from 'react'
  *
  * ── Clear at rest, frosted once something is under it ──
  *
- * A page at the top looks exactly as it always did. The frost fades in when
- * the first pixel of content goes beneath the bar, which is what iOS does
- * with a bar's "scroll edge" look, and it is a separate layer for the same
- * reason New account's is (AccountNew.jsx): the blur can feather into the
- * page below while the button and title stay at full strength. Translucent
- * rather than filled, because behind the page there is a gradient, and a
- * solid colour sliding over it reads as a patch.
+ * A page at the top looks exactly as it always did. Once the first pixel of
+ * content goes beneath the bar, the frost fades in and the row tightens a
+ * little towards the status bar - an iPhone's own scroll edge, as Settings
+ * draws it. No hairline: the blur feathers out into the page instead, in two
+ * layers so it thins gradually rather than stopping (index.css .pinned-top).
+ * They are layers of their own, beside the button and title rather than
+ * behind them in one box, so those stay at full strength. Translucent rather
+ * than filled, because behind the page there is a gradient, and a solid
+ * colour sliding over it reads as a patch.
  *
  * The edge it watches is a sentinel above the bar, not a scroll listener:
  * the page may scroll in the phone's main column, a desktop pane or a sheet,
@@ -48,6 +50,7 @@ export default function PinnedTop({ children, className = '' }) {
     <>
       <div ref={edge} className="h-1 -mb-1" aria-hidden="true" />
       <div className={`pinned-top ${className}`} data-under={under ? '' : undefined}>
+        <div className="pinned-top-haze" aria-hidden="true" />
         <div className="pinned-top-frost" aria-hidden="true" />
         {children}
       </div>

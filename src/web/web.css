@@ -104,85 +104,88 @@ html.web .web-pane {
    above every header. A window has none. */
 html.web .web-shell .pt-safe-header { padding-top: 1.25rem; }
 
-/* ── Toasts (WebToaster, sonner) ────────────────────────────────────────── */
+/* ── Toasts (WebToaster, sonner) ────────────────────────────────────────────
+   A web app's toast: a small card in the corner, one row - icon, words, the
+   button if there is one, a close - in the popovers' surface and shadow, so
+   it belongs to the same desk as the menus and the bell. */
+
+/* sonner sets a system font on its list; the app's own is Inter. */
+html.web [data-sonner-toaster] { font-family: inherit; }
 
 html.web .web-toast {
-  width: 356px;
+  width: 360px;
+  min-height: 52px;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 0.875rem 0.75rem 0.75rem;
-  border-radius: 1rem;
-  font-family: inherit;
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  box-shadow: 0 18px 40px -12px rgba(15, 23, 42, 0.28), 0 2px 6px rgba(15, 23, 42, 0.06);
-  color: rgb(15 23 42);
+  gap: 10px;
+  padding: 8px 8px 8px 14px;
+  border-radius: var(--d-r);
+  background: var(--d-panel);
+  box-shadow: var(--d-shadow-pop);
+  color: var(--d-text);
 }
-html.web.dark .web-toast {
-  background:
-    linear-gradient(rgba(var(--color-primary-rgb), 0.07), rgba(var(--color-primary-rgb), 0.07)),
-    #141c29;
-  border-color: rgba(var(--color-primary-rgb), 0.18);
-  box-shadow: 0 18px 44px -12px rgba(0, 0, 0, 0.7), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  color: #fff;
-}
-html.web .web-toast-icon { flex-shrink: 0; margin: 0; width: auto; height: auto; }
-html.web .web-toast-title { font-size: 0.8125rem; font-weight: 600; line-height: 1.35; }
-html.web .web-toast [data-content] { flex: 1; min-width: 0; }
+html.web .web-toast-icon { flex-shrink: 0; display: flex; margin: 0; width: auto; height: auto; }
+html.web .web-toast [data-content] { flex: 1; min-width: 0; padding: 6px 0; }
+html.web .web-toast-title { font-size: 14px; font-weight: 500; line-height: 20px; overflow-wrap: anywhere; }
 
+/* The kind, as a small solid mark: what a glance needs and no more. */
 html.web .web-toast-mark {
-  width: 1.75rem;
-  height: 1.75rem;
+  width: 20px;
+  height: 20px;
   border-radius: 999px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  color: #fff;
 }
-html.web .web-toast-mark-success { color: rgb(5 150 105); background: rgba(16, 185, 129, 0.14); }
-html.web .web-toast-mark-warning { color: rgb(217 119 6);  background: rgba(245, 158, 11, 0.16); }
-html.web .web-toast-mark-error   { color: rgb(220 38 38);  background: rgba(239, 68, 68, 0.14); }
-html.web.dark .web-toast-mark-success { color: rgb(52 211 153); }
-html.web.dark .web-toast-mark-warning { color: rgb(251 191 36); }
-html.web.dark .web-toast-mark-error   { color: rgb(248 113 113); }
+html.web .web-toast-mark-success { background: var(--d-pos); }
+html.web .web-toast-mark-warning { background: var(--d-warn); }
+html.web .web-toast-mark-error   { background: var(--d-neg); }
+/* The dark marks are light, so their glyph is the card's own colour. */
+html.web.dark .web-toast-mark { color: var(--d-panel); }
 
+/* Undo and the like: a quiet text button, the accent's ink. */
 html.web .web-toast-action {
+  order: 2;
   flex-shrink: 0;
-  height: 2rem;
-  padding: 0 0.75rem;
-  border-radius: 0.75rem;
-  font-size: 0.8125rem;
-  font-weight: 700;
-  color: var(--color-primary);
-  background: rgba(var(--color-primary-rgb), 0.10);
+  height: 32px;
+  padding: 0 10px;
+  border-radius: var(--d-r-sm);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--d-ink);
+  background: transparent;
   transition: background-color 0.15s var(--ease-out);
 }
-html.web .web-toast-action:hover { background: rgba(var(--color-primary-rgb), 0.18); }
+html.web .web-toast-action:hover { background: var(--d-hover); }
+html.web .web-toast-action:active { background: var(--d-press); }
+html.web .web-toast-action:focus-visible { outline: none; box-shadow: var(--d-ring); }
 
-/* The close sits on the card's corner, and only shows under the pointer. */
-html.web .web-toast-close {
-  position: absolute;
-  top: -0.5rem;
-  left: -0.5rem;
-  width: 1.375rem;
-  height: 1.375rem;
-  border-radius: 999px;
+/* The close: always there, at the end of the row, as on any web toast.
+   Through the toaster, because sonner's dark theme paints its own close. */
+html.web [data-sonner-toaster] .web-toast .web-toast-close {
+  order: 3;
+  position: static;
+  flex-shrink: 0;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--d-r-sm);
   display: flex;
   align-items: center;
   justify-content: center;
-  color: rgb(100 116 139);
-  background: #ffffff;
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  opacity: 0;
-  transition: opacity 0.15s var(--ease-out);
+  color: var(--d-text-3);
+  background: transparent;
+  border: 0;
+  transform: none;
+  transition: background-color 0.15s var(--ease-out), color 0.15s var(--ease-out);
 }
-html.web .web-toast-close svg { width: 0.75rem; height: 0.75rem; }
-html.web .web-toast:hover .web-toast-close,
-html.web .web-toast-close:focus-visible { opacity: 1; }
-html.web.dark .web-toast-close { background: #1b2433; border-color: rgba(255, 255, 255, 0.14); color: rgb(148 163 184); }
+html.web [data-sonner-toaster] .web-toast .web-toast-close svg { width: 14px; height: 14px; }
+html.web [data-sonner-toaster] .web-toast .web-toast-close:hover { background: var(--d-hover); color: var(--d-text); }
+html.web [data-sonner-toaster] .web-toast .web-toast-close:focus-visible { outline: none; box-shadow: var(--d-ring); }
 
-/* The phone's bar stays for the phone. */
-html.web .toast-host { display: none; }
+/* The phone's bar stays for the phone - and for the lock screen, which draws
+   before the desktop's toasts are there to take over (WebToaster). */
+html.web.web-toaster .toast-host { display: none; }
 
 /* A narrow window gives the list less, so its page keeps enough. */
 @media (max-width: 1179px) {

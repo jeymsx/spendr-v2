@@ -1696,10 +1696,18 @@ html { overscroll-behavior-x: none; }
 
 /* ── A page's top, pinned (components/ui/PinnedTop.jsx) ────────────────
    Sticky in whatever scrolls the page, above what slides beneath it, and
-   clear until something does. The frost is New account's (AccountNew.jsx):
-   its own layer, reaching 20px below the bar and masked away there, so the
-   blur feathers into the page rather than stopping in a hard line, while
-   the button and title above it stay sharp. Only its opacity moves.
+   clear until something does. Then it frosts the way an iPhone's Settings
+   does: no edge and no hairline, the blur thinning out into the page over
+   --frost-reach below the bar, and the row moving up a little.
+
+   ── Two layers, so the blur fades rather than stops ──
+
+   One masked blur thins to nothing over its feather, and a row passing
+   through that band was half covered and half clear - sliced, and legible in
+   grey, which is why this once ended on a hard line. Two make it gradual: a
+   light haze reaching all the way down, and the bar's real frost and tint
+   over it, solid behind the title and gone before the haze is. A row going
+   up blurs a little, then a lot, and is never cut across.
 
    No z-index on <main> means this 45 is in the app's root stacking order:
    over the page's own raised bits - the accent carousel lifts its middle
@@ -1708,52 +1716,73 @@ html { overscroll-behavior-x: none; }
   position: sticky;
   top: 0;
   z-index: 45;
+  --frost-reach: 28px;
 }
-/* A crisp edge and a hairline, the way an iPhone's bar ends. It feathered
-   out over 20px below the bar, and rows passing through the feather were
-   neither covered nor clear: sliced, and legible in grey. */
+.pinned-top-haze,
 .pinned-top-frost {
   position: absolute;
-  inset: 0;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: calc(-1 * var(--frost-reach));
   pointer-events: none;
   opacity: 0;
-  transition: opacity 180ms var(--ease-out);
-  background: rgba(255, 255, 255, 0.72);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
-  box-shadow: 0 0.5px 0 rgba(15, 23, 42, 0.12);
+  transition: opacity 220ms var(--ease-out);
+}
+.pinned-top-haze {
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--frost-reach) - 8px), transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--frost-reach) - 8px), transparent 100%);
+}
+.pinned-top-frost {
+  background: linear-gradient(to bottom, rgba(248, 250, 252, 0.8), rgba(248, 250, 252, 0.55) calc(100% - var(--frost-reach)), rgba(248, 250, 252, 0));
+  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  backdrop-filter: blur(22px) saturate(160%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - var(--frost-reach) - 20px), transparent calc(100% - 6px));
+  mask-image: linear-gradient(to bottom, #000 calc(100% - var(--frost-reach) - 20px), transparent calc(100% - 6px));
 }
 .dark .pinned-top-frost {
-  background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(to bottom, rgba(2, 6, 23, 0.55), rgba(2, 6, 23, 0.32) calc(100% - var(--frost-reach)), rgba(2, 6, 23, 0));
 }
+.pinned-top[data-under] .pinned-top-haze,
 .pinned-top[data-under] .pinned-top-frost { opacity: 1; }
+/* Tighter once the page is under it: the row moves up towards the status
+   bar, as an iPhone's does. A move, not a smaller box, so nothing below it
+   jumps by the same amount mid-scroll. */
+.pinned-top > :not(.pinned-top-haze):not(.pinned-top-frost) {
+  transition: translate 260ms var(--ease-out);
+}
+.pinned-top[data-under] > :not(.pinned-top-haze):not(.pinned-top-frost) {
+  translate: 0 -6px;
+}
 
 /* ── The status bar's ground (layouts/AppLayout.jsx) ───────────────────
    The installed app draws under the status bar (viewport-fit=cover with a
    translucent bar), so a list scrolled up ran beneath the clock with nothing
    behind it. A page with a pinned top covers that strip itself; for the
-   rest - the tabs, Settings - this frosts it once the page has scrolled,
-   the height of the inset and ending on the same hairline as a pinned top.
-   In a browser tab, which has no inset, it is nothing at all. */
+   rest - the tabs, Settings - this frosts it once the page has scrolled, the
+   way a pinned top does: solid behind the clock, then fading out below it,
+   with no hairline. Its height is a multiple of the inset, so in a browser
+   tab, which has none, it is nothing at all. */
 .status-frost {
   position: fixed;
   top: 0;
   left: 0;
   right: 0;
-  height: env(safe-area-inset-top, 0px);
+  height: calc(env(safe-area-inset-top, 0px) * 1.45);
   z-index: 45;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 180ms var(--ease-out);
-  background: rgba(255, 255, 255, 0.72);
-  -webkit-backdrop-filter: blur(24px) saturate(160%);
-  backdrop-filter: blur(24px) saturate(160%);
-  box-shadow: 0 0.5px 0 rgba(15, 23, 42, 0.12);
+  transition: opacity 220ms var(--ease-out);
+  background: linear-gradient(to bottom, rgba(248, 250, 252, 0.8), rgba(248, 250, 252, 0.55) 68%, rgba(248, 250, 252, 0));
+  -webkit-backdrop-filter: blur(20px) saturate(160%);
+  backdrop-filter: blur(20px) saturate(160%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 62%, transparent 100%);
 }
 .dark .status-frost {
-  background: rgba(0, 0, 0, 0.4);
-  box-shadow: 0 0.5px 0 rgba(255, 255, 255, 0.08);
+  background: linear-gradient(to bottom, rgba(2, 6, 23, 0.55), rgba(2, 6, 23, 0.32) 68%, rgba(2, 6, 23, 0));
 }
 .status-frost[data-under] { opacity: 1; }
 /* own-top: a page that pins a top of its own, New account and the importer. */
@@ -1806,8 +1835,10 @@ html.web .swipe-behind { display: none; }
 /* The desktop draws its own chrome round a page: the bar stays in the flow
    there, with nothing behind it. */
 html.web .pinned-top { position: static; }
+html.web .pinned-top-haze,
 html.web .pinned-top-frost,
 html.web .status-frost { display: none; }
+html.web .pinned-top > * { translate: none; }
 
 /* ── A small control's reach ────────────────────────────────────────────
    Some controls are drawn small on purpose - an eye beside a heading, a
@@ -2139,6 +2170,18 @@ html.web .onboarding-column {
    across the sidebar as well - reads like a system banner rather than a
    confirmation. It becomes a corner card instead, which is also where the
    eye is not: the content stays unobscured. */
+/* A toast that takes the place of another: the words change over a short
+   blur, not in one frame (ToastContext GlobalToast). */
+.toast-swap { animation: toast-swap 0.18s var(--ease-out, ease-out); }
+@keyframes toast-swap {
+  from { opacity: 0.4; filter: blur(4px); }
+  to   { opacity: 1; filter: blur(0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .toast-swap { animation: none; }
+}
+html.reduce-motion .toast-swap { animation: none; }
+
 html.web .toast-host {
   bottom: 1.5rem;
   left: auto;
