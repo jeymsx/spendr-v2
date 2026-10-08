@@ -7,6 +7,8 @@ import { GlyphTile } from '../../components/help/HelpGlyph'
 import { HELP_POPULAR, HELP_QUICK, articlesIn, helpArticle, helpTopic } from '../../lib/help'
 import { searchHelp } from '../../lib/helpSearch'
 import { ArticleRows, ContactCard, HelpBody, HelpSearchBox, NoResults, TopicGrid } from './HelpParts'
+import FeedbackSheet from '../../components/feedback/FeedbackSheet'
+import { useFeedback } from '../../components/feedback/useFeedback'
 
 /**
  * The help centre on the phone: every question about Spendr and its answer
@@ -23,6 +25,22 @@ import { ArticleRows, ContactCard, HelpBody, HelpSearchBox, NoResults, TopicGrid
 /** @typedef {import('../../lib/help').HelpArticle} HelpArticle */
 
 const present = (/** @type {Array<HelpArticle|null>} */ list) => /** @type {HelpArticle[]} */ (list.filter(Boolean))
+
+/**
+ * Still stuck: a message to the person who makes Spendr, from the app when it
+ * can send one (lib/feedback.js), by email when it cannot.
+ *
+ * @param {{className?: string}} props
+ */
+function Contact({ className = '' }) {
+  const f = useFeedback()
+  return (
+    <>
+      <ContactCard className={className} onSend={f.canSend ? () => f.show('other') : null} />
+      <FeedbackSheet f={f} />
+    </>
+  )
+}
 
 export default function HelpHome() {
   const navigate = useNavigate()
@@ -59,7 +77,7 @@ export default function HelpHome() {
           {results.length
             ? <ArticleRows articles={results} onOpen={open} showTopic />
             : <NoResults query={q} />}
-          <ContactCard className="mt-6" />
+          <Contact className="mt-6" />
         </section>
       ) : (
         <>
@@ -72,7 +90,7 @@ export default function HelpHome() {
             <ArticleRows className="mt-3" articles={present(HELP_POPULAR.map(helpArticle))} onOpen={open} />
           </section>
           <section className="px-5 mt-8">
-            <ContactCard />
+            <Contact />
           </section>
         </>
       )}
@@ -93,7 +111,7 @@ export function HelpTopicPage() {
           <p className="text-sm leading-snug text-slate-500 dark:text-slate-400">{topic.blurb}</p>
         </div>
         <ArticleRows className="mt-5" articles={articlesIn(topic.id)} onOpen={a => navigate(`/help/${a.id}`)} />
-        <ContactCard className="mt-8" />
+        <Contact className="mt-8" />
       </section>
     </SubPage>
   )
@@ -125,7 +143,7 @@ export function HelpArticlePage() {
         </section>
       )}
       <section className="px-5 mt-8">
-        <ContactCard />
+        <Contact />
       </section>
     </SubPage>
   )

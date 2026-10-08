@@ -423,6 +423,8 @@ html.web .d-input { font-size: 14px !important; }
 html.web .d-palette-input { font-size: 17px !important; }
 html.web .d-input::placeholder { color: var(--d-text-3); }
 html.web .d-input:focus { outline: none; border-color: var(--d-accent); box-shadow: var(--d-ring); }
+/* A field to write more than a line in: the input's frame, its own height. */
+html.web .d-textarea { height: auto; min-height: 140px; padding: 10px 14px; line-height: 1.5; resize: vertical; }
 html.web .d-input-wrap { position: relative; display: flex; align-items: center; }
 html.web .d-input-wrap > svg { position: absolute; left: 14px; color: var(--d-text-3); pointer-events: none; }
 html.web .d-input-wrap > .d-input { padding-left: 40px; border-radius: 999px; }

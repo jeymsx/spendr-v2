@@ -81,6 +81,7 @@ const SettingsSync       = lazy(() => import('../pages/settings/Sync'))
 const SettingsReports    = lazy(() => import('../pages/settings/Reports'))
 const SettingsBackup     = lazy(() => import('../pages/settings/BackupRestore'))
 const SettingsChangelog  = lazy(() => import('../pages/settings/Changelog'))
+const SettingsFeedback   = lazy(() => import('../pages/settings/Feedback'))
 const SettingsProfile    = lazy(() => import('../pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 
 function LoadingScreen() {
@@ -199,6 +200,7 @@ export default function WebApp() {
                 <Route path="reports" element={<SettingsReports />} />
                 <Route path="backup" element={<SettingsBackup />} />
                 <Route path="changelog" element={<SettingsChangelog />} />
+                <Route path="feedback" element={<SettingsFeedback />} />
                 {/* Part of Preferences on a computer. */}
                 <Route path="app-lock" element={<Navigate to="/settings/preferences#app-lock" replace />} />
                 <Route path="accent" element={<SettingsAccent />} />

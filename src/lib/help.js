@@ -1483,7 +1483,8 @@ export const HELP_ARTICLES = [
     body: [
       { p: 'What you enter is stored on your device. Spendr collects no analytics, does no usage tracking and shows no ads. It never connects to your bank, and never asks for a bank password.' },
       { p: 'A few features reach out, and only when you use them. Cloud sync keeps a copy of your data in Spendr’s database so it can reach your other devices, and no other user can read it. Reminders store a short note for each one, such as a card’s due date and amount. Exchange rates are downloaded only if you hold an account in another currency, and the request carries nothing but your main currency’s code.' },
-      { p: 'If Spendr ever crashes, a short description of the error stays on your device. It is never sent anywhere.' },
+      { p: 'If Spendr ever crashes, a short description of the error stays on your device. It is only sent if you include it in a bug report.' },
+      { p: 'A bug report or idea you send goes to the person who makes Spendr with your name, the app version and your device. None of your money is included.' },
       { p: 'To erase everything on this device, use Settings › Backup & restore › Reset app. To have your synced copy deleted too, email jamesandgen111@gmail.com.' },
       { tip: 'The full privacy policy and terms of use are in Settings › Privacy & terms.' },
     ],
@@ -1501,6 +1502,25 @@ export const HELP_ARTICLES = [
       { go: '/settings/changelog', label: 'Open What’s new' },
     ],
     related: ['notifications', 'install-home-screen'],
+  },
+  {
+    id: 'report-a-bug',
+    topic: 'settings',
+    title: 'How do I report a bug or suggest an idea?',
+    summary: 'Settings › Report a bug sends it straight to the person who makes Spendr, from inside the app.',
+    keywords: ['bug', 'problem', 'broken', 'not working', 'feedback', 'idea', 'suggestion', 'feature request', 'contact', 'support'],
+    body: [
+      { steps: [
+        'Open Settings.',
+        'Press Report a bug, under Help & about.',
+        'Choose Bug, Idea or Other, and write what happened or what you would like.',
+        'Press Send.',
+      ] },
+      { p: 'It goes with your name, the app version and your device, so the answer can reach you and the problem can be found. None of your money is included.' },
+      { p: 'If Spendr noticed errors on your device, a bug report can include them too. Leave Include the error log on to send them, or turn it off.' },
+      { tip: 'You need to be signed in to send from the app. Signed out, the same report opens as an email instead.' },
+    ],
+    related: ['privacy', 'whats-new'],
   },
 ]
 

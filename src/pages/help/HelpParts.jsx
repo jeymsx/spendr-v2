@@ -95,18 +95,30 @@ export function TopicGrid({ onOpen, className = '' }) {
   )
 }
 
-/** Still stuck: the person who makes Spendr, by email. @param {{className?: string}} props */
-export function ContactCard({ className = '' }) {
-  return (
-    <Card as="a" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Spendr help')}`} radius="3xl" interactive className={`help-contact flex items-center gap-3 px-4 py-4 ${className}`}>
+/**
+ * Still stuck: the person who makes Spendr. From the app when it can send
+ * (`onSend`: the Report a bug form, lib/feedback.js), and by email when it
+ * cannot - signed out, or no cloud.
+ *
+ * @param {{className?: string, onSend?: (() => void)|null}} props
+ */
+export function ContactCard({ className = '', onSend = null }) {
+  const inner = (
+    <>
       <GlyphTile name="mail" />
       <span className="flex-1 min-w-0">
         <span className="block text-15 font-semibold text-slate-900 dark:text-white">Still stuck?</span>
-        <span className="block text-13 text-slate-500 dark:text-slate-400">Email the person who makes Spendr. Answers usually come within a day.</span>
+        <span className="block text-13 text-slate-500 dark:text-slate-400">
+          {onSend ? 'Send a message to the person who makes Spendr.' : 'Email the person who makes Spendr.'} Answers usually come within a day.
+        </span>
       </span>
       <span className="text-slate-300 dark:text-slate-600 shrink-0"><IconChevronRight size={18} /></span>
-    </Card>
+    </>
   )
+  const frame = `help-contact flex items-center gap-3 px-4 py-4 text-left ${className}`
+  return onSend
+    ? <Card as="button" type="button" onClick={onSend} radius="3xl" interactive className={frame}>{inner}</Card>
+    : <Card as="a" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Spendr help')}`} radius="3xl" interactive className={frame}>{inner}</Card>
 }
 
 /**

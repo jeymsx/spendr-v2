@@ -11,6 +11,8 @@ import { HELP_POPULAR, HELP_QUICK, HELP_TOPICS, articlesIn, helpArticle, helpTop
 import { searchHelp } from '../../lib/helpSearch'
 import { CONTACT_EMAIL } from '../../lib/contact'
 import { HelpBody, HelpSearchBox } from '../../pages/help/HelpParts'
+import FeedbackDialog from '../ui/FeedbackDialog'
+import { useFeedback } from '../../components/feedback/useFeedback'
 
 /**
  * The help centre on a computer (lib/help.js; the phone's is pages/help).
@@ -39,6 +41,9 @@ export default function WebHelp() {
 
 function HelpHub() {
   const navigate = useNavigate()
+  // Still stuck: a message from the app when it can send one, an email when it cannot (lib/feedback.js).
+  const f = useFeedback()
+  const contact = () => { if (f.canSend) f.show('other'); else window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Spendr help')}` }
   const [params, setParams] = useSearchParams()
   const q = params.get('q') ?? ''
   const results = useMemo(() => (q.trim().length >= 2 ? searchHelp(q) : null), [q])
@@ -69,7 +74,7 @@ function HelpHub() {
         <Panel className="mt-8" title={results.length ? `${results.length === 1 ? 'One answer' : `${results.length} answers`} for “${q.trim()}”` : `No answers for “${q.trim()}”`} flush>
           {results.length
             ? <Rows articles={results} showTopic />
-            : <p className="px-6 pb-6 text-13 text-[var(--d-text-3)]">Try fewer words, or the name of the page you’re on, like Budget or Accounts. Or <a className="d-link" href={`mailto:${CONTACT_EMAIL}`}>email us</a>.</p>}
+            : <p className="px-6 pb-6 text-13 text-[var(--d-text-3)]">Try fewer words, or the name of the page you’re on, like Budget or Accounts. Or <button type="button" className="d-link" onClick={contact}>{f.canSend ? 'send us a message' : 'email us'}</button>.</p>}
         </Panel>
       ) : (
         <>
@@ -88,14 +93,15 @@ function HelpHub() {
               <Rows articles={present(HELP_POPULAR.map(helpArticle))} />
             </Panel>
             <Panel className="col-span-4 self-start" title="Still stuck?">
-              <p className="text-13 leading-relaxed text-[var(--d-text-2)]">Email the person who makes Spendr. Answers usually come within a day.</p>
-              <Btn className="mt-4" icon={<HelpGlyph name="mail" size={15} />} onClick={() => { window.location.href = `mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Spendr help')}` }}>
-                Email us
+              <p className="text-13 leading-relaxed text-[var(--d-text-2)]">{f.canSend ? 'Send a message to' : 'Email'} the person who makes Spendr. Answers usually come within a day.</p>
+              <Btn className="mt-4" icon={<HelpGlyph name="mail" size={15} />} onClick={contact}>
+                {f.canSend ? 'Send a message' : 'Email us'}
               </Btn>
             </Panel>
           </div>
         </>
       )}
+      <FeedbackDialog f={f} />
     </Page>
   )
 }
@@ -108,6 +114,7 @@ function HelpHub() {
 function HelpShelf({ topicId, articleId }) {
   const navigate = useNavigate()
   const search = useRef(/** @type {HTMLInputElement|null} */ (null))
+  const f = useFeedback()
   const article = articleId ? helpArticle(articleId) : null
   const topic = helpTopic(article?.topic ?? topicId ?? '')
   if (!topic || (articleId && !article)) return <Navigate to="/help" replace />
@@ -184,10 +191,13 @@ function HelpShelf({ topicId, articleId }) {
             </Panel>
           )}
           <p className="d-help-foot">
-            Still stuck? <a className="d-link" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Spendr help')}`}>Email the person who makes Spendr</a>.
+            Still stuck? {f.canSend
+              ? <button type="button" className="d-link" onClick={() => f.show('other')}>Send a message to the person who makes Spendr</button>
+              : <a className="d-link" href={`mailto:${CONTACT_EMAIL}?subject=${encodeURIComponent('Spendr help')}`}>Email the person who makes Spendr</a>}.
           </p>
         </div>
       </div>
+      <FeedbackDialog f={f} />
     </Page>
   )
 }

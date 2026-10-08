@@ -16,6 +16,9 @@ import { planDedupe } from '../../lib/dedupe'
 import { LAST_BACKUP_KEY } from '../../lib/backup'
 import { clearCrashes, crashReport, readCrashes } from '../../lib/crashLog'
 import { useIsDeveloper } from '../../hooks/useIsDeveloper'
+import { useFeedback } from '../../components/feedback/useFeedback'
+import { useNewFeedback } from '../../hooks/useNewFeedback'
+import FeedbackDialog from '../ui/FeedbackDialog'
 import { shareOrCopy } from '../../lib/share'
 import { isSupabaseConfigured } from '../../lib/supabase'
 import { APP_VERSION } from '../../lib/release'
@@ -29,7 +32,7 @@ import Btn from '../ui/Button'
 import Dialog from '../ui/Dialog'
 import { Progress } from '../ui/display'
 import {
-  IBell, IChevronRight, ICopy, IDownload, IEdit, IFileText, IGauge, IGlobe, IInfo, ILock, ILogOut, IMessage, IMonitor,
+  IAlert, IBell, IChevronRight, ICopy, IDownload, IEdit, IFileText, IGauge, IGlobe, IInbox, IInfo, ILock, ILogOut, IMessage, IMonitor,
   IPalette, IRefresh, IShield, ISliders, ISparkle, ITag, ITrash, ITrophy, IZap, IHelp,
 } from '../ui/icons'
 
@@ -48,8 +51,8 @@ import {
  * The phone's Settings page (pages/Settings) holds the same things as rows;
  * the hooks and sheets are its own (settings/Install, settings/Reminders,
  * settings/Dedupe, settings/Policy), so the two cannot drift on what a
- * setting does - only on how it is shown. Report a problem and Sign out are
- * the desktop's dialogs over the same logic.
+ * setting does - only on how it is shown. Report a bug, the error log and
+ * Sign out are the desktop's dialogs over the same logic.
  */
 export default function WebSettingsOverview() {
   const navigate = useNavigate()
@@ -62,8 +65,11 @@ export default function WebSettingsOverview() {
   const appLock = useAppLock()
   const fx = useRates()
   const achievements = useAchievements()
-  // The error log and the way to send it are for the developer (lib/developer.js).
+  // The error log, and the reports people send, are for the developer (lib/developer.js).
   const developer = useIsDeveloper()
+  // Report a bug, for everyone (lib/feedback.js); and how many are waiting, for the developer.
+  const feedback = useFeedback()
+  const newReports = useNewFeedback()
 
   const meta = useLiveQuery(() => db.meta.toArray(), [], [])
   const read = (/** @type {string} */ key) => (meta ?? []).find(m => m.key === key)?.value ?? null
@@ -141,12 +147,9 @@ export default function WebSettingsOverview() {
     ),
   ].filter(Boolean)
 
-  async function sendReport() {
-    const body = crashes.length
-      ? crashReport(crashes)
-      : `Spendr problem report · v${APP_VERSION}\n\nWhat happened:\n\n\nWhat you expected:\n\n\n${typeof navigator !== 'undefined' ? navigator.userAgent : ''}`
-    const outcome = await shareOrCopy('Spendr problem report', body)
-    setCrashNote(outcome === 'copied' ? 'Copied - paste it into a message.' : outcome === 'failed' ? 'Could not copy it on this browser.' : '')
+  async function shareLog() {
+    const outcome = await shareOrCopy('Spendr error log', crashReport(crashes))
+    setCrashNote(outcome === 'copied' ? 'Copied - paste it where you need it.' : outcome === 'failed' ? 'Could not copy it on this browser.' : '')
   }
 
   async function doSignOut() {
@@ -227,13 +230,21 @@ export default function WebSettingsOverview() {
 
         {device.length > 0 && <Section title="This device" note="What this browser can do.">{device}</Section>}
 
-        <Section title="Help & about" note={developer ? 'Answers, problems, and the fine print.' : 'Answers, and the fine print.'}>
+        <Section title="Help & about" note="Answers, bugs and ideas, and the fine print.">
           <LinkRow icon={<IHelp size={17} />} label="Help centre" to="/help" value="Search every question" />
+          {/* Everyone's: it reaches the developer's inbox below (lib/feedback.js). */}
+          <ActionRow icon={<IMessage size={17} />} label="Report a bug" sub="Or suggest an idea">
+            <Btn size="sm" onClick={() => feedback.show('bug')}>Report</Btn>
+          </ActionRow>
           {developer && (
-            <ActionRow icon={<IMessage size={17} />} label="Report a problem"
-              sub={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} recorded on this device` : 'Write one with the details filled in'}>
-              <Btn size="sm" onClick={() => setCrashesOpen(true)}>Report</Btn>
-            </ActionRow>
+            <>
+              <LinkRow icon={<IInbox size={17} />} label="Bug reports & ideas" to="/settings/feedback"
+                value={newReports == null ? '' : newReports ? `${newReports} new` : 'Nothing new'} />
+              <ActionRow icon={<IAlert size={17} />} label="Error log"
+                sub={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} on this device` : 'Nothing on this device'}>
+                <Btn size="sm" onClick={() => setCrashesOpen(true)}>Open</Btn>
+              </ActionRow>
+            </>
           )}
           <LinkRow icon={<IFileText size={17} />} label="Privacy policy" to="/settings/privacy" value={updatedLine(PRIVACY_SECTIONS)} />
           <LinkRow icon={<IInfo size={17} />} label="Terms of use" to="/settings/terms" value={updatedLine(TERMS_SECTIONS)} />
@@ -253,19 +264,21 @@ export default function WebSettingsOverview() {
       <Dialog
         open={developer && crashesOpen}
         onClose={closeCrashes}
-        title="Report a problem"
+        title="Error log"
         width={480}
-        actions={(
+        actions={crashes.length > 0 ? (
           <>
-            {crashes.length > 0 && <Btn onClick={() => { clearCrashes(); setCrashes([]); closeCrashes() }}>Clear</Btn>}
-            <Btn variant="primary" data-autofocus onClick={sendReport}>{crashes.length ? 'Send the log' : 'Write a report'}</Btn>
+            <Btn onClick={() => { clearCrashes(); setCrashes([]); closeCrashes() }}>Clear</Btn>
+            <Btn variant="primary" data-autofocus onClick={shareLog}>Copy the log</Btn>
           </>
+        ) : (
+          <Btn variant="primary" data-autofocus onClick={closeCrashes}>Done</Btn>
         )}
       >
         <p>
           {crashes.length
-            ? 'Errors Spendr noticed, kept on this device only. Sending them is up to you, and helps whoever fixes the app see what went wrong.'
-            : 'Nothing has gone wrong that Spendr noticed. If something still is not right, write a quick report: it opens with the details filled in.'}
+            ? 'Errors Spendr noticed on this device, kept here only.'
+            : 'Nothing has gone wrong that Spendr noticed on this device.'}
         </p>
         {crashNote && <p className="mt-3 font-medium d-pos">{crashNote}</p>}
         {crashes.length > 0 && (
@@ -298,6 +311,7 @@ export default function WebSettingsOverview() {
         Your data stays on this device. You can sign back in anytime to sync again.
       </Dialog>
 
+      <FeedbackDialog f={feedback} />
       <DedupeSheet open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
       {isSupabaseConfigured && <RemindersSheet r={reminders} />}
       <InstallSheet s={install} />

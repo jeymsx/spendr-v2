@@ -25,9 +25,12 @@ import SectionLabel from '../components/ui/SectionLabel'
    here and there is no reason to make it care where they went. */
 import {
   APP_VERSION, ACCENT_COLORS, buildAndDownloadCSV, syncedLabel,
-  IconTag, IconCloud, IconFileText, IconTarget, IconFeedback, IconLogOut, IconReport, IconShield, IconSliders,
+  IconTag, IconCloud, IconFileText, IconTarget, IconFeedback, IconInbox, IconLogOut, IconReport, IconShield, IconSliders,
   IconFaceId, SectionHeader, RowDivider, SectionCard, RowIcon, RowChevron, SettingsRow,
 } from './settings/shared'
+import FeedbackSheet from '../components/feedback/FeedbackSheet'
+import { useFeedback } from '../components/feedback/useFeedback'
+import { useNewFeedback } from '../hooks/useNewFeedback'
 import { ProfileHero, AchievementsCard } from './settings/Top'
 import { TemplateManagerSheet, TemplatesPage } from './settings/Templates'
 import { CategoryManagerSheet, CategoriesPage } from './settings/Categories'
@@ -109,6 +112,9 @@ export default function Settings() {
   const [crashesOpen, setCrashesOpen] = useState(false)
   const [crashNote, setCrashNote] = useState('')
   const [legalOpen, setLegalOpen] = useState(false)
+  // Report a bug, for everyone; and for the developer, how many are waiting (lib/feedback.js).
+  const feedback = useFeedback()
+  const newReports = useNewFeedback()
   const [loggingOut, setLoggingOut] = useState(false)
   const [showSignOutConfirm, setShowSignOutConfirm] = useState(false)
 
@@ -327,21 +333,6 @@ export default function Settings() {
       <div className="mb-8">
         <SectionHeader>Help & about</SectionHeader>
         <SectionCard>
-          {/* The developer's: with a log, it says how much is in it. To
-              anyone else a log of stack frames, and a message to write it
-              into, is homework (lib/developer.js). */}
-          {developer && (
-            <>
-              <SettingsRow
-                iconEl={<RowIcon color={crashes.length ? 'red' : 'amber'}><IconFeedback /></RowIcon>}
-                label="Report a problem"
-                sublabel={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} recorded on this device` : undefined}
-                right={<RowChevron />}
-                onTap={() => setCrashesOpen(true)}
-              />
-              <RowDivider />
-            </>
-          )}
           <SettingsRow
             iconEl={<RowIcon color="blue"><HelpGlyph name="help" size={17} /></RowIcon>}
             label="Help centre"
@@ -350,6 +341,38 @@ export default function Settings() {
             onTap={() => navigate('/help')}
           />
           <RowDivider />
+          {/* Everyone's: it reaches the developer's inbox below (lib/feedback.js). */}
+          <SettingsRow
+            iconEl={<RowIcon color="amber"><IconFeedback /></RowIcon>}
+            label="Report a bug"
+            sublabel="Or suggest an idea"
+            right={<RowChevron />}
+            onTap={() => feedback.show('bug')}
+          />
+          <RowDivider />
+          {/* The developer's: what people have sent, and this device's own
+              error log. To anyone else a log of stack frames is homework
+              (lib/developer.js). */}
+          {developer && (
+            <>
+              <SettingsRow
+                iconEl={<RowIcon color="violet"><IconInbox /></RowIcon>}
+                label="Bug reports & ideas"
+                sublabel={newReports == null ? undefined : newReports ? `${newReports} new` : 'Nothing new'}
+                right={<RowChevron />}
+                onTap={() => navigate('/settings/feedback')}
+              />
+              <RowDivider />
+              <SettingsRow
+                iconEl={<RowIcon color={crashes.length ? 'red' : 'slate'}><IconWarning size={16} /></RowIcon>}
+                label="Error log"
+                sublabel={crashes.length ? `${crashes.length} error${crashes.length === 1 ? '' : 's'} on this device` : 'Nothing on this device'}
+                right={<RowChevron />}
+                onTap={() => setCrashesOpen(true)}
+              />
+              <RowDivider />
+            </>
+          )}
           <SettingsRow
             iconEl={<RowIcon color="slate"><IconFileText /></RowIcon>}
             label="Privacy & terms"
@@ -437,43 +460,38 @@ export default function Settings() {
         </div>
       </Sheet>
 
-      {/* Report a problem: the log if there is one, and the way to send it.
-          Everything in it stays on this phone; Send is the only way any of it
-          leaves. */}
+      {/* The developer's error log: what this device noticed, and a way to
+          move it to wherever it is being looked at. Everything in it stays on
+          this phone until then. Everyone else's goes with a bug report. */}
       <Sheet
         open={developer && crashesOpen}
         onClose={() => { setCrashesOpen(false); setCrashNote('') }}
         /* A height of its own only with a log to scroll: that docks it. With
            nothing in it, it is a short card, and floats like one. */
         maxHeight={crashes.length ? '78dvh' : null}
-        title="Report a problem"
-        footer={(
+        title="Error log"
+        footer={crashes.length > 0 ? (
           <div className="flex gap-3">
-            {crashes.length > 0 && (
-              <Button variant="secondary" className="flex-1" onClick={() => { clearCrashes(); setCrashes([]); setCrashesOpen(false) }}>
-                Clear
-              </Button>
-            )}
+            <Button variant="secondary" className="flex-1" onClick={() => { clearCrashes(); setCrashes([]); setCrashesOpen(false) }}>
+              Clear
+            </Button>
             <Button
               className="flex-[2]"
               onClick={async () => {
-                const body = crashes.length
-                  ? crashReport(crashes)
-                  : `Spendr problem report · v${APP_VERSION}\n\nWhat happened:\n\n\nWhat you expected:\n\n\n${typeof navigator !== 'undefined' ? navigator.userAgent : ''}`
-                const outcome = await shareOrCopy('Spendr problem report', body)
-                setCrashNote(outcome === 'copied' ? 'Copied - paste it into a message.'
+                const outcome = await shareOrCopy('Spendr error log', crashReport(crashes))
+                setCrashNote(outcome === 'copied' ? 'Copied - paste it where you need it.'
                   : outcome === 'failed' ? 'Could not copy it on this browser.' : '')
               }}
             >
-              {crashes.length ? 'Send the log' : 'Write a report'}
+              Share the log
             </Button>
           </div>
-        )}
+        ) : null}
       >
         <p className="text-xs text-slate-500 dark:text-slate-400 leading-snug mb-3">
           {crashes.length
-            ? 'Errors Spendr noticed, kept on this device only. Sending them is up to you, and helps whoever fixes the app see what went wrong.'
-            : 'Nothing has gone wrong that Spendr noticed. If something still is not right, write a quick report: it opens in a message with the details filled in.'}
+            ? 'Errors Spendr noticed on this device, kept here only.'
+            : 'Nothing has gone wrong that Spendr noticed on this device.'}
         </p>
         {crashNote && (
           <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400 mb-3">{crashNote}</p>
@@ -518,6 +536,7 @@ export default function Settings() {
         </div>
       </Sheet>
 
+      <FeedbackSheet f={feedback} />
       <DedupeSheet open={dedupeOpen} onClose={() => setDedupeOpen(false)} />
       <PolicySheet open={!!policyOpen} type={policyOpen} onClose={() => setPolicyOpen(null)} />
       {isSupabaseConfigured && <RemindersSheet r={reminders} />}

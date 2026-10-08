@@ -15,7 +15,7 @@ import { fieldFrame } from '../../components/ui/Field'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { IconChevronRight } from '../../components/icons'
 import {
-  Database01, FaceId, FileDownload02, LogOut01, MessageAlertCircle, Passcode, RefreshCw01, ShieldTick, Sliders04,
+  Database01, FaceId, FileDownload02, Inbox01, LogOut01, MessageAlertCircle, Passcode, RefreshCw01, ShieldTick, Sliders04,
 } from '@untitledui/icons'
 import { toDateInput } from '../../utils/txDate'
 import { transactionsToCsv } from '../import/export'
@@ -212,6 +212,7 @@ export const IconSliders  = ui(Sliders04)
 export const IconSyncing  = ui(RefreshCw01)
 export const IconReport   = ui(FileDownload02)
 export const IconFeedback = ui(MessageAlertCircle)
+export const IconInbox    = ui(Inbox01)
 export const IconDatabase = ui(Database01)
 export const IconFaceId   = ui(FaceId)
 export const IconPasscode = ui(Passcode)

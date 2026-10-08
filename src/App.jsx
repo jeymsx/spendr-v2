@@ -55,6 +55,7 @@ const SettingsSync       = lazy(() => import('./pages/settings/Sync'))
 const SettingsReports    = lazy(() => import('./pages/settings/Reports'))
 const SettingsBackup     = lazy(() => import('./pages/settings/BackupRestore'))
 const SettingsChangelog  = lazy(() => import('./pages/settings/Changelog'))
+const SettingsFeedback   = lazy(() => import('./pages/settings/Feedback'))
 const SettingsAppLock    = lazy(() => import('./pages/settings/AppLock'))
 const SettingsProfile    = lazy(() => import('./pages/settings/Profile').then(m => ({ default: m.ProfilePage })))
 const SettingsTemplates  = lazy(() => import('./pages/Settings').then(m => ({ default: m.TemplatesPage })))
@@ -159,6 +160,8 @@ export default function App() {
               <Route path="/settings/reports"    element={<SettingsReports />} />
               <Route path="/settings/backup"     element={<SettingsBackup />} />
               <Route path="/settings/changelog"  element={<SettingsChangelog />} />
+              {/* The developer's inbox of reports; anyone else is sent back to Settings. */}
+              <Route path="/settings/feedback"   element={<SettingsFeedback />} />
               <Route path="/settings/app-lock"   element={<SettingsAppLock />} />
               <Route path="/settings/accent" element={<SettingsAccent />} />
               <Route path="/settings/categories" element={<SettingsCategories />} />

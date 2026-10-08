@@ -4,8 +4,10 @@ import { NavLink, Outlet, useLocation } from 'react-router-dom'
 import { APP_VERSION } from '../../lib/release'
 import Page from '../ui/Page'
 import {
-  ISettings, IUser, ISliders, IRefresh, ITag, IGauge, IZap, IGlobe, IDownload, IShield, ISparkle, ITrash, IFileText, IHelp,
+  ISettings, IUser, ISliders, IRefresh, ITag, IGauge, IZap, IGlobe, IDownload, IShield, ISparkle, ITrash, IFileText, IHelp, IInbox,
 } from '../ui/icons'
+import { useIsDeveloper } from '../../hooks/useIsDeveloper'
+import { useNewFeedback } from '../../hooks/useNewFeedback'
 
 /**
  * Settings on a computer: the sections in a column of their own at the left,
@@ -63,20 +65,29 @@ const GROUPS = [
   },
 ]
 
+/* The developer's alone (lib/developer.js): what people have sent from Report a bug. */
+const INBOX = { to: '/settings/feedback', label: 'Bug reports & ideas', Icon: IInbox }
+
 export default function WebSettings() {
   const { pathname } = useLocation()
+  const developer = useIsDeveloper()
+  const newReports = useNewFeedback()
+  const groups = developer
+    ? GROUPS.map(g => (g.label === 'About' ? { ...g, items: [...g.items, INBOX] } : g))
+    : GROUPS
   return (
     <Page title="Settings" subtitle={`Spendr ${APP_VERSION}`} scrollKey={pathname}>
       <div className="d-twopane" style={{ '--side': '264px' }}>
         <nav className="d-twopane-side d-panel p-2" aria-label="Settings">
-          {GROUPS.map(g => (
+          {groups.map(g => (
             <div key={g.label} className="pb-1">
               <div className="d-menu-label">{g.label}</div>
               {g.items.map(i => (
-                <NavLink key={i.to} to={i.to} end={i.end}
-                  className={({ isActive }) => `d-nav-item${isActive || i.also?.some(p => pathname.startsWith(p)) ? ' is-active' : ''}`}>
+                <NavLink key={i.to} to={i.to} end={'end' in i ? i.end : undefined}
+                  className={({ isActive }) => `d-nav-item${isActive || ('also' in i && i.also?.some(p => pathname.startsWith(p))) ? ' is-active' : ''}`}>
                   <span className="d-nav-icon" aria-hidden="true"><i.Icon size={17} /></span>
                   <span className="truncate">{i.label}</span>
+                  {i === INBOX && newReports ? <span className="d-nav-count d-num">{newReports}</span> : null}
                 </NavLink>
               ))}
             </div>
