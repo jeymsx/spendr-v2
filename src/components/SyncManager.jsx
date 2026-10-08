@@ -1,9 +1,13 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, useCallback } from 'react'
 import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
+import { useToast } from '../context/ToastContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { fullSync, FirstSyncChoiceNeeded } from '../lib/sync'
-import db from '../db/db'
+import { fullSync, pullChanges, FirstSyncChoiceNeeded } from '../lib/sync'
+import { startRealtime } from '../lib/realtime'
+import { watchLocalChanges } from '../lib/localChanges'
+import { remoteToastMessage } from '../lib/remoteToast'
+import db, { getUnsyncedTxs } from '../db/db'
 import { setSyncState } from '../hooks/useSyncState'
 import ReminderSync from './ReminderSync'
 import NotificationSync from './NotificationSync'
@@ -115,6 +119,23 @@ export default function SyncManager() {
   const dismissRef = useRef(null)
   /** The user the last successful sync in this session was for. */
   const syncedFor  = useRef(/** @type {string|null} */ (null))
+  const { showToast } = useToast()
+  const showToastRef = useRef(showToast)
+  useEffect(() => { showToastRef.current = showToast })
+  /* Whether the cloud is telling this device what changes (lib/realtime.js):
+     'on' when it is, 'connecting' while it finds out, 'off' when it cannot -
+     in which case a slow pull on a timer stands in. */
+  const [live, setLive] = useState(/** @type {import('../lib/realtime').LiveState} */ ('off'))
+  /* What came in while a sync was already running, to be done once it ends:
+     a pull for what another device did, a push for what this one did. */
+  const followUp = useRef({ pull: false, push: false, rechecks: 0 })
+  // Set below, once the things it runs exist; read when a sync ends.
+  const followUpRef = useRef(() => {})
+  /* The tables this device has written to since it last sent them, so a push
+     started by a change sends those and not every table (lib/localChanges.js
+     says which write counts). */
+  const dirty = useRef(/** @type {Set<string>} */ (new Set()))
+  const timers = useRef(/** @type {{pull: ReturnType<typeof setTimeout>|null, push: ReturnType<typeof setTimeout>|null, lastPull: number}} */ ({ pull: null, push: null, lastPull: 0 }))
 
   /* Where this session stands with the cloud, for the readers that must not
      act on a ledger that has not caught up - see hooks/useSyncState.js. A
@@ -125,13 +146,37 @@ export default function SyncManager() {
   }, [user?.id])
 
   /** @returns {Promise<boolean>} whether a sync ran to the end */
-  const runSync = useCallback(async (/** @type {{silent?: boolean, choice?: import('../lib/sync').FirstSyncChoice|null}} */ { silent = false, choice = null } = {}) => {
-    if (!user?.id || syncingRef.current || _syncLocked) return false
+  /** Say so when another device has added to the ledger (lib/remoteToast.js). */
+  const announce = useCallback((/** @type {Array<Record<string, any>>} */ added) => {
+    const message = remoteToastMessage(added)
+    if (message) showToastRef.current(message, 'success', { ifIdle: true })
+  }, [])
+
+  /**
+   * @param {object} [opts]
+   * @param {boolean} [opts.silent]  no chip unless it fails
+   * @param {import('../lib/sync').FirstSyncChoice|null} [opts.choice]
+   * @param {boolean} [opts.light]  the session as it is, not refreshed: a push after every save cannot ask the auth server each time
+   * @param {boolean} [opts.auto]   started by a change, not by a person: nobody is told if it cannot (it tries again at the next one)
+   * @param {boolean} [opts.changes] sent because of what this device wrote: the ledger goes up first, and only the tables written to
+   * @returns {Promise<boolean>} whether a sync ran to the end
+   */
+  const runSync = useCallback(async ({ silent = false, choice = null, light = false, auto = false, changes = false } = {}) => {
+    if (!user?.id) return false
+    if (syncingRef.current || _syncLocked) {
+      // Not lost: said again when the one in progress ends.
+      if (auto) followUp.current.push = true
+      return false
+    }
 
     syncingRef.current = true
     _syncLocked = true
     clearTimeout(dismissRef.current)
     setSyncState({ syncing: true })
+    /* Taken now: what is written from here on is the next push's. Handed back
+       if this one does not finish. */
+    const sent = new Set(dirty.current)
+    dirty.current.clear()
 
     if (!silent) {
       setStatus('syncing')
@@ -139,15 +184,24 @@ export default function SyncManager() {
     }
 
     try {
-      // Refresh the session first — iOS Safari PWA can have stale tokens
-      const { error: sessionErr } = await supabase.auth.refreshSession()
-      if (sessionErr) throw new Error(`Session expired: ${sessionErr.message}`)
+      if (light) {
+        const { data, error: sessionErr } = await supabase.auth.getSession()
+        if (sessionErr || !data.session) throw new Error(`Session expired: ${sessionErr?.message ?? 'signed out'}`)
+      } else {
+        // Refresh the session first — iOS Safari PWA can have stale tokens
+        const { error: sessionErr } = await supabase.auth.refreshSession()
+        if (sessionErr) throw new Error(`Session expired: ${sessionErr.message}`)
+      }
 
-      await fullSync(user.id, { choice })
+      const { added, first } = await fullSync(user.id, { choice, quick: changes, only: changes ? sent : null })
       await db.meta.put({ key: 'lastSync', value: new Date().toISOString() })
       syncedFor.current = user.id
       setSyncState({ syncing: false, caughtUp: true })
       setFirstSync(null)
+      /* What another device added, said once it is here. Not for a device's
+         first sync with an account: that is the whole ledger arriving, which
+         is not news. */
+      if (!first) announce(added)
 
       if (!silent) {
         setStatus('success')
@@ -155,12 +209,18 @@ export default function SyncManager() {
       }
       return true
     } catch (err) {
+      for (const table of sent) dirty.current.add(table)
       /* Not a failure: nothing was sent or changed, and nothing will be until
          the sheet is answered. caughtUp stays false meanwhile, so the readers
          that wait for it - the reminder upload - wait for the answer too. */
       if (err instanceof FirstSyncChoiceNeeded) {
         setFirstSync(err.info)
         setStatus('idle')
+        return false
+      }
+      if (auto) {
+        // Offline, or the cloud is having a moment: the next change tries again.
+        console.warn('[SyncManager] background sync did not finish:', err?.message ?? err)
         return false
       }
       console.error('[SyncManager]', err)
@@ -173,8 +233,82 @@ export default function SyncManager() {
       syncingRef.current = false
       _syncLocked = false
       setSyncState({ syncing: false })
+      followUpRef.current()
     }
-  }, [user?.id])
+  }, [user?.id, announce])
+
+  /**
+   * Pull what another device did, and push nothing (lib/sync.js pullChanges
+   * says why). Waits its turn behind a sync that is running, and runs once it
+   * has ended.
+   */
+  const runPull = useCallback(async () => {
+    if (!user?.id) return false
+    if (syncingRef.current || _syncLocked) { followUp.current.pull = true; return false }
+    // Nothing is pulled into a ledger that has not had its first sync, or been asked about it.
+    if (syncedFor.current !== user.id) return false
+
+    syncingRef.current = true
+    _syncLocked = true
+    timers.current.lastPull = Date.now()
+    try {
+      const { data, error: sessionErr } = await supabase.auth.getSession()
+      if (sessionErr || !data.session) throw new Error(`Session expired: ${sessionErr?.message ?? 'signed out'}`)
+      // Said as soon as the ledger is in, not when the last table is.
+      await pullChanges(user.id, { onAdded: announce })
+      return true
+    } catch (err) {
+      console.warn('[SyncManager] live pull did not finish:', err?.message ?? err)
+      return false
+    } finally {
+      syncingRef.current = false
+      _syncLocked = false
+      followUpRef.current()
+    }
+  }, [user?.id, announce])
+
+  /* What was waiting, once nothing is running. A push is checked for too:
+     a transaction saved while the sync was on its way up was written after
+     it had looked, and is still marked unsent. Twice at most, so a row that
+     cannot be sent cannot loop. */
+  useEffect(() => {
+    followUpRef.current = () => {
+      const f = followUp.current
+      setTimeout(async () => {
+        if (!user?.id || syncingRef.current || _syncLocked) return
+        if (f.push) { f.push = false; runSync({ silent: true, light: true, auto: true, changes: true }); return }
+        if (f.pull) { f.pull = false; runPull(); return }
+        if (syncedFor.current === user.id && f.rechecks < 2) {
+          const left = (await getUnsyncedTxs()).some(t => t.txId)
+          if (left) { f.rechecks += 1; runSync({ silent: true, light: true, auto: true, changes: true }) } else f.rechecks = 0
+        }
+      }, 400)
+    }
+  })
+
+  /* A change made here goes up shortly after, not on the next time the
+     window comes forward: the pause is for a burst of saves to be one push. */
+  const schedulePush = useCallback(() => {
+    if (!user?.id || syncedFor.current !== user.id) return
+    if (timers.current.push) clearTimeout(timers.current.push)
+    timers.current.push = setTimeout(() => {
+      timers.current.push = null
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+      runSync({ silent: true, light: true, auto: true, changes: true })
+    }, 1500)
+  }, [user?.id, runSync])
+
+  /* A change made elsewhere is pulled soon after it is heard, and a burst of
+     them - a push touches many rows - is one pull, no more often than every
+     couple of seconds. */
+  const schedulePull = useCallback(() => {
+    if (timers.current.pull) return
+    const wait = Math.max(500, 2500 - (Date.now() - timers.current.lastPull))
+    timers.current.pull = setTimeout(() => {
+      timers.current.pull = null
+      runPull()
+    }, wait)
+  }, [runPull])
 
   /** @param {import('../lib/sync').FirstSyncChoice} choice */
   async function choose(choice) {
@@ -223,11 +357,51 @@ export default function SyncManager() {
     return () => window.removeEventListener('focus', onFocus)
   }, [user?.id, runSync])
 
+  /* Coming back to the tab or the installed app, and the network returning,
+     are both moments something may have been missed: the stream does not
+     queue what it sent while this device was asleep. */
+  useEffect(() => {
+    if (!user?.id) return
+    const onVisible = () => { if (document.visibilityState === 'visible') schedulePull() }
+    const onOnline = () => runSync({ silent: true, light: true, auto: true })
+    document.addEventListener('visibilitychange', onVisible)
+    window.addEventListener('online', onOnline)
+    return () => {
+      document.removeEventListener('visibilitychange', onVisible)
+      window.removeEventListener('online', onOnline)
+    }
+  }, [user?.id, schedulePull, runSync])
+
+  // Listen for what other devices do.
+  useEffect(() => {
+    if (!user?.id || !isSupabaseConfigured) return
+    return startRealtime(user.id, { onChange: schedulePull, onState: setLive })
+  }, [user?.id, schedulePull])
+
+  // And push what this one does, as it happens.
+  useEffect(() => {
+    if (!user?.id || !isSupabaseConfigured) return
+    return watchLocalChanges(table => { dirty.current.add(table); schedulePush() })
+  }, [user?.id, schedulePush])
+
+  /* If the stream is not there - the database has not been told to publish
+     its changes (migration 030), or there is no connection - ask now and then
+     instead, while the window is in front. */
+  useEffect(() => {
+    if (!user?.id || !isSupabaseConfigured || live === 'on') return
+    const id = setInterval(() => { if (document.visibilityState === 'visible') schedulePull() }, 45_000)
+    return () => clearInterval(id)
+  }, [user?.id, live, schedulePull])
+
   // Cleanup on unmount
-  useEffect(() => () => clearTimeout(dismissRef.current), [])
+  useEffect(() => () => {
+    clearTimeout(dismissRef.current)
+    if (timers.current.pull) clearTimeout(timers.current.pull)
+    if (timers.current.push) clearTimeout(timers.current.push)
+  }, [])
 
   return (
-    <SyncContext.Provider value={{ status, runSync }}>
+    <SyncContext.Provider value={{ status, runSync, live }}>
       <SyncIndicator status={status} errMsg={errMsg} />
       {/* Push reminders need the server, so they need a user. */}
       {user?.id && isSupabaseConfigured && <ReminderSync userId={user.id} />}

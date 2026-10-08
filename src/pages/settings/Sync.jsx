@@ -24,7 +24,7 @@ import { IconSyncing, syncedLabel } from './shared'
 export default function SyncPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const { status, runSync } = useSyncManager()
+  const { status, runSync, live } = useSyncManager()
   const meta = useLiveQuery(() => db.meta.toArray(), [], [])
   const read = (/** @type {string} */ key) => (meta ?? []).find(m => m.key === key)?.value ?? null
   const lastSync = read('lastSync')
@@ -35,6 +35,12 @@ export default function SyncPage() {
     if (lastSync) return { text: syncedLabel(lastSync), dot: 'bg-emerald-400' }
     return { text: 'Not synced yet', dot: 'bg-slate-300 dark:bg-slate-600' }
   }, [status, lastSync])
+
+  /* Whether the cloud is telling this device what changes elsewhere
+     (lib/realtime.js) - and, when it is not, how soon it hears anyway. */
+  const liveText = live === 'on' ? 'Changes arrive as they happen'
+    : live === 'connecting' ? 'Connecting for live updates…'
+      : 'Live updates are off. Changes arrive about every minute'
 
   return (
     <SubPage title="Cloud sync">
@@ -47,6 +53,10 @@ export default function SyncPage() {
             {state.text}
           </p>
           <p className="mt-0.5 max-w-full truncate text-12 text-slate-400 dark:text-slate-500">{user.email}</p>
+          <p className="mt-3 flex items-center justify-center gap-2 text-12 text-slate-500 dark:text-slate-400">
+            <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${live === 'on' ? 'bg-emerald-400' : 'bg-slate-300 dark:bg-slate-600'}`} aria-hidden="true" />
+            {liveText}
+          </p>
           <Button className="mt-5 px-6" onClick={() => runSync()} disabled={status === 'syncing'}>
             <span className="inline-flex items-center gap-2">
               <span className={status === 'syncing' ? 'animate-spin inline-flex' : 'inline-flex'}><IconSyncing size={16} /></span>

@@ -271,7 +271,7 @@ export const SYNCED_TABLES = [
 /** How a row is FILED, as opposed to what it says. Changing only these is not
  *  an edit, so it must not move updatedAt. See the updating hook below.
  *  `pushed`: a note that has been on the server at least once (lib/notes.js). */
-const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed'])
+export const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed'])
 
 /* Stamped on the way IN, for every writer at once.
  *

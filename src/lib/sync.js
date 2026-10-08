@@ -10,6 +10,7 @@ import { SYSTEM_CATS } from './phCategories'
 import { NUDGE_KEY } from './nudge'
 import { FORECAST_FLOOR_KEY, FORECAST_SETTINGS_KEY, readForecastSettings } from './forecastSettings'
 import { TREND_SETTINGS_KEY, readTrendSettings } from './trendSettings'
+import { asRemoteWrites } from './syncSignal'
 import { docText, noteTitle } from './noteText'
 
 // ── Pending remote deletes ────────────────────────────────────────────────────
@@ -888,8 +889,17 @@ async function optionalSync(label, fn) {
 
 // ── Push to Supabase ──────────────────────────────────────────────────────────
 
-/** @param {string} userId */
-export async function syncToSupabase(userId) {
+/**
+ * The ledger, up: queued deletions, then the transactions not yet sent.
+ *
+ * Its own step because it is the part that is safe to do first. A row here is
+ * marked unsent by the device that wrote it, so sending it needs no pull to
+ * know what is newer - which is what lets a transaction saved on the phone
+ * reach the cloud before the rest of a sync has finished its round trips.
+ *
+ * @param {string} userId
+ */
+export async function pushLedger(userId) {
   if (!userId) return
 
   // Transactions: only push unsynced (falsy synced field = unsynced)
@@ -934,10 +944,24 @@ export async function syncToSupabase(userId) {
       await db.transactions.where('id').anyOf(ids).modify({ synced: SYNCED })
     }
   }
+}
 
-  // Other tables: always push all (small datasets, no per-record tracking needed)
-  await pushTable('accounts',   db.accounts,   accountToRow,  userId, 'user_id,name')
-  await pushTable('categories', db.categories, categoryToRow, userId, 'user_id,name,type')
+/**
+ * @param {string} userId
+ * @param {{only?: Set<string>|null}} [opts]  the tables this device has changed since it last pushed, when that is all that has to go. A table nothing was written to is not sent again: the cloud streams every row of an upsert to every device whether or not it changed. Null sends everything
+ */
+export async function syncToSupabase(userId, { only = null } = {}) {
+  if (!userId) return
+  /** @param {string} table */
+  const wants = (table) => !only || only.has(table)
+
+  await pushLedger(userId)
+
+  /* Other tables: all of a table at once (small datasets, no per-record
+     tracking needed), and only the ones in `only` when it is given. Trash and
+     notes keep their own marks, so they always run and send what is unsent. */
+  if (wants('accounts'))   await pushTable('accounts',   db.accounts,   accountToRow,  userId, 'user_id,name')
+  if (wants('categories')) await pushTable('categories', db.categories, categoryToRow, userId, 'user_id,name,type')
   /* Resolved on the STABLE id, not on local_id. See 011 - and the failure
      that finally forced it, which was not the slow duplication the migration
      was written for but a hard stop:
@@ -950,21 +974,21 @@ export async function syncToSupabase(userId) {
      and the push throws, taking every table after it down with it. Once the
      ids on the two sides stop lining up, local_id is not merely a weak key,
      it is one that cannot succeed. */
-  await pushTable('debts',      db.debts,      debtToRow,     userId, 'user_id,sync_id')
-  await pushTable('recurring',  db.recurring,  recurringToRow, userId, 'user_id,sync_id')
-  await pushTable('templates',  db.templates,  templateToRow,  userId, 'user_id,sync_id')
+  if (wants('debts'))      await pushTable('debts',      db.debts,      debtToRow,     userId, 'user_id,sync_id')
+  if (wants('recurring'))  await pushTable('recurring',  db.recurring,  recurringToRow, userId, 'user_id,sync_id')
+  if (wants('templates'))  await pushTable('templates',  db.templates,  templateToRow,  userId, 'user_id,sync_id')
   // Last, and fault-isolated: see optionalSync above.
-  await optionalSync('goals push', () =>
+  if (wants('goals')) await optionalSync('goals push', () =>
     pushTable('goals', db.goals, goalToRow, userId, 'user_id,name'))
-  await optionalSync('badges push', () =>
+  if (wants('badges')) await optionalSync('badges push', () =>
     pushTable('badges', db.badges, badgeToRow, userId, 'user_id,key'))
-  await optionalSync('challenges push', () =>
+  if (wants('challenges')) await optionalSync('challenges push', () =>
     pushTable('challenges', db.challenges, challengeToRow, userId, 'user_id,sync_id'))
   await optionalSync('trash push', () => pushTrash(userId))
-  await optionalSync('note folders push', () =>
+  if (wants('note_folders')) await optionalSync('note folders push', () =>
     pushTable('note_folders', db.note_folders, folderToRow, userId, 'user_id,sync_id'))
   await optionalSync('notes push', () => pushNotes(userId))
-  await pushPreferences(userId)
+  if (wants('meta')) await pushPreferences(userId)
 }
 
 /**
@@ -1535,16 +1559,17 @@ async function ensureSystemCategories() {
 
 /**
  * @param {string} userId
- * @param {{first?: boolean}} [opts]  see pullSimpleTable
+ * @param {{first?: boolean, onAdded?: (added: Transaction[]) => void}} [opts]  `first`: see pullSimpleTable. `onAdded` is called the moment the ledger has come in, with what is new, rather than when the last table has: the rest takes seconds, and a transaction another device just added should not wait for the notes
  */
-export async function syncFromSupabase(userId, opts = {}) {
-  if (!userId) return
+export async function syncFromSupabase(userId, { onAdded, ...opts } = {}) {
+  if (!userId) return { added: /** @type {Transaction[]} */ ([]) }
 
   // Rows we're still trying to delete must not be re-added by this pull.
   const pending = await getPendingDeletes()
 
   await pullPreferences(userId, opts)
-  await pullTxs(userId, opts)
+  const added = await pullTxs(userId, opts)
+  if (added.length) onAdded?.(added)
   await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId, null, pending, opts)
   // Categories: match on name+type to avoid confusing same-named categories of different types
   await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
@@ -1587,17 +1612,59 @@ export async function syncFromSupabase(userId, opts = {}) {
   await optionalSync('challenges pull', () =>
     pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending, opts))
   await optionalSync('trash pull', () => pullTrash(userId, pending, opts))
+  /* Found by name, ignoring case - the rule a folder's name is unique by
+     (lib/noteFolders.js) - but not with `where('name')`: the table indexes
+     only syncId, and asking for an index it has does not return nothing, it
+     throws. That took the whole sync down on any device meeting a folder it
+     had not got, which is the first thing a second device does. */
   await optionalSync('note folders pull', () =>
-    pullSimpleTable('note_folders', db.note_folders, rowToFolder, 'name', userId, null, pending, opts))
+    pullSimpleTable('note_folders', db.note_folders, rowToFolder, null, userId,
+      async row => (row.name
+        ? (await db.note_folders.toArray()).find(f => String(f.name).localeCompare(String(row.name), undefined, { sensitivity: 'accent' }) === 0)
+        : null),
+      pending, opts))
   await optionalSync('notes pull', () => pullNotes(userId, pending, opts))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   await ensureSystemCategories()
+  return { added }
+}
+
+/**
+ * Everything the cloud has that this device does not, and nothing sent back.
+ *
+ * What the live stream (lib/realtime.js) calls when another device has
+ * changed something. A pull and no push, on purpose: a full sync pushes every
+ * row of the small tables, the cloud streams every one of those writes to every
+ * device, and each device would answer with a sync of its own - two devices
+ * passing the same rows back and forth for ever. A pull writes nothing to the
+ * cloud, so it ends the chain.
+ *
+ * It does not merge in the other direction either. A pull compares each row's
+ * stamp and keeps the newer, so this device's own unsent edits are left alone;
+ * they go up with the next full sync, which they have already asked for
+ * (localChanges.js).
+ *
+ * For a device that has already had its first sync - the question a new
+ * device is asked (lib/firstSync.js) is fullSync's to put.
+ *
+ * @param {string} userId
+ * @param {{onAdded?: (added: Transaction[]) => void}} [opts]  see syncFromSupabase
+ * @returns {Promise<{added: Transaction[]}>}  the transactions it brought
+ */
+export async function pullChanges(userId, { onAdded } = {}) {
+  if (!userId) throw new Error('Not authenticated')
+  await dbReady
+  return asRemoteWrites(async () => {
+    await optionalSync('deletions pull', () => pullDeletions(userId))
+    return syncFromSupabase(userId, { onAdded })
+  })
 }
 
 /**
  * @param {string} userId
  * @param {{first?: boolean}} [opts]  see pullSimpleTable
+ * @returns {Promise<Transaction[]>}  the transactions this pull put on the device that it did not have
  */
 async function pullTxs(userId, { first = false } = {}) {
   /* Only what has changed since last time.
@@ -1613,7 +1680,7 @@ async function pullTxs(userId, { first = false } = {}) {
   const marks = await getWatermarks()
   const data = await fetchAllRows('transactions', userId, supabase,
     marks.transactions ? { column: 'updated_at', after: marks.transactions } : null)
-  if (!data.length) return
+  if (!data.length) return /** @type {Transaction[]} */ ([])
 
   const deletedMeta = await db.meta.get('deletedTxIds')
   const deletedSet = new Set(deletedMeta?.value ?? [])
@@ -1660,6 +1727,8 @@ async function pullTxs(userId, { first = false } = {}) {
   /* After the write, never before. A watermark moved ahead of rows that were
      not stored is a gap nothing will ever go back for. */
   await advanceWatermark('transactions', newest(data, 'updated_at'))
+  // What is new on this device, for whoever wants to say so (remoteToast.js).
+  return toAdd
 }
 
 // findFn: optional async (row) => existing local record | null
@@ -2061,10 +2130,14 @@ async function applyKeepBoth({ deltas, upload }) {
 
 /**
  * @param {string} userId
- * @param {{choice?: FirstSyncChoice|null}} [opts]  the answer to
- *   FirstSyncChoiceNeeded; ignored when there is nothing to choose
+ * @param {{choice?: FirstSyncChoice|null, quick?: boolean, only?: Set<string>|null}} [opts]  `choice`: the answer to
+ *   FirstSyncChoiceNeeded; ignored when there is nothing to choose. `quick`:
+ *   a push that a change asked for - the ledger goes up before the pull, so a
+ *   transaction is in the cloud within a round trip rather than after every
+ *   table has been read; `only`: see syncToSupabase
+ * @returns {Promise<{added: Transaction[], first: boolean}>}  what came down, and whether this was the device's first sync
  */
-export async function fullSync(userId, { choice = null } = {}) {
+export async function fullSync(userId, { choice = null, quick = false, only = null } = {}) {
   if (!userId) throw new Error('Not authenticated')
   // Wait for the initial seed to complete so the pull doesn't race with it
   // and create duplicate seeded records (e.g. two Cash accounts).
@@ -2086,20 +2159,24 @@ export async function fullSync(userId, { choice = null } = {}) {
      after: a row deleted remotely is not in the content pull anyway, and
      doing it first means a device coming back from a long absence sheds what
      is gone before it starts merging what is not. */
-  await optionalSync('deletions pull', () => pullDeletions(userId))
+  await asRemoteWrites(() => optionalSync('deletions pull', () => pullDeletions(userId)))
+  /* A change made here, on its way: the ledger first (see pushLedger). After
+     the deletions, so a row removed elsewhere is gone before it is sent. */
+  if (quick) await pushLedger(userId)
 
   const keepBoth = first && choice === 'both' ? await planKeepBoth(userId) : null
 
   // Pull so a fresh device gets correct remote state before pushing.
-  await syncFromSupabase(userId, { first: !!first })
+  const { added } = await asRemoteWrites(() => syncFromSupabase(userId, { first: !!first }))
   if (keepBoth) await applyKeepBoth(keepBoth)
   // Clean up any duplicates that seed vs. pull races may have left behind.
   await deduplicateLocalAccounts()
-  await syncToSupabase(userId)
+  await syncToSupabase(userId, { only })
 
   /* Last, so a first sync that fails anywhere above asks again next time
      rather than carrying on as an ordinary merge. */
   if (first) await db.meta.put({ key: SYNCED_WITH_KEY, value: userId })
+  return { added, first: !!first }
 }
 
 // ── Deletion helpers (call these alongside the local db.delete) ───────────────
