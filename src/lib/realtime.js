@@ -6,10 +6,12 @@ import { supabase as defaultClient } from './supabase'
  *
  * Supabase Realtime streams a table's changes to every connected client over
  * one WebSocket. All this does is listen: a change to any row of yours, on any
- * device, calls `onChange`, and what to do about it - pull, announce - is the
- * sync's business (components/SyncManager.jsx). Nothing is read from the
- * event itself, which is why a table that only changes in unknown ways
- * (a new column, a note's body) needs no special case: the pull finds out.
+ * device, calls `onChange` with the table and the event, and what to do about
+ * it - apply it, pull, announce - is the sync's business
+ * (components/SyncManager.jsx). Only the ledger's rows are used from the
+ * event; for every other table it is a nudge to pull that table, which is why
+ * one that changes in unknown ways (a new column, a note's body) needs no
+ * special case: the pull finds out.
  *
  * ── The tables ──
  *
@@ -33,8 +35,9 @@ import { supabase as defaultClient } from './supabase'
  * ── What it cannot promise ──
  *
  * Events are not queued for a device that is offline, asleep or between
- * connections. Every (re)subscribe therefore calls `onChange` once, as a
- * catch-up for whatever was missed, and the window-focus sync stays as it was.
+ * connections. Every (re)subscribe therefore calls `onChange('*')` once, as a
+ * catch-up for whatever was missed in any table, and the window-focus sync
+ * stays as it was.
  */
 
 export const REALTIME_TABLES = [
@@ -47,10 +50,11 @@ const LEDGER = 'transactions'
 
 /**
  * @typedef {'connecting'|'on'|'off'} LiveState
+ * @typedef {{eventType?: string, new?: Record<string, any>}} ChangeEvent  what the stream sent: INSERT, UPDATE or DELETE, and the row as it now is
  *
  * @param {string} userId
  * @param {object} handlers
- * @param {(table: string) => void} handlers.onChange  something changed, or may have
+ * @param {(table: string, event?: ChangeEvent) => void} handlers.onChange  something changed, or may have: `*` for any table
  * @param {(state: LiveState, why?: string) => void} [handlers.onState]
  * @param {typeof defaultClient} [client]
  * @returns {() => void} stop listening
@@ -63,13 +67,13 @@ export function startRealtime(userId, { onChange, onState }, client = defaultCli
   for (const table of REALTIME_TABLES) {
     const channel = client
       .channel(`spendr:${table}:${userId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table, filter: `user_id=eq.${userId}` }, () => {
-        if (!stopped) onChange(table)
+      .on('postgres_changes', { event: '*', schema: 'public', table, filter: `user_id=eq.${userId}` }, (/** @type {ChangeEvent} */ event) => {
+        if (!stopped) onChange(table, event)
       })
       .subscribe((/** @type {string} */ status, /** @type {any} */ err) => {
         if (stopped) return
         if (status === 'SUBSCRIBED') {
-          if (table === LEDGER) { onState?.('on'); onChange(table) }
+          if (table === LEDGER) { onState?.('on'); onChange('*') }
         } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
           if (table === LEDGER) onState?.('off', err?.message ?? status)
         }

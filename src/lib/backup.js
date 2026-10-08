@@ -84,6 +84,18 @@ export function inspectBackup(raw) {
 }
 
 /**
+ * A row as a restore writes it: without the note of what the cloud last had.
+ *
+ * @template {Record<string, any>} T
+ * @param {T} row
+ * @returns {T}
+ */
+function withoutSyncedAt(row) {
+  const { syncedAt: _noted, ...rest } = row
+  return /** @type {T} */ (rest)
+}
+
+/**
  * Replace local data with the contents of a backup.
  *
  * Restore means restore: the six backed-up tables are cleared and rewritten, so
@@ -96,6 +108,12 @@ export function inspectBackup(raw) {
  *  - `updatedAt` is set to now, so the restored rows win last-write-wins
  *    against whatever is currently in Supabase. Keeping the file's original
  *    timestamps would let the cloud overwrite the restore on the next pull.
+ *  - `syncedAt` is dropped. It is the device's note of which version of a row
+ *    the cloud last agreed on (lib/sync.js isUnsent), and a backup carries the
+ *    note of the device that made it: restored, it would read as "already
+ *    sent" for rows the cloud has never seen in this form, and the small
+ *    tables only send rows that are not. Without it every restored row goes
+ *    up once.
  *  - Rows that existed locally but are absent from the backup are queued for
  *    remote deletion, otherwise the next pull would simply bring them back.
  *
@@ -117,7 +135,7 @@ export async function restoreBackup(raw) {
    * @param {T[]} [rows]
    * @returns {T[]}
    */
-  const stamp = (rows) => (rows ?? []).map(r => ({
+  const stamp = (rows) => (rows ?? []).map(r => withoutSyncedAt({
     ...r,
     synced:    UNSYNCED,
     updatedAt: nowISO,
@@ -131,7 +149,7 @@ export async function restoreBackup(raw) {
    * @param {T[]} [rows]
    * @returns {T[]}
    */
-  const stampBadge = (rows) => (rows ?? []).map(r => ({ ...r, synced: UNSYNCED }))
+  const stampBadge = (rows) => (rows ?? []).map(r => withoutSyncedAt({ ...r, synced: UNSYNCED }))
 
   // Captured before the wipe so we know what the backup drops.
   const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges, oldTrash, oldNotes, oldFolders] = await Promise.all([

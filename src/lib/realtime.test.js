@@ -42,15 +42,16 @@ describe('startRealtime', () => {
     expect(REALTIME_TABLES).toContain('transactions')
   })
 
-  it('calls onChange with the table that changed', () => {
+  it('calls onChange with the table that changed, and the event, so a transaction need not be asked for again', () => {
     const { client, channels } = fakeClient()
     const onChange = vi.fn()
     startRealtime('u1', { onChange }, client)
-    channels.find(c => c.bindings[0].filter.table === 'accounts')?.bindings[0].cb({ eventType: 'UPDATE' })
-    expect(onChange).toHaveBeenCalledWith('accounts')
+    const event = { eventType: 'INSERT', new: { tx_id: 't1', amount: 150 } }
+    channels.find(c => c.bindings[0].filter.table === 'transactions')?.bindings[0].cb(event)
+    expect(onChange).toHaveBeenCalledWith('transactions', event)
   })
 
-  it('says it is connecting, then live when the ledger channel subscribes - and catches up once', () => {
+  it('says it is connecting, then live when the ledger channel subscribes - and catches up once, on every table', () => {
     const { client, channels } = fakeClient()
     const onChange = vi.fn()
     const onState = vi.fn()
@@ -61,7 +62,8 @@ describe('startRealtime', () => {
     expect(onChange).not.toHaveBeenCalled()
     channels.find(c => c.bindings[0].filter.table === 'transactions')?.status?.('SUBSCRIBED')
     expect(onState).toHaveBeenLastCalledWith('on')
-    expect(onChange).toHaveBeenCalledWith('transactions')
+    expect(onChange).toHaveBeenCalledTimes(1)
+    expect(onChange).toHaveBeenCalledWith('*')
   })
 
   it('says it is off when the ledger channel cannot subscribe, and why', () => {

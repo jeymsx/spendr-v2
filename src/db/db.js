@@ -270,8 +270,18 @@ export const SYNCED_TABLES = [
 
 /** How a row is FILED, as opposed to what it says. Changing only these is not
  *  an edit, so it must not move updatedAt. See the updating hook below.
- *  `pushed`: a note that has been on the server at least once (lib/notes.js). */
-export const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed'])
+ *  `pushed`: a note that has been on the server at least once (lib/notes.js).
+ *  `syncedAt`: the updatedAt this row had the last time the cloud and this
+ *  device agreed on it - written by a pull for a row it brought in, and by a
+ *  push for a row it sent (lib/sync.js isUnsent). A row whose updatedAt is not
+ *  its syncedAt has been changed since, and is the only kind a push sends.
+ *  Stamping it as an edit would move updatedAt, which is the very thing it is
+ *  compared with: every push would make the row look changed again. */
+export const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed', 'syncedAt'])
+
+// What a write really changes (db/changedKeys.js), re-exported for the hooks' readers.
+export { changedKeys } from './changedKeys'
+import { changedKeys } from './changedKeys'
 
 /* Stamped on the way IN, for every writer at once.
  *
@@ -319,15 +329,16 @@ for (const name of SYNCED_TABLES) {
    *   the REMOTE timestamp; stamping now() over that would make every pulled
    *   row instantly look newer than the source it just came from.
    *
-   *   a change to nothing but bookkeeping - syncId and synced are how the row
-   *   is filed, not what it says. The v11 backfill and the pull's id adoption
+   *   a change to nothing but bookkeeping - syncId, synced and syncedAt are
+   *   how the row is filed, not what it says. The v11 backfill and the pull's id adoption
    *   both write syncId across rows they are not otherwise touching, and
    *   stamping those would silently mark the entire table as newer than the
    *   server and block real data from ever arriving again. */
-  db.table(name).hook('updating', (mods) => {
+  db.table(name).hook('updating', (mods, _key, obj) => {
     if (!mods || typeof mods !== 'object') return
     if ('updatedAt' in mods) return
-    const keys = Object.keys(mods)
+    // Only what really changed: see changedKeys.
+    const keys = changedKeys(mods, obj)
     if (!keys.length || keys.every(k => BOOKKEEPING.has(k))) return
     return { updatedAt: new Date().toISOString() }
   })

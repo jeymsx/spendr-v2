@@ -3,8 +3,9 @@ import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { fullSync, pullChanges, FirstSyncChoiceNeeded } from '../lib/sync'
+import { fullSync, pullChanges, applyRemoteTransaction, toShareRow, unsentTables, FirstSyncChoiceNeeded } from '../lib/sync'
 import { startRealtime } from '../lib/realtime'
+import { startShare } from '../lib/liveShare'
 import { watchLocalChanges } from '../lib/localChanges'
 import { remoteToastMessage } from '../lib/remoteToast'
 import db, { getUnsyncedTxs } from '../db/db'
@@ -99,6 +100,14 @@ function SyncIndicator({ status, errMsg }) {
   )
 }
 
+/* How long a burst is given to finish before it is sent, or read. Short: it is
+   what a person feels between saving on one device and seeing it on the
+   other. A save writes several rows in a few milliseconds (the transaction,
+   the balance it moved), and a push touches many, so a moment is enough to
+   make each of those one trip rather than several. */
+const PUSH_WAIT = 300
+const PULL_WAIT = 250
+
 // Module-level lock — survives React StrictMode double-mount so two concurrent
 // fullSync calls never race on the same empty IndexedDB and create duplicates.
 let _syncLocked = false
@@ -135,7 +144,19 @@ export default function SyncManager() {
      started by a change sends those and not every table (lib/localChanges.js
      says which write counts). */
   const dirty = useRef(/** @type {Set<string>} */ (new Set()))
-  const timers = useRef(/** @type {{pull: ReturnType<typeof setTimeout>|null, push: ReturnType<typeof setTimeout>|null, lastPull: number}} */ ({ pull: null, push: null, lastPull: 0 }))
+  /* Transactions heard from another device that are waiting to go into the
+     ledger, by their id, and whether that is being done. */
+  const heardRows = useRef(/** @type {Map<string, Record<string, any>>} */ (new Map()))
+  const draining = useRef(false)
+  // Set below, once the drain exists; read when a sync ends.
+  const drainRef = useRef(() => {})
+  // The channel this device tells its other devices on, once it is joined (lib/liveShare.js).
+  const sharing = useRef(/** @type {ReturnType<typeof startShare>|null} */ (null))
+  /* The tables other devices have changed since this one last read them, by
+     their names in the cloud - `*` for any - so a pull reads those and not
+     every table. */
+  const pullTables = useRef(/** @type {Set<string>} */ (new Set()))
+  const timers = useRef(/** @type {{pull: ReturnType<typeof setTimeout>|null, push: ReturnType<typeof setTimeout>|null}} */ ({ pull: null, push: null }))
 
   /* Where this session stands with the cloud, for the readers that must not
      act on a ledger that has not caught up - see hooks/useSyncState.js. A
@@ -250,14 +271,18 @@ export default function SyncManager() {
 
     syncingRef.current = true
     _syncLocked = true
-    timers.current.lastPull = Date.now()
+    // The tables asked about since the last pull; handed back if this one does not finish.
+    const asked = pullTables.current
+    pullTables.current = new Set()
+    const only = asked.has('*') ? null : asked
     try {
       const { data, error: sessionErr } = await supabase.auth.getSession()
       if (sessionErr || !data.session) throw new Error(`Session expired: ${sessionErr?.message ?? 'signed out'}`)
       // Said as soon as the ledger is in, not when the last table is.
-      await pullChanges(user.id, { onAdded: announce })
+      await pullChanges(user.id, { onAdded: announce, only })
       return true
     } catch (err) {
+      for (const table of asked) pullTables.current.add(table)
       console.warn('[SyncManager] live pull did not finish:', err?.message ?? err)
       return false
     } finally {
@@ -269,18 +294,32 @@ export default function SyncManager() {
 
   /* What was waiting, once nothing is running. A push is checked for too:
      a transaction saved while the sync was on its way up was written after
-     it had looked, and is still marked unsent. Twice at most, so a row that
+     it had looked, and is still marked unsent. So is a row of any other table
+     that is - and that is the case this exists for: a pull writes into the
+     very tables a person is using, and the watcher of local changes hears
+     nothing while it does (it must not, or a pull would start a push), so a
+     save made in that moment is marked unsent and nobody asked for it to be
+     sent. Whatever is found goes up as a push of those tables, which reads
+     them first, as every push of a table does. Twice at most, so a row that
      cannot be sent cannot loop. */
   useEffect(() => {
     followUpRef.current = () => {
       const f = followUp.current
+      // What was heard before this session's first sync had finished goes in now, and at once: somebody is waiting for it.
+      if (heardRows.current.size) setTimeout(() => drainRef.current(), 0)
       setTimeout(async () => {
         if (!user?.id || syncingRef.current || _syncLocked) return
         if (f.push) { f.push = false; runSync({ silent: true, light: true, auto: true, changes: true }); return }
         if (f.pull) { f.pull = false; runPull(); return }
         if (syncedFor.current === user.id && f.rechecks < 2) {
-          const left = (await getUnsyncedTxs()).some(t => t.txId)
-          if (left) { f.rechecks += 1; runSync({ silent: true, light: true, auto: true, changes: true }) } else f.rechecks = 0
+          // A look that fails is no reason to push: the next sync's end looks again.
+          const tables = await unsentTables(user.id).catch(() => /** @type {Set<string>} */ (new Set()))
+          const left = tables.size > 0 || (await getUnsyncedTxs()).some(t => t.txId)
+          if (left) {
+            for (const table of tables) dirty.current.add(table)
+            f.rechecks += 1
+            runSync({ silent: true, light: true, auto: true, changes: true })
+          } else f.rechecks = 0
         }
       }, 400)
     }
@@ -295,20 +334,71 @@ export default function SyncManager() {
       timers.current.push = null
       if (typeof navigator !== 'undefined' && navigator.onLine === false) return
       runSync({ silent: true, light: true, auto: true, changes: true })
-    }, 1500)
+    }, PUSH_WAIT)
   }, [user?.id, runSync])
 
-  /* A change made elsewhere is pulled soon after it is heard, and a burst of
-     them - a push touches many rows - is one pull, no more often than every
-     couple of seconds. */
-  const schedulePull = useCallback(() => {
+  /* A change made elsewhere is read soon after it is heard - the table it was
+     in, and whichever others were heard in the same moment, which is how a
+     push that touches many rows becomes one pull. `*` for any table. */
+  const schedulePull = useCallback((table = '*') => {
+    pullTables.current.add(table)
     if (timers.current.pull) return
-    const wait = Math.max(500, 2500 - (Date.now() - timers.current.lastPull))
     timers.current.pull = setTimeout(() => {
       timers.current.pull = null
       runPull()
-    }, wait)
+    }, PULL_WAIT)
   }, [runPull])
+
+  /* A transaction another device has just saved - told to this one directly
+     (lib/liveShare.js) or announced by the database - goes into the ledger from
+     the message itself, with no trip back to the cloud: what makes it show up
+     the moment it is saved.
+
+     It does not wait for a sync. Adding it is one transaction on its own that
+     checks for the row first (applyRemoteTransaction), and a sync that is
+     reading the same rows checks again as it writes (sync.js pullTxs), so the
+     two cannot both add one however they overlap. What is heard while one is
+     being applied waits for it and goes in together, with one toast. Anything
+     that cannot be settled from the message alone, a pull does. */
+  const drainHeard = useCallback(async () => {
+    // Before the first sync of this session the ledger is not this account's yet: wait for it (followUpRef).
+    if (draining.current || !user?.id || syncedFor.current !== user.id) return
+    draining.current = true
+    try {
+      while (heardRows.current.size) {
+        const rows = [...heardRows.current.values()]
+        heardRows.current.clear()
+        /** @type {Array<Record<string, any>>} */
+        const added = []
+        for (const row of rows) {
+          try {
+            const result = await applyRemoteTransaction(row)
+            if (!result.handled) schedulePull('transactions')
+            else if (result.added) added.push(result.added)
+          } catch (err) {
+            console.warn('[SyncManager] a live change did not apply:', err?.message ?? err)
+            schedulePull('transactions')
+          }
+        }
+        if (added.length) announce(added)
+      }
+    } finally {
+      draining.current = false
+    }
+  }, [user?.id, announce, schedulePull])
+  useEffect(() => { drainRef.current = drainHeard })
+
+  const applyHeard = useCallback((/** @type {Record<string, any>} */ row) => {
+    heardRows.current.set(row.tx_id, row)
+    drainHeard()
+  }, [drainHeard])
+
+  /** What the stream says: a new or changed transaction goes straight in; anything else is a table to read. */
+  const heard = useCallback((/** @type {string} */ table, /** @type {import('../lib/realtime').ChangeEvent} */ event) => {
+    const row = event?.new
+    if (table === 'transactions' && event?.eventType !== 'DELETE' && row?.tx_id) applyHeard(row)
+    else schedulePull(table)
+  }, [applyHeard, schedulePull])
 
   /** @param {import('../lib/sync').FirstSyncChoice} choice */
   async function choose(choice) {
@@ -362,7 +452,7 @@ export default function SyncManager() {
      queue what it sent while this device was asleep. */
   useEffect(() => {
     if (!user?.id) return
-    const onVisible = () => { if (document.visibilityState === 'visible') schedulePull() }
+    const onVisible = () => { if (document.visibilityState === 'visible') schedulePull('*') }
     const onOnline = () => runSync({ silent: true, light: true, auto: true })
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('online', onOnline)
@@ -375,13 +465,39 @@ export default function SyncManager() {
   // Listen for what other devices do.
   useEffect(() => {
     if (!user?.id || !isSupabaseConfigured) return
-    return startRealtime(user.id, { onChange: schedulePull, onState: setLive })
-  }, [user?.id, schedulePull])
+    return startRealtime(user.id, { onChange: heard, onState: setLive })
+  }, [user?.id, heard])
+
+  /* Tell the other devices of a transaction saved here, directly, the moment
+     it is committed: the push below follows, but the database is a longer way
+     round. Whatever is read back is the row as it was saved. */
+  useEffect(() => {
+    if (!user?.id || !isSupabaseConfigured) return
+    const userId = user.id
+    const channel = startShare(userId, { onTransaction: row => heard('transactions', { eventType: 'BROADCAST', new: row }) })
+    sharing.current = channel
+    const waiting = heardRows.current
+    return () => { sharing.current = null; waiting.clear(); channel.stop() }
+  }, [user?.id, heard])
 
   // And push what this one does, as it happens.
   useEffect(() => {
     if (!user?.id || !isSupabaseConfigured) return
-    return watchLocalChanges(table => { dirty.current.add(table); schedulePush() })
+    const userId = user.id
+    // One message per transaction however many times it was written in the same save.
+    const queued = new Set()
+    const tell = (/** @type {any} */ key) => {
+      if (queued.has(key)) return
+      queued.add(key)
+      setTimeout(async () => {
+        queued.delete(key)
+        try {
+          const tx = await db.transactions.get(key)
+          if (tx?.txId) sharing.current?.share(toShareRow(tx, userId))
+        } catch { /* a head start, nothing more */ }
+      }, 0)
+    }
+    return watchLocalChanges(table => { dirty.current.add(table); schedulePush() }, tell)
   }, [user?.id, schedulePush])
 
   /* If the stream is not there - the database has not been told to publish
@@ -389,7 +505,7 @@ export default function SyncManager() {
      instead, while the window is in front. */
   useEffect(() => {
     if (!user?.id || !isSupabaseConfigured || live === 'on') return
-    const id = setInterval(() => { if (document.visibilityState === 'visible') schedulePull() }, 45_000)
+    const id = setInterval(() => { if (document.visibilityState === 'visible') schedulePull('*') }, 45_000)
     return () => clearInterval(id)
   }, [user?.id, live, schedulePull])
 

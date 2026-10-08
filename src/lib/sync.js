@@ -71,13 +71,18 @@ export function isPendingDelete(pending, table, row) {
 
 // Runs before the pull so a queued delete can't be undone by this very sync.
 // Entries that fail stay queued; over-deleting is safe because the push that
-// follows re-uploads every surviving local row.
+// follows re-uploads every surviving local row - which is why a table that
+// had a delete land is put back to wholly unsent below: a push now sends only
+// the rows that have changed, and a survivor of an over-broad delete (two goals
+// with one name) has not.
 /** @param {string} userId */
 async function flushPendingDeletes(userId) {
   const list = await getPendingDeletes()
   if (!list.length) return
 
   const remaining = []
+  /** @type {Set<string>} */
+  const landed = new Set()
   for (const entry of list) {
     let q = supabase.from(entry.table).delete().eq('user_id', userId)
     for (const [col, val] of Object.entries(entry.match ?? {})) q = q.eq(col, val)
@@ -85,9 +90,12 @@ async function flushPendingDeletes(userId) {
     if (error) {
       console.error('[sync] delete %s failed:', entry.table, error.message)
       remaining.push(entry)
+    } else {
+      landed.add(entry.table)
     }
   }
   await db.meta.put({ key: PENDING_KEY, value: remaining })
+  for (const table of landed) await forgetSent(table)
 }
 
 // ── Row mapping: Dexie → Supabase ─────────────────────────────────────────────
@@ -100,6 +108,20 @@ async function flushPendingDeletes(userId) {
    until a transfer comes back from a pull pointing the wrong way.
 
    Nothing else imports them. The export exists so sync.test.js can. */
+
+/**
+ * A transaction as the other devices are told of it the moment it is saved
+ * (lib/liveShare.js): the row the cloud will hold, so applyRemoteTransaction
+ * takes it as it takes one from the stream, with this device's own stamp where
+ * the cloud's is not written yet. The cloud's replaces it a moment later.
+ *
+ * @param {Transaction} r
+ * @param {string} userId
+ * @returns {Record<string, any>}
+ */
+export function toShareRow(r, userId) {
+  return { ...toSupabaseRow(r, userId), updated_at: r.updatedAt }
+}
 
 /**
  * @param {Transaction} r
@@ -215,6 +237,13 @@ export function categoryToRow(r, userId) {
     type:       r.type,
     budget:     r.budget,
     sort_order: r.sort_order ?? 0,
+    /* 032. Whether this category carries its unspent budget into the next
+       month - true, false, or null for "follow the setting for all of them" -
+       and the month it started carrying from (lib/rollover.js). Until 032 has
+       run the push leaves both out and retries (OPTIONAL_COLS), so they stay
+       on the device that set them. */
+    rollover:      r.rollover ?? null,
+    rollover_from: r.rolloverFrom ?? null,
     updated_at: r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -266,6 +295,11 @@ export function recurringToRow(r, userId) {
     /* 023. 'inflow' for income that arrives on a schedule - a salary. Null is
        a bill, which is every row written before the column existed. */
     type:       r.type ?? null,
+    /* 032. The day of the month a monthly, quarterly or yearly bill falls on,
+       so one due on the 31st does not drift to the 28th the first time a
+       short month rolls it forward. Null for a bill that has none, which is
+       every row written before the column existed. */
+    due_day:    r.dueDay ?? null,
     updated_at: r.updatedAt ?? new Date().toISOString(),
   }
 }
@@ -367,7 +401,10 @@ export function trashToRow(r, userId) {
     deleted_at: r.deletedAt,
     entry: {
       txs:      (r.txs ?? []).map((/** @type {Record<string, any>} */ t) => without(t, ['id', 'recurringId', 'synced'])),
-      debts:    (r.debts ?? []).map((/** @type {Record<string, any>} */ d) => without(d, ['id', 'synced'])),
+      /* syncedAt is this device's note of what it last agreed on with the
+         cloud: of no use to another device, and put back on a row it would
+         read as "sent already" for a row that never was. */
+      debts:    (r.debts ?? []).map((/** @type {Record<string, any>} */ d) => without(d, ['id', 'synced', 'syncedAt'])),
       unhooked: (r.unhooked ?? []).map((/** @type {Record<string, any>} */ u) => without(u, ['id'])),
       paid:     (r.paid ?? []).map((/** @type {Record<string, any>} */ p) => without(p, ['id'])),
     },
@@ -548,6 +585,14 @@ export function rowToCategory(row) {
     type:       row.type,
     budget:     row.budget,
     sort_order: row.sort_order ?? 0,
+    /* 032. Only when the server has a value: a database that has not had the
+       migration returns rows without the keys, and a category nobody has set
+       a carry-over on returns nulls - neither says anything about this
+       device's choice, and spreading a null over it would un-set it. The app
+       only ever turns a carry-over on or off, never back to "unset", so a
+       null is always "never set", the same reading 023's columns get. */
+    ...(row.rollover != null ? { rollover: !!row.rollover } : {}),
+    ...(row.rollover_from ? { rolloverFrom: row.rollover_from } : {}),
     updatedAt:  row.updated_at,
   }
 }
@@ -587,6 +632,10 @@ export function rowToRecurring(row) {
        'expense' outright, and a null is a bill from before the column - left
        absent, so it cannot turn a salary this device knows back into a bill. */
     ...(row.type ? { type: row.type } : {}),
+    /* 032. Only when there is one, for the same reason: a database without
+       the column, or a bill from before it, must not blank the day this
+       device knows the bill falls on. */
+    ...(row.due_day != null ? { dueDay: Number(row.due_day) } : {}),
     updatedAt: row.updated_at,
   }
 }
@@ -871,6 +920,11 @@ export async function pullPreferences(userId, { first = false } = {}) {
 // not that the rest of the app stops syncing.
 const MISSING_TABLE = /relation .* does not exist|could not find the table|schema cache/i
 
+/** The labels of the optional steps that found their table missing, this session.
+ *  unsentTables leaves those out: a push that cannot happen is not worth asking for again.
+ *  @type {Set<string>} */
+const absentRemotely = new Set()
+
 /**
  * @param {string} label
  * @param {() => Promise<any>} fn
@@ -878,8 +932,11 @@ const MISSING_TABLE = /relation .* does not exist|could not find the table|schem
 async function optionalSync(label, fn) {
   try {
     await fn()
+    // It ran: the table is there now (its migration was run while the app was open).
+    absentRemotely.delete(label)
   } catch (e) {
     if (MISSING_TABLE.test(e?.message ?? '')) {
+      absentRemotely.add(label)
       console.warn('[sync] %s skipped - run the Supabase migration:', label, e.message)
       return
     }
@@ -947,21 +1004,21 @@ export async function pushLedger(userId) {
 }
 
 /**
- * @param {string} userId
- * @param {{only?: Set<string>|null}} [opts]  the tables this device has changed since it last pushed, when that is all that has to go. A table nothing was written to is not sent again: the cloud streams every row of an upsert to every device whether or not it changed. Null sends everything
+ * The small tables, each pushed a row at a time by pushTable: how to read one,
+ * how to turn a row of it into the cloud's, and what the upsert resolves on.
+ *
+ * Kept in one place because two things have to agree on it - the push, and the
+ * look at what is left to push (unsentTables) - and a list that is written out
+ * twice is how the second one comes to miss a table.
+ *
+ * `label` is the name of the optionalSync step for a table that may not exist
+ * in the cloud yet (its migration not run); null for one that has to.
+ *
+ * @type {Record<string, {table: () => import("dexie").Table<any, any>, toRow: (r: any, userId: string) => Record<string, any>, on: string, label: string|null}>}
  */
-export async function syncToSupabase(userId, { only = null } = {}) {
-  if (!userId) return
-  /** @param {string} table */
-  const wants = (table) => !only || only.has(table)
-
-  await pushLedger(userId)
-
-  /* Other tables: all of a table at once (small datasets, no per-record
-     tracking needed), and only the ones in `only` when it is given. Trash and
-     notes keep their own marks, so they always run and send what is unsent. */
-  if (wants('accounts'))   await pushTable('accounts',   db.accounts,   accountToRow,  userId, 'user_id,name')
-  if (wants('categories')) await pushTable('categories', db.categories, categoryToRow, userId, 'user_id,name,type')
+const SMALL_TABLES = {
+  accounts:     { table: () => db.accounts,     toRow: accountToRow,   on: 'user_id,name',      label: null },
+  categories:   { table: () => db.categories,   toRow: categoryToRow,  on: 'user_id,name,type', label: null },
   /* Resolved on the STABLE id, not on local_id. See 011 - and the failure
      that finally forced it, which was not the slow duplication the migration
      was written for but a hard stop:
@@ -974,21 +1031,136 @@ export async function syncToSupabase(userId, { only = null } = {}) {
      and the push throws, taking every table after it down with it. Once the
      ids on the two sides stop lining up, local_id is not merely a weak key,
      it is one that cannot succeed. */
-  if (wants('debts'))      await pushTable('debts',      db.debts,      debtToRow,     userId, 'user_id,sync_id')
-  if (wants('recurring'))  await pushTable('recurring',  db.recurring,  recurringToRow, userId, 'user_id,sync_id')
-  if (wants('templates'))  await pushTable('templates',  db.templates,  templateToRow,  userId, 'user_id,sync_id')
+  debts:        { table: () => db.debts,        toRow: debtToRow,      on: 'user_id,sync_id',   label: null },
+  recurring:    { table: () => db.recurring,    toRow: recurringToRow, on: 'user_id,sync_id',   label: null },
+  templates:    { table: () => db.templates,    toRow: templateToRow,  on: 'user_id,sync_id',   label: null },
+  goals:        { table: () => db.goals,        toRow: goalToRow,      on: 'user_id,name',      label: 'goals push' },
+  badges:       { table: () => db.badges,       toRow: badgeToRow,     on: 'user_id,key',       label: 'badges push' },
+  challenges:   { table: () => db.challenges,   toRow: challengeToRow, on: 'user_id,sync_id',   label: 'challenges push' },
+  note_folders: { table: () => db.note_folders, toRow: folderToRow,    on: 'user_id,sync_id',   label: 'note folders push' },
+}
+
+/** The steps for the two tables that keep their own marks, by their optionalSync names. */
+const TRASH_STEP = 'trash push'
+const NOTES_STEP = 'notes push'
+
+/**
+ * One of the small tables, up: the rows changed since they last went.
+ *
+ * @param {string} name  a key of SMALL_TABLES
+ * @param {string} userId
+ */
+function pushSmall(name, userId) {
+  const spec = SMALL_TABLES[name]
+  return pushTable(name, spec.table(), spec.toRow, userId, spec.on)
+}
+
+/**
+ * The same, for a table that may not be in the cloud yet: fault-isolated,
+ * see optionalSync above.
+ *
+ * @param {string} name  a key of SMALL_TABLES that has a label
+ * @param {string} userId
+ */
+function pushOptional(name, userId) {
+  return optionalSync(/** @type {string} */ (SMALL_TABLES[name].label), () => pushSmall(name, userId))
+}
+
+/**
+ * @param {string} userId
+ * @param {{only?: Set<string>|null}} [opts]  the tables this device has changed since it last pushed, when that is all that has to go. A table nothing was written to is not sent again: the cloud streams every row of an upsert to every device whether or not it changed. Null sends everything - which is every row that has changed, of every table, since a table sends only those either way
+ */
+export async function syncToSupabase(userId, { only = null } = {}) {
+  if (!userId) return
+  /** @param {string} table */
+  const wants = (table) => !only || only.has(table)
+
+  await pushLedger(userId)
+
+  /* Other tables: a row at a time, and only the rows that have changed since
+     they last went (see isUnsent) - and only the tables in `only` when it is
+     given. Trash and notes keep their own marks, so they always run and send
+     what is unsent. */
+  if (wants('accounts'))   await pushSmall('accounts',   userId)
+  if (wants('categories')) await pushSmall('categories', userId)
+  if (wants('debts'))      await pushSmall('debts',      userId)
+  if (wants('recurring'))  await pushSmall('recurring',  userId)
+  if (wants('templates'))  await pushSmall('templates',  userId)
   // Last, and fault-isolated: see optionalSync above.
-  if (wants('goals')) await optionalSync('goals push', () =>
-    pushTable('goals', db.goals, goalToRow, userId, 'user_id,name'))
-  if (wants('badges')) await optionalSync('badges push', () =>
-    pushTable('badges', db.badges, badgeToRow, userId, 'user_id,key'))
-  if (wants('challenges')) await optionalSync('challenges push', () =>
-    pushTable('challenges', db.challenges, challengeToRow, userId, 'user_id,sync_id'))
-  await optionalSync('trash push', () => pushTrash(userId))
-  if (wants('note_folders')) await optionalSync('note folders push', () =>
-    pushTable('note_folders', db.note_folders, folderToRow, userId, 'user_id,sync_id'))
-  await optionalSync('notes push', () => pushNotes(userId))
+  if (wants('goals'))      await pushOptional('goals',      userId)
+  if (wants('badges'))     await pushOptional('badges',     userId)
+  if (wants('challenges')) await pushOptional('challenges', userId)
+  await optionalSync(TRASH_STEP, () => pushTrash(userId))
+  if (wants('note_folders')) await pushOptional('note_folders', userId)
+  await optionalSync(NOTES_STEP, () => pushNotes(userId))
   if (wants('meta')) await pushPreferences(userId)
+}
+
+/**
+ * A note that is waiting to go: it has an id to be known by, it has changed
+ * since it last went, and it has something in it.
+ *
+ * @param {Record<string, any>} n
+ */
+const noteIsUnsent = n => !!(n.syncId && n.synced !== SYNCED && (n.text ?? '').trim())
+
+/** @param {Record<string, any>} r  a deletion in Recently deleted */
+const trashIsUnsent = r => !!(r.syncId && r.synced !== SYNCED)
+
+/**
+ * The tables that have something to send, by their names here.
+ *
+ * What a sync - or a pull - that has just ended looks at. A pull writes into
+ * the very tables a person is using, and the watcher of local changes
+ * (localChanges.js) is deliberately told nothing of what happens while it
+ * does, or a pull would start a push and the push's echo a pull. That also
+ * silences a person's own save made in the same moment: the row is changed,
+ * marked as changed, and nobody asked for it to be sent. This is how it gets
+ * asked for. Cheap by design: the small tables are a few dozen rows, and the
+ * two with documents in them are only looked at as far as their first unsent
+ * one.
+ *
+ * Without the tables whose migration has not run (they could never be sent,
+ * and asking again would only repeat the refusal).
+ *
+ * @param {string} userId
+ * @returns {Promise<Set<string>>}
+ */
+export async function unsentTables(userId) {
+  /** @type {Set<string>} */
+  const out = new Set()
+  await Promise.all(Object.entries(SMALL_TABLES).map(async ([name, spec]) => {
+    if (spec.label && absentRemotely.has(spec.label)) return
+    const { pending } = await unsentRows(name, spec.table(), spec.toRow, userId, spec.on)
+    if (pending.length) out.add(name)
+  }))
+  if (!absentRemotely.has(TRASH_STEP) && await db.trash.filter(trashIsUnsent).first()) out.add('trash')
+  if (!absentRemotely.has(NOTES_STEP) && await db.notes.filter(noteIsUnsent).first()) out.add('notes')
+  return out
+}
+
+/**
+ * Every row of the small tables - or of one - put down as not sent.
+ *
+ * Two uses, one idea: the note on a row that it was sent no longer holds.
+ *
+ *   a device adding what it has to an account that already has data (the
+ *   first sync's "keep both"): its rows may carry a note that they were sent -
+ *   to the account this device last synced with, which is not this one. The
+ *   pull that follows marks the rows it matches as the account's own; what is
+ *   still unmarked after it is what this device alone has, and goes up.
+ *
+ *   a table that has had a delete land in the cloud (flushPendingDeletes): the
+ *   delete may have taken a row this device still has, and what the cloud lacks
+ *   has to be sent again whether or not it has changed.
+ *
+ * @param {string} [only]  a key of SMALL_TABLES; every one of them when it is left out
+ */
+async function forgetSent(only) {
+  for (const [name, spec] of Object.entries(SMALL_TABLES)) {
+    if (only && name !== only) continue
+    await spec.table().toCollection().modify((/** @type {Record<string, any>} */ row) => { delete row.syncedAt })
+  }
 }
 
 /**
@@ -1008,8 +1180,7 @@ export async function syncToSupabase(userId, { only = null } = {}) {
  * @param {string} userId
  */
 async function pushNotes(userId) {
-  const rows = (await db.notes.toArray())
-    .filter(n => n.syncId && n.synced !== SYNCED && (n.text ?? '').trim())
+  const rows = (await db.notes.toArray()).filter(noteIsUnsent)
   if (!rows.length) return
   const opts = { onConflict: 'user_id,sync_id', ignoreDuplicates: false }
   const payload = rows.map(r => noteToRow(r, userId))
@@ -1064,7 +1235,11 @@ async function pullNotes(userId, pending, { first = false } = {}) {
     if (error) throw new Error(`notes pull: ${error.message}`)
     for (const row of data ?? []) {
       const mine = local.get(row.sync_id)
-      if (mine?.id != null) await db.notes.update(mine.id, rowToNote(row))
+      /* Not over a note that was written to while this was being read: the
+         copy looked at above is from before the request, and a note being
+         typed in does not wait. The newer words stay, still marked unsent,
+         and go up in the push that follows. */
+      if (mine?.id != null) await updateIfUnchanged(db.notes, mine, rowToNote(row))
       else await db.notes.add(rowToNote(row))
     }
   }
@@ -1081,7 +1256,7 @@ async function pullNotes(userId, pending, { first = false } = {}) {
  * @param {string} userId
  */
 async function pushTrash(userId) {
-  const rows = (await db.trash.toArray()).filter(r => r.syncId && r.synced !== SYNCED)
+  const rows = (await db.trash.toArray()).filter(trashIsUnsent)
   if (!rows.length) return
   const { error } = await supabase.from('trash')
     .upsert(rows.map(r => trashToRow(r, userId)), { onConflict: 'user_id,sync_id', ignoreDuplicates: false })
@@ -1136,7 +1311,10 @@ async function pullTrash(userId, pending, opts = {}) {
    salary pulled from the server reads as a bill. */
 const OPTIONAL_COLS = {
   accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id', 'kind', 'invested_start', 'valued_at'],
-  categories: ['sync_id'],
+  /* 032's two. Until it runs, a category's carry-over setting stays on the
+     device that made it: the budget page there still works, the others fall
+     back to the setting for all categories. */
+  categories: ['sync_id', 'rollover', 'rollover_from'],
   goals: ['sync_id'],
   /* created_at is declared in 003_schema.sql, so it should be there - but a
      live table can have drifted from the migrations, and this is the existing
@@ -1166,7 +1344,10 @@ const OPTIONAL_COLS = {
   /* 010. Until it runs, a shared bill still posts and still charges the
      right amount - it just stops opening the receivables on another
      device. */
-  recurring: ['split', 'sync_id', 'type'],
+  /* 032's due_day too. Until it runs, the day a bill falls on stays on the
+     device that set it, and another device rolls it forward from the date
+     alone, which is what it did before there was a day to remember. */
+  recurring: ['split', 'sync_id', 'type', 'due_day'],
   /* 028. Until it runs, a note still syncs - its words, its pin, its bin -
      and stays filed and tagged only on the device that did it. */
   notes: ['tags', 'folder_sync_id'],
@@ -1234,7 +1415,7 @@ export function columnsToDrop(message, optional, dropped = [], keep = []) {
  * @param {Array<Record<string, any>>} rows
  * @param {{onConflict: string, ignoreDuplicates?: boolean}} opts
  * @param {{message?: string}} firstError
- * @returns {Promise<{error: any, dropped: string[]}>}
+ * @returns {Promise<{error: any, dropped: string[], rows: Array<Record<string, any>>}>}  `rows` is what the last attempt sent, without the columns it left out
  */
 async function upsertWithoutUnknown(table, rows, opts, firstError) {
   const optional = OPTIONAL_COLS[table] ?? []
@@ -1259,7 +1440,7 @@ async function upsertWithoutUnknown(table, rows, opts, firstError) {
   if (!error && dropped.length) {
     console.warn('[sync] %s: pushed without %s. Run the migration that adds them.', table, dropped.join(', '))
   }
-  return { error, dropped }
+  return { error, dropped, rows: current }
 }
 
 /**
@@ -1293,22 +1474,97 @@ export function isLocalIdConflict(message) {
   return /duplicate key value.*_user_id_local_id_key/is.test(String(message ?? ''))
 }
 
-// conflictCols: the Supabase UNIQUE constraint columns to resolve on.
-// Accounts and categories use their name-based constraints because the
-// IndexedDB auto-increment counter does NOT reset on table.clear(), so
-// local_ids can shift after a reset while names remain stable.
 /**
+ * A push rejected by the unique index on (user_id, sync_id), for a table the
+ * upsert is resolving on something else.
+ *
+ * Accounts and categories (and goals) are upserted on their NAME, and 016 put
+ * a plain unique index on (user_id, sync_id) beside it. Rename a row and the
+ * name matches nothing, so Postgres takes the INSERT branch - carrying the
+ * sync_id the renamed row already has remotely, which that index rejects.
+ * Same shape as isLocalIdConflict, and a worse ending: no retry without a
+ * column gets past it, because the row's identity is the very thing that
+ * collides. What does is resolving on the identity - `user_id,sync_id` - which
+ * finds the row the rename was meant to update and changes its name.
+ *
+ * Matched by the index's name, for the reason isLocalIdConflict is: the bare
+ * SQLSTATE is every unique violation there is, and a duplicate NAME is a real
+ * refusal that has to reach the person rather than be quietly retried.
+ *
+ * @param {string} [message]
+ */
+export function isSyncIdConflict(message) {
+  return /duplicate key value.*_user_sync_id_key/is.test(String(message ?? ''))
+}
+
+/**
+ * The value that says which version of a row this is, for "is it still the
+ * one that was sent": a row's own stamp, or for a badge, which has none, the
+ * day it was earned.
+ *
+ * @param {Record<string, any>|null|undefined} row
+ */
+const versionOf = (row) => row?.updatedAt ?? row?.earnedAt ?? null
+
+/**
+ * Whether a row of the small tables has changed since the cloud and this
+ * device last agreed on it - the only kind a push sends.
+ *
+ * ── Why a mark on the row ──
+ *
+ * These tables used to be sent whole, every row of the table on every push,
+ * with the device's own timestamps. A device that had not looked at the cloud
+ * for a while then wrote its stale copies of rows another device had changed
+ * in the meantime, and its (older) timestamps did nothing to stop it: the
+ * upsert replaces whatever is there. Last write won, whoever had last edited.
+ *
+ * Now a row carries `syncedAt`, the updatedAt it had when the cloud and this
+ * device last held the same row - set by a pull for a row it brought in, and
+ * by a push for a row it sent. Every edit moves updatedAt (the hook in
+ * db/db.js), so a row whose updatedAt is not its syncedAt has been written
+ * since, and is the only one worth sending. A row with no syncedAt has never
+ * been seen by the cloud in this form - a new row, or one from before this
+ * existed, which is sent once and marked.
+ *
+ * A row with no updatedAt at all (a badge's has only the day it was earned)
+ * is unsent until it has been marked once, and not again.
+ *
+ * @param {Record<string, any>} row
+ */
+export function isUnsent(row) {
+  if (!row.syncedAt) return true
+  return row.updatedAt != null && row.updatedAt !== row.syncedAt
+}
+
+/**
+ * What a push of one of the small tables would send, row by row: each local
+ * record beside the cloud's row for it.
+ *
+ * The same selection is made by the push and by the look at what is left
+ * (unsentTables), so what that look reports is exactly what a push would send
+ * and nothing it would turn away.
+ *
+ * ── Two rows that are one ──
+ *
+ * Rows that share a conflict key (two accounts called Cash) are one row to the
+ * cloud, and the first of them is the one it has always been sent as. That is
+ * decided among ALL the rows, before the unsent ones are picked out: picking
+ * first would let a duplicate that happened to be the only unsent one go up in
+ * place of the row the cloud holds.
+ *
  * @param {string} tableName
  * @param {import("dexie").Table<any, any>} dexieTable
  * @param {(r: any, userId: string) => Record<string, any>} toRow
  * @param {string} userId
- * @param {string} [conflictCols]
+ * @param {string} conflictCols
+ * @returns {Promise<{pending: Array<{record: Record<string, any>, row: Record<string, any>}>, unstamped: number}>}  `unstamped`: unsent rows left behind for having no stable id to resolve on
  */
-async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'user_id,local_id') {
+async function unsentRows(tableName, dexieTable, toRow, userId, conflictCols) {
   const records = await dexieTable.toArray()
-  if (!records.length) return
+  // The usual answer, before a single row is mapped.
+  if (!records.some(isUnsent)) return { pending: [], unstamped: 0 }
 
-  let rows = records.map(r => toRow(r, userId))
+  let all = records.map(record => ({ record, row: toRow(record, userId) }))
 
   /* A row with no stable id cannot be upserted on one.
    *
@@ -1320,14 +1576,10 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
    * db.js v11 backfills every row and its creating hook stamps every new
    * one, so this should find nothing. It is here because the failure mode is
    * unbounded growth rather than an error. */
+  let unstamped = 0
   if (conflictCols.includes('sync_id')) {
-    const before = rows.length
-    rows = rows.filter(r => r.sync_id)
-    if (rows.length < before) {
-      console.warn('[sync] %s: %d row(s) have no syncId and were not pushed',
-        tableName, before - rows.length)
-    }
-    if (!rows.length) return
+    unstamped = all.filter(p => !p.row.sync_id && isUnsent(p.record)).length
+    all = all.filter(p => p.row.sync_id)
   }
 
   // Deduplicate rows by conflict key so Postgres never sees two rows with the
@@ -1335,7 +1587,7 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
   const keys = conflictCols.split(',').filter(k => k !== 'user_id')
   if (keys.length > 0) {
     const seen = new Set()
-    rows = rows.filter(row => {
+    all = all.filter(({ row }) => {
       const key = keys.map(k => row[k]).join('|')
       if (seen.has(key)) return false
       seen.add(key)
@@ -1343,29 +1595,138 @@ async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'u
     })
   }
 
+  return { pending: all.filter(p => isUnsent(p.record)), unstamped }
+}
+
+/**
+ * Note that rows went up: each one's syncedAt becomes the stamp it was sent
+ * with, so it is not sent again until it is next changed.
+ *
+ * ── Only if it is still the row that was sent ──
+ *
+ * The push took its rows, then waited for the cloud. A row edited in that gap
+ * has a newer updatedAt than the one that went, and marking it as sent would
+ * make the edit look as though it had - for good, since nothing else would
+ * ever move its stamp. So each row is read again, and marked only if its
+ * version is still the one that was sent; an edited one keeps its old mark
+ * and goes in the next push. The same rule pushNotes has for its `synced`.
+ *
+ * @param {string} tableName
+ * @param {import("dexie").Table<any, any>} dexieTable
+ * @param {Array<{record: Record<string, any>, row: Record<string, any>}>} sent
+ */
+async function markSent(tableName, dexieTable, sent) {
+  // Badges are keyed by what they are; every other table by a number.
+  const pk = tableName === 'badges' ? 'key' : 'id'
+  await db.transaction('rw', dexieTable, async () => {
+    for (const { record, row } of sent) {
+      const at = record[pk]
+      if (at == null) continue
+      const now = await dexieTable.get(at)
+      if (!now || versionOf(now) !== versionOf(record)) continue
+      await dexieTable.update(at, { syncedAt: row.updated_at })
+    }
+  })
+}
+
+// conflictCols: the Supabase UNIQUE constraint columns to resolve on.
+// Accounts and categories use their name-based constraints because the
+// IndexedDB auto-increment counter does NOT reset on table.clear(), so
+// local_ids can shift after a reset while names remain stable.
+//
+// And a rename is the price of that, which the retry below pays: the name on
+// the row is then new to the cloud, and the stable id is what finds it.
+/**
+ * One of the small tables, up: the rows that have changed since they last
+ * went (isUnsent), and for each that went, a note of it (markSent).
+ *
+ * @param {string} tableName
+ * @param {import("dexie").Table<any, any>} dexieTable
+ * @param {(r: any, userId: string) => Record<string, any>} toRow
+ * @param {string} userId
+ * @param {string} [conflictCols]
+ */
+async function pushTable(tableName, dexieTable, toRow, userId, conflictCols = 'user_id,local_id') {
+  /* Only the rows that have changed since they last went - see isUnsent. A
+     table nothing was written to is no request at all. */
+  const { pending, unstamped } = await unsentRows(tableName, dexieTable, toRow, userId, conflictCols)
+  if (unstamped) {
+    console.warn('[sync] %s: %d row(s) have no syncId and were not pushed', tableName, unstamped)
+  }
+  if (!pending.length) return
+
+  const rows = pending.map(p => p.row)
   const opts = { onConflict: conflictCols, ignoreDuplicates: false }
   const { error } = await supabase.from(tableName).upsert(rows, opts)
-  if (!error) return
+  if (!error) { await markSent(tableName, dexieTable, pending); return }
+
+  /** What the next attempt sends, and why the last one failed. @type {Array<Record<string, any>>} */
+  let sending = rows
+  /** @type {any} */
+  let failure = error
 
   /* Retry without local_id. It is a convenience, not an identity: the pull
      looks a row up by local_id first and falls straight back to its name, so
      a row that arrives with none still reconciles. Losing it costs a lookup;
      letting the push throw costs every table after this one. */
-  if (isLocalIdConflict(error.message) && !conflictCols.includes('local_id')) {
-    const withoutLocalId = rows.map(({ local_id: _drop, ...rest }) => rest)
+  if (isLocalIdConflict(failure.message) && !conflictCols.includes('local_id')) {
+    const withoutLocalId = sending.map(({ local_id: _drop, ...rest }) => rest)
     const retry = await supabase.from(tableName).upsert(withoutLocalId, opts)
     if (!retry.error) {
       console.warn(
         '[sync] %s: a renamed row collided on local_id, so it was pushed without one.'
         + ' Run 008_rename_safe_sync.sql to stop this recurring: %s',
-        tableName, error.message,
+        tableName, failure.message,
       )
+      await markSent(tableName, dexieTable, pending)
       return
+    }
+    // Whatever it ran into next - on a database that has not had 008, that is
+    // the stable id's index, a rename having tripped both.
+    sending = withoutLocalId
+    failure = retry.error
+  }
+
+  /* A column the table does not have yet, left out and tried again. This runs
+     before the stable-id retry below on purpose: Postgres checks the columns
+     before it looks at a single row, so a row can only meet the id's index
+     once the unknown columns are gone - the refusal that matters may be the
+     second one. */
+  const net = await upsertWithoutUnknown(tableName, sending, opts, failure)
+  if (!net.error) { await markSent(tableName, dexieTable, pending); return }
+  sending = net.rows
+  failure = net.error
+
+  /* A renamed account or category, or goal: resolve on the stable id instead.
+     See isSyncIdConflict - the name the upsert resolves on matches nothing
+     after a rename, so Postgres INSERTs a row carrying a sync_id that is
+     already there, and no push on the name can succeed. On (user_id, sync_id)
+     the same row is found and its name is what changes.
+
+     Only the rows that have one: on this conflict target a row with none can
+     never match, and would insert a copy of itself on every push. They stay
+     marked as unsent and go with the next push, once the rename has landed
+     and the name resolves again. */
+  if (failure && isSyncIdConflict(failure.message) && !conflictCols.includes('sync_id')) {
+    /** @type {Set<string>} */
+    const seen = new Set()
+    const unique = sending.filter(r => {
+      if (!r.sync_id || seen.has(r.sync_id)) return false
+      seen.add(r.sync_id)
+      return true
+    })
+    if (unique.length) {
+      const byId = await supabase.from(tableName).upsert(unique, { ...opts, onConflict: 'user_id,sync_id' })
+      if (!byId.error) {
+        console.warn('[sync] %s: a renamed row was pushed on its syncId, its name having matched nothing.', tableName)
+        await markSent(tableName, dexieTable, pending.filter(p => p.row.sync_id))
+        return
+      }
+      failure = byId.error
     }
   }
 
-  const { error: again } = await upsertWithoutUnknown(tableName, rows, opts, error)
-  if (again) throw new Error(`${tableName} push: ${again.message}`)
+  throw new Error(`${tableName} push: ${failure.message}`)
 }
 
 // ── Pull from Supabase ────────────────────────────────────────────────────────
@@ -1559,22 +1920,24 @@ async function ensureSystemCategories() {
 
 /**
  * @param {string} userId
- * @param {{first?: boolean, onAdded?: (added: Transaction[]) => void}} [opts]  `first`: see pullSimpleTable. `onAdded` is called the moment the ledger has come in, with what is new, rather than when the last table has: the rest takes seconds, and a transaction another device just added should not wait for the notes
+ * @param {{first?: boolean, onAdded?: (added: Transaction[]) => void, only?: Set<string>|null}} [opts]  `first`: see pullSimpleTable. `onAdded` is called the moment the ledger has come in, with what is new, rather than when the last table has: the rest takes seconds, and a transaction another device just added should not wait for the notes. `only`: the tables to read, by their names in the cloud (preferences are `user_preferences`); null reads them all
  */
-export async function syncFromSupabase(userId, { onAdded, ...opts } = {}) {
+export async function syncFromSupabase(userId, { onAdded, only = null, ...opts } = {}) {
   if (!userId) return { added: /** @type {Transaction[]} */ ([]) }
+  /** @param {string} table */
+  const wants = (table) => !only || only.has(table)
 
   // Rows we're still trying to delete must not be re-added by this pull.
   const pending = await getPendingDeletes()
 
-  await pullPreferences(userId, opts)
-  const added = await pullTxs(userId, opts)
+  if (wants('user_preferences')) await pullPreferences(userId, opts)
+  const added = wants('transactions') ? await pullTxs(userId, opts) : /** @type {Transaction[]} */ ([])
   if (added.length) onAdded?.(added)
-  await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId, null, pending, opts)
+  if (wants('accounts')) await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId, null, pending, opts)
   // Categories: match on name+type to avoid confusing same-named categories of different types
-  await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
+  if (wants('categories')) await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
     row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first(), pending, opts)
-  await pullSimpleTable('debts', db.debts, rowToDebt, null, userId,
+  if (wants('debts')) await pullSimpleTable('debts', db.debts, rowToDebt, null, userId,
     row => {
       if (row.contact) {
         return db.debts.where('contact').equals(row.contact)
@@ -1602,31 +1965,31 @@ export async function syncFromSupabase(userId, { onAdded, ...opts } = {}) {
      possible thing to identify one by. Two bills sharing a name is far rarer,
      and merging those is recoverable in a way that a resurrecting duplicate
      is not. */
-  await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
+  if (wants('recurring')) await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
     row => (row.name ? db.recurring.where('name').equals(row.name).first() : null),
     pending, opts)
-  await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending, opts)
-  await optionalSync('goals pull', () =>
+  if (wants('templates')) await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending, opts)
+  if (wants('goals')) await optionalSync('goals pull', () =>
     pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending, opts))
-  await optionalSync('badges pull', () => pullBadges(userId))
-  await optionalSync('challenges pull', () =>
+  if (wants('badges')) await optionalSync('badges pull', () => pullBadges(userId))
+  if (wants('challenges')) await optionalSync('challenges pull', () =>
     pullSimpleTable('challenges', db.challenges, rowToChallenge, null, userId, null, pending, opts))
-  await optionalSync('trash pull', () => pullTrash(userId, pending, opts))
+  if (wants('trash')) await optionalSync('trash pull', () => pullTrash(userId, pending, opts))
   /* Found by name, ignoring case - the rule a folder's name is unique by
      (lib/noteFolders.js) - but not with `where('name')`: the table indexes
      only syncId, and asking for an index it has does not return nothing, it
      throws. That took the whole sync down on any device meeting a folder it
      had not got, which is the first thing a second device does. */
-  await optionalSync('note folders pull', () =>
+  if (wants('note_folders')) await optionalSync('note folders pull', () =>
     pullSimpleTable('note_folders', db.note_folders, rowToFolder, null, userId,
       async row => (row.name
         ? (await db.note_folders.toArray()).find(f => String(f.name).localeCompare(String(row.name), undefined, { sensitivity: 'accent' }) === 0)
         : null),
       pending, opts))
-  await optionalSync('notes pull', () => pullNotes(userId, pending, opts))
+  if (wants('notes')) await optionalSync('notes pull', () => pullNotes(userId, pending, opts))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
-  await ensureSystemCategories()
+  if (wants('categories')) await ensureSystemCategories()
   return { added }
 }
 
@@ -1642,23 +2005,79 @@ export async function syncFromSupabase(userId, { onAdded, ...opts } = {}) {
  *
  * It does not merge in the other direction either. A pull compares each row's
  * stamp and keeps the newer, so this device's own unsent edits are left alone;
- * they go up with the next full sync, which they have already asked for
- * (localChanges.js).
+ * they go up with the next push, which they have already asked for
+ * (localChanges.js) - or, for an edit made while the pull itself was writing,
+ * which that cannot hear, which SyncManager asks for when the pull ends and
+ * finds a row still unsent (unsentTables).
  *
  * For a device that has already had its first sync - the question a new
  * device is asked (lib/firstSync.js) is fullSync's to put.
  *
  * @param {string} userId
- * @param {{onAdded?: (added: Transaction[]) => void}} [opts]  see syncFromSupabase
+ * @param {{onAdded?: (added: Transaction[]) => void, only?: Set<string>|null}} [opts]  see syncFromSupabase; `deletions` among the tables is the tombstones
  * @returns {Promise<{added: Transaction[]}>}  the transactions it brought
  */
-export async function pullChanges(userId, { onAdded } = {}) {
+export async function pullChanges(userId, { onAdded, only = null } = {}) {
   if (!userId) throw new Error('Not authenticated')
   await dbReady
   return asRemoteWrites(async () => {
-    await optionalSync('deletions pull', () => pullDeletions(userId))
-    return syncFromSupabase(userId, { onAdded })
+    if (!only || only.has('deletions')) await optionalSync('deletions pull', () => pullDeletions(userId))
+    return syncFromSupabase(userId, { onAdded, only })
   })
+}
+
+/**
+ * One transaction another device just saved, put in this ledger the moment
+ * the stream announces it - from the announcement itself, with no round trip
+ * back to the cloud to ask for what it already said.
+ *
+ * What pullTxs does for a row it meets, for the one row: new here, it is added
+ * (and returned, for the toast); already here, it is replaced only by a newer
+ * stamp; one this device deleted stays deleted. The watermark is left alone, so
+ * the next pull reads the row again and finds nothing to do.
+ *
+ * `handled` is false when the event is not a whole row, which a pull then
+ * has to settle.
+ *
+ * @param {Record<string, any>} row  the event's new row, as the table has it
+ * @returns {Promise<{handled: boolean, added: Transaction|null}>}
+ */
+export async function applyRemoteTransaction(row) {
+  if (!row?.tx_id || !row.type || !row.transaction_date) return { handled: false, added: null }
+  await dbReady
+  return asRemoteWrites(async () => {
+    const deleted = new Set((await db.meta.get('deletedTxIds'))?.value ?? [])
+    if (deleted.has(row.tx_id)) return { handled: true, added: null }
+    return db.transaction('rw', db.transactions, async () => {
+      const existing = await db.transactions.where('txId').equals(row.tx_id).first()
+      const record = toDexieRecord(row)
+      if (!existing) {
+        await db.transactions.add(record)
+        return { handled: true, added: record }
+      }
+      const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0
+      const localts = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0
+      if (remotets > localts) await db.transactions.put({ ...existing, ...record })
+      return { handled: true, added: null }
+    })
+  })
+}
+
+/**
+ * The tables a change pushes have to be read first, to merge before they
+ * overwrite: the cloud's names for them. The ledger is not among them - what
+ * it sends is only what this device wrote.
+ *
+ * @param {Set<string>} only  the tables written to, by their names here (`meta` is the preferences)
+ * @returns {Set<string>}
+ */
+export function pullScope(only) {
+  const scope = new Set()
+  for (const table of only) {
+    if (table === 'transactions') continue
+    scope.add(table === 'meta' ? 'user_preferences' : table)
+  }
+  return scope
 }
 
 /**
@@ -1721,14 +2140,68 @@ async function pullTxs(userId, { first = false } = {}) {
   // Two bulk writes instead of N single writes. Besides the IndexedDB savings,
   // this collapses N liveQuery notifications into 2, so the UI stops re-running
   // every transactions query once per synced row.
-  if (toAdd.length) await db.transactions.bulkAdd(toAdd)
+  /* A transaction can reach this ledger by another road while the pull is in
+     flight: the other device tells this one of it directly
+     (applyRemoteTransaction), and does not wait for a sync to end. So what is
+     to be added is checked again at the moment it is written, in the same
+     transaction - one that is there by then is not added twice, and is not
+     counted as new either, or it would be announced twice. */
+  /** @type {Transaction[]} */
+  let fresh = []
+  if (toAdd.length) {
+    await db.transaction('rw', db.transactions, async () => {
+      const have = new Set((await db.transactions.where('txId').anyOf(toAdd.map(t => t.txId)).toArray()).map(t => t.txId))
+      fresh = toAdd.filter(t => !have.has(t.txId))
+      if (fresh.length) await db.transactions.bulkAdd(fresh)
+    })
+  }
   if (toPut.length) await db.transactions.bulkPut(toPut)
 
   /* After the write, never before. A watermark moved ahead of rows that were
      not stored is a gap nothing will ever go back for. */
   await advanceWatermark('transactions', newest(data, 'updated_at'))
   // What is new on this device, for whoever wants to say so (remoteToast.js).
-  return toAdd
+  return fresh
+}
+
+/**
+ * What a row written from the cloud's has to carry to be taken for the cloud's
+ * own: its syncedAt, the stamp the cloud has for it (see isUnsent). Nothing
+ * for the tables that keep their own marks, nor for a row the cloud has no
+ * stamp for - that one is unsent until it goes up with one.
+ *
+ * @param {string} tableName
+ * @param {Record<string, any>} row  a row as Supabase returned it
+ * @returns {{syncedAt?: string}}
+ */
+function pulledMark(tableName, row) {
+  return SMALL_TABLES[tableName] && row.updated_at ? { syncedAt: row.updated_at } : {}
+}
+
+/**
+ * Write the cloud's copy of a row over this device's - unless this device's
+ * has been written to since the pull looked at it.
+ *
+ * A pull reads a table, fetches, decides row by row, and writes; a person
+ * saving is not made to wait for it. Without this the write lands over the
+ * newer row with the older stamp, the save is gone, and nothing marks that it
+ * ever happened. With it the newer row stays where it is, still unsent, and
+ * the push that follows a pull (SyncManager, unsentTables) carries it up.
+ *
+ * Read and written in one transaction, so nothing can slip in between.
+ *
+ * @param {import("dexie").Table<any, any>} dexieTable
+ * @param {{id?: any, updatedAt?: string|null, earnedAt?: string|null}} before  the row as the pull read it
+ * @param {Record<string, any>} patch
+ * @returns {Promise<boolean>} whether it was written
+ */
+async function updateIfUnchanged(dexieTable, before, patch) {
+  return db.transaction('rw', dexieTable, async () => {
+    const now = await dexieTable.get(before.id)
+    if (!now || versionOf(now) !== versionOf(before)) return false
+    await dexieTable.update(before.id, patch)
+    return true
+  })
 }
 
 // findFn: optional async (row) => existing local record | null
@@ -1811,7 +2284,7 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
          we are about to create mints one - and the server would then have no
          way to recognise its own copy, so the next push would insert a
          second. Hand our id straight back. */
-      const newId = await dexieTable.add(fromRow(row))
+      const newId = await dexieTable.add({ ...fromRow(row), ...pulledMark(tableName, row) })
       const stamp = needsStamping(row, await dexieTable.get(newId))
       if (stamp) toStamp.push(stamp)
     } else {
@@ -1844,11 +2317,21 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
         /* syncId alone, and that matters: db/db.js treats a bookkeeping-only
            change as not an edit and leaves updatedAt where it is. Bumping it
            here would leave the row permanently newer than the copy it just
-           synced from, so the real content could never arrive. */
+           synced from, so the real content could never arrive.
+
+           And no syncedAt: taking the cloud's identity is not taking its
+           content. Where the content is the cloud's too, the write below
+           marks it; where this device's is newer it is still waiting to go,
+           and marking it here would hide that. */
         await dexieTable.update(target.id, { syncId: row.sync_id })
       }
       if (first || remotets > localts) {
-        await dexieTable.update(target.id, fromRow(row))
+        /* Marked as the cloud's own on the way in (see isUnsent), so a row
+           that arrives is not sent straight back. And only if the row is
+           still as it was when it was read: a pull takes a while, and a
+           person saving in the meantime has a newer row than the one decided
+           about here. That edit stays, and stays unsent. */
+        await updateIfUnchanged(dexieTable, target, { ...fromRow(row), ...pulledMark(tableName, row) })
       }
     }
   }
@@ -1945,7 +2428,7 @@ async function pullBadges(userId) {
     /* Quiet: it was celebrated, and announced, on the device that earned
        it. Here it is news only in the sense of arriving. */
     if (!local) {
-      await db.badges.put({ key: row.key, earnedAt: remoteAt, synced: SYNCED, silent: true })
+      await db.badges.put({ key: row.key, earnedAt: remoteAt, synced: SYNCED, silent: true, ...pulledMark('badges', row) })
       continue
     }
 
@@ -1956,7 +2439,15 @@ async function pullBadges(userId) {
       : (new Date(remoteAt) < new Date(localAt) ? remoteAt : localAt)
 
     if (earliest !== localAt) {
-      await db.badges.put({ ...local, earnedAt: earliest, synced: SYNCED })
+      await db.badges.put({ ...local, earnedAt: earliest, synced: SYNCED, ...pulledMark('badges', row) })
+    } else if (localAt && remoteAt && new Date(localAt).getTime() < new Date(remoteAt).getTime()) {
+      /* This device's date is the earlier, so the cloud's is the wrong one and
+         has to be corrected - by sending this one. A badge is only ever sent
+         while it is unsent (see isUnsent), so it is put back to that: the
+         whole-table push this used to be did it without being asked.
+         Compared as instants, not as text: the cloud writes the same moment
+         in another format, and that must not read as a difference. */
+      await db.badges.where('key').equals(row.key).modify((/** @type {Record<string, any>} */ b) => { delete b.syncedAt })
     }
   }
 }
@@ -2134,7 +2625,8 @@ async function applyKeepBoth({ deltas, upload }) {
  *   FirstSyncChoiceNeeded; ignored when there is nothing to choose. `quick`:
  *   a push that a change asked for - the ledger goes up before the pull, so a
  *   transaction is in the cloud within a round trip rather than after every
- *   table has been read; `only`: see syncToSupabase
+ *   table has been read, and the pull is only of the tables in `only`, the
+ *   ones about to be sent; `only`: see syncToSupabase
  * @returns {Promise<{added: Transaction[], first: boolean}>}  what came down, and whether this was the device's first sync
  */
 export async function fullSync(userId, { choice = null, quick = false, only = null } = {}) {
@@ -2151,6 +2643,11 @@ export async function fullSync(userId, { choice = null, quick = false, only = nu
     await forgetQueuedDeletes()
     await resetWatermarks()
     if (choice === 'account') await clearLocalLedger()
+    /* "Keep both": this device's rows go up beside the account's. Whatever
+       note they carry of having been sent was made against another account,
+       so it goes; the pull below then marks the rows it matches as the
+       account's, and what is left unmarked is what only this device has. */
+    else await forgetSent()
   }
 
   // Land queued deletions first, so the pull below can't resurrect them.
@@ -2167,7 +2664,7 @@ export async function fullSync(userId, { choice = null, quick = false, only = nu
   const keepBoth = first && choice === 'both' ? await planKeepBoth(userId) : null
 
   // Pull so a fresh device gets correct remote state before pushing.
-  const { added } = await asRemoteWrites(() => syncFromSupabase(userId, { first: !!first }))
+  const { added } = await asRemoteWrites(() => syncFromSupabase(userId, { first: !!first, only: quick && only ? pullScope(only) : null }))
   if (keepBoth) await applyKeepBoth(keepBoth)
   // Clean up any duplicates that seed vs. pull races may have left behind.
   await deduplicateLocalAccounts()

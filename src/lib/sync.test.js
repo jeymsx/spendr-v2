@@ -215,6 +215,73 @@ describe('categories, debts, bills and templates', () => {
     expect(rowToRecurring(recurringToRow(local, UID))).toEqual(local)
   })
 
+  /**
+   * 032. The per-category carry-over, and the day a bill falls on. Both were
+   * kept on the device that set them; each has to cross, and neither may be
+   * erased by a pull from a database that does not have the column yet - the
+   * pull spreads the mapped row over the local one, so an absent key has to
+   * stay absent rather than become a null.
+   */
+  it('round-trips a category\'s carry-over, on and off', () => {
+    const on = { name: 'Food', icon: '🍔', color: '#f59e0b', type: 'expense', budget: 8000, sort_order: 1, updatedAt: 'x', rollover: true, rolloverFrom: '2026-09' }
+    expect(rowToCategory(categoryToRow(on, UID))).toEqual(on)
+    // Off is a choice too, and is not the same as never having chosen.
+    const off = { ...on, rollover: false }
+    expect(rowToCategory(categoryToRow(off, UID))).toEqual(off)
+  })
+
+  it('sends a category\'s carry-over as the columns 032 adds, and nulls when it has none', () => {
+    const row = categoryToRow({ name: 'Food', type: 'expense', rollover: true, rolloverFrom: '2026-09' }, UID)
+    expect(row.rollover).toBe(true)
+    expect(row.rollover_from).toBe('2026-09')
+    const none = categoryToRow({ name: 'Food', type: 'expense' }, UID)
+    expect(none.rollover).toBeNull()
+    expect(none.rollover_from).toBeNull()
+  })
+
+  it('does not erase a category\'s carry-over when the cloud has none to say', () => {
+    const local = { id: 3, name: 'Food', type: 'expense', rollover: true, rolloverFrom: '2026-09' }
+    // A database that has not had 032: the keys are not there at all.
+    const before = rowToCategory({ name: 'Food', type: 'expense', budget: 5, updated_at: 'y' })
+    expect('rollover' in before).toBe(false)
+    expect('rolloverFrom' in before).toBe(false)
+    expect({ ...local, ...before }).toMatchObject({ rollover: true, rolloverFrom: '2026-09' })
+    // One that has, for a category nobody has set it on: nulls.
+    const after = rowToCategory({ name: 'Food', type: 'expense', budget: 5, updated_at: 'y', rollover: null, rollover_from: null })
+    expect('rollover' in after).toBe(false)
+    expect('rolloverFrom' in after).toBe(false)
+    expect({ ...local, ...after }).toMatchObject({ rollover: true, rolloverFrom: '2026-09' })
+  })
+
+  it('round-trips the day a bill falls on', () => {
+    /** @type {Recurring} */
+    const local = {
+      name: 'Rent', amount: 12000, category: 'Bills', account: 'BPI',
+      frequency: 'monthly', nextDate: '2026-10-31', active: true, updatedAt: 'b',
+      split: null, dueDay: 31,
+    }
+    expect(recurringToRow(local, UID).due_day).toBe(31)
+    expect(rowToRecurring(recurringToRow(local, UID))).toEqual(local)
+  })
+
+  it('sends null for a bill with no day of its own, and does not erase the day this device knows when the cloud has none', () => {
+    const base = { name: 'Netflix', amount: 549, category: 'Bills', account: 'GCash', frequency: 'monthly', nextDate: '2026-10-05', active: true }
+    expect(recurringToRow(base, UID).due_day).toBeNull()
+    // A null from a database that has the column, and no column at all.
+    const withNull = recurringToRow(base, UID)
+    const noColumn = { ...withNull }
+    delete noColumn.due_day
+    for (const row of [withNull, noColumn]) {
+      const pulled = rowToRecurring(row)
+      expect('dueDay' in pulled).toBe(false)
+      expect({ id: 1, ...base, dueDay: 31, ...pulled }.dueDay).toBe(31)
+    }
+  })
+
+  it('reads the day back as a number: a smallint can arrive as text', () => {
+    expect(rowToRecurring({ name: 'Rent', due_day: '31' }).dueDay).toBe(31)
+  })
+
   it('round-trips a template, including both transfer sides', () => {
     /** @type {Template} */
     const local = {
@@ -343,6 +410,11 @@ describe('trash', () => {
     expect(entry.debts[0]).not.toHaveProperty('id')
     expect(entry.unhooked[0]).toEqual({ syncId: 'debt-6', sourceTxId: 'buy-1' })
     expect(entry.paid[0]).toEqual({ syncId: 'debt-70', delta: 100 })
+  })
+
+  it("without this device's note of what the cloud last had of a row: put back elsewhere, it would read as sent already", () => {
+    const withMark = { ...local, debts: [{ id: 5, syncId: 'debt-5', name: 'Gelo', amount: 300, syncedAt: '2026-09-27T09:00:00.000Z' }] }
+    expect(trashToRow(withMark, UID).entry.debts[0]).not.toHaveProperty('syncedAt')
   })
 
   it('comes down as a deletion this device can put back', () => {
