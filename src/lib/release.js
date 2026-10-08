@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-10-08'
+export const RELEASE_DATE = '2026-10-09'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,43 +32,8 @@ export const RELEASE_DATE = '2026-10-08'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'transfer',
-    title: 'Live between your devices',
-    desc: 'Add a transaction on your phone and it shows on your computer within a second, with a note saying it came from your other device. Budgets, accounts and bills follow too.',
-  },
-  {
-    icon: 'sparkle',
-    title: 'Getting started',
-    desc: 'New to Spendr? A short list pinned at the top of your notifications walks you through the first week, and ticks itself off as you go.',
-  },
-  {
-    icon: 'compose',
-    title: 'Help, built in',
-    desc: 'Settings › Help centre answers everything Spendr does, with a search, pictures, and a button that takes you to the right place.',
-  },
-  {
-    icon: 'card',
-    title: 'Cards and what you owe',
-    desc: 'A card added any time can start with what you owe on it, and Edit can correct it. Card payments now come only from cash, e-wallet, bank or savings.',
-  },
-  {
-    icon: 'categories',
-    title: 'Budgets that add up',
-    desc: 'Carry budgets over now really carries, income categories no longer count as budgets, near the limit means 80% everywhere, and renaming a category renames it on bills and templates too.',
-  },
-  {
-    icon: 'receipt',
-    title: 'Imports that keep your balances',
-    desc: 'Importing a CSV changes balances only by what it adds and asks for an opening balance only for new accounts. Your own export comes back whole.',
-  },
-  {
-    icon: 'desktop',
-    title: 'Calmer messages, softer top bar',
-    desc: 'On a computer, messages stack in the corner one under another. On the phone, the top bar blurs into the page instead of ending on a line.',
-  },
-  {
-    icon: 'trash',
-    title: 'Undo, and many small fixes',
-    desc: 'Recently deleted has Undo, bills due on the 31st stay on the 31st, Hide balances hides every total, and a split expense can no longer lose its split to installments.',
+    icon: 'wallet',
+    title: 'Balances that match everywhere',
+    desc: 'Each account\'s balance now comes from its own transactions on every device, so adding and deleting on one device can no longer throw off another.',
   },
 ]
