@@ -1,6 +1,6 @@
 import db, { UNSYNCED } from '../../db/db'
 import { roundMoney } from '../../lib/currency'
-import { applyBalanceEffects } from '../../db/balances'
+import { applyBalanceEffects, openingFor } from '../../db/balances'
 import { PRIMED_META } from '../../lib/achievements'
 
 /**
@@ -140,7 +140,7 @@ export async function runImport({ rows, openingBalances = {}, creditLimits = {} 
     // opening balance the person gave it; the rows then move it from there.
     for (const name of plan.newAccounts) {
       const opening = roundMoney(parseFloat(String(openingBalances[name] ?? 0)) || 0, 'PHP')
-      await db.accounts.add({ name, type: 'cash', balance: opening, currency: 'PHP', color: NEW_COLOR })
+      await db.accounts.add({ name, type: 'cash', balance: opening, opening: await openingFor(name, opening, 'PHP'), currency: 'PHP', color: NEW_COLOR })
       await db.balances.put({ account: name, balance: opening })
     }
 

@@ -56,6 +56,8 @@ vi.mock('./balances', () => ({
     else if (t.type === 'expense') acct(t.account).balance -= t.amount
     else if (t.type === 'inflow') acct(t.account).balance += t.amount
   },
+  // No rows name a new card in these tests, so it opens with what it is given.
+  async openingFor(/** @type {string} */ _name, /** @type {number} */ balance) { return balance },
 }))
 
 const {

@@ -80,7 +80,12 @@ interface Account {
   name: string
   type: 'cash' | 'bank' | 'ewallet' | 'savings' | 'credit' | string
   role?: string | null
+  /** What it holds now: `opening` plus every transaction's move on it
+   *  (db/balances.js reconcileBalances). */
   balance?: number
+  /** What it held before any transaction here: the part of the balance the
+   *  ledger does not explain. Synced as opening_balance (033). */
+  opening?: number | null
   currency?: string
   color?: string
   /** Credit only; null on every asset account. */

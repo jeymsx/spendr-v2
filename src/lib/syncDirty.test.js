@@ -206,7 +206,7 @@ vi.mock('./supabase', () => {
   return { supabase: { from, auth: { getSession: async () => ({ data: { session: {} }, error: none }) } }, isSupabaseConfigured: true }
 })
 
-const { syncToSupabase, pullChanges, fullSync, unsentTables, isUnsent, isSyncIdConflict } = await import('./sync')
+const { syncToSupabase, pullChanges, fullSync, unsentTables, isUnsent, isSyncIdConflict, applyRemoteTransaction, accountPatch, accountToRow, rowToAccount } = await import('./sync')
 const { isWritingRemote } = await import('./syncSignal')
 
 const ERR_NAME = 'duplicate key value violates unique constraint "accounts_user_sync_id_key"'
@@ -887,5 +887,147 @@ describe('a pull is still a pull', () => {
     server.accounts = [remoteAccount({ sync_id: 'other', name: 'BPI', updated_at: earlier(2) })]
     await pullChanges('u1', { only: new Set(['accounts']) })
     expect(upserts).toEqual([])
+  })
+})
+
+/**
+ * A balance is what the account opened with plus every transaction in it, on
+ * each device (db/balances.js reconcileBalances) - not a total copied from
+ * whichever device wrote the account's row last.
+ *
+ * The copied total is what went wrong once changes arrived live: the account
+ * row and the transactions it counted came by different roads, in any order,
+ * and every way they could cross left the balance higher than the list. Each
+ * test here is one of those crossings, done the way it really happened.
+ */
+describe('balances, worked out from the ledger', () => {
+  const clean = { updatedAt: earlier(1), syncedAt: earlier(1) }
+  /** A transaction on this device. @param {Record<string, any>} over */
+  const localTx = (over) => tables.transactions.add({ type: 'expense', category: 'Food', account: 'Cash', date: '2026-10-08T00:00:00.000Z', synced: 1, updatedAt: earlier(2), ...over })
+  /** A transaction as the cloud has it. @param {Record<string, any>} over */
+  const remoteTx = (over) => ({ id: 1, user_id: 'u1', type: 'expense', transaction_date: '2026-10-08T00:00:00.000Z', description: 'x', category: 'Food', from_account: 'Cash', updated_at: earlier(4), ...over })
+  const cash = async () => (await tables.accounts.toArray()).find(a => a.name === 'Cash')
+
+  it('takes a deletion off once, when the deleting device\'s account row arrives first', async () => {
+    await tables.accounts.add(account({ opening: 1000, balance: 900, ...clean }))
+    await localTx({ txId: 't1', amount: 100 })
+    // The device that deleted it sends its account row, which already has it taken off...
+    server.accounts = [remoteAccount({ balance: 1000, opening_balance: 1000, updated_at: earlier(6) })]
+    await pullChanges('u1', { only: new Set(['accounts']) })
+    expect((await cash()).balance).toBe(900)
+    // ...and then the deletion itself.
+    server.deletions = [{ id: 1, user_id: 'u1', table_name: 'transactions', row_key: 't1', deleted_at: earlier(5) }]
+    await pullChanges('u1', { only: new Set(['deletions']) })
+    expect((await cash()).balance).toBe(1000)
+  })
+
+  it('and once when the deletion arrives first', async () => {
+    await tables.accounts.add(account({ opening: 1000, balance: 900, ...clean }))
+    await localTx({ txId: 't1', amount: 100 })
+    server.deletions = [{ id: 1, user_id: 'u1', table_name: 'transactions', row_key: 't1', deleted_at: earlier(5) }]
+    await pullChanges('u1', { only: new Set(['deletions']) })
+    expect((await cash()).balance).toBe(1000)
+    server.accounts = [remoteAccount({ balance: 1000, opening_balance: 1000, updated_at: earlier(6) })]
+    await pullChanges('u1', { only: new Set(['accounts']) })
+    expect((await cash()).balance).toBe(1000)
+  })
+
+  it('counts an expense made on each device in the same moment, both of them', async () => {
+    await tables.accounts.add(account({ opening: 1000, balance: 900, ...clean }))
+    await localTx({ txId: 'here', amount: 100 })
+    // The other device's expense, and its account row, which knew only of its own.
+    server.transactions = [remoteTx({ tx_id: 'there', amount: 50 })]
+    server.accounts = [remoteAccount({ balance: 950, opening_balance: 1000, updated_at: earlier(6) })]
+    await pullChanges('u1')
+    expect((await cash()).balance).toBe(850)
+  })
+
+  it('moves the balance the moment a transaction is heard, without waiting for the account\'s row', async () => {
+    await tables.accounts.add(account({ opening: 1000, balance: 1000, ...clean }))
+    await applyRemoteTransaction(remoteTx({ tx_id: 'live', amount: 40 }))
+    const row = await cash()
+    expect(row.balance).toBe(960)
+    // Worked out the same on every device, so it is nothing to send.
+    expect(isUnsent(row)).toBe(false)
+  })
+
+  it('gives an account that has no opening one, from the balance it has, which it keeps - and sends nothing for it', async () => {
+    await tables.accounts.add(account({ balance: 700, ...clean }))
+    await localTx({ txId: 't1', amount: 300 })
+    await pullChanges('u1', { only: new Set(['accounts']) })
+    expect(await cash()).toMatchObject({ opening: 1000, balance: 700 })
+    expect(isUnsent(await cash())).toBe(false)
+    await syncToSupabase('u1', { only: new Set(['accounts']) })
+    expect(upserts).toEqual([])
+  })
+
+  it('takes the cloud\'s opening over its own, and the balance follows from it', async () => {
+    await tables.accounts.add(account({ opening: 1000, balance: 900, ...clean }))
+    await localTx({ txId: 't1', amount: 100 })
+    server.accounts = [remoteAccount({ balance: 1234, opening_balance: 1200, updated_at: earlier(6) })]
+    await pullChanges('u1', { only: new Set(['accounts']) })
+    expect(await cash()).toMatchObject({ opening: 1200, balance: 1100 })
+  })
+
+  it('sends an opening the cloud has a place for and no figure in, once', async () => {
+    await tables.accounts.add(account({ opening: 1000, balance: 1000, ...clean }))
+    server.accounts = [remoteAccount({ opening_balance: null, updated_at: earlier(1) })]
+    await pullChanges('u1', { only: new Set(['accounts']) })
+    expect(isUnsent(await cash())).toBe(true)
+    await syncToSupabase('u1', { only: new Set(['accounts']) })
+    expect(sentTo('accounts')[0].rows[0]).toMatchObject({ name: 'Cash', opening_balance: 1000 })
+  })
+
+  it('asks nothing of a cloud that has no place for it (033 not run)', async () => {
+    await tables.accounts.add(account({ opening: 1000, balance: 1000, ...clean }))
+    server.accounts = [remoteAccount({ updated_at: earlier(1) })]
+    await pullChanges('u1', { only: new Set(['accounts']) })
+    expect(isUnsent(await cash())).toBe(false)
+  })
+
+  it('works the opening out on a first sync from the account\'s balance and the account\'s ledger', async () => {
+    await tables.meta.put({ key: 'syncedWith', value: 'somebody-else' })
+    await tables.meta.put({ key: 'lastSync', value: earlier(40) })
+    await tables.accounts.add(account({ opening: 7, balance: 7, ...clean }))
+    server.accounts = [remoteAccount({ balance: 500, updated_at: earlier(3) })]
+    server.transactions = [remoteTx({ tx_id: 't1', amount: 5, updated_at: earlier(3) })]
+    await fullSync('u1', { choice: 'account' })
+    expect(await cash()).toMatchObject({ opening: 505, balance: 500 })
+  })
+})
+
+describe('accountPatch', () => {
+  const patch = { name: 'Cash', balance: 950, opening: 1000, syncedAt: earlier(6) }
+
+  it('drops the balance when the cloud has the opening: the balance is worked out here', () => {
+    expect(accountPatch(patch, { opening: 900 }, { opening_balance: 1000 })).toEqual({ name: 'Cash', opening: 1000, syncedAt: earlier(6) })
+  })
+
+  it('drops the balance when this device has an opening and the cloud has none', () => {
+    const { opening: _none, ...noOpening } = patch
+    expect(accountPatch(noOpening, { opening: 900 }, { opening_balance: null })).toEqual({ name: 'Cash', syncedAt: earlier(6) })
+  })
+
+  it('takes the balance when neither has one: it is what an opening is worked out from', () => {
+    const { opening: _none, ...noOpening } = patch
+    expect(accountPatch(noOpening, {}, {})).toEqual(noOpening)
+  })
+
+  it('on a first sync with no opening in the cloud, clears this device\'s, to be worked out again', () => {
+    const { opening: _none, ...noOpening } = patch
+    expect(accountPatch(noOpening, { opening: 7 }, {}, true)).toEqual({ ...noOpening, opening: null })
+  })
+})
+
+describe('the opening, between here and the cloud', () => {
+  it('goes up as opening_balance, and null when this device has none', () => {
+    expect(accountToRow(/** @type {any} */ (account({ opening: 1000 })), 'u1').opening_balance).toBe(1000)
+    expect(accountToRow(/** @type {any} */ (account()), 'u1').opening_balance).toBeNull()
+  })
+
+  it('comes down only when the cloud has one, so a null never blanks this device\'s', () => {
+    expect(rowToAccount(remoteAccount({ opening_balance: '1000.50' })).opening).toBe(1000.5)
+    expect('opening' in rowToAccount(remoteAccount({ opening_balance: null }))).toBe(false)
+    expect('opening' in rowToAccount(remoteAccount())).toBe(false)
   })
 })

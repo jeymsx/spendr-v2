@@ -363,8 +363,9 @@ db.transactions.hook('creating', (_key, row) => {
 
 // ── Seed data ─────────────────────────────────────────────────────────────────
 
+// A new database has no transactions, so nothing explains any of a balance: it opens with all of it (db/balances.js).
 const DEFAULT_ACCOUNTS = [
-  { name: 'Cash', type: 'cash', balance: 0, currency: 'PHP', color: '#10b981' },
+  { name: 'Cash', type: 'cash', balance: 0, opening: 0, currency: 'PHP', color: '#10b981' },
 ]
 
 async function seed() {

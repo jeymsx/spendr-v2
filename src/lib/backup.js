@@ -2,6 +2,7 @@ import db, { SYNCED, UNSYNCED } from '../db/db'
 import { queueRemoteDelete, resetWatermarks } from './sync'
 import { toDateInput } from '../utils/txDate'
 import { PRIMED_META } from './achievements'
+import { ledgerMoves, settleAccount } from '../db/balances'
 
 /* Tables the JSON export writes.
  *
@@ -168,12 +169,20 @@ export async function restoreBackup(raw) {
      so its sections arrive untyped and the generic has nothing better to
      infer - and naming them here is exactly the assertion the restore makes
      anyway: that a section called "accounts" holds accounts. */
-  const accounts   = /** @type {Account[]}     */ (stamp(data.accounts))
   const categories = /** @type {Category[]}    */ (stamp(data.categories))
   const templates  = /** @type {Template[]}    */ (stamp(data.templates))
   const recurring  = /** @type {Recurring[]}   */ (stamp(data.recurring))
   const debts      = /** @type {Debt[]}        */ (stamp(data.debts))
   const transactions = /** @type {Transaction[]} */ (stamp(data.transactions))
+  /* Each account's opening, worked out from the balance it had in the file and
+     the ledger it will sit beside - a file from before openings has none, and
+     one from after has the same figure this gives. Balances are then worked
+     out from it, so they must add up from the start (db/balances.js). */
+  const restoredMoves = ledgerMoves(Array.isArray(data.transactions) ? transactions : oldTxs)
+  const accounts   = /** @type {Account[]}     */ (stamp(data.accounts)).map(a => {
+    const { opening } = settleAccount({ ...a, opening: null }, restoredMoves.get(a.name) ?? 0)
+    return { ...a, opening }
+  })
   const goals      = /** @type {Goal[]}         */ (stamp(data.goals))
   const badges     = /** @type {BadgeRow[]}     */ (stampBadge(data.badges))
   const challenges = /** @type {ChallengeRow[]} */ (stamp(data.challenges))

@@ -56,7 +56,12 @@ function table(name) {
     where(field) {
       return {
         /** @param {any} value */
-        equals(value) { return { async first() { return store[name].find(r => r[field] === value) } } },
+        equals(value) {
+          return {
+            async first() { return store[name].find(r => r[field] === value) },
+            async toArray() { return store[name].filter(r => r[field] === value).map(r => ({ ...r })) },
+          }
+        },
       }
     },
   }

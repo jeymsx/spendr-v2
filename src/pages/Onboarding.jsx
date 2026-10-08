@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
 import db from '../db/db'
 import { recordCardOwed } from '../db/accountWrites'
+import { openingFor, setOpeningBalance } from '../db/balances'
 import { APP_VERSION } from '../lib/release'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -333,8 +334,9 @@ export default function Onboarding() {
       const cash = await db.accounts.where('name').equals('Cash').first()
       const cashBal = parseMoney(balances.Cash)
       if (cash) {
-        await db.accounts.update(cash.id, { balance: cashBal, currency })
-        await db.balances.put({ account: 'Cash', balance: cashBal })
+        await db.accounts.update(cash.id, { currency })
+        // What you typed is where it starts: its opening, which its balance is worked out from.
+        await setOpeningBalance('Cash', cashBal)
       }
 
       /* Each account once, even if this runs twice - a double tap, or a
@@ -350,6 +352,8 @@ export default function Onboarding() {
           currency,
           // A card's balance is its charges (utils/creditCycle.js); what it owes today is one, below.
           balance: credit ? 0 : bal,
+          // What its balance is worked out from from now on (db/balances.js).
+          opening: await openingFor(acct.name, credit ? 0 : bal, currency),
           ...(credit ? {
             creditLimit: parseMoney(limits[acct.name]),
             statementDate: null,

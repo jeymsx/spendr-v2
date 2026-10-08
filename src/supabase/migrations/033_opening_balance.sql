@@ -1,0 +1,36 @@
+-- 033 — Each account's opening balance travels, so every device works its
+-- balance out the same way.
+--
+-- ── Why ──
+--
+-- An account's balance used to be a running total that each device kept and
+-- copied to the others on the account's row, newest row winning. Transactions
+-- travel separately. Once changes started arriving live, the two stopped
+-- arriving together, and a copied total cannot be merged: an expense added on
+-- each device at once lost one of them from the balance, a transaction added
+-- and deleted within a second raised the balance by its amount, and an undone
+-- deletion could be lost. Every one of those left the balance higher than the
+-- transactions in it, which is how it was noticed, on 2026-10-09.
+--
+-- So the app now works every balance out for itself: what the account opened
+-- with, plus every transaction in it (src/db/balances.js reconcileBalances).
+-- Whatever order rows arrive in, once they have all arrived each device shows
+-- the same figure. This column is the "opened with" part. Each device fills it
+-- in for its accounts the first time it runs the new version, and sends it
+-- here, so the others work from the same figure.
+--
+-- `balance` stays. It is still sent, as the sending device's view, so a version
+-- of the app from before this keeps working while it updates.
+--
+-- ── Until this runs ──
+--
+-- The app works without it (lib/sync.js OPTIONAL_COLS drops the column from a
+-- push and tries again). Each device then keeps the opening it worked out for
+-- itself, which is the same figure as long as the devices agreed when they
+-- updated. The first sync after this runs sends them.
+--
+-- Nullable with no default, so nothing existing is rewritten. Safe to run
+-- twice. Changes no row.
+
+alter table public.accounts
+  add column if not exists opening_balance numeric;

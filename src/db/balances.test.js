@@ -54,7 +54,7 @@ const db = {
 
 vi.mock('./db', () => ({ default: db }))
 
-const { applyBalanceEffect, reverseBalanceEffect, applyBalanceEffects, balanceMoves } = await import('./balances')
+const { applyBalanceEffect, reverseBalanceEffect, applyBalanceEffects, balanceMoves, ledgerMoves, settleAccount } = await import('./balances')
 
 /**
  * A transaction literal. The type requires a date, which none of this
@@ -327,6 +327,32 @@ describe('balanceMoves, the one definition', () => {
     expect(balanceMoves(tx({ type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount: 5 })))
       .toEqual([{ account: 'BPI', delta: -5 }, { account: 'Card', delta: 5 }])
     expect(balanceMoves(tx({ type: 'mystery', amount: 5 }))).toEqual([])
+  })
+})
+
+describe('a balance worked out from the ledger', () => {
+  it('totals every account a ledger moves, both ends of a transfer included, at what arrived', () => {
+    const moved = ledgerMoves([
+      tx({ type: 'expense', account: 'Cash', amount: 100 }),
+      tx({ type: 'inflow', account: 'Cash', amount: 30 }),
+      tx({ type: 'transfer', fromAccount: 'USD', toAccount: 'Card', amount: 10, toAmount: 560 }),
+      tx({ type: 'mystery', account: 'Cash', amount: 999 }),
+    ])
+    expect(Object.fromEntries(moved)).toEqual({ Cash: -70, USD: -10, Card: 560 })
+  })
+
+  it('gives an account with no opening the one its balance and its ledger imply, and leaves the balance where it is', () => {
+    expect(settleAccount({ balance: 700, currency: 'PHP' }, -300)).toEqual({ opening: 1000, balance: 700, openingIsNew: true })
+    expect(settleAccount({ balance: 700, opening: null }, -300).opening).toBe(1000)
+  })
+
+  it('works the balance out from the opening once there is one, whatever the balance said', () => {
+    expect(settleAccount({ balance: 2855, opening: 1000, currency: 'PHP' }, -300)).toEqual({ opening: 1000, balance: 700, openingIsNew: false })
+  })
+
+  it('rounds to the account\'s own currency, as a move does', () => {
+    expect(settleAccount({ opening: 0.1, currency: 'PHP' }, 0.2).balance).toBe(0.3)
+    expect(settleAccount({ opening: 10000, currency: 'JPY' }, -0.4).balance).toBe(10000)
   })
 })
 

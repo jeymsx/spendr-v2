@@ -22,6 +22,7 @@ import { monthsToClear, rateLabel, solveMonthlyRate } from '../../lib/loans'
 import { createInvestment, createCard, cardOwedChange, recordCardOwed, renameAccountInTransactions } from '../../db/accountWrites'
 import { getCreditStatus } from '../../utils/creditCycle'
 import { deleteTxGroup } from '../../db/txHelpers'
+import { openingFor } from '../../db/balances'
 import { fmt, getBaseCurrency, baseDecimals } from '../../lib/money'
 import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
 import CurrencyPickerSheet from '../../components/CurrencyPickerSheet'
@@ -134,8 +135,9 @@ export function buildAccountRow({
  */
 export async function createAccount(row, balance) {
   const opening = Number.isFinite(balance) ? balance : 0
-  await db.transaction('rw', [db.accounts, db.balances], async () => {
-    await db.accounts.add({ ...row, balance: opening })
+  await db.transaction('rw', [db.accounts, db.balances, db.transactions], async () => {
+    // What it opens with, which its balance is worked out from from now on (db/balances.js).
+    await db.accounts.add({ ...row, balance: opening, opening: await openingFor(row.name, opening, row.currency) })
     await db.balances.put({ account: row.name, balance: opening })
   })
 }

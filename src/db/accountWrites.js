@@ -1,5 +1,5 @@
 import db, { UNSYNCED } from './db'
-import { applyBalanceEffect } from './balances'
+import { applyBalanceEffect, openingFor } from './balances'
 import { valueRow } from '../lib/investments'
 import { getFxContext, stampTxCurrency } from '../lib/fxContext'
 import { LOAN_INTEREST, loanInterestNote, loanPaymentNote, loanStatus, splitLoanPayment } from '../lib/loans'
@@ -73,7 +73,7 @@ export async function recordValue(account, value, dateIso) {
 export async function createInvestment(row, value) {
   const nowIso = new Date().toISOString()
   await db.transaction('rw', [db.accounts, db.balances, db.transactions], async () => {
-    const id = await db.accounts.add(/** @type {any} */ ({ ...row, balance: 0, valuedAt: value > 0 ? nowIso : null }))
+    const id = await db.accounts.add(/** @type {any} */ ({ ...row, balance: 0, opening: await openingFor(row.name, 0, row.currency), valuedAt: value > 0 ? nowIso : null }))
     await db.balances.put({ account: row.name, balance: 0 })
     const vr = valueRow({ account: row.name, current: 0, value: Number(value) || 0, dateIso: nowIso })
     if (vr) {
@@ -245,7 +245,7 @@ export async function recordCardOwed(accountName, change, currency) {
  */
 export async function createCard(row, owed = 0) {
   await db.transaction('rw', [db.accounts, db.balances, db.transactions], async () => {
-    await db.accounts.add(/** @type {any} */ ({ ...row, balance: 0 }))
+    await db.accounts.add(/** @type {any} */ ({ ...row, balance: 0, opening: await openingFor(row.name, 0, row.currency) }))
     await db.balances.put({ account: row.name, balance: 0 })
     await recordCardOwed(row.name, Math.max(0, Number(owed) || 0), row.currency)
   })

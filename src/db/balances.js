@@ -126,3 +126,153 @@ export async function applyBalanceEffects(txs) {
   }
   for (const [account, delta] of totals) await adjustBalance(account, delta)
 }
+
+/**
+ * Every account's total move across a ledger, by name.
+ *
+ * @param {Iterable<Transaction>} txs
+ * @returns {Map<string, number>}
+ */
+export function ledgerMoves(txs) {
+  /** @type {Map<string, number>} */
+  const totals = new Map()
+  for (const tx of txs) {
+    for (const { account, delta } of balanceMoves(tx)) {
+      if (account && delta) totals.set(account, (totals.get(account) ?? 0) + delta)
+    }
+  }
+  return totals
+}
+
+/**
+ * What one account should hold, and what it should have opened with, given
+ * the ledger's total move on it.
+ *
+ * `opening` is the part of a balance no transaction explains - what the
+ * account held when it was added. It is worked out once, from the balance as
+ * it stands, and from then on the balance is worked out from it: an account
+ * with no opening yet keeps its balance and gets one; an account with one gets
+ * the balance it and the ledger add up to.
+ *
+ * @param {{balance?: number, opening?: number|null, currency?: string}} account
+ * @param {number} moved  ledgerMoves for it; 0 for none
+ * @returns {{opening: number, balance: number, openingIsNew: boolean}}
+ */
+export function settleAccount(account, moved = 0) {
+  const known = typeof account.opening === 'number' && Number.isFinite(account.opening)
+  if (!known) {
+    const balance = roundMoney(Number(account.balance) || 0, account.currency)
+    return { opening: roundMoney(balance - moved, account.currency), balance, openingIsNew: true }
+  }
+  return {
+    opening: /** @type {number} */ (account.opening),
+    balance: roundMoney(/** @type {number} */ (account.opening) + moved, account.currency),
+    openingIsNew: false,
+  }
+}
+
+/**
+ * Every account's balance, worked out again from its opening and the ledger.
+ *
+ * ── Why a balance is not taken from another device ──
+ *
+ * An account's balance used to be a running total, moved by each transaction
+ * written here and copied whole between devices on the account's row, newest
+ * row winning. Transactions travel on their own, on another road. Once
+ * changes started arriving live (2026-10-08), the two roads stopped arriving
+ * together, and a total that is copied cannot be merged:
+ *
+ *   an expense added on each device in the same moment: each total missed the
+ *     other's, and whichever row went last won - one expense gone from the
+ *     balance, while both stayed in the list;
+ *   a transaction added and deleted within a second: the deletion was taken
+ *     off a total that already had it taken off - the balance went UP by it;
+ *   a deletion undone: the restored row arrived, the total that knew of it
+ *     lost to one that did not.
+ *
+ * Each left the balance higher than the ledger, by exactly a transaction, and
+ * that is how it was noticed, the day after. So the balance is now the one
+ * thing that cannot disagree with the list beside it: what the account
+ * opened with, plus every row in it. Whatever order rows arrive in, once they
+ * have arrived the balance is right, on every device.
+ *
+ * Run after anything the cloud writes into the ledger or the accounts - the
+ * sync calls it. Nothing written here is news to send, so every write keeps
+ * the row's stamp and nothing is pushed back: a balance is worked out the same
+ * way on every device, and an opening worked out here for an account that had
+ * none is the figure it already had. That one is sent once the cloud has a
+ * place for it (lib/sync.js sendOpeningsTheCloudLacks).
+ *
+ * @returns {Promise<number>} how many accounts it changed
+ */
+export async function reconcileBalances() {
+  let changed = 0
+  await db.transaction('rw', [db.accounts, db.balances, db.transactions], async () => {
+    const accounts = await db.accounts.toArray()
+    if (!accounts.length) return
+    const moved = ledgerMoves(await db.transactions.toArray())
+    for (const a of accounts) {
+      const next = settleAccount(a, moved.get(a.name) ?? 0)
+      const keep = { updatedAt: a.updatedAt }
+      if (next.openingIsNew) {
+        await db.accounts.update(/** @type {number} */ (a.id), { opening: next.opening, ...keep })
+        changed++
+      } else if (next.balance !== a.balance) {
+        await db.accounts.update(/** @type {number} */ (a.id), { balance: next.balance, ...keep })
+        await db.balances.put({ account: a.name, balance: next.balance })
+        changed++
+      }
+    }
+  })
+  return changed
+}
+
+/**
+ * The ledger's total move on one account, from the rows that name it.
+ *
+ * @param {string} accountName
+ */
+async function movedOn(accountName) {
+  /** @type {Map<any, Transaction>} */
+  const rows = new Map()
+  for (const field of ['account', 'fromAccount', 'toAccount']) {
+    for (const t of await db.transactions.where(field).equals(accountName).toArray()) rows.set(t.id, t)
+  }
+  return ledgerMoves(rows.values()).get(accountName) ?? 0
+}
+
+/**
+ * What an account being made with `balance` in it opens with: all of it, less
+ * whatever the ledger already moves on its name. That is nothing, unless an
+ * account of the same name was deleted - its transactions stay - and without
+ * this they would be counted into the new one's balance.
+ *
+ * Given at the moment it is made, so the account's first push carries it and
+ * no other device has to work one out (see reconcileBalances). Call it inside
+ * the transaction that adds the account, with db.transactions in it.
+ *
+ * @param {string} accountName
+ * @param {number} balance
+ * @param {string} [currency]
+ */
+export async function openingFor(accountName, balance, currency) {
+  return roundMoney((Number(balance) || 0) - await movedOn(accountName), currency)
+}
+
+/**
+ * Set what an account holds now, without a transaction to explain it: the
+ * opening moves so the two still add up. For setup, where the balance you
+ * type IS where the account starts.
+ *
+ * @param {string} accountName
+ * @param {number} balance
+ */
+export async function setOpeningBalance(accountName, balance) {
+  await db.transaction('rw', [db.accounts, db.balances, db.transactions], async () => {
+    const acct = await db.accounts.where('name').equals(accountName).first()
+    if (!acct) return
+    const value = roundMoney(Number(balance) || 0, acct.currency)
+    await db.accounts.update(/** @type {number} */ (acct.id), { balance: value, opening: await openingFor(accountName, value, acct.currency) })
+    await db.balances.put({ account: accountName, balance: value })
+  })
+}

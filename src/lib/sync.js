@@ -1,5 +1,5 @@
 import db, { dbReady, getUnsyncedTxs, SYNCED, SYNCED_TABLES, TRASH_DAYS, UNSYNCED } from '../db/db'
-import { reverseBalanceEffect } from '../db/balances'
+import { reconcileBalances } from '../db/balances'
 import { supabase } from './supabase'
 import { roundMoney } from './currency'
 import { SYNCED_WITH_KEY, accountHasData, deviceStanding, localOnlyDeltas } from './firstSync'
@@ -197,6 +197,10 @@ export function accountToRow(r, userId) {
     type:            r.type,
     role:            r.role            ?? null,
     balance:         r.balance,
+    /* 033. What the account opened with; every device works the balance out
+       from it and its own ledger (db/balances.js reconcileBalances), so the
+       balance above is only the sender's view of it. */
+    opening_balance: typeof r.opening === 'number' ? r.opening : null,
     currency:        r.currency,
     credit_limit:    r.creditLimit    ?? null,
     statement_date:  r.statementDate  ?? null,
@@ -547,6 +551,8 @@ export function rowToAccount(row) {
     type:           row.type,
     role:           row.role,
     balance:        row.balance,
+    // 033. Only when the cloud has one: a null must not blank the one this device worked out.
+    ...(row.opening_balance != null && Number.isFinite(Number(row.opening_balance)) ? { opening: Number(row.opening_balance) } : {}),
     currency:       row.currency,
     creditLimit:    row.credit_limit,
     statementDate:  row.statement_date,
@@ -1310,7 +1316,10 @@ async function pullTrash(userId, pending, opts = {}) {
    the description the app gives them, which lib/flows.js also matches), and a
    salary pulled from the server reads as a bill. */
 const OPTIONAL_COLS = {
-  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id', 'kind', 'invested_start', 'valued_at'],
+  /* 033's opening_balance too. Until it runs, each device keeps the opening
+     it worked out for itself (db/balances.js), and the first push after it
+     runs sends it (pullSimpleTable). */
+  accounts: ['design', 'custom_color', 'interest_rate', 'late_fee', 'sync_id', 'kind', 'invested_start', 'valued_at', 'opening_balance'],
   /* 032's two. Until it runs, a category's carry-over setting stays on the
      device that made it: the budget page there still works, the others fall
      back to the setting for all categories. */
@@ -1801,11 +1810,13 @@ export function newest(rows, column) {
  * AFTER DELETE trigger, which is why nothing in the client has to remember to
  * record them.
  *
- * Balances are reversed on the way out. The device that did the deleting
- * reversed its own; this one has to reverse ITS copy or every account it
- * touched drifts by the amount of the row. Nothing is cascaded here - each
- * row the other device removed produced a tombstone of its own, so the same
- * set arrives, and cascading would double up.
+ * The balances follow from what is left (db/balances.js reconcileBalances),
+ * not from reversing each row here. Reversing is what used to happen, and it
+ * took the row off a balance that, as often as not, had already had it taken
+ * off - by the deleting device, whose account row had arrived first. Nothing
+ * is cascaded here either - each row the other device removed produced a
+ * tombstone of its own, so the same set arrives, and cascading would double
+ * up.
  *
  * @param {string} userId
  */
@@ -1815,6 +1826,7 @@ async function pullDeletions(userId) {
     marks.deletions ? { column: 'deleted_at', after: marks.deletions } : null)
   if (!rows.length) return
 
+  let ledger = false
   for (const t of rows) {
     const key = t.row_key
     if (!key) continue
@@ -1822,10 +1834,8 @@ async function pullDeletions(userId) {
     if (t.table_name === 'transactions') {
       const tx = await db.transactions.where('txId').equals(key).first()
       if (!tx) continue
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
-        await reverseBalanceEffect(/** @type {any} */ (tx))
-        await db.transactions.delete(tx.id)
-      })
+      await db.transactions.delete(tx.id)
+      ledger = true
       continue
     }
 
@@ -1835,6 +1845,7 @@ async function pullDeletions(userId) {
     if (row) await table.delete(row.id)
   }
 
+  if (ledger) await reconcileBalances()
   await advanceWatermark('deletions', newest(rows, 'deleted_at'))
 }
 
@@ -1990,6 +2001,11 @@ export async function syncFromSupabase(userId, { onAdded, only = null, ...opts }
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   if (wants('categories')) await ensureSystemCategories()
+  /* Every balance, from its opening and the ledger as it now stands (see
+     reconcileBalances). Not on a first sync: fullSync does it once the
+     choice it was made with has been carried out, which can still move a
+     balance. */
+  if (!opts.first && (wants('transactions') || wants('accounts'))) await reconcileBalances()
   return { added }
 }
 
@@ -2048,18 +2064,26 @@ export async function applyRemoteTransaction(row) {
   return asRemoteWrites(async () => {
     const deleted = new Set((await db.meta.get('deletedTxIds'))?.value ?? [])
     if (deleted.has(row.tx_id)) return { handled: true, added: null }
-    return db.transaction('rw', db.transactions, async () => {
+    let wrote = false
+    const result = await db.transaction('rw', db.transactions, async () => {
       const existing = await db.transactions.where('txId').equals(row.tx_id).first()
       const record = toDexieRecord(row)
       if (!existing) {
         await db.transactions.add(record)
+        wrote = true
         return { handled: true, added: record }
       }
       const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0
       const localts = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0
-      if (remotets > localts) await db.transactions.put({ ...existing, ...record })
+      if (remotets > localts) {
+        await db.transactions.put({ ...existing, ...record })
+        wrote = true
+      }
       return { handled: true, added: null }
     })
+    // The balances it moves, at once, rather than when the account's row comes: see reconcileBalances.
+    if (wrote) await reconcileBalances()
+    return result
   })
 }
 
@@ -2204,6 +2228,56 @@ async function updateIfUnchanged(dexieTable, before, patch) {
   })
 }
 
+/**
+ * An account's row from the cloud, as it is written over this device's copy:
+ * everything but the balance, which this device works out for itself from the
+ * opening and its own ledger (db/balances.js reconcileBalances). The balance on
+ * the row is the sending device's view, made before this one had heard of every
+ * transaction it counts - or after it had heard of one this device has not.
+ *
+ * The opening comes from the cloud when it has one (033). When it has none:
+ * on a first sync it is worked out again here, from the account's balance,
+ * once the choice has been carried out; otherwise this device keeps its own.
+ * The cloud's balance is taken only by a device that has no opening yet, as
+ * the one figure it has to work one out from.
+ *
+ * @param {Record<string, any>} patch  rowToAccount, and the pull's mark
+ * @param {Record<string, any>} local  this device's copy
+ * @param {Record<string, any>} row    as the cloud has it
+ * @param {boolean} [first]
+ * @returns {Record<string, any>}
+ */
+export function accountPatch(patch, local, row, first = false) {
+  const out = { ...patch }
+  if (row.opening_balance != null && typeof out.opening === 'number') {
+    delete out.balance
+    return out
+  }
+  if (first) return { ...out, opening: null }
+  if (typeof local?.opening === 'number') delete out.balance
+  return out
+}
+
+/**
+ * Accounts whose opening this device knows and the cloud does not - every one,
+ * the first time a device meets the cloud after 033 has run - put down to be
+ * sent, so each device works from the same one. Stamped as an edit, because it
+ * is the newest word on the row: a push carrying an older stamp than the
+ * cloud's would be turned away (032).
+ *
+ * A database without the column says nothing here, and nothing is sent.
+ *
+ * @param {Array<Record<string, any>>} rows  the cloud's accounts
+ */
+async function sendOpeningsTheCloudLacks(rows) {
+  for (const row of rows) {
+    if (!('opening_balance' in row) || row.opening_balance != null || !row.sync_id) continue
+    const local = await db.accounts.where('syncId').equals(row.sync_id).first()
+    if (!local || typeof local.opening !== 'number' || isUnsent(local)) continue
+    await db.accounts.update(/** @type {number} */ (local.id), { updatedAt: new Date().toISOString() })
+  }
+}
+
 // findFn: optional async (row) => existing local record | null
 // Used when a simple single-key lookup isn't enough (e.g. categories: name+type).
 /**
@@ -2331,10 +2405,13 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
            still as it was when it was read: a pull takes a while, and a
            person saving in the meantime has a newer row than the one decided
            about here. That edit stays, and stays unsent. */
-        await updateIfUnchanged(dexieTable, target, { ...fromRow(row), ...pulledMark(tableName, row) })
+        const patch = { ...fromRow(row), ...pulledMark(tableName, row) }
+        await updateIfUnchanged(dexieTable, target, tableName === 'accounts' ? accountPatch(patch, target, row, first) : patch)
       }
     }
   }
+
+  if (tableName === 'accounts') await sendOpeningsTheCloudLacks(data)
 
   await stampRemote(tableName, toStamp)
 }
@@ -2666,6 +2743,8 @@ export async function fullSync(userId, { choice = null, quick = false, only = nu
   // Pull so a fresh device gets correct remote state before pushing.
   const { added } = await asRemoteWrites(() => syncFromSupabase(userId, { first: !!first, only: quick && only ? pullScope(only) : null }))
   if (keepBoth) await applyKeepBoth(keepBoth)
+  // The pull leaves this to the first sync, until the choice is carried out: see syncFromSupabase.
+  if (first) await asRemoteWrites(() => reconcileBalances())
   // Clean up any duplicates that seed vs. pull races may have left behind.
   await deduplicateLocalAccounts()
   await syncToSupabase(userId, { only })
