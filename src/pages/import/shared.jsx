@@ -1,10 +1,27 @@
 // ── Constants ──────────────────────────────────────────────────────────────────
 
-export const NEW_REQUIRED_COLS    = ['tx_id', 'type', 'transaction_date', 'description', 'category', 'from_account', 'to_account', 'amount']
+/**
+ * The two layouts a file can have.
+ *
+ * SPENDR is what Spendr itself writes - Settings > Reports & exports >
+ * Transactions as CSV (settings/shared.jsx buildAndDownloadCSV). It was
+ * called "legacy" and shown to people as "from an older version", which is
+ * what a file Spendr made this morning looked like to the person importing it.
+ *
+ * TABLE is the column naming of the cloud table (tx_id, transaction_date,
+ * from_account, to_account): a file taken from there, or written by hand to
+ * match.
+ */
 // No 'synced' here on purpose. The app's own CSV export never writes that
-// column, and mapLegacyRows sets synced: UNSYNCED itself rather than reading
-// it — so requiring it made Spendr reject its own export file.
-export const LEGACY_REQUIRED_COLS = ['txId', 'type', 'date', 'description', 'category', 'payment', 'account', 'fromAccount', 'toAccount', 'amount']
+// column, and mapSpendrRows sets synced: UNSYNCED itself rather than reading
+// it - so requiring it made Spendr reject its own export file.
+export const SPENDR_REQUIRED_COLS = ['txId', 'type', 'date', 'description', 'category', 'payment', 'account', 'fromAccount', 'toAccount', 'amount']
+export const TABLE_REQUIRED_COLS = ['tx_id', 'type', 'transaction_date', 'description', 'category', 'from_account', 'to_account', 'amount']
+/** What Spendr's export also writes, each optional: a file without them imports as before. */
+export const SPENDR_OPTIONAL_COLS = [
+  'refundOf', 'splitId', 'installmentId', 'toAmount', 'toCurrency',
+  'currency', 'baseAmount', 'baseCurrency', 'adjust',
+]
 export const VALID_TYPES = new Set(['expense', 'inflow', 'transfer'])
 
 export const TRANSFER_RE = /Transfer:\s*(.+?)\s*→\s*(.+)/

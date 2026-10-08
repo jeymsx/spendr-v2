@@ -13,6 +13,7 @@ import { chipClass } from './shared'
 import { fmt } from '../../lib/money'
 import { currencyOfAccountName } from '../../lib/fxContext'
 import { estimateConversion } from '../../lib/transferLegs'
+import { isLiquid } from '../../lib/accountMeta'
 
 /** The accent the app paints money leaving an account. */
 const PAY_COLOR = '#10b981'
@@ -67,14 +68,16 @@ export default function CardPaymentSheet({
   const [pickerOpen, setPickerOpen] = useState(false)
   const amountRef = useRef(/** @type {HTMLInputElement|null} */ (null))
 
-  /* Anything that can send money. A card cannot pay a card - the balance
-     would move the wrong way on both ends and the statement would read as
-     settled by more debt. */
+  /* Money you hold: cash, wallets, banks, savings. A card cannot pay a card -
+     the balance would move the wrong way on both ends and the statement would
+     read as settled by more debt - and a loan or an investment is not money
+     you can reach (the same rule LoanPaySheet pays by). Without it the sheet
+     offered an investment, and pre-selected it as the "fullest account". */
   const cardCur = currencyOfAccountName(card?.name)
   const fromCur = currencyOfAccountName(from?.name)
 
   const payable = useMemo(
-    () => accounts.filter(a => a.type !== 'credit' && a.name !== card?.name),
+    () => accounts.filter(a => isLiquid(a) && a.name !== card?.name),
     [accounts, card],
   )
 

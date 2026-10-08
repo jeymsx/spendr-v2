@@ -49,6 +49,8 @@ import { useRecapMonth } from './recap/useRecapMonth'
 import LazyWrappedCard, { preloadWrappedCard } from './recap/LazyWrappedCard'
 import { isEverydayAccount } from '../lib/accountMeta'
 import { foldPlans, spendingRows } from '../utils/installments'
+import { effectiveLimit } from '../lib/rollover'
+import { isBudgeted } from '../lib/budgetLevels'
 
 const StandingNote = lazy(() => import('../components/standing/StandingNote'))
 
@@ -102,6 +104,8 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   // real account balances, so "is it funded?" cannot be read off the row - it
   // has to go through the allocator, the same one the Goals page uses.
   const goalRows   = useLiveQuery(() => db.goals.toArray(),      [], [])
+  // The default a category with no opinion of its own carries by (lib/rollover.js); undefined until read.
+  const rolloverDefault = useLiveQuery(async () => !!(await db.meta.get('budgetRollover'))?.value, [], undefined)
   /* 'converted' or 'separated' - set in Settings, and only offered to a
      ledger that holds more than one currency. See the block below. */
   const netWorthMode = useLiveQuery(
@@ -235,15 +239,26 @@ export default function Dashboard({ layout = 'phone' } = {}) {
       isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff)
   }, [txAll])
 
+  /* Each category's limit IN FORCE this month, carry included - what the
+     Budget page shows - so the card, the greeting hint and the page agree. It
+     was the bare limit, so with rollover on a category could read "over" on
+     Home against an allowance the page said was comfortable. Spending
+     categories only: an inflow category's stray budget is not a limit. */
   const budgetCategories = useMemo(() => {
     const spentMap = {}
     monthExpenses.forEach(t => {
       spentMap[t.category] = (spentMap[t.category] ?? 0) + txBase(t)
     })
+    const month = monthPrefix()
     return (categories || [])
-      .filter(c => c.budget > 0)
-      .map(c => ({ ...c, spent: spentMap[c.name] ?? 0 }))
-  }, [categories, monthExpenses])
+      .filter(isBudgeted)
+      .map(c => {
+        const { effective } = effectiveLimit({
+          cat: c, txs: txAll ?? [], month, globalDefault: !!rolloverDefault,
+        })
+        return { ...c, budget: effective, spent: spentMap[c.name] ?? 0 }
+      })
+  }, [categories, monthExpenses, txAll, rolloverDefault])
 
   // One figure for the whole month, for the home card. The per-category
   // detail lives on /budget now rather than as eight chips here.
@@ -403,6 +418,7 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   /* The forecast and the counted debts wait with the rest: arriving a frame
      later they moved the net worth and pushed Recent down under a thumb. */
   if (accounts === undefined || txAll === undefined || !nwDebts.ready || !forecast
+    || rolloverDefault === undefined
     || (wrappedDays && recapMonth === undefined)) {
     return <DashboardSkeleton />
   }

@@ -5,7 +5,7 @@ import { useBack } from '../hooks/useBack'
 import { useLeaveGuard } from '../hooks/useBackGuard'
 import { homeAfterSave } from '../lib/navTrail'
 import DiscardSheet from '../components/DiscardSheet'
-import { useCategoryGuess } from '../hooks/useCategoryGuess'
+import { useCategoryGuess, guessLabel } from '../hooks/useCategoryGuess'
 import db, { UNSYNCED } from '../db/db'
 import { applyBalanceEffect, saveTemplate, updateTransaction } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
@@ -100,7 +100,8 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
      "Jollibee" is Food because that is what it has always been. Only while
      the category is still the app's to choose - one you picked, or one a
      template, a quick log or the row being edited brought, is never replaced
-     by a guess. */
+     by a guess. The label under the heading says "From your history" only
+     when it WAS history, and "Suggested" otherwise. */
   const guess = useCategoryGuess(description, 'inflow', categories)
   const [catChosen, setCatChosen] = useState(false)
   /* The id the app itself picked, so a guess that stops fitting - "Grab"
@@ -123,8 +124,8 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
     if (catChosen || isEdit) return
     if (guess) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCategory(prev => (prev?.id === guess.id ? prev : guess))
-      setGuessedId(guess.id)
+      setCategory(prev => (prev?.id === guess.category.id ? prev : guess.category))
+      setGuessedId(guess.category.id)
       setCatError(false)
     } else if (guessedId != null) {
       setCategory(prev => (prev?.id === guessedId ? null : prev))
@@ -344,7 +345,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
               <p className="text-xs font-medium text-red-500 dark:text-red-400 mb-1.5">Pick one</p>
             )}
             {guessed && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">From your history</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">{guessLabel(guess)}</p>
             )}
           </div>
           <CategoryRail
@@ -421,6 +422,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
         amount={amount}
         account={account}
         type="inflow"
+        date={date}
       />
       {/* Before what you typed is thrown away (hooks/useBackGuard.js). */}
       <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />

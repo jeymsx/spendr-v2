@@ -186,8 +186,9 @@ export function buildForecast({
         counted: !income, overdue: true,
       })
       // Walk past the missed dates to the first one ahead, without counting them.
+      // Stepping from the bill's own due day, so a 31st does not slip to the 28th.
       for (let i = 0; i < 400 && d && d < today; i++) {
-        const next = advanceNextDate(date, r.frequency)
+        const next = advanceNextDate(date, r.frequency, r.dueDay)
         if (!next || next <= date) { d = null; break }
         date = next
         d = parseDateLocal(date)
@@ -196,7 +197,7 @@ export function buildForecast({
     for (let i = 0; i < 400 && d && d <= end; i++) {
       pay(d)
       events.push({ ...base_, key: `rec:${r.id}:${date}`, date: d, counted: true, overdue: false })
-      const next = advanceNextDate(date, r.frequency)
+      const next = advanceNextDate(date, r.frequency, r.dueDay)
       if (!next || next <= date) break
       date = next
       d = parseDateLocal(date)

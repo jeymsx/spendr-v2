@@ -37,7 +37,7 @@ export const FAQ: { q: string; a: string }[] = [
   },
   {
     q: 'Can I get my data out?',
-    a: 'Any time: export to CSV, back up everything as one file you can restore, or download a monthly PDF report.',
+    a: 'Any time: export to CSV, get one spreadsheet of everything, back up everything as one file you can restore, or download a monthly PDF report.',
   },
   {
     q: 'Does it handle other currencies?',

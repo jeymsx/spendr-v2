@@ -169,6 +169,14 @@ describe('under-budget', () => {
     expect(earned({ transactions: spent, categories: one }).has('under-budget')).toBe(false)
   })
 
+  /* An inflow category that still carries a budget (the form once offered the
+     field) has nothing to stay under: it is not one of the two limits. */
+  it('does not count the stray budget of an inflow category as a limit', () => {
+    const stray = [{ name: 'Food', budget: 8000, type: 'expense' }, { name: 'Salary', budget: 50000, type: 'inflow' }]
+    const spent = [tx('2026-05-02', 'expense', 100, 'Food')]
+    expect(earned({ transactions: spent, categories: stray }).has('under-budget')).toBe(false)
+  })
+
   it('ignores a month with no expenses at all', () => {
     const idle = [tx('2026-05-02', 'inflow', 40000)]
     expect(earned({ transactions: idle, categories: limits }).has('under-budget')).toBe(false)
@@ -191,6 +199,12 @@ describe('debt-cleared', () => {
 
   it('does not count a debt that was zero to begin with', () => {
     expect(earned({ debts: [{ amount: 0, amountPaid: 0 }] }).has('debt-cleared')).toBe(false)
+  })
+
+  it('counts a debt you owe, and not one a friend paid back to you', () => {
+    // Being paid back is All Squared's (lib/achievements.js).
+    expect(earned({ debts: [{ type: 'i_owe', amount: 1000, amountPaid: 1000 }] }).has('debt-cleared')).toBe(true)
+    expect(earned({ debts: [{ type: 'owed_to_me', amount: 1000, amountPaid: 1000 }] }).has('debt-cleared')).toBe(false)
   })
 })
 
@@ -385,6 +399,16 @@ describe('debt-free', () => {
 
     const all = [{ amount: 10, amountPaid: 10 }, { amount: 20, amountPaid: 20 }]
     expect(earned({ debts: all }).has('debt-free')).toBe(true)
+  })
+
+  it('looks only at what you owe, not at what friends owe you', () => {
+    const owed = (/** @type {number} */ paid) => ({ type: 'owed_to_me', amount: 50, amountPaid: paid })
+    const mine = [{ type: 'i_owe', amount: 10, amountPaid: 10 }, { type: 'i_owe', amount: 20, amountPaid: 20 }]
+    // A friend still owing you does not hold the badge back.
+    expect(earned({ debts: [...mine, owed(0)] }).has('debt-free')).toBe(true)
+    // And two friends paying you back is not two debts of yours settled.
+    expect(earned({ debts: [owed(50), owed(50)] }).has('debt-free')).toBe(false)
+    expect(earned({ debts: [mine[0], owed(50)] }).has('debt-free')).toBe(false)
   })
 })
 

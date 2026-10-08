@@ -1,3 +1,5 @@
+import { EXPENSE_PRESETS } from './phCategories'
+
 /**
  * What a card is about to charge you for paying late.
  *
@@ -24,8 +26,36 @@
  * a ₱300 minimum is not a thing any issuer does.
  */
 
-/** Categories a posted charge is filed under, so Insights can separate them. */
-export const FINANCE_CHARGE_CATEGORY = 'Bank charges'
+/**
+ * What a posted charge is filed under, so Insights can separate it.
+ *
+ * It was 'Bank charges', which no list in the app ever offered and nothing
+ * created: the row got a grey fallback tile, could not be budgeted, and sat
+ * outside every picker. "Fees & Charges" is a preset people already have, and
+ * postFinanceCharge (db/accountWrites.js) creates it for anyone who does not.
+ */
+export const FINANCE_CHARGE_CATEGORY = 'Fees & Charges'
+
+/** What charges were filed under before - still read, never written. */
+export const LEGACY_FINANCE_CHARGE_CATEGORY = 'Bank charges'
+
+/** What a charge is called when nobody says otherwise. */
+export const FINANCE_CHARGE_DESCRIPTION = 'Finance charge'
+
+/**
+ * The category row to create when a user does not have FINANCE_CHARGE_CATEGORY:
+ * the preset's own icon and colour, with no budget.
+ */
+export function financeChargeCategory() {
+  const preset = EXPENSE_PRESETS.find(p => p.name === FINANCE_CHARGE_CATEGORY)
+  return {
+    name: FINANCE_CHARGE_CATEGORY,
+    icon: preset?.icon ?? '⚠️',
+    color: preset?.color ?? '#FF6B6B',
+    type: 'expense',
+    budget: 0,
+  }
+}
 
 /**
  * @param {object} input
@@ -83,12 +113,40 @@ export function financeChargeRow({ accountName, amount, description, now = new D
   return {
     type:        'expense',
     amount:      round2(amount),
-    description: description || 'Finance charge',
+    description: description || FINANCE_CHARGE_DESCRIPTION,
     category:    FINANCE_CHARGE_CATEGORY,
+    /* What makes it a finance charge, kept apart from the category: the
+       category is the user's to change - re-filing a charge under Bills is an
+       ordinary thing to do - and used to be the only thing the "already
+       logged" check looked at, so re-filing it brought the offer back. */
+    financeCharge: true,
     account:     accountName,
     date:        iso,
     updatedAt:   iso,
   }
+}
+
+/**
+ * Is this row a finance charge the app wrote?
+ *
+ * The marker is the answer on the device that wrote it. Two things carry it
+ * where the marker cannot:
+ *
+ *   rows from before the marker, which were all filed under 'Bank charges';
+ *   the other devices, which get the row without the field - transactions sync
+ *   a fixed set of columns - and recognise it by the description the app gave
+ *   it, which survives a re-filing.
+ *
+ * Neither is the category the charge is filed under NOW - that is the
+ * user's - and "Fees & Charges" in particular is where annual fees go too.
+ *
+ * @param {Partial<Transaction>|null|undefined} t
+ */
+export function isFinanceCharge(t) {
+  if (!t || t.type !== 'expense') return false
+  if (/** @type {any} */ (t).financeCharge) return true
+  if (t.category === LEGACY_FINANCE_CHARGE_CATEGORY) return true
+  return String(t.description ?? '').trim().toLowerCase() === FINANCE_CHARGE_DESCRIPTION.toLowerCase()
 }
 
 /**
@@ -100,9 +158,9 @@ export function financeChargeRow({ accountName, amount, description, now = new D
  * writes four charges, each bigger than the one before.
  *
  * A bank posts one finance charge per cycle, so one logged after this
- * statement's due date is the whole of it. Matched on the category rather
- * than a flag on the row: a charge you later edited or renamed still counts,
- * and a charge you deleted correctly brings the offer back.
+ * statement's due date is the whole of it. Recognised by isFinanceCharge, not
+ * by the category it is filed under: a charge you re-filed or edited still
+ * counts, and a charge you deleted correctly brings the offer back.
  *
  * @param {object} input
  * @param {Array<Partial<Transaction>>} [input.transactions]
@@ -114,8 +172,7 @@ export function financeChargeLogged({ transactions = [], accountName, since }) {
   if (!since) return false
   const from = since.getTime()
   return transactions.some(t =>
-    t.type === 'expense'
+    isFinanceCharge(t)
     && t.account === accountName
-    && t.category === FINANCE_CHARGE_CATEGORY
     && new Date(t.date ?? 0).getTime() >= from)
 }

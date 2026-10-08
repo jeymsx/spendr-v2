@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react'
-import db, { UNSYNCED } from '../../db/db'
+import db from '../../db/db'
 import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
 import { deleteCategoryRemote } from '../../lib/sync'
@@ -12,6 +12,8 @@ import Field from '../../components/ui/Field'
 import { IconWarning, IconCheck } from '../../components/icons'
 import { CAT_COLORS, DEFAULT_CAT_NAMES, EMOJI_OPTIONS } from './shared'
 import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
+import { categoryUsage, usageWords, saveCategoryEdit, reassignAndDeleteCategory } from '../../lib/categoryRefs'
+import { monthKey, rollsOver, startForLimit } from '../../lib/rollover'
 
 // ── Category form sheet ────────────────────────────────────────────────────────
 
@@ -19,7 +21,8 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
   const { showToast } = useToast()
   const [saving,         setSaving]         = useState(false)
   const [mode,           setMode]           = useState('form')
-  const [txCount,        setTxCount]        = useState(0)
+  // What still uses this category, by kind: transactions, bills, templates, debts.
+  const [usage,          setUsage]          = useState({ transactions: 0, bills: 0, templates: 0, debts: 0, total: 0 })
   const [reassignTarget, setReassignTarget] = useState(null)
 
   const [name,      setName]      = useState('')
@@ -87,29 +90,43 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
     onClose()
   }
 
+  /* Everything that names the category, not just its transactions: a bill
+     with none left behind it would be deleted outright and go on posting
+     under a name nothing has any more. */
   async function runDeleteCheck() {
-    const count = await db.transactions.where('category').equals(category.name).count()
-    setTxCount(count)
-    setMode(count > 0 ? 'reassign' : 'confirm-delete')
+    const found = await categoryUsage(category.name)
+    setUsage(found)
+    setMode(found.total > 0 ? 'reassign' : 'confirm-delete')
   }
 
   async function handleSave() {
     if (!name.trim()) { setNameError(true); return }
     setSaving(true)
     try {
-      const data = { name: name.trim(), type, icon, color, budget: parseMoney(budget) || 0 }
+      /* Only spending has a limit. The field is not offered for an inflow
+         category, and what a form saves for one is nothing: any budget one
+         held used to count in every budget total. */
+      const limit = type === 'inflow' ? 0 : parseMoney(budget) || 0
+      const data = { name: name.trim(), type, icon, color, budget: limit }
+
+      /* A category that rolls over needs a start month the moment it has a
+         limit, or it carries nothing (lib/rollover.js startForLimit). The
+         switch stamps the ones that exist when it goes on; this is the one
+         made, or given its first limit, after. */
+      const globalRollover = !!(await db.meta.get('budgetRollover'))?.value
+      const from = startForLimit({
+        cat: isEdit ? category : null,
+        budget: limit,
+        rolls: rollsOver(isEdit ? category : {}, globalRollover),
+        month: monthKey(new Date()),
+      })
+      const row = from ? { ...data, rolloverFrom: from } : data
+
       if (isEdit) {
-        const oldName = category.name
-        const newName = data.name
-        const renamedAt = new Date().toISOString()
-        await db.transaction('rw', [db.categories, db.transactions], async () => {
-          await db.categories.update(category.id, data)
-          if (oldName !== newName) {
-            await db.transactions.where('category').equals(oldName).modify({ category: newName, synced: UNSYNCED, updatedAt: renamedAt })
-          }
-        })
+        // A rename carries to every bill, template and debt that names it (lib/categoryRefs.js).
+        await saveCategoryEdit(category.id, category.name, row)
       } else {
-        await db.categories.add(data)
+        await db.categories.add(row)
       }
       close()
     } catch (e) {
@@ -137,10 +154,8 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
     if (!reassignTarget) return
     setSaving(true)
     try {
-      await db.transaction('rw', [db.categories, db.transactions], async () => {
-        await db.transactions.where('category').equals(category.name).modify({ category: reassignTarget.name })
-        await db.categories.delete(category.id)
-      })
+      // Transactions, bills, templates and debts all move, and the transactions are marked to sync.
+      await reassignAndDeleteCategory(category, reassignTarget.name)
       await deleteCategoryRemote(category.name, category.type)
       close()
     } catch (e) {
@@ -291,7 +306,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
                   rectangles stretched to fill the row and ticked with a white
                   check - the same job as the card's colour row, drawn as a
                   different object two screens away. */}
-              <SectionLabel>Color</SectionLabel>
+              <SectionLabel>Colour</SectionLabel>
               <SwatchRail
                 colors={CAT_COLORS}
                 value={color}
@@ -319,28 +334,32 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{name || 'Category name'}</p>
                 <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
                   {type === 'expense' ? 'Expense' : 'Inflow'}
-                  {parseMoney(budget) > 0 && ` · ${fmt(parseMoney(budget))} / mo`}
+                  {type !== 'inflow' && parseMoney(budget) > 0 && ` · ${fmt(parseMoney(budget))} / mo`}
                 </p>
               </div>
             </div>
 
-            <Field
-              label="Monthly budget"
-              type="text"
-              inputMode="decimal"
-              value={budget === '0' ? '' : budget}
-              onChange={moneyChangeHandler(setBudget)}
-              left={baseSymbol()}
-              placeholder={zeroAmount()}
-              /* "Optional — 0 means no budget" was the placeholder, which is
-                 three jobs for one line: what goes in the box, that the box is
-                 optional, and what zero does. A placeholder can only do the
-                 first, and it vanishes the moment you type - which is when the
-                 other two still matter. They are the hint now. */
-              hint={parseMoney(budget) > 0
-                ? `Spending alerts when you approach ${fmt(parseMoney(budget))} this month`
-                : 'Optional. Leave empty for no budget.'}
-            />
+            {/* Spending only. Money coming in has no limit to stay under, and
+                a budget on it counted as one in every total. */}
+            {type !== 'inflow' && (
+              <Field
+                label="Monthly budget"
+                type="text"
+                inputMode="decimal"
+                value={budget === '0' ? '' : budget}
+                onChange={moneyChangeHandler(setBudget)}
+                left={baseSymbol()}
+                placeholder={zeroAmount()}
+                /* "Optional — 0 means no budget" was the placeholder, which is
+                   three jobs for one line: what goes in the box, that the box is
+                   optional, and what zero does. A placeholder can only do the
+                   first, and it vanishes the moment you type - which is when the
+                   other two still matter. They are the hint now. */
+                hint={parseMoney(budget) > 0
+                  ? `Spending alerts when you approach ${fmt(parseMoney(budget))} this month`
+                  : 'Optional. Leave empty for no budget.'}
+              />
+            )}
 
           </div>
         )}
@@ -376,7 +395,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               <span className="shrink-0 mt-0.5 text-amber-500 dark:text-amber-400"><IconWarning size={20} /></span>
               <div>
                 <p className="text-sm font-semibold text-amber-700 dark:text-amber-400">
-                  {txCount} {txCount === 1 ? 'transaction uses' : 'transactions use'} this category
+                  {usageWords(usage)}
                 </p>
                 <p className="text-xs text-amber-600/80 dark:text-amber-500/80 mt-0.5">
                   Choose a replacement before deleting.

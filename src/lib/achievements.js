@@ -7,6 +7,7 @@ import { getFxContext, txBase } from './fxContext'
 import { toBase } from './fx'
 import { isSpend } from './flows'
 import { isLiquid } from './accountMeta'
+import { isBudgeted } from './budgetLevels'
 import { spendingRows } from '../utils/installments'
 
 /**
@@ -237,7 +238,7 @@ export const TRACKS = [
     glyph: 'nospend', tone: 'lime', streak: true,
     tiers: [{ n: 3 }, { n: 7, key: 'no-spend-week' }, { n: 14 }, { n: 30 }, { n: 60 }, { n: 100 }],
     title: n => `${n} No-Spend Days`,
-    blurb: n => (n === 7 ? 'Seven days in a row without spending a peso.' : `${count(n)} days in a row without spending.`),
+    blurb: n => (n === 7 ? 'Seven days in a row without spending.' : `${count(n)} days in a row without spending.`),
     how: n => `Go ${n} days in a row without logging an expense.`,
   },
   {
@@ -324,7 +325,7 @@ const NEW_BADGES = [
     how: 'Set a monthly limit on three categories.',
     tone: 'indigo',
     glyph: 'target',
-    test: ({ categories }) => (categories ?? []).filter(c => c?.type !== 'inflow' && (c?.budget ?? 0) > 0).length >= 3,
+    test: ({ categories }) => (categories ?? []).filter(isBudgeted).length >= 3,
   },
   {
     key: 'first-goal',
@@ -525,7 +526,8 @@ export function trackProgress({
   const posted = transactions.filter(t => (isoToDateInput(t?.date ?? '') || '9999') <= nowKey)
   const graceDay = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1, 12)
   const months = monthStats(posted, graceDay)
-  const limits = categories.filter(c => (c?.budget ?? 0) > 0)
+  // Expense categories with a limit: a stray budget on an inflow category is not one to stay inside.
+  const limits = categories.filter(isBudgeted)
 
   guard('logging', () => {
     const s = loggingStreak(transactions, today)

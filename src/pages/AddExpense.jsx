@@ -5,14 +5,14 @@ import { useBack } from '../hooks/useBack'
 import { useLeaveGuard } from '../hooks/useBackGuard'
 import { homeAfterSave } from '../lib/navTrail'
 import DiscardSheet from '../components/DiscardSheet'
-import { useCategoryGuess } from '../hooks/useCategoryGuess'
+import { useCategoryGuess, guessLabel } from '../hooks/useCategoryGuess'
 import db, { UNSYNCED } from '../db/db'
 import { postSplitExpense, applyBalanceEffect, checkOverdraw, saveTemplate, updateTransaction } from '../db/txHelpers'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../utils/moneyInput'
 import { isoToDateInput, dateInputToIso } from '../utils/txDate'
-import { advanceNextDate, parseDateLocal } from '../utils/recurring'
+import { advanceNextDate, dueDayOf, monthsAfter, parseDateLocal } from '../utils/recurring'
 import { isInstallmentRow } from '../utils/installments'
 import { statementFor } from '../lib/creditBills'
 import { useCreditAvailMap } from '../hooks/useCreditAvailMap'
@@ -45,13 +45,6 @@ import { isEverydayAccount } from '../lib/accountMeta'
 const INSTALLMENT_TERMS = [3, 6, 9, 12, 18, 24, 36]
 const MIN_TERM = 2
 const MAX_TERM = 60
-
-/** Advance a YYYY-MM-DD string by n months, clamping short months. */
-function addMonths(dateStr, n) {
-  let d = dateStr
-  for (let i = 0; i < n; i++) d = advanceNextDate(d, 'monthly')
-  return d
-}
 
 function localDateStr(d) {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`
@@ -188,7 +181,9 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
      "Jollibee" is Food because that is what it has always been. Only while
      the category is still the app's to choose - one you picked, or one a
      template, a quick log or the row being edited brought, is never replaced
-     by a guess. */
+     by a guess. The label under the heading says "From your history" only
+     when it WAS history; a built-in merchant, a typo or the category's own
+     name in the text is a "Suggested". */
   const guess = useCategoryGuess(description, 'expense', categories)
   const [catChosen, setCatChosen] = useState(false)
   /* The id the app itself picked, so a guess that stops fitting - "Grab"
@@ -215,8 +210,8 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     if (catChosen || isEdit || splitLegs) return
     if (guess) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-      setCategory(prev => (prev?.id === guess.id ? prev : guess))
-      setGuessedId(guess.id)
+      setCategory(prev => (prev?.id === guess.category.id ? prev : guess.category))
+      setGuessedId(guess.category.id)
       setCatError(false)
     } else if (guessedId != null) {
       setCategory(prev => (prev?.id === guessedId ? null : prev))
@@ -236,8 +231,16 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
   // always what they actually bill rather than a number we derived.
   const isCredit      = account?.type === 'credit'
   const isInstallment = isCredit && installMonths > 1
+  /* Divided, by category or with people. A plan and a division are different
+     ways of writing the purchase down - a plan is N charges on the card, a
+     division is legs and receivables - and the save path has no way to do
+     both, so the form never lets it be asked: with a division on, there is no
+     term to pick (see Installment below), and with a term picked there is no
+     door to divide. It used to allow both and quietly save the plan without
+     the division, while the review sheet still showed it. */
+  const isDivided     = !!splitLegs?.length || !!people?.length
   const installTotal  = Math.round(amount * installMonths * 100) / 100
-  const installLast   = isInstallment ? addMonths(date, installMonths - 1) : null
+  const installLast   = isInstallment ? monthsAfter(date, installMonths - 1) : null
   const termIsCustom  = customTerm
     || (installMonths > 1 && !INSTALLMENT_TERMS.includes(installMonths))
 
@@ -256,6 +259,11 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     const d = parseDateLocal(day)
     return d ? statementFor(account, d) : null
   }
+  /* The future is for a plan and nowhere else: a plan whose payments start
+     later is dated on, and its later payments are in the future by
+     definition - so is moving one. Both the picker's `max` and the check
+     below read this, so the one cannot allow what the other refuses. */
+  const futureOk = isInstallment || editsPlanPayment
   const dateBill = isInstallment || editsPlanPayment ? billOf(date) : null
   const lastBill = isInstallment ? billOf(installLast) : null
 
@@ -273,6 +281,17 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     if (acct?.type !== 'credit') { setInstallMonths(0); setCustomTerm(false) }
   }
 
+  /* Takes the division off, so a term can be picked. The category stays as
+     the first leg left it - the same pick a non-split save would file under -
+     and counts as chosen, so a description's guess does not quietly replace
+     what the split screen put there. */
+  function clearDivision() {
+    if (splitLegs?.length) setCatChosen(true)
+    setSplitLegs(null)
+    setPeople(null)
+    setPeopleSplit(null)
+  }
+
   useEffect(() => {
     const t = setTimeout(() => amountInputRef.current?.focus(), 80)
     return () => clearTimeout(t)
@@ -287,8 +306,10 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
     /* A date after today. The field's max stops the picker, not a date
        typed into it on a computer - and a future row moved the balance at
        once while the lists, which hide what has not happened yet, never
-       showed it. A row being edited that was already ahead keeps its date. */
-    if (date > localDateStr(new Date()) && !(isEdit && String(editTx?.date ?? '').slice(0, 10) > localDateStr(new Date()))) {
+       showed it. A row being edited that was already ahead keeps its date.
+       A new installment plan may start ahead - the picker says so, and this
+       used to refuse it with "Pick today or an earlier date". */
+    if (date > localDateStr(new Date()) && !futureOk && !(isEdit && String(editTx?.date ?? '').slice(0, 10) > localDateStr(new Date()))) {
       showToast('Pick today or an earlier date', 'error')
       err = true
     }
@@ -372,6 +393,10 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
 
       const rows  = []
       let   dueOn = date
+      /* Every month steps from the day the plan was bought on, not from the
+         date before it: a plan bought on the 31st is due Feb 28 and then
+         Mar 31, where stepping on from Feb 28 left the rest on the 28th. */
+      const firstDay = dueDayOf(date)
       for (let i = 0; i < count; i++) {
         const [y, m, d] = dueOn.split('-').map(Number)
         const txDate = new Date(y, m - 1, d, now.getHours(), now.getMinutes(), now.getSeconds())
@@ -389,11 +414,16 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           updatedAt:   updISO,
           ...(installmentId ? { installmentId } : {}),
         })
-        dueOn = advanceNextDate(dueOn, 'monthly')
+        dueOn = advanceNextDate(dueOn, 'monthly', firstDay)
       }
 
       /* One receivable per person, each pointing at this purchase so that
-         settling it refunds the category rather than counting as income. */
+         settling it refunds the category rather than counting as income.
+
+         `count === 1` is no longer where a division is dropped: the form does
+         not let a plan and a division exist together (isDivided), so a plan
+         never arrives here with people or legs. It stays as the guard that a
+         receivable is never pinned to one month of a plan. */
       const shares = (count === 1 ? (people ?? []) : []).filter(p => p.name && p.amount > 0)
 
       /**
@@ -523,6 +553,11 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           setSplitLegs(legs)
           setPeople(shares)
           setPeopleSplit(split)
+          /* A division and a term are exclusive. The door to this screen is
+             hidden once a term is picked, so the one term that can still be
+             here is a custom one with nothing typed in yet: let it go, so
+             the form is not left holding a plan next to a split. */
+          if (legs?.length || shares?.length) { setInstallMonths(0); setCustomTerm(false) }
           /* A split supplies its own categories; the rail's single pick no
              longer means anything, but the first leg is still what a
              non-split save would file under. */
@@ -628,7 +663,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
               <p className="text-xs font-medium text-red-500 dark:text-red-400 mb-1.5">Pick one</p>
             )}
             {guessed && (
-              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">From your history</p>
+              <p className="text-xs text-slate-400 dark:text-slate-500 mb-1.5">{guessLabel(guess)}</p>
             )}
           </div>
           {splitLegs ? (
@@ -693,7 +728,10 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
           />
         </div>
 
-        {/* Installment — credit accounts only, and never on an edit.
+        {/* Installment — credit accounts only, never on an edit, and never on
+            a purchase that is divided (see isDivided): a division has no plan
+            to be part of, so the term picker gives way to a note and a way to
+            remove the split.
 
             A term is not a property of this row, it is how many rows exist:
             picking 6 writes six charges dated a month apart. Offering it here
@@ -701,7 +739,19 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
             and "3 into 6" has to invent three, which is a different operation
             from editing the one you opened. Delete the plan and re-enter it,
             which is what deleteTxGroup already handles as a unit. */}
-        {isCredit && !isEdit && (
+        {isCredit && !isEdit && isDivided && (
+          <div>
+            <SectionLabel>Installment</SectionLabel>
+            <p className="text-11 text-slate-500 dark:text-slate-400 px-1">
+              Installments can&apos;t be split.{' '}
+              <button type="button" onClick={clearDivision} className="font-semibold text-primary active:opacity-60">
+                Remove the split
+              </button>
+              {' '}to pay in installments.
+            </p>
+          </div>
+        )}
+        {isCredit && !isEdit && !isDivided && (
           <div>
             <SectionLabel>Installment</SectionLabel>
             {/* -mx-4 px-4 to cancel the form's own px-4.
@@ -785,10 +835,9 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
             <DateInput
               aria-label="Date"
               value={date}
-              /* The future is allowed for a plan, and nowhere else: a plan
-                 whose payments start later is dated on, and its later
-                 payments are in the future by definition - so is moving one. */
-              max={isInstallment || editsPlanPayment ? undefined : localDateStr(new Date())}
+              /* The future is allowed for a plan, and nowhere else - see
+                 futureOk. */
+              max={futureOk ? undefined : localDateStr(new Date())}
               onChange={e => e.target.value && setDate(e.target.value)}
               className="flex-1 min-w-0 bg-transparent text-sm font-medium text-slate-800 dark:text-white outline-none"
             />
@@ -828,8 +877,8 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         amount={amount}
         description={description}
         category={category}
-        splitLegs={splitLegs}
-        people={people}
+        splitLegs={isInstallment ? null : splitLegs}
+        people={isInstallment ? null : people}
         catByName={Object.fromEntries((categories ?? []).map(c => [c.name, c]))}
         account={account}
         onSaveTemplate={() => {}}
@@ -863,6 +912,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         amount={amount}
         account={account}
         type="expense"
+        date={date}
       />
       {/* Before what you typed is thrown away (hooks/useBackGuard.js). */}
       <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />

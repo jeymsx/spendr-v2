@@ -65,7 +65,7 @@ export default function ImportWizard() {
   const leave = useBack('/settings')
   const [step,            setStep]            = useState(1)
   const [rows,            setRows]            = useState(null)
-  const [isLegacy,        setIsLegacy]        = useState(false)
+  const [format,          setFormat]          = useState(/** @type {import('./import/csv').CsvFormat} */ ('spendr'))
   const [fileName,        setFileName]        = useState('')
   const [fileSize,        setFileSize]        = useState(0)
   const [openingBalances, setOpeningBalances] = useState({})
@@ -73,9 +73,9 @@ export default function ImportWizard() {
   const [imported,        setImported]        = useState(0)
   const [skipped,         setSkipped]         = useState(0)
 
-  function handleParsed(parsedRows, legacy, name, size) {
+  function handleParsed(parsedRows, parsedFormat, name, size) {
     setRows(parsedRows)
-    setIsLegacy(legacy)
+    setFormat(parsedFormat)
     setFileName(name)
     setFileSize(size)
     setStep(2)
@@ -95,7 +95,7 @@ export default function ImportWizard() {
 
   function reset() {
     setRows(null)
-    setIsLegacy(false)
+    setFormat('spendr')
     setFileName('')
     setFileSize(0)
     setOpeningBalances({})
@@ -150,7 +150,7 @@ export default function ImportWizard() {
       {step === 2 && rows && (
         <StepPreview
           rows={rows}
-          isLegacy={isLegacy}
+          format={format}
           fileName={fileName}
           fileSize={fileSize}
           onBack={() => setStep(1)}

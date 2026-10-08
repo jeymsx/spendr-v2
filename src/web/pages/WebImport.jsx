@@ -14,24 +14,30 @@ const ImportWizard = lazy(() => import('../../pages/ImportWizard'))
  * Here it sits in a column beside the wizard, readable while you work.
  *
  * The facts in that column are read off the wizard's own constants
- * (NEW_REQUIRED_COLS, LEGACY_REQUIRED_COLS, VALID_TYPES) and its dedupe step,
+ * (SPENDR_REQUIRED_COLS, TABLE_REQUIRED_COLS, VALID_TYPES) and its dedupe step,
  * so they describe what the parser actually does rather than what it ought to.
  */
 
-const NEW_COLS = [
-  ['tx_id',            'Stable id. Rows whose id already exists are skipped.'],
-  ['type',             'expense, inflow or transfer.'],
-  ['transaction_date', 'ISO date, e.g. 2026-08-28.'],
-  ['description',      'Free text. May be blank.'],
-  ['category',         'Created if it does not exist yet.'],
-  ['from_account',     'The account for an expense; the source of a transfer.'],
-  ['to_account',       'The account for income; the destination of a transfer.'],
-  ['amount',           'Positive number. The type carries the direction.'],
+/* Spendr's own layout - what Transactions as CSV writes - which is the one to
+   lead with. The cloud table's naming (tx_id, transaction_date, from_account,
+   to_account) is read too, and said in one line below. */
+const COLS = [
+  ['txId',        'Stable id. Rows whose id already exists are skipped.'],
+  ['type',        'expense, inflow or transfer.'],
+  ['date',        'ISO date, e.g. 2026-08-28.'],
+  ['description', 'Free text. May be blank.'],
+  ['category',    'Created if it does not exist yet.'],
+  ['payment',     'Kept as it is. May be blank.'],
+  ['account',     'The account for an expense or an inflow.'],
+  ['fromAccount', 'The source of a transfer.'],
+  ['toAccount',   'The destination of a transfer.'],
+  ['amount',      'Positive number. The type carries the direction; a refund is a negative expense.'],
 ]
 
-const LEGACY_COLS = [
-  'txId', 'type', 'date', 'description', 'category',
-  'payment', 'account', 'fromAccount', 'toAccount', 'amount',
+/* Optional, and what keeps a round trip whole. */
+const OPTIONAL_COLS = [
+  'refundOf', 'splitId', 'installmentId', 'toAmount', 'toCurrency',
+  'currency', 'baseAmount', 'baseCurrency', 'adjust',
 ]
 
 function RefPanel({ title, children }) {
@@ -87,8 +93,10 @@ export default function WebImport() {
                 <span className="font-semibold text-slate-800 dark:text-slate-100">
                   A Spendr export.
                 </span>{' '}
-                Settings → Export CSV produces a file this reads back without
-                any editing.
+                Transactions as CSV, under Reports &amp; exports in Settings, makes a
+                file this reads back without any editing. Refunds, splits,
+                installment plans and transfers between currencies stay as
+                they were.
               </li>
               <li>
                 <span className="font-semibold text-slate-800 dark:text-slate-100">
@@ -96,12 +104,19 @@ export default function WebImport() {
                 </span>{' '}
                 Any CSV with the columns below, in any order.
               </li>
+              <li>
+                <span className="font-semibold text-slate-800 dark:text-slate-100">
+                  Not the Export CSV on Transactions.
+                </span>{' '}
+                That file is made for spreadsheets and cannot be read back. To
+                move your data, use Transactions as CSV or a backup.
+              </li>
             </ul>
           </RefPanel>
 
           <RefPanel title="Required columns">
             <dl className="flex flex-col gap-2.5">
-              {NEW_COLS.map(([col, note]) => (
+              {COLS.map(([col, note]) => (
                 <div key={col}>
                   <dt className="mb-0.5"><Mono>{col}</Mono></dt>
                   <dd className="text-11 leading-relaxed text-slate-500 dark:text-slate-400">
@@ -112,14 +127,19 @@ export default function WebImport() {
             </dl>
             <p className="mt-4 pt-4 border-t border-slate-100 dark:border-white/[0.06]
               text-11 leading-relaxed text-slate-500 dark:text-slate-400">
-              Older exports are detected automatically and use{' '}
-              {LEGACY_COLS.map((c, i) => (
+              Optional, and read when they are there:{' '}
+              {OPTIONAL_COLS.map((c, i) => (
                 <span key={c}>
                   {i > 0 && ', '}
                   <span className="font-mono text-slate-600 dark:text-slate-300">{c}</span>
                 </span>
               ))}
-              {' '}instead. You don't need to convert them.
+              . A file named the way the cloud table is, with{' '}
+              <span className="font-mono text-slate-600 dark:text-slate-300">tx_id</span>,{' '}
+              <span className="font-mono text-slate-600 dark:text-slate-300">transaction_date</span>,{' '}
+              <span className="font-mono text-slate-600 dark:text-slate-300">from_account</span> and{' '}
+              <span className="font-mono text-slate-600 dark:text-slate-300">to_account</span>,
+              is detected and read too.
             </p>
           </RefPanel>
 
@@ -131,12 +151,13 @@ export default function WebImport() {
                 are created for you.
               </li>
               <li>
-                A row whose <Mono>tx_id</Mono> is already in your data is skipped,
+                A row whose <Mono>txId</Mono> is already in your data is skipped,
                 so re-importing the same file changes nothing.
               </li>
               <li>
-                Step 3 asks for each new account's opening balance and credit
-                limit. Imported transactions don't imply a starting balance.
+                Step 3 asks what each account the import creates held before the
+                file's first row. Accounts you already have keep their balances,
+                and only the imported transactions are added to them.
               </li>
               <li>
                 Rows with an unrecognised type or an unparseable date are flagged
@@ -151,12 +172,12 @@ export default function WebImport() {
               the whole database if a file turns out to be wrong.
             </p>
             <Link
-              to="/settings"
+              to="/settings/backup"
               className="mt-3 inline-flex items-center h-8 px-3 rounded-xl text-11 font-semibold
                 text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-white/[0.07]
                 hover:bg-slate-200 dark:hover:bg-white/[0.12] transition-colors duration-150"
             >
-              Open Settings → Backup
+              Open Backup &amp; restore
             </Link>
           </RefPanel>
         </aside>

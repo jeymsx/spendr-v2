@@ -1,4 +1,4 @@
-import { getCycleRange } from '../utils/creditCycle'
+import { getCycleRange, cutoffDayOf } from '../utils/creditCycle'
 import { receivedAmount } from './transferLegs'
 import { statementDueDate } from './creditBills'
 
@@ -58,7 +58,10 @@ const EPS = 0.005
 export function creditStatements(account, txs, today = new Date()) {
   const name = account?.name
   if (!name) return []
-  const cutoff = Number(account?.cutoffDate) || 0
+  /* From the account, so a card with only a Statement day still bills by it
+     (cutoffDayOf), the way getCreditStatus does - the history and the balance
+     must close the same cycles. */
+  const cutoff = cutoffDayOf(account) ?? 0
   const dueDay = Number(account?.dueDate) || undefined
 
   /** @type {Array<{tx: Record<string, any>, at: number, amount: number}>} */

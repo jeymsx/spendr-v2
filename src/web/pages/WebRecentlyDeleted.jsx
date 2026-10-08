@@ -4,9 +4,10 @@ import { Link } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
-import { MissingAccountError, TRASH_DAYS, deleteForever, describeEntry, emptyTrash, purgeTrash, restoreFromTrash } from '../../db/trash'
+import { MissingAccountError, TRASH_DAYS, describeEntry, emptyTrash, purgeTrash, restoreFromTrash } from '../../db/trash'
 import { fmt } from '../../lib/money'
 import { txRowTone } from '../../pages/transactions/shared'
+import { useDeferredForget } from '../../pages/transactions/useDeferredForget'
 import Page from '../ui/Page'
 import Panel from '../ui/Panel'
 import { Empty } from '../ui/display'
@@ -28,7 +29,10 @@ function deletedWhen(iso, now) {
  * with a button and deletes for good with a swipe - and a mouse cannot
  * swipe. Each row puts back with its own button; tick several and the bar
  * that replaces the header does either to all of them, as Transactions'
- * does. Deleting for good, one or all, asks first.
+ * does. Deleting for good, one or all, asks first - and then, as the phone's
+ * swipe does, leaves an Undo for a few seconds (useDeferredForget): the rows
+ * go from the table at once and are deleted for real only when it runs out.
+ * Delete all has no Undo, as on the phone.
  *
  * The same thirty days and the same writes as the phone's
  * (pages/transactions/RecentlyDeleted, db/trash.js): a deletion is one row
@@ -51,11 +55,13 @@ export default function WebRecentlyDeleted({ inPane = false }) {
   const [selected, setSelected] = useState(/** @type {Set<string|number>} */ (new Set()))
   const [confirm, setConfirm] = useState(/** @type {null | {ids: number[], all?: boolean}} */ (null))
   const [busy, setBusy] = useState(false)
+  // Rows deleted for good and not yet final: out of the table, with an Undo on offer.
+  const { hidden, forgetWithUndo, settle } = useDeferredForget()
 
   // What is past thirty days goes as the page opens.
   useEffect(() => { purgeTrash().catch(() => { /* the next open will */ }) }, [])
 
-  const list = useMemo(() => entries ?? [], [entries])
+  const list = useMemo(() => (entries ?? []).filter(e => !hidden.includes(e.id)), [entries, hidden])
   const rows = useMemo(() => list.map(e => ({ ...describeEntry(e, now), id: e.id, deletedAt: e.deletedAt })), [list, now])
   // A row put back or deleted elsewhere drops out of the selection.
   const live = useMemo(() => new Set([...selected].filter(id => rows.some(r => r.id === id))), [selected, rows])
@@ -85,17 +91,25 @@ export default function WebRecentlyDeleted({ inPane = false }) {
 
   const forget = useCallback(async () => {
     if (!confirm) return
+    if (!confirm.all) {
+      // Out of the table at once; deleted for good when the Undo runs out.
+      forgetWithUndo(confirm.ids, confirm.ids.length > 1 ? `${confirm.ids.length} deleted for good` : 'Deleted for good')
+      setSelected(new Set())
+      setConfirm(null)
+      return
+    }
     setBusy(true)
     try {
-      if (confirm.all) await emptyTrash()
-      else for (const id of confirm.ids) await deleteForever(id)
-      showToast(confirm.all ? 'Recently deleted is empty' : confirm.ids.length > 1 ? `${confirm.ids.length} deleted for good` : 'Deleted for good')
+      // What is waiting is made final first, so the two never race.
+      await settle()
+      await emptyTrash()
+      showToast('Recently deleted is empty')
       setSelected(new Set())
       setConfirm(null)
     } finally {
       setBusy(false)
     }
-  }, [confirm, showToast])
+  }, [confirm, forgetWithUndo, settle, showToast])
   const closeConfirm = useCallback(() => { if (!busy) setConfirm(null) }, [busy])
 
   const columns = [

@@ -138,7 +138,7 @@ export default function BackupRestorePage() {
           <div className="text-center">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Download a backup?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              Saves everything you have: accounts, transactions, categories, templates, bills, debts and goals, in one file.
+              Saves everything you have: accounts, transactions, categories, templates, bills, debts, goals and settings, in one file.
             </p>
           </div>
         </div>

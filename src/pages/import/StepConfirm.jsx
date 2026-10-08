@@ -1,13 +1,12 @@
 import { useState, useMemo } from 'react'
-import db, { UNSYNCED } from '../../db/db'
+import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { IconImport, IconBankUI, IconSparkle, IconBalance } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import { IconArrowLeft, IconWarning } from './shared'
-import { baseSymbol } from '../../lib/money'
-import { receivedAmount } from '../../lib/transferLegs'
-import { PRIMED_META } from '../../lib/achievements'
+import { fmt } from '../../lib/money'
+import { runImport } from './runImport'
 
 // ── Step 4: Confirm import ─────────────────────────────────────────────────────
 
@@ -15,11 +14,14 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
   const [importing, setImporting] = useState(false)
   const [error,     setError]     = useState(null)
 
-  const existingAccounts   = useLiveQuery(() => db.accounts.toArray(),   [], [])
-  const existingCategories = useLiveQuery(() => db.categories.toArray(), [], [])
+  /* Undefined until they have loaded: an empty default made every account in
+     the file read as missing for the moment before they did. */
+  const existingAccounts   = useLiveQuery(() => db.accounts.toArray(),   [])
+  const existingCategories = useLiveQuery(() => db.categories.toArray(), [])
 
   const missingAccounts = useMemo(() => {
-    const existing = new Set((existingAccounts ?? []).map(a => a.name))
+    if (!existingAccounts) return new Set()
+    const existing = new Set(existingAccounts.map(a => a.name))
     const missing  = new Set()
     rows.forEach(r => {
       if (r.account && !existing.has(r.account))         missing.add(r.account)
@@ -30,7 +32,8 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
   }, [rows, existingAccounts])
 
   const missingCategories = useMemo(() => {
-    const existing = new Set((existingCategories ?? []).map(c => c.name))
+    if (!existingCategories) return new Set()
+    const existing = new Set(existingCategories.map(c => c.name))
     return new Set(rows.map(r => r.category).filter(c => c && !existing.has(c)))
   }, [rows, existingCategories])
 
@@ -38,109 +41,16 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
     setImporting(true)
     setError(null)
     try {
-      // 1. Gather existing txIds to detect duplicates
-      const existingTxIds = new Set(
-        (await db.transactions.toArray()).map(t => t.txId).filter(Boolean)
-      )
-
-      // 2. Separate new vs duplicate rows
-      const toInsert   = rows.filter(r => !r.txId || !existingTxIds.has(r.txId))
-      const skipCount  = rows.length - toInsert.length
-
-      // 3. Auto-create missing accounts
-      for (const name of missingAccounts) {
-        const alreadyExists = await db.accounts.where('name').equals(name).first()
-        if (!alreadyExists) {
-          await db.accounts.add({ name, type: 'cash', balance: 0, currency: 'PHP', color: '#6b7280' })
-        }
-      }
-
-      // 4. Auto-create missing categories
-      for (const name of missingCategories) {
-        const alreadyExists = await db.categories.where('name').equals(name).first()
-        if (!alreadyExists) {
-          await db.categories.add({ name, type: 'expense', icon: '📦', color: '#6b7280', budget: 0 })
-        }
-      }
-
-      // 5. Insert all new transactions
-      if (toInsert.length > 0) {
-        const records = toInsert.map(r => ({
-          txId:        r.txId || null,
-          type:        r.type,
-          date:        r.date,
-          description: r.description,
-          category:    r.category,
-          payment:     r.payment ?? null,   // present in legacy CSVs, null for new format
-          account:     r.account ?? null,
-          fromAccount: r.fromAccount ?? null,
-          toAccount:   r.toAccount ?? null,
-          amount:      r.amount,
-          synced:      UNSYNCED,
-          updatedAt:   new Date().toISOString(),
-        }))
-        /* History arriving, so the next look at achievements writes what it
-           earns without a celebration for each - see PRIMED_META. In one
-           transaction, so no look can see the rows without the flag. */
-        await db.transaction('rw', db.transactions, db.meta, async () => {
-          await db.transactions.bulkAdd(records)
-          await db.meta.delete(PRIMED_META)
-        })
-      }
-
-      // 6. Apply credit limits to credit accounts
-      if (creditLimits) {
-        for (const [name, limit] of Object.entries(creditLimits)) {
-          if (!limit) continue
-          const acct = await db.accounts.where('name').equals(name).first()
-          if (acct) await db.accounts.update(acct.id, { creditLimit: limit })
-        }
-      }
-
-      // 7. Recalculate all account balances from scratch
-      await recalcAllBalances()
-
-      onDone(toInsert.length, skipCount)
+      /* Everything - the rows, the accounts and categories they need, and what
+         they do to the balances - is written in one transaction (runImport),
+         which has the rules and the reasons. */
+      const { imported, skipped } = await runImport({ rows, openingBalances, creditLimits })
+      onDone(imported, skipped)
     } catch (e) {
       console.error('[ImportWizard] import failed:', e)
       setError(e.message || 'Import failed. Please try again.')
       setImporting(false)
     }
-  }
-
-  async function recalcAllBalances() {
-    const allTxs   = await db.transactions.orderBy('date').toArray()
-    const allAccts = await db.accounts.toArray()
-
-    // Start from opening balance; default 0 for accounts not in the map
-    const balMap     = new Map(allAccts.map(a => [a.name, parseFloat(openingBalances?.[a.name] ?? 0) || 0]))
-    const acctTypeMap = new Map(allAccts.map(a => [a.name, a.type]))
-
-    for (const tx of allTxs) {
-      const amt = tx.amount ?? 0
-      if (tx.type === 'expense' && balMap.has(tx.account)) {
-        balMap.set(tx.account, balMap.get(tx.account) - amt)
-      } else if (tx.type === 'inflow' && balMap.has(tx.account)) {
-        balMap.set(tx.account, balMap.get(tx.account) + amt)
-      } else if (tx.type === 'transfer') {
-        if (balMap.has(tx.fromAccount)) balMap.set(tx.fromAccount, balMap.get(tx.fromAccount) - amt)
-        if (balMap.has(tx.toAccount)) {
-          const toIsCredit = acctTypeMap.get(tx.toAccount) === 'credit'
-          // What arrived - the received leg when the ends differ in currency.
-          const got = receivedAmount(tx)
-          balMap.set(tx.toAccount, balMap.get(tx.toAccount) + (toIsCredit ? -got : got))
-        }
-      }
-    }
-
-    // Write final balances
-    await db.transaction('rw', [db.accounts, db.balances], async () => {
-      for (const acct of allAccts) {
-        const newBal = balMap.get(acct.name) ?? 0
-        await db.accounts.update(acct.id, { balance: newBal })
-        await db.balances.put({ account: acct.name, balance: newBal })
-      }
-    })
   }
 
   return (
@@ -173,7 +83,9 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
                   {missingAccounts.size} account{missingAccounts.size > 1 ? 's' : ''} will be created
                 </p>
                 <p className="text-xs text-amber-600/80 dark:text-amber-500 mt-0.5">
-                  {[...missingAccounts].join(', ')} · as Cash, {baseSymbol()}0 balance
+                  {[...missingAccounts].map(name => (
+                    openingBalances?.[name] ? `${name} (${fmt(openingBalances[name])})` : name
+                  )).join(', ')} · as Cash
                 </p>
               </div>
             </div>
@@ -206,8 +118,8 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
                 Your balances are worked out for you
               </p>
               <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-0.5">
-                Every transaction in the file is added to the opening balances
-                you entered.
+                Each new transaction moves the accounts it names. Accounts you
+                already have keep what they hold now.
               </p>
             </div>
           </div>

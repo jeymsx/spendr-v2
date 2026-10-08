@@ -23,7 +23,11 @@ import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
 import { fmt, baseSymbol } from '../lib/money'
-import { effectiveLimit, monthKey, prevMonth, sweepable } from '../lib/rollover'
+import {
+  effectiveLimit, monthKey, prevMonth, sweepable, sweepOutcome, sweptKey,
+  SWEPT_MOVED, SWEPT_DISMISSED,
+} from '../lib/rollover'
+import { budgetLevel, isBudgeted } from '../lib/budgetLevels'
 import SweepSheet from './budget/SweepSheet'
 import { postCardPayment } from '../db/txHelpers'
 import { txBase } from '../lib/fxContext'
@@ -89,9 +93,11 @@ function CategoryRow({ cat }) {
   /* Two states worth marking, and they are not the same news. Over means the
      limit is already gone; near means it will be if nothing changes. The
      percentage beside them says which by colour, but a percentage has to be
-     read - a badge on the tile is caught while scanning. */
-  const over = cat.spent > cat.budget
-  const near = !over && cat.budget > 0 && pct >= 75
+     read - a badge on the tile is caught while scanning. Where near starts is
+     lib/budgetLevels.js, the same line the meter, the bell and Home use. */
+  const level = budgetLevel(cat.spent, cat.budget)
+  const over = level === 'over'
+  const near = level === 'near'
 
   /* A link, not a div.
      "108%" is the end of a sentence whose beginning is the list of things you
@@ -253,11 +259,13 @@ export default function Budget() {
   const globalRollover = useMemo(
     () => (meta ?? []).find(m => m.key === 'budgetRollover')?.value ?? false, [meta])
 
-  /* Last month's leftovers, and whether they have already been dealt with.
-     The stamp is per month, so dismissing September does not silence October. */
-  const sweptKey = `swept-${lastMonth}`
-  const alreadySwept = useMemo(
-    () => !!(meta ?? []).find(m => m.key === sweptKey)?.value, [meta, sweptKey])
+  /* Last month's leftovers, and what has been done about them: null while the
+     offer is open, 'dismissed' once turned down, 'moved' once the money has
+     gone into a goal. The stamp is per month, so dismissing September does not
+     silence October. */
+  const stampKey = sweptKey(lastMonth)
+  const swept = useMemo(
+    () => sweepOutcome((meta ?? []).find(m => m.key === stampKey)?.value), [meta, stampKey])
   const goals = useLiveQuery(() => db.goals.toArray(), [], [])
   const accountRows = useLiveQuery(() => db.accounts.toArray(), [], [])
   const leftovers = useMemo(() => sweepable({
@@ -275,7 +283,8 @@ export default function Budget() {
          the overdraw check inside the same decision as the write. A sweep is
          exactly that, so it uses it rather than growing a second copy. */
       await postCardPayment({ cardName: to.name, fromName: from.name, amount })
-      await db.meta.put({ key: sweptKey, value: true, updatedAt: new Date().toISOString() })
+      // Recorded as MOVED, not just handled: nothing may offer these leftovers again.
+      await db.meta.put({ key: stampKey, value: SWEPT_MOVED, updatedAt: new Date().toISOString() })
       showToast(`${fmt(amount)} moved to ${goal.name}`)
       setSweepOpen(false)
     } catch (e) {
@@ -308,7 +317,7 @@ export default function Budget() {
      for the one line that explains where it came from. */
   const budgeted = useMemo(() =>
     (categories ?? [])
-      .filter(c => (c.budget ?? 0) > 0)
+      .filter(isBudgeted)
       .map(c => {
         const { carry, effective } = effectiveLimit({
           cat: c, txs: transactions ?? [], month: thisMonth, globalDefault: globalRollover,
@@ -322,7 +331,7 @@ export default function Budget() {
   // Money going somewhere no limit was ever set. Easy to miss, and it is
   // exactly what makes a budget look healthier than the month actually is.
   const unbudgeted = useMemo(() => {
-    const limited = new Set((categories ?? []).filter(c => (c.budget ?? 0) > 0).map(c => c.name))
+    const limited = new Set((categories ?? []).filter(isBudgeted).map(c => c.name))
     const byName = Object.fromEntries((categories ?? []).map(c => [c.name, c]))
     return Object.entries(spentByCat)
       .filter(([name, amt]) => !limited.has(name) && amt > 0)
@@ -398,7 +407,7 @@ export default function Budget() {
             body="Give a category a monthly limit and this page starts tracking it against what you actually spend."
             action={(
               <Link
-                to="/settings"
+                to="/settings/budgets"
                 className="inline-block px-4 py-2.5 rounded-xl text-sm font-semibold text-white bg-primary
                   active:scale-[0.97] transition-transform duration-75"
               >
@@ -483,11 +492,16 @@ export default function Budget() {
               there whether or not you wanted to be asked today, and a control
               with no way back is a trap. So a dismissed month collapses to one
               line that still opens the sheet.
+
+              Only a DISMISSED month, though. Moving the money wrote the same
+              stamp, so this line went on offering to keep what had already
+              gone into a goal, and a second tap moved it again. A moved month
+              shows nothing: there is nothing left to keep.
  
               A rolling category is deliberately absent from `leftovers` - its
               leftover has already been kept, and sweeping it would move the
               same money twice. See lib/rollover.js. */}
-          {leftovers.total > 0 && alreadySwept && (
+          {leftovers.total > 0 && swept === SWEPT_DISMISSED && (
             <div className="px-5 mt-6">
               <button
                 type="button"
@@ -505,7 +519,7 @@ export default function Budget() {
             </div>
           )}
 
-          {leftovers.total > 0 && !alreadySwept && (
+          {leftovers.total > 0 && swept === null && (
             <div className="px-5 mt-6">
               <Card padding="md">
                 <p className="text-14 font-semibold text-slate-800 dark:text-white">
@@ -520,7 +534,7 @@ export default function Budget() {
                     size="sm"
                     className="flex-1"
                     onClick={() => db.meta.put({
-                      key: sweptKey, value: true, updatedAt: new Date().toISOString(),
+                      key: stampKey, value: SWEPT_DISMISSED, updatedAt: new Date().toISOString(),
                     })}
                   >
                     Dismiss

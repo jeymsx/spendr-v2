@@ -12,7 +12,8 @@ import { describe, it, expect, vi } from 'vitest'
  */
 vi.mock('../db/db', () => ({ default: { recurring: {} }, UNSYNCED: 0, SYNCED: 1 }))
 
-const { validateRecurring, toRecurringRow, isIncomeRecurring } = await import('./recurringWrite')
+const { validateRecurring, toRecurringRow, isIncomeRecurring, resolveDueDay } = await import('./recurringWrite')
+const { advanceNextDate } = await import('../utils/recurring')
 
 const filled = {
   name: 'Netflix',
@@ -115,5 +116,65 @@ describe('income on a schedule', () => {
     expect(isIncomeRecurring({ type: 'expense' })).toBe(false)
     expect(isIncomeRecurring({})).toBe(false)
     expect(isIncomeRecurring(null)).toBe(false)
+  })
+})
+
+/**
+ * `dueDay`: the day of the month a bill is really due, so a bill made on the
+ * 31st is not on the 28th for good after its first February.
+ */
+describe('the due day a bill keeps', () => {
+  it('is the day of the date a new monthly bill starts on', () => {
+    expect(toRecurringRow({ ...filled, nextDate: '2026-01-31' }).dueDay).toBe(31)
+    expect(toRecurringRow({ ...filled, nextDate: '2026-10-05' }).dueDay).toBe(5)
+  })
+
+  it('is set for every frequency that steps by months', () => {
+    for (const frequency of ['monthly', 'quarterly', 'semiannual', 'yearly']) {
+      expect(toRecurringRow({ ...filled, frequency, nextDate: '2026-08-30' }).dueDay).toBe(30)
+    }
+  })
+
+  it('is null where there is no day of the month to protect', () => {
+    for (const frequency of ['daily', 'weekly', 'fortnightly', 'semimonthly']) {
+      expect(toRecurringRow({ ...filled, frequency, nextDate: '2026-08-30' }).dueDay).toBeNull()
+    }
+  })
+
+  it('follows a date that was changed', () => {
+    const prev = { nextDate: '2026-02-28', dueDay: 31, frequency: 'monthly' }
+    expect(toRecurringRow({ ...filled, nextDate: '2026-03-12' }, prev).dueDay).toBe(12)
+    expect(toRecurringRow({ ...filled, nextDate: '2026-03-31' }, prev).dueDay).toBe(31)
+  })
+
+  /**
+   * The date a Jan 31 bill shows in February is the 28th. Saving the bill to
+   * fix a typo in its name must not read the day off that and overwrite the
+   * 31st it exists to remember.
+   */
+  it('keeps the day on file when the bill is saved with its date unchanged', () => {
+    const prev = { nextDate: '2026-02-28', dueDay: 31, frequency: 'monthly' }
+    expect(toRecurringRow({ ...filled, name: 'Rent', nextDate: '2026-02-28' }, prev).dueDay).toBe(31)
+  })
+
+  it('reads the day off the date when the row had none, which is no worse than before', () => {
+    const prev = { nextDate: '2026-02-28', frequency: 'monthly' }
+    expect(toRecurringRow({ ...filled, nextDate: '2026-02-28' }, prev).dueDay).toBe(28)
+  })
+
+  it('does not trust a day on file that the unchanged date disagrees with', () => {
+    expect(resolveDueDay('monthly', '2026-03-15', { nextDate: '2026-03-15', dueDay: 31 })).toBe(15)
+  })
+
+  it('takes the date a twice-a-month bill was snapped to, not the one typed', () => {
+    expect(toRecurringRow({ ...filled, frequency: 'semimonthly', nextDate: '2026-10-05' }).dueDay).toBeNull()
+  })
+
+  it('makes a bill that survives a year of posts, end to end', () => {
+    const row = toRecurringRow({ ...filled, nextDate: '2026-01-31' })
+    let next = row.nextDate
+    const seen = []
+    for (let i = 0; i < 4; i++) { next = advanceNextDate(next, row.frequency, row.dueDay); seen.push(next) }
+    expect(seen).toEqual(['2026-02-28', '2026-03-31', '2026-04-30', '2026-05-31'])
   })
 })

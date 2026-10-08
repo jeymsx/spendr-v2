@@ -10,6 +10,7 @@ import { allocateGoals } from '../lib/goals'
 import { convert } from '../lib/fx'
 import { netWorthBreakdown, debtsCountFrom } from '../lib/netWorth'
 import { isRefund } from '../lib/txMoney'
+import { isBudgeted } from '../lib/budgetLevels'
 
 /**
  * Everything in the ledger as one spreadsheet - Accounts with their balances,
@@ -254,7 +255,7 @@ export function workbookSheets({
     .sort((a, b) => (b.c.budget ?? 0) - (a.c.budget ?? 0) || String(a.c.name).localeCompare(String(b.c.name)))
     .map(({ c, spent }, i) => {
       const r = i + 2
-      return [text(c.name), (c.budget ?? 0) > 0 ? num(c.budget) : null, num(spent), formula(`IF(B${r}="","",B${r}-C${r})`), formula(`IF(B${r}="","",C${r}/B${r})`, '0%')]
+      return [text(c.name), isBudgeted(c) ? num(c.budget) : null, num(spent), formula(`IF(B${r}="","",B${r}-C${r})`), formula(`IF(B${r}="","",C${r}/B${r})`, '0%')]
     })
   const budgetsData = [head(['Category', 'Monthly limit', `Spent this month (${base})`, 'Left', 'Used']), ...budgetRows]
 

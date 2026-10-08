@@ -1,5 +1,6 @@
 import { cardStatements, cardUrl, CARD_LEAD_DAYS, REMINDER_HOUR, stableKey } from './reminders'
 import { effectiveLimit } from './rollover'
+import { budgetLevel, isBudgeted, BUDGET_NEAR_PCT } from './budgetLevels'
 import { currencyOfAccountName, txBase } from './fxContext'
 import { fmt } from './money'
 import { achievementDef } from './achievements'
@@ -49,8 +50,6 @@ import { spendingRows } from '../utils/installments'
  */
 
 export const FEED_WINDOW_DAYS = 35
-/** Share of a budget that earns the early warning. */
-export const BUDGET_WARN_AT = 0.8
 /** How old the last backup file may get before the bell asks for another. */
 export const BACKUP_STALE_DAYS = 14
 /** Entries a ledger needs before a backup of it is worth asking for. */
@@ -68,6 +67,8 @@ const DAY_MS = 864e5
  * @property {string} title
  * @property {string} body
  * @property {string|null} url   where tapping it goes; null for an in-place action
+ * @property {string} [category]   a budget alert's category, by name - so a pass
+ *   that finds several can name them in one toast (freshBudgetToast)
  * @property {boolean} [quiet]   true for news that is not news to this person -
  *   a badge written silently because it was already true - so it is kept as
  *   read rather than lighting the bell
@@ -312,7 +313,8 @@ export function collectNotifications({
       id: `recap:${lastMonth}`, kind: 'recap',
       at: new Date(now.getFullYear(), now.getMonth(), 1, REMINDER_HOUR).toISOString(),
       // The month alone, as the push says it: the year is the one that just ended.
-      title: `Your ${monthName(lastMonth)} recap is ready`,
+      // Wrapped, as every other screen calls it (the id and kind stay `recap`: stored ids must not change).
+      title: `Your ${monthName(lastMonth)} Wrapped is ready`,
       body: 'See how your month went',
       url: `/recap/${lastMonth}`,
     })
@@ -327,8 +329,9 @@ export function collectNotifications({
 }
 
 /**
- * The moment each budgeted category reached 80% of its limit, or went over
- * it, in each of `months` - the latest of the two, for each.
+ * The moment each budgeted category reached "near" its limit (80%, from
+ * lib/budgetLevels.js - the line every surface shares), or went over it, in
+ * each of `months` - the latest of the two, for each.
  *
  * The limit is the EFFECTIVE one, rollover included, exactly as the Budget
  * page shows it - and one that rollover has taken to nothing is over at the
@@ -351,7 +354,7 @@ export function collectNotifications({
  * @returns {FeedItem[]}
  */
 export function budgetCrossings({ categories, transactions, months, globalRollover = false, priceOf = txBase }) {
-  const budgeted = (categories ?? []).filter(c => c && c.type !== 'inflow' && (c.budget ?? 0) > 0)
+  const budgeted = (categories ?? []).filter(isBudgeted)
   if (!budgeted.length) return []
   const names = new Set(budgeted.map(c => c.name))
 
@@ -383,9 +386,10 @@ export function budgetCrossings({ categories, transactions, months, globalRollov
       let running = 0
       for (const t of inMonth) {
         running += priceOf(t)
-        if (!over && running > limit + 0.004) {
+        const level = budgetLevel(running, limit)
+        if (!over && level === 'over') {
           over = {
-            id: `budget:${key}:${month}:over`, kind: 'budget-over', at: t.date,
+            id: `budget:${key}:${month}:over`, kind: 'budget-over', at: t.date, category: cat.name,
             title: `Over your ${cat.name} budget`,
             body: limit > 0
               ? `${fmt(running - limit)} over ${fmt(limit)}`
@@ -395,10 +399,11 @@ export function budgetCrossings({ categories, transactions, months, globalRollov
           break
         }
         // One purchase that goes straight past 100% is one alert, not two.
-        if (!warn && !over && limit > 0 && running >= limit * BUDGET_WARN_AT - 0.004) {
+        if (!warn && !over && level === 'near') {
           warn = {
-            id: `budget:${key}:${month}:80`, kind: 'budget-warn', at: t.date,
-            title: `${cat.name} budget ${Math.round(BUDGET_WARN_AT * 100)}% used`,
+            // `:80` is part of the stored id, so it stays a literal whatever the threshold becomes.
+            id: `budget:${key}:${month}:80`, kind: 'budget-warn', at: t.date, category: cat.name,
+            title: `${cat.name} budget ${BUDGET_NEAR_PCT}% used`,
             body: `${fmt(Math.max(0, limit - running))} left of ${fmt(limit)}`,
             url: '/budget',
           }
@@ -409,6 +414,53 @@ export function budgetCrossings({ categories, transactions, months, globalRollov
     }
   }
   return out
+}
+
+/**
+ * One toast for the budget alerts a pass has just found.
+ *
+ * A single pass can find several at once - an import, a sync from the other
+ * device, a bill posting across two categories - and the phone shows one toast
+ * at a time, so showing one per alert meant only the last was ever seen and the
+ * rest were lost to it. They are said once, together:
+ *
+ *   one alert          its own title: "Food budget 80% used"
+ *   two categories     "Food and Transport are near their limits"
+ *                      ("are over budget" when both are; "need a look" when
+ *                      one is near and one is over)
+ *   three or more      "3 budgets need a look"
+ *
+ * Only alerts that have only just happened (`withinMs`), as before: an alert
+ * found late, on a first sync or after a backup, is in the bell and is not
+ * something to interrupt for.
+ *
+ * @param {FeedItem[]} fresh  the entries a pass has just recorded
+ * @param {Date} now
+ * @param {number} withinMs  how recent an alert has to be to count as news
+ * @returns {string|null}  the message, or null when there is nothing to say
+ */
+export function freshBudgetToast(fresh, now, withinMs) {
+  const news = (fresh ?? []).filter(n =>
+    (n.kind === 'budget-warn' || n.kind === 'budget-over') && now.getTime() - Date.parse(n.at) < withinMs)
+  if (!news.length) return null
+  if (news.length === 1) return news[0].title
+
+  /* Per category, the worst of what it has: one that crossed 80% and then
+     100% in the same pass is over, once. */
+  /** @type {Map<string, boolean>} category -> over */
+  const byName = new Map()
+  for (const n of news) {
+    const name = n.category ?? n.id
+    byName.set(name, (byName.get(name) ?? false) || n.kind === 'budget-over')
+  }
+  if (byName.size === 1) {
+    return (news.find(n => n.kind === 'budget-over') ?? news[0]).title
+  }
+  if (byName.size > 2 || news.some(n => !n.category)) return `${byName.size} budgets need a look`
+
+  const names = [...byName.keys()].join(' and ')
+  const overs = [...byName.values()].filter(Boolean).length
+  return `${names} ${overs === 0 ? 'are near their limits' : overs === byName.size ? 'are over budget' : 'need a look'}`
 }
 
 /**

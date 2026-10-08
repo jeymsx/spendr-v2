@@ -2,18 +2,18 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { usePageTitle } from '../../lib/pageTitle'
 import { DetailSkeleton } from '../ui/Skeletons'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import db, { UNSYNCED } from '../../db/db'
+import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import useRates from '../../hooks/useRates'
 import { useBaseCurrency } from '../../context/CurrencyContext'
 import { useToast } from '../../context/ToastContext'
-import { getCreditStatus, getNextCycleRange } from '../../utils/creditCycle'
+import { getCreditStatus, getNextCycleRange, cutoffDayOf } from '../../utils/creditCycle'
 import { statementDueDate, daysToDue, upcomingDueDate } from '../../lib/creditBills'
 import { creditStatements } from '../../lib/creditStatements'
-import { estimateFinanceCharge, financeChargeRow, financeChargeLogged } from '../../lib/financeCharge'
+import { estimateFinanceCharge, financeChargeLogged } from '../../lib/financeCharge'
 import { receivedAmount } from '../../lib/transferLegs'
-import { applyBalanceEffect, postCardPayment } from '../../db/txHelpers'
-import { payLoan, recordValue } from '../../db/accountWrites'
+import { postCardPayment } from '../../db/txHelpers'
+import { payLoan, recordValue, postFinanceCharge } from '../../db/accountWrites'
 import { allocateGoals } from '../../lib/goals'
 import { investmentStatus, valuedAgo } from '../../lib/investments'
 import { loanStatus, foldLoanPayments } from '../../lib/loans'
@@ -111,7 +111,7 @@ export default function WebAccountDetail() {
   const creditData = useMemo(() => {
     if (!account || !isCredit) return null
     const status = getCreditStatus(account, withRunning)
-    const { cycleStart: nextStart, cycleEnd: nextEnd } = getNextCycleRange(account.cutoffDate)
+    const { cycleStart: nextStart, cycleEnd: nextEnd } = getNextCycleRange(cutoffDayOf(account))
     const dueDate = nextOccurrenceDate(account.dueDate)
     const stmtDue = statementDueDate(status.cycleEnd, account.dueDate)
     const stmtDays = daysToDue(stmtDue, new Date())
@@ -204,11 +204,8 @@ export default function WebAccountDetail() {
     chargeInFlight.current = true
     setLogging(true)
     try {
-      const row = financeChargeRow({ accountName: account.name, amount: lateInfo.total })
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
-        await db.transactions.add({ ...row, txId: crypto.randomUUID(), synced: UNSYNCED })
-        await applyBalanceEffect(row)
-      })
+      // Filed under Fees & Charges, which is created here when this ledger does not have it.
+      await postFinanceCharge({ accountName: account.name, amount: lateInfo.total })
       showToast(`Logged ${fmt(lateInfo.total, account.currency)} finance charge`)
     } catch (e) {
       console.error('[WebAccountDetail] finance charge failed:', e)

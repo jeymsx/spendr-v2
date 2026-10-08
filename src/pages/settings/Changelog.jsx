@@ -18,7 +18,7 @@ function fmtDay(day) {
  */
 export default function ChangelogPage() {
   return (
-    <SubPage title="Changelog">
+    <SubPage title="What’s new">
       <p className="mx-5 mt-1 mb-4 text-13 leading-relaxed text-slate-500 dark:text-slate-400 text-center text-balance">
         What changed in each version of Spendr, newest first.
       </p>

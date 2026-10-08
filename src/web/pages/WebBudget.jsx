@@ -5,7 +5,10 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import { scheduledCutoff } from '../../utils/scheduled'
-import { effectiveLimit, monthKey, prevMonth, sweepable } from '../../lib/rollover'
+import {
+  effectiveLimit, monthKey, prevMonth, sweepable, sweepOutcome, sweptKey, SWEPT_MOVED, SWEPT_DISMISSED,
+} from '../../lib/rollover'
+import { budgetLevel, isBudgeted, levelOfPct } from '../../lib/budgetLevels'
 import { postCardPayment } from '../../db/txHelpers'
 import { txBase } from '../../lib/fxContext'
 import { isSpend } from '../../lib/flows'
@@ -21,6 +24,39 @@ import { IChevronLeft, IChevronRight, IEdit, ISparkle } from '../ui/icons'
 import { spendingRows } from '../../utils/installments'
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']
+
+/**
+ * A bar's colour for where a budget stands: red once over, amber from where
+ * "near" starts (lib/budgetLevels.js - the phone's line, not its own),
+ * otherwise `fallback`.
+ *
+ * @param {import('../../lib/budgetLevels').BudgetLevel} level
+ * @param {string} [fallback]
+ */
+function barColor(level, fallback) {
+  return level === 'over' ? 'var(--d-neg)' : level === 'near' ? 'var(--d-warn)' : fallback
+}
+
+/**
+ * How much of a limit is used, as the table draws it, and where that stands.
+ *
+ * A carried-over overspend can leave a limit of nothing, and `spent / 0` is no
+ * percentage: it used to be written as 0, so a category with money still going
+ * out read as untouched - an empty, calm bar on the one row that is furthest
+ * over. Nothing left with something spent is the over state (budgetLevel), so
+ * the bar is full and red; `rank` puts that row above any finite percentage.
+ *
+ * @param {number} spent
+ * @param {number} limit  the limit in force this month, carry included
+ * @returns {{pct: number, level: import('../../lib/budgetLevels').BudgetLevel, rank: number}}
+ */
+function usedOf(spent, limit) {
+  const level = budgetLevel(spent, limit)
+  if (limit > 0) return { pct: (spent / limit) * 100, level, rank: (spent / limit) * 100 }
+  return level === 'over'
+    ? { pct: 100, level, rank: Number.MAX_SAFE_INTEGER }
+    : { pct: 0, level, rank: 0 }
+}
 
 /** 'YYYY-MM' + n months. @param {string} key @param {number} n */
 function addMonths(key, n) {
@@ -57,8 +93,9 @@ export default function WebBudget() {
   const globalRollover = useMemo(() => (meta ?? []).find(m => m.key === 'budgetRollover')?.value ?? false, [meta])
 
   const lastMonth = prevMonth(thisMonth)
-  const sweptKey = `swept-${lastMonth}`
-  const alreadySwept = !!(meta ?? []).find(m => m.key === sweptKey)?.value
+  // What was done about last month's leftovers: null while the offer is open (lib/rollover.js sweepOutcome).
+  const stampKey = sweptKey(lastMonth)
+  const swept = sweepOutcome((meta ?? []).find(m => m.key === stampKey)?.value)
   const leftovers = useMemo(() => sweepable({
     categories: categories ?? [], txs: transactions ?? [], month: lastMonth, globalDefault: globalRollover,
   }), [categories, transactions, lastMonth, globalRollover])
@@ -78,16 +115,16 @@ export default function WebBudget() {
   }, [transactions, month])
 
   const rows = useMemo(() => (categories ?? [])
-    .filter(c => (c.budget ?? 0) > 0)
+    .filter(isBudgeted)
     .map(c => {
       const { carry, effective } = effectiveLimit({ cat: c, txs: transactions ?? [], month, globalDefault: globalRollover })
       const spent = spentByCat[c.name] ?? 0
-      return { ...c, limit: effective, baseBudget: c.budget, carry, spent, left: effective - spent, pct: effective ? (spent / effective) * 100 : 0 }
+      return { ...c, limit: effective, baseBudget: c.budget, carry, spent, left: effective - spent, ...usedOf(spent, effective) }
     })
-    .sort((a, b) => b.pct - a.pct), [categories, transactions, month, globalRollover, spentByCat])
+    .sort((a, b) => b.rank - a.rank || b.spent - a.spent), [categories, transactions, month, globalRollover, spentByCat])
 
   const unbudgeted = useMemo(() => {
-    const limited = new Set((categories ?? []).filter(c => (c.budget ?? 0) > 0).map(c => c.name))
+    const limited = new Set((categories ?? []).filter(isBudgeted).map(c => c.name))
     const byName = Object.fromEntries((categories ?? []).map(c => [c.name, c]))
     return Object.entries(spentByCat)
       .filter(([name, amt]) => !limited.has(name) && amt > 0)
@@ -126,7 +163,8 @@ export default function WebBudget() {
     setSweeping(true)
     try {
       await postCardPayment({ cardName: to.name, fromName: from.name, amount })
-      await db.meta.put({ key: sweptKey, value: true, updatedAt: new Date().toISOString() })
+      // Recorded as MOVED, so nothing offers these leftovers again (same stamp as the phone).
+      await db.meta.put({ key: stampKey, value: SWEPT_MOVED, updatedAt: new Date().toISOString() })
       showToast(`${fmt(amount)} moved to ${goal.name}`)
       setSweepOpen(false)
     } catch (e) {
@@ -158,7 +196,7 @@ export default function WebBudget() {
       {loading ? <StatsSkeleton /> : (
         <div className="d-stats grid grid-cols-4 gap-5 mb-8">
           <Stat label="Spent" value={<Roll id="budget:spent" value={totals.spent} />} note={totals.limit ? `${Math.round(totals.pct)}% of ${fmt(totals.limit)}` : 'No limits set'}>
-            {totals.limit > 0 && <Progress className="mt-3" value={totals.pct} color={totals.pct > 100 ? 'var(--d-neg)' : totals.pct > 85 ? 'var(--d-warn)' : undefined} />}
+            {totals.limit > 0 && <Progress className="mt-3" value={totals.pct} color={barColor(levelOfPct(totals.pct))} />}
           </Stat>
           <Stat label={totals.left < 0 ? 'Over' : 'Left'} value={<Roll id="budget:left" value={Math.abs(totals.left)} />} tone={totals.left < 0 ? 'neg' : null} note={over ? `${over} ${over === 1 ? 'category is' : 'categories are'} over` : 'Every category within its limit'} />
           <Stat label={isNow ? 'Days left' : 'Days'} value={isNow ? String(daysLeft) : String(daysInMonth)} note={isNow ? `${fmt(perDay)} a day to stay within` : 'The month is over'} />
@@ -166,14 +204,16 @@ export default function WebBudget() {
         </div>
       )}
 
-      {isNow && leftovers.total > 0 && !alreadySwept && (
+      {/* Open offers only: a dismissed or moved month shows nothing here. The
+          phone keeps one quiet line after a dismissal; this page never has. */}
+      {isNow && leftovers.total > 0 && swept === null && (
         <div className="d-panel mb-6 px-6 py-5 flex items-center gap-4" style={{ borderColor: 'rgba(var(--color-primary-rgb), 0.3)', background: 'rgba(var(--color-primary-rgb), 0.05)' }}>
           <span className="d-tile" style={{ background: 'rgba(var(--color-primary-rgb), 0.14)', color: 'var(--d-accent)' }}><ISparkle size={18} /></span>
           <div className="flex-1 min-w-0">
             <div className="text-15 font-semibold text-[var(--d-text)]">You did not spend {fmt(leftovers.total)} last month</div>
             <div className="text-13 text-[var(--d-text-2)]">Move it into a goal and it stops being this month’s spending.</div>
           </div>
-          <Btn onClick={() => db.meta.put({ key: sweptKey, value: true, updatedAt: new Date().toISOString() })}>Dismiss</Btn>
+          <Btn onClick={() => db.meta.put({ key: stampKey, value: SWEPT_DISMISSED, updatedAt: new Date().toISOString() })}>Dismiss</Btn>
           <Btn variant="primary" onClick={() => setSweepOpen(true)}>Keep it</Btn>
         </div>
       )}
@@ -203,8 +243,8 @@ export default function WebBudget() {
                 key: 'progress', header: 'Used', width: '26%',
                 render: (c) => (
                   <span className="flex items-center gap-3">
-                    <Progress className="flex-1" value={c.pct} color={c.pct > 100 ? 'var(--d-neg)' : c.pct > 85 ? 'var(--d-warn)' : c.color} />
-                    <span className={`w-11 text-right text-13 font-semibold d-num ${c.pct > 100 ? 'd-neg' : 'text-[var(--d-text-2)]'}`}>{Math.round(c.pct)}%</span>
+                    <Progress className="flex-1" value={c.pct} color={barColor(c.level, c.color)} />
+                    <span className={`w-11 text-right text-13 font-semibold d-num ${c.level === 'over' ? 'd-neg' : 'text-[var(--d-text-2)]'}`}>{Math.round(c.pct)}%</span>
                   </span>
                 ),
               },

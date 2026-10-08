@@ -147,6 +147,7 @@ function Converter({ base, table, onPick, code, amount, onAmount }) {
 export default function RatesPage() {
   const base = useBaseCurrency()
   const { table, foreign, stale, busy, error, refresh } = useRates()
+  const canRetry = stale || !!error || busy
 
   const [allOpen, setAllOpen] = useState(false)
   const [pickOpen, setPickOpen] = useState(false)
@@ -211,7 +212,7 @@ export default function RatesPage() {
             {/* See the note on the same row in Settings: the app keeps these
                 current by itself, so a button is for the case where that
                 failed rather than a thing to press. */}
-            {(stale || error || busy) && (
+            {canRetry && (
               <Button onClick={() => refresh()} disabled={busy} size="sm" className="px-4 shrink-0">
                 {busy ? 'Updating…' : 'Retry'}
               </Button>
@@ -220,7 +221,16 @@ export default function RatesPage() {
         </Card>
 
         {!table ? (
-          <EmptyState art="globe" title="No rates yet" body="Connect to the internet and tap Update." />
+          /* The button is only there when rates are stale, failed or loading, so
+             the instruction is only given when there is a button to tap. A
+             ledger with no foreign account has nothing to download. */
+          <EmptyState
+            art="globe"
+            title="No rates yet"
+            body={canRetry
+              ? 'Connect to the internet, then tap Retry.'
+              : 'Rates download once an account holds another currency.'}
+          />
         ) : (
           <>
             <Card padding="none" clip>
@@ -228,7 +238,7 @@ export default function RatesPage() {
                   right readable without a label on every row. */}
               <div className="flex items-center justify-between gap-3 px-4 py-3
                 border-b border-slate-100 dark:border-white/[0.06]">
-                <p className="text-13 font-bold text-slate-800 dark:text-white">1 Foreign Currency</p>
+                <p className="text-13 font-bold text-slate-800 dark:text-white">Per 1 unit</p>
                 <p className="text-13 font-bold text-slate-800 dark:text-white">{base}</p>
               </div>
 

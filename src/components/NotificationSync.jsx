@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { useToast } from '../context/ToastContext'
-import { collectNotifications } from '../lib/notifications'
+import { collectNotifications, freshBudgetToast } from '../lib/notifications'
 import { recordNotifications, releaseSeenAt } from '../db/notifications'
 import { CURRENT_VERSION, WHATS_NEW_HEADLINE } from './WhatsNewModal'
 import useForecast from '../hooks/useForecast'
@@ -79,12 +79,10 @@ export default function NotificationSync() {
         /* Recorded is recorded: a newer pass will not offer these again, so
            a change that landed meanwhile must not swallow the toast. */
         if (!mounted.current || document.visibilityState !== 'visible') return
-        for (const n of fresh) {
-          const isBudget = n.kind === 'budget-warn' || n.kind === 'budget-over'
-          if (isBudget && now.getTime() - Date.parse(n.at) < FRESH_MS) {
-            toastRef.current(n.title, 'warning', { ifIdle: true })
-          }
-        }
+        /* One toast for the pass, not one per alert: the phone shows a single
+           toast at a time, so several in a loop left only the last on screen. */
+        const message = freshBudgetToast(fresh, now, FRESH_MS)
+        if (message) toastRef.current(message, 'warning', { ifIdle: true })
       } catch (e) {
         console.warn('[notifications] could not record:', /** @type {any} */ (e)?.message ?? e)
       }

@@ -12,14 +12,15 @@ import db, { UNSYNCED } from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
-import { PH_ACCOUNTS } from '../../lib/phAccounts'
+import { PH_ACCOUNTS, PH_RETIRED_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
 import {
   PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, INVESTMENT_KINDS, defaultRole,
 } from '../../lib/accountMeta'
 import { CORRECTION_DESC, isAdjustment } from '../../lib/flows'
 import { monthsToClear, rateLabel, solveMonthlyRate } from '../../lib/loans'
-import { createInvestment } from '../../db/accountWrites'
+import { createInvestment, createCard, cardOwedChange, recordCardOwed, renameAccountInTransactions } from '../../db/accountWrites'
+import { getCreditStatus } from '../../utils/creditCycle'
 import { deleteTxGroup } from '../../db/txHelpers'
 import { fmt, getBaseCurrency, baseDecimals } from '../../lib/money'
 import { currencyOf, roundMoney, symbolOf } from '../../lib/currency'
@@ -181,6 +182,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const [minPayment,     setMinPayment]     = useState('0')
   const [interestRate,   setInterestRate]   = useState('')
   const [lateFee,        setLateFee]        = useState('0')
+  /* What a card owes, as typed. null is "not touched": the field then shows
+     what the card owes now, which is only known once its transactions have
+     loaded, so there is nothing to pre-fill and nothing to race. */
+  const [owedNow,        setOwedNow]        = useState(/** @type {string|null} */ (null))
   // An investment's kind and what went in before it was added; a loan's months left.
   const [kind,           setKind]           = useState('fund')
   const [investedStart,  setInvestedStart]  = useState('')
@@ -202,6 +207,25 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
 
   const isEdit = !!account?.id
 
+  /* A card's own ledger, for "Amount owed now" - the figure its screens show,
+     not a stored one. Only read when a card is being edited; undefined until
+     it has loaded, and the field says nothing is changing until then. By id,
+     so a row that names the card twice is counted once. */
+  const cardTxs = useLiveQuery(async () => {
+    if (!open || !isEdit || account?.type !== 'credit') return []
+    const name = account.name
+    const [a, f, t] = await Promise.all([
+      db.transactions.where('account').equals(name).toArray(),
+      db.transactions.where('fromAccount').equals(name).toArray(),
+      db.transactions.where('toAccount').equals(name).toArray(),
+    ])
+    return [...new Map([...a, ...f, ...t].map(tx => [tx.id, tx])).values()]
+  }, [open, isEdit, account?.id, account?.name, account?.type], undefined)
+  const cardStatus = useMemo(
+    () => (cardTxs && account?.type === 'credit' ? getCreditStatus(account, cardTxs) : null),
+    [cardTxs, account],
+  )
+
   /**
    * The institution's own colour, recovered from its name.
    *
@@ -213,7 +237,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
    */
   const presetColor = useMemo(() => {
     const n = name.trim().toLowerCase()
-    return PH_ACCOUNTS.find(p => p.name.toLowerCase() === n)?.color ?? null
+    return [...PH_ACCOUNTS, ...PH_RETIRED_ACCOUNTS].find(p => p.name.toLowerCase() === n)?.color ?? null
   }, [name])
 
   /**
@@ -265,6 +289,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setMinPayment(numToMoneyStr(account.minimumPayment ?? 0))
       setInterestRate(account.interestRate != null ? String(account.interestRate) : '')
       setLateFee(numToMoneyStr(account.lateFee ?? 0))
+      setOwedNow(null)
       setQrImage(account.qrImage ?? null)
       setParentName(account.parentName ?? null)
       setScheme(account.scheme ?? '')
@@ -284,6 +309,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
       setCutoffDay('')
       setMinPayment('0')
       setInterestRate('')
+      setOwedNow(null)
       setKind(prefill?.kind ?? 'fund')
       setInvestedStart('')
       setLoanMonths('')
@@ -319,7 +345,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   }, [open])
   const changed = useChangedSince([
     name, type, role, color, startingBal, currency, creditLimit, statementDay, dueDay, cutoffDay,
-    minPayment, interestRate, lateFee, kind, investedStart, loanMonths, parentName, scheme, design,
+    minPayment, interestRate, lateFee, owedNow, kind, investedStart, loanMonths, parentName, scheme, design,
     customColor, qrImage ? `${String(qrImage).length}:${String(qrImage).slice(0, 48)}` : null,
   ], open && filledFor != null)
   const dirty = changed && !saving
@@ -384,13 +410,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               await db.balances.delete(oldName)
               await db.balances.put({ account: cleanName, balance: bal.balance })
             }
-            // Migrate transaction references
-            const byAcct = await db.transactions.where('account').equals(oldName).toArray()
-            for (const tx of byAcct) await db.transactions.update(tx.id, { account: cleanName })
-            const byFrom = await db.transactions.where('fromAccount').equals(oldName).toArray()
-            for (const tx of byFrom) await db.transactions.update(tx.id, { fromAccount: cleanName })
-            const byTo = await db.transactions.where('toAccount').equals(oldName).toArray()
-            for (const tx of byTo) await db.transactions.update(tx.id, { toAccount: cleanName })
+            /* Migrate transaction references - stamped as changed, so the
+               rename syncs (db/accountWrites.js renameAccountInTransactions). */
+            await renameAccountInTransactions(oldName, cleanName)
             // Update children's parentName reference
             await db.accounts.where('parentName').equals(oldName).modify({ parentName: cleanName })
             // Goals name their funding accounts. `accounts` is a multi-entry
@@ -459,9 +481,17 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
             await db.accounts.update(account.id, { balance: newBal, updatedAt: nowISO })
             await db.balances.put({ account: cleanName, balance: newBal })
           }
+
+          /* A card has no balance to type over: what it owes is its charges
+             against its payments. Changing "Amount owed now" writes the
+             difference as a correction on the card, the same row New account
+             and setup write for what a card already owes. */
+          if (owedChange !== 0) await recordCardOwed(cleanName, owedChange, currency)
         })
       } else if (type === 'investment') {
         await createInvestment(data, parseMoney(startingBal) || 0)
+      } else if (type === 'credit') {
+        await createCard(data, parseMoney(owedField) || 0)
       } else {
         await createAccount(data, balanceFromField(startingBal))
       }
@@ -469,6 +499,8 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
         !isEdit ? 'Account created'
         : adjustDiff !== 0
           ? `${type === 'loan' ? 'Owed' : 'Balance'} corrected to ${fmt(parseMoney(startingBal), currency)}`
+        : owedChange !== 0
+          ? `Owed corrected to ${fmt(parseMoney(owedField), currency)}`
         : 'Account updated',
       )
       leaveGuard.leave(close)
@@ -570,8 +602,9 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   /* Hoisted out of the adjust block, which used to be an IIFE: the Apply
      button is Sheet's footer now, and it needs the same difference the
      preview inside the body shows. */
-  /* What saving will write, if anything. Zero for a new account and for a
-     credit card, neither of which shows the field. */
+  /* What saving will write, if anything. Zero for a new account, which has
+     no balance to correct yet, and for a credit card, whose field is the
+     amount it owes - owedChange, below. */
   /* On the cent, not on the float. The field now shows the balance rounded
      (see numToMoneyStr), while the stored figure may still carry noise from
      before rounding existed - 140.0000000123. Compared raw, opening an
@@ -582,6 +615,17 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   const adjustDiff = isEdit && type !== 'credit' && type !== 'investment'
     ? roundMoney(balanceFromField(startingBal) - (account?.balance ?? 0), currency)
     : 0
+
+  /* The same for a card, which has no balance to set: what it owes. The field
+     shows what the card owes now until it is typed in, and what saving writes
+     is the difference - see cardOwedChange. Zero for a new card until an
+     amount is typed, and for an edit until the card's history has loaded. */
+  const isCardType = type === 'credit'
+  const owedField = owedNow ?? (cardStatus && cardStatus.currentBalance > 0
+    ? numToMoneyStr(cardStatus.currentBalance, currency) : '')
+  const owedChange = !isCardType ? 0
+    : isEdit ? (owedNow === null || !cardStatus ? 0 : cardOwedChange({ want: parseMoney(owedField), status: cardStatus, currency }))
+    : cardOwedChange({ want: parseMoney(owedField), status: null, currency })
 
   /* The delete confirmation's content, defined once.
 
@@ -859,9 +903,10 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                 design - the old screen said it too, but only after you had
                 committed to going there.
 
-                Not for credit cards: what they owe comes off the statement
-                and the ledger, and typing over it would be a fiction. The
-                old pill was hidden for them too. */}
+                A credit card gets its own version, "Amount owed now": what it
+                owes comes off the statement and the ledger, so it is not
+                typed over - the difference is written as a correction on the
+                card instead, and a new card can say what it already owes. */}
             {/* An investment's value is changed from its own page, where it
                 is dated; here it only says so. */}
             {isEdit && isInvestmentType && (
@@ -870,18 +915,28 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
               </p>
             )}
 
-            {(!isEdit || (type !== 'credit' && !isInvestmentType)) && (
+            {(!isEdit || !isInvestmentType) && (
               <div>
-                <SectionLabel>
-                  {isLoanType ? (isEdit ? 'Owed' : 'Amount owed')
+                <SectionLabel hint={isCardType && !isEdit ? 'What the card already owes. Leave it blank for a new card.' : undefined}>
+                  {isCardType ? 'Amount owed now'
+                    : isLoanType ? (isEdit ? 'Owed' : 'Amount owed')
                     : isInvestmentType ? 'Value now'
                     : isEdit ? 'Balance' : 'Starting balance'}
                 </SectionLabel>
+                {/* A card's figure is what it owes - not stored, but worked out
+                    from its ledger - so it has a field of its own. */}
                 <MoneyField
-                  value={startingBal === '0' ? '' : startingBal}
-                  onChange={moneyChangeHandler(setStartingBal, baseDecimals(currency))}
+                  value={isCardType ? owedField : (startingBal === '0' ? '' : startingBal)}
+                  onChange={isCardType
+                    ? moneyChangeHandler(setOwedNow, baseDecimals(currency))
+                    : moneyChangeHandler(setStartingBal, baseDecimals(currency))}
                   currency={currency}
                 />
+                {isEdit && isCardType && owedChange !== 0 && (
+                  <p className="mt-2 px-1 text-12 font-medium text-slate-500 dark:text-slate-400">
+                    {`Records a ${fmt(Math.abs(owedChange), currency)} correction to what you owe. It won't count as ${owedChange > 0 ? 'spending' : 'income'}.`}
+                  </p>
+                )}
                 {/* A correction moves the balance and net worth, and is not
                     counted as income or spending - so the line says that,
                     rather than calling it one. */}
@@ -897,6 +952,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     A dollar account in a peso ledger is the case this exists
                     for, and the row is quiet when there is nothing unusual to
                     say: the ledger's own currency needs no explaining. */}
+                {!(isEdit && isCardType) && (
                 <button
                   type="button"
                   onClick={() => setCurrencyOpen(true)}
@@ -914,6 +970,7 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                     <polyline points="5,2 9,7 5,12" />
                   </svg>
                 </button>
+                )}
               </div>
             )}
 
@@ -1047,15 +1104,22 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                   </div>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3">
+                {/* The cutoff day is what a card's cycle runs on (utils/
+                    creditCycle.js). The Statement day is only a fallback for a
+                    card with no cutoff - the day it closes, so the next one
+                    starts the day after - and nothing reads it otherwise, so
+                    it is asked for only while there is no cutoff to say it.
+                    It used to sit beside the other two, promising a thing it
+                    did not do. */}
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <SectionLabel>Statement</SectionLabel>
+                    <SectionLabel>Cutoff</SectionLabel>
                     <input
                       type="number"
                       inputMode="numeric"
                       min="1" max="31"
-                      value={statementDay}
-                      onChange={e => setStatementDay(e.target.value)}
+                      value={cutoffDay}
+                      onChange={e => setCutoffDay(e.target.value)}
                       placeholder="1–31"
                       className={inputClass(false)}
                     />
@@ -1072,22 +1136,25 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
                       className={inputClass(false)}
                     />
                   </div>
-                  <div>
-                    <SectionLabel>Cutoff</SectionLabel>
-                    <input
-                      type="number"
-                      inputMode="numeric"
-                      min="1" max="31"
-                      value={cutoffDay}
-                      onChange={e => setCutoffDay(e.target.value)}
-                      placeholder="1–31"
-                      className={inputClass(false)}
-                    />
-                  </div>
+                  {!cutoffDay.trim() && (
+                    <div>
+                      <SectionLabel hint="Used only when there is no cutoff.">Statement</SectionLabel>
+                      <input
+                        type="number"
+                        inputMode="numeric"
+                        min="1" max="31"
+                        value={statementDay}
+                        onChange={e => setStatementDay(e.target.value)}
+                        placeholder="1–31"
+                        className={inputClass(false)}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <p className="text-11 text-slate-400 dark:text-slate-500 px-1 -mt-2">
-                  Statement day closes your bill · Due day is the deadline to pay · Cutoff starts the next cycle
+                  Cutoff is the day a new statement starts. Spending from this day goes on the next bill. Due is the deadline to pay.
+                  {!cutoffDay.trim() && ' With no cutoff, the day after the statement day starts a new statement.'}
                 </p>
               </div>
             )}

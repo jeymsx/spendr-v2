@@ -289,7 +289,7 @@ function RunningSheet({ row, state, onClose }) {
           {/* Running, where it stands is the news. Finished, the verdict is -
               and where it stood when it ended goes under it. */}
           <p className="mt-1 text-28 leading-tight font-bold text-slate-900 dark:text-white tabular-nums">
-            {running ? row.judged.progress : row.status === 'quit' ? 'Given up' : row.status === 'won' ? 'Won' : 'Missed'}
+            {running ? row.judged.progress : row.status === 'quit' ? 'Gave up' : row.status === 'won' ? 'Won' : 'Missed'}
           </p>
           {challengeSubject(row) && (
             <p className="-mt-1 max-w-full truncate text-15 font-semibold text-slate-600 dark:text-slate-300">
@@ -307,7 +307,7 @@ function RunningSheet({ row, state, onClose }) {
             </div>
           )}
           <p className="mt-3 text-15 text-slate-700 dark:text-slate-200 leading-snug max-w-[300px]">{row.def.blurb}</p>
-          {confirm && <p className="text-13 text-red-600 dark:text-red-400">It ends here and counts as missed. You can always take it on again.</p>}
+          {confirm && <p className="text-13 text-red-600 dark:text-red-400">It ends here and won&apos;t count as a win. You can take it on again anytime.</p>}
         </div>
       )}
     </Sheet>

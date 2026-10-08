@@ -15,6 +15,7 @@ import {
 } from '../../components/icons'
 import Sheet from '../../components/ui/Sheet'
 import { fmt } from '../../lib/money'
+import { isBudgeted } from '../../lib/budgetLevels'
 export {
   SortableCategoryRow, CategoryManager, CategoryManagerSheet, CategoriesPage,
 } from './CategoryManager'
@@ -72,7 +73,8 @@ export function CategoryRow({ cat, onTap, onLongPressDelete }) {
       </div>
       <div className="flex-1 min-w-0">
         <p className="text-sm font-semibold text-slate-800 dark:text-white truncate">{cat.name}</p>
-        {(cat.budget ?? 0) > 0 && (
+        {/* Not for an inflow category: the form once offered it a limit, and the stray number would read as one. */}
+        {isBudgeted(cat) && (
           <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5 tabular-nums">
             {fmt(cat.budget)} / mo
           </p>
@@ -130,7 +132,7 @@ export function CategoryPresetsSheet({ open, onClose, activeTab, existingCategor
       z={120}
       scrim={45}
       maxHeight="75vh"
-      title="Add from Presets"
+      title="Browse presets"
       titleAction={(
         <button onClick={onClose} className="text-xs font-medium text-slate-500 dark:text-slate-400 active:opacity-60">
           Done

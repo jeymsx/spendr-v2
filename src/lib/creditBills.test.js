@@ -52,6 +52,14 @@ describe('statementFor', () => {
     expect(ymd(statementFor({ cutoffDate: '26', dueDate: '5' }, new Date(2026, 8, 10, 12)).due)).toEqual([2026, 10, 5])
   })
 
+  it('bills by the Statement day when there is no cutoff day', () => {
+    // Statement day 25 closes the cycle on the 25th: the same one as SPayLater's cutoff of 26.
+    const s = statementFor({ statementDate: 25, dueDate: 5 }, new Date(2026, 8, 10, 12))
+    expect(ymd(s.cycleStart)).toEqual([2026, 8, 26])
+    expect(ymd(s.cycleEnd)).toEqual([2026, 9, 25])
+    expect(ymd(s.due)).toEqual([2026, 10, 5])
+  })
+
   it('bills by calendar month without a cutoff, and names no due date without a due day', () => {
     const s = statementFor({}, new Date(2026, 8, 10, 12))
     expect(ymd(s.cycleStart)).toEqual([2026, 9, 1])

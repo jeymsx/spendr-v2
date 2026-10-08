@@ -20,6 +20,7 @@ import { SkeletonList } from '../../components/ui/Skeleton'
 import { RowDivider } from '../../components/ui/Presence'
 import { fmt } from '../../lib/money'
 import { txRowTone } from './shared'
+import { useDeferredForget } from './useDeferredForget'
 
 /**
  * Recently deleted: every transaction deleted in the last thirty days, to
@@ -57,11 +58,14 @@ export default function RecentlyDeleted() {
   const [picked, setPicked] = useState(/** @type {number|null} */ (null))
   const [emptying, setEmptying] = useState(false)
   const [busy, setBusy] = useState(false)
+  /* Rows swiped away and not yet deleted for good: hidden, with an Undo on
+     offer, until it runs out (useDeferredForget has why it waits). */
+  const { hidden, forgetWithUndo, settle } = useDeferredForget()
 
   // What is past thirty days goes as the page opens.
   useEffect(() => { purgeTrash().catch(() => { /* the next open will */ }) }, [])
 
-  const list = entries ?? []
+  const list = (entries ?? []).filter(e => !hidden.includes(e.id))
   const pickedEntry = list.find(e => e.id === picked) ?? null
 
   /** @param {number} id */
@@ -83,6 +87,7 @@ export default function RecentlyDeleted() {
 
   /** @param {number} id */
   async function forget(id) {
+    await settle()
     await deleteForever(id)
     setPicked(null)
     showToast('Deleted for good')
@@ -92,6 +97,7 @@ export default function RecentlyDeleted() {
   async function empty() {
     setBusy(true)
     try {
+      await settle()
       await emptyTrash()
       setEmptying(false)
       showToast('Recently deleted is empty')
@@ -130,7 +136,7 @@ export default function RecentlyDeleted() {
                 const name = lead.description || lead.category || (lead.type === 'transfer' ? 'Transfer' : 'Transaction')
                 return (
                   <div key={entry.id}>
-                    <SwipeRow label={`Delete ${name} for good`} onDelete={() => forget(entry.id)}>
+                    <SwipeRow label={`Delete ${name} for good`} onDelete={() => forgetWithUndo(entry.id)}>
                       <div className="flex items-center">
                         <button
                           type="button"

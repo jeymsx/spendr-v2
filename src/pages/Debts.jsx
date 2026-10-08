@@ -174,7 +174,7 @@ export default function Debts() {
             : 'text-slate-900 dark:text-white',
         sub: totals.net > 0 ? 'In your favour'
            : totals.net < 0 ? 'Against you'
-           : rows.length ? 'All even' : 'Nothing recorded',
+           : rows.length ? 'All square' : 'Nothing recorded',
       }
     : view === 'i_owe'
       ? {

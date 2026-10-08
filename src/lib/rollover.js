@@ -24,9 +24,24 @@
  * every unspent peso back to January - a four-figure windfall out of nowhere,
  * for months you were not budgeting this way. `rolloverFrom` is stamped when
  * the flag goes on and the carry starts there.
+ *
+ * A category that rolls but has no `rolloverFrom` carries nothing at all
+ * (effectiveLimit starts counting at the month asked about, which is no
+ * months). So every way a category can START rolling has to stamp one, and
+ * this file holds the rules for it, as pure functions the screens call:
+ *
+ *   the global switch goes on     startsForGlobalOn
+ *   a category's button goes on   planLimitSave / startForLimit
+ *   a limit is set on a category  planLimitSave / startForLimit
+ *
+ * The switch used to stamp nothing. Turning "Carry budgets over" on made every
+ * category roll in name only, because the only code that wrote a start month
+ * was the per-category button - which, with the switch already on, could not
+ * write at all.
  */
 
 import { txBase } from './fxContext'
+import { canHaveBudget } from './budgetLevels'
 import { isSpend } from './flows'
 import { spendingRows } from '../utils/installments'
 
@@ -137,12 +152,30 @@ export function effectiveLimit({ cat, txs, month, globalDefault = false }) {
 }
 
 /**
+ * Did `month`'s leftover really go into the next month's limit?
+ *
+ * Rolling is not enough. The carry into the month after `month` counts `month`
+ * only when it starts at or before it (carryInto), so a category that rolls
+ * but starts this month - or has no start at all - has NOT kept last month's
+ * leftover, and that money is still loose.
+ *
+ * @param {Record<string, any>} cat
+ * @param {boolean} globalDefault
+ * @param {string} month  the month whose leftover is in question
+ */
+export function keptLeftover(cat, globalDefault, month) {
+  return rollsOver(cat, globalDefault) && !!cat?.rolloverFrom && cat.rolloverFrom <= month
+}
+
+/**
  * Last month's leftovers, for the sweep.
  *
  * Only categories that came in UNDER, and only the amount they were under by.
- * A category with no limit is not under anything, and one that rolls over has
- * already kept its leftover - sweeping it too would move the same money
- * twice.
+ * A category with no limit is not under anything, and one whose leftover was
+ * carried into this month's limit has already kept it - sweeping it too would
+ * move the same money twice. One that rolls but only began this month, or has
+ * no start yet, kept nothing, so it is still offered: otherwise its leftover
+ * would be neither carried nor offered, which is lost.
  *
  * And only a month you spent in at all. With no spending logged that month -
  * limits set today, a ledger begun this month, a month not logged - every
@@ -160,7 +193,8 @@ export function sweepable({ categories, txs, month, globalDefault = false }) {
   const out = []
   for (const cat of categories ?? []) {
     const limit = cat.budget ?? 0
-    if (!(limit > 0) || rollsOver(cat, globalDefault)) continue
+    // An inflow category's stray budget is not a limit anyone is under.
+    if (!canHaveBudget(cat) || !(limit > 0) || keptLeftover(cat, globalDefault, month)) continue
     const spent = spendByMonth(txs, cat.name)[month] ?? 0
     const left = Math.round((limit - spent) * 100) / 100
     if (left > 0) out.push({ name: cat.name, limit, spent, left, icon: cat.icon, color: cat.color })
@@ -168,4 +202,135 @@ export function sweepable({ categories, txs, month, globalDefault = false }) {
   out.sort((a, b) => b.left - a.left)
   const total = Math.round(out.reduce((s, c) => s + c.left, 0) * 100) / 100
   return { rows: out, total }
+}
+
+/**
+ * The start month to write for each category now that the global switch is on.
+ *
+ * Every expense category that has none, so that what the switch promises -
+ * "unspent rolls into next month" - starts from this month for all of them. A
+ * category already holding a start keeps it (turning the switch off and on
+ * again must not move it), and one explicitly set NOT to roll is left alone:
+ * stamping it would give the carry a date to reach back to if it were ever
+ * switched on by hand.
+ *
+ * A category with no limit is stamped too. It carries nothing until it has
+ * one, and the day it gets one startForLimit begins its carry afresh.
+ *
+ * @param {Array<Record<string, any>>} categories
+ * @param {string} month  the current month, as a key
+ * @returns {Array<{id: number, rolloverFrom: string}>}
+ */
+export function startsForGlobalOn(categories, month) {
+  /** @type {Array<{id: number, rolloverFrom: string}>} */
+  const out = []
+  for (const c of categories ?? []) {
+    if (c?.id == null || !canHaveBudget(c) || c.rolloverFrom || c.rollover === false) continue
+    out.push({ id: c.id, rolloverFrom: month })
+  }
+  return out
+}
+
+/**
+ * The `rolloverFrom` to write alongside a limit, or undefined to leave it be.
+ *
+ * Starts the carry at `month` when a category that rolls is given a limit it
+ * did not have: carryInto measures every month since the start against the
+ * CURRENT limit, so a start that predates the limit would credit months in
+ * which nothing was budgeted - the "windfall out of nowhere" the start date
+ * exists to prevent. Also when it rolls, has a limit and has never had a start
+ * at all, which is how a category created or restored with the switch already
+ * on would otherwise sit there carrying nothing for ever.
+ *
+ * Left alone when a start already stands and the limit was already there: a
+ * category switched off and on again keeps its old start, as it always has.
+ *
+ * @param {object} input
+ * @param {Record<string, any>|null|undefined} input.cat  the category as saved; absent for a new one
+ * @param {number} input.budget  the limit it will have once this is written
+ * @param {boolean} input.rolls  whether it will roll over once this is written
+ * @param {string} input.month   the current month, as a key
+ * @returns {string|undefined}
+ */
+export function startForLimit({ cat, budget, rolls, month }) {
+  if (!rolls || !(budget > 0)) return undefined
+  if (!((cat?.budget ?? 0) > 0) || !cat?.rolloverFrom) return month
+  return undefined
+}
+
+/**
+ * What to write, per category, when the limit editor saves.
+ *
+ * Only the categories the person touched. For each: the new limit, the new
+ * carry flag, and a start month where one is needed (startForLimit).
+ *
+ * The flag is written only when it differs from what the category resolves to
+ * now - tapping the button and tapping it back changes nothing - and when it
+ * is written it is written EXPLICITLY, true or false, whatever the global
+ * switch says. That is what lets one category opt in or out against the
+ * default: an explicit value beats the global in rollsOver, so the default
+ * changing later does not move it. (It used to be skipped whenever the shown
+ * state equalled the global, which left the button unable to stamp anything
+ * while the switch was on.)
+ *
+ * @param {object} input
+ * @param {Array<Record<string, any>>} input.categories  as saved
+ * @param {Record<string, number>} input.budgets  new limits, parsed, by category id
+ * @param {Record<string, boolean>} input.carry   the carry buttons pressed, by category id
+ * @param {boolean} input.globalDefault
+ * @param {string} input.month  the current month, as a key
+ * @returns {Array<{id: number, patch: Record<string, any>}>}  only rows with something to write
+ */
+export function planLimitSave({ categories, budgets, carry, globalDefault, month }) {
+  /** @type {Array<{id: number, patch: Record<string, any>}>} */
+  const out = []
+  for (const cat of categories ?? []) {
+    const key = String(cat.id)
+    const hasBudget = Object.prototype.hasOwnProperty.call(budgets, key)
+    const hasCarry  = Object.prototype.hasOwnProperty.call(carry, key)
+    if (!hasBudget && !hasCarry) continue
+
+    const before = cat.budget ?? 0
+    const budget = hasBudget ? budgets[key] : before
+    const resolved = rollsOver(cat, globalDefault)
+    const rolls = hasCarry ? carry[key] : resolved
+
+    /** @type {Record<string, any>} */
+    const patch = {}
+    if (hasBudget && budget !== before) patch.budget = budget
+    if (hasCarry && carry[key] !== resolved) patch.rollover = carry[key]
+    const from = startForLimit({ cat, budget, rolls, month })
+    if (from) patch.rolloverFrom = from
+    if (Object.keys(patch).length) out.push({ id: cat.id, patch })
+  }
+  return out
+}
+
+/** The meta key that records what was done about a month's leftovers. @param {string} month */
+export const sweptKey = (month) => `swept-${month}`
+
+/** What the stamp holds once the money has been moved into a goal. */
+export const SWEPT_MOVED = 'moved'
+/** What it holds once the offer has been turned down. */
+export const SWEPT_DISMISSED = 'dismissed'
+
+/**
+ * What became of a month's leftovers, from its stamp: 'moved' into a goal,
+ * 'dismissed', or null while the offer is still open.
+ *
+ * Moving and dismissing used to write the same `true`, so the Budget page
+ * could not tell them apart and went on offering to "keep" money that had
+ * already been moved - a second transfer of the same leftovers, one tap away.
+ *
+ * A stamp from before the two were told apart is `true`, and reads as moved.
+ * That is the reading that cannot lose money: if it was really a dismissal the
+ * quiet line that offered the sweep again is gone for that one month, where the
+ * other reading would offer money that has left twice.
+ *
+ * @param {unknown} value  the stamp's value
+ * @returns {'moved'|'dismissed'|null}
+ */
+export function sweepOutcome(value) {
+  if (value === SWEPT_DISMISSED) return SWEPT_DISMISSED
+  return value ? SWEPT_MOVED : null
 }

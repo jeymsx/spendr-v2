@@ -18,6 +18,7 @@ import {
   Database01, FaceId, FileDownload02, LogOut01, MessageAlertCircle, Passcode, RefreshCw01, ShieldTick, Sliders04,
 } from '@untitledui/icons'
 import { toDateInput } from '../../utils/txDate'
+import { transactionsToCsv } from '../import/export'
 
 // ── Constants ──────────────────────────────────────────────────────────────────
 
@@ -78,45 +79,16 @@ export function syncedLabel(isoStr) {
 // ── CSV export ─────────────────────────────────────────────────────────────────
 
 /**
- * The ledger as a spreadsheet.
+ * The ledger as a CSV file, saved to the device.
  *
- * ── The totals were always right ──
+ * The columns, and why each one is there, are in pages/import/export.js, which
+ * writes the text - beside the importer that reads it back, so a file made
+ * here can be imported without editing. This is only the download.
  *
- * A refund is stored as an expense with a NEGATIVE amount and a split is N
- * ordinary expenses, so SUM over `amount` and a pivot by category both come
- * out correct with no column here knowing either concept exists. That is the
- * whole payoff of the sign carrying the arithmetic.
- *
- * ── What was missing was the relationships ──
- *
- * Correct totals, unreadable rows. Two lines for one purchase looked like two
- * purchases, and a negative row looked like a typo rather than money that
- * came back from the line above it. The last three columns are the links that
- * were already in the data and had nowhere to go: which purchase a refund
- * came from, which legs are one purchase, which charges are one plan. Empty
- * on the ordinary rows, which is most of them.
- *
- * toAmount and toCurrency follow them: what arrived at the other end of a
- * transfer between two currencies. Blank everywhere else.
+ * @param {Array<Record<string, any>>} transactions
  */
 export function buildAndDownloadCSV(transactions) {
-  const headers = [
-    'txId', 'type', 'date', 'description', 'category',
-    'payment', 'account', 'fromAccount', 'toAccount', 'amount',
-    'refundOf', 'splitId', 'installmentId', 'toAmount', 'toCurrency',
-  ]
-  const esc = v => `"${String(v ?? '').replace(/"/g, '""')}"`
-  const lines = [
-    headers.join(','),
-    ...transactions.map(t => [
-      esc(t.txId), esc(t.type), esc(t.date), esc(t.description),
-      esc(t.category), esc(t.payment), esc(t.account),
-      esc(t.fromAccount), esc(t.toAccount), Number(t.amount ?? 0),
-      esc(t.refundOf), esc(t.splitId), esc(t.installmentId),
-      t.toAmount ?? '', esc(t.toCurrency),
-    ].join(',')),
-  ]
-  const blob = new Blob([lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' })
+  const blob = new Blob([transactionsToCsv(transactions)], { type: 'text/csv;charset=utf-8;' })
   const url  = URL.createObjectURL(blob)
   const a    = document.createElement('a')
   a.href     = url

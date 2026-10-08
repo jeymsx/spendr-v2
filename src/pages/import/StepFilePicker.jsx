@@ -2,7 +2,7 @@ import { useState, useRef, useCallback } from 'react'
 import Card from '../../components/ui/Card'
 import SectionLabel from '../../components/ui/SectionLabel'
 import { IconUpload } from '../../components/icons'
-import { IconWarning, NEW_REQUIRED_COLS } from './shared'
+import { IconWarning, SPENDR_REQUIRED_COLS } from './shared'
 import { parseCSV } from './csv'
 
 // ── Step 1: File picker ────────────────────────────────────────────────────────
@@ -24,13 +24,13 @@ export function StepFilePicker({ onParsed }) {
     const reader = new FileReader()
     reader.onload = (e) => {
       try {
-        const { rows, isLegacy } = parseCSV(e.target.result)
+        const { rows, format } = parseCSV(e.target.result)
         if (rows.length === 0) {
           setError('The CSV file is empty. No data rows were found.')
           setLoading(false)
           return
         }
-        onParsed(rows, isLegacy, file.name, file.size)
+        onParsed(rows, format, file.name, file.size)
       } catch (err) {
         setError(err.message)
         setLoading(false)
@@ -131,10 +131,11 @@ export function StepFilePicker({ onParsed }) {
       <Card padding="md" className="mt-5">
         <SectionLabel>Expected columns</SectionLabel>
         <p className="text-11 text-slate-500 dark:text-slate-400 font-mono leading-relaxed break-all">
-          {NEW_REQUIRED_COLS.join(', ')}
+          {SPENDR_REQUIRED_COLS.join(', ')}
         </p>
         <p className="text-11 text-slate-400 dark:text-slate-500 mt-2">
-          Legacy format (txId, date, payment, account…) is also accepted.
+          That is how Spendr exports Transactions as CSV. A file with tx_id,
+          transaction_date, from_account and to_account columns is read too.
         </p>
       </Card>
     </div>

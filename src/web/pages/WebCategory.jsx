@@ -6,6 +6,7 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { txMonthKey } from '../../utils/txDate'
 import { effectiveLimit, monthKey } from '../../lib/rollover'
+import { levelOfPct } from '../../lib/budgetLevels'
 import { isSpend, isIncome, isAdjustment } from '../../lib/flows'
 import { txBase } from '../../lib/fxContext'
 import { foldLoanPayments } from '../../lib/loans'
@@ -91,6 +92,8 @@ export default function WebCategory() {
   const rows = useMemo(() => foldLoanPayments(catTxs), [catTxs])
   const verb = isInflow ? 'Received' : 'Spent'
   const pct = limit ? (monthTotal / limit) * 100 : 0
+  // Amber from where "near" starts for every surface (lib/budgetLevels.js), red once over.
+  const level = levelOfPct(pct)
   const left = limit - monthTotal
 
   // Its figures, chart and rows wait for the ledger, so none says nothing first.
@@ -113,7 +116,7 @@ export default function WebCategory() {
       {loading ? <StatsSkeleton /> : (
         <div className="d-stats grid grid-cols-4 gap-5 mb-8">
           <Stat label={`${verb} this month`} value={fmt(monthTotal)} note={limit ? `${Math.round(pct)}% of the limit` : ' '}>
-            {limit > 0 && <Progress className="mt-3" value={pct} color={pct > 100 ? 'var(--d-neg)' : pct > 85 ? 'var(--d-warn)' : cat?.color} />}
+            {limit > 0 && <Progress className="mt-3" value={pct} color={level === 'over' ? 'var(--d-neg)' : level === 'near' ? 'var(--d-warn)' : cat?.color} />}
           </Stat>
           <Stat label={limit ? (left < 0 ? 'Over' : 'Left') : 'Limit'} value={limit ? fmt(Math.abs(left)) : '—'} tone={limit && left < 0 ? 'neg' : null} note={limit ? `Of ${fmt(limit)}` : 'Set one in Budget limits'} />
           <Stat label="Usually" value={fmt(usual)} note={past.length ? `A month, over ${past.length} ${past.length === 1 ? 'month' : 'months'}` : 'Not enough history yet'} />

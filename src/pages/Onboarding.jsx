@@ -1,8 +1,8 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { AnimatePresence, MotionConfig, motion } from 'motion/react'
-import db, { UNSYNCED } from '../db/db'
-import { CORRECTION_DESC } from '../lib/flows'
+import db from '../db/db'
+import { recordCardOwed } from '../db/accountWrites'
 import { APP_VERSION } from '../lib/release'
 import { useAuth } from '../context/AuthContext'
 import { useTheme } from '../context/ThemeContext'
@@ -31,6 +31,7 @@ import { StepBalances } from './onboarding/StepBalances'
 import { StepStayOnTrack } from './onboarding/StepStayOnTrack'
 import { StepInstall, StepInstallFirst, StepOpenInBrowser } from './onboarding/StepInstall'
 import { StepDone } from './onboarding/StepDone'
+import { startGettingStarted } from '../hooks/useGettingStarted'
 
 /**
  * Setup: the first thing anyone sees.
@@ -362,22 +363,9 @@ export default function Onboarding() {
            the account, where nothing reads it for a card: Home said the whole
            limit was free, the card said nothing was used, and net worth left
            the debt out. As a correction it is the card's first charge - it
-           moves the card and net worth, and is not spending. */
-        if (credit && bal > 0) {
-          const nowISO = new Date().toISOString()
-          await db.transactions.add({
-            txId:        crypto.randomUUID(),
-            type:        'expense',
-            date:        nowISO,
-            description: CORRECTION_DESC,
-            category:    'Others',
-            account:     acct.name,
-            amount:      bal,
-            adjust:      'correction',
-            synced:      UNSYNCED,
-            updatedAt:   nowISO,
-          })
-        }
+           moves the card and net worth, and is not spending. The row is the
+           same one New account and Edit write (db/accountWrites.js). */
+        if (credit && bal > 0) await recordCardOwed(acct.name, bal, currency)
       }
 
       // The starter categories, less any a sync has already put here.
@@ -389,6 +377,8 @@ export default function Onboarding() {
          What's New over their first Home was a list of changes to an app
          they had never used. */
       await db.meta.put({ key: 'whatsNewSeen', value: APP_VERSION })
+      // A fresh setup, so the first-week list on Home (lib/gettingStarted.js).
+      await startGettingStarted()
       await db.meta.put({ key: 'onboarded', value: true })
       clearDraft()
       navigate('/', { replace: true })

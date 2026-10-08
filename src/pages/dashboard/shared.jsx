@@ -6,6 +6,7 @@ import { txBase } from '../../lib/fxContext'
 import { isSpend } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
 import { spendingRows } from '../../utils/installments'
+import { budgetLevel, canHaveBudget } from '../../lib/budgetLevels'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -37,17 +38,28 @@ export function getGreeting() {
  * into a template literal. The budget cases pass the CATEGORY, so the line
  * renders whatever that category renders as everywhere else; the rest pass an
  * icon directly.
+ *
+ * @param {Array<Record<string, any>>} txAll
+ * @param {Array<Record<string, any>>} budgetCategories  each with `spent` and `budget`,
+ *   where `budget` is the limit IN FORCE this month - what was set plus what
+ *   rollover carried in (lib/rollover effectiveLimit), as the Budget page
+ *   shows it. The greeting used to read the bare limit, so a category with a
+ *   carried-in allowance was "over budget" here and comfortably within it there.
+ * @param {Array<Record<string, any>>} upcomingRecurring
  */
 export function getContextHint(txAll, budgetCategories, upcomingRecurring) {
   const _d    = new Date()
   const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,'0')}-${String(_d.getDate()).padStart(2,'0')}`
   const dow   = new Date().getDay() // 0=Sun, 6=Sat
 
-  // Budget warnings take top priority
-  const overBudget = (budgetCategories ?? []).find(c => c.spent > c.budget)
+  /* Budget warnings take top priority. Spending only - an inflow category's
+     stray budget is not a limit - and "near" is the shared 80%, the same line
+     as the meter, the Budget page and the bell (lib/budgetLevels.js). */
+  const limited = (budgetCategories ?? []).filter(canHaveBudget)
+  const overBudget = limited.find(c => budgetLevel(c.spent, c.budget) === 'over')
   if (overBudget) return { cat: overBudget, Icon: IconWarning, text: `Over budget on ${overBudget.name.toLowerCase()}` }
 
-  const nearBudget = (budgetCategories ?? []).find(c => c.budget > 0 && (c.spent / c.budget) >= 0.85)
+  const nearBudget = limited.find(c => budgetLevel(c.spent, c.budget) === 'near')
   if (nearBudget) return { cat: nearBudget, Icon: IconWarning, text: `${nearBudget.name.toLowerCase()} budget almost full` }
 
   // Overdue bills first, then ones due today or tomorrow. The previous check

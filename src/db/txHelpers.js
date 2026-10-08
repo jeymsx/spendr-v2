@@ -78,7 +78,9 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
   }
 
   const nowISO      = new Date().toISOString()
-  const newNextDate = advanceNextDate(rec.nextDate, rec.frequency)
+  /* dueDay, so a bill due on the 31st goes Feb 28, then Mar 31 - not 28 for
+     good after its first short month. */
+  const newNextDate = advanceNextDate(rec.nextDate, rec.frequency, rec.dueDay)
 
   /* Returned to the caller so it can offer an Undo. deleteTxGroup already
      reverses everything this does - the balance, the row, and the bill's
@@ -381,7 +383,7 @@ export async function restoreDeletedTx(tx) {
         const rec = await db.recurring.get(tx.recurringId)
         if (rec && rec.nextDate === tx.recurringPrevDate) {
           await db.recurring.update(tx.recurringId, {
-            nextDate: advanceNextDate(tx.recurringPrevDate, rec.frequency),
+            nextDate: advanceNextDate(tx.recurringPrevDate, rec.frequency, rec.dueDay),
           })
         }
       }

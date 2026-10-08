@@ -227,7 +227,8 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
         body,
         url: '/recurring',
       })
-      const next = advanceNextDate(date, bill.frequency)
+      // From the bill's due day, so a 31st keeps its day after a short month.
+      const next = advanceNextDate(date, bill.frequency, bill.dueDay)
       if (!next || next <= date) break
       date = next
     }
@@ -251,7 +252,8 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
     recaps.push({
       tag: `recap:${month}`,
       fireAt: fireAt.toISOString(),
-      title: `Your ${monthName(month)} recap is ready`,
+      // Worded as the bell words it (lib/notifications.js): the two are one message.
+      title: `Your ${monthName(month)} Wrapped is ready`,
       body: 'See how your month went',
       url: `/recap/${month}`,
     })

@@ -31,8 +31,23 @@ export const PH_ACCOUNTS = [
   { name: 'UNO Digital Bank',   type: 'bank',    color: '#f59e0b', group: 'Digital Banks',     popular: false },
   { name: 'OwnBank',            type: 'bank',    color: '#10b981', group: 'Digital Banks',     popular: false },
   { name: 'ING',                type: 'bank',    color: '#f97316', group: 'Digital Banks',     popular: false },
-  { name: 'Citibank',           type: 'credit',  color: '#2D9DFF', group: 'Traditional Banks',      popular: false },
+  /* Citi's Philippine consumer cards moved to UnionBank in 2022, so a card
+     opened today is a UnionBank one - which is what this offers in Citibank's
+     place. Named "UnionBank Credit Card" and not "UnionBank" because the bank
+     itself is a preset above and account names are unique; accountBrands'
+     logo lookup drops the product words, so it still finds unionbank.svg. */
+  { name: 'UnionBank Credit Card', type: 'credit', color: '#f97316', group: 'Traditional Banks',    popular: false },
   { name: 'HSBC',               type: 'credit',  color: '#ef4444', group: 'Traditional Banks',      popular: false },
+]
+
+/**
+ * Presets no picker offers any more, kept for the accounts already made from
+ * them. Their logo still comes through accountBrands' name lookup
+ * (citibank.svg); what this keeps is the house colour, which the edit form
+ * finds by name to offer back (AccountForm's presetColor).
+ */
+export const PH_RETIRED_ACCOUNTS = [
+  { name: 'Citibank',           type: 'credit',  color: '#2D9DFF', group: 'Traditional Banks',      popular: false },
 ]
 
 export const PH_GROUPS = ['E-Wallets', 'Traditional Banks', 'Digital Banks']

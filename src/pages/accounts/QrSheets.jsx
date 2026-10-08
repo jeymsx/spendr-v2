@@ -107,7 +107,7 @@ export function QrCropSheet({ open, onClose, onConfirm, initialSrc = null }) {
       onClose={onClose}
       z={150}
       scrim={60}
-      title="Crop QR Photo"
+      title="Crop QR photo"
       maxHeight="92dvh"
       footer={actions}
     >

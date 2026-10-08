@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { budgetCrossings, collectNotifications, dayHeading, groupByDay, timeOf } from './notifications'
+import { budgetCrossings, collectNotifications, dayHeading, groupByDay, timeOf, freshBudgetToast } from './notifications'
 
 /**
  * The notifications list, worked out from the ledger. Local dates throughout,
@@ -106,6 +106,21 @@ describe('budget alerts', () => {
     expect(crossings([food(3, 4000), food(4, 1000)]).map(e => e.kind)).toEqual(['budget-warn'])
   })
 
+  /* One line for every surface (lib/budgetLevels.js): 75% was amber on the
+     phone's meter and 85% on Home and the desktop, and neither warned here. */
+  it('does not warn below 80%, where the meter is not amber either', () => {
+    expect(crossings([food(3, 3900)])).toEqual([])
+    expect(crossings([food(3, 3999)])).toEqual([])
+    expect(crossings([food(3, 4001)]).map(e => e.kind)).toEqual(['budget-warn'])
+  })
+
+  /** An inflow category that was once given a "Monthly budget" is not a limit to cross. */
+  it('ignores an inflow category that holds a budget', () => {
+    const salary = { name: 'Salary', type: 'inflow', syncId: 'cat-salary', budget: 50000 }
+    const txs = [{ type: 'inflow', category: 'Salary', amount: 60000, date: at(9, 3) }, food(2, 100)]
+    expect(budgetCrossings({ categories: [salary], transactions: txs, months: ['2026-09'], priceOf: plain })).toEqual([])
+  })
+
   it('lets a refund walk the total back before the line', () => {
     expect(crossings([food(2, 3500), food(3, -1000), food(5, 1400)])).toEqual([])
   })
@@ -124,6 +139,85 @@ describe('budget alerts', () => {
     const events = crossings([food(20, 11000, 8), food(3, 150)], { categories: [rolls] })
     expect(events).toHaveLength(1)
     expect(events[0]).toMatchObject({ kind: 'budget-over', at: at(9, 3), body: "Nothing left after last month's overspend" })
+  })
+})
+
+/**
+ * The phone shows one toast at a time, and NotificationSync called showToast
+ * once per fresh alert in a loop, so a pass that found several showed only the
+ * last. They are one message now.
+ */
+describe('the toast for fresh budget alerts', () => {
+  const NOW_T = new Date(2026, 8, 20, 12, 0, 0)
+  const WITHIN = 2 * 60 * 1000
+  /** @param {'budget-warn'|'budget-over'} kind @param {string} category @param {number} [agoMs] */
+  const alert = (kind, category, agoMs = 1000) => ({
+    id: `budget:${category}:2026-09:${kind === 'budget-over' ? 'over' : '80'}`,
+    kind, category, at: new Date(NOW_T.getTime() - agoMs).toISOString(), url: '/budget', body: '',
+    title: kind === 'budget-over' ? `Over your ${category} budget` : `${category} budget 80% used`,
+  })
+  const toast = (/** @type {any[]} */ items) => freshBudgetToast(items, NOW_T, WITHIN)
+
+  it('has nothing to say when nothing is fresh', () => {
+    expect(toast([])).toBeNull()
+    expect(toast([alert('budget-warn', 'Food', 10 * 60 * 1000)])).toBeNull()
+  })
+
+  it('leaves out entries that are not budget alerts', () => {
+    expect(toast([{ id: 'bill:x', kind: 'bill-due', at: NOW_T.toISOString(), title: 'Netflix due today', body: '', url: null }])).toBeNull()
+  })
+
+  it("keeps the alert's own title for a single one", () => {
+    expect(toast([alert('budget-warn', 'Food')])).toBe('Food budget 80% used')
+    expect(toast([alert('budget-over', 'Food')])).toBe('Over your Food budget')
+  })
+
+  it('names two categories in one sentence', () => {
+    expect(toast([alert('budget-warn', 'Food'), alert('budget-warn', 'Transport')]))
+      .toBe('Food and Transport are near their limits')
+    expect(toast([alert('budget-over', 'Food'), alert('budget-over', 'Transport')]))
+      .toBe('Food and Transport are over budget')
+    expect(toast([alert('budget-warn', 'Food'), alert('budget-over', 'Transport')]))
+      .toBe('Food and Transport need a look')
+  })
+
+  it('counts three or more', () => {
+    expect(toast([alert('budget-warn', 'Food'), alert('budget-warn', 'Transport'), alert('budget-over', 'Fun')]))
+      .toBe('3 budgets need a look')
+  })
+
+  /** Only what is news counts: the old one is in the bell. */
+  it('ignores an alert that is not fresh when counting', () => {
+    expect(toast([alert('budget-warn', 'Food'), alert('budget-warn', 'Transport', 10 * 60 * 1000)]))
+      .toBe('Food budget 80% used')
+  })
+
+  it('says a category once when it crossed both lines in the same pass', () => {
+    expect(toast([alert('budget-warn', 'Food'), alert('budget-over', 'Food')])).toBe('Over your Food budget')
+    expect(toast([alert('budget-warn', 'Food'), alert('budget-over', 'Food'), alert('budget-warn', 'Transport')]))
+      .toBe('Food and Transport need a look')
+  })
+
+  it('uses no em dash, as nothing the user reads does', () => {
+    const msgs = [
+      toast([alert('budget-warn', 'Food'), alert('budget-warn', 'Transport')]),
+      toast([alert('budget-warn', 'A'), alert('budget-warn', 'B'), alert('budget-warn', 'C')]),
+    ]
+    for (const m of msgs) expect(m).not.toContain(String.fromCharCode(0x2014))
+  })
+
+  it('is what a real pass hands it: crossings carry their category', () => {
+    const cats = [
+      { name: 'Food', type: 'expense', syncId: 'cat-food', budget: 1000 },
+      { name: 'Fun', type: 'expense', syncId: 'cat-fun', budget: 1000 },
+    ]
+    const txs = [
+      { type: 'expense', category: 'Food', amount: 900, date: at(9, 20) },
+      { type: 'expense', category: 'Fun', amount: 1500, date: at(9, 20) },
+    ]
+    const events = budgetCrossings({ categories: cats, transactions: txs, months: ['2026-09'], priceOf: plain })
+    expect(events.map(e => e.category).sort()).toEqual(['Food', 'Fun'])
+    expect(freshBudgetToast(events, new Date(at(9, 20)), WITHIN * 100)).toBe('Food and Fun need a look')
   })
 })
 
@@ -176,7 +270,7 @@ describe('badges, the recap and this release', () => {
     const txs = [{ type: 'expense', category: 'Food', amount: 100, date: at(9, 3) }]
     const oct1 = new Date(2026, 9, 1, 9, 30)
     const recap = collectNotifications({ transactions: txs, now: oct1 }).find(f => f.kind === 'recap')
-    expect(recap).toMatchObject({ id: 'recap:2026-09', title: 'Your September recap is ready', url: '/recap/2026-09' })
+    expect(recap).toMatchObject({ id: 'recap:2026-09', title: 'Your September Wrapped is ready', url: '/recap/2026-09' })
     const early = new Date(2026, 9, 1, 8)
     expect(collectNotifications({ transactions: txs, now: early }).find(f => f.kind === 'recap')).toBeUndefined()
   })
@@ -184,7 +278,7 @@ describe('badges, the recap and this release', () => {
   it('names December by its month in January, as the push does', () => {
     const txs = [{ type: 'expense', category: 'Food', amount: 100, date: new Date(2026, 11, 3).toISOString() }]
     const recap = collectNotifications({ transactions: txs, now: new Date(2027, 0, 1, 10) }).find(f => f.kind === 'recap')
-    expect(recap?.title).toBe('Your December recap is ready')
+    expect(recap?.title).toBe('Your December Wrapped is ready')
   })
 
   it('has no recap for a month with nothing in it', () => {

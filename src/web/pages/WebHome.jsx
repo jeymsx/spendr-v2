@@ -31,6 +31,8 @@ import { AreaTrend } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxCategoryText } from './txParts'
 import { IChevronRight } from '../ui/icons'
 import { foldPlans, spendingRows } from '../../utils/installments'
+import { effectiveLimit, monthKey } from '../../lib/rollover'
+import { isBudgeted } from '../../lib/budgetLevels'
 
 /**
  * Home on a computer: where the money stands, at a glance.
@@ -47,6 +49,9 @@ import { foldPlans, spendingRows } from '../../utils/installments'
  */
 const WALLET_CORNERS = { top: 24, bottom: 24 }
 
+/** How much of its limit a budget row has used. A limit carried down to nothing with money spent is all of it. */
+const usedPct = (/** @type {{spent: number, budget: number}} */ c) => (c.budget > 0 ? (c.spent / c.budget) * 100 : c.spent > 0 ? 100 : 0)
+
 const StandingNote = lazy(() => import('../../components/standing/StandingNote'))
 
 export default function WebHome() {
@@ -57,6 +62,8 @@ export default function WebHome() {
   const name = nameMeta?.value?.trim() || ''
   const { loading, breakdown, groups, txAll, base, credit } = useAccountsView()
   const categories = useLiveQuery(() => db.categories.toArray(), [], [])
+  // The default a category with no opinion of its own carries by (lib/rollover.js).
+  const rolloverDefault = useLiveQuery(async () => !!(await db.meta.get('budgetRollover'))?.value, [], false)
   const period = useMemo(() => ({ range: '1m', month: null }), [])
   const month = useInsightsData(period)
   const { forecast } = useForecast(30)
@@ -94,12 +101,21 @@ export default function WebHome() {
     for (const t of spendingRows(txAll)) {
       if (isSpend(t) && txMonthKey(t.date) === pfx && (t.date ?? '') <= cutoff) spentBy[t.category] = (spentBy[t.category] ?? 0) + txBase(t)
     }
-    const rows = (categories ?? []).filter(c => c.budget > 0).map(c => ({ ...c, spent: spentBy[c.name] ?? 0 }))
-      .sort((a, b) => b.spent / b.budget - a.spent / a.budget)
+    /* The limit IN FORCE this month, carry included, as the Budget page shows
+       it; and spending categories only, so an inflow category's stray budget
+       is not counted as a limit. */
+    const thisMonth = monthKey(new Date())
+    const rows = (categories ?? []).filter(isBudgeted)
+      .map(c => ({
+        ...c,
+        budget: effectiveLimit({ cat: c, txs: txAll, month: thisMonth, globalDefault: rolloverDefault }).effective,
+        spent: spentBy[c.name] ?? 0,
+      }))
+      .sort((a, b) => usedPct(b) - usedPct(a))
     const total = rows.reduce((s, c) => s + c.budget, 0)
     const spent = rows.reduce((s, c) => s + c.spent, 0)
     return { rows, total, spent, pct: total ? (spent / total) * 100 : 0 }
-  }, [txAll, categories])
+  }, [txAll, categories, rolloverDefault])
 
   const spentChange = month.previous ? changeOf(month.totalSpent, month.previous.spent) : null
   const net = month.totalEarned - month.totalSpent
@@ -338,7 +354,7 @@ export default function WebHome() {
                 />
                 <div className="mt-4 flex-1 flex flex-col justify-evenly gap-3">
                   {budget.rows.slice(0, 4).map(c => {
-                    const pct = (c.spent / c.budget) * 100
+                    const pct = usedPct(c)
                     return (
                       <Link key={c.id} to={`/categories/${encodeURIComponent(c.name)}`} className="block group">
                         <div className="flex items-center justify-between gap-2 mb-1 text-12">

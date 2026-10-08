@@ -98,6 +98,11 @@ export function RestoreBackupSheet({ open, onClose }) {
      the restore could not clear them. Now the sheet says so before you tap. */
   const untouched = (info?.missing ?? []).map(t => (t === 'trash' ? 'Recently deleted' : t)).join(' and ')
 
+  /* Settings arrived in version 2 (lib/backup.js): a file with `meta` or
+     `prefs` brings its own name, currency, theme and the rest, and one
+     without leaves the current ones alone. */
+  const hasSettings = Array.isArray(info?.data?.meta) || !!info?.data?.prefs
+
   return (
     /* Was a hand-rolled centred card. It stays centred on desktop - that is
        what `html.web .sheet-panel` does to every sheet - so the geometry is
@@ -195,8 +200,11 @@ export function RestoreBackupSheet({ open, onClose }) {
             </div>
 
             <p className="text-xs text-slate-500 dark:text-slate-400 text-center px-1">
-              Your name, currency and theme stay as they are. If you&apos;re signed
-              in, your cloud copy will match this next time it syncs.
+              {hasSettings
+                ? 'Your name, currency, theme and other settings come from the backup too.'
+                : 'Your name, currency and theme stay as they are.'}
+              {' '}If you&apos;re signed in, your cloud copy will match this next
+              time it syncs.
             </p>
 
             <div>
@@ -246,29 +254,26 @@ export function ResetConfirmModal({ open, onClose }) {
   async function handleReset() {
     setLoading(true)
     try {
-      /* Everything the app holds. Goals and badges were left behind before:
-         goals pointing at accounts that no longer existed, and badges that
-         the fresh start then announced all over again. */
-      await db.transaction('rw', [
-        db.transactions, db.balances, db.accounts, db.categories, db.debts,
-        db.recurring, db.templates, db.goals, db.badges, db.meta, db.notifications, db.trash,
-      ], async () => {
-        await db.transactions.clear()
-        await db.balances.clear()
-        await db.accounts.clear()
-        await db.categories.clear()
-        await db.debts.clear()
-        await db.recurring.clear()
-        await db.templates.clear()
-        await db.goals.clear()
-        await db.badges.clear()
-        await db.meta.clear()
-        await db.notifications.clear()
-        await db.trash.clear()
+      /* Every table the database has. Goals and badges were left behind
+         first: goals pointing at accounts that no longer existed, and badges
+         that the fresh start then announced all over again. Challenges and
+         the notes tables were left behind next, which made "erase everything"
+         untrue. Clearing by `db.tables` means a table added later is wiped
+         without anyone remembering to list it here. */
+      await db.transaction('rw', db.tables, async () => {
+        for (const table of db.tables) await table.clear()
       })
       /* The app lock too: a fresh start behind yesterday's Face ID would be a
          locked door on an empty room. */
       clearLock()
+      /* And the look, which lives in localStorage because it has to be known
+         before the database opens. Dropped rather than rewritten: the
+         reload below makes ThemeContext fall back to its own defaults. */
+      try {
+        localStorage.removeItem('spendr-theme')
+        localStorage.removeItem('accentColor')
+        localStorage.removeItem('spendr-style')
+      } catch { /* storage blocked: nothing to reset */ }
       // Sign out so the Onboarding auto-sign-in effect doesn't fire on reload
       await signOut()
       window.location.replace('/')
@@ -342,7 +347,7 @@ export function ResetConfirmModal({ open, onClose }) {
           <div className="text-center">
             <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">Reset app?</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">
-              This will permanently delete all transactions, accounts, categories, goals, debts, and recurring payments. This cannot be undone.
+              Everything on this device is deleted, including transactions, accounts, categories, goals, debts, bills, templates and settings. App lock turns off and you&apos;re signed out. If you sync, your cloud copy stays and comes back when you sign in. If you don&apos;t, it can&apos;t be undone.
             </p>
           </div>
         )}

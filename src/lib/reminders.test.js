@@ -132,6 +132,23 @@ describe('bills', () => {
     expect(buildReminders({ recurring: daily, now: NOW })).toHaveLength(MAX_REMINDERS)
   })
 
+  /* A bill due on the 31st sits on Feb 28 for a month, and March's reminder is
+     back on the 31st. Stepping from the date alone stayed on the 28th for good. */
+  it('keeps a month-end bill on its day after a short month', () => {
+    const rent = { ...NETFLIX, nextDate: '2026-02-28', dueDay: 31 }
+    const feb20 = new Date(2026, 1, 20, 8)
+    expect(buildReminders({ recurring: [rent], now: feb20 }).map(r => r.tag)).toEqual([
+      'bill:bbbb-2222:2026-02-28',
+      'bill:bbbb-2222:2026-03-31',
+    ])
+    // A row from before the anchor existed has none, and steps from its date as it always did.
+    const old = { ...rent, dueDay: /** @type {number|undefined} */ (undefined) }
+    expect(buildReminders({ recurring: [old], now: feb20 }).map(r => r.tag)).toEqual([
+      'bill:bbbb-2222:2026-02-28',
+      'bill:bbbb-2222:2026-03-28',
+    ])
+  })
+
   it('stops on a frequency it cannot step', () => {
     const list = buildReminders({ recurring: [{ ...NETFLIX, frequency: 'whenever' }], now: NOW })
     expect(list.map(r => r.tag)).toEqual(['bill:bbbb-2222:2026-09-28'])
@@ -173,7 +190,8 @@ describe('the monthly recap', () => {
   it('is announced at 9 on the 1st, once the month has anything in it', () => {
     const txs = [{ type: 'expense', account: 'BPI', amount: 120, date: at(9, 3) }]
     const recap = buildReminders({ transactions: txs, now: NOW }).find(r => r.tag === 'recap:2026-09')
-    expect(recap).toMatchObject({ title: 'Your September recap is ready', body: 'See how your month went', url: '/recap/2026-09' })
+    // Worded as the bell words it (notifications.test.js asserts the same title).
+    expect(recap).toMatchObject({ title: 'Your September Wrapped is ready', body: 'See how your month went', url: '/recap/2026-09' })
     expect(local(recap.fireAt)).toBe('10/1 9:00')
   })
 

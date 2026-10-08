@@ -611,6 +611,7 @@ export default function Transfer({ onCancel, onSaved, editTx = null } = {}) {
         amount={amount}
         account={fromAccount}
         type="transfer"
+        date={date}
       />
       {/* Before what you typed is thrown away (hooks/useBackGuard.js). */}
       <DiscardSheet open={leaveGuard.asking} onKeep={leaveGuard.keep} onDiscard={leaveGuard.discard} />

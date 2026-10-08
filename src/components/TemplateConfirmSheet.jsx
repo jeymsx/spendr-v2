@@ -194,7 +194,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
           {template.type !== 'transfer' && (
             <div className="py-2.5">
               <div className={fieldFrame(false)}>
-                <span className="text-13 text-slate-500 dark:text-slate-400 shrink-0">Note</span>
+                <span className="text-13 text-slate-500 dark:text-slate-400 shrink-0">Description</span>
                 <input
                   type="text"
                   value={description}

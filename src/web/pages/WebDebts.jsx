@@ -123,7 +123,7 @@ export default function WebDebts() {
             {
               key: 'net', header: 'Balance', width: 240, align: 'right',
               render: (p) => Math.abs(p.net) < 0.005
-                ? <span className="d-cell-faint">Square</span>
+                ? <span className="d-cell-faint">All square</span>
                 : <span className={`d-num font-semibold whitespace-nowrap ${p.net > 0 ? 'd-pos' : 'd-neg'}`}>{p.net > 0 ? 'Owes you ' : 'You owe '}{fmt(Math.abs(p.net))}</span>,
             },
           ]}

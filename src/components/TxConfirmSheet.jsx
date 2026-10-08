@@ -227,7 +227,7 @@ export default function TxConfirmSheet({
             for the same reason: the sheet already owns the horizontal inset. */}
         <div className="flex flex-col mb-6">
           {description && description.trim() && (
-            <DetailRow label="Note" value={description} padded={false} isLast />
+            <DetailRow label="Description" value={description} padded={false} isLast />
           )}
           {/* One category is a value; several are a set, and a set wants
               chips rather than a comma-separated run-on. The review sheet was

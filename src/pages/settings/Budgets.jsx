@@ -9,7 +9,7 @@ import { useBack } from '../../hooks/useBack'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
-import { rollsOver, monthKey } from '../../lib/rollover'
+import { rollsOver, monthKey, planLimitSave } from '../../lib/rollover'
 import SubPage from '../../components/SubPage'
 import CategoryGlyph from '../../components/CategoryGlyph'
 import Button from '../../components/ui/Button'
@@ -117,31 +117,25 @@ export function BudgetManager({ open, onClose, variant = 'sheet' }) {
   async function saveAll() {
     setSaving(true)
     try {
-      await Promise.all(
-        Object.entries(localBudgets).map(([id, str]) => {
-          const cat = (categories ?? []).find(c => String(c.id) === String(id))
-          if (!cat) return Promise.resolve()
-          // An empty field is no limit: parseMoney('') is 0, and 0 is how
-          // "no limit" has always been stored.
-          const newBudget = parseMoney(str) || 0
-          if (newBudget === (cat.budget ?? 0)) return Promise.resolve()
-          return db.categories.update(Number(id), { budget: newBudget })
-        })
-      )
-      /* Stamps rolloverFrom on the way ON so the carry starts here rather
-         than crediting every unspent peso back to whenever the category was
-         created. Off leaves the old date alone: turning it on again later
-         should not silently reach further back than it did before. */
-      await Promise.all(
-        Object.entries(localRollover).map(([id, on]) => {
-          const cat = (categories ?? []).find(c => String(c.id) === String(id))
-          if (!cat || on === rollsOver(cat, globalRollover)) return Promise.resolve()
-          return db.categories.update(Number(id), {
-            rollover: on,
-            rolloverFrom: on ? (cat.rolloverFrom ?? thisMonth) : cat.rolloverFrom,
-          })
-        })
-      )
+      /* One patch per category, worked out in lib/rollover.js: the limit, the
+         carry flag and the month the carry starts from, together. They were
+         two writes that each had to guess what the other would do, and the
+         second skipped whenever the state the button showed equalled the
+         global switch's - so a category that was only rolling by default
+         could never be given a start month from here. The button now opts a
+         category in or out explicitly, whatever the switch says.
+         An empty field is no limit: parseMoney('') is 0, and 0 is how "no
+         limit" has always been stored. */
+      /** @type {Record<string, number>} */
+      const budgets = {}
+      for (const [id, str] of Object.entries(localBudgets)) budgets[id] = parseMoney(str) || 0
+      const plan = planLimitSave({
+        categories: categories ?? [], budgets, carry: localRollover,
+        globalDefault: globalRollover, month: thisMonth,
+      })
+      await db.transaction('rw', db.categories, async () => {
+        for (const { id, patch } of plan) await db.categories.update(id, patch)
+      })
       setLocalBudgets({})
       setLocalRollover({})
       leaveGuard.leave(close)

@@ -17,7 +17,12 @@ export function inDateRange(tx, range, customFrom, customTo) {
   const today  = new Date(); today.setHours(0, 0, 0, 0)
 
   if (range === 'week') {
-    const start = new Date(today); start.setDate(today.getDate() - today.getDay())
+    /* Monday, which is where the calendar's week starts (CalendarView). The
+       filter began on Sunday, so on a Sunday "This week" held one day and on
+       a Monday it still held yesterday - two weeks that disagreed about
+       where one ended. getDay() is 0 for Sunday, so (day + 6) % 7 counts the
+       days since Monday: Monday 0, Sunday 6. */
+    const start = new Date(today); start.setDate(today.getDate() - ((today.getDay() + 6) % 7))
     return txDate >= start
   }
   if (range === 'month') {

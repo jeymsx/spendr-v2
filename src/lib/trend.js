@@ -77,7 +77,7 @@ export const TREND_RANGES = [
   { key: '6m',  label: '6M',  span: 180 * DAY_MS,     points: 61 },
   { key: '1y',  label: '1Y',  span: 365 * DAY_MS,     points: 53 },
   // Span is worked out from the oldest transaction on the account.
-  { key: 'all', label: 'ALL', span: null,             points: 60 },
+  { key: 'all', label: 'All', span: null,             points: 60 },
 ]
 
 export const RANGE_TITLE = {

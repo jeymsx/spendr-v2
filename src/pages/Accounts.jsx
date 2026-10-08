@@ -27,7 +27,7 @@ import {
 } from '../lib/accountMeta'
 import { netWorthBreakdown } from '../lib/netWorth'
 import useNetWorthDebts from '../hooks/useNetWorthDebts'
-import { fmt } from '../lib/money'
+import { fmt, fmtHidden } from '../lib/money'
 import IconButton from '../components/ui/IconButton'
 import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
@@ -446,8 +446,10 @@ export default function Accounts() {
                   {parent.name}
                 </span>
                 <Divider className="flex-1" />
+                {/* Masked with the cards under it: the eye hides every balance
+                    on the page, and a subtotal is a balance. */}
                 <span className="text-11 tabular-nums text-slate-400 dark:text-slate-500">
-                  {fmt(groupTotal)}
+                  {balanceHidden ? fmtHidden() : fmt(groupTotal)}
                 </span>
               </div>
               {/* Stacked, wallet-style: each card overlaps the one above it
@@ -486,7 +488,7 @@ export default function Accounts() {
               </span>
               <Divider className="flex-1" />
               <span className="text-11 tabular-nums text-slate-400 dark:text-slate-500">
-                {fmt(groupTotalInBase(group.accounts, creditStmtMap, baseCurrency, rates))}
+                {balanceHidden ? fmtHidden() : fmt(groupTotalInBase(group.accounts, creditStmtMap, baseCurrency, rates))}
               </span>
             </div>
             {/* One DndContext per group: reordering is within a group, since

@@ -73,7 +73,7 @@ export const StepInstall = forwardRef(
         <StepBody>
           <Heading
             ref={ref}
-            title="Add Spendr to your home screen"
+            title="Add Spendr to your Home Screen"
             sub="Open it in one tap, full screen, even offline."
           />
           <InstallGuide onInstalled={() => setDone(true)} />

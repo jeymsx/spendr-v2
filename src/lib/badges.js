@@ -3,6 +3,7 @@ import { isoToDateInput } from '../utils/txDate'
 import { txBase } from './fxContext'
 import { isIncome, isSpend } from './flows'
 import { isLiquid } from './accountMeta'
+import { isBudgeted } from './budgetLevels'
 import { spendingRows } from '../utils/installments'
 
 /**
@@ -354,11 +355,14 @@ export const BADGES = [
     key: 'debt-cleared',
     name: 'Debt Cleared',
     blurb: 'You paid one off in full.',
-    how: 'Settle any debt down to zero.',
+    how: 'Settle any debt you owe down to zero.',
     tone: 'rose',
     glyph: 'check',
+    /* Debts you owe only. Someone paying YOU back is All Squared's
+       (lib/achievements.js), and used to earn this one as well. A row with no
+       type is an old `i_owe`, which is what the form defaults to. */
     test: ({ debts }) =>
-      (debts ?? []).some(d => (d.amount ?? 0) > 0 && (d.amountPaid ?? 0) >= d.amount),
+      (debts ?? []).some(d => d.type !== 'owed_to_me' && (d.amount ?? 0) > 0 && (d.amountPaid ?? 0) >= d.amount),
   },
   {
     key: 'on-autopilot',
@@ -460,7 +464,7 @@ export const BADGES = [
   {
     key: 'no-spend-week',
     name: 'No-Spend Week',
-    blurb: 'Seven days in a row without spending a peso.',
+    blurb: 'Seven days in a row without spending.',
     how: 'Go a full week with no expenses logged.',
     tone: 'lime',
     glyph: 'nospend',
@@ -514,9 +518,10 @@ export const BADGES = [
     glyph: 'chain',
     /* Two minimum, and every one settled. Owing nothing because you have never
        recorded a debt is not the same achievement as having paid them off, and
-       the badge would otherwise land on an empty page. */
+       the badge would otherwise land on an empty page. Only what you owe: what
+       friends owe you neither counts toward the two nor holds the badge back. */
     test: ({ debts }) => {
-      const real = (debts ?? []).filter(d => (d.amount ?? 0) > 0)
+      const real = (debts ?? []).filter(d => d.type !== 'owed_to_me' && (d.amount ?? 0) > 0)
       return real.length >= 2 && real.every(d => (d.amountPaid ?? 0) >= d.amount)
     },
   },
@@ -565,7 +570,10 @@ export function evaluateBadges({
      re-deriving them per badge is five walks over the whole ledger on a screen
      that re-runs whenever any of seven tables changes. */
   const months = monthStats(transactions, today)
-  const limits = (categories ?? []).filter(c => (c.budget ?? 0) > 0)
+  /* Expense categories with a limit. An inflow category that still carries a
+     stray budget has nothing to stay under, and must not count towards the
+     "two limits" the budget badges ask for or be judged against a month. */
+  const limits = (categories ?? []).filter(isBudgeted)
   const ctx = { transactions, accounts, categories, debts, recurring, goals, today, months, limits }
   const earned = new Set()
   for (const badge of BADGES) {

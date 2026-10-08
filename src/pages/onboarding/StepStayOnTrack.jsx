@@ -40,7 +40,7 @@ export const StepStayOnTrack = forwardRef(
             <Heading
               ref={ref}
               title="Keep your money safe"
-              sub="Back it up to your Google account, see it on your other devices, and get a daily nudge to log. Only you can see it."
+              sub="Back it up to your Google account, see it on your other devices, and get a daily check-in reminder. Only you can see it."
             />
           </StepBody>
           <StepFooter>
@@ -56,10 +56,10 @@ export const StepStayOnTrack = forwardRef(
 
     if (push !== 'ok') {
       const why = push === 'ios-install'
-        ? 'For a daily nudge, add Spendr to your Home Screen, then turn it on in Settings.'
+        ? 'For a daily check-in, add Spendr to your Home Screen, then turn it on in Settings.'
         : push === 'blocked'
-          ? 'Notifications are off for Spendr here. Allow them, then turn the nudge on in Settings.'
-          : 'This browser can’t show reminders, so the daily nudge will have to wait.'
+          ? 'Notifications are off for Spendr here. Allow them, then turn the daily check-in on in Settings.'
+          : 'This browser can’t show reminders, so the daily check-in will have to wait.'
       return (
         <>
           <StepBody>
@@ -82,7 +82,7 @@ export const StepStayOnTrack = forwardRef(
       setNote(r.reason === 'blocked'
         ? 'Notifications are blocked for Spendr. Allow them in your settings, or skip this for now.'
         : r.reason === 'dismissed'
-          ? 'Allow notifications to get the nudge.'
+          ? 'Allow notifications to get the daily check-in.'
           : 'Couldn’t turn it on just now. You can do it later in Settings.')
     }
 
@@ -92,10 +92,10 @@ export const StepStayOnTrack = forwardRef(
         <StepBody>
           <Heading
             ref={ref}
-            title="Want a daily nudge?"
+            title="Want a daily check-in?"
             sub="One reminder to log what you spent. It skips days you’ve already logged."
           />
-          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Nudge time">
+          <div className="grid grid-cols-4 gap-2" role="radiogroup" aria-label="Daily check-in time">
             {QUICK.map(t => (
               <button
                 key={t}

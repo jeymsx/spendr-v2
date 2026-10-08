@@ -176,6 +176,7 @@ vi.mock('./db', () => ({ default: db, UNSYNCED: 0, SYNCED: 1, TRASH_DAYS: 30 }))
 const {
   postCardPayment, postRefund, postSplitExpense, deleteTxGroup, OverdrawError,
   updateTransaction, settleWithPerson, saveTemplate, recategorize, refile, syncTransferFee,
+  postRecurringCharge, restoreDeletedTx,
 } = await import('./txHelpers')
 const { isFeeOf } = await import('../lib/transferFee')
 const { moveToTrash, restoreFromTrash, purgeTrash, describeEntry, deleteForever, MissingAccountError } = await import('./trash')
@@ -993,6 +994,40 @@ describe('Recently deleted', () => {
     expect(d.total).toBe(1000)
     expect(d.extra).toBe('With its 1 other part')
     expect(d.daysLeft).toBe(28)
+  })
+})
+
+/* A bill due on the 31st sits on Feb 28 for a month. Posting it from there must
+   send it back to Mar 31 (its dueDay), not on to Mar 28 for good - and putting
+   a deleted post back has to step the same way, or an Undo would undo that. */
+describe('a month-end bill keeps its day', () => {
+  const rent = (over = {}) => ({
+    id: 50, syncId: 'rent-1', name: 'Rent', amount: 100, account: 'Maya Savings', category: 'Bills',
+    frequency: 'monthly', nextDate: '2026-02-28', dueDay: 31, active: true, ...over,
+  })
+
+  it('posts from its short-month date back to the 31st', async () => {
+    store.recurring.push(rent())
+    const { nextDate } = await postRecurringCharge(/** @type {any} */ (store.recurring[0]), { allowOverdraw: true })
+    expect(nextDate).toBe('2026-03-31')
+    expect(store.recurring[0].nextDate).toBe('2026-03-31')
+  })
+
+  it('still steps from the date alone when the row has no due day yet', async () => {
+    store.recurring.push(rent({ dueDay: undefined }))
+    const { nextDate } = await postRecurringCharge(/** @type {any} */ (store.recurring[0]), { allowOverdraw: true })
+    expect(nextDate).toBe('2026-03-28')
+  })
+
+  it('steps the same way when a deleted post is put back', async () => {
+    // The delete rolled the bill back to the date it was posted from.
+    store.recurring.push(rent())
+    const post = {
+      id: 90, txId: 'rent-post', type: 'expense', amount: 100, account: 'Maya Savings', category: 'Bills',
+      date: '2026-02-28T08:00:00+08:00', recurringId: 50, recurringPrevDate: '2026-02-28',
+    }
+    expect(await restoreDeletedTx(/** @type {any} */ (post))).toBe(true)
+    expect(store.recurring[0].nextDate).toBe('2026-03-31')
   })
 })
 

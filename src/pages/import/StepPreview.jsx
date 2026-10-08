@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect, useRef } from 'react'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
-import { ACCOUNT_TYPE_ICON, IconCashUI, IconCheck } from '../../components/icons'
+import { ACCOUNT_TYPE_ICON, IconCashUI, IconCheck, IconInfo } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
 import Divider from '../../components/ui/Divider'
@@ -10,7 +10,7 @@ import DetailRow from '../../components/ui/DetailRow'
 import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 import { isoToDateInput } from '../../utils/txDate'
 import { fmtDateFull } from '../../utils/recurring'
-import { IconArrowLeft, fmtBytes, VALID_TYPES, IconFile, IconWarning } from './shared'
+import { IconArrowLeft, fmtBytes, VALID_TYPES, IconFile } from './shared'
 import { WarnBanner, TypeBadge } from './bits'
 
 // ── Step 2: Preview & validation ───────────────────────────────────────────────
@@ -37,9 +37,12 @@ function readableRange(a, b) {
   return `${from} – ${to}`
 }
 
-export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext }) {
-  const existingAccounts  = useLiveQuery(() => db.accounts.toArray(),  [], [])
-  const existingCategories = useLiveQuery(() => db.categories.toArray(), [], [])
+/** @param {{rows: Array<Record<string, any>>, format: import('./csv').CsvFormat, fileName: string, fileSize: number, onBack: () => void, onNext: () => void}} props */
+export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }) {
+  /* Undefined until loaded - an empty default read every account as missing
+     for the moment before they were. */
+  const existingAccounts  = useLiveQuery(() => db.accounts.toArray(),  [])
+  const existingCategories = useLiveQuery(() => db.categories.toArray(), [])
 
   const analysis = useMemo(() => {
     if (!rows) return null
@@ -106,17 +109,19 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
         </div>
       </div>
 
-      {/* Legacy format notice */}
-      {isLegacy && (
+      {/* Spendr's own export. Not a warning - there is nothing to fix - and not
+          "from an older version": this is the file Spendr writes today, which
+          is what it used to be called by mistake. */}
+      {format === 'spendr' && (
         <div className="px-5 mb-5">
           <div className="flex items-start gap-3 px-4 py-3.5 rounded-2xl
-            bg-amber-50 dark:bg-amber-500/10 border border-amber-100 dark:border-amber-500/20">
-            <span className="text-amber-500 dark:text-amber-400 shrink-0 mt-0.5"><IconWarning /></span>
+            bg-blue-50 dark:bg-primary/[0.08] border border-blue-100 dark:border-primary/20">
+            <span className="text-slate-500 dark:text-slate-400 shrink-0 mt-0.5"><IconInfo size={16} /></span>
             <div>
-              <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">From an older version</p>
-              <p className="text-xs text-amber-600/80 dark:text-amber-500 mt-0.5">
-                This file was exported by an older version of Spendr. It will import
-                just fine. There is nothing you need to change.
+              <p className="text-sm font-semibold text-blue-800 dark:text-blue-300">A Spendr export</p>
+              <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-0.5">
+                This file is laid out the way Spendr exports it, so it imports as
+                it is. There is nothing you need to change.
               </p>
             </div>
           </div>
@@ -193,7 +198,7 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
           {missingAccounts.size > 0 && (
             <WarnBanner
               title={`${missingAccounts.size} account${missingAccounts.size > 1 ? 's' : ''} not in your wallet`}
-              body={`"${[...missingAccounts].join('", "')}" will be auto-created as Cash account${missingAccounts.size > 1 ? 's' : ''} with ${baseSymbol()}0 balance.`}
+              body={`"${[...missingAccounts].join('", "')}" will be created as ${missingAccounts.size > 1 ? 'Cash accounts' : 'a Cash account'}. You can set what each one started with next.`}
             />
           )}
           {missingCategories.size > 0 && (
@@ -258,7 +263,7 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
           Back
         </Button>
         <Button className="flex-[2]" onClick={onNext}>
-          Continue →
+          Continue
         </Button>
       </div>
     </div>
@@ -266,14 +271,60 @@ export function StepPreview({ rows, isLegacy, fileName, fileSize, onBack, onNext
 }
 
 // ── Step 3: Opening balances ───────────────────────────────────────────────────
-// Users set the balance each account had BEFORE the first transaction in the file.
-// recalcAllBalances() uses these as starting points instead of ₱0.
+// Asked only for the accounts this import CREATES: an account already in the
+// wallet has a balance, and the import leaves it alone except for the rows it
+// adds (runImport.js). So a created account's opening balance is the one thing
+// nothing else can say - what it held before the file's first row.
+// Credit limits are the exception that is not a balance: a card that is
+// already there can have its limit set here, as before.
 
 // Account glyphs come from ACCOUNT_TYPE_ICON in components/icons.jsx, so
 // the wizard and the rest of the app cannot drift apart.
 
+/**
+ * One account and the figure being asked for.
+ *
+ * @param {{name: string, acc?: Record<string, any>, caption: string, value: string, onChange: (v: string) => void}} props
+ */
+function AccountFigureRow({ name, acc, caption, value, onChange }) {
+  const Icon = ACCOUNT_TYPE_ICON[acc?.type] ?? IconCashUI
+  return (
+    <Card className="flex items-center gap-3 px-4 py-3.5">
+      <div
+        className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
+        style={{
+          backgroundColor: (acc?.color ?? '#6b7280') + '22',
+          border: `1px solid ${acc?.color ?? '#6b7280'}44`,
+        }}
+      >
+        <Icon size={18} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="font-medium text-15 text-slate-800 dark:text-white truncate">{name}</p>
+        <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">{caption}</p>
+      </div>
+      <div className="flex items-center gap-1 shrink-0">
+        <span className="text-slate-400 dark:text-slate-500 text-sm">{baseSymbol()}</span>
+        <input
+          type="number"
+          inputMode="decimal"
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          placeholder={`${baseSymbol()}${zeroAmount()}`}
+          aria-label={`${name}, ${caption.toLowerCase()}`}
+          className="w-28 text-right text-slate-800 dark:text-white
+            placeholder:text-slate-300 dark:placeholder:text-slate-600
+            bg-transparent focus:outline-none text-15 tabular-nums"
+        />
+      </div>
+    </Card>
+  )
+}
+
+/** @param {{rows: Array<Record<string, any>>, onBack: () => void, onNext: (r: {balances: Record<string, number>, creditLimits: Record<string, number>}) => void}} props */
 export function StepOpeningBalances({ rows, onBack, onNext }) {
-  const existingAccounts = useLiveQuery(() => db.accounts.toArray(), [], [])
+  // Undefined until loaded: an empty default would make every account new.
+  const existingAccounts = useLiveQuery(() => db.accounts.toArray(), [])
   const initialized = useRef(false)
 
   // All unique account names referenced in the CSV
@@ -288,93 +339,91 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
     return [...set].sort()
   }, [rows])
 
+  // The accounts the import will create, and the cards it can set a limit on.
+  const { created, cards } = useMemo(() => {
+    if (!existingAccounts) return { created: [], cards: [] }
+    const byName = new Map(existingAccounts.map(a => [a.name, a]))
+    return {
+      created: csvAccounts.filter(n => !byName.has(n)),
+      cards: csvAccounts.filter(n => byName.get(n)?.type === 'credit'),
+    }
+  }, [csvAccounts, existingAccounts])
+
   const [balances,      setBalances]      = useState({})
   const [creditLimits,  setCreditLimits]  = useState({})
 
-  // Pre-fill from existing DB accounts once they load
+  // Pre-fill each card's limit from the one it has, once the accounts load.
   useEffect(() => {
-    if (initialized.current || !existingAccounts?.length) return
+    if (initialized.current || !existingAccounts) return
     initialized.current = true
-    const initBal = {}, initLim = {}
+    const initLim = {}
     csvAccounts.forEach(name => {
       const acc = existingAccounts.find(a => a.name === name)
-      if (acc?.type === 'credit') {
-        if (acc.creditLimit) initLim[name] = String(acc.creditLimit)
-      } else {
-        if (acc?.balance) initBal[name] = String(acc.balance)
-      }
+      if (acc?.type === 'credit' && acc.creditLimit) initLim[name] = String(acc.creditLimit)
     })
-    setBalances(initBal)
     setCreditLimits(initLim)
   }, [existingAccounts, csvAccounts])
 
   function handleContinue() {
     const numericBal = {}, numericLim = {}
-    csvAccounts.forEach(name => {
-      const acc = existingAccounts?.find(a => a.name === name)
-      if (acc?.type === 'credit') {
-        numericLim[name] = parseFloat(creditLimits[name] ?? 0) || 0
-      } else {
-        numericBal[name] = parseFloat(balances[name] ?? 0) || 0
-      }
-    })
+    created.forEach(name => { numericBal[name] = parseFloat(balances[name] ?? 0) || 0 })
+    cards.forEach(name => { numericLim[name] = parseFloat(creditLimits[name] ?? 0) || 0 })
     onNext({ balances: numericBal, creditLimits: numericLim })
   }
+
+  // Nothing to show until the accounts are known.
+  if (!existingAccounts) return null
 
   return (
     <div className="px-5 pt-4 pb-6">
       <h2 className="text-xl font-bold text-slate-900 dark:text-white mb-1">Opening balances</h2>
-      <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
-        How much was in each account <span className="font-semibold text-slate-700 dark:text-slate-200">before your first transaction</span> in this file? Leave at 0 if you started from nothing.
-      </p>
-      <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">
-        Pre-filled from your current account balances. Adjust as needed.
-      </p>
+      {created.length > 0 ? (
+        <>
+          <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+            How much was in each new account <span className="font-semibold text-slate-700 dark:text-slate-200">before your first transaction</span> in this file? Leave at 0 if you started from nothing.
+          </p>
+          <p className="text-xs text-slate-400 dark:text-slate-500 mb-5">
+            Accounts you already have keep their balances. Only the transactions in this file are added to them.
+          </p>
+        </>
+      ) : (
+        <p className="text-sm text-slate-500 dark:text-slate-400 mb-5">
+          Every account in this file is already in your wallet, so their balances stay as they are.
+          Only the transactions in this file are added to them.
+        </p>
+      )}
 
-      <div className="flex flex-col gap-2.5 mb-6">
-        {csvAccounts.map(name => {
-          const acc = existingAccounts?.find(a => a.name === name)
-          const isCredit = acc?.type === 'credit'
-          return (
-            <Card key={name} className="flex items-center gap-3 px-4 py-3.5">
-              <div
-                className="w-10 h-10 rounded-xl flex items-center justify-center text-lg shrink-0"
-                style={{
-                  backgroundColor: (acc?.color ?? '#6b7280') + '22',
-                  border: `1px solid ${acc?.color ?? '#6b7280'}44`,
-                }}
-              >
-                {(() => {
-                  const Icon = ACCOUNT_TYPE_ICON[acc?.type] ?? IconCashUI
-                  return <Icon size={18} />
-                })()}
-              </div>
-              <div className="flex-1 min-w-0">
-                <p className="font-medium text-15 text-slate-800 dark:text-white truncate">{name}</p>
-                {isCredit && (
-                  <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">Credit limit</p>
-                )}
-              </div>
-              <div className="flex items-center gap-1 shrink-0">
-                <span className="text-slate-400 dark:text-slate-500 text-sm">{baseSymbol()}</span>
-                <input
-                  type="number"
-                  inputMode="decimal"
-                  value={isCredit ? (creditLimits[name] ?? '') : (balances[name] ?? '')}
-                  onChange={e => isCredit
-                    ? setCreditLimits(prev => ({ ...prev, [name]: e.target.value }))
-                    : setBalances(prev => ({ ...prev, [name]: e.target.value }))
-                  }
-                  placeholder={`${baseSymbol()}${zeroAmount()}`}
-                  className="w-28 text-right text-slate-800 dark:text-white
-                    placeholder:text-slate-300 dark:placeholder:text-slate-600
-                    bg-transparent focus:outline-none text-15 tabular-nums"
-                />
-              </div>
-            </Card>
-          )
-        })}
-      </div>
+      {created.length > 0 && (
+        <div className="flex flex-col gap-2.5 mb-6">
+          {created.map(name => (
+            <AccountFigureRow
+              key={name}
+              name={name}
+              caption="New account"
+              value={balances[name] ?? ''}
+              onChange={v => setBalances(prev => ({ ...prev, [name]: v }))}
+            />
+          ))}
+        </div>
+      )}
+
+      {cards.length > 0 && (
+        <div className="mb-6">
+          <SectionLabel>Credit limits</SectionLabel>
+          <div className="flex flex-col gap-2.5">
+            {cards.map(name => (
+              <AccountFigureRow
+                key={name}
+                name={name}
+                acc={existingAccounts.find(a => a.name === name)}
+                caption="Credit limit"
+                value={creditLimits[name] ?? ''}
+                onChange={v => setCreditLimits(prev => ({ ...prev, [name]: v }))}
+              />
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="flex gap-3">
         <Button variant="secondary" className="flex-1" onClick={onBack}>
@@ -382,7 +431,7 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
           Back
         </Button>
         <Button className="flex-[2]" onClick={handleContinue}>
-          Continue →
+          Continue
         </Button>
       </div>
     </div>

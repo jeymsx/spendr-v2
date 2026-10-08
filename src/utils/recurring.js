@@ -1,13 +1,64 @@
 import { toDateInput } from './txDate'
 
+/** How many days a month has. @param {number} year @param {number} month zero-based */
+const lastDayOf = (year, month) => new Date(year, month + 1, 0).getDate()
+
+/**
+ * The day of the month to step from: the intended one, when the date in hand
+ * is that day as far as its month allows.
+ *
+ * A bill due on the 31st sits on Feb 28 for a month. Stepping from that date
+ * alone says "the 28th", and every month after is the 28th for good - the
+ * intended day was lost the first time a short month clamped it. So a row
+ * keeps the day it was SET to (`dueDay`) and each step clamps from that.
+ *
+ * The anchor is trusted only while the date agrees with it. If something moved
+ * the date to another day without moving the anchor - a sync from a device
+ * that does not know about it, an edit that predates it - the date wins, which
+ * is what stepping from the date alone did before anchors existed.
+ *
+ * @param {Date} d              the date being stepped from
+ * @param {number|null} [anchor]  the intended day of the month, 1-31
+ */
+function dayToStepFrom(d, anchor) {
+  const want = Math.trunc(Number(anchor))
+  if (!(want >= 1 && want <= 31)) return d.getDate()
+  const reachable = Math.min(want, lastDayOf(d.getFullYear(), d.getMonth()))
+  return reachable === d.getDate() ? want : d.getDate()
+}
+
+/**
+ * The day of the month a date is "really" due on, as a number: the date's own
+ * day, or `anchor` when the date agrees with it (see dayToStepFrom). Null for
+ * a date that is not one. What a bill's `dueDay` is set to.
+ *
+ * @param {string} [dateStr]  YYYY-MM-DD
+ * @param {number|null} [anchor]  a day already on record for this date
+ * @returns {number|null}
+ */
+export function dueDayOf(dateStr, anchor) {
+  const d = parseDateLocal(dateStr)
+  return d ? dayToStepFrom(d, anchor) : null
+}
+
+/** Whether stepping a frequency moves by whole months, so a due day means something. @param {string} frequency */
+export const stepsByMonth = (frequency) => FREQ_BY_VALUE[frequency]?.step?.unit === 'month'
+
 /**
  * Advance a date string forward by one frequency period.
  * Returns a YYYY-MM-DD string.
  *
+ * `anchorDay` is the day of the month the item is really due (a recurring
+ * row's `dueDay`). Leave it out and the day of `dateStr` is used, which is how
+ * this always worked - and is why a bill due on the 31st ended up on the 28th
+ * for good after its first February. With it, Jan 31 steps to Feb 28 and then
+ * to Mar 31. It only matters for the month-based frequencies.
+ *
  * @param {string} dateStr
  * @param {string} frequency
+ * @param {number|null} [anchorDay]
  */
-export function advanceNextDate(dateStr, frequency) {
+export function advanceNextDate(dateStr, frequency, anchorDay) {
   const step = FREQ_BY_VALUE[frequency]?.step
   const d = parseDateLocal(dateStr) ?? new Date(dateStr)
   // An unknown frequency stays put - on the same LOCAL day, not the UTC one.
@@ -29,12 +80,14 @@ export function advanceNextDate(dateStr, frequency) {
        lands on Mar 2 otherwise, because Feb has no 31st and the overflow
        carries - and a bill due on the 31st would walk forward through the
        calendar a day or two every quarter. Clamping keeps it on the last day
-       of the target month and, crucially, does not lose the original day:
-       the NEXT advance is computed from the stored date, so a Jan 31 bill
-       becomes Feb 28 and then Mar 28 rather than returning to the 31st.
-       That is the same behaviour this had for monthly and yearly; the only
-       change is that the period is now a number from the table. */
-    const day = d.getDate()
+       of the target month.
+
+       What it clamps FROM is the intended day, not the date's own. From the
+       date alone a Jan 31 bill became Feb 28 and then Mar 28 - the 31st was
+       gone for good after the first short month. dayToStepFrom keeps it, so
+       the sequence is Jan 31, Feb 28, Mar 31, Apr 30. With no anchor it is the
+       date's own day, as before. */
+    const day = dayToStepFrom(d, anchorDay)
     d.setDate(1)
     d.setMonth(d.getMonth() + step.n)
     const lastOfTarget = new Date(d.getFullYear(), d.getMonth() + 1, 0).getDate()
@@ -46,6 +99,22 @@ export function advanceNextDate(dateStr, frequency) {
   /** @param {number} n */
   const p = (n) => String(n).padStart(2, '0')
   return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+}
+
+/**
+ * A date `months` months on, keeping the day of the month `dateStr` started
+ * on: an installment bought on the 31st is due on Feb 28 and then Mar 31, not
+ * on the 28th from then on. Stepping one month at a time from the previous
+ * result is what lost the day.
+ *
+ * @param {string} dateStr  YYYY-MM-DD
+ * @param {number} months
+ */
+export function monthsAfter(dateStr, months) {
+  const anchor = dueDayOf(dateStr)
+  let out = dateStr
+  for (let i = 0; i < months; i++) out = advanceNextDate(out, 'monthly', anchor)
+  return out
 }
 
 /**

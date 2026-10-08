@@ -29,13 +29,50 @@ function eod(year, month, day) {
 }
 
 /**
+ * The day a card's billing cycle starts, as a day of the month - the number
+ * getCycleRange and getNextCycleRange take - or null for a card that bills by
+ * calendar month.
+ *
+ * ── What the two fields mean ──
+ *
+ * `cutoffDate` is the day a NEW statement starts: charges from that day on go
+ * on the next bill (cutoff 15 bills the 15th to the 14th). It is what the
+ * whole cycle arithmetic runs on, and it is what the forms ask for.
+ *
+ * `statementDate` is the day a statement CLOSES. The forms used to offer it as
+ * a field of its own and nothing read it, so a card with only that day typed
+ * was billed by calendar month as if it had none. It is a fallback now: with
+ * no cutoff day, the statement is taken to close on that day and the new one
+ * to start on the next - the 31st wraps to the 1st. A cutoff day, when there
+ * is one, always wins, so no card that has one changes by a day.
+ *
+ * Short months: a day the month does not have clamps to its last day, so a
+ * statement on the 30th starts its next cycle on the 30th in a 30-day month
+ * rather than the 1st. That is the cutoff arithmetic's own rule for a 31st,
+ * and is the only place the fallback is a day out.
+ *
+ * Call this with the ACCOUNT, not `account.cutoffDate`, wherever a cycle is
+ * worked out - passing the bare field is what skips the fallback.
+ *
+ * @param {{cutoffDate?: number|string|null, statementDate?: number|string|null}|null|undefined} account
+ * @returns {number|null}
+ */
+export function cutoffDayOf(account) {
+  const cutoff = Math.trunc(Number(account?.cutoffDate))
+  if (cutoff >= 1) return cutoff
+  const statement = Math.min(31, Math.trunc(Number(account?.statementDate)))
+  if (statement >= 1) return statement >= 31 ? 1 : statement + 1
+  return null
+}
+
+/**
  * Returns { cycleStart, cycleEnd } for the most recently closed billing cycle.
  * cutoffDay = the first day of a new billing cycle (e.g. 15 → billing runs 15th–14th).
  *
  * cutoff=15, today=May 21  → Apr 15 00:00 – May 14 23:59  (open: May 15–Jun 14)
  * cutoff=15, today=May 10  → Mar 15 00:00 – Apr 14 23:59  (open: Apr 15–May 14)
  *
- * @param {number} cutoffDay
+ * @param {number|null} [cutoffDay]  from cutoffDayOf(account); none bills by calendar month
  * @param {Date} [referenceDate]
  */
 export function getCycleRange(cutoffDay, referenceDate = new Date()) {
@@ -85,7 +122,7 @@ export function getCycleRange(cutoffDay, referenceDate = new Date()) {
  * Returns { cycleStart, cycleEnd } for the currently-accumulating (open) cycle.
  * Starts on cutoffDay of this (or next) month, ends on (cutoffDay - 1) end-of-day of the following month.
  *
- * @param {number} cutoffDay
+ * @param {number|null} [cutoffDay]  from cutoffDayOf(account); none bills by calendar month
  * @param {Date} [referenceDate]
  */
 export function getNextCycleRange(cutoffDay, referenceDate = new Date()) {
@@ -173,10 +210,11 @@ export function nextDueDate(dayOfMonth, now = new Date()) {
  * @param {Date} [referenceDate]
  */
 export function getCreditStatus(account, txs, referenceDate = new Date()) {
-  const { cycleStart, cycleEnd } = getCycleRange(account?.cutoffDate, referenceDate)
+  const cutoff = cutoffDayOf(account)
+  const { cycleStart, cycleEnd } = getCycleRange(cutoff, referenceDate)
   // The cycle now accumulating. Its end is the boundary between "on the next
   // bill" and "committed, but for a later bill".
-  const { cycleEnd: nextCycleEnd } = getNextCycleRange(account?.cutoffDate, referenceDate)
+  const { cycleEnd: nextCycleEnd } = getNextCycleRange(cutoff, referenceDate)
   const name = account?.name
 
   const thisCharges          = []

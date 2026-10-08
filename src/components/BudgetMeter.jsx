@@ -13,6 +13,8 @@
  * between spending your last peso and spending twice your limit.
  */
 
+import { levelOfPct } from '../lib/budgetLevels'
+
 /**
  * The tone for a given percentage.
  *
@@ -30,12 +32,20 @@
  * the raw accent is not readable as small text: #2D9DFF is 2.85:1 on white,
  * so the class shifts it darker in light mode and lighter in dark, which
  * measures 5.1:1 and 7.1:1.
+ *
+ * Where amber starts and red starts is lib/budgetLevels.js, the one definition
+ * every surface reads.
+ *
+ * @param {number} pct  share of the limit used; may exceed 100
+ * @param {string} [accentHex]  the app's accent, for the on-track tone
  */
 export function budgetTone(pct, accentHex) {
-  if (pct > 100) {
+  // Where amber starts and red starts is lib/budgetLevels.js, for every surface.
+  const level = levelOfPct(pct)
+  if (level === 'over') {
     return { key: 'over', color: '#ef4444', svgColor: '#ef4444', textClass: 'text-red-500 dark:text-red-400' }
   }
-  if (pct >= 75) {
+  if (level === 'near') {
     return { key: 'warn', color: '#f59e0b', svgColor: '#f59e0b', textClass: 'text-amber-600 dark:text-amber-400' }
   }
   return {

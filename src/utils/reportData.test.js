@@ -229,3 +229,43 @@ describe('loans, people and value updates', () => {
     expect(data.summary.totalExpenses).toBe(0)
   })
 })
+
+describe('budgets in the category breakdown', () => {
+  /* Only an expense category has a limit to print. An inflow category that
+     still carries a stray budget, with the same name as an expense one, must
+     not lend it (the breakdown looks categories up by name). */
+  it('prints an expense category\'s limit, and none from an inflow category', async () => {
+    store.categories = [
+      { name: 'Groceries', type: 'expense', budget: 5000 },
+      { name: 'Gifts', type: 'inflow', budget: 9000 },
+    ]
+    store.transactions.push({ type: 'expense', account: 'Wallet', amount: 400, category: 'Gifts', date: '2026-08-10T08:00:00+08:00' })
+
+    const data = await fetchReportData(2026, 6)
+    expect(data.categoryBreakdown.find(c => c.name === 'Groceries')?.budget).toBe(5000)
+
+    const august = await fetchReportData(2026, 8)
+    expect(august.categoryBreakdown.find(c => c.name === 'Gifts')?.budget).toBeNull()
+  })
+})
+
+describe('a card with only a Statement day', () => {
+  /* Statement day 24 closes the cycle on the 24th, so the next one opens on
+     the 25th - the same cycles as a cutoff of 25 (cutoffDayOf), not the
+     calendar month the bare cutoffDate field gave it. */
+  it('shows the open cycle from its statement day', async () => {
+    /** @param {Row} over */
+    const detail = async (over) => {
+      store.accounts = [{ ...card, ...over }, wallet]
+      return (await fetchReportData(2026, 8)).creditDetailMap['Test Card']
+    }
+    const withCutoff = await detail({})
+    const stmtOnly = await detail({ cutoffDate: null, statementDate: 24 })
+    const neither = await detail({ cutoffDate: null })
+
+    expect(stmtOnly.nextRange).toBe(withCutoff.nextRange)
+    expect(stmtOnly.stmtRange).toBe(withCutoff.stmtRange)
+    // Not the calendar month a card with no day at all is billed by.
+    expect(stmtOnly.nextRange).not.toBe(neither.nextRange)
+  })
+})

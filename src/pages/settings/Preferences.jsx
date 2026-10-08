@@ -12,6 +12,7 @@ import { PauseCircle } from '@untitledui/icons'
 import Switch from '../../components/ui/Switch'
 import { setReduceMotion, systemReducesMotion } from '../../components/ui/motion'
 import { useReduceMotionChosen } from '../../hooks/useReduceMotion'
+import { setBudgetRollover } from '../../lib/rolloverSettings'
 import {
   ACCENT_COLORS, IconPalette, RowChevron, RowDivider, RowIcon, SectionCard, SectionHeader, SettingsRow,
 } from './shared'
@@ -112,7 +113,9 @@ export default function Preferences() {
           <RowDivider />
           {/* The default for a category that has not been decided on its own.
               Turning it off here does not turn off a category you switched on
-              deliberately - see lib/rollover.js. */}
+              deliberately - see lib/rollover.js. Turning it ON also gives
+              every category the month it starts carrying from
+              (lib/rolloverSettings.js); the flag alone carried nothing. */}
           <SettingsRow
             iconEl={
               <RowIcon color="violet">
@@ -127,7 +130,7 @@ export default function Preferences() {
             label="Carry budgets over"
             sublabel="Unspent rolls into next month"
             right={<ToggleSwitch on={budgetRollover} />}
-            onTap={() => put('budgetRollover', !budgetRollover)}
+            onTap={() => setBudgetRollover(!budgetRollover)}
           />
 
           <RowDivider />

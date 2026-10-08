@@ -4,7 +4,7 @@ import { useBack } from '../hooks/useBack'
 import db from '../db/db'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import { allocateGoals } from '../lib/goals'
-import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
+import { getCreditStatus, getNextCycleRange, cutoffDayOf } from '../utils/creditCycle'
 import { accountBrand } from '../lib/accountBrands'
 import { normalizeDesign } from '../lib/cardDesigns'
 import BrandMark from '../components/BrandMark'
@@ -15,11 +15,8 @@ import LimitMeter from '../components/LimitMeter'
 import { statementDueDate, daysToDue, upcomingDueDate } from '../lib/creditBills'
 import { creditStatements } from '../lib/creditStatements'
 import { receivedAmount } from '../lib/transferLegs'
-import {
-  estimateFinanceCharge, financeChargeRow, financeChargeLogged,
-} from '../lib/financeCharge'
-import { applyBalanceEffect, postCardPayment } from '../db/txHelpers'
-import { UNSYNCED } from '../db/db'
+import { estimateFinanceCharge, financeChargeLogged } from '../lib/financeCharge'
+import { postCardPayment } from '../db/txHelpers'
 import { useToast } from '../context/ToastContext'
 import { IconChevronRight } from '../components/icons'
 import {
@@ -51,7 +48,7 @@ import { INVESTMENT_KIND_LABEL } from '../lib/accountMeta'
 import { investmentStatus, valuedAgo } from '../lib/investments'
 import { loanStatus } from '../lib/loans'
 import { ordinal } from '../utils/recurring'
-import { payLoan, recordValue } from '../db/accountWrites'
+import { payLoan, recordValue, postFinanceCharge } from '../db/accountWrites'
 import UpdateValueSheet from './accounts/UpdateValueSheet'
 import LoanPaySheet from './accounts/LoanPaySheet'
 import { BrandSquare } from './accounts/HoldingTile'
@@ -291,11 +288,8 @@ export default function AccountDetail() {
     chargeInFlight.current = true
     setLoggingCharge(true)
     try {
-      const row = financeChargeRow({ accountName: account.name, amount: lateInfo.total })
-      await db.transaction('rw', [db.transactions, db.accounts, db.balances], async () => {
-        await db.transactions.add({ ...row, txId: crypto.randomUUID(), synced: UNSYNCED })
-        await applyBalanceEffect(row)
-      })
+      // Filed under Fees & Charges, which is created here when this ledger does not have it.
+      await postFinanceCharge({ accountName: account.name, amount: lateInfo.total })
       showToast(`Logged ${fmt(lateInfo.total, account.currency)} finance charge`)
     } catch (e) {
       console.error('[AccountDetail] finance charge failed:', e)
@@ -309,7 +303,8 @@ export default function AccountDetail() {
   const creditData = useMemo(() => {
     if (!account || account.type !== 'credit') return null
     const status = getCreditStatus(account, txsWithRunning)
-    const { cycleStart: nextStart, cycleEnd: nextEnd } = getNextCycleRange(account.cutoffDate)
+    // From the account, so a card with only a Statement day gets the open cycle getCreditStatus used above.
+    const { cycleStart: nextStart, cycleEnd: nextEnd } = getNextCycleRange(cutoffDayOf(account))
     const dueDate = nextOccurrenceDate(account.dueDate)
     /* The CLOSED statement's own due date, and the days left to it.
        statementDueDate can return a date in the past, which is the point -

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { getCycleRange, getNextCycleRange, getCreditStatus, nextDueDate } from './creditCycle'
+import { getCycleRange, getNextCycleRange, getCreditStatus, nextDueDate, cutoffDayOf } from './creditCycle'
 
 /* Local dates throughout: the cycle boundaries are built with `new Date(y, m, d)`,
    so comparing them against UTC strings is how you get an off-by-one. */
@@ -374,5 +374,82 @@ describe('money taken out of a card', () => {
     const s = getCreditStatus(/** @type {any} */ (visa), txs, at(2026, 9, 10))
     expect(s.currentBalance).toBe(0)
     expect(s.signedBalance).toBe(-3000)
+  })
+})
+
+/**
+ * `cutoffDate` is the day a new statement starts - what the cycle arithmetic
+ * runs on, and what the forms now say. `statementDate` is the day one closes,
+ * which the old form offered and nothing read: a card with only that typed was
+ * billed by calendar month. It is the fallback when there is no cutoff day.
+ */
+describe('cutoffDayOf - the statement day as a fallback', () => {
+  it('uses the cutoff day when there is one, whatever the statement day says', () => {
+    expect(cutoffDayOf({ cutoffDate: 15, statementDate: 5 })).toBe(15)
+    expect(cutoffDayOf({ cutoffDate: '15' })).toBe(15)
+  })
+
+  it('starts the next statement the day after the one that closes', () => {
+    expect(cutoffDayOf({ statementDate: 14 })).toBe(15)
+    expect(cutoffDayOf({ statementDate: 1 })).toBe(2)
+    expect(cutoffDayOf({ cutoffDate: null, statementDate: 14 })).toBe(15)
+    expect(cutoffDayOf({ cutoffDate: 0, statementDate: 14 })).toBe(15)
+  })
+
+  it('wraps past the end of the month: a statement on the 31st starts the next on the 1st', () => {
+    expect(cutoffDayOf({ statementDate: 31 })).toBe(1)
+    expect(cutoffDayOf({ statementDate: 30 })).toBe(31)
+    // A day that is not a day is held to one.
+    expect(cutoffDayOf({ statementDate: 45 })).toBe(1)
+  })
+
+  it('is null for a card with neither, which bills by calendar month', () => {
+    expect(cutoffDayOf({})).toBeNull()
+    expect(cutoffDayOf(null)).toBeNull()
+    expect(cutoffDayOf({ cutoffDate: null, statementDate: null })).toBeNull()
+    expect(cutoffDayOf({ cutoffDate: 0, statementDate: 0 })).toBeNull()
+  })
+
+  it('bills a statement-only card exactly as the equivalent cutoff would', () => {
+    // Statement closes on the 14th = a cutoff of the 15th.
+    const stmt = { name: 'Visa', type: 'credit', statementDate: 14 }
+    const cut  = { name: 'Visa', type: 'credit', cutoffDate: 15 }
+    const txs = [
+      // the 14th: the last day of the closed cycle
+      { type: 'expense', account: 'Visa', amount: 100, date: at(2026, 5, 14, 20).toISOString() },
+      // the 15th: the first day of the next one
+      { type: 'expense', account: 'Visa', amount: 70, date: at(2026, 5, 15, 9).toISOString() },
+    ]
+    const a = getCreditStatus(/** @type {any} */ (stmt), txs, at(2026, 5, 21))
+    const b = getCreditStatus(/** @type {any} */ (cut), txs, at(2026, 5, 21))
+    expect(span(a)).toBe('2026-04-15 .. 2026-05-14')
+    expect(a.thisTotal).toBe(100)
+    expect(a.nextStatementTotal).toBe(70)
+    expect(a.thisTotal).toBe(b.thisTotal)
+    expect(a.nextStatementTotal).toBe(b.nextStatementTotal)
+    expect(a.currentBalance).toBe(170)
+  })
+
+  it('does not move a card that has a cutoff day when it also has a statement day', () => {
+    const both = { name: 'Visa', type: 'credit', cutoffDate: 15, statementDate: 5 }
+    const only = { name: 'Visa', type: 'credit', cutoffDate: 15 }
+    for (let m = 1; m <= 12; m++) {
+      const ref = at(2026, m, 11)
+      const a = getCreditStatus(/** @type {any} */ (both), [], ref)
+      const b = getCreditStatus(/** @type {any} */ (only), [], ref)
+      expect(span(a)).toBe(span(b))
+    }
+  })
+
+  it('a statement on the 31st bills by whole calendar months', () => {
+    const acct = { name: 'Visa', type: 'credit', statementDate: 31 }
+    expect(span(getCycleRange(cutoffDayOf(acct), at(2026, 5, 21)))).toBe('2026-04-01 .. 2026-04-30')
+    const s = getCreditStatus(/** @type {any} */ (acct), [], at(2026, 5, 21))
+    expect(span(s)).toBe('2026-04-01 .. 2026-04-30')
+  })
+
+  it('a card with neither still bills by calendar month, as before', () => {
+    const s = getCreditStatus(/** @type {any} */ ({ name: 'Visa', type: 'credit' }), [], at(2026, 5, 21))
+    expect(span(s)).toBe('2026-04-01 .. 2026-04-30')
   })
 })

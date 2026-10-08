@@ -1,4 +1,4 @@
-import { getCreditStatus, getNextCycleRange } from '../utils/creditCycle'
+import { getCreditStatus, getNextCycleRange, cutoffDayOf } from '../utils/creditCycle'
 
 /**
  * A credit card's statement, as a bill.
@@ -101,14 +101,15 @@ export function statementDueDate(cycleEnd, dueDay) {
  * and shows this beside it, so a date that lands on the wrong bill says so
  * before it is saved.
  *
- * @param {{cutoffDate?: number|string|null, dueDate?: number|string|null}|null|undefined} account
- *   cutoffDate: the day a cycle starts (none bills by calendar month);
+ * @param {{cutoffDate?: number|string|null, statementDate?: number|string|null, dueDate?: number|string|null}|null|undefined} account
+ *   cutoffDate: the day a cycle starts, or statementDate when there is none
+ *   (see cutoffDayOf); neither bills by calendar month;
  *   dueDate: the day of the month it is due (none: `due` is null)
  * @param {Date} date
  * @returns {{cycleStart: Date, cycleEnd: Date, due: Date|null}}
  */
 export function statementFor(account, date) {
-  const { cycleStart, cycleEnd } = getNextCycleRange(Number(account?.cutoffDate) || 0, date)
+  const { cycleStart, cycleEnd } = getNextCycleRange(cutoffDayOf(account) ?? 0, date)
   return { cycleStart, cycleEnd, due: statementDueDate(cycleEnd, Number(account?.dueDate) || undefined) }
 }
 

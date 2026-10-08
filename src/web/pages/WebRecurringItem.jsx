@@ -149,7 +149,11 @@ export default function WebRecurringItem() {
         <>
           <Btn onClick={toggle} disabled={toggling}>{rec.active ? 'Pause' : 'Resume'}</Btn>
           <Btn icon={<IEdit size={14} />} onClick={() => navigate(`/recurring/${rec.id}/edit`)}>Edit</Btn>
-          <Btn variant="primary" icon={<IZap size={14} />} onClick={() => setConfirmPost(true)} disabled={posting}>{posting ? 'Saving…' : income ? 'Mark received' : 'Post now'}</Btn>
+          {/* Not while paused: a paused bill is off the schedule, so posting it
+              would charge something the app has been told to leave alone. */}
+          {rec.active && (
+            <Btn variant="primary" icon={<IZap size={14} />} onClick={() => setConfirmPost(true)} disabled={posting}>{posting ? 'Saving…' : income ? 'Mark received' : 'Post now'}</Btn>
+          )}
           <Popover role="menu" align="end" width={220} label="More" trigger={<Btn variant="ghost" icon={<IMore size={16} />} label="More" />}>
             <MenuItem icon={<ITrash />} danger onSelect={() => setConfirmDel(true)}>Delete this {noun}</MenuItem>
           </Popover>

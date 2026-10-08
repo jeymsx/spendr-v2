@@ -476,7 +476,7 @@ export function TemplateManager({ open, onClose, variant = 'sheet' }) {
       <div className="px-5">
         <Button block onClick={openAdd}>
           <IconPlus size={15} strokeWidth="2.5" />
-          Add Template
+          New template
         </Button>
         <p className="text-11 text-slate-400 dark:text-slate-500 text-center mt-2.5">
           Hold a template to quickly delete it

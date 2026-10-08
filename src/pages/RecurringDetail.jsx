@@ -446,7 +446,7 @@ export default function RecurringDetail() {
       </section>
 
       {/* ── The two verbs ── */}
-      <section className="px-5 mt-4 grid grid-cols-2 gap-3">
+      <section className={`px-5 mt-4 grid gap-3 ${rec.active ? 'grid-cols-2' : 'grid-cols-1'}`}>
         {/* No sub-labels. They read "Stop reminders" and the amount - one
             explaining a word that needs no explanation, the other repeating a
             figure from the card directly above. */}
@@ -456,13 +456,19 @@ export default function RecurringDetail() {
           onClick={handleToggle}
           disabled={toggling}
         />
-        <ActionTile
-          icon={<IconBolt />}
-          label={posting ? 'Saving…' : income ? 'Mark received' : 'Post now'}
-          onClick={() => setConfirmPost(true)}
-          disabled={posting}
-          tone="accent"
-        />
+        {/* Only while it is running. A paused bill is off the schedule -
+            upcoming, reminders and the forecast all skip it - so posting one
+            would charge something the app has been told to leave alone. Resume
+            first; the tile then spans the row rather than sit in half of it. */}
+        {rec.active && (
+          <ActionTile
+            icon={<IconBolt />}
+            label={posting ? 'Saving…' : income ? 'Mark received' : 'Post now'}
+            onClick={() => setConfirmPost(true)}
+            disabled={posting}
+            tone="accent"
+          />
+        )}
       </section>
 
       {/* ── The facts ──

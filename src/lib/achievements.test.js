@@ -158,6 +158,14 @@ describe('evaluateAchievements', () => {
     expect(earned.has('first-goal')).toBe(true)
   })
 
+  it('does not take an inflow category\'s stray budget as one of the three limits', () => {
+    const categories = [
+      { name: 'Food', type: 'expense', budget: 1000 }, { name: 'Transpo', type: 'expense', budget: 1000 },
+      { name: 'Salary', type: 'inflow', budget: 1000 },
+    ]
+    expect(evaluateAchievements({ categories, today: TODAY }).has('limits-set')).toBe(false)
+  })
+
   it('keeps fifteen badges, every one with a mark and a colour of its own to draw', () => {
     const badges = ACHIEVEMENTS.filter(a => a.kind === 'badge')
     expect(badges).toHaveLength(15)
@@ -212,6 +220,8 @@ describe('evaluateAchievements', () => {
       expect(has({ debts: [{ ...split, amountPaid: 600 }] }, 'all-squared')).toBe(true)
       // Paying off what you owe is Debt Cleared's, not this.
       expect(has({ debts: [{ name: 'Bank', type: 'i_owe', amount: 600, amountPaid: 600 }] }, 'all-squared')).toBe(false)
+      // And being paid back is All Squared's, not Debt Cleared's.
+      expect(has({ debts: [{ ...split, amountPaid: 600 }] }, 'debt-cleared')).toBe(false)
     })
 
     it('Worldly: money held in two currencies, not an account opened and left empty', () => {
@@ -281,6 +291,13 @@ describe('trackProgress', () => {
     const months = [5, 6, 7].map(m => ({ date: new Date(2026, m, 10, 12).toISOString(), type: 'expense', amount: 100, category: 'Food' }))
     expect(trackProgress({ transactions: months, categories, today: TODAY }).budget.value).toBe(3)
     expect(trackProgress({ transactions: months, categories, today: TODAY, budgetFrom: '2026-08' }).budget.value).toBe(1)
+  })
+
+  it('does not count an inflow category\'s stray budget as a limit to stay inside', () => {
+    // One real limit and one left on Salary: not the two limits the track needs.
+    const categories = [{ name: 'Food', type: 'expense', budget: 5000 }, { name: 'Salary', type: 'inflow', budget: 90000 }]
+    const months = [5, 6, 7].map(m => ({ date: new Date(2026, m, 10, 12).toISOString(), type: 'expense', amount: 100, category: 'Food' }))
+    expect(trackProgress({ transactions: months, categories, today: TODAY }).budget.value).toBe(0)
   })
 
   it('does not count a balance in a currency it cannot price', () => {

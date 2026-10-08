@@ -550,7 +550,7 @@ export default function RecurringForm() {
                   Active
                 </span>
                 <span className="block text-12 text-slate-500 dark:text-slate-400">
-                  Shows in upcoming and can be posted
+                  Shows in upcoming, reminders and the forecast, and can be posted
                 </span>
               </span>
               <button

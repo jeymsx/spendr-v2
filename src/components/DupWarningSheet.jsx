@@ -1,13 +1,19 @@
 import Button from './ui/Button'
 import Sheet from './ui/Sheet'
 import { fmt } from '../lib/money'
+import { dupWhen } from './dupWhen'
 
 const TYPE_LABEL = { expense: 'expense', inflow: 'inflow', transfer: 'transfer' }
 
-/** `account` is the account RECORD, for the currency the amount is in. */
-export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, type, account }) {
+/**
+ * `account` is the account RECORD, for the currency the amount is in.
+ * `date` is the form's local day, 'YYYY-MM-DD': the duplicate is looked for on
+ * that day, so that is the day the sheet names (dupWhen).
+ */
+export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, type, account, date }) {
   /* Sheet owns the overlay, the panel, Escape, the scroll lock, the focus
      trap and the exit animation. */
+  const when = dupWhen(date)
 
   return (
     <Sheet
@@ -47,7 +53,7 @@ export default function DupWarningSheet({ open, onClose, onSaveAnyway, amount, t
             Possible duplicate
           </h3>
           <p className="text-sm text-slate-500 dark:text-slate-400 leading-snug">
-            A {fmt(amount, account?.currency)} {TYPE_LABEL[type] ?? type} with the same amount and account already exists today.
+            A {fmt(amount, account?.currency)} {TYPE_LABEL[type] ?? type} with the same amount and account already exists{when ? ` ${when}` : ''}.
           </p>
         </div>
 

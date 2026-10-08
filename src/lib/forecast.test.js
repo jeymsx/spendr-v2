@@ -68,6 +68,24 @@ describe('the forecast walk', () => {
     expect(f.events.filter(e => e.name === 'Internet').map(e => e.date.getMonth())).toEqual([8, 9])
   })
 
+  /* A bill due on the 31st sits on Feb 28 for a month, then goes back to the
+     31st. Walked from the date alone it stayed on the 28th, so every month
+     after February was drawn up to three days early. */
+  it('keeps a month-end bill on its day through a short month', () => {
+    const feb10 = new Date(2026, 1, 10, 12)
+    const days = (/** @type {Record<string, any>} */ over) => run({
+      now: feb10, horizonDays: 60,
+      recurring: [{ id: 1, name: 'Rent', amount: 15000, frequency: 'monthly', active: true, account: 'BPI', ...over }],
+    }).events.filter(e => e.name === 'Rent').map(e => `${e.date.getMonth() + 1}/${e.date.getDate()}`)
+
+    // Already on its short-month date: the next step is back to the 31st.
+    expect(days({ nextDate: iso(2, 28), dueDay: 31 })).toEqual(['2/28', '3/31'])
+    // Overdue from Jan 31: the missed dates are walked past from the same day.
+    expect(days({ nextDate: iso(1, 31), dueDay: 31 })).toEqual(['2/10', '2/28', '3/31'])
+    // A row from before the anchor existed steps from its date, as it always did.
+    expect(days({ nextDate: iso(2, 28) })).toEqual(['2/28', '3/28'])
+  })
+
   it('lists a card\'s due date without taking it out twice', () => {
     const card = { id: 2, name: 'Card', type: 'credit', balance: 0, cutoffDate: 25, dueDate: 15, currency: 'PHP' }
     const charge = { type: 'expense', account: 'Card', amount: 3000, date: new Date(2026, 7, 20).toISOString() }

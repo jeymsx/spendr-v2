@@ -468,7 +468,7 @@ function FilterBar({ search, onSearch, filters, setFilters, accounts, categories
 
   return (
     <div className="d-toolbar">
-      <SearchInput value={search} onChange={onSearch} placeholder="Search notes, categories, accounts, amounts" className="flex-1 min-w-[150px] max-w-[320px]" />
+      <SearchInput value={search} onChange={onSearch} placeholder="Search descriptions, categories, accounts, amounts" className="flex-1 min-w-[150px] max-w-[320px]" />
       <Segmented
         label="Type"
         value={filters.type}
@@ -671,7 +671,9 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
         <>
           <Btn variant="danger" icon={<ITrash size={14} />} onClick={() => onDelete(tx)} className="mr-auto">Delete</Btn>
           {refundable && <Btn variant="secondary" icon={<IUndo size={14} />} onClick={() => onRefund(tx)}>Refund</Btn>}
-          <Btn variant="primary" icon={<IEdit size={14} />} onClick={() => onEdit(tx)}>Edit</Btn>
+          {/* Not a refund: the form only knows money going out, so Edit
+              opened a page that said it could not be edited. */}
+          {!isRefund(tx) && <Btn variant="primary" icon={<IEdit size={14} />} onClick={() => onEdit(tx)}>Edit</Btn>}
         </>
       )}
     >
@@ -706,7 +708,7 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
             )}
             <dt>Date</dt>
             <dd>{new Date(tx.date).toLocaleDateString(undefined, { weekday: 'short', month: 'long', day: 'numeric', year: 'numeric' })} · {fmtTime(tx.date)}</dd>
-            {row.description && !plan && (<><dt>Note</dt><dd><span className="break-words min-w-0">{row.description}</span></dd></>)}
+            {row.description && !plan && (<><dt>Description</dt><dd><span className="break-words min-w-0">{row.description}</span></dd></>)}
             {plan ? (
               <>
                 <dt>Plan</dt>

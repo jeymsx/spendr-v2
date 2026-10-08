@@ -1,6 +1,6 @@
 import { createElement } from 'react'
 import db from '../db/db'
-import { getCreditStatus, getNextCycleRange } from './creditCycle'
+import { getCreditStatus, getNextCycleRange, cutoffDayOf } from './creditCycle'
 import { scheduledCutoff } from './scheduled'
 import { RATES_META_KEY, sumInBase } from '../lib/fx'
 import { DEFAULT_CURRENCY } from '../lib/currency'
@@ -10,6 +10,7 @@ import { receivedAmount } from '../lib/transferLegs'
 import { saveFile } from '../lib/share'
 import { isIncome, isSpend } from '../lib/flows'
 import { bucketOf } from '../lib/accountMeta'
+import { isBudgeted } from '../lib/budgetLevels'
 import { debtsNetAt } from '../lib/trend'
 import { debtsCountFrom } from '../lib/netWorth'
 import { spendingRows } from './installments'
@@ -106,7 +107,8 @@ export async function fetchReportData(year, month, base = '', rates = null) {
         count,
         pct:    totalExpenses > 0 ? (total / totalExpenses) * 100 : 0,
         color:  cat?.color ?? '#6366f1',
-        budget: cat?.budget > 0 ? cat.budget : null,
+        // Only an expense category has a limit: an inflow of the same name must not lend its stray one.
+        budget: isBudgeted(cat) ? cat.budget : null,
       }
     })
     .sort((a, b) => b.total - a.total)
@@ -131,7 +133,8 @@ export async function fetchReportData(year, month, base = '', rates = null) {
             nextStatementTotal, laterTotal, nextCycleEnd, currentBalance: balanceUsed,
             minimumDue }
       = getCreditStatus(acct, txsAsOf, asOf)
-    const { cycleStart: nextStart } = getNextCycleRange(acct.cutoffDate, asOf)
+    // From the account, so a card with only a Statement day gets the same open cycle getCreditStatus used above.
+    const { cycleStart: nextStart } = getNextCycleRange(cutoffDayOf(acct), asOf)
 
     const limit = acct.creditLimit ?? 0
     const available   = Math.max(limit - balanceUsed, 0)

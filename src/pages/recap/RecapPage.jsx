@@ -51,7 +51,7 @@ export default function RecapPage() {
 
   if (!recap) {
     return (
-      <SubPage title="Monthly recap" onBack={close}>
+      <SubPage title="Wrapped" onBack={close}>
         <EmptyState className="mt-10" art="sparkles" {...emptyCopy(month)} />
       </SubPage>
     )
@@ -79,13 +79,13 @@ export default function RecapPage() {
  */
 function emptyCopy(month) {
   if (!month) {
-    return { title: 'No recap yet', body: 'Your first one is ready on the 1st, once a month has something logged in it.' }
+    return { title: 'No Wrapped yet', body: 'Your first one is ready on the 1st, once a month has something logged in it.' }
   }
   const now = new Date()
   if (month >= monthKeyOf(now)) {
     const { year, month: m } = parseMonth(addMonths(month, 1))
     const ready = new Date(year, m, 1).toLocaleDateString('en-US', { month: 'long', day: 'numeric' })
-    return { title: `No recap for ${monthLabel(month, now)} yet`, body: `It will be ready on ${ready}.` }
+    return { title: `No Wrapped for ${monthLabel(month, now)} yet`, body: `It will be ready on ${ready}.` }
   }
-  return { title: `Nothing to recap for ${monthLabel(month, now)}`, body: 'Nothing was logged that month.' }
+  return { title: `No Wrapped for ${monthLabel(month, now)}`, body: 'Nothing was logged that month.' }
 }

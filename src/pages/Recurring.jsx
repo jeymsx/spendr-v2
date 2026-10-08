@@ -619,7 +619,9 @@ export function RecurringFormSheet({ open, onClose, editRec, categories, account
             <div>
               <p className="text-sm font-medium text-slate-800 dark:text-white">Active</p>
               <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
-                {active ? 'Will appear in upcoming' : 'Paused, not shown in upcoming'}
+                {active
+                  ? 'Shows in upcoming, reminders and the forecast'
+                  : 'Paused: left out of upcoming, reminders and the forecast'}
               </p>
             </div>
             <button

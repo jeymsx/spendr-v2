@@ -154,7 +154,7 @@ export const GROUPS: Group[] = [
       { icon: 'lock', title: 'App lock', body: 'Face ID when Spendr opens, with a backup PIN if Face ID can’t.' },
       { icon: 'eye-off', title: 'Out of sight', body: 'Your net worth stays hidden on Home until you tap the eye.' },
       { icon: 'chart-bar-off', title: 'No tracking', body: 'No analytics, no usage tracking, no advertising identifiers, no ads.' },
-      { icon: 'file-spreadsheet', title: 'Export and back up', body: 'Export to CSV, back up everything as one file you can restore, or send it to Google Sheets.' },
+      { icon: 'file-spreadsheet', title: 'Export and back up', body: 'Export to CSV, get one spreadsheet of everything, or back up everything as one file you can restore.' },
       { icon: 'file-type-pdf', title: 'A monthly report', body: 'Download any month as a PDF.' },
       { icon: 'refresh', title: 'Sync, if you want it', body: 'Sign in with Google to keep your phone and computer in step, or don’t: everything works without it.' },
     ],

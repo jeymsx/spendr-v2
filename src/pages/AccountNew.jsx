@@ -8,7 +8,7 @@ import { CARD_DESIGNS } from '../lib/cardDesigns'
 import { PH_ACCOUNTS, PH_HOLDINGS } from '../lib/phAccounts'
 import { INVESTMENT_KINDS } from '../lib/accountMeta'
 import { monthsToClear, rateLabel, solveMonthlyRate } from '../lib/loans'
-import { createInvestment } from '../db/accountWrites'
+import { createInvestment, createCard } from '../db/accountWrites'
 import Field from '../components/ui/Field'
 import PickSelect from '../components/ui/PickSelect'
 import { parseMoney, moneyChangeHandler } from '../utils/moneyInput'
@@ -133,6 +133,8 @@ export default function AccountNew() {
        without making the fifth impossible. */
     currency: getBaseCurrency(),
     creditLimit: '0',
+    // What a card already owes when it is added; blank for a new one.
+    owedNow: '',
     cutoffDay: '',
     dueDay: '',
     minPayment: '0',
@@ -337,10 +339,13 @@ export default function AccountNew() {
       })
       /* An investment's opening value is written as a dated value row, so
          the net-worth line steps on the day it was added; a loan's balance is
-         what you owe, stored negative; a card starts at zero and fills in
-         from its charges. */
+         what you owe, stored negative; a card has no balance to set - what it
+         owes comes from its charges - so what it already owes is written as
+         its first one, a correction (db/accountWrites.js createCard), and it
+         fills in from there. */
       if (isInvestment) await createInvestment(row, parseMoney(draft.startingBal) || 0)
-      else await createAccount(row, isCredit ? 0 : isLoan ? -(parseMoney(draft.startingBal) || 0) : parseMoney(draft.startingBal))
+      else if (isCredit) await createCard(row, parseMoney(draft.owedNow) || 0)
+      else await createAccount(row, isLoan ? -(parseMoney(draft.startingBal) || 0) : parseMoney(draft.startingBal))
       /* No toast, and no navigation. The next screen IS the confirmation,
          and a toast sliding over it would be the same news twice. */
       setCreated(true)
@@ -560,7 +565,7 @@ export default function AccountNew() {
               </div>
             ) : (
               <p className="text-sm text-slate-500 dark:text-slate-400 px-1">
-                Nothing matches that. Name it yourself below.
+                No match. Tap Continue to use this name.
               </p>
             )}
           </div>
@@ -758,9 +763,20 @@ export default function AccountNew() {
             />
           </div>
 
+          {/* What the card already owes, if anything. It is the card's first
+              entry rather than a balance: see createCard. Blank is a new card. */}
+          <div>
+            <SectionLabel hint="What the card already owes. Leave it blank for a new card.">Amount owed now</SectionLabel>
+            <MoneyField
+              value={draft.owedNow}
+              onChange={moneyChangeHandler(v => set({ owedNow: v }), baseDecimals(draft.currency))}
+              currency={draft.currency}
+            />
+          </div>
+
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <SectionLabel hint="Day the statement closes.">Cutoff day</SectionLabel>
+              <SectionLabel hint="Day a new statement starts.">Cutoff day</SectionLabel>
               <input
                 inputMode="numeric"
                 value={draft.cutoffDay}
@@ -790,8 +806,8 @@ export default function AccountNew() {
           </div>
 
           <p className="text-11 text-slate-500 dark:text-slate-400">
-            A credit card's balance comes from its charges, so it starts at zero
-            and fills in as you record spending.
+            Spending from the cutoff day goes on the next bill. With no cutoff
+            day, the card bills by calendar month.
           </p>
         </div>
       )}

@@ -379,7 +379,7 @@ export default function Transactions() {
               bg-primary/10 dark:bg-primary/20 text-primary">
               {amountMin != null ? `${baseSymbol()}${amountMin.toLocaleString()}` : `${baseSymbol()}0`}
               {' – '}
-              {amountMax != null ? `₱${amountMax.toLocaleString()}` : 'any'}
+              {amountMax != null ? `${baseSymbol()}${amountMax.toLocaleString()}` : 'any'}
               <button onClick={() => { setAmountMin(null); setAmountMax(null) }} className="ml-0.5 opacity-60 hover:opacity-100 active:opacity-100">×</button>
             </span>
           )}

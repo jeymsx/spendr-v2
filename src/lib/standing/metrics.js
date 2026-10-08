@@ -1,4 +1,5 @@
 import { daysBetween, num } from './format'
+import { BUDGET_NEAR_AT, isBudgeted } from '../budgetLevels'
 
 /**
  * What the facts add up to: the pace of the month, what is left, what is
@@ -60,7 +61,8 @@ export function metricsOf(f) {
   const earned = Math.max(0, num(mo.earned))
 
   // ── The budget ──
-  const rows = (f.budget?.rows ?? []).filter(r => num(r.budget) > 0)
+  // Budgeted categories only (lib/budgetLevels.js): an expense category with a limit.
+  const rows = (f.budget?.rows ?? []).filter(isBudgeted)
     .map(r => ({ name: r.name, budget: num(r.budget), spent: Math.max(0, num(r.spent)), fixed: !!r.fixed }))
   const budgetTotal = rows.reduce((t, r) => t + r.budget, 0)
   const hasBudget = budgetTotal > 0
@@ -99,8 +101,11 @@ export function metricsOf(f) {
   const fullCats = ratioRows
     .filter(r => Math.round(r.spent - r.budget) > 0)
     .sort((a, b) => b.ratio - a.ratio)
+  /* "Close" is the app's one near-the-limit line (lib/budgetLevels.js), so the
+     note calls a category close exactly when the meter and the bell do - it
+     had its own 0.75 and spoke up on a category every other screen called calm. */
   const closeCat = ratioRows
-    .filter(r => r.ratio >= 0.75 && r.ratio < 1 && r.name !== anchor?.name)
+    .filter(r => r.ratio >= BUDGET_NEAR_AT && r.ratio < 1 && r.name !== anchor?.name)
     .sort((a, b) => b.ratio - a.ratio)[0] ?? null
 
   // ── What is coming ──

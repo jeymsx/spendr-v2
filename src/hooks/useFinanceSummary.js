@@ -13,6 +13,7 @@ import { bucketOf } from '../lib/accountMeta'
 import { netWorthBreakdown } from '../lib/netWorth'
 import useNetWorthDebts from './useNetWorthDebts'
 import { spendingRows } from '../utils/installments'
+import { isBudgeted } from '../lib/budgetLevels'
 
 /**
  * The figures every overview screen needs, derived once.
@@ -94,8 +95,9 @@ export function useFinanceSummary() {
     /** @type {Record<string, number>} */
     const spent = {}
     monthExpenses.forEach(t => { spent[t.category] = (spent[t.category] ?? 0) + txBase(t) })
+    // Expense categories with a limit: an inflow category's stray budget is not one.
     return (categories ?? [])
-      .filter(c => (c.budget ?? 0) > 0)
+      .filter(isBudgeted)
       .map(c => ({ ...c, spent: spent[c.name] ?? 0 }))
       .sort((a, b) => (b.spent / b.budget) - (a.spent / a.budget))
   }, [categories, monthExpenses])

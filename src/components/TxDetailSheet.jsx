@@ -381,8 +381,10 @@ export default function TxDetailSheet({
         )}
         {/* Nor for a loan payment: its split is worked out from the loan's
             rate, and editing one half would leave the other wrong. Delete
-            takes both, and paying again splits it afresh. */}
-        {!adjustment && !payment && (
+            takes both, and paying again splits it afresh. Nor for a refund:
+            the form only knows money going out, so Edit opened a page that
+            said "This one cannot be edited". Delete it and record it again. */}
+        {!adjustment && !payment && !isRefund(rec) && (
           <Button className="flex-[2]" onClick={enterEdit}>
             Edit
           </Button>
@@ -574,10 +576,10 @@ export default function TxDetailSheet({
                     <DetailRow label="Interest" value={fmt(payment.interest.amount, txCur)} padded={false} isLast />
                   </>
                 )}
-                {/* The notes and the interest's category are the app's own
+                {/* The descriptions and the interest's category are the app's own
                     words for the two halves - the rows above say it. */}
                 {!payment && rec.description && rec.description.trim() && (
-                  <DetailRow label="Note" value={rec.description} padded={false} isLast />
+                  <DetailRow label="Description" value={rec.description} padded={false} isLast />
                 )}
                 {cat && !payment && (
                   <DetailRow
@@ -685,7 +687,7 @@ export default function TxDetailSheet({
                       autoFocus
                     />
                   </EditRow>,
-                  <EditRow key="desc" label="Note">
+                  <EditRow key="desc" label="Description">
                     <RowInput
                       value={editDescription}
                       onChange={e => setEditDescription(e.target.value)}
@@ -804,7 +806,7 @@ export default function TxDetailSheet({
                   </>
                 )}
                 {!payment && rec.description && rec.description.trim() && (
-                  <DetailRow label="Note" value={rec.description} padded={false} isLast />
+                  <DetailRow label="Description" value={rec.description} padded={false} isLast />
                 )}
                 <DetailRow
                   label="Balance"

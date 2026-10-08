@@ -18,9 +18,11 @@ import { fmt } from '../../lib/money'
  * became savings, which is a different thing entirely - and the one people
  * usually mean when they say "if I did not spend it, I want to keep it".
  *
- * So the two are exclusive by construction: lib/rollover.js leaves a rolling
- * category out of `sweepable`, because its leftover has already been kept and
- * moving it again would move the same money twice.
+ * So the two are exclusive by construction: lib/rollover.js leaves a category
+ * whose carry has already taken last month's leftover out of `sweepable`,
+ * because that leftover has been kept and moving it again would move the same
+ * money twice. (A category that rolls but only started this month kept
+ * nothing, and is still offered.)
  *
  * ── It moves real money ──
  *

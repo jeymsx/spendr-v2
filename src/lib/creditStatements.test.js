@@ -104,6 +104,22 @@ describe('creditStatements', () => {
     expect(aug.status).toBe('paid')
   })
 
+  /* A card typed with only a Statement day closes on it: statement day 14 is a
+     cutoff of 15 (cutoffDayOf), so the history closes the very cycles
+     getCreditStatus does - not calendar months, as it did with the bare field. */
+  it('bills by the Statement day when the card has no cutoff day', () => {
+    const txs = [charge(7, 20, 1000), pay(8, 20, 1000), charge(8, 20, 300), pay(9, 25, 300)]
+    const stmtOnly = card({ cutoffDate: null, statementDate: 14 })
+    const list = creditStatements(stmtOnly, txs, at(9, 30))
+    expect(list).toEqual(creditStatements(card(), txs, at(9, 30)))
+    expect(ymd(list[0].cycleStart)).toEqual([2026, 8, 15])
+    expect(ymd(list[0].cycleEnd)).toEqual([2026, 9, 14])
+    expect(ymd(list[0].cycleEnd)).toEqual(ymd(getCreditStatus(stmtOnly, txs, at(9, 30)).cycleEnd))
+    // A cutoff day, when there is one, still wins over it.
+    const both = creditStatements(card({ cutoffDate: 15, statementDate: 20 }), txs, at(9, 30))
+    expect(ymd(both[0].cycleEnd)).toEqual([2026, 9, 14])
+  })
+
   it('counts cash taken from the card as a charge and a refund onto it as a payment', () => {
     const advance = { type: 'transfer', fromAccount: 'Card', toAccount: 'Cash', amount: 2000, date: new Date(2026, 6, 20, 12).toISOString() }
     const refund = { type: 'inflow', account: 'Card', amount: 500, date: new Date(2026, 7, 18, 12).toISOString() }

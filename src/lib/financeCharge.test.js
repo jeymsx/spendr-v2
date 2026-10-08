@@ -1,8 +1,9 @@
 import { describe, it, expect } from 'vitest'
 import {
-  estimateFinanceCharge, financeChargeRow, financeChargeLogged,
-  FINANCE_CHARGE_CATEGORY,
+  estimateFinanceCharge, financeChargeRow, financeChargeLogged, isFinanceCharge, financeChargeCategory,
+  FINANCE_CHARGE_CATEGORY, LEGACY_FINANCE_CHARGE_CATEGORY, FINANCE_CHARGE_DESCRIPTION,
 } from './financeCharge'
+import { EXPENSE_PRESETS } from './phCategories'
 
 const card = (over = {}) => ({ name: 'Card', type: 'credit', interestRate: 3, lateFee: 500, ...over })
 
@@ -99,13 +100,36 @@ describe('financeChargeRow', () => {
   it('rounds the amount it writes', () => {
     expect(financeChargeRow({ accountName: 'Card', amount: 43.2149, now }).amount).toBe(43.21)
   })
+
+  /**
+   * It was filed under 'Bank charges', which no list offers and nothing
+   * creates: a grey fallback tile, no budget, and a row that lived outside
+   * every picker. "Fees & Charges" is a preset people have.
+   */
+  it('files the charge under a category the app really has', () => {
+    const preset = EXPENSE_PRESETS.find(p => p.name === FINANCE_CHARGE_CATEGORY)
+    expect(preset).toBeTruthy()
+    expect(preset?.type).toBe('expense')
+    expect(FINANCE_CHARGE_CATEGORY).toBe('Fees & Charges')
+    expect(financeChargeRow({ accountName: 'Card', amount: 1, now }).category).toBe('Fees & Charges')
+  })
+
+  it('carries a marker that is not the category', () => {
+    expect(financeChargeRow({ accountName: 'Card', amount: 1, now }).financeCharge).toBe(true)
+  })
+
+  it('builds the category it is filed under, from the preset, for a ledger without it', () => {
+    const cat = financeChargeCategory()
+    const preset = EXPENSE_PRESETS.find(p => p.name === FINANCE_CHARGE_CATEGORY)
+    expect(cat).toEqual({ name: 'Fees & Charges', icon: preset?.icon, color: preset?.color, type: 'expense', budget: 0 })
+  })
 })
 
 describe('financeChargeLogged', () => {
   const due = new Date(2026, 8, 5)
   /** @param {Date} d @param {Record<string, any>} [over] */
   const chargeOn = (d, over = {}) => ({
-    type: 'expense', account: 'Card', category: FINANCE_CHARGE_CATEGORY,
+    type: 'expense', account: 'Card', category: FINANCE_CHARGE_CATEGORY, financeCharge: true,
     amount: 635, date: d.toISOString(), ...over,
   })
 
@@ -134,13 +158,58 @@ describe('financeChargeLogged', () => {
   })
 
   it('ignores an ordinary purchase, however recent', () => {
-    const txs = [chargeOn(new Date(2026, 8, 13), { category: 'Food' })]
+    const txs = [{ type: 'expense', account: 'Card', category: 'Food', description: 'Jollibee',
+      amount: 635, date: new Date(2026, 8, 13).toISOString() }]
     expect(financeChargeLogged({ transactions: txs, accountName: 'Card', since: due })).toBe(false)
+  })
+
+  /**
+   * The bug: the check matched on the category, so re-filing a logged charge
+   * under Bills made the offer come back - and logging it again, for a larger
+   * figure, because the balance had just gone up.
+   */
+  it('still counts a charge that was re-filed under another category', () => {
+    const txs = [chargeOn(new Date(2026, 8, 13), { category: 'Bills' })]
+    expect(financeChargeLogged({ transactions: txs, accountName: 'Card', since: due })).toBe(true)
+  })
+
+  it('still counts one logged before the marker, which was filed under Bank charges', () => {
+    const old = { type: 'expense', account: 'Card', category: LEGACY_FINANCE_CHARGE_CATEGORY,
+      amount: 635, date: new Date(2026, 8, 13).toISOString() }
+    expect(financeChargeLogged({ transactions: [old], accountName: 'Card', since: due })).toBe(true)
+  })
+
+  it('counts one the marker did not travel with - another device - by its description, even re-filed', () => {
+    const synced = { type: 'expense', account: 'Card', category: 'Bills', description: FINANCE_CHARGE_DESCRIPTION,
+      amount: 635, date: new Date(2026, 8, 13).toISOString() }
+    expect(financeChargeLogged({ transactions: [synced], accountName: 'Card', since: due })).toBe(true)
+  })
+
+  /** Fees & Charges is where an annual fee goes too, so the category alone proves nothing. */
+  it('does not take any row in Fees & Charges for the charge', () => {
+    const annual = { type: 'expense', account: 'Card', category: FINANCE_CHARGE_CATEGORY, description: 'Annual fee',
+      amount: 2500, date: new Date(2026, 8, 13).toISOString() }
+    expect(financeChargeLogged({ transactions: [annual], accountName: 'Card', since: due })).toBe(false)
   })
 
   /** No due date means no statement period to scope the question to. */
   it('is false when there is no due date to measure from', () => {
     const txs = [chargeOn(new Date(2026, 8, 13))]
     expect(financeChargeLogged({ transactions: txs, accountName: 'Card', since: null })).toBe(false)
+  })
+})
+
+describe('isFinanceCharge', () => {
+  it('knows its own marker, the old category and the default description', () => {
+    expect(isFinanceCharge({ type: 'expense', financeCharge: true })).toBe(true)
+    expect(isFinanceCharge({ type: 'expense', category: 'Bank charges' })).toBe(true)
+    expect(isFinanceCharge({ type: 'expense', description: ' finance charge ' })).toBe(true)
+  })
+
+  it('is not an inflow, an empty row, or a purchase', () => {
+    expect(isFinanceCharge({ type: 'inflow', financeCharge: true })).toBe(false)
+    expect(isFinanceCharge(null)).toBe(false)
+    expect(isFinanceCharge(undefined)).toBe(false)
+    expect(isFinanceCharge({ type: 'expense', category: 'Food', description: 'Lunch' })).toBe(false)
   })
 })

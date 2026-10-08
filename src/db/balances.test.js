@@ -54,7 +54,7 @@ const db = {
 
 vi.mock('./db', () => ({ default: db }))
 
-const { applyBalanceEffect, reverseBalanceEffect } = await import('./balances')
+const { applyBalanceEffect, reverseBalanceEffect, applyBalanceEffects, balanceMoves } = await import('./balances')
 
 /**
  * A transaction literal. The type requires a date, which none of this
@@ -69,7 +69,8 @@ const bal = (name) => store.accounts.find(a => a.name === name)?.balance
 /** @param {string} name */
 const mirror = (name) => store.balances.find(b => b.account === name)?.balance
 
-beforeEach(() => {
+/** The accounts every test starts from. */
+function resetStore() {
   store = {
     accounts: [
       { id: 1, name: 'Cash',   type: 'cash',   currency: 'PHP', balance: 1000 },
@@ -81,7 +82,9 @@ beforeEach(() => {
     ],
     balances: [],
   }
-})
+}
+
+beforeEach(resetStore)
 
 describe('the direction each kind of transaction moves money', () => {
   it('takes an expense out and puts an inflow in', async () => {
@@ -253,6 +256,77 @@ describe('what it declines to do', () => {
   it('does nothing for a type it does not know', async () => {
     await applyBalanceEffect(tx({ type: 'mystery', account: 'Cash', amount: 50 }))
     expect(bal('Cash')).toBe(1000)
+  })
+})
+
+/* A whole file of transactions, as the importer posts it: summed per account,
+   one write each, onto exactly the figure applying them one by one reaches. */
+describe('applyBalanceEffects, for an import', () => {
+  const batch = /** @type {Transaction[]} */ ([
+    { type: 'expense',  account: 'Cash', amount: 199.99 },
+    { type: 'inflow',   account: 'BPI',  amount: 14000 },
+    { type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount: 1234.56 },
+    { type: 'expense',  account: 'Card', amount: 800 },
+    { type: 'expense',  account: 'Cash', amount: -45.5 },
+    { type: 'transfer', fromAccount: 'BDO Dollar', toAccount: 'BPI', amount: 100, toAmount: 5800, toCurrency: 'PHP' },
+    { type: 'expense',  account: 'Nowhere', amount: 10 },
+  ].map(tx))
+
+  it('lands on the same balances as applying each one in turn', async () => {
+    await applyBalanceEffects(batch)
+    const together = store.accounts.map(a => [a.name, a.balance])
+
+    resetStore()
+    for (const t of batch) await applyBalanceEffect(t)
+    expect(store.accounts.map(a => [a.name, a.balance])).toEqual(together)
+  })
+
+  it('pays a credit card down, and charges it, the way one transaction does', async () => {
+    await applyBalanceEffects([
+      tx({ type: 'expense', account: 'Card', amount: 800 }),
+      tx({ type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount: 4000 }),
+    ])
+    expect(bal('Card')).toBe(0) // -3,200 - 800 + 4,000
+    expect(bal('BPI')).toBe(1000)
+  })
+
+  it('writes each account once, with the mirror, and none that nothing moved', async () => {
+    const update = vi.spyOn(db.accounts, 'update')
+    await applyBalanceEffects([
+      tx({ type: 'expense', account: 'Cash', amount: 100 }),
+      tx({ type: 'expense', account: 'Cash', amount: 50 }),
+      tx({ type: 'expense', account: 'Cash', amount: 25 }),
+    ])
+    expect(update).toHaveBeenCalledTimes(1)
+    expect(bal('Cash')).toBe(825)
+    expect(mirror('Cash')).toBe(825)
+    expect(store.balances.map(b => b.account)).toEqual(['Cash'])
+    update.mockRestore()
+  })
+
+  it('does nothing for a batch that nets to zero, or an empty one', async () => {
+    await applyBalanceEffects([])
+    await applyBalanceEffects([
+      tx({ type: 'expense', account: 'Cash', amount: 100 }),
+      tx({ type: 'inflow', account: 'Cash', amount: 100 }),
+    ])
+    expect(bal('Cash')).toBe(1000)
+    expect(store.balances).toEqual([])
+  })
+
+  it('stays exact over a thousand small rows', async () => {
+    await applyBalanceEffects(Array.from({ length: 1000 }, () => tx({ type: 'inflow', account: 'Cash', amount: 0.1 })))
+    expect(bal('Cash')).toBe(1100)
+  })
+})
+
+describe('balanceMoves, the one definition', () => {
+  it('names the accounts a transaction moves and by how much', () => {
+    expect(balanceMoves(tx({ type: 'expense', account: 'Cash', amount: 5 }))).toEqual([{ account: 'Cash', delta: -5 }])
+    expect(balanceMoves(tx({ type: 'inflow', account: 'Cash', amount: 5 }))).toEqual([{ account: 'Cash', delta: 5 }])
+    expect(balanceMoves(tx({ type: 'transfer', fromAccount: 'BPI', toAccount: 'Card', amount: 5 })))
+      .toEqual([{ account: 'BPI', delta: -5 }, { account: 'Card', delta: 5 }])
+    expect(balanceMoves(tx({ type: 'mystery', amount: 5 }))).toEqual([])
   })
 })
 

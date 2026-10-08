@@ -1,6 +1,6 @@
 import db from '../db/db'
 import { parseMoney } from '../utils/moneyInput'
-import { snapToCutoff } from '../utils/recurring'
+import { snapToCutoff, dueDayOf, stepsByMonth } from '../utils/recurring'
 
 /**
  * Validating and writing a bill, in one place, for two very different screens.
@@ -36,20 +36,47 @@ export function validateRecurring({ name, amountStr, category, account, nextDate
   return errs
 }
 
+/**
+ * The day of the month a bill is really due on: the `dueDay` a row keeps so a
+ * bill due on the 31st does not settle on the 28th after its first February
+ * (utils/recurring.js, advanceNextDate). Null for a frequency that does not
+ * step by months - a weekly bill has no day of the month to protect.
+ *
+ * Set from the date when a bill is made or its date is changed. Saving a bill
+ * WITHOUT changing the date keeps the day already on it: the date a Jan 31
+ * bill shows in February is the 28th, and reading the day off that would
+ * overwrite the 31st with the thing it exists to remember.
+ *
+ * @param {string} frequency
+ * @param {string} nextDate  YYYY-MM-DD
+ * @param {Record<string, any>|null} [prev]  the row as it was, when editing
+ * @returns {number|null}
+ */
+export function resolveDueDay(frequency, nextDate, prev = null) {
+  if (!stepsByMonth(frequency)) return null
+  const unchanged = !!prev && String(prev.nextDate ?? '').slice(0, 10) === String(nextDate ?? '').slice(0, 10)
+  return dueDayOf(nextDate, unchanged ? prev?.dueDay : null)
+}
+
 /** The row a valid draft becomes. Names, not ids - see the db schema.
  *
  * @param {Record<string, any>} input
+ * @param {Record<string, any>|null} [prev]  the row as it was, when editing
  */
-export function toRecurringRow({ name, amountStr, category, account, frequency, nextDate, active, split, type }) {
+export function toRecurringRow({ name, amountStr, category, account, frequency, nextDate, active, split, type }, prev = null) {
   const income = type === 'inflow'
+  // Twice a month lands on the cut-offs, whatever day was picked.
+  const date = frequency === 'semimonthly' ? snapToCutoff(nextDate) : nextDate
   return {
     name: name.trim(),
     amount: parseMoney(amountStr),
     category: category.name,
     account: account.name,
     frequency,
-    // Twice a month lands on the cut-offs, whatever day was picked.
-    nextDate: frequency === 'semimonthly' ? snapToCutoff(nextDate) : nextDate,
+    nextDate: date,
+    /* The intended day of the month, which advanceNextDate clamps from each
+       time. Only the Dexie field: sync.js carries it to the cloud. */
+    dueDay: resolveDueDay(frequency, date, prev),
     active,
     /* A standing division, stored as TYPED rather than resolved, so it
        re-divides whatever the bill charges this month. null rather than an
@@ -78,7 +105,7 @@ export const isIncomeRecurring = (rec) => rec?.type === 'inflow'
  * @param {Recurring|null} [editRec]
  */
 export async function saveRecurring(draft, editRec = null) {
-  const row = toRecurringRow(draft)
+  const row = toRecurringRow(draft, editRec)
   if (editRec) {
     await db.recurring.update(editRec.id, row)
     return 'updated'

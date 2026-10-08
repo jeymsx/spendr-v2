@@ -130,7 +130,7 @@ describe('the story', () => {
     expect(live()).toMatch(/Slide 2 of 12: What you spent/)
     press(' ')
     expect(live()).toMatch(/, paused$/)
-    expect(screen.getByRole('button', { name: 'Play recap' }).getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByRole('button', { name: 'Play Wrapped' }).getAttribute('aria-pressed')).toBe('true')
   })
 
   it('offers a share on every slide, and ends on Done and Share', () => {

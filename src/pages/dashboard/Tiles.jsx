@@ -111,12 +111,14 @@ export function BudgetSummaryTile({ totals }) {
 
   if (!hasBudget) {
     return (
-      <Card as={Link} to="/settings" padding="md" interactive className="block">
+      /* Straight to the limits, not the settings index: that is a list of a
+         dozen other things, and the one you came for is a tap further. */
+      <Card as={Link} to="/settings/budgets" padding="md" interactive className="block">
         <p className="text-15 text-slate-800 dark:text-white">
           No <span className="font-bold">spending budget</span> set
         </p>
         <p className="text-12 text-slate-500 dark:text-slate-400 mt-0.5">
-          Set a monthly limit per category in <span className="font-semibold text-primary">Settings</span>
+          <span className="font-semibold text-primary">Set a monthly limit</span> for a category
         </p>
         <BudgetMeter pct={0} className="mt-3.5" />
       </Card>

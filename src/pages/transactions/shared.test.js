@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, afterEach, vi } from 'vitest'
 
 /**
  * Grouping, which is the third face of the same bug.
@@ -61,5 +61,55 @@ describe('canRecategorize', () => {
     expect(canRecategorize({ type: 'inflow', category: 'Debt Collection', settles: [{ id: 1 }] })).toBe(false)
     expect(canRecategorize({ type: 'expense', category: 'Transfer Fee' })).toBe(false)
     expect(canRecategorize({ type: 'expense', category: 'Food', description: 'Balance adjustment' })).toBe(false)
+  })
+})
+
+/**
+ * "This week" begins where the calendar's week begins: on Monday.
+ *
+ * The filter counted from Sunday while CalendarView starts its weeks on
+ * Monday, so on a Sunday the filter held one day and the calendar held seven.
+ * Dates are built from local parts, so the tests state the property rather
+ * than an offset.
+ */
+describe('inDateRange, this week', () => {
+  /** @param {number} y @param {number} m @param {number} d @param {number} [h] */
+  const at = (y, m, d, h = 12) => ({ date: new Date(y, m, d, h, 0, 0).toISOString() })
+
+  afterEach(() => { vi.useRealTimers() })
+
+  /** @param {number} y @param {number} m @param {number} d */
+  function today(y, m, d) {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(y, m, d, 15, 30, 0))
+  }
+
+  it('starts on Monday, on a day in the middle of the week', async () => {
+    const { inDateRange } = await import('./shared')
+    today(2026, 9, 7) // Wednesday
+    expect(inDateRange(at(2026, 9, 5, 0), 'week')).toBe(true) // Monday, first minute
+    expect(inDateRange(at(2026, 9, 4, 23), 'week')).toBe(false) // Sunday, last hour
+    expect(inDateRange(at(2026, 9, 7), 'week')).toBe(true)
+  })
+
+  it('still holds the whole week on a Sunday', async () => {
+    const { inDateRange } = await import('./shared')
+    today(2026, 9, 11) // Sunday, the last day of the week
+    expect(inDateRange(at(2026, 9, 5), 'week')).toBe(true) // that week's Monday
+    expect(inDateRange(at(2026, 9, 4), 'week')).toBe(false) // the Sunday before
+  })
+
+  it('holds only today on a Monday', async () => {
+    const { inDateRange } = await import('./shared')
+    today(2026, 9, 12) // Monday
+    expect(inDateRange(at(2026, 9, 12, 8), 'week')).toBe(true)
+    expect(inDateRange(at(2026, 9, 11, 20), 'week')).toBe(false) // yesterday, Sunday
+  })
+
+  it('crosses a month boundary', async () => {
+    const { inDateRange } = await import('./shared')
+    today(2026, 10, 1) // Sunday 1 November: its week began on Monday 26 October
+    expect(inDateRange(at(2026, 9, 26), 'week')).toBe(true)
+    expect(inDateRange(at(2026, 9, 25), 'week')).toBe(false)
   })
 })
