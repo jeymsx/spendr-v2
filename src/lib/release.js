@@ -32,8 +32,8 @@ export const RELEASE_DATE = '2026-10-09'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'wallet',
-    title: 'Balances that match everywhere',
-    desc: 'Each account\'s balance now comes from its own transactions on every device, so adding and deleting on one device can no longer throw off another.',
+    icon: 'compose',
+    title: 'Report a bug, from the app',
+    desc: 'Settings › Report a bug sends a bug or an idea straight to the person who makes Spendr. Still stuck in the help centre does too.',
   },
 ]

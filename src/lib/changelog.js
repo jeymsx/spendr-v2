@@ -24,6 +24,13 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.20.1',
+    date: '2026-10-09',
+    items: [
+      { title: 'Balances that match everywhere', desc: 'Each account’s balance now comes from its own transactions on every device, so adding and deleting on one device can no longer throw off another.' },
+    ],
+  },
+  {
     version: '0.20.0',
     date: '2026-10-08',
     items: [
