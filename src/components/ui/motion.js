@@ -148,7 +148,12 @@ export function tween({ from, to, duration = 0.7, onUpdate, onComplete }) {
   const start = performance.now()
   let raf = 0
   const step = (/** @type {number} */ now) => {
-    const p = Math.min(1, (now - start) / (duration * 1000))
+    /* Never before the start. The frame's own timestamp is when the frame
+       began, which can be a few milliseconds earlier than the performance.now()
+       the tween started on, and a negative progress through an ease-out runs
+       the figure BACKWARDS first: a spent total of 21,280 rolling to 114,314
+       showed -8,783 for a frame. */
+    const p = Math.max(0, Math.min(1, (now - start) / (duration * 1000)))
     // Quint out: close to EASE_OUT, and exact at both ends.
     const e = 1 - (1 - p) ** 5
     if (p >= 1) { onUpdate(to); onComplete?.(); return }

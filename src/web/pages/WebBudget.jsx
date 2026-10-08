@@ -15,7 +15,7 @@ import Page from '../ui/Page'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
-import { Stat, CategoryTile, Progress, Empty } from '../ui/display'
+import { Stat, CategoryTile, Progress, Empty, Roll } from '../ui/display'
 import { Bars } from '../ui/charts'
 import { IChevronLeft, IChevronRight, IEdit, ISparkle } from '../ui/icons'
 import { spendingRows } from '../../utils/installments'
@@ -157,12 +157,12 @@ export default function WebBudget() {
     >
       {loading ? <StatsSkeleton /> : (
         <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-          <Stat label="Spent" value={fmt(totals.spent)} note={totals.limit ? `${Math.round(totals.pct)}% of ${fmt(totals.limit)}` : 'No limits set'}>
+          <Stat label="Spent" value={<Roll id="budget:spent" value={totals.spent} />} note={totals.limit ? `${Math.round(totals.pct)}% of ${fmt(totals.limit)}` : 'No limits set'}>
             {totals.limit > 0 && <Progress className="mt-3" value={totals.pct} color={totals.pct > 100 ? 'var(--d-neg)' : totals.pct > 85 ? 'var(--d-warn)' : undefined} />}
           </Stat>
-          <Stat label={totals.left < 0 ? 'Over' : 'Left'} value={fmt(Math.abs(totals.left))} tone={totals.left < 0 ? 'neg' : null} note={over ? `${over} ${over === 1 ? 'category is' : 'categories are'} over` : 'Every category within its limit'} />
+          <Stat label={totals.left < 0 ? 'Over' : 'Left'} value={<Roll id="budget:left" value={Math.abs(totals.left)} />} tone={totals.left < 0 ? 'neg' : null} note={over ? `${over} ${over === 1 ? 'category is' : 'categories are'} over` : 'Every category within its limit'} />
           <Stat label={isNow ? 'Days left' : 'Days'} value={isNow ? String(daysLeft) : String(daysInMonth)} note={isNow ? `${fmt(perDay)} a day to stay within` : 'The month is over'} />
-          <Stat label="Without a limit" value={fmt(totals.other)} note={unbudgeted.length ? `${unbudgeted.length} ${unbudgeted.length === 1 ? 'category' : 'categories'} spent with no limit` : 'Nothing spent outside a limit'} />
+          <Stat label="Without a limit" value={<Roll id="budget:other" value={totals.other} />} note={unbudgeted.length ? `${unbudgeted.length} ${unbudgeted.length === 1 ? 'category' : 'categories'} spent with no limit` : 'Nothing spent outside a limit'} />
         </div>
       )}
 

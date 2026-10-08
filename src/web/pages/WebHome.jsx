@@ -24,7 +24,7 @@ import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { Segmented } from '../ui/controls'
-import { Stat, Money, AccountTile, CategoryTile, Progress, Empty, Skeleton } from '../ui/display'
+import { Stat, Money, AccountTile, CategoryTile, Progress, Empty, Skeleton, Roll } from '../ui/display'
 import { CardSkeleton, RowsSkeleton, StatCardSkeleton } from '../ui/Skeletons'
 import { useFitText } from '../ui/fitText'
 import { AreaTrend } from '../ui/charts'
@@ -145,7 +145,7 @@ export default function WebHome() {
           >
             <span className="wallet-stitch" aria-hidden="true" />
             <div className="text-13 font-semibold text-white/70">Net worth</div>
-            <div ref={/** @type {any} */ (netWorthRef)} className="mt-2 text-[48px] leading-[54px] font-semibold tracking-[-0.03em] whitespace-nowrap d-figure">{loading ? '—' : <Money value={breakdown.total} />}</div>
+            <div ref={/** @type {any} */ (netWorthRef)} className="mt-2 text-[48px] leading-[54px] font-semibold tracking-[-0.03em] whitespace-nowrap d-figure">{loading ? '—' : <Money value={breakdown.total} roll="home:net-worth" />}</div>
             {thisMonthChange != null && (
               <div className="mt-3">
                 <span className="inline-flex items-center h-6 px-2.5 rounded-full bg-white/15 text-12 font-semibold d-num">
@@ -189,23 +189,23 @@ export default function WebHome() {
             <>
               <Stat
                 label={`Spent in ${monthName}`}
-                value={fmt(month.totalSpent)}
+                value={<Roll id="home:spent" value={month.totalSpent} />}
                 note={!spentChange || !month.previous ? ' ' : spentChange.same ? `Same as ${month.previous.label}` : `${spentChange.up ? '↑' : '↓'} ${spentChange.pct}% vs ${month.previous.label}`}
               />
               <Stat
                 label={`Came in, ${monthName}`}
-                value={fmt(month.totalEarned)}
+                value={<Roll id="home:earned" value={month.totalEarned} />}
                 note={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))} after spending`}
               />
               <Stat
                 label="Safe to spend"
-                value={safe == null ? '—' : fmt(Math.max(0, safe))}
+                value={safe == null ? '—' : <Roll id="home:safe-to-spend" value={Math.max(0, safe)} />}
                 tone={forecast?.firstNegative ? 'neg' : null}
                 note={forecast?.firstNegative ? 'You may run short before payday' : payday ? `Until payday, ${payday}` : 'For the next 2 weeks'}
               />
               <Stat
                 label="Budget left"
-                value={budget.total ? fmt(Math.abs(budgetLeft)) : '—'}
+                value={budget.total ? <Roll id="home:budget-left" value={Math.abs(budgetLeft)} /> : '—'}
                 tone={budget.total && budgetLeft < 0 ? 'neg' : null}
                 note={budget.total ? (budgetLeft < 0 ? 'Over the month’s limits' : `${Math.round(budget.pct)}% of ${fmt(budget.total)} used`) : 'No limits set'}
               />

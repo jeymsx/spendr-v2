@@ -30,7 +30,7 @@ import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
 import { MultiSegmented, Segmented, Tabs } from '../ui/controls'
-import { Stat, CategoryTile, AccountTile, Progress, Empty, Money } from '../ui/display'
+import { Stat, CategoryTile, AccountTile, Progress, Empty, Money, Roll, signedFmt } from '../ui/display'
 import { AreaTrend, Bars, InOutBars, Ring, TREND_COLORS, TrendPlot } from '../ui/charts'
 import { shortDate, TxDescription, TxAmount, TxAccount } from './txParts'
 import { IChevronLeft, IChevronRight, ISliders } from '../ui/icons'
@@ -131,14 +131,14 @@ function Figures({ data, period }) {
     : (net < 0 ? 'Nothing came in' : ' ')
   return (
     <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-      <Stat oneLine label="Spent" value={fmt(data.totalSpent)} note={spentNote} />
-      <Stat oneLine label="Came in" value={fmt(data.totalEarned)} note={earnedNote} />
-      <Stat oneLine label="Net" value={`${net >= 0 ? '+' : '−'}${fmt(Math.abs(net))}`} tone={net < 0 ? 'neg' : net > 0 ? 'pos' : null} note={netNote} />
+      <Stat oneLine label="Spent" value={<Roll id="insights:spent" value={data.totalSpent} />} note={spentNote} />
+      <Stat oneLine label="Came in" value={<Roll id="insights:earned" value={data.totalEarned} />} note={earnedNote} />
+      <Stat oneLine label="Net" value={<Roll id="insights:net" value={net} format={signedFmt} />} tone={net < 0 ? 'neg' : net > 0 ? 'pos' : null} note={netNote} />
       {/* Wrapped where there is a finished month to watch - the one shown,
           or the last one - and the biggest category until there is. */}
       {recapMonth
         ? <WrappedTile month={recapMonth} />
-        : <Stat label="Biggest category" value={top ? fmt(top.value) : '—'} note={top ? `${top.name}, ${Math.round((top.value / (data.totalSpent || 1)) * 100)}% of spending` : `Nothing spent ${periodPhrase(period)}`} />}
+        : <Stat label="Biggest category" value={top ? <Roll id="insights:top-category" value={top.value} /> : '—'} note={top ? `${top.name}, ${Math.round((top.value / (data.totalSpent || 1)) * 100)}% of spending` : `Nothing spent ${periodPhrase(period)}`} />}
     </div>
   )
 }
@@ -411,8 +411,8 @@ function Trend({ data, period }) {
       </Panel>
       {daily ? (
         <div className="grid grid-cols-3 gap-5">
-          <Stat oneLine label="Average a day" value={fmt(avg)} note={`Over ${lived.length} ${lived.length === 1 ? 'day' : 'days'} so far`} />
-          <Stat oneLine label="Biggest day" value={peak ? fmt(peak.expense) : '—'} note={peak ? peak.label : ' '} />
+          <Stat oneLine label="Average a day" value={<Roll id="insights:avg-day" value={avg} />} note={`Over ${lived.length} ${lived.length === 1 ? 'day' : 'days'} so far`} />
+          <Stat oneLine label="Biggest day" value={peak ? <Roll id="insights:biggest-day" value={peak.expense} /> : '—'} note={peak ? peak.label : ' '} />
           <Stat oneLine label="Days with no spending" value={String(quiet)} note={`Of ${lived.length}`} />
         </div>
       ) : (
@@ -449,10 +449,10 @@ function NetWorth() {
   return (
     <>
       <div className="grid grid-cols-3 gap-5 mb-8">
-        <Stat oneLine label="Net worth now" value={current == null ? '—' : <Money value={current} />} note={thisMonth == null ? 'Every account at today’s rate' : Math.abs(thisMonth) < 0.005 ? 'No change this month' : `${thisMonth > 0 ? '↑' : '↓'} ${fmt(Math.abs(thisMonth))} this month`} />
-        <Stat oneLine label={`Change ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`} value={`${change >= 0 ? '+' : '−'}${fmt(Math.abs(change))}`} tone={change < 0 ? 'neg' : change > 0 ? 'pos' : null}
+        <Stat oneLine label="Net worth now" value={current == null ? '—' : <Money value={current} roll="insights:net-worth" />} note={thisMonth == null ? 'Every account at today’s rate' : Math.abs(thisMonth) < 0.005 ? 'No change this month' : `${thisMonth > 0 ? '↑' : '↓'} ${fmt(Math.abs(thisMonth))} this month`} />
+        <Stat oneLine label={`Change ${NET_RANGE_WORDS[/** @type {keyof typeof NET_RANGE_WORDS} */ (range)] ?? ''}`} value={<Roll id="insights:net-worth-change" value={change} format={signedFmt} />} tone={change < 0 ? 'neg' : change > 0 ? 'pos' : null}
           note={!chart[0] ? ' ' : Math.abs(chart[0].value) > 0.005 && change !== 0 ? `${change > 0 ? '↑' : '↓'} ${Math.round((Math.abs(change) / Math.abs(chart[0].value)) * 100)}% from ${fmt(chart[0].value)}` : `From ${fmt(chart[0].value)}`} />
-        <Stat oneLine label="Best month" value={best ? `+${fmt(Math.max(0, best.change))}` : '—'} note={best ? monthName(best.key) : ' '} />
+        <Stat oneLine label="Best month" value={best ? <Roll id="insights:best-month" value={Math.max(0, best.change)} format={(v) => `+${fmt(v)}`} /> : '—'} note={best ? monthName(best.key) : ' '} />
       </div>
       <Panel className="mb-5" title="Net worth over time"
         actions={<Segmented label="Range" value={range} onChange={(v) => setInsights({ net: v })} options={NET_RANGES.map(r => ({ value: r.key, label: r.key === 'all' ? 'All' : r.key.toUpperCase() }))} />}>
@@ -512,11 +512,11 @@ function Forecast() {
   return (
     <>
       <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-        <Stat label="Safe to spend" value={fmt(Math.max(0, forecast.safeToSpend ?? 0))} tone={neg ? 'neg' : null}
+        <Stat label="Safe to spend" value={<Roll id="insights:safe-to-spend" value={Math.max(0, forecast.safeToSpend ?? 0)} />} tone={neg ? 'neg' : null}
           note={forecast.safeUntil ? `Until payday, ${short(new Date(forecast.safeUntil))}` : 'For the next 2 weeks'} />
-        <Stat label="Lowest point" value={low ? <Money value={low.balance} colour /> : '—'} note={low ? `On ${short(low.date)}` : ' '} />
-        <Stat label="Everyday spending" value={fmt(forecast.dailySpend ?? 0)} note="A day, from your history" />
-        <Stat label="Coming in" value={fmt(forecast.events.filter(e => e.sign > 0).reduce((t, e) => t + Math.abs(e.amount), 0))} note={forecast.hasIncome ? `Pay and income in the next ${range.days} days` : 'No pay found yet'} />
+        <Stat label="Lowest point" value={low ? <Money value={low.balance} colour roll="insights:lowest-point" /> : '—'} note={low ? `On ${short(low.date)}` : ' '} />
+        <Stat label="Everyday spending" value={<Roll id="insights:everyday" value={forecast.dailySpend ?? 0} />} note="A day, from your history" />
+        <Stat label="Coming in" value={<Roll id="insights:coming-in" value={forecast.events.filter(e => e.sign > 0).reduce((t, e) => t + Math.abs(e.amount), 0)} />} note={forecast.hasIncome ? `Pay and income in the next ${range.days} days` : 'No pay found yet'} />
       </div>
       <Panel className="mb-5" title="Your money ahead" meta={neg ? `Runs short on ${short(neg.date)}` : 'Stays above zero'}
         actions={

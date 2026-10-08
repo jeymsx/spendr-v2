@@ -12,7 +12,7 @@ import Page from '../ui/Page'
 import Panel from '../ui/Panel'
 import Btn from '../ui/Button'
 import DataTable from '../ui/DataTable'
-import { Stat, Money, AccountTile, Progress, Empty } from '../ui/display'
+import { Stat, Money, AccountTile, Progress, Empty, Roll } from '../ui/display'
 import { IPlus, IGrid, IList } from '../ui/icons'
 import { Segmented } from '../ui/controls'
 import { shortDate } from './txParts'
@@ -114,10 +114,10 @@ export default function WebAccounts() {
     >
       {loading ? <StatsSkeleton /> : (
         <div className="d-stats grid grid-cols-4 gap-5 mb-8">
-          <Stat oneLine label="Net worth" value={<Money value={breakdown.total} />} note={notes.net} />
-          <Stat oneLine label="You have" value={fmt(have)} note={notes.youHave} />
-          <Stat oneLine label="You owe" value={owe ? `−${fmt(owe)}` : fmt(0)} note={notes.youOwe} />
-          <Stat oneLine label="Credit available" value={fmt(available)} note={notes.avail} />
+          <Stat oneLine label="Net worth" value={<Money value={breakdown.total} roll="accounts:net-worth" />} note={notes.net} />
+          <Stat oneLine label="You have" value={<Roll id="accounts:have" value={have} />} note={notes.youHave} />
+          <Stat oneLine label="You owe" value={<Roll id="accounts:owe" value={owe} format={(v) => (v ? `−${fmt(v)}` : fmt(0))} />} note={notes.youOwe} />
+          <Stat oneLine label="Credit available" value={<Roll id="accounts:credit-available" value={available} />} note={notes.avail} />
         </div>
       )}
 

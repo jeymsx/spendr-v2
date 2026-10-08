@@ -2,6 +2,7 @@ import CategoryGlyph from '../../components/CategoryGlyph'
 import { EmptyArt } from '../../components/ui/EmptyState'
 import BrandMark from '../../components/BrandMark'
 import { accountBrand } from '../../lib/accountBrands'
+import RollingNumber from '../../components/ui/RollingNumber'
 import { fmt } from '../../lib/money'
 import { useFitText } from './fitText'
 
@@ -49,15 +50,37 @@ export function Amount({ value, currency, kind = 'neutral', sign = true, classNa
 }
 
 /**
- * A plain figure, signed only when it is negative - a balance, a total.
+ * A figure that rolls to its new value, the way the phone's do
+ * (components/ui/RollingNumber): from what this `id` last showed, and only
+ * when it has changed - so a figure counts the difference when you switch the
+ * period or when another device adds a transaction, and a page you open with
+ * nothing new on it is simply its numbers.
  *
- * @param {{value: number, currency?: string, className?: string, colour?: boolean}} props
+ * `id` names the figure, not the page it is on: it must be the same wherever
+ * and whenever the figure is drawn, and must not name the period, or changing
+ * the period would be a different figure rather than the same one changing.
+ *
+ * @param {{id: string, value: number, format?: (v: number) => string}} props
  */
-export function Money({ value, currency, className = '', colour = false }) {
+export function Roll({ id, value, format = (v) => fmt(v) }) {
+  return <RollingNumber id={id} value={Number.isFinite(value) ? value : 0} format={format} />
+}
+
+/** A figure with its sign always shown: "+₱1,200", "−₱300". @param {number} v */
+export const signedFmt = (v) => `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v))}`
+
+/**
+ * A plain figure, signed only when it is negative - a balance, a total. With
+ * `roll`, the name of the figure, it rolls to a new value (see Roll).
+ *
+ * @param {{value: number, currency?: string, className?: string, colour?: boolean, roll?: string}} props
+ */
+export function Money({ value, currency, className = '', colour = false, roll }) {
   const v = value ?? 0
+  const text = (/** @type {number} */ n) => `${n < 0 ? '−' : ''}${fmt(Math.abs(n), currency)}`
   return (
     <span className={`d-num whitespace-nowrap ${colour && v < 0 ? 'd-neg' : ''} ${className}`}>
-      {v < 0 ? '−' : ''}{fmt(Math.abs(v), currency)}
+      {roll ? <RollingNumber id={`${roll}:${currency ?? ''}`} value={v} format={text} /> : text(v)}
     </span>
   )
 }

@@ -64,6 +64,22 @@ describe('RollingNumber', () => {
     expect(container.textContent).toBe('P250.00')
   })
 
+  it('never runs backwards, even when the first frame is stamped before the roll began', () => {
+    /* A frame's own timestamp is when the frame started, which can be a
+       moment before the performance.now() the roll started on. A spent total
+       of 21,280 rolling to 114,314 used to show -8,783 for that frame. */
+    const { container, rerender } = render(<RollingNumber id="t3b" value={21280} format={peso} />)
+    rerender(<RollingNumber id="t3b" value={114314} format={peso} />)
+    const first = frames.shift()
+    now -= 60
+    first?.(now)
+    const v = Number(container.textContent.slice(1))
+    expect(v).toBeGreaterThanOrEqual(21280)
+    expect(v).toBeLessThanOrEqual(114314)
+    flush()
+    expect(container.textContent).toBe('P114314.00')
+  })
+
   it('treats a different id as a different figure - pesos to dollars is not a roll', () => {
     const first = render(<RollingNumber id="t4:PHP" value={5600} format={peso} />)
     first.unmount()
