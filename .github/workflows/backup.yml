@@ -1,0 +1,111 @@
+# A copy of the cloud database every night, encrypted, kept 30 days.
+#
+# Why: the Supabase free plan keeps no backups. Twice now a sync has written
+# wrong figures to the cloud (2026-09-28 balances and budgets, 2026-10-08 two
+# balances), and putting them back meant a two-week-old backup file and the
+# 30 days of row_history. With this, any night of the last month can be put
+# back exactly.
+#
+# What it saves: the whole `public` schema (every table, with its rules,
+# triggers and functions) and the sign-ins (auth.users and auth.identities,
+# data only), as two pg_dump files in one encrypted archive.
+#
+# ── Encrypted, because this repository is public ──
+#
+# Artifacts of a public repository can be downloaded by anyone signed in to
+# GitHub. The archive is AES-256 with a passphrase that exists only in this
+# repository's secrets and wherever you keep it. Lose the passphrase and the
+# backups cannot be opened - keep it in a password manager.
+#
+# ── Setting it up (once) ──
+#
+#   GitHub › this repository › Settings › Secrets and variables › Actions ›
+#   New repository secret, twice:
+#
+#   SUPABASE_DB_URL     Supabase › Project › Connect › Connection string ›
+#                       "Session pooler" (NOT "Direct connection": that one is
+#                       IPv6-only on the free plan and GitHub cannot reach it),
+#                       with your database password filled in. It looks like
+#                       postgresql://postgres.edsxieulenqxrtzuvcdq:PASSWORD@aws-0-ap-southeast-2.pooler.supabase.com:5432/postgres
+#   BACKUP_PASSPHRASE   a long random passphrase you also keep somewhere safe.
+#
+#   Then Actions › Nightly backup › Run workflow, to see the first one work.
+#   Without the two secrets it skips itself rather than failing.
+#
+# ── Putting one back ──
+#
+#   Download the artifact (Actions › a run › Artifacts), then:
+#     gpg --decrypt spendr-backup-*.tar.gpg > backup.tar && tar -xf backup.tar
+#   and restore ONLY what you need, into a scratch project or table first:
+#     pg_restore --data-only --table=accounts --dbname "$URL" public.dump
+#   Restoring the whole of public.dump over the live database replaces every
+#   user's data with that night's - almost never what you want.
+
+name: Nightly backup
+
+on:
+  schedule:
+    # 18:00 UTC is 2am in Manila.
+    - cron: '0 18 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    env:
+      SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Skip unless set up
+        id: ready
+        run: |
+          if [ -z "$SUPABASE_DB_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "::notice::Backups are not set up: add SUPABASE_DB_URL and BACKUP_PASSPHRASE to this repository's secrets (see the top of backup.yml)."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      # pg_dump has to be at least the server's version, and Supabase runs 17.
+      - name: Install pg_dump 17
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq postgresql-client-17
+          /usr/lib/postgresql/17/bin/pg_dump --version
+
+      - name: Dump and encrypt
+        if: steps.ready.outputs.ok == 'true'
+        run: |
+          set -euo pipefail
+          PG=/usr/lib/postgresql/17/bin
+          stamp=$(date -u +%Y-%m-%d)
+          mkdir -p out
+          "$PG/pg_dump" "$SUPABASE_DB_URL" --format=custom --no-owner --no-privileges --schema=public --file=out/public.dump
+          "$PG/pg_dump" "$SUPABASE_DB_URL" --format=custom --data-only --table=auth.users --table=auth.identities --file=out/auth.dump
+          tar -cf backup.tar -C out public.dump auth.dump
+          gpg --batch --yes --pinentry-mode loopback --passphrase "$BACKUP_PASSPHRASE" \
+              --symmetric --cipher-algo AES256 --output "spendr-backup-$stamp.tar.gpg" backup.tar
+          rm -rf out backup.tar
+          ls -l spendr-backup-*.tar.gpg
+
+      - name: Keep it 30 days
+        if: steps.ready.outputs.ok == 'true'
+        uses: actions/upload-artifact@v4
+        with:
+          name: spendr-backup
+          path: spendr-backup-*.tar.gpg
+          retention-days: 30
+          if-no-files-found: error
