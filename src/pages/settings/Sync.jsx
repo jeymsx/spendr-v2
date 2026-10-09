@@ -1,4 +1,4 @@
-import { useMemo } from 'react'
+import { useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
@@ -8,6 +8,7 @@ import SubPage from '../../components/SubPage'
 import Button from '../../components/ui/Button'
 import EmptyState, { EmptyArt } from '../../components/ui/EmptyState'
 import { IconSyncing, syncedLabel } from './shared'
+import { DeleteAccountSheet } from './DeleteAccount'
 
 /**
  * Cloud sync: whether this device is signed in, when it last synced, and the
@@ -28,6 +29,8 @@ export default function SyncPage() {
   const meta = useLiveQuery(() => db.meta.toArray(), [], [])
   const read = (/** @type {string} */ key) => (meta ?? []).find(m => m.key === key)?.value ?? null
   const lastSync = read('lastSync')
+  // Delete my account: at the foot of the page, out of the way, where the account is.
+  const [deleting, setDeleting] = useState(false)
 
   const state = useMemo(() => {
     if (status === 'syncing') return { text: 'Syncing…', dot: 'bg-primary animate-pulse' }
@@ -73,6 +76,15 @@ export default function SyncPage() {
           action={<Button className="px-6" onClick={() => navigate('/login')}>Sign in with Google</Button>}
         />
       )}
+      {user && (
+        <div className="mx-5 mb-10 text-center">
+          <Button variant="dangerTint" size="sm" className="px-5" onClick={() => setDeleting(true)}>
+            Delete my account
+          </Button>
+          <p className="mt-2 text-12 text-slate-500 dark:text-slate-400">Deletes your cloud copy and sign-in for good.</p>
+        </div>
+      )}
+      <DeleteAccountSheet open={deleting} onClose={() => setDeleting(false)} />
     </SubPage>
   )
 }

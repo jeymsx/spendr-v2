@@ -1303,10 +1303,10 @@ export const HELP_ARTICLES = [
         'Type the word reset in capital letters, then press Reset app.',
       ] },
       { p: 'Everything on this device is deleted: every transaction, account, category, goal, debt, bill, template and challenge, and your settings. Theme, accent colour and style go back to their defaults, App lock is turned off, and you are signed out. Spendr then starts again from setup.' },
-      { p: 'A synced copy stays in the cloud, and comes back when you sign in again. To have that copy deleted as well, email jamesandgen111@gmail.com.' },
+      { p: 'A synced copy stays in the cloud, and comes back when you sign in again. To delete that copy as well, delete your account instead: Settings › Cloud sync › Delete my account.' },
       { tip: 'If you don’t sync, a reset can’t be undone. Download a backup first if there is any chance you’ll want your data back.' },
     ],
-    related: ['backup-restore', 'sign-out', 'privacy'],
+    related: ['delete-account', 'backup-restore', 'sign-out'],
   },
 
   // ── Settings and security ───────────────────────────────────────────────────
@@ -1485,7 +1485,7 @@ export const HELP_ARTICLES = [
       { p: 'A few features reach out, and only when you use them. Cloud sync keeps a copy of your data in Spendr’s database so it can reach your other devices, and no other user can read it. Reminders store a short note for each one, such as a card’s due date and amount. Exchange rates are downloaded only if you hold an account in another currency, and the request carries nothing but your main currency’s code.' },
       { p: 'If Spendr ever crashes, a short description of the error stays on your device. It is only sent if you include it in a bug report.' },
       { p: 'A bug report or idea you send goes to the person who makes Spendr with your name, the app version and your device. None of your money is included.' },
-      { p: 'To erase everything on this device, use Settings › Backup & restore › Reset app. To have your synced copy deleted too, email jamesandgen111@gmail.com.' },
+      { p: 'To erase everything on this device, use Settings › Backup & restore › Reset app. To delete your account and its cloud copy too, use Settings › Cloud sync › Delete my account.' },
       { tip: 'The full privacy policy and terms of use are in Settings › Privacy & terms.' },
     ],
     related: ['app-lock', 'cloud-sync', 'reset-app'],
@@ -1521,6 +1521,25 @@ export const HELP_ARTICLES = [
       { tip: 'You need to be signed in to send from the app. Signed out, the same report opens as an email instead.' },
     ],
     related: ['privacy', 'whats-new'],
+  },
+  {
+    id: 'delete-account',
+    topic: 'sync',
+    title: 'How do I delete my account?',
+    summary: 'Settings › Cloud sync › Delete my account deletes your cloud copy and your sign-in for good, and erases this device.',
+    keywords: ['delete account', 'close account', 'remove account', 'delete my data', 'erase', 'privacy', 'gdpr', 'unsubscribe'],
+    body: [
+      { steps: [
+        'Open Settings › Cloud sync.',
+        'Press Delete my account at the bottom.',
+        'Press Continue.',
+        'Type the word delete in capital letters, then press Delete for good.',
+      ] },
+      { p: 'Your account and everything synced to it are deleted from the cloud at once: transactions, accounts, budgets, bills, goals, debts, notes, reminders and any reports you sent. This device is erased too, and your other devices stop syncing.' },
+      { tip: 'It can’t be undone. To keep a copy, save a backup first in Settings › Backup & restore.' },
+      { go: '/settings/sync', label: 'Open Cloud sync' },
+    ],
+    related: ['reset-app', 'backup-restore', 'privacy'],
   },
 ]
 
