@@ -24,6 +24,13 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.21.0',
+    date: '2026-10-09',
+    items: [
+      { title: 'Report a bug, from the app', desc: 'Settings › Report a bug sends a bug or an idea straight to the person who makes Spendr. Still stuck in the help centre does too.' },
+    ],
+  },
+  {
     version: '0.20.1',
     date: '2026-10-09',
     items: [

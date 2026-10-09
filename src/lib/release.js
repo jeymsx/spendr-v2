@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-10-09'
+export const RELEASE_DATE = '2026-10-10'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,8 +32,28 @@ export const RELEASE_DATE = '2026-10-09'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'compose',
-    title: 'Report a bug, from the app',
-    desc: 'Settings › Report a bug sends a bug or an idea straight to the person who makes Spendr. Still stuck in the help centre does too.',
+    icon: 'trash',
+    title: 'Delete your account',
+    desc: 'Settings › Cloud sync now has Delete my account. It removes your account and everything synced to it, so save a backup first if you want a copy.',
+  },
+  {
+    icon: 'transfer',
+    title: 'Sync that holds up',
+    desc: 'Changes made offline always reach your other devices. A bill paid on one shows as paid on the others, and can’t be paid twice for the same date.',
+  },
+  {
+    icon: 'lock',
+    title: 'Safer sign-in',
+    desc: 'Unlocking with Google always asks Google again, and other sites can’t load Spendr inside their pages.',
+  },
+  {
+    icon: 'receipt',
+    title: 'Sturdier CSV import',
+    desc: 'Import reads more date and amount formats, and lists the rows it leaves out with the reason.',
+  },
+  {
+    icon: 'phone',
+    title: 'Clear when it can’t save',
+    desc: 'If your browser won’t let Spendr keep data, Spendr now says why instead of loading forever.',
   },
 ]
