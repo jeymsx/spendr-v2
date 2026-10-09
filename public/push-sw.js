@@ -37,7 +37,13 @@ self.addEventListener('push', (event) => {
    open window is reused and moved there; otherwise a new one is opened. */
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
-  const target = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin).href
+  /* This app's own pages only: an address on another site - written into a
+     reminder by hand - opens Home instead. */
+  let target = new URL('/', self.location.origin).href
+  try {
+    const asked = new URL((event.notification.data && event.notification.data.url) || '/', self.location.origin)
+    if (asked.origin === self.location.origin) target = asked.href
+  } catch { /* not an address at all: Home */ }
 
   event.waitUntil((async () => {
     const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true })

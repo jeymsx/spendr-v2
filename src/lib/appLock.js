@@ -248,10 +248,13 @@ export function awayTooLong(delay, leftAt, now) {
  * @param {Store|null} [store]
  * @param {Store|null} [tabStore]
  */
-export function locksOnLaunch(config, now, store = local(), tabStore = tab()) {
+export function locksOnLaunch(config, now, store = local(), tabStore = tab(), arrival = arrivalKind()) {
   if (!config) return false
   const reloadAt = get(RELOAD_KEY, tabStore)
-  if (typeof reloadAt === 'number' && now - reloadAt >= 0 && now - reloadAt < RELOAD_GRACE) return false
+  /* Not when this page was arrived at by going away and coming back: leaving
+     for another site in the same tab also says goodbye while on screen, and
+     its Back within the grace used to open the app unlocked. */
+  if (arrival !== 'away' && typeof reloadAt === 'number' && now - reloadAt >= 0 && now - reloadAt < RELOAD_GRACE) return false
   if (config.delay === 0) return true
   return awayTooLong(config.delay, get(AWAY_KEY, store), now)
 }
@@ -267,6 +270,30 @@ export function readAway(store = local()) {
 
 /** It locked: the time away is spent. @param {Store|null} [store] */
 export function clearAway(store = local()) { drop(AWAY_KEY, store) }
+
+/**
+ * How this page was arrived at, for the reload grace:
+ *
+ *   reload    reloaded where it stood - an update, a pull to refresh
+ *   sign-in   a sign-in coming back from Google, with its tokens in the address
+ *   away      Back to it from somewhere else, or typed in again: somebody left
+ *   unknown   the browser does not say; given the benefit of the doubt, as
+ *             before this existed
+ *
+ * @param {{type?: string}|undefined} [nav]  the navigation entry, for tests
+ * @param {{hash?: string, search?: string}} [loc]
+ * @returns {'reload'|'sign-in'|'away'|'unknown'}
+ */
+export function arrivalKind(
+  nav = typeof performance !== 'undefined' ? /** @type {any} */ (performance.getEntriesByType?.('navigation')?.[0]) : undefined,
+  loc = typeof location !== 'undefined' ? location : {},
+) {
+  const type = nav?.type
+  if (!type) return 'unknown'
+  if (type === 'reload') return 'reload'
+  if (type === 'navigate' && /access_token=|[?&]code=/.test(`${loc.hash ?? ''}${loc.search ?? ''}`)) return 'sign-in'
+  return 'away'
+}
 
 /** Spendr is reloading while unlocked and on screen. @param {number} now @param {Store|null} [tabStore] */
 export function noteReload(now, tabStore = tab()) { put(RELOAD_KEY, now, tabStore) }

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import {
-  DELAYS, LOCK_KEY, RELOAD_GRACE, awayTooLong, clearAway, clearLock, clearTries, locksOnLaunch,
+  DELAYS, LOCK_KEY, RELOAD_GRACE, arrivalKind, awayTooLong, clearAway, clearLock, clearTries, locksOnLaunch,
   noteAway, noteReload, noteWrongPin, pauseAfter, pinWait, readAway, readLock, readTries,
   recoveryOutcome, recoveryPending, saveLock, spendReload, startRecovery, validPin,
 } from './appLock'
@@ -98,6 +98,23 @@ describe('when it locks', () => {
     const s = memory()
     noteReload(T, memory())
     expect(locksOnLaunch(lock(), T + 2_000, s, memory())).toBe(true)
+  })
+
+  it('gives the grace to a reload and to a sign-in coming back, never to Back from another site', () => {
+    const tabNow = memory()
+    noteReload(T, tabNow)
+    expect(locksOnLaunch(lock(), T + 2_000, memory(), tabNow, 'reload')).toBe(false)
+    expect(locksOnLaunch(lock(), T + 2_000, memory(), tabNow, 'sign-in')).toBe(false)
+    expect(locksOnLaunch(lock(), T + 2_000, memory(), tabNow, 'away')).toBe(true)
+  })
+
+  it('reads how the page was arrived at from the browser', () => {
+    expect(arrivalKind({ type: 'reload' }, {})).toBe('reload')
+    expect(arrivalKind({ type: 'navigate' }, { hash: '#access_token=abc&expires_in=3600' })).toBe('sign-in')
+    expect(arrivalKind({ type: 'navigate' }, { search: '?code=xyz' })).toBe('sign-in')
+    expect(arrivalKind({ type: 'navigate' }, { hash: '', search: '' })).toBe('away')
+    expect(arrivalKind({ type: 'back_forward' }, {})).toBe('away')
+    expect(arrivalKind(undefined, {})).toBe('unknown')
   })
 
   it('counts time away against the delay, and a clock set back as long away', () => {

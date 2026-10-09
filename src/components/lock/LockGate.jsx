@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { supabase } from '../../lib/supabase'
+import { showPageTitle } from '../../lib/pageTitle'
 import {
   LOCK_KEY, awayTooLong, cancelRecovery, clearAway, clearLock, clearTries, forgetFaceIdTest, locksOnLaunch, noteAway,
   noteReload, readAway, readLock, recoveryOutcome, saveLock, spendReload,
@@ -114,11 +115,13 @@ export default function LockGate({ children }) {
     mark.decode?.().catch(() => {})
   }, [hasLock])
 
-  // The class index.css hides the app by, following the state.
+  // The class index.css hides the app by, following the state - and the tab's title with it (lib/pageTitle.js).
   useLayoutEffect(() => {
     const root = document.documentElement
-    root.classList.toggle('app-locked', !!s.config && s.locked)
-    return () => root.classList.remove('app-locked')
+    const locked = !!s.config && s.locked
+    root.classList.toggle('app-locked', locked)
+    showPageTitle(locked)
+    return () => { root.classList.remove('app-locked'); showPageTitle(false) }
   }, [s.config, s.locked])
 
   useEffect(() => {
@@ -154,6 +157,7 @@ export default function LockGate({ children }) {
         || (tick !== null && performance.now() - tick >= cur.config.delay))
       if (longEnough && !cur.locked) {
         root.classList.add('app-locked')
+        showPageTitle(true)
         clearAway()
         const next = { ...cur, locked: true, fading: false, lockId: cur.lockId + 1 }
         live.current = next

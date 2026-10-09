@@ -153,7 +153,8 @@ export default function LockScreen({ config, onUnlock, note = '', active = true 
     const before = session?.user?.id === config.accountId ? session.user.last_sign_in_at ?? null : null
     startRecovery(config.accountId, before, Date.now())
     try {
-      const { error } = await signInWithGoogle()
+      // Google asks for the password, not just the account it remembers: this turns the lock off.
+      const { error } = await signInWithGoogle({ reauthenticate: true })
       if (error) throw error
     } catch {
       cancelRecovery()

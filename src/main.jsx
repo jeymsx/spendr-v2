@@ -8,6 +8,7 @@ import { CurrencyProvider } from './context/CurrencyContext'
 import FxContextSync from './context/FxContextSync'
 import ErrorBoundary from './components/ErrorBoundary'
 import { recordCrash } from './lib/crashLog'
+import { dropStaleCaches } from './lib/staleCaches'
 import { version as APP_VERSION } from '../package.json'
 import Shell from './Shell'
 import LockGate from './components/lock/LockGate'
@@ -51,6 +52,9 @@ function recoverFromStaleChunk(event) {
 
 // Vite fires this for a failed module preload.
 window.addEventListener('vite:preloadError', recoverFromStaleChunk)
+
+// A copy of the cloud an old service worker kept, and nothing else ever cleared (lib/staleCaches.js).
+dropStaleCaches()
 
 // A dynamic import that fails outright surfaces as an unhandled rejection.
 window.addEventListener('unhandledrejection', (e) => {

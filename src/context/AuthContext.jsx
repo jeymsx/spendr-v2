@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { rememberDeveloper } from '../lib/developer'
+import { dropStaleCaches } from '../lib/staleCaches'
 
 const AuthContext = createContext(null)
 
@@ -26,10 +27,20 @@ export function AuthProvider({ children }) {
   // A device signed in as the developer is the developer's from then on (lib/developer.js).
   useEffect(() => { rememberDeveloper(session?.user?.email) }, [session])
 
-  function signInWithGoogle() {
+  /**
+   * @param {{reauthenticate?: boolean}} [opts]  `reauthenticate`: make Google
+   *   ask for the password again, not just pick the account it remembers. For
+   *   the App lock's "Forgot? Sign in again", which turns the lock off - an
+   *   account Google keeps signed in on the phone would otherwise be one tap
+   *   from anybody holding it.
+   */
+  function signInWithGoogle({ reauthenticate = false } = {}) {
     return supabase.auth.signInWithOAuth({
       provider: 'google',
-      options:  { redirectTo: window.location.origin },
+      options: {
+        redirectTo: window.location.origin,
+        ...(reauthenticate ? { queryParams: { prompt: 'login' } } : {}),
+      },
     })
   }
 
@@ -53,6 +64,8 @@ export function AuthProvider({ children }) {
         console.warn('[auth] could not turn reminders off before signing out:', e?.message ?? e)
       }
     }
+    // A copy of the cloud an old service worker kept goes with the session (lib/staleCaches.js).
+    await dropStaleCaches()
     return supabase.auth.signOut({ scope: 'local' })
   }
 

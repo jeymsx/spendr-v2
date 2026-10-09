@@ -154,16 +154,14 @@ export default defineConfig({
               cacheableResponse: { statuses: [0, 200] },
             },
           },
-          {
-            // Supabase REST + Auth: network-first, fall back to cache when offline
-            urlPattern: /^https:\/\/[^/]+\.supabase\.co\//i,
-            handler: 'NetworkFirst',
-            options: {
-              cacheName: 'supabase-api',
-              networkTimeoutSeconds: 10,
-              cacheableResponse: { statuses: [0, 200] },
-            },
-          },
+          /* No rule for Supabase, on purpose. There was one (NetworkFirst into
+             a 'supabase-api' cache), and it kept a second copy of the whole
+             cloud ledger - transactions, notes, debts with people's names - in
+             Cache Storage, where Reset app and Sign out never reached, with no
+             limit, a new entry for every incremental pull, and a stale answer
+             handed to a pull that took over ten seconds. The offline copy is
+             IndexedDB (Dexie); the cloud is asked live or not at all. The old
+             cache is deleted on start (lib/staleCaches.js). */
           {
             /* The Inter subsets left out of the precache above. Served from
                this origin now rather than Google Fonts - see main.jsx - and
@@ -180,4 +178,11 @@ export default defineConfig({
       },
     }),
   ],
+  /* The tests: vitest's own defaults, and not .claude/ - an agent's git
+     worktree lives there with its own copy of src/ and its own node_modules,
+     and running those copies here loads a second React and fails every
+     component test in them. */
+  test: {
+    exclude: ['**/node_modules/**', '**/.git/**', '**/dist/**', '.claude/**'],
+  },
 })

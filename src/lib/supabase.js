@@ -25,4 +25,32 @@ if (!isSupabaseConfigured) {
 export const supabase = createClient(
   url || 'http://localhost/unconfigured',
   key || 'unconfigured',
+  { global: { fetch: fetchWithTimeout } },
 )
+
+/** How long one request to the cloud may take before it is given up on. */
+export const REQUEST_TIMEOUT_MS = 20_000
+
+/**
+ * fetch, given up on after REQUEST_TIMEOUT_MS.
+ *
+ * Nothing else gave up on a request. One that hung - started as a phone's
+ * connection came back, and never answered - held the sync it belonged to
+ * open for good, and every sync after it waited behind that one: an expense
+ * saved offline sat on the phone, and live changes stopped arriving, until
+ * the app was reloaded. Failing it lets that sync end as failed, and the next
+ * one runs. A caller's own signal still works, and still wins.
+ *
+ * @param {RequestInfo | URL} input
+ * @param {RequestInit} [init]
+ */
+export function fetchWithTimeout(input, init = {}) {
+  const timeout = new AbortController()
+  const timer = setTimeout(() => timeout.abort(new Error('The request took too long')), REQUEST_TIMEOUT_MS)
+  const theirs = init.signal
+  if (theirs) {
+    if (theirs.aborted) timeout.abort(theirs.reason)
+    else theirs.addEventListener('abort', () => timeout.abort(theirs.reason), { once: true })
+  }
+  return fetch(input, { ...init, signal: timeout.signal }).finally(() => clearTimeout(timer))
+}

@@ -86,10 +86,29 @@ function safeDecode(s) {
   try { return decodeURIComponent(s) } catch { return s }
 }
 
-/** "Budget · Spendr", or "Spendr" with no name. @param {string|null|undefined} name */
+/** The title the page asked for, kept while the App lock shows plain "Spendr" instead. */
+let wanted = 'Spendr'
+
+/** Whether the App lock is up (components/lock/LockGate.jsx sets the class). */
+const lockedNow = () => typeof document !== 'undefined' && document.documentElement.classList.contains('app-locked')
+
+/**
+ * "Budget · Spendr", or "Spendr" with no name. While the App lock is up, only
+ * "Spendr": a desktop tab reading "BPI · Spendr" over a locked app says whose
+ * account is open behind it.
+ *
+ * @param {string|null|undefined} name
+ */
 export function setPageTitle(name) {
   if (typeof document === 'undefined') return
-  document.title = name ? `${name} · Spendr` : 'Spendr'
+  wanted = name ? `${name} · Spendr` : 'Spendr'
+  document.title = lockedNow() ? 'Spendr' : wanted
+}
+
+/** The lock went up or came down: the tab says only "Spendr", or what the page asked for. @param {boolean} locked */
+export function showPageTitle(locked) {
+  if (typeof document === 'undefined') return
+  document.title = locked ? 'Spendr' : wanted
 }
 
 /** Keeps the tab's title in step with the address. Rendered once, in Shell. @returns {null} */

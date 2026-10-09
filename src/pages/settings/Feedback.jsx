@@ -22,6 +22,8 @@ const KIND_TONE = {
   other: 'bg-slate-100 text-slate-600 dark:bg-white/[0.08] dark:text-slate-300',
 }
 
+/** Anything as plain text, for what came from the cloud: a row can be written by hand. @param {unknown} v */
+const text = (v) => (v == null ? '' : typeof v === 'string' ? v : typeof v === 'number' || typeof v === 'boolean' ? String(v) : JSON.stringify(v))
 /** "Oct 9, 2026". @param {string} iso */
 const dayOf = (iso) => new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
 /** "8:41 PM". @param {string} iso */
@@ -181,15 +183,26 @@ export default function FeedbackPage() {
  */
 function Report({ r, first, onToggle, onDelete }) {
   const [showLog, setShowLog] = useState(false)
-  const log = Array.isArray(r.error_log) ? r.error_log : []
+  /* As text, whatever arrived: a row can be written by hand straight to the
+     cloud, not only by the app, and an entry that is not an object, or a field
+     that is not text, used to take this whole page down. */
+  const log = (Array.isArray(r.error_log) ? r.error_log : [])
+    .filter(e => e && typeof e === 'object' && !Array.isArray(e))
+    .map(e => ({
+      message: text(e.message), where: text(e.where), route: text(e.route), version: text(e.version),
+      last: text(e.last), stack: text(e.stack), count: Number(e.count) || 1,
+    }))
   const reply = replyLink(r)
   const where = [r.app_version ? `v${r.app_version}` : '', describeDevice(r.device)].filter(Boolean).join(' · ')
   return (
     <article className={`px-4 py-3.5 ${first ? '' : 'border-t border-slate-100 dark:border-white/[0.07]'}`}>
       <div className="flex items-center gap-2">
         <span className={`text-11 font-semibold px-2 py-0.5 rounded-full ${KIND_TONE[r.kind] ?? KIND_TONE.other}`}>{kindLabel(r.kind)}</span>
-        <span className="flex-1 min-w-0 truncate text-13 font-semibold text-slate-800 dark:text-slate-100">
-          {r.sender_name || r.sender_email || 'Someone'}
+        {/* The address, always: it is the account's own, while the name is
+            whatever its owner has set it to be. */}
+        <span className="flex-1 min-w-0 truncate text-13 text-slate-500 dark:text-slate-400">
+          {r.sender_name && <span className="font-semibold text-slate-800 dark:text-slate-100">{text(r.sender_name)} </span>}
+          {text(r.sender_email) || (r.sender_name ? '' : 'Someone')}
         </span>
         <span className="text-11 text-slate-500 dark:text-slate-400 tabular-nums whitespace-nowrap">{timeOf(r.created_at)}</span>
       </div>
@@ -214,7 +227,7 @@ function Report({ r, first, onToggle, onDelete }) {
                   <p className="text-13 font-semibold text-slate-800 dark:text-white break-words">{e.message}</p>
                   <p className="text-11 text-slate-500 dark:text-slate-400 mt-0.5">
                     {e.where} on {e.route || '/'}{e.version ? ` · v${e.version}` : ''}
-                    {e.last ? ` · ${dayOf(e.last)} ${timeOf(e.last)}` : ''}{e.count > 1 ? ` · ${e.count} times` : ''}
+                    {e.last && !Number.isNaN(Date.parse(e.last)) ? ` · ${dayOf(e.last)} ${timeOf(e.last)}` : ''}{e.count > 1 ? ` · ${e.count} times` : ''}
                   </p>
                   {e.stack && (
                     <pre className="mt-1.5 text-11 leading-snug text-slate-500 dark:text-slate-400 whitespace-pre-wrap break-all font-mono">{e.stack}</pre>
