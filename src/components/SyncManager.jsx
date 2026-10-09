@@ -3,7 +3,7 @@ import { Outlet } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import { useToast } from '../context/ToastContext'
 import { supabase, isSupabaseConfigured } from '../lib/supabase'
-import { fullSync, pullChanges, applyRemoteTransaction, toShareRow, unsentTables, FirstSyncChoiceNeeded } from '../lib/sync'
+import { fullSync, pullChanges, applyRemoteTransaction, settleBalances, balancesToSend, toShareRow, unsentTables, FirstSyncChoiceNeeded } from '../lib/sync'
 import { startRealtime } from '../lib/realtime'
 import { startShare } from '../lib/liveShare'
 import { watchLocalChanges } from '../lib/localChanges'
@@ -284,6 +284,14 @@ export default function SyncManager() {
     } catch (err) {
       for (const table of asked) pullTables.current.add(table)
       console.warn('[SyncManager] live pull did not finish:', err?.message ?? err)
+      /* Asked again shortly - a connection that has just come back often
+         fails the first request or two - and not while there is no
+         connection at all: coming back online starts a sync of its own. */
+      setTimeout(() => {
+        if (typeof navigator !== 'undefined' && navigator.onLine === false) return
+        followUp.current.pull = true
+        followUpRef.current()
+      }, 5000)
       return false
     } finally {
       syncingRef.current = false
@@ -370,22 +378,31 @@ export default function SyncManager() {
         heardRows.current.clear()
         /** @type {Array<Record<string, any>>} */
         const added = []
+        let changed = false
         for (const row of rows) {
           try {
-            const result = await applyRemoteTransaction(row)
+            // The balances once for the batch, below, not once per row.
+            const result = await applyRemoteTransaction(row, { reconcile: false })
             if (!result.handled) schedulePull('transactions')
             else if (result.added) added.push(result.added)
+            if (result.changed) changed = true
           } catch (err) {
             console.warn('[SyncManager] a live change did not apply:', err?.message ?? err)
             schedulePull('transactions')
           }
         }
+        if (changed) await settleBalances().catch(err => console.warn('[SyncManager] balances not worked out:', err?.message ?? err))
+        /* And sent, when they moved. The cloud's balance is whichever device
+           sent last, and that can be one that sent before it had heard this
+           row - the delete an Undo took back, say. Left there, it stayed
+           wrong until the next change anywhere. */
+        if (changed && await balancesToSend().catch(() => false)) schedulePush()
         if (added.length) announce(added)
       }
     } finally {
       draining.current = false
     }
-  }, [user?.id, announce, schedulePull])
+  }, [user?.id, announce, schedulePull, schedulePush])
   useEffect(() => { drainRef.current = drainHeard })
 
   const applyHeard = useCallback((/** @type {Record<string, any>} */ row) => {
@@ -453,7 +470,8 @@ export default function SyncManager() {
   useEffect(() => {
     if (!user?.id) return
     const onVisible = () => { if (document.visibilityState === 'visible') schedulePull('*') }
-    const onOnline = () => runSync({ silent: true, light: true, auto: true })
+    // Back online: whatever was tried and failed while offline gets its tries back.
+    const onOnline = () => { followUp.current.rechecks = 0; runSync({ silent: true, light: true, auto: true }) }
     document.addEventListener('visibilitychange', onVisible)
     window.addEventListener('online', onOnline)
     return () => {
@@ -465,7 +483,16 @@ export default function SyncManager() {
   // Listen for what other devices do.
   useEffect(() => {
     if (!user?.id || !isSupabaseConfigured) return
-    return startRealtime(user.id, { onChange: heard, onState: setLive })
+    /* A browser or network that refuses a WebSocket outright throws here, and
+       an effect that throws takes the whole app down. Without the stream the
+       app still syncs, on the slow timer below. */
+    try {
+      return startRealtime(user.id, { onChange: heard, onState: setLive })
+    } catch (err) {
+      // The live state stays 'off', which is where it starts, and the slow timer stands in.
+      console.warn('[SyncManager] live updates could not start:', err?.message ?? err)
+      return undefined
+    }
   }, [user?.id, heard])
 
   /* Tell the other devices of a transaction saved here, directly, the moment
@@ -474,10 +501,17 @@ export default function SyncManager() {
   useEffect(() => {
     if (!user?.id || !isSupabaseConfigured) return
     const userId = user.id
-    const channel = startShare(userId, { onTransaction: row => heard('transactions', { eventType: 'BROADCAST', new: row }) })
+    /** @type {ReturnType<typeof startShare>|null} */
+    let channel = null
+    // Refused like the stream above, it is a head start lost, not the app.
+    try {
+      channel = startShare(userId, { onTransaction: row => heard('transactions', { eventType: 'BROADCAST', new: row }) })
+    } catch (err) {
+      console.warn('[SyncManager] direct sharing could not start:', err?.message ?? err)
+    }
     sharing.current = channel
     const waiting = heardRows.current
-    return () => { sharing.current = null; waiting.clear(); channel.stop() }
+    return () => { sharing.current = null; waiting.clear(); channel?.stop() }
   }, [user?.id, heard])
 
   // And push what this one does, as it happens.

@@ -1,5 +1,5 @@
 import db, { SYNCED, UNSYNCED } from '../db/db'
-import { queueRemoteDelete, resetWatermarks } from './sync'
+import { queueRemoteDelete, resetLedgerWatermark } from './sync'
 import { toDateInput } from '../utils/txDate'
 import { PRIMED_META } from './achievements'
 import { ledgerMoves, settleAccount } from '../db/balances'
@@ -153,7 +153,7 @@ export async function restoreBackup(raw) {
   const stampBadge = (rows) => (rows ?? []).map(r => withoutSyncedAt({ ...r, synced: UNSYNCED }))
 
   // Captured before the wipe so we know what the backup drops.
-  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges, oldTrash, oldNotes, oldFolders] = await Promise.all([
+  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges, oldTrash, oldNotes, oldFolders, oldRecurring, oldDebts] = await Promise.all([
     db.transactions.toArray(),
     db.accounts.toArray(),
     db.categories.toArray(),
@@ -163,6 +163,8 @@ export async function restoreBackup(raw) {
     db.trash.toArray(),
     db.notes.toArray(),
     db.note_folders.toArray(),
+    db.recurring.toArray(),
+    db.debts.toArray(),
   ])
 
   /* Each call names the table it is restoring. A backup file is parsed JSON,
@@ -181,7 +183,11 @@ export async function restoreBackup(raw) {
   const restoredMoves = ledgerMoves(Array.isArray(data.transactions) ? transactions : oldTxs)
   const accounts   = /** @type {Account[]}     */ (stamp(data.accounts)).map(a => {
     const { opening } = settleAccount({ ...a, opening: null }, restoredMoves.get(a.name) ?? 0)
-    return { ...a, opening }
+    /* A QR photo is a picture this app made (accounts/QrSheets.jsx), never an
+       address: one pointing at another site would be fetched every time the
+       account opened, saying so to whoever runs it. */
+    const qr = typeof a.qrImage === 'string' && a.qrImage.startsWith('data:image/') ? a.qrImage : null
+    return { ...a, opening, qrImage: qr }
   })
   const goals      = /** @type {Goal[]}         */ (stamp(data.goals))
   const badges     = /** @type {BadgeRow[]}     */ (stampBadge(data.badges))
@@ -207,6 +213,8 @@ export async function restoreBackup(raw) {
   const keptTrashIds      = new Set(trash.map(e => e.syncId).filter(Boolean))
   const keptNoteIds       = new Set(notes.map(n => n.syncId).filter(Boolean))
   const keptFolderIds     = new Set(folders.map(f => f.syncId).filter(Boolean))
+  const keptRecurringIds  = new Set(recurring.map(r => r.syncId).filter(Boolean))
+  const keptDebtIds       = new Set(debts.map(d => d.syncId).filter(Boolean))
 
   await db.transaction('rw', [
     db.transactions, db.accounts, db.categories, db.templates,
@@ -317,6 +325,20 @@ export async function restoreBackup(raw) {
       if (f.syncId && !keptFolderIds.has(f.syncId)) await queueRemoteDelete('note_folders', { sync_id: f.syncId })
     }
   }
+  /* Bills and debts too, which were missing here: a bill added after the
+     backup was made was left in the cloud, and the next pull brought it back
+     onto the restored phone. By the stable id, never the name (see
+     deleteRecurringRemote in lib/sync.js). */
+  if (Array.isArray(data.recurring)) {
+    for (const r of oldRecurring) {
+      if (r.syncId && !keptRecurringIds.has(r.syncId)) await queueRemoteDelete('recurring', { sync_id: r.syncId })
+    }
+  }
+  if (Array.isArray(data.debts)) {
+    for (const d of oldDebts) {
+      if (d.syncId && !keptDebtIds.has(d.syncId)) await queueRemoteDelete('debts', { sync_id: d.syncId })
+    }
+  }
 
   /* Outside the Dexie transaction, because localStorage is not part of it
      and a throw here must not roll back a restore that has already landed. */
@@ -328,8 +350,10 @@ export async function restoreBackup(raw) {
    * restore has just replaced the local database with an older copy that
    * knows nothing about that mark. Left in place it would step straight over
    * every row between the backup and now - a restore would silently lose
-   * exactly the recent history it was meant to protect. */
-  await resetWatermarks()
+   * exactly the recent history it was meant to protect.
+   *
+   * The ledger only, not the deletions: see resetLedgerWatermark. */
+  await resetLedgerWatermark()
 
   return {
     counts,
@@ -390,8 +414,9 @@ function readLocalPrefs() {
 function writeLocalPrefs(prefs) {
   if (!prefs) return
   try {
-    if (prefs.theme) localStorage.setItem('spendr-theme', prefs.theme)
-    if (prefs.accentColor) localStorage.setItem('accentColor', prefs.accentColor)
+    if (prefs.theme === 'light' || prefs.theme === 'dark') localStorage.setItem('spendr-theme', prefs.theme)
+    // A colour, and only a colour: it goes straight into a CSS variable, and a file can say anything.
+    if (typeof prefs.accentColor === 'string' && /^#[0-9a-f]{6}$/i.test(prefs.accentColor)) localStorage.setItem('accentColor', prefs.accentColor)
     if (prefs.style === 'flat' || prefs.style === 'vivid') localStorage.setItem('spendr-style', prefs.style)
   } catch { /* nothing to do about it, and not worth failing a restore over */ }
 }

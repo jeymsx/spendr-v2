@@ -31,19 +31,19 @@ export default function FirstSyncSheet({ info, busy, onChoose, onSignOut }) {
          should be answered first. */
       z={450}
       scrim={60}
-      ariaLabel="This account already has data"
+      ariaLabel={copy?.title ?? 'This account already has data'}
       footer={copy && (
         <div className="space-y-3">
           <div>
             <Button block loading={busy === 'account'} disabled={!!busy} onClick={() => onChoose('account')}>
-              Use my account's data
+              {copy.accountLabel}
             </Button>
             <p className="mt-1.5 text-center text-12 text-slate-500 dark:text-slate-400">{copy.account}</p>
           </div>
           {copy.both && (
             <div>
               <Button block variant="secondary" loading={busy === 'both'} disabled={!!busy} onClick={() => onChoose('both')}>
-                Keep both
+                {copy.bothLabel}
               </Button>
               <p className="mt-1.5 text-center text-12 text-slate-500 dark:text-slate-400">{copy.both}</p>
             </div>
@@ -61,7 +61,7 @@ export default function FirstSyncSheet({ info, busy, onChoose, onSignOut }) {
             <IconCloud size={26} />
           </div>
           <div>
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">This account already has data</h3>
+            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{copy.title}</h3>
             <p className="text-sm text-slate-500 dark:text-slate-400">{copy.body}</p>
           </div>
         </div>

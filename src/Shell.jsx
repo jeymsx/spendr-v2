@@ -1,7 +1,9 @@
-import { lazy, Suspense, useEffect } from 'react'
+import { lazy, Suspense, useEffect, useState } from 'react'
 import { useViewMode } from './web/useViewMode'
 import App from './App'
 import { PageTitle } from './lib/pageTitle'
+import { dbReady, storageProblem } from './db/db'
+import StorageBlocked from './components/StorageBlocked'
 
 // Lazy so a phone never downloads the desktop UI, and vice versa is free
 // because App is the eager default.
@@ -25,6 +27,9 @@ function Booting() {
  */
 export default function Shell() {
   const mode = useViewMode()
+  // A browser that will not keep data gets told so, not a spinner for good (db/db.js storageProblem).
+  const [blocked, setBlocked] = useState(false)
+  useEffect(() => { dbReady.then(() => { if (storageProblem) setBlocked(true) }) }, [])
 
   // Marks the document so index.css can restyle the shared sheets as centred
   // modals on desktop. Doing it in CSS rather than in each component keeps one
@@ -35,6 +40,8 @@ export default function Shell() {
     root.classList.toggle('web', mode === 'desktop')
     return () => root.classList.remove('web')
   }, [mode])
+
+  if (blocked) return <StorageBlocked />
 
   // The browser tab names the page, in either layout (lib/pageTitle.js).
   if (mode === 'desktop') {

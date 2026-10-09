@@ -132,6 +132,11 @@ function table(rows, key) {
       }
     },
     async toArray() { return rows().slice() },
+    /** A Collection of the whole table, narrowed: db/bills.js chargeFor reads .filter().first(). @param {(r: Row) => boolean} fn */
+    filter(fn) {
+      const hits = () => rows().filter(fn)
+      return { async first() { return hits()[0] ?? undefined }, async toArray() { return hits() } }
+    },
   }
 }
 
@@ -267,12 +272,12 @@ describe('postCardPayment', () => {
     expect(acct('Maya Savings').balance).toBe(6688)
   })
 
-  it('stamps both sides with the same updatedAt it gives the row', async () => {
+  it('stamps the row it writes, and leaves both accounts as they were: a balance moving is not an edit to the account', async () => {
+    const before = [acct('ZZ Test Card').updatedAt, acct('Maya Savings').updatedAt]
     await pay()
 
     expect(store.transactions[0].updatedAt).toBeTruthy()
-    expect(acct('ZZ Test Card').updatedAt).toBeTruthy()
-    expect(acct('Maya Savings').updatedAt).toBeTruthy()
+    expect([acct('ZZ Test Card').updatedAt, acct('Maya Savings').updatedAt]).toEqual(before)
   })
 
   describe('refuses a payment that cannot mean anything', () => {
@@ -1028,6 +1033,34 @@ describe('a month-end bill keeps its day', () => {
     }
     expect(await restoreDeletedTx(/** @type {any} */ (post))).toBe(true)
     expect(store.recurring[0].nextDate).toBe('2026-03-31')
+  })
+})
+
+describe('a due date already paid', () => {
+  const rent = (over = {}) => ({
+    id: 50, syncId: 'rent-1', name: 'Rent', amount: 100, account: 'Maya Savings', category: 'Bills',
+    frequency: 'monthly', nextDate: '2026-10-05', dueDay: 5, active: true, ...over,
+  })
+
+  it('is not paid again: the bill moves on, nothing is charged, and the caller is told', async () => {
+    store.recurring.push(rent())
+    // Paid on another device, its charge already here, while this device's bill still says it is due.
+    store.transactions.push({ id: 91, txId: 'paid-elsewhere', type: 'expense', amount: 100, account: 'Maya Savings', recurringSyncId: 'rent-1', recurringPrevDate: '2026-10-05' })
+    const balance = acct('Maya Savings').balance
+    const result = await postRecurringCharge(/** @type {any} */ (store.recurring[0]), { allowOverdraw: true })
+    expect(result).toMatchObject({ alreadyPaid: true, tx: null, nextDate: '2026-11-05' })
+    expect(store.transactions).toHaveLength(1)
+    expect(acct('Maya Savings').balance).toBe(balance)
+    expect(store.recurring[0].nextDate).toBe('2026-11-05')
+  })
+
+  it('a second tap on the same due date posts nothing more', async () => {
+    store.recurring.push(rent())
+    const stale = { ...store.recurring[0] }
+    await postRecurringCharge(/** @type {any} */ (stale), { allowOverdraw: true })
+    const again = await postRecurringCharge(/** @type {any} */ (stale), { allowOverdraw: true })
+    expect(again.alreadyPaid).toBe(true)
+    expect(store.transactions.filter(t => t.recurringSyncId === 'rent-1')).toHaveLength(1)
   })
 })
 

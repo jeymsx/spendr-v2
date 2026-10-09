@@ -270,6 +270,15 @@ export const SYNCED_TABLES = [
 
 /** How a row is FILED, as opposed to what it says. Changing only these is not
  *  an edit, so it must not move updatedAt. See the updating hook below.
+ *  `balance` and `opening`: an account's balance is worked out on every device
+ *  from its opening and its transactions (db/balances.js), so a balance moving
+ *  is not news to send. It was, once: every expense stamped its account as
+ *  edited, and the stale copy that stamp made newest overwrote a rename or a
+ *  colour made a moment before on another device, and took the account's whole
+ *  history away with the name. An opening travels when the account is new, or
+ *  is sent on purpose (lib/sync.js sendOpeningsTheCloudLacks). The balance
+ *  still reaches the cloud, as a column of its own (lib/sync.js pushBalances),
+ *  marked by `balanceSent`.
  *  `pushed`: a note that has been on the server at least once (lib/notes.js).
  *  `syncedAt`: the updatedAt this row had the last time the cloud and this
  *  device agreed on it - written by a pull for a row it brought in, and by a
@@ -277,7 +286,7 @@ export const SYNCED_TABLES = [
  *  its syncedAt has been changed since, and is the only kind a push sends.
  *  Stamping it as an edit would move updatedAt, which is the very thing it is
  *  compared with: every push would make the row look changed again. */
-export const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed', 'syncedAt'])
+export const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed', 'syncedAt', 'balance', 'opening', 'balanceSent'])
 
 // What a write really changes (db/changedKeys.js), re-exported for the hooks' readers.
 export { changedKeys } from './changedKeys'
@@ -436,8 +445,28 @@ export async function getUnsyncedTxs() {
   return db.transactions.filter(t => !t.synced).toArray()
 }
 
+/**
+ * Why this browser will not keep Spendr's data, when it will not: no
+ * IndexedDB at all, or one that refuses to open (a private window, "Don't
+ * allow sites to save data", storage full). Null when the database opened.
+ *
+ * Read by the shell, which says so instead of the endless spinner every
+ * screen showed before: each one waits for its first read, and a read from a
+ * database that never opened neither answers nor throws.
+ *
+ * @type {Error|null}
+ */
+export let storageProblem = null
+
+const STORAGE_ERRORS = /MissingAPIError|OpenFailedError|InvalidStateError|QuotaExceededError|UnknownError|DatabaseClosedError|SecurityError|NotAllowedError/
+
 export const dbReady = seed()
   .then(normalizeSyncedFlags)
-  .catch(err => console.error('[SpendrDB] init failed:', err))
+  .catch(err => {
+    console.error('[SpendrDB] init failed:', err)
+    if (STORAGE_ERRORS.test(`${err?.name ?? ''} ${err?.inner?.name ?? ''}`) || typeof indexedDB === 'undefined') {
+      storageProblem = err instanceof Error ? err : new Error(String(err))
+    }
+  })
 
 export default db

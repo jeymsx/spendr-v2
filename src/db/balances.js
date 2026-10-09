@@ -33,8 +33,8 @@ async function adjustBalance(accountName, delta) {
      rather than lossy, because every delta is already a whole number of
      cents - see roundMoney. A yen account rounds to the yen. */
   const newBal = roundMoney((acct.balance ?? 0) + delta, acct.currency)
-  const now = new Date().toISOString()
-  await db.accounts.update(acct.id, { balance: newBal, updatedAt: now })
+  // Not an edit to the account: see BOOKKEEPING in db/db.js.
+  await db.accounts.update(acct.id, { balance: newBal })
   await db.balances.put({ account: accountName, balance: newBal })
 }
 
@@ -197,11 +197,13 @@ export function settleAccount(account, moved = 0) {
  * have arrived the balance is right, on every device.
  *
  * Run after anything the cloud writes into the ledger or the accounts - the
- * sync calls it. Nothing written here is news to send, so every write keeps
- * the row's stamp and nothing is pushed back: a balance is worked out the same
- * way on every device, and an opening worked out here for an account that had
- * none is the figure it already had. That one is sent once the cloud has a
- * place for it (lib/sync.js sendOpeningsTheCloudLacks).
+ * sync calls it. Nothing written here is news to send: `balance` and `opening`
+ * are bookkeeping (BOOKKEEPING in db/db.js), so the row keeps its stamp and is
+ * not pushed back - a balance is worked out the same way on every device, and
+ * an opening worked out here for an account that had none is the figure it
+ * already had. That one is sent once the cloud has a place for it (lib/sync.js
+ * sendOpeningsTheCloudLacks). Stamping these as edits is what once let a
+ * device's stale copy of an account overwrite a rename made on another.
  *
  * @returns {Promise<number>} how many accounts it changed
  */
@@ -213,12 +215,12 @@ export async function reconcileBalances() {
     const moved = ledgerMoves(await db.transactions.toArray())
     for (const a of accounts) {
       const next = settleAccount(a, moved.get(a.name) ?? 0)
-      const keep = { updatedAt: a.updatedAt }
+      // Neither is an edit to the account, so neither moves its stamp (BOOKKEEPING in db/db.js).
       if (next.openingIsNew) {
-        await db.accounts.update(/** @type {number} */ (a.id), { opening: next.opening, ...keep })
+        await db.accounts.update(/** @type {number} */ (a.id), { opening: next.opening })
         changed++
       } else if (next.balance !== a.balance) {
-        await db.accounts.update(/** @type {number} */ (a.id), { balance: next.balance, ...keep })
+        await db.accounts.update(/** @type {number} */ (a.id), { balance: next.balance })
         await db.balances.put({ account: a.name, balance: next.balance })
         changed++
       }

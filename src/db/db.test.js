@@ -34,9 +34,16 @@ describe('bookkeeping', () => {
   })
 
   it('moves updatedAt for a real edit, even one that carries syncedAt along', () => {
-    const [moved] = updatingHooks('accounts', { balance: 10, syncedAt: '2026-10-08T04:00:00.000Z' })
+    const [moved] = updatingHooks('accounts', { name: 'Wallet', syncedAt: '2026-10-08T04:00:00.000Z' })
     expect(typeof moved?.updatedAt).toBe('string')
     expect(Number.isNaN(Date.parse(moved.updatedAt))).toBe(false)
+  })
+
+  it('does not move updatedAt for a balance or an opening: they are worked out on every device, not sent', () => {
+    // Stamping these let a device's stale copy of an account overwrite a rename made on another.
+    expect(updatingHooks('accounts', { balance: 10 })).toEqual([])
+    expect(updatingHooks('accounts', { opening: 1000 })).toEqual([])
+    expect(updatingHooks('accounts', { balance: 10, opening: 1000, syncedAt: '2026-10-08T04:00:00.000Z' })).toEqual([])
   })
 
   it('leaves an explicit updatedAt alone: that is what a pull writes beside syncedAt', () => {

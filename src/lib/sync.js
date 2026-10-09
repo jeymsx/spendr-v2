@@ -1,5 +1,6 @@
 import db, { dbReady, getUnsyncedTxs, SYNCED, SYNCED_TABLES, TRASH_DAYS, UNSYNCED } from '../db/db'
 import { reconcileBalances } from '../db/balances'
+import { settlePaidBills } from '../db/bills'
 import { supabase } from './supabase'
 import { roundMoney } from './currency'
 import { SYNCED_WITH_KEY, accountHasData, deviceStanding, localOnlyDeltas } from './firstSync'
@@ -80,21 +81,29 @@ async function flushPendingDeletes(userId) {
   const list = await getPendingDeletes()
   if (!list.length) return
 
-  const remaining = []
   /** @type {Set<string>} */
   const landed = new Set()
+  /** The entries that went, by what they say. @type {Set<string>} */
+  const done = new Set()
   for (const entry of list) {
     let q = supabase.from(entry.table).delete().eq('user_id', userId)
     for (const [col, val] of Object.entries(entry.match ?? {})) q = q.eq(col, val)
     const { error } = await q
     if (error) {
       console.error('[sync] delete %s failed:', entry.table, error.message)
-      remaining.push(entry)
     } else {
       landed.add(entry.table)
+      done.add(JSON.stringify(entry))
     }
   }
-  await db.meta.put({ key: PENDING_KEY, value: remaining })
+  /* Off the queue: what went, and nothing else. The queue is read again here,
+     not overwritten with the list read before the deletes went out - a delete
+     queued while they were on their way (a second category deleted a moment
+     after the first) was lost that way, and the row came back. */
+  await db.transaction('rw', db.meta, async () => {
+    const now = await getPendingDeletes()
+    await db.meta.put({ key: PENDING_KEY, value: now.filter((/** @type {any} */ e) => !done.has(JSON.stringify(e))) })
+  })
   for (const table of landed) await forgetSent(table)
 }
 
@@ -163,6 +172,8 @@ export function toSupabaseRow(r, userId) {
     /* Which bill wrote this charge. 017 - and unlike recurringId beside it,
        this one is portable, so a bill's history survives a new device. */
     recurring_sync_id: r.recurringSyncId ?? null,
+    // 035: the due date a bill's charge paid, so every device can tell it is paid (db/bills.js).
+    recurring_prev_date: r.recurringPrevDate ?? null,
     /* 018. What the amount is IN, and what it was worth in the ledger's
        currency on the day - priced once, at write time, because re-deriving
        a past figure at today's rate rewrites a month you had closed. Null on
@@ -516,6 +527,8 @@ export function toDexieRecord(row) {
     settles:     row.settles ?? null,
     creditSyncId: row.credit_sync_id ?? null,
     recurringSyncId: row.recurring_sync_id ?? null,
+    // Only when the cloud has it: a null must not blank the one this device wrote (db/bills.js).
+    ...(row.recurring_prev_date ? { recurringPrevDate: row.recurring_prev_date } : {}),
     currency:     row.currency ?? null,
     baseAmount:   row.base_amount ?? null,
     baseCurrency: row.base_currency ?? null,
@@ -551,6 +564,8 @@ export function rowToAccount(row) {
     type:           row.type,
     role:           row.role,
     balance:        row.balance,
+    // What the cloud holds is, by definition, what it has been sent (pushBalances).
+    ...(row.balance != null && Number.isFinite(Number(row.balance)) ? { balanceSent: Number(row.balance) } : {}),
     // 033. Only when the cloud has one: a null must not blank the one this device worked out.
     ...(row.opening_balance != null && Number.isFinite(Number(row.opening_balance)) ? { opening: Number(row.opening_balance) } : {}),
     currency:       row.currency,
@@ -978,16 +993,30 @@ export async function pushLedger(userId) {
       .eq('user_id', userId)
       .in('tx_id', deletedTxIds)
     if (!delErr) {
-      await db.meta.put({ key: 'deletedTxIds', value: [] })
+      /* Off the list: the ones that went. Read again rather than emptied - a
+         transaction deleted while this was on its way is not among them, and
+         emptying the list lost that delete for good. */
+      const sent = new Set(deletedTxIds)
+      await db.transaction('rw', db.meta, async () => {
+        const now = (await db.meta.get('deletedTxIds'))?.value ?? []
+        await db.meta.put({ key: 'deletedTxIds', value: now.filter((/** @type {string} */ id) => !sent.has(id)) })
+      })
     }
   }
 
   if (unsyncedTxs.length > 0) {
-    // Only push transactions that have a stable tx_id
-    const rows = unsyncedTxs.filter(r => r.txId).map(r => toSupabaseRow(r, userId))
-
-    if (rows.length > 0) {
-      const opts = { onConflict: 'user_id,tx_id', ignoreDuplicates: false }
+    /* In batches, each sent and then marked before the next. A first sign-in
+       with years of history went up as one 10 MB request - more than a
+       gateway may take - and was then marked row by row, which on a phone
+       with 20,000 rows froze it for minutes before the accounts went up at
+       all. A batch is a request of a sensible size and one write to mark. */
+    const BATCH = 1000
+    const opts = { onConflict: 'user_id,tx_id', ignoreDuplicates: false }
+    // Only transactions that have a stable tx_id go up.
+    const sendable = unsyncedTxs.filter(r => r.txId)
+    for (let i = 0; i < sendable.length; i += BATCH) {
+      const batch = sendable.slice(i, i + BATCH)
+      const rows = batch.map(r => toSupabaseRow(r, userId))
       const { error } = await supabase.from('transactions').upsert(rows, opts)
       if (error) {
         /* Transactions do not go through pushTable, so they never had its
@@ -999,14 +1028,91 @@ export async function pushLedger(userId) {
         const { error: again } = await upsertWithoutUnknown('transactions', rows, opts, error)
         if (again) throw new Error(`transactions push: ${again.message}`)
       }
-    }
-
-    // Mark as synced locally
-    const ids = unsyncedTxs.map(r => r.id).filter(Boolean)
-    if (ids.length) {
-      await db.transactions.where('id').anyOf(ids).modify({ synced: SYNCED })
+      await markTxsSent(batch)
     }
   }
+}
+
+/**
+ * Transactions that went up, marked as sent: each still as it was sent, and
+ * only those. One edited while the push was on its way is newer than what went,
+ * and marking it sent hid the edit for good - the cloud and every other device
+ * kept the old figure. It stays unsent and goes next time.
+ *
+ * Read and written whole, in one transaction: one write, so the lists showing
+ * these rows refresh once rather than once per row.
+ *
+ * @param {Transaction[]} sent  the rows as they were read before sending
+ */
+async function markTxsSent(sent) {
+  const withIds = sent.filter(r => r.id != null)
+  if (!withIds.length) return
+  await db.transaction('rw', db.transactions, async () => {
+    const now = await db.transactions.bulkGet(withIds.map(r => r.id))
+    const still = []
+    for (let k = 0; k < withIds.length; k++) {
+      const row = now[k]
+      if (row && sameRowKey(row) === sameRowKey(withIds[k])) still.push({ ...row, synced: SYNCED })
+    }
+    if (still.length) await db.transactions.bulkPut(still)
+  })
+}
+
+/**
+ * An account renamed on another device, followed here: this device's own
+ * transactions that still name it by the old name move to the new one.
+ *
+ * The device that renamed it moved every transaction it had, and those arrive
+ * renamed. What it could not move is what it did not have - an expense this
+ * device added to the account while offline, before it heard of the rename.
+ * Left on the old name, that expense belonged to an account that no longer
+ * existed: counted as spending, in no balance, and found by nothing. Stamped
+ * as changed, so the move goes up too.
+ *
+ * @param {string} from
+ * @param {string} to
+ */
+async function followRename(from, to) {
+  const at = new Date().toISOString()
+  await db.transaction('rw', db.transactions, async () => {
+    for (const field of ['account', 'fromAccount', 'toAccount']) {
+      const rows = await db.transactions.where(field).equals(from).toArray()
+      for (const tx of rows) await db.transactions.update(tx.id, { [field]: to, synced: UNSYNCED, updatedAt: at })
+    }
+  })
+}
+
+/**
+ * Read the whole ledger again, once, on every device.
+ *
+ * Until 035 the cloud stamped a transaction's updated_at only when it was
+ * changed, not when it was added - so a row saved offline went up with the
+ * time it was saved, earlier than what another device had already read up to,
+ * and that device's pulls (only rows newer than the newest seen) never asked
+ * for it. Its balance was then short by the row for good. Forgetting how far
+ * the ledger has been read makes the next pull read all of it, which brings
+ * any row missed that way; the rest are already here and are left alone.
+ */
+async function recheckLedgerOnce() {
+  const KEY = 'ledgerRecheck035'
+  if ((await db.meta.get(KEY))?.value) return
+  const marks = await getWatermarks()
+  if (marks.transactions) {
+    const { transactions: _drop, ...rest } = marks
+    await db.meta.put({ key: WATERMARK_KEY, value: rest })
+  }
+  await db.meta.put({ key: KEY, value: true })
+}
+
+/**
+ * A transaction's content, for "is it still the row that was sent": everything
+ * but whether it has been sent.
+ *
+ * @param {Record<string, any>} row
+ */
+function sameRowKey(row) {
+  const { synced: _drop, ...rest } = row
+  return JSON.stringify(rest)
 }
 
 /**
@@ -1088,6 +1194,8 @@ export async function syncToSupabase(userId, { only = null } = {}) {
      given. Trash and notes keep their own marks, so they always run and send
      what is unsent. */
   if (wants('accounts'))   await pushSmall('accounts',   userId)
+  // Every push: a balance moves with the ledger, not with an edit to the account (see pushBalances).
+  await pushBalances(userId)
   if (wants('categories')) await pushSmall('categories', userId)
   if (wants('debts'))      await pushSmall('debts',      userId)
   if (wants('recurring'))  await pushSmall('recurring',  userId)
@@ -1142,7 +1250,48 @@ export async function unsentTables(userId) {
   }))
   if (!absentRemotely.has(TRASH_STEP) && await db.trash.filter(trashIsUnsent).first()) out.add('trash')
   if (!absentRemotely.has(NOTES_STEP) && await db.notes.filter(noteIsUnsent).first()) out.add('notes')
+  // A balance worked out again by a pull, and not yet sent (pushBalances).
+  if (await db.accounts.filter(balanceIsUnsent).first()) out.add('accounts')
   return out
+}
+
+/** @param {Record<string, any>} a  an account whose balance the cloud has not been sent */
+const balanceIsUnsent = a => !!a.syncId && typeof a.balance === 'number' && a.balance !== a.balanceSent
+
+/** Whether a balance here has moved since it was last sent (pushBalances). */
+export async function balancesToSend() {
+  await dbReady
+  return !!(await db.accounts.filter(balanceIsUnsent).first())
+}
+
+/**
+ * Each account's balance, sent on its own when it has moved since it was last
+ * sent: an update of that one column, found by the account's stable id.
+ *
+ * A balance is worked out on every device (db/balances.js) and is not an edit
+ * to its account, so it no longer rides along with the account's row - doing
+ * that is what once let a stale copy of a row overwrite a rename made on
+ * another device. But the cloud's copy is still read, by Latr (the sibling app
+ * that reads this account's figures) and by a first sync before 033, so it is
+ * kept current this way: one column, which cannot carry an old name or colour
+ * back with it, and which leaves the row's stamp alone, so 032's guard and
+ * every device's newest-wins comparison are untouched.
+ *
+ * `balanceSent` is bookkeeping (db/db.js), so marking it is not an edit.
+ *
+ * @param {string} userId
+ */
+async function pushBalances(userId) {
+  const due = await db.accounts.filter(balanceIsUnsent).toArray()
+  for (const a of due) {
+    const { error } = await supabase.from('accounts').update({ balance: a.balance }).eq('user_id', userId).eq('sync_id', a.syncId)
+    if (error) throw new Error(`accounts balance push: ${error.message}`)
+    await db.transaction('rw', db.accounts, async () => {
+      const now = await db.accounts.get(a.id)
+      // Only if it is still the figure that went: one that moved again goes next time.
+      if (now && now.balance === a.balance) await db.accounts.update(a.id, { balanceSent: a.balance })
+    })
+  }
 }
 
 /**
@@ -1343,7 +1492,7 @@ const OPTIONAL_COLS = {
      accounts - but another device reading the row sees one number for both
      ends, which is how every transfer read before 019. */
   transactions: [
-    'refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id',
+    'refund_of', 'split_id', 'settles', 'credit_sync_id', 'recurring_sync_id', 'recurring_prev_date',
     'currency', 'base_amount', 'base_currency', 'to_amount', 'to_currency', 'adjust',
   ],
   /* 024's daily_nudge too. Until it runs, the check-in's time stays on the
@@ -1790,6 +1939,23 @@ export async function resetWatermarks() {
   await db.meta.delete(WATERMARK_KEY)
 }
 
+/**
+ * Read the whole ledger again next time, but not the deletions.
+ *
+ * For a restore: the restored rows include ones deleted after the backup was
+ * made, which are what the restore is for. Reading every deletion from the
+ * start again re-applied those old deletions to them on the very next sync -
+ * on this device, while another device that had heard of them live kept them,
+ * and the two disagreed for good. Deletions this device has already applied
+ * stay applied; only the ledger is read in full.
+ */
+export async function resetLedgerWatermark() {
+  const marks = await getWatermarks()
+  if (!marks.transactions) return
+  const { transactions: _drop, ...rest } = marks
+  await db.meta.put({ key: WATERMARK_KEY, value: rest })
+}
+
 /** The newest timestamp in a batch, for the watermark. Exported for the test:
  *  it is what decides how far the stream advances, so it is worth pinning.
  *  @param {any[]} rows @param {string} column */
@@ -1834,6 +2000,12 @@ async function pullDeletions(userId) {
     if (t.table_name === 'transactions') {
       const tx = await db.transactions.where('txId').equals(key).first()
       if (!tx) continue
+      /* Not a row this device has changed since and not yet sent - put back
+         from Recently deleted a second after the delete went, say. Its
+         tombstone can arrive after the Undo, and deleting it then undid the
+         Undo. The row goes up next and the cloud has it again, the same rule
+         a pull keeps for an unsent edit (pullTxs). */
+      if (tx.synced === UNSYNCED) continue
       await db.transactions.delete(tx.id)
       ledger = true
       continue
@@ -1945,6 +2117,14 @@ export async function syncFromSupabase(userId, { onAdded, only = null, ...opts }
   const added = wants('transactions') ? await pullTxs(userId, opts) : /** @type {Transaction[]} */ ([])
   if (added.length) onAdded?.(added)
   if (wants('accounts')) await pullSimpleTable('accounts',   db.accounts,   rowToAccount,   'name', userId, null, pending, opts)
+  /* Every balance, from its opening and the ledger as it now stands (see
+     reconcileBalances) - here, as soon as both are in, and not at the end: a
+     later table failing (the notes, on a connection just coming back) used to
+     end the pull before it got this far, and the balances stayed wrong until
+     something else changed. Not on a first sync: fullSync does it once the
+     choice it was made with has been carried out, which can still move a
+     balance. */
+  if (!opts.first && (wants('transactions') || wants('accounts'))) await reconcileBalances()
   // Categories: match on name+type to avoid confusing same-named categories of different types
   if (wants('categories')) await pullSimpleTable('categories', db.categories, rowToCategory, null, userId,
     row => db.categories.where('name').equals(row.name).and(c => c.type === row.type).first(), pending, opts)
@@ -1979,6 +2159,9 @@ export async function syncFromSupabase(userId, { onAdded, only = null, ...opts }
   if (wants('recurring')) await pullSimpleTable('recurring', db.recurring, rowToRecurring, null, userId,
     row => (row.name ? db.recurring.where('name').equals(row.name).first() : null),
     pending, opts)
+  /* And a bill sent back by another device's older copy to a due date already
+     paid moves on again (db/bills.js). */
+  if (!opts.first && (wants('transactions') || wants('recurring'))) await settlePaidBills()
   if (wants('templates')) await pullSimpleTable('templates',  db.templates,  rowToTemplate,  'name', userId, null, pending, opts)
   if (wants('goals')) await optionalSync('goals pull', () =>
     pullSimpleTable('goals', db.goals, rowToGoal, 'name', userId, null, pending, opts))
@@ -2001,11 +2184,6 @@ export async function syncFromSupabase(userId, { onAdded, only = null, ...opts }
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   if (wants('categories')) await ensureSystemCategories()
-  /* Every balance, from its opening and the ledger as it now stands (see
-     reconcileBalances). Not on a first sync: fullSync does it once the
-     choice it was made with has been carried out, which can still move a
-     balance. */
-  if (!opts.first && (wants('transactions') || wants('accounts'))) await reconcileBalances()
   return { added }
 }
 
@@ -2056,14 +2234,20 @@ export async function pullChanges(userId, { onAdded, only = null } = {}) {
  * has to settle.
  *
  * @param {Record<string, any>} row  the event's new row, as the table has it
- * @returns {Promise<{handled: boolean, added: Transaction|null}>}
+ * @param {{reconcile?: boolean}} [opts]  `reconcile: false` leaves the balances
+ *   to the caller, which applies a batch of rows and works them out once
+ *   (settleBalances) - every balance from the whole ledger, once per row, froze
+ *   a phone with a long history for seconds at a time
+ * @returns {Promise<{handled: boolean, added: Transaction|null, changed?: boolean}>}
  */
-export async function applyRemoteTransaction(row) {
+export async function applyRemoteTransaction(row, { reconcile = true } = {}) {
   if (!row?.tx_id || !row.type || !row.transaction_date) return { handled: false, added: null }
   await dbReady
   return asRemoteWrites(async () => {
     const deleted = new Set((await db.meta.get('deletedTxIds'))?.value ?? [])
-    if (deleted.has(row.tx_id)) return { handled: true, added: null }
+    /** @type {{handled: boolean, added: Transaction|null}} */
+    const none = { handled: true, added: null }
+    if (deleted.has(row.tx_id)) return none
     let wrote = false
     const result = await db.transaction('rw', db.transactions, async () => {
       const existing = await db.transactions.where('txId').equals(row.tx_id).first()
@@ -2075,16 +2259,22 @@ export async function applyRemoteTransaction(row) {
       }
       const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0
       const localts = existing.updatedAt ? new Date(existing.updatedAt).getTime() : 0
-      if (remotets > localts) {
+      // Not over an edit of this device's still on its way up: see pullTxs.
+      if (remotets > localts && existing.synced !== UNSYNCED) {
         await db.transactions.put({ ...existing, ...record })
         wrote = true
       }
       return { handled: true, added: null }
     })
     // The balances it moves, at once, rather than when the account's row comes: see reconcileBalances.
-    if (wrote) await reconcileBalances()
-    return result
+    if (wrote && reconcile) await reconcileBalances()
+    return { ...result, changed: wrote }
   })
+}
+
+/** Every balance worked out again, as the cloud's write it follows (see applyRemoteTransaction). */
+export function settleBalances() {
+  return asRemoteWrites(() => reconcileBalances())
 }
 
 /**
@@ -2154,7 +2344,12 @@ async function pullTxs(userId, { first = false } = {}) {
 
     if (!existing) {
       toAdd.push({ ...toDexieRecord(row) })
-    } else if (first || remotets > localts) {
+    } else if (first || (remotets > localts && existing.synced !== UNSYNCED)) {
+      /* Never over a row this device has changed and not yet sent: that
+         change goes up next and becomes the newest, wherever the clocks
+         stand. Comparing stamps alone let a device whose clock ran ahead keep
+         its own old copy over a correction made elsewhere, and let a pull
+         land on top of an edit made while it was on its way. */
       // Spread `existing` first to mirror Dexie's partial .update(): fields the
       // remote row doesn't carry (recurringId, recurringPrevDate, …) survive.
       toPut.push({ ...existing, ...toDexieRecord(row) })
@@ -2406,7 +2601,10 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
            person saving in the meantime has a newer row than the one decided
            about here. That edit stays, and stays unsent. */
         const patch = { ...fromRow(row), ...pulledMark(tableName, row) }
-        await updateIfUnchanged(dexieTable, target, tableName === 'accounts' ? accountPatch(patch, target, row, first) : patch)
+        const wrote = await updateIfUnchanged(dexieTable, target, tableName === 'accounts' ? accountPatch(patch, target, row, first) : patch)
+        if (wrote && tableName === 'accounts' && target.name && row.name && target.name !== row.name) {
+          await followRename(target.name, row.name)
+        }
       }
     }
   }
@@ -2557,7 +2755,7 @@ async function deduplicateLocalAccounts() {
 // See lib/firstSync.js for the night that made this necessary.
 
 /**
- * @typedef {{remote: {transactions: number, accounts: number}, local: {transactions: number}}} FirstSyncInfo
+ * @typedef {{remote: {transactions: number, accounts: number}, local: {transactions: number}, previousUser?: boolean}} FirstSyncInfo
  * @typedef {'account'|'both'} FirstSyncChoice
  *   account  the account's data replaces this device's
  *   both     this device's entries are added to the account's; where the
@@ -2625,14 +2823,21 @@ export async function checkFirstSync(userId) {
     countRemote('transactions', userId),
     countRemote('accounts', userId),
   ])
+  const local = { transactions: await db.transactions.count() }
   if (!accountHasData({ transactions, accounts })) {
-    await db.meta.put({ key: SYNCED_WITH_KEY, value: userId })
-    return null
+    /* An empty account on a device somebody ELSE last used: their ledger is
+       on it, and carrying on would make it this account's - shown as its own
+       and sent to its cloud. Asked, unless there is nothing of theirs here. A
+       device that has never synced with anyone is somebody setting up, and
+       carries on as before. */
+    const theirs = !!mark?.value && (local.transactions > 0 || (await db.notes.count()) > 0 || (await db.accounts.count()) > 1)
+    if (!theirs) {
+      await db.meta.put({ key: SYNCED_WITH_KEY, value: userId })
+      return null
+    }
+    return { remote: { transactions, accounts }, local, previousUser: true }
   }
-  return {
-    remote: { transactions, accounts },
-    local: { transactions: await db.transactions.count() },
-  }
+  return { remote: { transactions, accounts }, local, previousUser: !!mark?.value }
 }
 
 /**
@@ -2648,15 +2853,33 @@ async function forgetQueuedDeletes() {
 
 /** "Use my account's data": everything the account will replace, gone first. */
 async function clearLocalLedger() {
+  /* Everything that is a person's, not the device's: notes, folders and the
+     notifications worked out from their ledger too. Those were left behind,
+     so "Use my account's data" on a phone somebody else had used kept their
+     notes and their budget alerts on screen - and sent their unsent notes up
+     into the new account. */
   const tables = [
     db.transactions, db.balances, db.accounts, db.categories, db.debts,
     db.recurring, db.templates, db.goals, db.challenges, db.badges, db.trash,
+    db.notes, db.note_folders, db.notifications,
   ]
-  await db.transaction('rw', tables, async () => {
+  await db.transaction('rw', [...tables, db.meta], async () => {
     for (const t of tables) await t.clear()
+    // And what they set about themselves: their name, their settings. The account's own come down with the pull.
+    for (const key of PERSONAL_META_KEYS) await db.meta.delete(key)
   })
   await resetWatermarks()
 }
+
+/**
+ * meta keys that belong to the person, not the device: cleared when a device
+ * changes hands (clearLocalLedger). The device's own - onboarded, the sync
+ * bookkeeping, the app lock - stay.
+ */
+const PERSONAL_META_KEYS = [
+  'displayName', 'userName', 'currency', 'skipConfirm', 'budgetRollover', 'netWorthMode', 'netWorthDebts',
+  'forecastFloor', 'forecastSettings', 'trendSettings', 'dismissedBills', 'gettingStarted', 'deletedTxIds',
+]
 
 /**
  * "Keep both", before the pull: which of this device's entries the server
@@ -2729,14 +2952,19 @@ export async function fullSync(userId, { choice = null, quick = false, only = nu
 
   // Land queued deletions first, so the pull below can't resurrect them.
   await flushPendingDeletes(userId)
+  if (!first) await recheckLedgerOnce()
   /* And the ones somebody else made. Before the content pull rather than
      after: a row deleted remotely is not in the content pull anyway, and
      doing it first means a device coming back from a long absence sheds what
      is gone before it starts merging what is not. */
   await asRemoteWrites(() => optionalSync('deletions pull', () => pullDeletions(userId)))
-  /* A change made here, on its way: the ledger first (see pushLedger). After
-     the deletions, so a row removed elsewhere is gone before it is sent. */
-  if (quick) await pushLedger(userId)
+  /* What this device has written, on its way: the ledger first (see
+     pushLedger), on every sync but a device's first. After the deletions, so
+     a row removed elsewhere is gone before it is sent. Before the pull rather
+     than after it: an expense saved offline used to wait for every table to
+     be read, and a connection just come back that failed one of those reads
+     (the notes) ended the sync with the expense still on the phone. */
+  if (quick || !first) await pushLedger(userId)
 
   const keepBoth = first && choice === 'both' ? await planKeepBoth(userId) : null
 
@@ -2820,12 +3048,22 @@ export async function deleteAccountRemote(name) {
   if (name) await queueRemoteDelete('accounts', { name })
 }
 
-/** Categories are unique on (user_id, name, type).
+/**
+ * A category, by its own id when it has one.
+ *
+ * Categories are unique in the cloud on (user_id, name, type), so a second
+ * "Food" made on a device was never a second row there - its push landed on
+ * the first one's. Deleted by name, that copy took the real Food with it, on
+ * every device, budget and all. By the stable id it matches only itself, and a
+ * copy that never reached the cloud matches nothing, which is right. The name
+ * is the fallback for a row from before stable ids.
  *
  * @param {string} name
  * @param {string} type
+ * @param {string|null} [syncId]
  */
-export async function deleteCategoryRemote(name, type) {
+export async function deleteCategoryRemote(name, type, syncId = null) {
+  if (syncId) { await queueRemoteDelete('categories', { sync_id: syncId }); return }
   if (name) await queueRemoteDelete('categories', { name, type })
 }
 

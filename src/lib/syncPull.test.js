@@ -91,6 +91,7 @@ vi.mock('../db/db', () => {
       },
       bulkAdd: async (/** @type {any[]} */ rows) => { remoteWhileWriting.push(isWritingRemote()); localTxs.push(...rows); return rows.length },
       bulkPut: async () => 0,
+      bulkGet: async (/** @type {any[]} */ ids) => ids.map(id => localTxs.find(tx => tx.id === id)),
       where: (/** @type {string} */ key) => ({
         equals: (/** @type {string} */ v) => ({ first: async () => localTxs.find(tx => tx[key] === v) }),
         anyOf: (/** @type {any[]} */ keys) => ({ modify: async () => 0, toArray: async () => localTxs.filter(tx => keys.includes(tx[key])) }),

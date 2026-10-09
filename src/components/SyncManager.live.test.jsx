@@ -36,7 +36,7 @@ vi.mock('../context/AuthContext', () => ({ useAuth: () => ({ user: h.user, signO
 vi.mock('../context/ToastContext', () => ({ useToast: () => ({ showToast: h.showToast }) }))
 vi.mock('../lib/supabase', () => ({ supabase: { auth: { getSession: h.getSession, refreshSession: h.refreshSession } }, isSupabaseConfigured: true }))
 vi.mock('../lib/sync', () => ({
-  fullSync: h.fullSync, pullChanges: h.pullChanges, applyRemoteTransaction: h.applyRemoteTransaction,
+  fullSync: h.fullSync, pullChanges: h.pullChanges, applyRemoteTransaction: h.applyRemoteTransaction, settleBalances: async () => 0, balancesToSend: async () => false,
   unsentTables: h.unsentTables,
   toShareRow: (/** @type {any} */ tx, /** @type {string} */ userId) => ({ tx_id: tx.txId, user_id: userId, amount: tx.amount }),
   FirstSyncChoiceNeeded: class extends Error { constructor(/** @type {any} */ info) { super('first'); this.info = info } },
@@ -155,7 +155,7 @@ describe('what the other device does', () => {
     const row = { tx_id: 't1', type: 'expense', amount: 150, transaction_date: '2026-10-08T04:00:00.000Z' }
     h.stream.onChange('transactions', { eventType: 'INSERT', new: row })
     await tick(20)
-    expect(h.applyRemoteTransaction).toHaveBeenCalledWith(row)
+    expect(h.applyRemoteTransaction).toHaveBeenCalledWith(row, { reconcile: false })
     expect(h.showToast).toHaveBeenCalledWith('From your other device: Lunch, ₱150.00', 'success', { ifIdle: true })
     await tick(1000)
     expect(h.pullChanges).not.toHaveBeenCalled()
@@ -487,7 +487,7 @@ describe('telling the other devices directly', () => {
     const row = { tx_id: 't1', type: 'expense', amount: 150, transaction_date: '2026-10-08T04:00:00.000Z' }
     h.toldOfTransaction?.(row)
     await tick(20)
-    expect(h.applyRemoteTransaction).toHaveBeenCalledWith(row)
+    expect(h.applyRemoteTransaction).toHaveBeenCalledWith(row, { reconcile: false })
     expect(h.showToast).toHaveBeenCalledWith('From your other device: Lunch, ₱150.00', 'success', { ifIdle: true })
     expect(h.pullChanges).not.toHaveBeenCalled()
   })

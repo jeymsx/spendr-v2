@@ -142,14 +142,27 @@ function NoteBody({ note, back, fresh }) {
   const timer = useRef(/** @type {ReturnType<typeof setTimeout>|null} */ (null))
   const inFlight = useRef(/** @type {Promise<void>} */ (Promise.resolve()))
 
+  /* Said once when a save fails, not after every keystroke's retry, and
+     again only after one has worked. A note that cannot be written - the
+     device out of space, the commonest reason - used to fail without a word,
+     and the text was gone once the note was left. */
+  const toastRef = useRef(showToast)
+  useEffect(() => { toastRef.current = showToast })
+  const warned = useRef(false)
+
   const save = useCallback(async () => {
     if (!dirty.current) return
     dirty.current = false
     try {
       written.current = await saveNote(noteId, latest.current)
+      warned.current = false
     } catch (e) {
       dirty.current = true
       console.error('[NoteEditor] save failed:', e)
+      if (!warned.current) {
+        warned.current = true
+        toastRef.current('Note not saved. Your device may be out of space.', 'error')
+      }
     }
   }, [noteId])
 

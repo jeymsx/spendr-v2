@@ -80,7 +80,9 @@ export default function WebRecurringItem() {
     setConfirmPost(false)
     setPosting(true)
     try {
-      const { tx } = await postRecurringCharge(rec, { allowOverdraw: force })
+      const { tx, alreadyPaid } = await postRecurringCharge(rec, { allowOverdraw: force })
+      // Paid already, here or on another device (db/bills.js): the bill moved on, nothing was charged.
+      if (alreadyPaid) { showToast(`${rec.name} is already paid for that date`); return }
       showToast(`${rec.name} ${income ? 'received' : 'posted'}`, 'success', tx ? {
         actionLabel: 'Undo',
         onAction: async () => {

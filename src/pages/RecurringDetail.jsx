@@ -246,7 +246,9 @@ export default function RecurringDetail() {
     setConfirmPost(false)
     setPosting(true)
     try {
-      const { tx } = await postRecurringCharge(rec, { allowOverdraw: force })
+      const { tx, alreadyPaid } = await postRecurringCharge(rec, { allowOverdraw: force })
+      // Paid already, here or on another device (db/bills.js): the bill moved on, nothing was charged.
+      if (alreadyPaid) { showToast(`${rec.name} is already paid for that date`); return }
       /* Undo, because a posted bill moves three things at once - a
          transaction appears, the account balance drops, and the bill's due
          date jumps a period - and finding all three to put back by hand is

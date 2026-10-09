@@ -1,6 +1,7 @@
 import db, { UNSYNCED } from './db'
 import { applyBalanceEffect, reverseBalanceEffect } from './balances'
 import { advanceNextDate } from '../utils/recurring'
+import { chargeFor } from './bills'
 import { resolveBillShares } from '../lib/splitModes'
 import { applyPayment } from '../lib/people'
 import { deleteDebtRemote } from '../lib/sync'
@@ -67,6 +68,16 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
   const income = rec?.type === 'inflow'
   const kind = income ? 'inflow' : 'expense'
 
+  /* A due date already paid - here, or on another device whose charge has
+     arrived (db/bills.js) - is not paid again: the bill moves on instead, and
+     the caller says so. Checked first, so an overdraw warning is never shown
+     for a payment that would not be made. */
+  const advanced = advanceNextDate(rec.nextDate, rec.frequency, rec.dueDay)
+  if (await chargeFor(rec)) {
+    await db.recurring.update(rec.id, { nextDate: advanced })
+    return { nextDate: advanced, tx: /** @type {Record<string, any>|null} */ (null), alreadyPaid: true }
+  }
+
   /* The overdraw check lives here rather than in the caller because it has to
      happen inside the same decision as the write. There IS a review sheet in
      front of this now, but it shows what the charge is, not whether the
@@ -88,7 +99,10 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
      code, only the row it wrote. */
   let addedId = null
 
+  let alreadyPaid = false
   await db.transaction('rw', [db.transactions, db.accounts, db.balances, db.recurring], async () => {
+    // Again, inside the write: a double tap must not post twice.
+    if (await chargeFor(rec)) { alreadyPaid = true; await db.recurring.update(rec.id, { nextDate: newNextDate }); return }
     addedId = await db.transactions.add({
       txId:              crypto.randomUUID(),
       type:              kind,
@@ -113,6 +127,7 @@ export async function postRecurringCharge(rec, { allowOverdraw = false } = {}) {
     await db.recurring.update(rec.id, { nextDate: newNextDate })
   })
 
+  if (alreadyPaid) return { nextDate: newNextDate, tx: null, alreadyPaid: true }
   const tx = addedId ? await db.transactions.get(addedId) : null
   if (income) return { nextDate: newNextDate, tx }
 

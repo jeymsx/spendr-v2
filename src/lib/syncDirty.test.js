@@ -30,7 +30,7 @@ const earlier = (n) => new Date(Date.UTC(2026, 9, 1, 10, 0, 0) + n * 1000).toISO
 
 // ── An in-memory Dexie, as far as sync.js uses it ───────────────────────────
 
-const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed', 'syncedAt'])
+const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed', 'syncedAt', 'balance', 'opening', 'balanceSent'])
 const SYNCED_TABLES = ['accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders']
 
 /** @param {any} row */
@@ -78,6 +78,8 @@ class MemTable {
 
   /** @param {any} key */
   async get(key) { return copy(this.rows.get(key)) }
+  /** @param {any[]} keys */
+  async bulkGet(keys) { return keys.map(k => copy(this.rows.get(k))) }
   async toArray() { return [...this.rows.values()].map(copy) }
   async count() { return this.rows.size }
   async clear() { this.rows.clear() }
@@ -143,7 +145,7 @@ let afterFirst = null
 
 /** @type {Record<string, MemTable>} */
 let tables = {}
-const NAMES = ['transactions', 'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders', 'balances']
+const NAMES = ['transactions', 'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders', 'balances', 'notifications']
 function freshTables() {
   tables = Object.fromEntries(NAMES.map(n => [n, new MemTable(n, n === 'balances' ? 'account' : 'id')]))
   tables.badges = new MemTable('badges', 'key')
@@ -168,6 +170,8 @@ vi.mock('../db/db', () => {
 let server = {}
 /** Every upsert it was sent. @type {Array<{table: string, onConflict: string, rows: any[]}>} */
 let upserts = []
+/** Every update of chosen columns, with what it was filtered by. @type {Array<{table: string, patch: any, match: Record<string, any>}>} */
+let updates = []
 /** Called with each upsert before it is answered: how a test acts in the middle of a push. @type {((table: string, rows: any[]) => any)|null} */
 let duringPush = null
 /** Called whenever a table is read: how a test acts in the middle of a pull. @type {((table: string) => any)|null} */
@@ -194,7 +198,13 @@ vi.mock('./supabase', () => {
         await duringPush?.(table, rows)
         return { error: refuse?.(table, rows, opts) ?? undefined }
       },
-      update: () => builder,
+      update: (/** @type {any} */ patch) => {
+        const u = { table, patch, match: /** @type {Record<string, any>} */ ({}) }
+        updates.push(u)
+        /** @type {any} */
+        const filtered = { ...builder, eq: (/** @type {string} */ col, /** @type {any} */ val) => { u.match[col] = val; return filtered } }
+        return filtered
+      },
       delete: () => builder,
       then: async (/** @type {any} */ res) => {
         await duringBody?.(table)
@@ -206,7 +216,7 @@ vi.mock('./supabase', () => {
   return { supabase: { from, auth: { getSession: async () => ({ data: { session: {} }, error: none }) } }, isSupabaseConfigured: true }
 })
 
-const { syncToSupabase, pullChanges, fullSync, unsentTables, isUnsent, isSyncIdConflict, applyRemoteTransaction, accountPatch, accountToRow, rowToAccount } = await import('./sync')
+const { syncToSupabase, pullChanges, fullSync, unsentTables, isUnsent, isSyncIdConflict, applyRemoteTransaction, accountPatch, accountToRow, rowToAccount, resetLedgerWatermark, FirstSyncChoiceNeeded } = await import('./sync')
 const { isWritingRemote } = await import('./syncSignal')
 
 const ERR_NAME = 'duplicate key value violates unique constraint "accounts_user_sync_id_key"'
@@ -219,6 +229,7 @@ beforeEach(() => {
   ticks = 0
   server = {}
   upserts = []
+  updates = []
   duringPush = null
   duringRead = null
   duringBody = null
@@ -232,7 +243,11 @@ beforeEach(() => {
 afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 /** An account as the app writes one. @param {Record<string, any>} [over] */
-const account = (over = {}) => ({ name: 'Cash', type: 'cash', balance: 100, currency: 'PHP', color: '#10b981', syncId: 'a-cash', ...over })
+const account = (over = {}) => {
+  const row = { name: 'Cash', type: 'cash', balance: 100, currency: 'PHP', color: '#10b981', syncId: 'a-cash', ...over }
+  // Its balance already in the cloud, unless a test says otherwise: see pushBalances.
+  return { balanceSent: row.balance, ...row }
+}
 /** A remote account row. @param {Record<string, any>} [over] */
 const remoteAccount = (over = {}) => ({ id: 1, user_id: 'u1', sync_id: 'a-cash', name: 'Cash', type: 'cash', balance: 100, currency: 'PHP', color: '#10b981', updated_at: earlier(5), ...over })
 
@@ -345,11 +360,11 @@ describe('what a push of a small table sends', () => {
   it('does not mark a row that was edited while the push was on its way, and does mark the others', async () => {
     const edited = await tables.accounts.add(account({ name: 'Cash', syncId: 'a1' }))
     const quiet = await tables.accounts.add(account({ name: 'BPI', syncId: 'a2' }))
-    // The person saves a new balance for Cash after the request left and before the answer came.
-    duringPush = async () => { await tables.accounts.update(edited, { balance: 999 }) }
+    // The person changes Cash's colour after the request left and before the answer came.
+    duringPush = async () => { await tables.accounts.update(edited, { color: '#999999' }) }
     await syncToSupabase('u1', { only: new Set(['accounts']) })
     const cash = await tables.accounts.get(edited)
-    expect(cash.balance).toBe(999)
+    expect(cash.color).toBe('#999999')
     expect(isUnsent(cash)).toBe(true)
     expect(isUnsent(await tables.accounts.get(quiet))).toBe(false)
     // ...so the next push carries it.
@@ -357,7 +372,7 @@ describe('what a push of a small table sends', () => {
     upserts = []
     await syncToSupabase('u1', { only: new Set(['accounts']) })
     expect(sentTo('accounts')).toHaveLength(1)
-    expect(sentTo('accounts')[0].rows.map(r => [r.name, r.balance])).toEqual([['Cash', 999]])
+    expect(sentTo('accounts')[0].rows.map(r => [r.name, r.color])).toEqual([['Cash', '#999999']])
     expect(isUnsent(await tables.accounts.get(edited))).toBe(false)
   })
 
@@ -562,11 +577,11 @@ describe('what a pull writes', () => {
 
   it('leaves a row alone that this device changed since, and still unsent: the cloud\'s copy is older', async () => {
     const id = await tables.accounts.add(account({ balance: 100, updatedAt: earlier(2), syncedAt: earlier(2) }))
-    await tables.accounts.update(id, { balance: 321 })
+    await tables.accounts.update(id, { color: '#321321' })
     server.accounts = [remoteAccount({ balance: 100, updated_at: earlier(2) })]
     await pullChanges('u1', { only: new Set(['accounts']) })
     const row = await tables.accounts.get(id)
-    expect(row.balance).toBe(321)
+    expect(row.color).toBe('#321321')
     expect(isUnsent(row)).toBe(true)
   })
 
@@ -644,7 +659,7 @@ describe('a save made while a pull is writing', () => {
     duringRead = async (table) => {
       if (table !== 'accounts') return
       open = isWritingRemote()
-      await tables.accounts.update(id, { balance: 555 })
+      await tables.accounts.update(id, { color: '#555555' })
     }
     await pullChanges('u1', { only: new Set(['accounts']) })
     expect(open).toBe(true)
@@ -654,7 +669,7 @@ describe('a save made while a pull is writing', () => {
     const id = await tables.accounts.add(account({ balance: 100, updatedAt: earlier(2), syncedAt: earlier(2) }))
     await tables.categories.add({ name: 'Food', type: 'expense', budget: 5, syncId: 'c1', updatedAt: earlier(2), syncedAt: earlier(2) })
     server.accounts = [remoteAccount({ balance: 100, updated_at: earlier(2) })]
-    duringRead = async (table) => { if (table === 'accounts') await tables.accounts.update(id, { balance: 555 }) }
+    duringRead = async (table) => { if (table === 'accounts') await tables.accounts.update(id, { color: '#555555' }) }
     await pullChanges('u1', { only: new Set(['accounts']) })
     duringRead = null
     expect(await unsentTables('u1')).toEqual(new Set(['accounts']))
@@ -663,12 +678,12 @@ describe('a save made while a pull is writing', () => {
   it('goes up in the push that follows, and nothing is left after it', async () => {
     const id = await tables.accounts.add(account({ balance: 100, updatedAt: earlier(2), syncedAt: earlier(2) }))
     server.accounts = [remoteAccount({ balance: 100, updated_at: earlier(2) })]
-    duringRead = async (table) => { if (table === 'accounts') await tables.accounts.update(id, { balance: 555 }) }
+    duringRead = async (table) => { if (table === 'accounts') await tables.accounts.update(id, { color: '#555555' }) }
     await pullChanges('u1', { only: new Set(['accounts']) })
     duringRead = null
     // What SyncManager does: ask which tables are unsent and push those.
     await syncToSupabase('u1', { only: await unsentTables('u1') })
-    expect(sentTo('accounts')[0].rows.map(r => r.balance)).toEqual([555])
+    expect(sentTo('accounts')[0].rows.map(r => r.color)).toEqual(['#555555'])
     expect((await unsentTables('u1')).size).toBe(0)
   })
 
@@ -680,13 +695,13 @@ describe('a save made while a pull is writing', () => {
     afterFirst = async (table) => {
       if (table !== 'accounts' || saved) return
       saved = true
-      await tables.accounts.update(id, { balance: 555 })
+      await tables.accounts.update(id, { color: '#555555' })
     }
     await pullChanges('u1', { only: new Set(['accounts']) })
     afterFirst = null
     expect(saved).toBe(true)
     const row = await tables.accounts.get(id)
-    expect(row.balance).toBe(555)
+    expect(row.color).toBe('#555555')
     expect(isUnsent(row)).toBe(true)
     expect(await unsentTables('u1')).toEqual(new Set(['accounts']))
   })
@@ -821,7 +836,7 @@ describe('a first sync', () => {
     await fullSync('u1', { choice: 'both' })
     upserts = []
     const maya = (await tables.accounts.toArray()).find(a => a.name === 'Maya')
-    await tables.accounts.update(maya.id, { balance: 640 })
+    await tables.accounts.update(maya.id, { color: '#640640' })
     await fullSync('u1')
     expect(namesSentTo('accounts')).toEqual(['Maya'])
   })
@@ -1029,5 +1044,160 @@ describe('the opening, between here and the cloud', () => {
     expect(rowToAccount(remoteAccount({ opening_balance: '1000.50' })).opening).toBe(1000.5)
     expect('opening' in rowToAccount(remoteAccount({ opening_balance: null }))).toBe(false)
     expect('opening' in rowToAccount(remoteAccount())).toBe(false)
+  })
+})
+
+/**
+ * The races a second device found, each one a change that was silently
+ * dropped: made while a push was on its way, or a pull was deciding.
+ */
+describe('a change made while the ledger is being sent', () => {
+  /** A transaction on this device. @param {Record<string, any>} over */
+  const tx = (over) => tables.transactions.add({ txId: 't1', type: 'expense', category: 'Food', account: 'Cash', amount: 10, date: '2026-10-08T00:00:00.000Z', synced: 0, updatedAt: earlier(1), ...over })
+
+  it('an edit made while the push is on its way stays unsent, and goes next time', async () => {
+    await tx({})
+    duringPush = async (table) => {
+      if (table !== 'transactions') return
+      const [row] = await tables.transactions.toArray()
+      await tables.transactions.update(row.id, { amount: 99, updatedAt: earlier(2), synced: 0 })
+    }
+    await syncToSupabase('u1', { only: new Set(['transactions']) })
+    let [row] = await tables.transactions.toArray()
+    expect(row).toMatchObject({ amount: 99, synced: 0 })
+    duringPush = null
+    upserts = []
+    await syncToSupabase('u1', { only: new Set(['transactions']) })
+    expect(sentTo('transactions')[0].rows[0].amount).toBe(99)
+    ;[row] = await tables.transactions.toArray()
+    expect(row.synced).toBe(1)
+  })
+
+  it('a transaction deleted while another delete is on its way is not forgotten', async () => {
+    await tables.meta.put({ key: 'deletedTxIds', value: ['gone-1'] })
+    let once = false
+    duringBody = async (table) => {
+      if (table !== 'transactions' || once) return
+      once = true
+      await tables.meta.put({ key: 'deletedTxIds', value: ['gone-1', 'gone-2'] })
+    }
+    await syncToSupabase('u1', { only: new Set(['transactions']) })
+    expect((await tables.meta.get('deletedTxIds')).value).toEqual(['gone-2'])
+  })
+
+  it('a row deleted while other deletes are on their way stays queued', async () => {
+    await tables.meta.put({ key: 'syncedWith', value: 'u1' })
+    await tables.meta.put({ key: 'pendingDeletes', value: [{ table: 'categories', match: { sync_id: 'c1' } }] })
+    let once = false
+    duringBody = async (table) => {
+      if (table !== 'categories' || once) return
+      once = true
+      const now = (await tables.meta.get('pendingDeletes')).value
+      await tables.meta.put({ key: 'pendingDeletes', value: [...now, { table: 'categories', match: { sync_id: 'c2' } }] })
+    }
+    await fullSync('u1')
+    expect((await tables.meta.get('pendingDeletes')).value).toEqual([{ table: 'categories', match: { sync_id: 'c2' } }])
+  })
+})
+
+describe('a pull never lands on a change not yet sent', () => {
+  const remote = (over = {}) => ({ id: 1, user_id: 'u1', tx_id: 't1', type: 'expense', transaction_date: '2026-10-08T00:00:00.000Z', description: 'x', category: 'Food', from_account: 'Cash', amount: 10, updated_at: earlier(9), ...over })
+
+  it('keeps an unsent edit over the cloud\'s newer copy, wherever the clocks stand', async () => {
+    await tables.transactions.add({ txId: 't1', type: 'expense', category: 'Food', account: 'Cash', amount: 99, date: '2026-10-08T00:00:00.000Z', synced: 0, updatedAt: earlier(1) })
+    server.transactions = [remote()]
+    await pullChanges('u1', { only: new Set(['transactions']) })
+    expect((await tables.transactions.toArray())[0].amount).toBe(99)
+  })
+
+  it('and so does a row heard live', async () => {
+    await tables.transactions.add({ txId: 't1', type: 'expense', category: 'Food', account: 'Cash', amount: 99, date: '2026-10-08T00:00:00.000Z', synced: 0, updatedAt: earlier(1) })
+    await applyRemoteTransaction(remote())
+    expect((await tables.transactions.toArray())[0].amount).toBe(99)
+  })
+
+  it('takes the cloud\'s newer copy over one already sent', async () => {
+    await tables.transactions.add({ txId: 't1', type: 'expense', category: 'Food', account: 'Cash', amount: 99, date: '2026-10-08T00:00:00.000Z', synced: 1, updatedAt: earlier(1) })
+    server.transactions = [remote()]
+    await pullChanges('u1', { only: new Set(['transactions']) })
+    expect((await tables.transactions.toArray())[0].amount).toBe(10)
+  })
+})
+
+describe('a device that changes hands', () => {
+  beforeEach(async () => {
+    await tables.meta.put({ key: 'syncedWith', value: 'somebody-else' })
+    await tables.meta.put({ key: 'lastSync', value: earlier(40) })
+    await tables.meta.put({ key: 'displayName', value: 'Xena' })
+    await tables.transactions.add({ txId: 'x1', type: 'expense', category: 'Food', account: 'Cash', amount: 5, date: '2026-10-08T00:00:00.000Z', synced: 1, updatedAt: earlier(1) })
+    await tables.notes.add({ syncId: 'n1', text: 'Owe Ben 4,200', updatedAt: earlier(1) })
+    await tables.notifications.put({ id: 'budget:Therapy', at: earlier(1), read: 0 })
+  })
+
+  it('asks a new, empty account before taking the last person\'s ledger as its own', async () => {
+    const err = await fullSync('u1').catch(e => e)
+    expect(err).toBeInstanceOf(FirstSyncChoiceNeeded)
+    expect(err.info).toMatchObject({ previousUser: true, remote: { transactions: 0, accounts: 0 }, local: { transactions: 1 } })
+    expect(upserts).toEqual([])
+  })
+
+  it('"Start fresh" leaves nothing of theirs: entries, notes, notifications, their name - and sends none of it', async () => {
+    await fullSync('u1', { choice: 'account' })
+    expect(await tables.transactions.count()).toBe(0)
+    expect(await tables.notes.count()).toBe(0)
+    expect(await tables.notifications.count()).toBe(0)
+    expect(await tables.meta.get('displayName')).toBeUndefined()
+    expect(sentTo('transactions')).toEqual([])
+    expect(sentTo('notes')).toEqual([])
+  })
+})
+
+describe('a restore', () => {
+  it('reads the ledger again from the start, but keeps the deletions already applied', async () => {
+    await tables.meta.put({ key: 'syncWatermark', value: { transactions: earlier(5), deletions: earlier(6) } })
+    await resetLedgerWatermark()
+    expect((await tables.meta.get('syncWatermark')).value).toEqual({ deletions: earlier(6) })
+  })
+})
+
+describe('a balance, on its own', () => {
+  /** The balance-only updates sent, as [sync_id, balance]. */
+  const patches = () => updates.filter(u => u.table === 'accounts').map(u => [u.match.sync_id, u.patch.balance])
+
+  it('sends a balance that moved as that one column, and nothing of the rest of the row', async () => {
+    await tables.accounts.add(account({ syncId: 'a1', balance: 850, balanceSent: 1000, updatedAt: earlier(1), syncedAt: earlier(1) }))
+    await syncToSupabase('u1', { only: new Set(['transactions']) })
+    expect(patches()).toEqual([['a1', 850]])
+    expect(sentTo('accounts')).toEqual([])
+    const [row] = await tables.accounts.toArray()
+    expect(row).toMatchObject({ balanceSent: 850, updatedAt: earlier(1) })
+    expect(isUnsent(row)).toBe(false)
+  })
+
+  it('sends nothing when the balance has not moved', async () => {
+    await tables.accounts.add(account({ syncId: 'a1', balance: 850, balanceSent: 850, updatedAt: earlier(1), syncedAt: earlier(1) }))
+    await syncToSupabase('u1', { only: new Set(['transactions']) })
+    expect(patches()).toEqual([])
+  })
+
+  it('counts a balance a pull worked out, and has not yet sent, as something left to send', async () => {
+    await tables.accounts.add(account({ syncId: 'a1', balance: 850, balanceSent: 1000, updatedAt: earlier(1), syncedAt: earlier(1) }))
+    expect(await unsentTables('u1')).toEqual(new Set(['accounts']))
+  })
+})
+
+describe('a deletion that arrives after an Undo', () => {
+  it('does not take back a row put back here and not yet sent', async () => {
+    await tables.transactions.add({ txId: 't1', type: 'expense', category: 'Food', account: 'Cash', amount: 150, date: '2026-10-08T00:00:00.000Z', synced: 0, updatedAt: earlier(3) })
+    server.deletions = [{ id: 1, user_id: 'u1', table_name: 'transactions', row_key: 't1', deleted_at: earlier(2) }]
+    await pullChanges('u1', { only: new Set(['deletions']) })
+    expect(await tables.transactions.count()).toBe(1)
+  })
+
+  it('still removes a row this device has nothing unsent about', async () => {
+    await tables.transactions.add({ txId: 't1', type: 'expense', category: 'Food', account: 'Cash', amount: 150, date: '2026-10-08T00:00:00.000Z', synced: 1, updatedAt: earlier(1) })
+    server.deletions = [{ id: 1, user_id: 'u1', table_name: 'transactions', row_key: 't1', deleted_at: earlier(2) }]
+    await pullChanges('u1', { only: new Set(['deletions']) })
+    expect(await tables.transactions.count()).toBe(0)
   })
 })

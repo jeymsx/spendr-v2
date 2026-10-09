@@ -6,11 +6,10 @@
  * and they should be read side by side.
  */
 import { useState, useEffect, useRef } from 'react'
-import db from '../../db/db'
 import { useAuth } from '../../context/AuthContext'
 import { useToast } from '../../context/ToastContext'
 import { inspectBackup, restoreBackup } from '../../lib/backup'
-import { clearLock } from '../../lib/appLock'
+import { eraseThisDevice } from '../../lib/eraseDevice'
 import { IconUpload } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
@@ -254,26 +253,8 @@ export function ResetConfirmModal({ open, onClose }) {
   async function handleReset() {
     setLoading(true)
     try {
-      /* Every table the database has. Goals and badges were left behind
-         first: goals pointing at accounts that no longer existed, and badges
-         that the fresh start then announced all over again. Challenges and
-         the notes tables were left behind next, which made "erase everything"
-         untrue. Clearing by `db.tables` means a table added later is wiped
-         without anyone remembering to list it here. */
-      await db.transaction('rw', db.tables, async () => {
-        for (const table of db.tables) await table.clear()
-      })
-      /* The app lock too: a fresh start behind yesterday's Face ID would be a
-         locked door on an empty room. */
-      clearLock()
-      /* And the look, which lives in localStorage because it has to be known
-         before the database opens. Dropped rather than rewritten: the
-         reload below makes ThemeContext fall back to its own defaults. */
-      try {
-        localStorage.removeItem('spendr-theme')
-        localStorage.removeItem('accentColor')
-        localStorage.removeItem('spendr-style')
-      } catch { /* storage blocked: nothing to reset */ }
+      // Every table, the app lock and the look (lib/eraseDevice.js).
+      await eraseThisDevice()
       // Sign out so the Onboarding auto-sign-in effect doesn't fire on reload
       await signOut()
       window.location.replace('/')

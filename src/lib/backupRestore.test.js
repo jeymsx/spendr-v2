@@ -31,7 +31,7 @@ vi.mock('../db/db', () => {
   }), { get: (t, k) => (k in t ? t[/** @type {string} */ (k)] : (t[/** @type {string} */ (k)] = table(/** @type {string} */ (k)))) })
   return { default: db, UNSYNCED: 0, SYNCED: 1 }
 })
-vi.mock('./sync', () => ({ queueRemoteDelete: vi.fn(), resetWatermarks: vi.fn(async () => {}) }))
+vi.mock('./sync', () => ({ queueRemoteDelete: vi.fn(), resetWatermarks: vi.fn(async () => {}), resetLedgerWatermark: vi.fn(async () => {}) }))
 vi.mock('./achievements', () => ({ PRIMED_META: 'achievementsPrimed' }))
 
 const { restoreBackup } = await import('./backup')

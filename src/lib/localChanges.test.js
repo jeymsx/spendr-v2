@@ -46,7 +46,7 @@ vi.mock('../db/db', () => {
   return {
     default: { table: (/** @type {string} */ n) => tables.get(n), meta: tables.get('meta') },
     SYNCED_TABLES: ['accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders'],
-    BOOKKEEPING: new Set(['syncId', 'synced', 'pushed', 'syncedAt']),
+    BOOKKEEPING: new Set(['syncId', 'synced', 'pushed', 'syncedAt', 'balance', 'opening', 'balanceSent']),
   }
 })
 
@@ -138,7 +138,7 @@ describe('watchLocalChanges', () => {
   it('says which table was written to, so only that one need be sent', () => {
     const onChange = vi.fn()
     watchLocalChanges(onChange)
-    tables.get('accounts').fire('updating', { balance: 10 }, 1)
+    tables.get('accounts').fire('updating', { name: 'Wallet' }, 1)
     tables.get('goals').fire('creating', 1, {})
     tables.get('meta').fire('updating', { value: 'x' }, 'displayName')
     expect(onChange.mock.calls.map(c => c[0])).toEqual(['accounts', 'goals', 'meta'])
@@ -160,7 +160,7 @@ describe('watchLocalChanges', () => {
     tables.get('notes').fire('updating', { pushed: true, synced: 1 }, 1)
     tables.get('accounts').fire('updating', { syncId: 'abc' }, 1)
     expect(onChange).not.toHaveBeenCalled()
-    tables.get('accounts').fire('updating', { balance: 10, synced: 1 }, 1)
+    tables.get('accounts').fire('updating', { name: 'Wallet', synced: 1 }, 1)
     expect(onChange).toHaveBeenCalledTimes(1)
   })
 
@@ -174,7 +174,7 @@ describe('watchLocalChanges', () => {
     }
     expect(onChange).not.toHaveBeenCalled()
     // An edit that carries it along is still an edit.
-    tables.get('accounts').fire('updating', { balance: 10, syncedAt: '2026-10-08T04:00:00.000Z' }, 1)
+    tables.get('accounts').fire('updating', { name: 'Wallet', syncedAt: '2026-10-08T04:00:00.000Z' }, 1)
     expect(onChange).toHaveBeenCalledWith('accounts')
   })
 

@@ -108,19 +108,39 @@ function count(n, one, many) {
  * What the first-sync sheet says: what the account holds, and what each
  * answer does to this device.
  *
- * @param {{remote: {transactions: number, accounts: number}, local: {transactions: number}}} info
+ * `previousUser`: the device was last signed in to a DIFFERENT account, and
+ * the one signing in now is empty. That used to be no question at all - the
+ * device simply carried on, so a new account signing in on somebody else's
+ * phone took their whole ledger as its own, and sent it to its cloud. Now it
+ * is asked, in words that say whose the data is.
+ *
+ * @param {{remote: {transactions: number, accounts: number}, local: {transactions: number}, previousUser?: boolean}} info
  */
 export function firstSyncCopy(info) {
   const { transactions, accounts } = info.remote
   const own = info.local.transactions
+  if (info.previousUser && !accountHasData(info.remote)) {
+    const what = own > 0 ? count(own, 'entry', 'entries') : 'data'
+    return {
+      title: 'Another account used this device',
+      body: `This device has ${what} from the account it was last signed in with. Yours has nothing yet.`,
+      accountLabel: 'Start fresh',
+      account: own > 0 ? `Removes this device's ${count(own, 'entry', 'entries')}.` : 'Removes what is on this device.',
+      bothLabel: 'Move them to my account',
+      both: own > 0 ? `Adds this device's ${count(own, 'entry', 'entries')} to your account.` : null,
+    }
+  }
   const held = transactions > 0
     ? `It has ${count(transactions, 'entry', 'entries')} across ${count(accounts, 'account', 'accounts')}.`
     : `It has ${count(accounts, 'account', 'accounts')} and no entries yet.`
   return {
+    title: 'This account already has data',
     body: own > 0 ? `${held} This device has ${count(own, 'entry', 'entries')} of its own.` : held,
+    accountLabel: "Use my account's data",
     account: own > 0
       ? `Removes this device's ${count(own, 'entry', 'entries')}.`
       : 'Replaces what you set up on this device.',
+    bothLabel: 'Keep both',
     both: own > 0 ? `Adds this device's ${count(own, 'entry', 'entries')} to your account.` : null,
   }
 }

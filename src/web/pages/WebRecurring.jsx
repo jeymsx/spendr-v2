@@ -77,7 +77,9 @@ export default function WebRecurring() {
   const post = useCallback(async (/** @type {any} */ rec, force = false) => {
     setPosting(rec.id)
     try {
-      const { tx } = await postRecurringCharge(rec, { allowOverdraw: force })
+      const { tx, alreadyPaid } = await postRecurringCharge(rec, { allowOverdraw: force })
+      // Paid already, here or on another device (db/bills.js): the bill moved on, nothing was charged.
+      if (alreadyPaid) { setOverdraw(null); showToast(`${rec.name} is already paid for that date`); return }
       setOverdraw(null)
       showToast(`${rec.name} ${isIncomeRecurring(rec) ? 'received' : 'posted'}`, 'success', tx ? {
         actionLabel: 'Undo',
