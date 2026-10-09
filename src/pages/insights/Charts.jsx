@@ -213,10 +213,12 @@ export function TrendChart({ trend, series, settings, animKey = '' }) {
 // ── Chart: Net worth over time ────────────────────────────────────────────────
 
 /** A y-axis figure with no currency sign, like the Trend chart's: "120K",
- *  "1.2M", and a real minus for a net worth below zero. */
+ *  "1.2M", "3.4B", and a real minus for a net worth below zero. */
 function compactTick(v) {
   const a = Math.abs(v)
   const sign = v < 0 ? '−' : ''
+  if (a >= 1e12) return `${sign}${+(a / 1e12).toFixed(1)}T`
+  if (a >= 1e9) return `${sign}${+(a / 1e9).toFixed(1)}B`
   if (a >= 1e6) return `${sign}${+(a / 1e6).toFixed(1)}M`
   if (a >= 1e3) return `${sign}${+(a / 1e3).toFixed(a >= 1e4 ? 0 : 1)}K`
   return `${sign}${Math.round(a)}`

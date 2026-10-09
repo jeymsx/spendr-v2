@@ -3,6 +3,7 @@ import db from '../../db/db'
 import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
 import { deleteCategoryRemote } from '../../lib/sync'
+import { nameKey, stripInvisible } from '../../lib/nameKey'
 import CategoryGlyph, { presetCategoryIcon as CATEGORY_ICON_BY_NAME } from '../../components/CategoryGlyph'
 import Button from '../../components/ui/Button'
 import Sheet from '../../components/ui/Sheet'
@@ -30,14 +31,31 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
   const [icon,      setIcon]      = useState('📦')
   const [color,     setColor]     = useState(CAT_COLORS[0])
   const [budget,    setBudget]    = useState('0')
-  const [nameError, setNameError] = useState(false)
+  // false, or why the name will not do: 'required', or 'taken' by another category of the same type.
+  const [nameError, setNameError] = useState(/** @type {false|'required'|'taken'} */ (false))
 
   const isEdit    = !!category?.id
   const isDefault = isEdit && DEFAULT_CAT_NAMES.has(category?.name)
 
-  const reassignOptions = useMemo(() =>
-    allCategories.filter(c => c.type === (category?.type ?? type) && c.id !== category?.id),
-    [allCategories, category, type])
+  /* Never one with the same name as the one going. Everything here is joined
+     BY NAME: moving a category's transactions to a twin of it moves them
+     nowhere, and the cloud used to delete a category by name, so removing
+     the copy removed the real one - budget and all - on every device. A
+     twin made before the form refused them is still in the list, and is the
+     one thing the list must not offer. */
+  const reassignOptions = useMemo(() => {
+    const own = nameKey(category?.name)
+    return allCategories.filter(c =>
+      c.type === (category?.type ?? type) && c.id !== category?.id && nameKey(c.name) !== own)
+  }, [allCategories, category, type])
+
+  /* Another category of the same type under exactly this name. Rows point at
+     a name, so while one is left, deleting this one orphans nothing: there is
+     nothing to reassign, and asking would only invite moving the survivor's
+     transactions to somewhere else. (A name differing in case is not this:
+     "Food" rows do not belong to "food".) */
+  const hasTwin = isEdit && allCategories.some(c =>
+    c.id !== category.id && c.name === category.name && (c.type ?? 'expense') === (category.type ?? 'expense'))
 
   useEffect(() => {
     if (!open) return
@@ -94,20 +112,40 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
      with none left behind it would be deleted outright and go on posting
      under a name nothing has any more. */
   async function runDeleteCheck() {
+    if (hasTwin) {
+      setUsage({ transactions: 0, bills: 0, templates: 0, debts: 0, total: 0 })
+      setMode('confirm-delete')
+      return
+    }
     const found = await categoryUsage(category.name)
     setUsage(found)
     setMode(found.total > 0 ? 'reassign' : 'confirm-delete')
   }
 
   async function handleSave() {
-    if (!name.trim()) { setNameError(true); return }
+    // Without the characters you cannot see: "Fo" + a zero-width space + "od" prints as Food.
+    const cleanName = stripInvisible(name)
+    if (!cleanName) { setNameError('required'); return }
+    /* One name, one category, per type. The cloud and every transaction, bill
+       and template find a category BY NAME, so a second "Food" shares the
+       first one's ledger and its delete removes both. Case, spaces and
+       invisible characters do not make a name different. Saving a category
+       under the name it already has is always fine - it must not start
+       failing because of a twin made before this check - and an inflow
+       "Food" does not clash with an expense one. */
+    if (!(isEdit && cleanName === category.name)) {
+      const key = nameKey(cleanName)
+      const taken = allCategories.some(c =>
+        c.id !== category?.id && (c.type ?? 'expense') === type && nameKey(c.name) === key)
+      if (taken) { setNameError('taken'); return }
+    }
     setSaving(true)
     try {
       /* Only spending has a limit. The field is not offered for an inflow
          category, and what a form saves for one is nothing: any budget one
          held used to count in every budget total. */
       const limit = type === 'inflow' ? 0 : parseMoney(budget) || 0
-      const data = { name: name.trim(), type, icon, color, budget: limit }
+      const data = { name: cleanName, type, icon, color, budget: limit }
 
       /* A category that rolls over needs a start month the moment it has a
          limit, or it carries nothing (lib/rollover.js startForLimit). The
@@ -140,8 +178,10 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
     setSaving(true)
     try {
       await db.categories.delete(category.id)
-      // Without this the next pull re-adds the category from Supabase.
-      await deleteCategoryRemote(category.name, category.type)
+      /* Without this the next pull re-adds the category from Supabase. By its
+         own sync id when it has one: by name alone, deleting a twin deleted
+         the original (lib/sync.js deleteCategoryRemote). */
+      await deleteCategoryRemote(category.name, category.type, category.syncId ?? null)
       close()
     } catch (e) {
       console.error('[CategoryForm] delete failed:', e)
@@ -156,7 +196,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
     try {
       // Transactions, bills, templates and debts all move, and the transactions are marked to sync.
       await reassignAndDeleteCategory(category, reassignTarget.name)
-      await deleteCategoryRemote(category.name, category.type)
+      await deleteCategoryRemote(category.name, category.type, category.syncId ?? null)
       close()
     } catch (e) {
       console.error('[CategoryForm] reassign+delete failed:', e)
@@ -244,7 +284,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               onChange={e => { setName(e.target.value); setNameError(false) }}
               placeholder="e.g. Groceries"
               maxLength={30}
-              error={nameError ? 'Name is required' : null}
+              error={nameError === 'taken' ? 'You already have a category with this name' : nameError ? 'Name is required' : null}
             />
 
             <div>
@@ -258,7 +298,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               ) : (
                 <div className="grid grid-cols-2 gap-2">
                   {[{ value: 'expense', label: '↑ Expense' }, { value: 'inflow', label: '↓ Inflow' }].map(o => (
-                    <button key={o.value} onClick={() => setType(o.value)}
+                    <button key={o.value} onClick={() => { setType(o.value); setNameError(false) }}
                       className={[
                         'py-3 rounded-full text-sm font-semibold transition-all duration-75 active:scale-[0.97]',
                         type === o.value
@@ -383,7 +423,11 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               </div>
             )}
             <p className="text-sm text-center text-slate-500 dark:text-slate-400 mb-1">Permanently delete this category?</p>
-            <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-7">No transactions are using it. This cannot be undone.</p>
+            <p className="text-xs text-center text-slate-400 dark:text-slate-500 mb-7">
+              {hasTwin
+                ? 'Another category has the same name, so nothing loses its category. This cannot be undone.'
+                : 'No transactions are using it. This cannot be undone.'}
+            </p>
           </div>
         )}
 

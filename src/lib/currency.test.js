@@ -77,6 +77,30 @@ describe('compactAmount and maskedAmount', () => {
     expect(compactAmount(999, 'USD')).toBe('$999.00')
   })
 
+  /**
+   * The bug: there was no tier above M, so ten billion read "₱10000.0M" and a
+   * corrupt figure of a quadrillion "−₱999999999.9M" - nine digits wide in the
+   * column that exists to be narrow.
+   */
+  it('has a billions tier, and a trillions one to stop there', () => {
+    expect(compactAmount(1_000_000_000, 'PHP')).toBe('₱1.0B')
+    expect(compactAmount(10_000_000_000, 'PHP')).toBe('₱10.0B')
+    expect(compactAmount(-2_450_000_000, 'USD')).toBe(MINUS + '$2.5B')
+    expect(compactAmount(1_000_000_000_000, 'PHP')).toBe('₱1.0T')
+    expect(compactAmount(-999_999_999_999_999.9, 'PHP')).toBe(MINUS + '₱1000.0T')
+  })
+
+  it('leaves the thousands and millions as they were', () => {
+    expect(compactAmount(1_000_000, 'PHP')).toBe('₱1.0M')
+    expect(compactAmount(1_000, 'PHP')).toBe('₱1.0K')
+  })
+
+  it('keeps even an absurd figure short enough for a tile', () => {
+    for (const n of [1e10, 1e12, 1e15, -1e15, 9.99e14, 1e16]) {
+      expect(compactAmount(n, 'PHP').length).toBeLessThanOrEqual(9)
+    }
+  })
+
   it('keeps the mark while the figure is hidden', () => {
     expect(maskedAmount('USD')).toBe('$ \u2022\u2022\u2022\u2022')
     expect(maskedAmount('PHP', 6)).toBe('\u20b1 \u2022\u2022\u2022\u2022\u2022\u2022')

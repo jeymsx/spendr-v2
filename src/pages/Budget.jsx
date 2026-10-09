@@ -22,7 +22,7 @@ import Divider from '../components/ui/Divider'
 import EmptyState from '../components/ui/EmptyState'
 import { SkeletonHero, SkeletonList } from '../components/ui/Skeleton'
 import ProgressBar from '../components/ui/ProgressBar'
-import { fmt, baseSymbol } from '../lib/money'
+import { fmt, fmtCompact, baseSymbol } from '../lib/money'
 import {
   effectiveLimit, monthKey, prevMonth, sweepable, sweepOutcome, sweptKey,
   SWEPT_MOVED, SWEPT_DISMISSED,
@@ -53,14 +53,6 @@ import { spendingRows } from '../utils/installments'
    actually measured, where the centavos are real. */
 const _whole = new Intl.NumberFormat('en-PH', { maximumFractionDigits: 0 })
 const fmtWhole = (v) => ((v ?? 0) < 0 ? '−' : '') + baseSymbol() + _whole.format(Math.abs(Math.round(v ?? 0)))
-
-function fmtCompact(v) {
-  const abs = Math.abs(v ?? 0)
-  const sign = ((v ?? 0) < 0 ? '−' : '') + baseSymbol()
-  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
-  if (abs >= 1_000)     return sign + (abs / 1_000).toFixed(1) + 'K'
-  return fmt(v)
-}
 
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December']

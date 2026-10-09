@@ -299,9 +299,21 @@ export function formatWhole(v, code) {
   return (n < 0 && whole !== 0 ? MINUS : '') + symbolOf(code) + grouper(0).format(whole)
 }
 
+/** Largest first, so the first tier a figure reaches is the one it is written in. */
+const COMPACT_TIERS = /** @type {const} */ ([
+  [1_000_000_000_000, 'T'],
+  [1_000_000_000, 'B'],
+  [1_000_000, 'M'],
+  [1_000, 'K'],
+])
+
 /**
  * The short one, for anywhere a column is narrower than an amount:
- * "₱1.2K", "$3.4M", and the full figure below a thousand.
+ * "₱1.2K", "$3.4M", "₱2.0B", and the full figure below a thousand.
+ *
+ * It goes up to a trillion. Without the B tier ten billion read "₱10000.0M"
+ * and a corrupt figure of a quadrillion "₱999999999.9M" - the longest string
+ * on the screen, in the place that exists to be short.
  *
  * @param {number} [v]
  * @param {string} [code]
@@ -311,8 +323,9 @@ export function compactAmount(v, code) {
   const n = Number.isFinite(v) ? /** @type {number} */ (v) : 0
   const abs = Math.abs(n)
   const sign = (n < 0 ? MINUS : '') + symbolOf(code)
-  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + 'M'
-  if (abs >= 1_000) return sign + (abs / 1_000).toFixed(1) + 'K'
+  for (const [from, mark] of COMPACT_TIERS) {
+    if (abs >= from) return sign + (abs / from).toFixed(1) + mark
+  }
   return formatAmount(n, code)
 }
 

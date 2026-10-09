@@ -550,11 +550,17 @@ export default function Dashboard({ layout = 'phone' } = {}) {
 
                 <div className="mt-2">
                   {revealed ? (
-                    <span key="shown" className={`${swap} text-4xl font-semibold tracking-tight text-white tabular-nums`}>
+                    /* whitespace-nowrap: a long negative figure broke after
+                       its minus sign - U+2212 allows a line break before the
+                       peso - and left a lone "−" on a line of its own. From a
+                       billion the figure is written short, as the tiles below
+                       are from ₱100K, so nowrap does not push it out of the
+                       card. */
+                    <span key="shown" className={`${swap} text-4xl font-semibold tracking-tight text-white tabular-nums whitespace-nowrap`}>
                       <RollingNumber
                         id={`home:net:${shownCurrency}`}
                         value={netWorth}
-                        format={v => fmt(v, shownCurrency)}
+                        format={v => (Math.abs(v) >= 1e9 ? fmtCompact(v, shownCurrency) : fmt(v, shownCurrency))}
                       />
                     </span>
                   ) : (

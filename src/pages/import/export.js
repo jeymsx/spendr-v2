@@ -47,8 +47,45 @@ export const CSV_HEADERS = [
   'currency', 'baseAmount', 'baseCurrency', 'adjust',
 ]
 
-/** @param {unknown} v */
-const esc = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`
+/**
+ * One cell of a CSV that a spreadsheet will open.
+ *
+ * ── Text can be a formula ──
+ *
+ * Excel and Sheets run a cell that starts with = + - or @ as a formula, and a
+ * tab or a carriage return in front hides the sign from a reader while the cell
+ * still runs. A description of =HYPERLINK("http://evil", "Click") or
+ * =cmd|' /C calc'!A0 typed into a note, or arriving in an imported file, would
+ * run on whoever opened the export. So a text cell that starts with one of
+ * those has an apostrophe put before it - the spreadsheet then shows it as
+ * text, and csv.js takes the apostrophe off again on the way back in.
+ *
+ * ── A number is not text ──
+ *
+ * A number is written as it is, unquoted and unprotected: a refund of -500 has
+ * to stay -500 in the sheet's own sum, and an apostrophe would make it a word.
+ * Only a value that is typeof number gets this - a string of digits is text. A
+ * number that is not finite is an empty cell.
+ *
+ * Every text cell is quoted, with its quotes doubled, so a comma, a quote or a
+ * newline in it cannot move the cells after it.
+ *
+ * @param {unknown} v
+ * @returns {string}
+ */
+export function csvCell(v) {
+  if (typeof v === 'number') return Number.isFinite(v) ? String(v) : ''
+  const s = String(v ?? '')
+  const safe = /^[=+\-@\t\r]/.test(s) ? `'${s}` : s
+  return `"${safe.replace(/"/g, '""')}"`
+}
+
+/**
+ * A figure that may be missing: its number, or an empty cell.
+ *
+ * @param {unknown} v
+ */
+const figure = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '' : csvCell(Number(v)))
 
 /**
  * @param {Array<Record<string, any>>} transactions
@@ -58,12 +95,12 @@ export function transactionsToCsv(transactions) {
   const lines = [
     CSV_HEADERS.join(','),
     ...transactions.map(t => [
-      esc(t.txId), esc(t.type), esc(t.date), esc(t.description),
-      esc(t.category), esc(t.payment), esc(t.account),
-      esc(t.fromAccount), esc(t.toAccount), Number(t.amount ?? 0),
-      esc(t.refundOf), esc(t.splitId), esc(t.installmentId),
-      t.toAmount ?? '', esc(t.toCurrency),
-      esc(t.currency), t.baseAmount ?? '', esc(t.baseCurrency), esc(t.adjust),
+      csvCell(t.txId), csvCell(t.type), csvCell(t.date), csvCell(t.description),
+      csvCell(t.category), csvCell(t.payment), csvCell(t.account),
+      csvCell(t.fromAccount), csvCell(t.toAccount), figure(t.amount ?? 0),
+      csvCell(t.refundOf), csvCell(t.splitId), csvCell(t.installmentId),
+      figure(t.toAmount), csvCell(t.toCurrency),
+      csvCell(t.currency), figure(t.baseAmount), csvCell(t.baseCurrency), csvCell(t.adjust),
     ].join(',')),
   ]
   return lines.join('\r\n')

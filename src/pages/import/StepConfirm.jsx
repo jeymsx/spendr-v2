@@ -4,7 +4,7 @@ import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { IconImport, IconBankUI, IconSparkle, IconBalance } from '../../components/icons'
 import Button from '../../components/ui/Button'
 import Card from '../../components/ui/Card'
-import { IconArrowLeft, IconWarning } from './shared'
+import { IconArrowLeft, IconWarning, LIMITS, canImport, nameIndex } from './shared'
 import { fmt } from '../../lib/money'
 import { runImport } from './runImport'
 
@@ -19,23 +19,31 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
   const existingAccounts   = useLiveQuery(() => db.accounts.toArray(),   [])
   const existingCategories = useLiveQuery(() => db.categories.toArray(), [])
 
+  /* The rows that will be written. The ones with a problem were listed in the
+     preview and are left out (runImport), so nothing here counts them. */
+  const importable = useMemo(() => rows.filter(canImport), [rows])
+  const leftOut = rows.length - importable.length
+
+  /* Names are matched the way the import matches them (a "cash" in the file is
+     the Cash account), so only an account or category the wallet truly lacks
+     is announced as one to be created. */
   const missingAccounts = useMemo(() => {
     if (!existingAccounts) return new Set()
-    const existing = new Set(existingAccounts.map(a => a.name))
+    const index = nameIndex(existingAccounts.map(a => a.name), LIMITS.account)
     const missing  = new Set()
-    rows.forEach(r => {
-      if (r.account && !existing.has(r.account))         missing.add(r.account)
-      if (r.fromAccount && !existing.has(r.fromAccount)) missing.add(r.fromAccount)
-      if (r.toAccount && !existing.has(r.toAccount))     missing.add(r.toAccount)
+    importable.forEach(r => {
+      for (const name of [r.account, r.fromAccount, r.toAccount]) {
+        if (name && !index.known(name)) missing.add(index.pick(name))
+      }
     })
     return missing
-  }, [rows, existingAccounts])
+  }, [importable, existingAccounts])
 
   const missingCategories = useMemo(() => {
     if (!existingCategories) return new Set()
-    const existing = new Set(existingCategories.map(c => c.name))
-    return new Set(rows.map(r => r.category).filter(c => c && !existing.has(c)))
-  }, [rows, existingCategories])
+    const index = nameIndex(existingCategories.map(c => c.name), LIMITS.category)
+    return new Set(importable.map(r => r.category).filter(c => c && !index.known(c)).map(c => index.pick(c)))
+  }, [importable, existingCategories])
 
   async function handleImport() {
     setImporting(true)
@@ -64,11 +72,16 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
             <span className="text-slate-500 dark:text-slate-400"><IconImport size={24} /></span>
             <div>
               <p className="text-sm font-semibold text-slate-800 dark:text-white">
-                {rows.length} transactions will be processed
+                {importable.length} transactions will be processed
               </p>
               <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">
                 Duplicates (same txId) will be skipped automatically
               </p>
+              {leftOut > 0 && (
+                <p className="text-xs text-red-600 dark:text-red-400 mt-0.5">
+                  {leftOut} {leftOut === 1 ? 'row has' : 'rows have'} a problem and will be left out
+                </p>
+              )}
             </div>
           </div>
         </Card>
@@ -139,14 +152,14 @@ export function StepConfirm({ rows, openingBalances, creditLimits, onBack, onDon
           <IconArrowLeft />
           Back
         </Button>
-        <Button className="flex-[2]" onClick={handleImport} disabled={importing}>
+        <Button className="flex-[2]" onClick={handleImport} disabled={importing || importable.length === 0}>
           {importing ? (
             <span className="flex items-center justify-center gap-2">
               <span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
               Importing…
             </span>
           ) : (
-            `Import ${rows.length} transactions`
+            `Import ${importable.length} transactions`
           )}
         </Button>
       </div>

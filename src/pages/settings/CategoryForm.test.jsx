@@ -13,9 +13,11 @@ import { render, screen, cleanup, fireEvent, waitFor } from '@testing-library/re
  */
 
 const add = vi.fn(async () => 1)
+const del = vi.fn(async () => {})
+const deleteCategoryRemote = vi.fn(async () => {})
 const metaGet = vi.fn(async () => undefined)
 vi.mock('../../db/db', () => ({
-  default: { categories: { add: (/** @type {any[]} */ ...a) => add(...a) }, meta: { get: (/** @type {any[]} */ ...a) => metaGet(...a) } },
+  default: { categories: { add: (/** @type {any[]} */ ...a) => add(...a), delete: (/** @type {any[]} */ ...a) => del(...a) }, meta: { get: (/** @type {any[]} */ ...a) => metaGet(...a) } },
   UNSYNCED: 0,
   SYNCED: 1,
   SYNCED_TABLES: [],
@@ -27,7 +29,7 @@ vi.mock('../../context/ThemeContext', () => ({
   useTheme: () => ({ theme: 'light', accentColor: '#2D9DFF' }),
   useIsDark: () => false,
 }))
-vi.mock('../../lib/sync', () => ({ deleteCategoryRemote: async () => {} }))
+vi.mock('../../lib/sync', () => ({ deleteCategoryRemote: (/** @type {any[]} */ ...a) => deleteCategoryRemote(...a) }))
 
 const saveCategoryEdit = vi.fn(async () => {})
 const reassignAndDeleteCategory = vi.fn(async () => {})
@@ -53,6 +55,7 @@ const form = (props = {}) => (
 
 beforeEach(() => {
   add.mockClear(); saveCategoryEdit.mockClear(); reassignAndDeleteCategory.mockClear()
+  del.mockClear(); deleteCategoryRemote.mockClear()
   // mockClear leaves an implementation set by an earlier test in place.
   metaGet.mockReset()
   metaGet.mockResolvedValue(undefined)
@@ -169,5 +172,148 @@ describe('deleting', () => {
     fireEvent.click(screen.getByRole('button', { name: /Reassign & delete/ }))
     await waitFor(() => expect(reassignAndDeleteCategory).toHaveBeenCalled())
     expect(reassignAndDeleteCategory.mock.calls[0]).toEqual([FOOD, 'Groceries'])
+  })
+})
+
+describe('a name that is already taken', () => {
+  /** Types a name into the form's name field and presses the save button. */
+  const submit = (/** @type {string} */ value, /** @type {string} */ button = 'Add category') => {
+    fireEvent.change(screen.getByLabelText('Category name'), { target: { value } })
+    fireEvent.click(screen.getByRole('button', { name: button }))
+  }
+  const TAKEN = 'You already have a category with this name'
+
+  /** The bug: "Food" was accepted beside Food, and deleting the copy deleted the original by name. */
+  it('refuses a new category named like one that exists, ignoring case and spaces', async () => {
+    render(form({ defaultType: 'expense' }))
+    submit('Food')
+    expect(await screen.findByText(TAKEN)).toBeTruthy()
+    submit('  fOOD ')
+    expect(await screen.findByText(TAKEN)).toBeTruthy()
+    expect(add).not.toHaveBeenCalled()
+    submit('Eating out')
+    await waitFor(() => expect(add).toHaveBeenCalledTimes(1))
+    expect(add.mock.calls[0][0]).toMatchObject({ name: 'Eating out' })
+  })
+
+  it('refuses a name that only differs by characters you cannot see', async () => {
+    render(form({ defaultType: 'expense' }))
+    submit('Fo\u200Bod')
+    expect(await screen.findByText(TAKEN)).toBeTruthy()
+    submit('\uFEFFFood\u2060')
+    expect(await screen.findByText(TAKEN)).toBeTruthy()
+    expect(add).not.toHaveBeenCalled()
+  })
+
+  it('saves the name without the invisible characters it was typed with', async () => {
+    render(form({ defaultType: 'expense' }))
+    submit('Ba\u200Bnk fees')
+    await waitFor(() => expect(add).toHaveBeenCalled())
+    expect(add.mock.calls[0][0]).toMatchObject({ name: 'Bank fees' })
+  })
+
+  it('lets an inflow category take the name of an expense one', async () => {
+    render(form({ defaultType: 'inflow' }))
+    submit('Food')
+    await waitFor(() => expect(add).toHaveBeenCalled())
+    expect(add.mock.calls[0][0]).toMatchObject({ name: 'Food', type: 'inflow' })
+  })
+
+  it('stops saying it once the name is changed', async () => {
+    render(form({ defaultType: 'expense' }))
+    submit('Food')
+    expect(await screen.findByText(TAKEN)).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Category name'), { target: { value: 'Foodie' } })
+    expect(screen.queryByText(TAKEN)).toBeNull()
+  })
+
+  it('still asks for a name at all', async () => {
+    render(form({ defaultType: 'expense' }))
+    submit('\u200B  \u200B')
+    expect(await screen.findByText('Name is required')).toBeTruthy()
+    expect(add).not.toHaveBeenCalled()
+  })
+
+  it('refuses a rename onto an existing name', async () => {
+    render(form({ category: GROCERIES }))
+    submit('food', 'Save changes')
+    expect(await screen.findByText(TAKEN)).toBeTruthy()
+    expect(saveCategoryEdit).not.toHaveBeenCalled()
+  })
+
+  it('lets a category change the case of its own name', async () => {
+    render(form({ category: FOOD }))
+    submit('FOOD', 'Save changes')
+    await waitFor(() => expect(saveCategoryEdit).toHaveBeenCalled())
+    expect(saveCategoryEdit.mock.calls[0]).toEqual([1, 'Food', expect.objectContaining({ name: 'FOOD' })])
+  })
+
+  /** A twin made before this check must not make its own colour or budget unsaveable. */
+  it('still saves a category whose name did not change, twin or not', async () => {
+    const twin = { id: 9, name: 'Food', type: 'expense', budget: 0 }
+    render(form({ category: FOOD, allCategories: [FOOD, twin, SALARY] }))
+    fireEvent.click(screen.getByRole('button', { name: 'Save changes' }))
+    await waitFor(() => expect(saveCategoryEdit).toHaveBeenCalled())
+    expect(saveCategoryEdit.mock.calls[0][1]).toBe('Food')
+  })
+})
+
+describe('deleting a category that has a look-alike', () => {
+  const lower = { id: 9, name: 'food', type: 'expense', budget: 0 }
+  const exact = { id: 10, name: 'Food', type: 'expense', budget: 0 }
+
+  it('never offers a category with the same name as the one going', async () => {
+    usage.current = { transactions: 3, bills: 0, templates: 0, debts: 0, total: 3 }
+    render(form({ category: FOOD, startAtDelete: true, allCategories: [FOOD, lower, GROCERIES] }))
+    expect(await screen.findByText('3 transactions use this category')).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Groceries/ })).toBeTruthy()
+    expect(screen.queryByRole('button', { name: /^food$/i })).toBeNull()
+  })
+
+  it('has nothing to offer when every other category is a look-alike', async () => {
+    usage.current = { transactions: 3, bills: 0, templates: 0, debts: 0, total: 3 }
+    render(form({ category: FOOD, startAtDelete: true, allCategories: [FOOD, lower] }))
+    expect(await screen.findByText('No other categories available')).toBeTruthy()
+    expect(/** @type {HTMLButtonElement} */ (screen.getByRole('button', { name: /Reassign & delete/ })).disabled).toBe(true)
+  })
+
+  /** Rows point at a name, so with the same name still held nothing is orphaned and nothing needs moving. */
+  it('goes straight to deleting when another category holds the exact same name', async () => {
+    usage.current = { transactions: 3, bills: 0, templates: 0, debts: 0, total: 3 }
+    render(form({ category: { ...FOOD, syncId: 'sync-copy' }, startAtDelete: true, allCategories: [FOOD, exact] }))
+    expect(await screen.findByText('Permanently delete this category?')).toBeTruthy()
+    expect(screen.getByText(/nothing loses its category/)).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Delete category' }))
+    await waitFor(() => expect(deleteCategoryRemote).toHaveBeenCalled())
+    expect(deleteCategoryRemote.mock.calls[0]).toEqual(['Food', 'expense', 'sync-copy'])
+  })
+})
+
+describe('the cloud delete', () => {
+  /** The cloud delete went by name, so deleting a copy deleted the original. The row's own id travels with it now. */
+  it('is handed the category sync id when deleting outright', async () => {
+    render(form({ category: { ...GROCERIES, syncId: 'sync-groceries' }, startAtDelete: true }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete category' }))
+    await waitFor(() => expect(deleteCategoryRemote).toHaveBeenCalled())
+    expect(del).toHaveBeenCalledWith(3)
+    expect(deleteCategoryRemote.mock.calls[0]).toEqual(['Groceries', 'expense', 'sync-groceries'])
+  })
+
+  it('is handed the sync id after a reassign too', async () => {
+    usage.current = { transactions: 2, bills: 0, templates: 0, debts: 0, total: 2 }
+    const food = { ...FOOD, syncId: 'sync-food' }
+    render(form({ category: food, startAtDelete: true, allCategories: [food, SALARY, GROCERIES] }))
+    expect(await screen.findByText('2 transactions use this category')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Groceries/ }))
+    fireEvent.click(screen.getByRole('button', { name: /Reassign & delete/ }))
+    await waitFor(() => expect(deleteCategoryRemote).toHaveBeenCalled())
+    expect(deleteCategoryRemote.mock.calls[0]).toEqual(['Food', 'expense', 'sync-food'])
+  })
+
+  it('falls back to null for a row from before sync ids', async () => {
+    render(form({ category: GROCERIES, startAtDelete: true }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete category' }))
+    await waitFor(() => expect(deleteCategoryRemote).toHaveBeenCalled())
+    expect(deleteCategoryRemote.mock.calls[0]).toEqual(['Groceries', 'expense', null])
   })
 })

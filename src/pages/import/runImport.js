@@ -2,6 +2,7 @@ import db, { UNSYNCED } from '../../db/db'
 import { roundMoney } from '../../lib/currency'
 import { applyBalanceEffects, openingFor } from '../../db/balances'
 import { PRIMED_META } from '../../lib/achievements'
+import { LIMITS, VALID_TYPES, canImport, cleanText, nameIndex, nameKey } from './shared'
 
 /**
  * Writing an import: the rows, the accounts and categories they need, and what
@@ -45,28 +46,52 @@ const CARRIED = [
  * Accounts and categories are asked for by the rows that will be written
  * only: a skipped row naming an account that is gone must not bring it back.
  *
+ * ── A name in a file is the wallet's name, however it is typed ──
+ *
+ * "cash" in a file is the Cash account, and so is "CASH " and a "Cash" with a
+ * zero-width space in it: names are matched ignoring case, spacing and
+ * invisible characters, and every row that comes out names the account or
+ * category the way the WALLET spells it. A name the wallet lacks is created
+ * once, in the spelling the file used first, cut to what the form allows.
+ * Before this the forms refused a second "cash" beside "Cash" and the importer
+ * made one.
+ *
  * @param {Array<Record<string, any>>} rows
- * @param {{txIds: Iterable<string>, accountNames: Set<string>, categoryNames: Set<string>}} existing
+ * @param {{txIds: Iterable<string>, accountNames: Iterable<string>, categoryNames: Iterable<string>}} existing
  */
 export function planImport(rows, existing) {
   const seen = new Set(existing.txIds)
+  const accounts = nameIndex(existing.accountNames, LIMITS.account)
+  const categories = nameIndex(existing.categoryNames, LIMITS.category)
   /** @type {Array<Record<string, any>>} */
   const toInsert = []
+  /** @type {Set<string>} */
+  const newAccounts = new Set()
+  /** @type {Set<string>} */
+  const newCategories = new Set()
+
   for (const r of rows) {
     if (r.txId) {
       if (seen.has(r.txId)) continue
       seen.add(r.txId)
     }
-    toInsert.push(r)
-  }
 
-  const newAccounts = new Set()
-  const newCategories = new Set()
-  for (const r of toInsert) {
-    for (const name of [r.account, r.fromAccount, r.toAccount]) {
-      if (name && !existing.accountNames.has(name)) newAccounts.add(name)
+    const row = { ...r, description: cleanText(r.description, LIMITS.description) }
+    for (const field of ['account', 'fromAccount', 'toAccount']) {
+      if (!r[field]) continue
+      const name = accounts.pick(r[field])
+      row[field] = name || null
+      if (name && !accounts.known(name)) newAccounts.add(name)
     }
-    if (r.category && !existing.categoryNames.has(r.category)) newCategories.add(r.category)
+    // The payment column names an account too (txHelpers writes it from one),
+    // so it takes the same spelling, but it never makes an account by itself.
+    if (r.payment) row.payment = accounts.pick(r.payment) || null
+    if (r.category) {
+      const name = categories.pick(r.category)
+      row.category = name
+      if (name && !categories.known(name)) newCategories.add(name)
+    }
+    toInsert.push(row)
   }
 
   return {
@@ -109,8 +134,23 @@ export function recordOf(r, now) {
 }
 
 /**
+ * A row that is safe to write: csv.js found nothing wrong with it, and it is
+ * what a ledger row has to be - a known type, a number for an amount, a date.
+ * The reading is csv.js's job; this is the last gate before the database, for
+ * rows that come from anywhere else.
+ *
+ * @param {Record<string, any>} r
+ */
+function writable(r) {
+  return canImport(r) && VALID_TYPES.has(r.type) && Number.isFinite(r.amount) && Number.isFinite(Date.parse(r.date))
+}
+
+/**
  * Write the import. One database transaction, so a failure leaves the wallet
  * exactly as it was rather than with half the rows and none of the balance.
+ *
+ * A row the parser marked with a problem is left out and the rest are written:
+ * the preview has already listed what was left out and why.
  *
  * @param {{
  *   rows: Array<Record<string, any>>,
@@ -130,7 +170,7 @@ export async function runImport({ rows, openingBalances = {}, creditLimits = {} 
     const accounts = await db.accounts.toArray()
     const categories = await db.categories.toArray()
 
-    const plan = planImport(rows, {
+    const plan = planImport(rows.filter(writable), {
       txIds: stored.map(t => t.txId).filter(Boolean),
       accountNames: new Set(accounts.map(a => a.name)),
       categoryNames: new Set(categories.map(c => c.name)),
@@ -138,8 +178,11 @@ export async function runImport({ rows, openingBalances = {}, creditLimits = {} 
 
     // Accounts the file names that the wallet lacks. Each starts at the
     // opening balance the person gave it; the rows then move it from there.
+    // The balances arrive under the spelling step 3 showed, which can differ in
+    // case or spacing from the one the rows settled on, so they are found by key.
+    const openingByKey = new Map(Object.entries(openingBalances).map(([name, v]) => [nameKey(name, LIMITS.account), v]))
     for (const name of plan.newAccounts) {
-      const opening = roundMoney(parseFloat(String(openingBalances[name] ?? 0)) || 0, 'PHP')
+      const opening = roundMoney(parseFloat(String(openingByKey.get(nameKey(name, LIMITS.account)) ?? 0)) || 0, 'PHP')
       await db.accounts.add({ name, type: 'cash', balance: opening, opening: await openingFor(name, opening, 'PHP'), currency: 'PHP', color: NEW_COLOR })
       await db.balances.put({ account: name, balance: opening })
     }
@@ -164,7 +207,7 @@ export async function runImport({ rows, openingBalances = {}, creditLimits = {} 
     for (const [name, limit] of Object.entries(creditLimits)) {
       const value = parseFloat(String(limit)) || 0
       if (!value) continue
-      const card = accounts.find(a => a.name === name && a.type === 'credit')
+      const card = accounts.find(a => a.type === 'credit' && nameKey(a.name, LIMITS.account) === nameKey(name, LIMITS.account))
       if (card) await db.accounts.update(card.id, { creditLimit: value })
     }
 

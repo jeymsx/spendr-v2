@@ -147,6 +147,84 @@ describe('moneyChangeHandler', () => {
   })
 })
 
+/**
+ * Pasting is the same event as typing, with more characters in it. Stripping
+ * to digits was right for a currency symbol and for commas, and silently wrong
+ * for a sign, an exponent and a European amount - each became a different,
+ * valid-looking number in the field.
+ */
+describe('pasting an amount', () => {
+  /** What the field shows after `value` lands in it; undefined when the handler leaves the field alone. */
+  const pasted = (/** @type {string} */ value) => {
+    const set = vi.fn()
+    moneyChangeHandler(set)({ target: { value } })
+    return set.mock.calls.length ? set.mock.calls[0][0] : undefined
+  }
+
+  it('reads thousands commas and a leading currency symbol', () => {
+    expect(pasted('1,234.50')).toBe('1,234.50')
+    expect(parseMoney(pasted('1,234.50'))).toBe(1234.5)
+    expect(pasted('₱500')).toBe('500')
+    expect(pasted('₱ 1,234,567.89')).toBe('1,234,567.89')
+    expect(pasted('PHP 2,500')).toBe('2,500')
+    expect(pasted('$99.99')).toBe('99.99')
+  })
+
+  it('reads a comma as the decimal when dots or spaces group the thousands', () => {
+    expect(pasted('1.234,50')).toBe('1,234.50')
+    expect(parseMoney(pasted('1.234,50'))).toBe(1234.5)
+    expect(pasted('₱1.234.567,8')).toBe('1,234,567.8')
+    expect(pasted('1 234,50')).toBe('1,234.50')
+    expect(pasted('1.234.567')).toBe('1,234,567')
+  })
+
+  it('leaves a lone comma a thousands comma, because the field itself writes them', () => {
+    // "1,250" with the 2 deleted is "1,50", and that is 150, not 1.50.
+    expect(pasted('1,50')).toBe('150')
+    expect(pasted('12,345')).toBe('12,345')
+  })
+
+  /** The bug: "1e9" came out as 19 and "1e15" as 115. */
+  it('refuses exponent notation and keeps the field as it was', () => {
+    expect(pasted('1e9')).toBeUndefined()
+    expect(pasted('1e15')).toBeUndefined()
+    expect(pasted('2E3')).toBeUndefined()
+    expect(pasted('1.5e3')).toBeUndefined()
+    expect(pasted('₱1e9')).toBeUndefined()
+    // Into a field that already says 12: "12" + "e5".
+    expect(pasted('12e5')).toBeUndefined()
+  })
+
+  it('still ignores a stray letter that is not part of an exponent', () => {
+    expect(pasted('12e')).toBe('12')
+    expect(pasted('e12')).toBe('12')
+    expect(pasted('1,2a0b0')).toBe('1,200')
+  })
+
+  /** The bug: "-500" lost its minus and the field said a positive 500. */
+  it('refuses a negative rather than turning it into a positive', () => {
+    expect(pasted('-500')).toBeUndefined()
+    expect(pasted('\u2212500')).toBeUndefined()
+    expect(pasted('-₱500')).toBeUndefined()
+    expect(pasted('₱-500')).toBeUndefined()
+    expect(pasted('(500)')).toBeUndefined()
+    expect(pasted('500-')).toBeUndefined()
+    // Pasted at the end of 12, which is what the handler is handed.
+    expect(pasted('12-500')).toBeUndefined()
+  })
+
+  it('does not mistake a lone minus typed first for a number', () => {
+    expect(pasted('-')).toBeUndefined()
+  })
+
+  it('refuses nothing it used to take', () => {
+    expect(pasted('')).toBe('0')
+    expect(pasted('0')).toBe('0')
+    expect(pasted('500.5')).toBe('500.5')
+    expect(pasted('1234567890')).toBe('1,234,567,890')
+  })
+})
+
 /* A yen or a won is quoted whole. "1,500.75" was accepted for one, stored,
    and shown back as ¥1,501 - the field took a figure the currency does not
    have. */

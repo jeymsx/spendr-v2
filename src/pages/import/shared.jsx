@@ -1,3 +1,4 @@
+import { INVISIBLE } from '../../lib/nameKey'
 // ── Constants ──────────────────────────────────────────────────────────────────
 
 /**
@@ -25,6 +26,140 @@ export const SPENDR_OPTIONAL_COLS = [
 export const VALID_TYPES = new Set(['expense', 'inflow', 'transfer'])
 
 export const TRANSFER_RE = /Transfer:\s*(.+?)\s*→\s*(.+)/
+
+// ── Text from a file ───────────────────────────────────────────────────────────
+
+/**
+ * The longest each kind of text may be - the maxLength of the form that makes
+ * it (TxDetailSheet and AddExpense for a description, AccountForm for an
+ * account, CategoryForm for a category). A file is not held to less than a
+ * form, and must not get more: a 5,000-character account name broke every list
+ * that showed it.
+ */
+export const LIMITS = { description: 100, account: 40, category: 30 }
+
+/**
+ * Characters that draw nothing: the zero-width ones, the byte-order mark, the
+ * word joiner and the bidi controls. A name carrying one looks the same as
+ * another and is not equal to it - "Cash" and "Cash" with a zero-width space
+ * were two accounts - and a bidi override can make a name read backwards.
+ */
+// One list of them for the whole app (lib/nameKey.js), so the forms and the importer agree on what is invisible.
+
+/** @param {string} s */
+export function stripInvisible(s) {
+  return s.replace(INVISIBLE, '')
+}
+
+/**
+ * At most `limit` UTF-16 units - what an input's maxLength counts - and never
+ * half of an emoji.
+ *
+ * @param {string} s
+ * @param {number} limit
+ */
+function cutTo(s, limit) {
+  if (s.length <= limit) return s
+  let cut = s.slice(0, limit)
+  const last = cut.charCodeAt(cut.length - 1)
+  if (last >= 0xD800 && last <= 0xDBFF) cut = cut.slice(0, -1)
+  return cut.trimEnd()
+}
+
+/**
+ * Free text as it is stored: no invisible characters, no spaces round the
+ * edges, and no longer than the form allows. Inner spacing is left as written.
+ *
+ * @param {unknown} raw
+ * @param {number} limit
+ */
+export function cleanText(raw, limit) {
+  return cutTo(stripInvisible(String(raw ?? '')).trim(), limit)
+}
+
+/**
+ * A name - an account or a category - as it is stored: cleanText, with every
+ * run of spaces made one and the accents in one fixed form, so the same name
+ * typed two ways is one string.
+ *
+ * @param {unknown} raw
+ * @param {number} limit
+ */
+export function cleanName(raw, limit) {
+  const spaced = stripInvisible(String(raw ?? '')).normalize('NFC').replace(/\s+/g, ' ').trim()
+  return cutTo(spaced, limit)
+}
+
+/**
+ * What two spellings of a name share when they are the same name: cleaned, and
+ * in lower case.
+ *
+ * @param {unknown} name
+ * @param {number} limit
+ */
+export function nameKey(name, limit) {
+  return cleanName(name, limit).toLowerCase()
+}
+
+/**
+ * The names a wallet already has, and the way a file's names are matched to
+ * them: ignoring case, spacing and invisible characters, so "cash", "CASH " and
+ * "Cash" are one account. A name the wallet lacks is spelled the way it first
+ * appears in the file, and every later spelling of it follows that one.
+ *
+ * @param {Iterable<string>} existing
+ * @param {number} limit  the longest a new name may be
+ */
+export function nameIndex(existing, limit) {
+  /** @param {unknown} name */
+  const keyOf = (name) => nameKey(name, limit)
+  /** @type {Map<string, string>} */
+  const old = new Map()
+  /** @type {Map<string, string>} */
+  const spelled = new Map()
+  /** @type {Set<unknown>} */
+  const exact = new Set()
+  for (const name of existing) {
+    const key = keyOf(name)
+    exact.add(name)
+    if (key && !old.has(key)) { old.set(key, name); spelled.set(key, name) }
+  }
+  return {
+    /**
+     * The spelling to store for this name: the wallet's own when it has one,
+     * otherwise the first spelling the file used. Blank stays blank. A name the
+     * wallet has exactly as written is that one, even in a wallet that holds
+     * "Cash" and "cash" side by side.
+     *
+     * @param {unknown} name
+     */
+    pick(name) {
+      if (exact.has(name)) return /** @type {string} */ (name)
+      const key = keyOf(name)
+      if (!key) return ''
+      if (!spelled.has(key)) spelled.set(key, cleanName(name, limit))
+      return /** @type {string} */ (spelled.get(key))
+    },
+    /**
+     * The wallet's spelling of this name, or undefined when it has none.
+     *
+     * @param {unknown} name
+     */
+    known(name) {
+      return old.get(keyOf(name))
+    },
+  }
+}
+
+/**
+ * A row the importer can write. csv.js marks the ones it cannot with a
+ * `problem`, and they travel with the rest so the preview can say which and why.
+ *
+ * @param {{problem?: string}} row
+ */
+export function canImport(row) {
+  return !row.problem
+}
 
 export function fmtBytes(bytes) {
   if (bytes < 1024) return `${bytes} B`

@@ -91,6 +91,7 @@ vi.mock('../../lib/achievements', () => ({ PRIMED_META: 'achievementsPrimedFor' 
 
 const { runImport, planImport, recordOf } = await import('./runImport')
 const { parseCSV } = await import('./csv')
+const { stripInvisible } = await import('./shared')
 const { transactionsToCsv } = await import('./export')
 
 /** @param {string} name */
@@ -405,5 +406,197 @@ describe('a round trip through Spendr s own export', () => {
     expect(bal('Dollar')).toBe(400)
     expect(bal('Visa')).toBe(-9000)
     expect(bal('GCash')).toBe(3000 - 700 - 300 + 80)
+  })
+})
+
+describe('rows the parser found a problem with', () => {
+  /* A tester's file of bad values: every one of these used to be written - as
+     1.00, as 0, as type "debit", as 0.005, as 1e15 - and moved a balance. */
+  const HEAD = 'tx_id,type,transaction_date,description,category,from_account,to_account,amount'
+  const file = [
+    HEAD,
+    ',expense,2026-10-01,"AMT thousands, quoted",Food,BPI,,"1,234.50"',
+    ',expense,2026-10-01,AMT peso sign,Food,BPI,,₱500',
+    ',expense,2026-10-01,AMT negative expense,Food,BPI,,-250',
+    ',expense,2026-10-01,AMT tiny,Food,BPI,,0.005',
+    ',expense,2026-10-01,AMT huge,Food,BPI,,1e15',
+    ',expense,2026-10-01,AMT words,Phantom,Ghost,,abc',
+    ',debit,2026-10-01,AMT debit,Food,BPI,,100',
+    ',expense,2026-10-01,AMT many decimals,Food,BPI,,12.345678',
+    ',expense,2026-02-30,DATE feb 30,Food,BPI,,222',
+    ',expense,,DATE none,Food,BPI,,444',
+    ',expense,2026-13-01,DATE month 13,Food,BPI,,555',
+    ',payment,2026-10-01,TYPE unknown,Food,BPI,,10',
+  ].join('\n')
+
+  it('are not written, while the good rows of the same file are', async () => {
+    const { rows } = parseCSV(file)
+    expect(rows).toHaveLength(12)
+    expect(rows.filter(r => r.problem)).toHaveLength(6)
+
+    const r = await runImport({ rows })
+    expect(r).toMatchObject({ imported: 6, skipped: 0 })
+    const written = store.transactions.filter(t => !t.txId.startsWith('old-')).map(t => t.description).sort()
+    expect(written).toEqual([
+      'AMT debit', 'AMT many decimals', 'AMT negative expense', 'AMT peso sign', 'AMT thousands, quoted', 'AMT tiny',
+    ])
+  })
+
+  it('move no balance, and the good rows move it by what they say, to the cent', async () => {
+    await runImport({ rows: parseCSV(file).rows })
+    // 1,234.50 + 500 - 250 + 0.01 + 100 + 12.35 out of 45,000.
+    expect(bal('BPI')).toBeCloseTo(45000 - 1234.5 - 500 + 250 - 0.01 - 100 - 12.35, 2)
+    expect(mirror('BPI')).toBe(bal('BPI'))
+    // Every amount that was stored is a whole number of cents.
+    for (const t of store.transactions.filter(t => !t.txId.startsWith('old-'))) {
+      expect(Math.abs(t.amount * 100 - Math.round(t.amount * 100))).toBeLessThan(1e-6)
+    }
+  })
+
+  it('make no account or category of their own', async () => {
+    const r = await runImport({ rows: parseCSV(file).rows })
+    expect(r.createdAccounts).toEqual([])
+    expect(r.createdCategories).toEqual([])
+    expect(store.accounts.some(a => a.name === 'Ghost')).toBe(false)
+    expect(store.categories.some(c => c.name === 'Phantom')).toBe(false)
+  })
+
+  it('store a debit as an expense on its account', async () => {
+    await runImport({ rows: parseCSV(file).rows })
+    expect(store.transactions.find(t => t.description === 'AMT debit')).toMatchObject({ type: 'expense', account: 'BPI', amount: 100 })
+  })
+
+  it('leave the wallet as it was when the whole file is bad', async () => {
+    const before = structuredClone(store)
+    const r = await runImport({
+      rows: parseCSV([HEAD, ',expense,2026-10-01,A,Phantom,Ghost,,abc', ',expense,,B,Phantom,Ghost,,5'].join('\n')).rows,
+    })
+    expect(r).toMatchObject({ imported: 0, skipped: 0 })
+    expect(store).toEqual(before)
+  })
+
+  it('are refused by the importer itself, whoever built the rows', async () => {
+    const r = await runImport({
+      rows: [
+        row({ txId: 'p-1', type: 'expense', account: 'BPI', amount: 10, problem: 'Anything' }),
+        row({ txId: 'p-2', type: 'debit', account: 'BPI', amount: 10 }),
+        row({ txId: 'p-3', type: 'expense', account: 'BPI', amount: Number.NaN }),
+        row({ txId: 'p-4', type: 'expense', account: 'BPI', amount: /** @type {any} */ ('12') }),
+        row({ txId: 'p-5', type: 'expense', account: 'BPI', amount: 10, date: '2026-13-01' }),
+        row({ txId: 'p-6', type: 'expense', account: 'BPI', amount: 10, date: '' }),
+        row({ txId: 'ok-1', type: 'expense', account: 'BPI', amount: 10 }),
+      ],
+    })
+    expect(r.imported).toBe(1)
+    expect(bal('BPI')).toBe(44990)
+  })
+})
+
+describe('names in a file against the names in the wallet', () => {
+  const ZWSP = String.fromCodePoint(0x200B)
+  const RLO = String.fromCodePoint(0x202E)
+
+  it('land on the account the wallet has, however they are typed', async () => {
+    const r = await runImport({
+      rows: [
+        row({ txId: 'n-1', type: 'expense', account: 'bpi', amount: 1 }),
+        row({ txId: 'n-2', type: 'expense', account: '  BPI  ', amount: 1 }),
+        row({ txId: 'n-3', type: 'expense', account: `B${ZWSP}PI`, amount: 1 }),
+        row({ txId: 'n-4', type: 'expense', account: `${RLO}Bpi`, amount: 1, payment: 'bPi' }),
+        row({ txId: 'n-5', type: 'transfer', fromAccount: 'gcash', toAccount: 'VISA', amount: 5, category: '' }),
+      ],
+    })
+    expect(r.createdAccounts).toEqual([])
+    expect(store.accounts.map(a => a.name)).toEqual(['BPI', 'GCash', 'Visa', 'Dollar'])
+    expect(store.transactions.filter(t => t.txId.startsWith('n-') && t.type === 'expense').map(t => t.account)).toEqual(['BPI', 'BPI', 'BPI', 'BPI'])
+    expect(store.transactions.find(t => t.txId === 'n-4')?.payment).toBe('BPI')
+    expect(store.transactions.find(t => t.txId === 'n-5')).toMatchObject({ fromAccount: 'GCash', toAccount: 'Visa' })
+    expect(bal('BPI')).toBe(44996)
+    expect(bal('GCash')).toBe(2995)
+    expect(bal('Visa')).toBe(5)
+  })
+
+  it('land on the category the wallet has', async () => {
+    const r = await runImport({
+      rows: [
+        row({ txId: 'c-1', type: 'expense', account: 'BPI', amount: 1, category: 'food' }),
+        row({ txId: 'c-2', type: 'expense', account: 'BPI', amount: 1, category: ' FOOD ' }),
+        row({ txId: 'c-3', type: 'inflow', account: 'BPI', amount: 1, category: `Sal${ZWSP}ary` }),
+      ],
+    })
+    expect(r.createdCategories).toEqual([])
+    expect(store.categories.map(c => c.name)).toEqual(['Food', 'Salary'])
+    expect(store.transactions.filter(t => t.txId.startsWith('c-')).map(t => t.category)).toEqual(['Food', 'Food', 'Salary'])
+  })
+
+  it('are made once when the wallet lacks them, as the file first spelled them', async () => {
+    const r = await runImport({
+      rows: [
+        row({ txId: 'm-1', type: 'expense', account: 'Maya', amount: 10, category: 'Pets' }),
+        row({ txId: 'm-2', type: 'expense', account: 'maya ', amount: 10, category: 'PETS' }),
+        row({ txId: 'm-3', type: 'inflow', account: 'MAYA', amount: 50, category: 'pets' }),
+      ],
+      // Step 3 may show the name in another spelling than the one settled on.
+      openingBalances: { MAYA: 1000 },
+    })
+    expect(r.createdAccounts).toEqual(['Maya'])
+    expect(r.createdCategories).toEqual(['Pets'])
+    expect(store.accounts.filter(a => a.name.toLowerCase().trim() === 'maya')).toHaveLength(1)
+    expect(store.categories.filter(c => c.name.toLowerCase() === 'pets')).toHaveLength(1)
+    expect(bal('Maya')).toBe(1030)
+    expect(store.transactions.filter(t => t.txId.startsWith('m-')).map(t => t.account)).toEqual(['Maya', 'Maya', 'Maya'])
+  })
+
+  it('make no account from a name that is nothing but invisible characters', async () => {
+    const r = await runImport({ rows: [row({ txId: 'i-1', type: 'expense', account: `${ZWSP}${ZWSP}`, amount: 10 })] })
+    expect(r.createdAccounts).toEqual([])
+    expect(store.transactions.find(t => t.txId === 'i-1')?.account).toBeNull()
+  })
+
+  it('are cut to what the forms allow when a row arrives that was not read by the parser', () => {
+    const plan = planImport(
+      [row({ txId: 'l-1', type: 'expense', account: 'L'.repeat(5000), category: 'C'.repeat(500), description: 'D'.repeat(6000) })],
+      { txIds: [], accountNames: [], categoryNames: [] },
+    )
+    expect(plan.newAccounts).toEqual(['L'.repeat(40)])
+    expect(plan.newCategories).toEqual(['C'.repeat(30)])
+    expect(plan.toInsert[0]).toMatchObject({ account: 'L'.repeat(40), category: 'C'.repeat(30), description: 'D'.repeat(100) })
+  })
+
+  it('send a limit to the card they name, whatever the case', async () => {
+    await runImport({
+      rows: [row({ txId: 'l-1', type: 'expense', account: 'visa', amount: 100 })],
+      creditLimits: { VISA: 80000 },
+    })
+    expect(store.accounts.find(a => a.name === 'Visa')?.creditLimit).toBe(80000)
+  })
+
+  it('a wallet with a name longer than the form allows is still matched', () => {
+    const long = 'N'.repeat(60)
+    const plan = planImport([row({ txId: 'x-1', account: long })], { txIds: [], accountNames: [long], categoryNames: [] })
+    expect(plan.newAccounts).toEqual([])
+    expect(plan.toInsert[0].account).toBe(long)
+  })
+
+  it('the whole of a file with long, hidden and lookalike names imports within the limits', async () => {
+    store.accounts.push({ id: 9, name: 'Cash', type: 'cash', balance: 100, currency: 'PHP' })
+    const head = 'tx_id,type,transaction_date,description,category,from_account,to_account,amount'
+    const { rows } = parseCSV([
+      head,
+      `,expense,2026-10-04,"${'D'.repeat(6000)}","<img src=x onerror=alert(1)>",${'L'.repeat(5000)},,10`,
+      `,expense,2026-10-04,NAME emoji acct,Food,"Wallet ${String.fromCodePoint(0x1F45B)} ${RLO}tlaw",,10`,
+      ',expense,2026-10-04,NAME cash lower,Food,cash,,10',
+      ',expense,2026-10-04,NAME cash space,Food,"Cash ",,10',
+    ].join('\n'))
+    const r = await runImport({ rows })
+    expect(r.imported).toBe(4)
+    expect(r.createdAccounts).toHaveLength(2)
+    expect(store.accounts.filter(a => a.name.toLowerCase() === 'cash')).toHaveLength(1)
+    expect(bal('Cash')).toBe(80)
+    for (const a of store.accounts) expect(a.name.length).toBeLessThanOrEqual(40)
+    for (const c of store.categories) expect(c.name.length).toBeLessThanOrEqual(30)
+    for (const t of store.transactions) expect((t.description ?? '').length).toBeLessThanOrEqual(100)
+    // The stored names carry nothing invisible.
+    for (const a of store.accounts) expect(stripInvisible(a.name)).toBe(a.name)
   })
 })

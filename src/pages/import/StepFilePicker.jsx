@@ -15,7 +15,8 @@ export function StepFilePicker({ onParsed }) {
 
   const processFile = useCallback((file) => {
     if (!file) return
-    if (!file.name.endsWith('.csv')) {
+    // Case-insensitive: Windows and some banks name the file STATEMENT.CSV.
+    if (!file.name.toLowerCase().endsWith('.csv')) {
       setError('Invalid file type. Only .csv files are accepted.')
       return
     }

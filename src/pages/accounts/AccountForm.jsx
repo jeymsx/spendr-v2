@@ -14,6 +14,7 @@ import { useToast } from '../../context/ToastContext'
 import { parseMoney, moneyChangeHandler, numToMoneyStr } from '../../utils/moneyInput'
 import { PH_ACCOUNTS, PH_RETIRED_ACCOUNTS } from '../../lib/phAccounts'
 import { deleteAccountRemote } from '../../lib/sync'
+import { nameKey, stripInvisible } from '../../lib/nameKey'
 import {
   PALETTE, TYPE_OPTIONS, TYPE_LABEL, ROLE_OPTIONS, INVESTMENT_KINDS, defaultRole,
 } from '../../lib/accountMeta'
@@ -374,18 +375,24 @@ export function AccountFormSheet({ open, onClose, account, prefill = null, varia
   }
 
   async function handleSave() {
-    if (!name.trim()) { setNameError('required'); return }
-    const cleanName = name.trim()
+    /* Without the characters you cannot see. "Ca" + a zero-width space +
+       "sh" prints as Cash, and was saved beside the real one: two accounts
+       that look identical and are two different keys (lib/nameKey.js). */
+    const cleanName = stripInvisible(name)
+    if (!cleanName) { setNameError('required'); return }
     /* One name, one account. The New account flow always refused a name
        already in use, and editing did not: renaming Piggy Bank to "Cash"
        gave two accounts called Cash, and because every transaction, bill and
        balance finds its account BY NAME, the two shared one ledger - and
-       renaming it back carried Cash's whole history away with it. Case and
-       spaces do not make a name different. Renaming an account to its own
-       name in another case is still fine. */
-    if (isEdit && cleanName.toLowerCase() !== String(account.name ?? '').trim().toLowerCase()) {
+       renaming it back carried Cash's whole history away with it. Case,
+       spaces and invisible characters do not make a name different. Renaming
+       an account to its own name in another case is still fine - nothing
+       else holds the name - and so is saving one whose name did not change,
+       which must not start failing because of a twin made before this check. */
+    if (!(isEdit && cleanName === String(account.name ?? ''))) {
+      const key = nameKey(cleanName)
       const taken = (await db.accounts.toArray())
-        .some(a => a.id !== account.id && String(a.name ?? '').trim().toLowerCase() === cleanName.toLowerCase())
+        .some(a => (!isEdit || a.id !== account.id) && nameKey(a.name) === key)
       if (taken) { setNameError('taken'); return }
     }
     setSaving(true)

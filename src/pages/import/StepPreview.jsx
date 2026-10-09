@@ -10,7 +10,7 @@ import DetailRow from '../../components/ui/DetailRow'
 import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 import { isoToDateInput } from '../../utils/txDate'
 import { fmtDateFull } from '../../utils/recurring'
-import { IconArrowLeft, fmtBytes, VALID_TYPES, IconFile } from './shared'
+import { IconArrowLeft, fmtBytes, VALID_TYPES, IconFile, LIMITS, canImport, nameIndex } from './shared'
 import { WarnBanner, TypeBadge } from './bits'
 
 // ── Step 2: Preview & validation ───────────────────────────────────────────────
@@ -47,12 +47,17 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
   const analysis = useMemo(() => {
     if (!rows) return null
 
-    const dates = rows.map(r => r.date).filter(Boolean).sort()
+    /* Only the rows that will be written are counted and shown. The ones with a
+       problem are listed apart, with the reason, and left out of the import. */
+    const good = rows.filter(canImport)
+    const left = rows.flatMap((row, i) => (canImport(row) ? [] : [{ n: i + 1, row }]))
+
+    const dates = good.map(r => r.date).filter(Boolean).sort()
     const earliest = dates[0]
     const latest   = dates[dates.length - 1]
 
     const byType = { expense: 0, inflow: 0, transfer: 0, other: 0 }
-    rows.forEach(r => {
+    good.forEach(r => {
       if (r.type === 'expense')  byType.expense++
       else if (r.type === 'inflow')   byType.inflow++
       else if (r.type === 'transfer') byType.transfer++
@@ -61,7 +66,7 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
 
     const accountSet  = new Set()
     const categorySet = new Set()
-    rows.forEach(r => {
+    good.forEach(r => {
       if (r.account)     accountSet.add(r.account)
       if (r.fromAccount) accountSet.add(r.fromAccount)
       if (r.toAccount)   accountSet.add(r.toAccount)
@@ -70,26 +75,40 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
     accountSet.delete('')
     categorySet.delete('')
 
-    return { earliest, latest, byType, accountSet, categorySet }
+    return { good, left, earliest, latest, byType, accountSet, categorySet }
   }, [rows])
 
-  const missingAccounts = useMemo(() => {
-    if (!analysis || !existingAccounts) return new Set()
-    const existing = new Set((existingAccounts ?? []).map(a => a.name))
-    return new Set([...analysis.accountSet].filter(a => !existing.has(a)))
+  /* The names as the wallet will have them: "cash" in the file is the Cash
+     account, so it is shown as Cash and is not one of the ones to be created. */
+  const accountNames = useMemo(() => {
+    if (!analysis) return { names: [], missing: new Set() }
+    const index = nameIndex((existingAccounts ?? []).map(a => a.name), LIMITS.account)
+    const names = [...new Set([...analysis.accountSet].map(n => index.pick(n)).filter(Boolean))]
+    return { names, missing: new Set(existingAccounts ? names.filter(n => !index.known(n)) : []) }
   }, [analysis, existingAccounts])
 
-  const missingCategories = useMemo(() => {
-    if (!analysis || !existingCategories) return new Set()
-    const existing = new Set((existingCategories ?? []).map(c => c.name))
-    return new Set([...analysis.categorySet].filter(c => !existing.has(c)))
+  const categoryNames = useMemo(() => {
+    if (!analysis) return { names: [], missing: new Set() }
+    const index = nameIndex((existingCategories ?? []).map(c => c.name), LIMITS.category)
+    const names = [...new Set([...analysis.categorySet].map(n => index.pick(n)).filter(Boolean))]
+    return { names, missing: new Set(existingCategories ? names.filter(n => !index.known(n)) : []) }
   }, [analysis, existingCategories])
 
-  const preview = rows?.slice(0, 10) ?? []
+  const missingAccounts = accountNames.missing
+  const missingCategories = categoryNames.missing
+
+  const preview = analysis?.good.slice(0, 10) ?? []
 
   const previewCols = ['date', 'type', 'description', 'account', 'amount']
 
   if (!analysis) return null
+
+  const { good, left } = analysis
+  /* Nothing in the file says which of 12/03 is the day, so it was read day
+     first, the way the Philippines writes it. Said, so a person who meant
+     12 December can fix the file instead of importing it wrong. */
+  const dateGuessed = good.some(r => r.dateGuess)
+  const LEFT_SHOWN = 8
 
   return (
     <div className="pb-6">
@@ -132,31 +151,72 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
       <div className="px-5 mb-5">
         <SectionLabel>Summary</SectionLabel>
         <Card clip>
-          <DetailRow label="Total transactions" value={String(rows.length)} />
+          <DetailRow label="Total transactions" value={String(good.length)} />
           <DetailRow label="Date range" value={readableRange(analysis.earliest, analysis.latest)} />
           <DetailRow label="Expenses" value={String(analysis.byType.expense)} />
           <DetailRow label="Inflows" value={String(analysis.byType.inflow)} />
           <DetailRow
             label="Transfers"
             value={String(analysis.byType.transfer)}
-            isLast={analysis.byType.other === 0}
+            isLast={analysis.byType.other === 0 && left.length === 0}
           />
           {analysis.byType.other > 0 && (
             <DetailRow
               label="Unknown type"
               value={String(analysis.byType.other)}
               tone="text-amber-600 dark:text-amber-400"
+              isLast={left.length === 0}
+            />
+          )}
+          {left.length > 0 && (
+            <DetailRow
+              label="Left out"
+              value={String(left.length)}
+              tone="text-red-600 dark:text-red-400"
               isLast
             />
           )}
         </Card>
       </div>
 
+      {/* The rows that will not be imported, and why. They never reach the
+          wallet; the rest of the file imports as normal. */}
+      {left.length > 0 && (
+        <div className="px-5 mb-5">
+          <SectionLabel>Rows left out</SectionLabel>
+          <Card clip>
+            {left.slice(0, LEFT_SHOWN).map(({ n, row }, i) => (
+              <div
+                key={n}
+                className={`px-4 py-3 ${i > 0 ? 'border-t border-slate-50 dark:border-white/[0.05]' : ''}`}
+              >
+                <p className="text-13 font-medium text-red-600 dark:text-red-400 break-words">{row.problem}</p>
+                <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5 truncate">
+                  Row {n}{row.description ? ` · ${row.description}` : ''}
+                </p>
+              </div>
+            ))}
+            {left.length > LEFT_SHOWN && (
+              <>
+                <Divider />
+                <div className="px-4 py-2.5 text-center text-11 text-slate-400 dark:text-slate-500">
+                  +{left.length - LEFT_SHOWN} more left out
+                </div>
+              </>
+            )}
+          </Card>
+          <p className="text-11 text-slate-400 dark:text-slate-500 mt-2 px-1">
+            These are not imported. Fix them in the file and import it again,
+            and the rows already in will be skipped.
+          </p>
+        </div>
+      )}
+
       {/* Accounts referenced */}
       <div className="px-5 mb-5">
         <SectionLabel>Accounts in file</SectionLabel>
         <div className="flex flex-wrap gap-2">
-          {[...analysis.accountSet].map(a => (
+          {accountNames.names.map(a => (
             <span
               key={a}
               className={[
@@ -176,7 +236,7 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
       <div className="px-5 mb-5">
         <SectionLabel>Categories in file</SectionLabel>
         <div className="flex flex-wrap gap-2">
-          {[...analysis.categorySet].map(c => (
+          {categoryNames.names.map(c => (
             <span
               key={c}
               className={[
@@ -193,8 +253,14 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
       </div>
 
       {/* Warnings */}
-      {(missingAccounts.size > 0 || missingCategories.size > 0) && (
+      {(missingAccounts.size > 0 || missingCategories.size > 0 || dateGuessed) && (
         <div className="px-5 mb-5 space-y-2.5">
+          {dateGuessed && (
+            <WarnBanner
+              title="Dates read day first"
+              body="Some dates look like 12/03/2026 and nothing in the file says which number is the day. They are read as day first, so that is 12 March. If you meant 3 December, fix the file and import it again."
+            />
+          )}
           {missingAccounts.size > 0 && (
             <WarnBanner
               title={`${missingAccounts.size} account${missingAccounts.size > 1 ? 's' : ''} not in your wallet`}
@@ -245,11 +311,11 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
               </tbody>
             </table>
           </div>
-          {rows.length > 10 && (
+          {good.length > 10 && (
             <>
               <Divider />
               <div className="px-4 py-2.5 text-center text-11 text-slate-400 dark:text-slate-500">
-                +{rows.length - 10} more rows not shown
+                +{good.length - 10} more rows not shown
               </div>
             </>
           )}
@@ -262,7 +328,7 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
           <IconArrowLeft />
           Back
         </Button>
-        <Button className="flex-[2]" onClick={onNext}>
+        <Button className="flex-[2]" onClick={onNext} disabled={good.length === 0}>
           Continue
         </Button>
       </div>
@@ -328,16 +394,19 @@ export function StepOpeningBalances({ rows, onBack, onNext }) {
   const initialized = useRef(false)
 
   // All unique account names referenced in the CSV
+  // The accounts the rows that will be written name, spelled the way the wallet
+  // spells them (a "cash" in the file is its Cash) and once each.
   const csvAccounts = useMemo(() => {
+    const index = nameIndex((existingAccounts ?? []).map(a => a.name), LIMITS.account)
     const set = new Set()
-    rows.forEach(r => {
-      if (r.account)     set.add(r.account)
-      if (r.fromAccount) set.add(r.fromAccount)
-      if (r.toAccount)   set.add(r.toAccount)
+    rows.filter(canImport).forEach(r => {
+      for (const n of [r.account, r.fromAccount, r.toAccount]) {
+        if (n) set.add(index.pick(n))
+      }
     })
     set.delete('')
     return [...set].sort()
-  }, [rows])
+  }, [rows, existingAccounts])
 
   // The accounts the import will create, and the cards it can set a limit on.
   const { created, cards } = useMemo(() => {

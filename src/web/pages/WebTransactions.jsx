@@ -19,6 +19,7 @@ import { txBase, currencyOfTx } from '../../lib/fxContext'
 import { editTransaction } from '../../lib/editTransaction'
 import { fmt } from '../../lib/money'
 import { inDateRange, canRecategorize, DATE_OPTS, fmtTime } from '../../pages/transactions/shared'
+import { csvCell } from '../../pages/import/export'
 import TxDetailSheet from '../../components/TxDetailSheet'
 import RefundSheet from '../../components/RefundSheet'
 import { shortDate, moneyOf, totalsOf, TxDescription, TxAccount, TxAmount } from './txParts'
@@ -738,10 +739,9 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
  */
 function exportCsv(rows, catMap) {
   const head = ['Date', 'Time', 'Type', 'Description', 'Category', 'Account', 'From', 'To', 'Amount', 'Currency', 'Amount (base)']
-  const esc = (/** @type {any} */ v) => {
-    const s = String(v ?? '')
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s
-  }
+  // csvCell quotes every text cell and defuses a leading = + - @ (a description
+  // of =HYPERLINK(...) would otherwise run in Excel); the amounts below are
+  // numbers, so a negative one stays a number.
   const lines = [head.join(',')]
   for (const t of rows.flatMap(r => (isLoanPayment(r) ? [unfoldLoanPayment(r)] : [r]))) {
     const { sign, magnitude, currency } = amountDisplay(t)
@@ -749,8 +749,8 @@ function exportCsv(rows, catMap) {
     lines.push([
       isoToDateInput(t.date), fmtTime(t.date), t.type, txRowWords(t, catMap[t.category]).title,
       t.type === 'transfer' ? '' : t.category, t.account ?? '', t.fromAccount ?? '', t.toAccount ?? '',
-      signed.toFixed(2), currency, ((sign === '−' ? -1 : 1) * Math.abs(txBase(t))).toFixed(2),
-    ].map(esc).join(','))
+      Number(signed.toFixed(2)), currency, Number(((sign === '−' ? -1 : 1) * Math.abs(txBase(t))).toFixed(2)),
+    ].map(csvCell).join(','))
   }
   // A byte-order mark first, so Excel reads the peso sign and accents as UTF-8.
   const blob = new Blob([String.fromCharCode(0xFEFF) + lines.join('\r\n')], { type: 'text/csv;charset=utf-8' })

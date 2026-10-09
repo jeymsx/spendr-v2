@@ -34,6 +34,7 @@ import { inputClass } from './accounts/shared'
 import { BrandTile, StepProgress } from './accounts/NewFields'
 import { StyleStep, CreatedStep } from './accounts/NewCardStyleStep'
 import Rail from '../components/ui/Rail'
+import { nameKey, stripInvisible } from '../lib/nameKey'
 import CurrencyPickerSheet from '../components/CurrencyPickerSheet'
 import { currencyOf, symbolOf } from '../lib/currency'
 import { getBaseCurrency, baseDecimals } from '../lib/money'
@@ -196,12 +197,14 @@ export default function AccountNew() {
   // Changing type away from credit can strand the index past the end.
   const current = steps[Math.min(step, steps.length - 1)]
 
+  /* Compared as the name reads (lib/nameKey.js): case, spaces and characters
+     nobody can see do not make a name with a zero-width space in it a different account from Cash. */
   const taken = useMemo(
-    () => new Set((accounts ?? []).map(a => (a.name ?? '').trim().toLowerCase())),
+    () => new Set((accounts ?? []).map(a => nameKey(a.name ?? ''))),
     [accounts],
   )
-  const trimmed = draft.name.trim()
-  const duplicate = !!trimmed && taken.has(trimmed.toLowerCase())
+  const trimmed = stripInvisible(draft.name)
+  const duplicate = !!trimmed && taken.has(nameKey(trimmed))
   // A duplicate name is not cosmetic: sync upserts accounts on (user, name),
   // so two accounts sharing one would silently merge in the cloud.
   const nameProblem = !trimmed
@@ -319,7 +322,7 @@ export default function AccountNew() {
     setSaving(true)
     try {
       const row = buildAccountRow({
-        name: draft.name,
+        name: stripInvisible(draft.name),
         type: draft.type,
         role: draft.role,
         color: draft.color,

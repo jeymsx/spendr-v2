@@ -79,6 +79,34 @@ describe('Step 3, opening balances', () => {
     expect(onNext).toHaveBeenCalledWith({ balances: {}, creditLimits: {} })
   })
 
+  it('does not ask for an account the wallet has under another spelling, or for one twice', async () => {
+    await open([
+      { type: 'expense', account: 'bpi', amount: 10 },
+      { type: 'expense', account: ' BPI ', amount: 10 },
+      { type: 'expense', account: 'Maya', amount: 10 },
+      { type: 'expense', account: 'MAYA', amount: 10 },
+    ])
+    expect(screen.queryByLabelText(/^bpi/i)).toBeNull()
+    expect(screen.getAllByLabelText(/maya, new account/i)).toHaveLength(1)
+    expect(screen.getByLabelText('Maya, new account')).toBeTruthy()
+  })
+
+  it('finds the limit of a card typed in another case', async () => {
+    const onNext = await open([{ type: 'expense', account: 'visa', amount: 10 }])
+    expect(/** @type {HTMLInputElement} */ (screen.getByLabelText('Visa, credit limit')).value).toBe('50000')
+    fireEvent.click(screen.getByRole('button', { name: 'Continue' }))
+    expect(onNext).toHaveBeenCalledWith({ balances: {}, creditLimits: { Visa: 50000 } })
+  })
+
+  it('does not ask for an account only a left-out row names', async () => {
+    await open([
+      { type: 'expense', account: 'BPI', amount: 10 },
+      { type: 'expense', account: 'Ghost', amount: 0, problem: '"abc" is not an amount' },
+    ])
+    expect(screen.queryByLabelText(/ghost/i)).toBeNull()
+    expect(screen.getByText(/Every account in this file is already in your wallet/)).toBeTruthy()
+  })
+
   it('treats a blank field as nothing, so the new account starts from zero', async () => {
     const onNext = await open([{ type: 'expense', account: 'Maya', amount: 10 }])
     fireEvent.click(screen.getByRole('button', { name: 'Continue' }))

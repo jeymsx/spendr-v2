@@ -1,7 +1,18 @@
-/** "Sep 12, 2026", or null when a debt carries no due date. */
+import { parseDateLocal } from '../../utils/recurring'
+
+/**
+ * "Sep 12, 2026", or null when a debt carries no due date.
+ *
+ * A due date is a calendar day typed into a date field and kept as
+ * 'YYYY-MM-DD'. new Date('2026-11-01') reads that as UTC midnight, which in
+ * any zone west of UTC is still Oct 31 - the debt said it was due a day early,
+ * and "overdue" arrived a day before the day. parseDateLocal keeps it the day
+ * that was typed.
+ */
 export function fmtDueDate(iso) {
   if (!iso) return null
-  const d = new Date(iso)
+  const d = parseDateLocal(iso)
+  if (!d) return null
   return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })
 }
 
@@ -21,8 +32,9 @@ export const owedOn    = (d) => Math.max(0, (d.amount ?? 0) - (d.amountPaid ?? 0
 /** Whole days from today to a due date; negative once it has passed. */
 export function daysToDue(dueDate) {
   if (!dueDate) return null
-  const due = new Date(dueDate); due.setHours(0, 0, 0, 0)
-  if (Number.isNaN(due.getTime())) return null
+  // Local, for the reason fmtDueDate gives: the day typed, in the viewer's own zone.
+  const due = parseDateLocal(dueDate)
+  if (!due) return null
   const now = new Date(); now.setHours(0, 0, 0, 0)
   return Math.round((due - now) / 86400000)
 }

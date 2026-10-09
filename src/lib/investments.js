@@ -73,7 +73,7 @@ export function investmentStatus(account, transactions = [], now = new Date()) {
   paidIn = round2(paidIn)
 
   const ageDays = lastValued
-    ? Math.max(0, Math.floor((startOfDay(now) - startOfDay(lastValued)) / DAY_MS))
+    ? Math.max(0, calendarDaysBetween(lastValued, now))
     : null
   const gain = round2(value - paidIn)
   return {
@@ -89,9 +89,21 @@ export function investmentStatus(account, transactions = [], now = new Date()) {
   }
 }
 
-/** @param {Date} d */
-function startOfDay(d) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime()
+/**
+ * Whole calendar days from `from` to `to`, by LOCAL date.
+ *
+ * Two local midnights are not always 24 hours apart: across a daylight-saving
+ * change one day is 23 or 25 hours long, so Oct 3 to Oct 5 in Sydney is a
+ * 47-hour span. Flooring hours / 24 called that one day, and a figure valued
+ * two days ago read "Updated yesterday". The days are counted from the year,
+ * month and day instead, where every day is one day.
+ *
+ * @param {Date} from
+ * @param {Date} to
+ */
+export function calendarDaysBetween(from, to) {
+  const utcDay = (/** @type {Date} */ d) => Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())
+  return Math.round((utcDay(to) - utcDay(from)) / DAY_MS)
 }
 
 /**
@@ -101,7 +113,7 @@ function startOfDay(d) {
  */
 export function valuedAgo(d, now = new Date()) {
   if (!d) return 'Not updated yet'
-  const days = Math.floor((startOfDay(now) - startOfDay(d)) / DAY_MS)
+  const days = calendarDaysBetween(d, now)
   if (days <= 0) return 'Updated today'
   if (days === 1) return 'Updated yesterday'
   if (days < 7) return `Updated ${days} days ago`
