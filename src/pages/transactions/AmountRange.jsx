@@ -1,6 +1,6 @@
 import { useMemo, useCallback } from 'react'
 import * as RadixSlider from '@radix-ui/react-slider'
-import { baseSymbol } from '../../lib/money'
+import { baseSymbol, fmtCompact } from '../../lib/money'
 
 // ── Amount range histogram + slider ───────────────────────────────────────────
 
@@ -56,11 +56,13 @@ export function AmountRangeFilter({ allTxs, amountMin, amountMax, onAmountMin, o
   const loPos = amountMin != null ? toPos(amountMin) : 0
   const hiPos = amountMax != null ? toPos(amountMax) : 100
 
-  const fmtAmt = (v) => {
-    if (v >= 1_000_000) return baseSymbol() + (v / 1_000_000).toFixed(1) + 'M'
-    if (v >= 1_000)     return baseSymbol() + (v / 1_000).toFixed(v % 1000 === 0 ? 0 : 1) + 'k'
-    return baseSymbol() + Math.round(v)
-  }
+  /* The shared compact form, so the ends go past M ("₱1500.0M" was the most
+     it could say) and read K like every other figure, with a bare ".0"
+     dropped since a slider's end is approximate anyway: "₱5K", "₱1.5K",
+     "₱2M". Whole below a thousand, where fromPos only ever lands. */
+  const fmtAmt = (v) => (v >= 1_000
+    ? fmtCompact(v).replace(/\.0(?=[KMBT])/, '')
+    : baseSymbol() + Math.round(v))
 
   return (
     <div>

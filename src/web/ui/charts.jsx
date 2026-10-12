@@ -18,8 +18,8 @@ import { Empty } from './display'
 const AXIS = { fontSize: 11, fill: 'var(--d-text-3)' }
 const GRID = 'var(--d-border)'
 
-/** @param {number} v */
-const tick = (v) => (Math.abs(v) >= 1000 ? fmtCompact(v).replace(/\.0(?=[KMB])/, '') : fmt(v).replace(/\.00$/, ''))
+/** A y-axis figure: "₱500", "₱1.5K", "₱2M", "₱1T" - every tier compactAmount writes. @param {number} v */
+export const tick = (v) => (Math.abs(v) >= 1000 ? fmtCompact(v).replace(/\.0(?=[KMBT])/, '') : fmt(v).replace(/\.00$/, ''))
 
 /**
  * What a chart says when there is nothing to draw - no points, or every

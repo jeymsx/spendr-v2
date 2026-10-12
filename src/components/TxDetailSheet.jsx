@@ -23,7 +23,8 @@ import Card from './ui/Card'
 import DetailRow from './ui/DetailRow'
 import IconButton from './ui/IconButton'
 import Sheet from './ui/Sheet'
-import { fmt, baseSymbol, zeroAmount } from '../lib/money'
+import { fmt, baseSymbol, baseDecimals, zeroAmount } from '../lib/money'
+import { typedAmount } from '../utils/moneyInput'
 import { currencyOfTx, repriceForEdit } from '../lib/fxContext'
 import { isAdjustment } from '../lib/flows'
 import { impliedRate, rederiveReceived } from '../lib/transferLegs'
@@ -676,12 +677,15 @@ export default function TxDetailSheet({
                         separate span. As a span it landed at the LEFT of the
                         value column - the input is flex-1, so it claimed the
                         space and pushed the ₱ back against the label, reading
-                        "Amount ₱      300". onChange already strips anything
-                        that is not a digit or a dot, so the prefix round-trips
-                        harmlessly. */}
+                        "Amount ₱      300". onChange keeps only the figure
+                        (typedAmount, ungrouped like the value it prefills),
+                        so the prefix round-trips harmlessly. */}
                     <RowInput
                       value={editAmount ? `${baseSymbol(txCur)}${editAmount}` : ''}
-                      onChange={e => setEditAmount(e.target.value.replace(/[^0-9.]/g, ''))}
+                      onChange={e => {
+                        const v = typedAmount(e.target.value, baseDecimals(txCur))
+                        if (v !== null) setEditAmount(v)
+                      }}
                       placeholder={`${baseSymbol(txCur)}${zeroAmount(txCur)}`}
                       inputMode="decimal"
                       autoFocus

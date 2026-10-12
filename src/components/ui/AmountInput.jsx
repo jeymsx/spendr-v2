@@ -77,7 +77,9 @@ const AmountInput = forwardRef(function AmountInput({
   color,
   /** 'hero' inside an AmountHero, 'page' for a form's own figure. */
   size = 'hero',
-  /** Shown before the mark: the + or − on a template's amount. */
+  /** Shown before the mark: the + or − on a template's amount. It reaches
+      onChange in the value, so the caller drops it before the figure is read:
+      a leading − is a negative to typedMoneyDigits, which refuses it. */
   sign = '',
   /** The amount's currency. The base currency when not given, which is what
       every form not tied to one particular account wants. */

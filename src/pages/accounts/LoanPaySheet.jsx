@@ -8,9 +8,9 @@ import AccountPickerSheet, { AccountChip } from '../../components/AccountPickerS
 import FadeScroller from '../../components/FadeScroller'
 import { RAIL_TOUCH } from '../../components/ui/Rail'
 import { IconChevronRight } from '../../components/icons'
-import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
+import { parseMoney, numToMoneyStr, typedAmount } from '../../utils/moneyInput'
 import { chipClass } from './shared'
-import { fmt } from '../../lib/money'
+import { fmt, baseDecimals } from '../../lib/money'
 import { isLiquid } from '../../lib/accountMeta'
 import { rateLabel, splitLoanPayment } from '../../lib/loans'
 
@@ -72,10 +72,10 @@ export default function LoanPaySheet({ open, onClose, loan, accounts = [], statu
   const short = from ? value - (from.balance ?? 0) : 0
   const ready = value > 0 && !!from && !saving
 
+  // Ungrouped as typed, like CardPaymentSheet's hero; see typedAmount.
   const onAmount = (/** @type {any} */ e) => {
-    const v = String(e.target.value).replace(/[^0-9.]/g, '')
-    const parts = v.split('.')
-    setAmount(parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : v)
+    const v = typedAmount(e.target.value, baseDecimals(cur))
+    if (v !== null) setAmount(v)
   }
 
   return (

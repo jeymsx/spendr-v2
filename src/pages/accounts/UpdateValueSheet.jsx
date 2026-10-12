@@ -4,8 +4,8 @@ import Button from '../../components/ui/Button'
 import AmountHero from '../../components/ui/AmountHero'
 import AmountInput from '../../components/ui/AmountInput'
 import DetailRow from '../../components/ui/DetailRow'
-import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
-import { fmt } from '../../lib/money'
+import { parseMoney, numToMoneyStr, typedAmount } from '../../utils/moneyInput'
+import { fmt, baseDecimals } from '../../lib/money'
 import { valuedAgo } from '../../lib/investments'
 
 /** The accent, the colour a transfer is drawn in: a value update is a move
@@ -39,12 +39,11 @@ export default function UpdateValueSheet({ open, onClose, account, status, onSav
   const valid = Number.isFinite(typed) && typed >= 0 && value.trim() !== ''
   const delta = valid ? typed - current : 0
 
-  /* Digits and one point - the raw string, so the caret stays put. The same
-     rule CardPaymentSheet's hero uses. */
+  /* The raw string, so the caret stays put - typedAmount, the same rule
+     CardPaymentSheet's hero uses. */
   const onChange = (/** @type {any} */ e) => {
-    const v = String(e.target.value).replace(/[^0-9.]/g, '')
-    const parts = v.split('.')
-    setValue(parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : v)
+    const v = typedAmount(e.target.value, baseDecimals(account?.currency))
+    if (v !== null) setValue(v)
   }
 
   return (

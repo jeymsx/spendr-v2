@@ -15,10 +15,11 @@ import { MemoryRouter } from 'react-router-dom'
 
 vi.mock('../../db/db', () => ({ default: {}, UNSYNCED: 0, SYNCED: 1, SYNCED_TABLES: [] }))
 
-const { getContextHint } = await import('./shared')
+const { getContextHint, shortAmount } = await import('./shared')
 const { BudgetSummaryTile } = await import('./Tiles')
+const { setBaseCurrency } = await import('../../lib/money')
 
-afterEach(cleanup)
+afterEach(() => { cleanup(); setBaseCurrency('PHP') })
 
 /** @param {string} name @param {number} budget @param {number} spent @param {Record<string, any>} [more] */
 const row = (name, budget, spent, more = {}) => ({ name, type: 'expense', budget, spent, ...more })
@@ -65,6 +66,42 @@ describe('the budget hint under the greeting', () => {
     const hint = getContextHint([], [row('Fun', 1000, 900), row('Food', 1000, 1100)], [])
     expect(hint.text).toBe('Over budget on food')
     expect(hint.cat.name).toBe('Food')
+  })
+})
+
+/**
+ * The "spent today" hint and the template chips each had a formatter of their
+ * own that stopped at K, so a million read "₱1000.0K"; the chips also wrote
+ * the ledger's mark on a template kept in another currency.
+ */
+describe('shortAmount, for the chips and the hint', () => {
+  it('is whole below a thousand and the shared compact form above', () => {
+    expect(shortAmount(940)).toBe('₱940')
+    expect(shortAmount(1500)).toBe('₱1.5K')
+    expect(shortAmount(5000)).toBe('₱5.0K')
+  })
+
+  it('goes past K, to M, B and T', () => {
+    expect(shortAmount(2_500_000)).toBe('₱2.5M')
+    expect(shortAmount(1_200_000_000)).toBe('₱1.2B')
+    expect(shortAmount(3_000_000_000_000)).toBe('₱3.0T')
+  })
+
+  it("writes a template's own currency when given one", () => {
+    expect(shortAmount(40, 'USD')).toBe('$40')
+    expect(shortAmount(150000, 'JPY')).toBe('¥150.0K')
+  })
+
+  it('follows the ledger when given none', () => {
+    setBaseCurrency('USD')
+    expect(shortAmount(12.6)).toBe('$13')
+  })
+
+  it('says a big day in M rather than thousands of K', () => {
+    const tx = { id: 1, type: 'expense', amount: 2_500_000, account: 'Cash', date: new Date().toISOString() }
+    expect(getContextHint([tx], [], []).text).toBe('₱2.5M spent today')
+    const small = { ...tx, amount: 450 }
+    expect(getContextHint([small], [], []).text).toBe('₱450 spent today')
   })
 })
 

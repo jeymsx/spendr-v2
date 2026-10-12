@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { parseMoney, numToMoneyStr, moneyChangeHandler } from './moneyInput'
+import { parseMoney, numToMoneyStr, moneyChangeHandler, typedAmount } from './moneyInput'
 import { setBaseCurrency, zeroAmount } from '../lib/money'
 
 /**
@@ -271,5 +271,57 @@ describe('a currency quoted whole', () => {
     expect(zeroAmount('PHP')).toBe('0.00')
     setBaseCurrency('JPY')
     expect(zeroAmount()).toBe('0')
+  })
+})
+
+/**
+ * The same rules without the commas, for the fields that show the raw string
+ * as you type (the sheet heroes, the inline edit rows, the split rows). Each
+ * of those stripped to [0-9.] by hand, which is the bug list below.
+ */
+describe('typedAmount', () => {
+  afterEach(() => { setBaseCurrency('PHP') })
+
+  it('keeps the figure as typed, with no grouping', () => {
+    expect(typedAmount('1234567.5', 2)).toBe('1234567.5')
+    expect(typedAmount('₱1234', 2)).toBe('1234')
+    expect(typedAmount('1,234.50', 2)).toBe('1234.50')
+  })
+
+  it('leaves an emptied field empty, so its placeholder shows', () => {
+    expect(typedAmount('', 2)).toBe('')
+    expect(typedAmount('₱', 2)).toBe('')
+  })
+
+  /** The bugs: "-500" became 500 and "1e5" became 15. */
+  it('refuses a sign or an exponent instead of stripping it', () => {
+    expect(typedAmount('-500', 2)).toBeNull()
+    expect(typedAmount('₱-500', 2)).toBeNull()
+    expect(typedAmount('−₱500', 2)).toBeNull()
+    expect(typedAmount('(500)', 2)).toBeNull()
+    expect(typedAmount('1e5', 2)).toBeNull()
+  })
+
+  it('takes one point and no more places than the currency has', () => {
+    expect(typedAmount('12.34.56', 2)).toBe('12.34')
+    expect(typedAmount('100.999', 2)).toBe('100.99')
+    expect(typedAmount('1500.75', 0)).toBe('1500.')
+    expect(typedAmount('1.2345', 3)).toBe('1.234')
+  })
+
+  it("takes the ledger's places when it is given none", () => {
+    setBaseCurrency('JPY')
+    expect(typedAmount('1500.75')).toBe('1500.')
+  })
+
+  it('refuses an eleventh whole digit rather than growing without end', () => {
+    expect(typedAmount('1234567890', 2)).toBe('1234567890')
+    expect(typedAmount('12345678901', 2)).toBeNull()
+  })
+
+  it('drops a leading zero but keeps a lone one', () => {
+    expect(typedAmount('0123', 2)).toBe('123')
+    expect(typedAmount('0', 2)).toBe('0')
+    expect(typedAmount('0.50', 2)).toBe('0.50')
   })
 })

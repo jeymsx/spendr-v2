@@ -83,37 +83,61 @@ export function typedMoneyDigits(raw) {
   return s.replace(/,/g, '').replace(/[^0-9.]/g, '')
 }
 
+/**
+ * What a money field should hold after a keystroke or paste, WITHOUT grouping
+ * commas: "1234.5", "" for an emptied field - or null when it is not an
+ * amount (typedMoneyDigits) or has grown past ten whole digits, and the field
+ * should stay as it was.
+ *
+ * Every rule moneyChangeHandler applies except the commas. It is for the
+ * fields that show the raw string as you type - the sheet heroes
+ * (CardPaymentSheet, RefundSheet, ...) and the inline edit rows - because
+ * re-inserting separators mid-type moves the caret. Those fields used to
+ * strip to `[0-9.]` by hand, which turned "-500" into 500 and "1e5" into 15,
+ * let a yen take centavos, and let a stuck key grow the figure without end.
+ *
+ * `decimals`: how many places the amount's currency has (lib/money.js
+ * baseDecimals) - the ledger's, unless the field is in an account's own
+ * currency. A yen or a won has none: "1,500.75" was accepted, stored, and
+ * shown back as ¥1,501. A point typed into one stays, and takes nothing
+ * after it; dropping it let the digits after it run on, and "1500.75"
+ * came out as ¥150,075.
+ *
+ * @param {string} raw  the whole value of the input after the keystroke or paste
+ * @param {number} [decimals]
+ * @returns {string|null}
+ */
+export function typedAmount(raw, decimals = baseDecimals()) {
+  const digits = typedMoneyDigits(raw)
+  if (digits === null) return null
+  let v = digits
+  /* Re-split after the join, which is the whole bug this used to have.
+     `parts` was computed once from the raw value, so after the extra points
+     were joined away it still reported the ORIGINAL count - and the
+     two-decimal guard below, which only fires at a length of exactly 2,
+     never ran. Typing "12.34.56" produced "12.3456", and parseMoney handed
+     that sub-centavo amount straight to the ledger. */
+  let parts = v.split('.')
+  if (parts.length > 2) {
+    v = parts[0] + '.' + parts.slice(1).join('')
+    parts = v.split('.')
+  }
+  if (parts.length === 2 && parts[1].length > decimals) v = parts[0] + '.' + parts[1].slice(0, decimals)
+  const intPart = v.split('.')[0]
+  if (intPart.length > 10) return null
+  if (intPart.length > 1 && intPart.startsWith('0')) v = v.replace(/^0+/, '') || '0'
+  return v
+}
+
 // onChange handler factory for money inputs.
 // Strips commas, validates, reformats with commas, then calls setState.
-// A value that is not a plain amount (typedMoneyDigits) leaves the field as it was.
-/* `decimals`: how many places the amount's currency has (lib/money.js
-   baseDecimals) - the ledger's, unless the field is in an account's own
-   currency. A yen or a won has none: "1,500.75" was accepted, stored, and
-   shown back as ¥1,501. A point typed into one stays, and takes nothing
-   after it; dropping it let the digits after it run on, and "1500.75"
-   came out as ¥150,075. */
-/** @param {(v: string) => void} setState @param {number} [decimals] */
+// A value that is not a plain amount (typedAmount) leaves the field as it was.
+/** @param {(v: string) => void} setState @param {number} [decimals] see typedAmount */
 export function moneyChangeHandler(setState, decimals = baseDecimals()) {
   return (/** @type {{target: {value: string}}} */ e) => {
-    const digits = typedMoneyDigits(e.target.value)
+    const v = typedAmount(e.target.value, decimals)
     // Not an amount: no setState, so a controlled input snaps back to what it showed.
-    if (digits === null) return
-    let v = digits
-    /* Re-split after the join, which is the whole bug this used to have.
-       `parts` was computed once from the raw value, so after the extra points
-       were joined away it still reported the ORIGINAL count - and the
-       two-decimal guard below, which only fires at a length of exactly 2,
-       never ran. Typing "12.34.56" produced "12.3456", and parseMoney handed
-       that sub-centavo amount straight to the ledger. */
-    let parts = v.split('.')
-    if (parts.length > 2) {
-      v = parts[0] + '.' + parts.slice(1).join('')
-      parts = v.split('.')
-    }
-    if (parts.length === 2 && parts[1].length > decimals) v = parts[0] + '.' + parts[1].slice(0, decimals)
-    const intPart = v.split('.')[0]
-    if (intPart.length > 10) return
-    if (intPart.length > 1 && intPart.startsWith('0')) v = v.replace(/^0+/, '') || '0'
+    if (v === null) return
     const intFmt = v.split('.')[0].replace(/\B(?=(\d{3})+(?!\d))/g, ',')
     const dec = v.includes('.') ? '.' + v.split('.')[1] : ''
     setState(intFmt + dec || '0')

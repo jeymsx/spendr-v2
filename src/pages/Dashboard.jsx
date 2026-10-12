@@ -18,10 +18,10 @@ import IconButton from '../components/ui/IconButton'
 import BellButton from '../components/BellButton'
 import Card from '../components/ui/Card'
 import EmptyState from '../components/ui/EmptyState'
-import { fmt, fmtCompact, baseSymbol, fmtHidden } from '../lib/money'
+import { fmt, fmtCompact, fmtHidden } from '../lib/money'
 import {
   ContextHint, getContextHint, getGreeting, monthPrefix,
-  quickActionCounts,
+  quickActionCounts, shortAmount,
 } from './dashboard/shared'
 import RollingNumber from '../components/ui/RollingNumber'
 import { useSwap } from '../components/ui/useSwap'
@@ -43,7 +43,7 @@ import { isSpend } from '../lib/flows'
 import { txGlyphCat } from '../lib/txRow'
 import { foldLoanPayments } from '../lib/loans'
 import { useBaseCurrency } from '../context/CurrencyContext'
-import { txBase } from '../lib/fxContext'
+import { currencyOfAccountName, txBase } from '../lib/fxContext'
 import { addMonths, monthKeyOf, wrappedOnHome } from '../lib/recap'
 import { useRecapMonth } from './recap/useRecapMonth'
 import LazyWrappedCard, { preloadWrappedCard } from './recap/LazyWrappedCard'
@@ -763,9 +763,8 @@ export default function Dashboard({ layout = 'phone' } = {}) {
                 const icon = tpl.type === 'transfer'
             ? <IconTransferUI size={15} />
             : <CategoryGlyph cat={cat} size={15} emoji="⚡" />
-                const compact = (tpl.amount ?? 0) >= 1000
-                  ? baseSymbol() + ((tpl.amount) / 1000).toFixed(1) + 'K'
-                  : baseSymbol() + (tpl.amount ?? 0).toFixed(0)
+                // In the template's own currency, as TemplateConfirmSheet writes it.
+                const compact = shortAmount(tpl.amount ?? 0, currencyOfAccountName(tpl.account ?? tpl.fromAccount))
                 return (
                   <button
                     key={tpl.id}

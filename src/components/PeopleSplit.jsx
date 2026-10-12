@@ -5,9 +5,9 @@ import CategoryGlyph from './CategoryGlyph'
 import Divider from './ui/Divider'
 import Button from './ui/Button'
 import { getInitials, getAvatarColor } from '../pages/debts/shared'
-import { parseMoney } from '../utils/moneyInput'
+import { parseMoney, typedAmount, typedMoneyDigits } from '../utils/moneyInput'
 import { chipClass } from '../pages/accounts/shared'
-import { fmt, baseSymbol, zeroAmount } from '../lib/money'
+import { fmt, baseSymbol, baseDecimals, zeroAmount } from '../lib/money'
 import { resolveSplit, SPLIT_MODES, MODE_FIELD } from '../lib/splitModes'
 
 /**
@@ -104,17 +104,28 @@ function PersonRow({
      different: 30% and ₱300, 2x and ₱400, +₱50 and ₱550. */
   const typedIsTheShare = included && mode === 'exact'
 
-  /* Digits only for shares, digits and one point for the rest. Written out
-     rather than reusing moneyChangeHandler because a percent and a share
-     count are not money and must not be grouped with separators. */
+  /* By MODE_FIELD's kind. `integer` (shares) is digits only, `number`
+     (percent) digits and one point, `money` (exact, +/−) typedAmount: the
+     currency's own places and the ten-digit cap. None of them is grouped -
+     a percent and a share count are not money, and the money fields show
+     the raw string as you type, the way the sheet heroes do.
+
+     All three go through typedMoneyDigits first, so a pasted "1e5" or
+     "-30" is refused rather than stripped into 15 or 30. The one sign
+     allowed is a leading minus on +/−, where it is a discount. */
   const onChange = (e) => {
     const raw = String(e.target.value)
-    if (field.kind === 'integer') return onValue(raw.replace(/[^0-9]/g, ''))
-    const neg = mode === 'adjust' && raw.trim().startsWith('-')
-    const body = raw.replace(/[^0-9.]/g, '')
-    const parts = body.split('.')
-    const clean = parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : body
-    onValue((neg ? '-' : '') + clean)
+    if (field.kind === 'money') {
+      const neg = mode === 'adjust' && /^\s*[-−]/.test(raw)
+      const v = typedAmount(neg ? raw.trim().slice(1) : raw, baseDecimals(currency))
+      if (v !== null) onValue((neg ? '-' : '') + v)
+      return
+    }
+    const digits = typedMoneyDigits(raw)
+    if (digits === null) return
+    if (field.kind === 'integer') return onValue(digits.replace(/\./g, ''))
+    const parts = digits.split('.')
+    onValue(parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : digits)
   }
 
   return (

@@ -1,7 +1,7 @@
 import { allocateGoals } from '../../lib/goals'
 import { IconBank, IconCard, IconPhone, IconWallet, IconWarning, IconBell } from '../../components/icons'
 import CategoryGlyph from '../../components/CategoryGlyph'
-import { baseSymbol } from '../../lib/money'
+import { baseSymbol, fmtCompact } from '../../lib/money'
 import { txBase } from '../../lib/fxContext'
 import { isSpend } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
@@ -18,6 +18,23 @@ export function fmtDate(dateStr) {
   if (d.toDateString() === now.toDateString())  return 'Today'
   if (d.toDateString() === yest.toDateString()) return 'Yesterday'
   return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })
+}
+
+/**
+ * A figure for a chip or a line of Home's prose: the shared compact form from
+ * a thousand up ("₱1.5K", "₱2.5M", "₱1.2B"), the whole figure below it
+ * ("₱940"). The template chips and the "spent today" hint each wrote their
+ * own, which stopped at K - a million read "₱1000.0K" - and the chips put the
+ * ledger's mark on a template in another currency.
+ *
+ * @param {number} v
+ * @param {string} [code]  the amount's currency; the base if omitted
+ */
+export function shortAmount(v, code) {
+  const n = Number.isFinite(v) ? v : 0
+  if (Math.abs(n) >= 1000) return fmtCompact(n, code)
+  const whole = Math.round(Math.abs(n))
+  return (n < 0 && whole ? '−' : '') + baseSymbol(code) + whole
 }
 
 export function getGreeting() {
@@ -81,12 +98,7 @@ export function getContextHint(txAll, budgetCategories, upcomingRecurring) {
   const todayTotal = spendingRows(txAll ?? [])
     .filter(t => isSpend(t) && isoToDateInput(t.date) === today)
     .reduce((s, t) => s + txBase(t), 0)
-  if (todayTotal > 0) {
-    const compact = todayTotal >= 1000
-      ? baseSymbol() + (todayTotal / 1000).toFixed(1) + 'K'
-      : baseSymbol() + todayTotal.toFixed(0)
-    return { text: `${compact} spent today` }
-  }
+  if (todayTotal > 0) return { text: `${shortAmount(todayTotal)} spent today` }
 
   // Day-of-week fallbacks
   if (dow === 1) return { text: 'New week, fresh start' }

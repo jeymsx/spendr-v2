@@ -8,9 +8,9 @@ import AccountPickerSheet, { AccountChip } from './AccountPickerSheet'
 import FadeScroller from './FadeScroller'
 import { RAIL_TOUCH } from './ui/Rail'
 import { IconChevronRight } from './icons'
-import { parseMoney, numToMoneyStr } from '../utils/moneyInput'
+import { parseMoney, numToMoneyStr, typedAmount } from '../utils/moneyInput'
 import { chipClass } from '../pages/accounts/shared'
-import { fmt } from '../lib/money'
+import { fmt, baseDecimals } from '../lib/money'
 import { refundableAmount, refundedAmount } from '../lib/txMoney'
 import { currencyOfTx } from '../lib/fxContext'
 
@@ -84,13 +84,13 @@ export default function RefundSheet({
     return out
   }, [remaining])
 
-  /* Digits and one point, written out rather than using moneyChangeHandler:
-     the hero shows the raw string, and re-inserting thousands separators
-     mid-type moves the caret. */
+  /* typedAmount rather than moneyChangeHandler: the hero shows the raw
+     string, and re-inserting thousands separators mid-type moves the caret.
+     Same rules otherwise - a sign or an exponent is refused rather than
+     stripped, and the places are the purchase's own. */
   const onAmount = (e) => {
-    const v = String(e.target.value).replace(/[^0-9.]/g, '')
-    const parts = v.split('.')
-    setAmount(parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : v)
+    const v = typedAmount(e.target.value, baseDecimals(cur))
+    if (v !== null) setAmount(v)
   }
 
   return (

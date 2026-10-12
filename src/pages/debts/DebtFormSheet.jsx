@@ -205,11 +205,12 @@ export function DebtFormSheet({ open, onClose, editDebt, defaultTab, defaultCont
             {/* The peso rides in the value, not in a leading span. A RowInput
                 is right-aligned and flex-1, so a span would claim the space
                 and push the mark back against the label - the same reason
-                TxDetailSheet's edit rows do it this way. The strip on the way
-                out is what keeps parseMoney seeing digits. */}
+                TxDetailSheet's edit rows do it this way. moneyChangeHandler
+                drops the mark on the way out, so parseMoney sees digits; a
+                pre-strip to [0-9.] here used to drop a minus with it. */}
             <RowInput
               value={paidStr && paidStr !== '0' ? `${baseSymbol()}${paidStr}` : ''}
-              onChange={e => { e.target.value = e.target.value.replace(/[^0-9.]/g, ''); moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
+              onChange={e => { moneyChangeHandler(setPaidStr)(e); setErrors(p => ({ ...p, paid: null })) }}
               placeholder={`${baseSymbol()}${zeroAmount()}`}
               inputMode="decimal"
             />

@@ -8,9 +8,9 @@ import AccountPickerSheet, { AccountChip } from '../../components/AccountPickerS
 import FadeScroller from '../../components/FadeScroller'
 import { RAIL_TOUCH } from '../../components/ui/Rail'
 import { IconChevronRight } from '../../components/icons'
-import { parseMoney, numToMoneyStr } from '../../utils/moneyInput'
+import { parseMoney, numToMoneyStr, typedAmount } from '../../utils/moneyInput'
 import { chipClass } from './shared'
-import { fmt } from '../../lib/money'
+import { fmt, baseDecimals } from '../../lib/money'
 import { currencyOfAccountName } from '../../lib/fxContext'
 import { estimateConversion } from '../../lib/transferLegs'
 import { isLiquid } from '../../lib/accountMeta'
@@ -121,13 +121,13 @@ export default function CardPaymentSheet({
   const short = from && sourceValue != null ? sourceValue - (from.balance ?? 0) : 0
   const ready = value > 0 && !!from && !saving && sourceValue != null
 
-  /* Digits and one point, same rule as every other money input - but written
-     out rather than using moneyChangeHandler, because the hero shows the raw
-     string and re-inserting thousands separators mid-type moves the caret. */
+  /* The same rules as every other money input (typedAmount), without the
+     grouping moneyChangeHandler adds, because the hero shows the raw string
+     and re-inserting thousands separators mid-type moves the caret. In the
+     card's places, which is what the figure is owed in. */
   const onAmount = (e) => {
-    const v = String(e.target.value).replace(/[^0-9.]/g, '')
-    const parts = v.split('.')
-    setAmount(parts.length > 2 ? `${parts[0]}.${parts.slice(1).join('')}` : v)
+    const v = typedAmount(e.target.value, baseDecimals(cardCur))
+    if (v !== null) setAmount(v)
   }
 
   return (

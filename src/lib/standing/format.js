@@ -41,9 +41,10 @@ export function money(n, cur) {
   return fmt(v, cur || undefined).replace(/[.,]0+$/, '')
 }
 
-/** A short amount for a list of piles: "₱47.6K". @param {number} n @param {string} [cur] */
+/** A short amount for a list of piles: "₱47.6K", "₱2M", "₱1T". @param {number} n @param {string} [cur] */
 export function moneyK(n, cur) {
-  return fmtCompact(Math.abs(num(n)), cur || undefined).replace(/\.0(?=[KMB])/, '')
+  // Every tier compactAmount writes (lib/currency.js), T included.
+  return fmtCompact(Math.abs(num(n)), cur || undefined).replace(/\.0(?=[KMBT])/, '')
 }
 
 /** A share, whole: "48%". @param {number} n */

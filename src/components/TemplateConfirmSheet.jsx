@@ -50,6 +50,15 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
 
   const cfg         = TYPE_CONFIG[template.type] ?? TYPE_CONFIG.expense
   const amount      = parseMoney(amountStr)
+  /* The hero's value carries the type's sign ahead of the mark, "−₱500" on
+     an expense, and that minus is U+2212 - which moneyChangeHandler rightly
+     refuses as a negative, so every key typed into an expense template's
+     amount snapped back. The sign is decoration; it comes off first. */
+  const onAmount = (/** @type {{target: {value: string}}} */ e) => {
+    const raw = String(e.target.value)
+    const value = cfg.sign && raw.startsWith(cfg.sign) ? raw.slice(cfg.sign.length) : raw
+    moneyChangeHandler(setAmountStr, baseDecimals(currencyOfAccountName(template?.account ?? template?.fromAccount)))({ target: { value } })
+  }
   const category    = (categories ?? []).find(c => c.name === template.category)
   const account     = (accounts ?? []).find(a => a.name === template.account)
   const fromAccount = (accounts ?? []).find(a => a.name === template.fromAccount)
@@ -179,7 +188,7 @@ export default function TemplateConfirmSheet({ open, onClose, template }) {
         <AmountHero color={cfg.color} className="mt-5 mb-6">
           <AmountInput
             value={amountStr}
-            onChange={moneyChangeHandler(setAmountStr, baseDecimals(currencyOfAccountName(template?.account ?? template?.fromAccount)))}
+            onChange={onAmount}
             label="Amount"
             sign={cfg.sign}
             color={cfg.color}
