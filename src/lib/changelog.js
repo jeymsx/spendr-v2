@@ -24,6 +24,17 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.22.0',
+    date: '2026-10-10',
+    items: [
+      { title: 'Delete your account', desc: 'Settings › Cloud sync now has Delete my account. It removes your account and everything synced to it, so save a backup first if you want a copy.' },
+      { title: 'Sync that holds up', desc: 'Changes made offline always reach your other devices. A bill paid on one shows as paid on the others, and can’t be paid twice for the same date.' },
+      { title: 'Safer sign-in', desc: 'Unlocking with Google always asks Google again, and other sites can’t load Spendr inside their pages.' },
+      { title: 'Sturdier CSV import', desc: 'Import reads more date and amount formats, and lists the rows it leaves out with the reason.' },
+      { title: 'Clear when it can’t save', desc: 'If your browser won’t let Spendr keep data, Spendr now says why instead of loading forever.' },
+    ],
+  },
+  {
     version: '0.21.0',
     date: '2026-10-09',
     items: [

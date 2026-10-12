@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-10-10'
+export const RELEASE_DATE = '2026-10-12'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,28 +32,23 @@ export const RELEASE_DATE = '2026-10-10'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'trash',
-    title: 'Delete your account',
-    desc: 'Settings › Cloud sync now has Delete my account. It removes your account and everything synced to it, so save a backup first if you want a copy.',
+    icon: 'categories',
+    title: 'Change the others too',
+    desc: 'Change a transaction’s category from its icon, and Spendr offers to move the others with the same description. Undo puts them all back.',
   },
   {
-    icon: 'transfer',
-    title: 'Sync that holds up',
-    desc: 'Changes made offline always reach your other devices. A bill paid on one shows as paid on the others, and can’t be paid twice for the same date.',
-  },
-  {
-    icon: 'lock',
-    title: 'Safer sign-in',
-    desc: 'Unlocking with Google always asks Google again, and other sites can’t load Spendr inside their pages.',
+    icon: 'sparkle',
+    title: 'Income, not Inflow',
+    desc: 'Money coming in is called Income everywhere now, from the Add button to your exports.',
   },
   {
     icon: 'receipt',
-    title: 'Sturdier CSV import',
-    desc: 'Import reads more date and amount formats, and lists the rows it leaves out with the reason.',
+    title: 'Steadier amount typing',
+    desc: 'Refunds, splits, card and loan payments and quick edits read amounts as carefully as every other form. A template’s amount can be changed again.',
   },
   {
-    icon: 'phone',
-    title: 'Clear when it can’t save',
-    desc: 'If your browser won’t let Spendr keep data, Spendr now says why instead of loading forever.',
+    icon: 'bank',
+    title: 'No ghost bills',
+    desc: 'An old copy of a bill left in the cloud can no longer turn up on a new device.',
   },
 ]
