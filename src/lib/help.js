@@ -467,10 +467,11 @@ export const HELP_ARTICLES = [
     topic: 'transactions',
     title: 'How do I change a transaction?',
     summary: 'Tap it in Transactions and press Edit. To change only its category, tap the icon on the left of the row instead.',
-    keywords: ['edit', 'fix', 'wrong amount', 'wrong category', 'change date', 'refile', 'recategorize'],
+    keywords: ['edit', 'fix', 'wrong amount', 'wrong category', 'change date', 'refile', 'recategorize', 'change all', 'same description', 'move more', 'others too'],
     body: [
       { p: 'Tap a transaction to see it in full, then press Edit. You can change the amount, description, category, account and date. Press Save changes when you are done.' },
       { p: 'To refile one quickly, tap the category icon on the left of its row and pick another. It is filed straight away, with Undo on the message that follows. For an installment purchase, every payment in the plan moves together.' },
+      { p: 'If other transactions with the same description are still in the old category, the message offers to move them too: press Move 2 more (or however many there are), and Undo after that puts them all back. On a computer, the same happens when you change one row’s category in the table.' },
       { p: 'Transfers, refunds and debt payments have no category to change, so their icon does nothing.' },
       { p: 'Edit isn’t offered on a refund, a loan payment or a balance correction. To change a refund, delete it and record it again from the purchase.' },
       { tip: 'The type can’t be changed: to turn an expense into a transfer, delete it and log it again. The same goes for a split or an installment term, which are set when you log the purchase.' },

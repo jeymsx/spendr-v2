@@ -8,7 +8,9 @@ import CategoryPickerSheet from '../components/CategoryPickerSheet'
 import SwipeRow from '../components/ui/SwipeRow'
 import { useToast } from '../context/ToastContext'
 import { moveToTrash, restoreFromTrash } from '../db/trash'
-import { recategorize, refile } from '../db/txHelpers'
+import { recategorize } from '../db/txHelpers'
+import { othersLike } from './transactions/othersLike'
+import { announceRefile } from './transactions/refileToast'
 import { findInstallmentGroup, isInstallmentRow, foldPlans, planFactor } from '../utils/installments'
 import { fmt } from '../lib/money'
 import { currencyOfTx } from '../lib/fxContext'
@@ -250,15 +252,17 @@ export default function Transactions() {
   }
 
   /* The tile, tapped: file the row under another category. A plan's months
-     move together, so the plan is not left half in one category. */
+     move together, so the plan is not left half in one category. Rows like
+     it still under the old one are offered too (transactions/othersLike.js). */
   async function refileTx(tx, cat) {
     if (!cat || cat.name === tx.category) return
     const rows = isInstallmentRow(tx) ? findInstallmentGroup(tx, txAll ?? []) : [tx]
+    const others = othersLike(tx, txAll ?? [], rows.map(r => r.id))
     try {
       const before = await recategorize(rows, cat.name)
-      showToast(rows.length > 1 ? `${rows.length} payments filed under ${cat.name}` : `Filed under ${cat.name}`, 'success', {
-        actionLabel: 'Undo',
-        onAction: () => { refile(before).catch(e => console.error('[Transactions] refile undo failed:', e)) },
+      announceRefile(showToast, {
+        message: rows.length > 1 ? `${rows.length} payments filed under ${cat.name}` : `Filed under ${cat.name}`,
+        before, category: cat.name, from: tx.category, others, tag: 'Transactions',
       })
     } catch (e) {
       console.error('[Transactions] recategorize failed:', e)

@@ -6,7 +6,9 @@ import db from '../../db/db'
 import { useLiveQuery } from '../../hooks/useLiveQuery'
 import { useToast } from '../../context/ToastContext'
 import { moveToTrash, restoreFromTrash } from '../../db/trash'
-import { recategorize, refile, postRefund } from '../../db/txHelpers'
+import { recategorize, postRefund } from '../../db/txHelpers'
+import { othersLike } from '../../pages/transactions/othersLike'
+import { announceRefile } from '../../pages/transactions/refileToast'
 import { findInstallmentGroup, isInstallmentRow, foldPlans, planFactor } from '../../utils/installments'
 import { scheduledCutoff } from '../../utils/scheduled'
 import { isoToDateInput } from '../../utils/txDate'
@@ -241,11 +243,13 @@ export default function WebTransactions() {
         if (!ids.has(r.id)) { ids.add(r.id); rowsToFile.push(r) }
       }
     }
+    // One row refiled offers the rows like it, as on the phone; a selection was already a choice of rows.
+    const others = todo.length === 1 ? othersLike(todo[0], txAll ?? [], [...ids]) : []
     try {
       const before = await recategorize(rowsToFile, cat.name)
-      showToast(rowsToFile.length > 1 ? `${rowsToFile.length} filed under ${cat.name}` : `Filed under ${cat.name}`, 'success', {
-        actionLabel: 'Undo',
-        onAction: () => { refile(before).catch(e => console.error('[WebTransactions] refile undo failed:', e)) },
+      announceRefile(showToast, {
+        message: rowsToFile.length > 1 ? `${rowsToFile.length} filed under ${cat.name}` : `Filed under ${cat.name}`,
+        before, category: cat.name, from: todo[0].category, others, tag: 'WebTransactions',
       })
     } catch (e) {
       console.error('[WebTransactions] recategorize failed:', e)
