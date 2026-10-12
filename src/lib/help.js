@@ -13,8 +13,8 @@
  * For someone with the app open in their other hand. Plain, warm and specific:
  * what to press, in the words on the screen, and what happens after. Sentence
  * case, no em dashes (`npm run check` fails on them), the app's own names for
- * things (Inflow is "income" in a sentence, but the button says Inflow, so the
- * steps say Inflow). A path through the app is written with › between the
+ * things (money in is Income on the buttons, so the steps say Income, never
+ * the old name Inflow). A path through the app is written with › between the
  * names on screen: Settings › Budget limits. Where the phone and a computer
  * differ, say both.
  *
@@ -129,7 +129,7 @@ export const HELP_ARTICLES = [
     keywords: ['navigation', 'menu', 'tabs', 'where is', 'settings', 'sidebar', 'lost'],
     body: [
       { p: 'On a phone, the bar at the bottom holds Home, Transactions, the + button, Accounts and Insights. Press the tab you are already on to jump back to the top.' },
-      { p: 'Home holds the rest. The bell and Settings sit at the top right. The round buttons open Goals, Debts and Recurring, and add an Expense, Inflow or Transfer. The Budget card opens your Budget page, and Achievements is at the top of Settings.' },
+      { p: 'Home holds the rest. The bell and Settings sit at the top right. The round buttons open Goals, Debts and Recurring, and add an Expense, Income or Transfer. The Budget card opens your Budget page, and Achievements is at the top of Settings.' },
       { p: 'A number on Goals, Debts or Recurring means one of them needs you: a goal that has reached its target, a debt due within a week, or a bill due soon.' },
       { p: 'On a computer, the sidebar lists Home, Transactions, Accounts and Insights, then Budget, Goals, Recurring and Debts, with Achievements and Settings below. The bar along the top searches everything and holds Add and the bell.' },
       { tip: 'In the Home Screen app on an iPhone, swipe in from the left edge of the screen to go back.' },
@@ -187,17 +187,17 @@ export const HELP_ARTICLES = [
     id: 'add-income',
     topic: 'start',
     title: 'How do I log my pay or other income?',
-    summary: 'Press + and choose Inflow. Type the amount, pick a category like Salary, choose the account it landed in, then review and save.',
-    keywords: ['salary', 'sahod', 'sweldo', 'money in', 'allowance', 'padala', 'received', 'inflow'],
+    summary: 'Press + and choose Income. Type the amount, pick a category like Salary, choose the account it landed in, then review and save.',
+    keywords: ['salary', 'sahod', 'sweldo', 'money in', 'allowance', 'padala', 'received', 'inflow', 'add inflow'],
     body: [
-      { p: 'Money coming in is an inflow. It adds to the account it landed in and counts as income in Insights.' },
+      { p: 'Logging money that came in adds it to the account it landed in and counts it as income in Insights.' },
       { steps: [
-        'Press + at the bottom, then Inflow.',
+        'Press + at the bottom, then Income.',
         'Type the amount.',
         'Type a Description if you like, such as who it came from.',
         'Pick a category, such as Salary or Income.',
         'Choose the Account it landed in.',
-        'Press Review inflow, then Save transaction.',
+        'Press Review income, then Save transaction.',
       ] },
       { p: 'Your pay comes again, so add it to Recurring as well. Spendr then expects it in the forecast and Safe to spend, and you mark it received each payday.' },
       { tip: 'Got money back for something you bought? Use Refund on that purchase instead, so it counts as spending less rather than as income.' },
@@ -284,7 +284,7 @@ export const HELP_ARTICLES = [
     keywords: ['hold plus', 'fast entry', 'shortcut', 'type it', 'quick add', 'one line'],
     body: [
       { p: 'Quick log turns a line of text into a filled-in form. Press and hold the + button at the bottom until it opens, then type what happened.' },
-      { p: 'Start with the amount and add a word or two. “150 jollibee” is an expense, filed under the category you usually use for it. Add an account’s name to use that account. Words like salary, sahod, allowance or bonus make it an inflow.' },
+      { p: 'Start with the amount and add a word or two. “150 jollibee” is an expense, filed under the category you usually use for it. Add an account’s name to use that account. Words like salary, sahod, allowance or bonus make it income.' },
       { p: 'For a transfer, name both accounts as they are called in Spendr: “1000 from gcash to cash”. Add a fee with “15 fee”, and yesterday or kahapon for something from the day before.' },
       { shot: 'ql-expense-form', caption: 'What “185 starbucks” fills in.' },
       { p: 'As you type, chips show what Spendr understood. A solid chip is something you typed, and a dashed one is a guess. Press the tick, or Enter, to open the form filled in. Nothing is saved until you review it there.' },
@@ -315,7 +315,7 @@ export const HELP_ARTICLES = [
     summary: 'Type a description and Spendr picks a category: From your history if it learned it from you, Suggested if it is only a guess. Tap another tile to change it.',
     keywords: ['auto category', 'suggest', 'suggested', 'guess', 'from your history', 'wrong category', 'learns'],
     body: [
-      { p: 'When you type a description on Add expense or Add inflow, Spendr looks for the category you have used for it before, then for well-known places like Jollibee or Grab, or a category’s own name in what you typed. When it finds one, it selects that tile and says why beside Category.' },
+      { p: 'When you type a description on Add expense or Add income, Spendr looks for the category you have used for it before, then for well-known places like Jollibee or Grab, or a category’s own name in what you typed. When it finds one, it selects that tile and says why beside Category.' },
       { p: 'From your history means you have filed that description there before. Suggested means Spendr is guessing from something else, such as a well-known place, so it is worth a glance.' },
       { p: 'It only fills in a category you haven’t picked yourself: tap any other tile and your choice stays. The more you log, the better its guesses get, and recent entries count the most.' },
       { tip: 'Filed something under the wrong category? Tap the icon on the left of its row in Transactions to refile it in one tap.' },
@@ -335,7 +335,7 @@ export const HELP_ARTICLES = [
         'Turn on Save as template.',
         'Press Save transaction.',
       ] },
-      { p: 'Next time, open Add expense, Add inflow or Transfer and press the Templates button at the top right. Pick one and the form fills in, ready to review.' },
+      { p: 'Next time, open Add expense, Add income or Transfer and press the Templates button at the top right. Pick one and the form fills in, ready to review.' },
       { p: 'Your templates also show as chips on Home. Press one, change the amount if you need to, and press Save transaction.' },
       { p: 'To add, change or remove them, open Settings › Quick templates. Press + for a new one, or tap one to edit it.' },
       { tip: 'Holding a template deletes it straight away, with no undo, both in Quick templates and on the forms.' },
@@ -437,7 +437,7 @@ export const HELP_ARTICLES = [
     summary: 'Point at Add at the top, or press E, I, T or Q on any page. Ctrl+K searches everything and runs commands.',
     keywords: ['keyboard shortcuts', 'desktop', 'laptop', 'command palette', 'ctrl k', 'hotkeys'],
     body: [
-      { p: 'Point at Add in the top bar for its menu: Expense, Inflow, Transfer and Quick log. Or press E, I, T or Q on any page, as long as you aren’t typing in a field.' },
+      { p: 'Point at Add in the top bar for its menu: Expense, Income, Transfer and Quick log. Or press E, I, T or Q on any page, as long as you aren’t typing in a field.' },
       { p: 'The form opens in a panel at the right, over the page you were on. Escape closes it, and you stay where you were.' },
       { p: 'Press Ctrl+K (⌘K on a Mac), or / when you aren’t typing, to open the search. Type to find transactions, accounts, categories, bills, goals and people, or to jump to a page. It also adds transactions, switches between light and dark, and syncs.' },
       { tip: 'In the Add menu, the arrow keys move between items and Enter picks one.' },
@@ -454,7 +454,7 @@ export const HELP_ARTICLES = [
     keywords: ['search', 'filter', 'look up', 'calendar', 'date range', 'amount range', 'history'],
     body: [
       { p: 'Open Transactions and type in Search. It looks through each transaction’s description, category, account and amount, so 1850 and 1,850 both find ₱1,850. Matching accounts, categories, bills, goals and people show above the results too.' },
-      { p: 'The chips under the search show All, Expense, Inflow or Transfer. Press Filter for more: an amount range, a date range (This week, This month, Last month or Custom), one or more accounts, and a category. This week starts on Monday. Then press Show transactions.' },
+      { p: 'The chips under the search show All, Expense, Income or Transfer. Press Filter for more: an amount range, a date range (This week, This month, Last month or Custom), one or more accounts, and a category. This week starts on Monday. Then press Show transactions.' },
       { shot: 'transactions' },
       { p: 'To see your month day by day, press the calendar button at the top. Each day has a dot for each kind of entry: red for spending, green for money in and blue for transfers. Tap a day to list what happened on it.' },
       { tip: 'Search also finds installment payments still to come, which the list keeps out of sight until their date.' },
@@ -804,8 +804,8 @@ export const HELP_ARTICLES = [
     summary: 'Open Settings › Categories to add your own or pick presets, change a name, icon or colour, and choose where a deleted category’s entries go.',
     keywords: ['new category', 'rename category', 'icon', 'colour', 'delete category', 'presets', 'income categories'],
     body: [
-      { p: 'Open Settings › Categories. Expense and Inflow categories each have their own tab.' },
-      { p: 'Press Add category to make one: give it a Category name, an Icon, a colour and, for an Expense category, a Monthly budget if you like. Inflow categories have no budget. Or press Browse presets and tap the ones you want.' },
+      { p: 'Open Settings › Categories. Expense and Income categories each have their own tab.' },
+      { p: 'Press Add category to make one: give it a Category name, an Icon, a colour and, for an Expense category, a Monthly budget if you like. Income categories have no budget. Or press Browse presets and tap the ones you want.' },
       { p: 'Tap a category to edit it. Renaming it moves every transaction filed under it to the new name, and renames it on your bills, templates and debts too. Drag the handles to change the order categories appear in when you log.' },
       { p: 'To delete one, open it and press Delete. If anything uses it, Spendr says how many transactions, bills, templates and debts do, and asks which category to move them to. Press Reassign & delete and they all move, then the category goes.' },
       { tip: 'Nothing is left behind under the old name: a bill keeps posting under the renamed or replacement category, and so do your templates.' },
@@ -853,7 +853,7 @@ export const HELP_ARTICLES = [
         'Choose the Frequency. Twice a month means the 15th and the last day of the month.',
         'Set the Next payday and press Add income.',
       ] },
-      { p: 'Each payday, open it on Recurring and press Mark received, which logs the inflow. Pay that’s late isn’t counted until you do.' },
+      { p: 'Each payday, open it on Recurring and press Mark received, which logs the income. Pay that’s late isn’t counted until you do.' },
       { tip: 'Haven’t added it? The forecast also looks for pay in what you’ve logged. Forecast settings chooses whether it counts pay on Recurring, pay found in your history, or both.' },
       { go: '/recurring/new?type=income', label: 'Add your payday' },
     ],

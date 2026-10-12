@@ -77,6 +77,9 @@ describe('workbookSheets', () => {
     const row = (/** @type {string} */ d) => t.find((/** @type {any[]} */ r) => val(r[2]) === d)
     expect(val(row('Rent')[8])).toBe(-12000)
     expect(val(row('Salary')[8])).toBe(30000)
+    // Money in says Income, the word the app uses, not the stored type 'inflow'.
+    expect(val(row('Salary')[1])).toBe('Income')
+    expect(val(row('Rent')[1])).toBe('Expense')
     // A refund is money back: positive.
     expect(val(row('Lunch refund')[8])).toBe(50)
     expect(val(row('Lunch refund')[9])).toBe('Refund')

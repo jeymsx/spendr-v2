@@ -474,7 +474,7 @@ function FilterBar({ search, onSearch, filters, setFilters, accounts, categories
         label="Type"
         value={filters.type}
         onChange={(v) => setFilters({ type: v, category: null })}
-        options={[{ value: 'all', label: 'All' }, { value: 'expense', label: 'Expenses' }, { value: 'inflow', label: 'Inflows' }, { value: 'transfer', label: 'Transfers' }]}
+        options={[{ value: 'all', label: 'All' }, { value: 'expense', label: 'Expenses' }, { value: 'inflow', label: 'Income' }, { value: 'transfer', label: 'Transfers' }]}
       />
       <Popover
         role="dialog"
@@ -634,7 +634,7 @@ function BulkBar({ rows, categories, onClear, onRefile, onDelete }) {
         label="File under"
         align="end"
         width={240}
-        trigger={<Btn size="sm" icon={<ITag size={14} />} iconRight={<IChevronDown size={13} />} disabled={!options.length} title={!refilable.length ? 'None of these can be refiled' : types.length > 1 ? 'Pick expenses or inflows, not both' : undefined}>Change category</Btn>}
+        trigger={<Btn size="sm" icon={<ITag size={14} />} iconRight={<IChevronDown size={13} />} disabled={!options.length} title={!refilable.length ? 'None of these can be refiled' : types.length > 1 ? 'Pick expenses or income, not both' : undefined}>Change category</Btn>}
       >
         <div className="max-h-[320px] overflow-y-auto">
           <MenuLabel>File {refilable.length} under</MenuLabel>
@@ -667,7 +667,7 @@ function TxDrawer({ tx, catMap, acctMap, categories, onClose, onEdit, onDelete, 
     <Drawer
       open={!!tx}
       onClose={onClose}
-      title={tx?.type === 'transfer' ? 'Transfer' : tx?.type === 'inflow' ? 'Inflow' : 'Expense'}
+      title={tx?.type === 'transfer' ? 'Transfer' : tx?.type === 'inflow' ? 'Income' : 'Expense'}
       footer={tx && (
         <>
           <Btn variant="danger" icon={<ITrash size={14} />} onClick={() => onDelete(tx)} className="mr-auto">Delete</Btn>
@@ -747,7 +747,7 @@ function exportCsv(rows, catMap) {
     const { sign, magnitude, currency } = amountDisplay(t)
     const signed = (sign === '−' ? -1 : 1) * magnitude
     lines.push([
-      isoToDateInput(t.date), fmtTime(t.date), t.type, txRowWords(t, catMap[t.category]).title,
+      isoToDateInput(t.date), fmtTime(t.date), t.type === 'inflow' ? 'income' : t.type, txRowWords(t, catMap[t.category]).title,
       t.type === 'transfer' ? '' : t.category, t.account ?? '', t.fromAccount ?? '', t.toAccount ?? '',
       Number(signed.toFixed(2)), currency, Number(((sign === '−' ? -1 : 1) * Math.abs(txBase(t))).toFixed(2)),
     ].map(csvCell).join(','))

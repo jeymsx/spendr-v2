@@ -36,7 +36,7 @@ import { fmt, baseSymbol, zeroAmount } from '../../lib/money'
 
 export const TMPL_TYPE_STYLE = {
   expense:  { bg: 'bg-red-50 dark:bg-red-500/10',      text: 'text-red-500 dark:text-red-400',      label: 'Expense'  },
-  inflow:   { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', label: 'Inflow' },
+  inflow:   { bg: 'bg-emerald-50 dark:bg-emerald-500/10', text: 'text-emerald-600 dark:text-emerald-400', label: 'Income' },
   transfer: { bg: 'bg-blue-50 dark:bg-blue-500/10',    text: 'text-blue-600 dark:text-blue-400',    label: 'Transfer' },
 }
 

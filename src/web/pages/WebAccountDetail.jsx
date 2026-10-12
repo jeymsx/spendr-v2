@@ -438,7 +438,7 @@ function MonthStats({ txs, name, cur }) {
   }
   return (
     <>
-      <Stat label="In this month" value={fmt(into, cur)} note="Inflows and transfers in" />
+      <Stat label="In this month" value={fmt(into, cur)} note="Income and transfers in" />
       <Stat label="Out this month" value={fmt(out, cur)} note="Spending and transfers out" />
     </>
   )

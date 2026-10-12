@@ -121,7 +121,7 @@ export function AddFlowProvider({ children }) {
           it, and closing is not a navigation - the page underneath stays
           exactly where it was. */}
       {flow && (Form || editing) && (
-        <Drawer open onClose={closeAdd} label={editing ? 'Edit transaction' : `Add ${flow}`} width={560}>
+        <Drawer open onClose={closeAdd} label={editing ? 'Edit transaction' : `Add ${flow === 'inflow' ? 'income' : flow}`} width={560}>
           <div className="d-drawer-phone">
             <Suspense fallback={
               <div className="flex items-center justify-center py-20">

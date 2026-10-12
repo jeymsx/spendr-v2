@@ -133,7 +133,7 @@ function CommandPalette({ initial, onClose }) {
 
   const actions = useMemo(() => /** @type {Item[]} */ ([
     { id: 'a-expense', group: 'Create', label: 'Add an expense', icon: <IArrowUpRight />, kbd: 'E', run: () => { onClose(); openAdd('expense') }, keywords: 'new spend' },
-    { id: 'a-inflow', group: 'Create', label: 'Add an inflow', icon: <IArrowDownLeft />, kbd: 'I', run: () => { onClose(); openAdd('inflow') }, keywords: 'new income' },
+    { id: 'a-inflow', group: 'Create', label: 'Add income', icon: <IArrowDownLeft />, kbd: 'I', run: () => { onClose(); openAdd('inflow') }, keywords: 'new inflow' },
     { id: 'a-transfer', group: 'Create', label: 'Add a transfer', icon: <ITransfer />, kbd: 'T', run: () => { onClose(); openAdd('transfer') }, keywords: 'new move' },
     { id: 'a-quick', group: 'Create', label: 'Quick log', icon: <IZap />, kbd: 'Q', run: () => { onClose(); openAdd('quick') }, keywords: 'type' },
     { id: 'a-account', group: 'Create', label: 'New account', icon: <IPlus />, run: () => go('/accounts/new'), keywords: 'add wallet bank card' },

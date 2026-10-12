@@ -3,7 +3,7 @@ import Sheet from './ui/Sheet'
 import { fmt } from '../lib/money'
 import { dupWhen } from './dupWhen'
 
-const TYPE_LABEL = { expense: 'expense', inflow: 'inflow', transfer: 'transfer' }
+const TYPE_LABEL = { expense: 'expense', inflow: 'income', transfer: 'transfer' }
 
 /**
  * `account` is the account RECORD, for the currency the amount is in.

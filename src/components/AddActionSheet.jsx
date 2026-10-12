@@ -43,7 +43,7 @@ const ACTIONS = [
     iconBg: 'bg-red-500/[0.10] border border-red-500/[0.20] text-red-500 dark:text-red-400 shadow-sm dark:shadow-[inset_0_1px_0_rgba(239,68,68,0.12)]',
   },
   {
-    label: 'Inflow',
+    label: 'Income',
     path: '/inflow',
     Icon: IconArrowDown,
     iconBg: 'bg-emerald-500/[0.10] border border-emerald-500/[0.20] text-emerald-600 dark:text-emerald-400 shadow-sm dark:shadow-[inset_0_1px_0_rgba(16,185,129,0.12)]',

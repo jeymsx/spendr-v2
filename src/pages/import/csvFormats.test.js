@@ -25,6 +25,26 @@ describe('which layout a file is', () => {
     expect(rows[0]).toMatchObject({ txId: 't1', type: 'expense', account: 'Cash', amount: 120 })
   })
 
+  it('writes money in as income, the word on screen, and reads it back as an inflow', () => {
+    const csv = transactionsToCsv([
+      { txId: 't1', type: 'inflow', date: '2026-09-10T04:00:00.000Z', description: 'Pay', category: 'Salary', account: 'BPI', amount: 5000 },
+    ])
+    expect(csv.split('\r\n')[1]).toMatch(/^"t1","income",/)
+    const { rows } = parseCSV(csv)
+    expect(rows[0]).toMatchObject({ txId: 't1', type: 'inflow', account: 'BPI', amount: 5000 })
+    expect(rows[0]).not.toHaveProperty('problem')
+  })
+
+  it('still reads inflow, the word an export wrote before it said income', () => {
+    const old = [
+      'txId,type,date,description,category,payment,account,fromAccount,toAccount,amount',
+      '"a","inflow","2026-09-10T04:00:00.000Z","Pay","Salary","","BPI","","",5000',
+    ].join('\r\n')
+    const { rows } = parseCSV(old)
+    expect(rows[0]).toMatchObject({ type: 'inflow', account: 'BPI', amount: 5000 })
+    expect(rows[0]).not.toHaveProperty('problem')
+  })
+
   it('still reads an export from before the link columns existed', () => {
     const old = [
       'txId,type,date,description,category,payment,account,fromAccount,toAccount,amount',

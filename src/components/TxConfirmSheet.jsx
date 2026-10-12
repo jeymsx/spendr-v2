@@ -23,7 +23,7 @@ function ToggleSwitch({ on }) {
    type is the sign, the colour, and the noun the title uses. */
 const TYPE_CONFIG = {
   expense:  { noun: 'expense',  sign: '−', color: '#ef4444' },
-  inflow:   { noun: 'inflow',   sign: '+', color: '#22c55e' },
+  inflow:   { noun: 'income',   sign: '+', color: '#22c55e' },
   transfer: { noun: 'transfer', sign: '',  color: 'var(--color-primary)' },
 }
 

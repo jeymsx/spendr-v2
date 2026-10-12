@@ -49,7 +49,7 @@ const exitDelay = () =>
 
 const TYPE_COPY = {
   expense:  { verb: 'Expense',  to: '/expense'  },
-  inflow:   { verb: 'Inflow',   to: '/inflow'   },
+  inflow:   { verb: 'Income',   to: '/inflow'   },
   transfer: { verb: 'Transfer', to: '/transfer' },
 }
 

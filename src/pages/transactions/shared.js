@@ -106,7 +106,7 @@ export function canRecategorize(tx) {
 export const TYPE_OPTS = [
   { value: 'all',      label: 'All'      },
   { value: 'expense',  label: 'Expense'  },
-  { value: 'inflow',   label: 'Inflow'   },
+  { value: 'inflow',   label: 'Income'   },
   { value: 'transfer', label: 'Transfer' },
 ]
 

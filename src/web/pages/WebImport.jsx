@@ -23,12 +23,12 @@ const ImportWizard = lazy(() => import('../../pages/ImportWizard'))
    to_account) is read too, and said in one line below. */
 const COLS = [
   ['txId',        'Stable id. Rows whose id already exists are skipped.'],
-  ['type',        'expense, inflow or transfer.'],
+  ['type',        'expense, income or transfer.'],
   ['date',        'ISO date, e.g. 2026-08-28.'],
   ['description', 'Free text. May be blank.'],
   ['category',    'Created if it does not exist yet.'],
   ['payment',     'Kept as it is. May be blank.'],
-  ['account',     'The account for an expense or an inflow.'],
+  ['account',     'The account for an expense or income.'],
   ['fromAccount', 'The source of a transfer.'],
   ['toAccount',   'The destination of a transfer.'],
   ['amount',      'Positive number. The type carries the direction; a refund is a negative expense.'],

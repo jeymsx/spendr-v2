@@ -247,7 +247,7 @@ export const TRACKS = [
     tiers: [{ n: 1, key: 'first-peso' }, { n: 50 }, { n: 100, key: 'century' }, { n: 250 }, { n: 500, key: 'five-hundred' }, { n: 1000, label: '1K' }, { n: 2500, label: '2.5K' }, { n: 5000, label: '5K' }],
     title: n => (n === 1 ? 'First Entry' : `${count(n)} Entries`),
     blurb: n => (n === 1 ? 'You logged your first transaction.' : `${count(n)} transactions on the books.`),
-    how: n => (n === 1 ? 'Log any expense, inflow or transfer.' : `Log ${count(n)} transactions.`),
+    how: n => (n === 1 ? 'Log any expense, income or transfer.' : `Log ${count(n)} transactions.`),
   },
   {
     key: 'green', name: 'Green months', about: 'Months in a row earning more than you spent', unit: 'months',
@@ -255,7 +255,7 @@ export const TRACKS = [
     tiers: [{ n: 1, key: 'green-month' }, { n: 3, key: 'steady-three' }, { n: 6 }, { n: 12 }],
     title: n => (n === 1 ? 'Green Month' : `${n} Green Months`),
     blurb: n => (n === 1 ? 'You earned more than you spent.' : `${n} months running, you earned more than you spent.`),
-    how: n => `Finish ${n === 1 ? 'a month' : `${n} months in a row`} with inflow above spending.`,
+    how: n => `Finish ${n === 1 ? 'a month' : `${n} months in a row`} with income above spending.`,
   },
   {
     key: 'budget', name: 'On budget', about: 'Months in a row inside every limit', unit: 'months',

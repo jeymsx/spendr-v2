@@ -129,7 +129,8 @@ export function searchEverything(rawQuery, data = {}, limit = 3) {
 
   add('Categories', data.categories,
     c => scoreText(c.name, q),
-    c => ({ id: c.id, label: c.name, meta: c.type,
+    // The type 'inflow' is Income on screen.
+    c => ({ id: c.id, label: c.name, meta: c.type === 'inflow' ? 'income' : c.type,
             to: `/categories/${encodeURIComponent(c.name)}` }))
 
   add('Recurring', data.recurring,

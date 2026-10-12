@@ -88,6 +88,14 @@ export function csvCell(v) {
 const figure = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '' : csvCell(Number(v)))
 
 /**
+ * The type as a person reads it: money in is "income", as the app says it,
+ * though the ledger stores 'inflow'. csv.js readType takes either word back.
+ *
+ * @param {unknown} type
+ */
+const typeWord = (type) => (type === 'inflow' ? 'income' : type)
+
+/**
  * @param {Array<Record<string, any>>} transactions
  * @returns {string}  CRLF-separated, header first, no trailing newline
  */
@@ -95,7 +103,7 @@ export function transactionsToCsv(transactions) {
   const lines = [
     CSV_HEADERS.join(','),
     ...transactions.map(t => [
-      csvCell(t.txId), csvCell(t.type), csvCell(t.date), csvCell(t.description),
+      csvCell(t.txId), csvCell(typeWord(t.type)), csvCell(t.date), csvCell(t.description),
       csvCell(t.category), csvCell(t.payment), csvCell(t.account),
       csvCell(t.fromAccount), csvCell(t.toAccount), figure(t.amount ?? 0),
       csvCell(t.refundOf), csvCell(t.splitId), csvCell(t.installmentId),

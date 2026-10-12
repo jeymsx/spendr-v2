@@ -20,7 +20,7 @@ const NAMES = /** @type {Array<[string, string]>} */ ([
   ['/transactions/:id/edit', 'Edit transaction'],
   ['/transactions', 'Transactions'],
   ['/expense', 'Add expense'],
-  ['/inflow', 'Add inflow'],
+  ['/inflow', 'Add income'],
   ['/transfer', 'Transfer'],
   ['/accounts/new', 'New account'],
   ['/accounts/:id/edit', 'Edit account'],

@@ -16,7 +16,7 @@ import { HELP_ARTICLES } from './help.js'
  * found as written in the title counts for most of all.
  *
  * People search with their own words, not the app's, so a few are taken to
- * mean the app's: "income" finds Inflow, "delete" finds remove, and so on.
+ * mean the app's: "inflow", Income's old name, finds it, "delete" finds remove.
  * Those are guesses, so they count for a third as much as the word itself, and
  * only as whole words (a synonym of "spend" is not a reason to match Spendr).
  *

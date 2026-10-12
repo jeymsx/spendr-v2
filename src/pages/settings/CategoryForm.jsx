@@ -292,12 +292,12 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               {isEdit ? (
                 <p className="h-[48px] flex items-center px-4 rounded-2xl text-sm font-medium text-slate-700 dark:text-slate-300
                   bg-slate-50 dark:bg-white/[0.04] border border-slate-200/80 dark:border-white/[0.09]">
-                  {type === 'expense' ? '↑ Expense' : '↓ Inflow'}
+                  {type === 'expense' ? '↑ Expense' : '↓ Income'}
                   <span className="ml-2 text-xs text-slate-400 dark:text-slate-500 font-normal">(cannot change)</span>
                 </p>
               ) : (
                 <div className="grid grid-cols-2 gap-2">
-                  {[{ value: 'expense', label: '↑ Expense' }, { value: 'inflow', label: '↓ Inflow' }].map(o => (
+                  {[{ value: 'expense', label: '↑ Expense' }, { value: 'inflow', label: '↓ Income' }].map(o => (
                     <button key={o.value} onClick={() => { setType(o.value); setNameError(false) }}
                       className={[
                         'py-3 rounded-full text-sm font-semibold transition-all duration-75 active:scale-[0.97]',
@@ -373,7 +373,7 @@ export function CategoryFormSheet({ open, onClose, category, defaultType, allCat
               <div>
                 <p className="text-sm font-semibold text-slate-800 dark:text-white">{name || 'Category name'}</p>
                 <p className="text-11 text-slate-400 dark:text-slate-500 mt-0.5">
-                  {type === 'expense' ? 'Expense' : 'Inflow'}
+                  {type === 'expense' ? 'Expense' : 'Income'}
                   {type !== 'inflow' && parseMoney(budget) > 0 && ` · ${fmt(parseMoney(budget))} / mo`}
                 </p>
               </div>

@@ -100,6 +100,11 @@ describe('searchEverything', () => {
     expect(groups[0].items[0].to).toBe('/categories/Gro%2Fcery')
   })
 
+  it('says income, not the stored type inflow, under a category of money in', () => {
+    const groups = searchEverything('sal', { categories: [{ id: 2, name: 'Salary', type: 'inflow' }] })
+    expect(groups[0].items[0].meta).toBe('income')
+  })
+
   /** One letter matches most of the app; the results would be noise. */
   it('says nothing until there are two characters', () => {
     expect(searchEverything('g', data)).toEqual([])

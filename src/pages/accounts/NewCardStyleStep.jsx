@@ -110,7 +110,7 @@ export function CreatedStep({ draft, onDone, onAddTransaction }) {
             ? 'Move money in with a transfer, and update its value from its page whenever you check it.'
             : draft.type === 'loan'
               ? 'Pay it from its page: the payment is split, and only the interest counts as spending.'
-              : 'Log an expense, an inflow or a transfer against it and the balance keeps itself.'}
+              : 'Log expenses, income or transfers against it and the balance keeps itself.'}
       </p>
 
       <div className="w-full mt-8 flex flex-col gap-2.5" style={{ animation: 'pageFadeIn 0.5s 0.3s ease both' }}>

@@ -154,7 +154,7 @@ export function StepPreview({ rows, format, fileName, fileSize, onBack, onNext }
           <DetailRow label="Total transactions" value={String(good.length)} />
           <DetailRow label="Date range" value={readableRange(analysis.earliest, analysis.latest)} />
           <DetailRow label="Expenses" value={String(analysis.byType.expense)} />
-          <DetailRow label="Inflows" value={String(analysis.byType.inflow)} />
+          <DetailRow label="Income" value={String(analysis.byType.inflow)} />
           <DetailRow
             label="Transfers"
             value={String(analysis.byType.transfer)}

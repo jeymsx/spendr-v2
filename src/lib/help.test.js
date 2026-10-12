@@ -170,4 +170,10 @@ describe('searchHelp', () => {
     expect(searchHelp('pay card', { limit: 50 }).length).toBeLessThanOrEqual(wide)
     expect(searchHelp('add expense')[0]?.id).toBe('add-expense')
   })
+
+  it('finds income by its old name, inflow', () => {
+    expect(searchHelp('inflow')[0]?.id).toBe('add-income')
+    expect(searchHelp('add inflow').slice(0, 2).map(a => a.id)).toContain('add-income')
+    expect(searchHelp('inflow categories')[0]?.id).toBe('manage-categories')
+  })
 })

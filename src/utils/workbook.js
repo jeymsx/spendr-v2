@@ -203,7 +203,7 @@ export function workbookSheets({
     const transfer = t.type === 'transfer'
     return [
       day(t.date),
-      text(t.type === 'expense' ? 'Expense' : t.type === 'inflow' ? 'Inflow' : transfer ? 'Transfer' : t.type),
+      text(t.type === 'expense' ? 'Expense' : t.type === 'inflow' ? 'Income' : transfer ? 'Transfer' : t.type),
       text(t.description),
       transfer ? null : text(t.category),
       text(transfer ? (t.fromAccount || t.account) : t.account),
@@ -261,7 +261,7 @@ export function workbookSheets({
 
   /* ── Bills that repeat ── */
   const recurringRows = recurring.map(r => [
-    text(r.name), text(r.type === 'inflow' ? 'Inflow' : 'Expense'), num(r.amount), text(r.frequency),
+    text(r.name), text(r.type === 'inflow' ? 'Income' : 'Expense'), num(r.amount), text(r.frequency),
     day(r.nextDate), text(r.account), text(r.category), text(r.active === false ? 'No' : 'Yes'),
   ])
   const recurringData = [head(['Name', 'Type', 'Amount', 'How often', 'Next', 'Account', 'Category', 'Active']), ...recurringRows]

@@ -210,7 +210,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
           account: account.name,
           date: dateInputToIso(date, editTx.date),
         })
-        showToast('Inflow updated')
+        showToast('Income updated')
         leaveGuard.leave(() => { if (onSaved) onSaved(); else back() })
         return
       }
@@ -235,12 +235,12 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
         await applyBalanceEffect({ type: 'inflow', amount, account: account.name })
       })
       if (templateData) await saveTemplate(templateData)
-      showToast('Inflow saved')
+      showToast('Income saved')
       // Home in place of the form, so back does not reopen it (AddExpense).
       leaveGuard.leave(() => { if (onSaved) onSaved(); else homeAfterSave(navigate) })
     } catch (e) {
       console.error('[AddInflow] save failed:', e)
-      showToast('Failed to save inflow', 'error')
+      showToast('Failed to save income', 'error')
       setSaving(false)
     }
   }
@@ -270,7 +270,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
             <IconChevronLeft />
           </IconButton>
           <h1 className="text-base font-semibold text-slate-800 dark:text-white text-center truncate">
-            {isEdit ? 'Edit inflow' : 'Add inflow'}
+            {isEdit ? 'Edit income' : 'Add income'}
           </h1>
           {/* Templates start a new entry from a saved one, which is the
               opposite of editing a particular row. */}
@@ -385,7 +385,7 @@ export default function AddInflow({ onCancel, onSaved, editTx = null } = {}) {
 
       <div className="px-4 pt-5">
         <Button size="lg" block onClick={onConfirmPress} disabled={saving || amount <= 0}>
-          {isEdit ? (saving ? 'Saving…' : 'Save changes') : 'Review inflow'}
+          {isEdit ? (saving ? 'Saving…' : 'Save changes') : 'Review income'}
         </Button>
       </div>
 

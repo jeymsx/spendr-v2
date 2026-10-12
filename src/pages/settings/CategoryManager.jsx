@@ -168,7 +168,7 @@ export function CategoryManager({ open, onClose, variant = 'sheet' }) {
     <SegTabs
       tabs={[
         { value: 'expense', label: 'Expense', count: expenseCats.length },
-        { value: 'inflow',  label: 'Inflow',  count: inflowCats.length  },
+        { value: 'inflow',  label: 'Income',  count: inflowCats.length  },
       ]}
       value={activeTab}
       onChange={setActiveTab}
@@ -187,7 +187,7 @@ export function CategoryManager({ open, onClose, variant = 'sheet' }) {
                 dark:bg-white/[0.04] dark:border-white/[0.07]
                 shadow-[0_1px_4px_rgba(0,0,0,0.05)] dark:shadow-none mb-3">
                 {visibleCats.length === 0 ? (
-                  <EmptyState size="sm" art="tiles" title={`No ${activeTab} categories`} body={'Tap "Add" below to create one'} />
+                  <EmptyState size="sm" art="tiles" title={`No ${activeTab === 'inflow' ? 'income' : activeTab} categories`} body={'Tap "Add" below to create one'} />
                 ) : (
                   <DndContext
                     sensors={sensors}

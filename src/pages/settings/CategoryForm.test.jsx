@@ -78,7 +78,7 @@ describe('the budget field', () => {
 
   it('goes away when a new category is switched to inflow, and comes back', () => {
     render(form({ defaultType: 'expense' }))
-    fireEvent.click(screen.getByText('↓ Inflow'))
+    fireEvent.click(screen.getByText('↓ Income'))
     expect(screen.queryByLabelText('Monthly budget')).toBeNull()
     fireEvent.click(screen.getByText('↑ Expense'))
     expect(screen.getByLabelText('Monthly budget')).toBeTruthy()
@@ -90,7 +90,7 @@ describe('saving', () => {
     render(form({ defaultType: 'expense' }))
     fireEvent.change(screen.getByLabelText('Category name'), { target: { value: 'Bonus' } })
     fireEvent.change(screen.getByLabelText('Monthly budget'), { target: { value: '3000' } })
-    fireEvent.click(screen.getByText('↓ Inflow'))
+    fireEvent.click(screen.getByText('↓ Income'))
     fireEvent.click(screen.getByRole('button', { name: 'Add category' }))
     await waitFor(() => expect(add).toHaveBeenCalled())
     expect(add.mock.calls[0][0]).toMatchObject({ name: 'Bonus', type: 'inflow', budget: 0 })

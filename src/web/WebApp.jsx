@@ -100,7 +100,7 @@ function LoadingScreen() {
    (each one's own route, below). */
 const FORM_ROUTES = [
   { path: '/expense', label: 'Add expense', el: <AddExpense /> },
-  { path: '/inflow', label: 'Add inflow', el: <AddInflow /> },
+  { path: '/inflow', label: 'Add income', el: <AddInflow /> },
   { path: '/transfer', label: 'Transfer', el: <Transfer /> },
   { path: '/transactions/:id/edit', label: 'Edit transaction', el: <EditTransaction /> },
   { path: '/accounts/new', label: 'New account', el: <AccountNew />, width: 600 },
@@ -142,7 +142,7 @@ export default function WebApp() {
               <Route path="/transactions/deleted" element={<RecentlyDeleted />} />
               <Route path="/transactions/:id/edit" element={<RouteDrawer label="Edit transaction" fallback="/transactions" under={<WebTransactions />}><EditTransaction /></RouteDrawer>} />
               <Route path="/expense"  element={<RouteDrawer label="Add expense" fallback="/" under={<WebHome />}><AddExpense /></RouteDrawer>} />
-              <Route path="/inflow"   element={<RouteDrawer label="Add inflow" fallback="/" under={<WebHome />}><AddInflow /></RouteDrawer>} />
+              <Route path="/inflow"   element={<RouteDrawer label="Add income" fallback="/" under={<WebHome />}><AddInflow /></RouteDrawer>} />
               <Route path="/transfer" element={<RouteDrawer label="Transfer" fallback="/" under={<WebHome />}><Transfer /></RouteDrawer>} />
 
               <Route path="/accounts" element={<WebAccounts />} />

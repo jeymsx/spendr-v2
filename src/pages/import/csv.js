@@ -302,7 +302,8 @@ export function readAmount(raw) {
 
 /**
  * The words a file uses for the three kinds of row. A bank's export says
- * "debit" and "credit"; Spendr's own says expense, inflow and transfer.
+ * "debit" and "credit"; Spendr's own says expense, income and transfer, and
+ * said inflow (the type's stored name) before income was the word on screen.
  */
 const TYPE_WORDS = new Map([
   ['expense', 'expense'], ['debit', 'expense'], ['withdrawal', 'expense'],

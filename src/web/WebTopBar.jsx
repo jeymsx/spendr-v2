@@ -117,7 +117,7 @@ function AddMenu() {
       trigger={<Btn variant="primary" icon={<IPlus size={15} />} iconRight={<IChevronDown size={14} className="-mr-1 opacity-80" />}>Add</Btn>}
     >
       <MenuItem icon={<IArrowUpRight />} kbd="E" onSelect={() => openAdd('expense')}>Expense</MenuItem>
-      <MenuItem icon={<IArrowDownLeft />} kbd="I" onSelect={() => openAdd('inflow')}>Inflow</MenuItem>
+      <MenuItem icon={<IArrowDownLeft />} kbd="I" onSelect={() => openAdd('inflow')}>Income</MenuItem>
       <MenuItem icon={<ITransfer />} kbd="T" onSelect={() => openAdd('transfer')}>Transfer</MenuItem>
       <MenuSep />
       <MenuItem icon={<IZap />} kbd="Q" onSelect={() => openAdd('quick')}>Quick log</MenuItem>

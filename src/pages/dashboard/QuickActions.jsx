@@ -186,7 +186,7 @@ export default function QuickActions({ counts = {} }) {
         <QuickAction to="/debts"     icon={<IconBanknote />}  label="Debts"    badge={counts.debts} />
         <QuickAction to="/recurring" icon={<IconRepeat />}    label="Recurring" badge={counts.bills} />
         <QuickAction to="/expense"   icon={<IconArrowOut />}  label="Expense" />
-        <QuickAction to="/inflow"    icon={<IconArrowIn />}   label="Inflow" />
+        <QuickAction to="/inflow"    icon={<IconArrowIn />}   label="Income" />
         <QuickAction to="/transfer"  icon={<IconTransfer />}  label="Transfer" />
       </div>
     </section>
