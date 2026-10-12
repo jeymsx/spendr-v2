@@ -2496,6 +2496,10 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
   // Every stable id the server knows about, for the collision test below.
   const remoteSyncIds = new Set(data.map(r => r.sync_id).filter(Boolean))
 
+  /* Rows that have a stable id first, so a row without one meets them already
+     on this device - which is how a stale twin is told apart (below). */
+  data.sort((a, b) => (a.sync_id ? 0 : 1) - (b.sync_id ? 0 : 1))
+
   /* Remote rows that have no stable id, paired with the local row that turns
      out to be them. See the note by the push below: this is what stops the
      first sync after an upgrade duplicating the entire table. */
@@ -2543,6 +2547,16 @@ async function pullSimpleTable(tableName, dexieTable, fromRow, nameKey, userId, 
       row.sync_id && weak?.syncId && weak.syncId !== row.sync_id
       && remoteSyncIds.has(weak.syncId)
     )
+
+    /* The same question for a remote row with no stable id at all. If what it
+       matched is in the cloud already under its own id, this row is a stale
+       twin - a copy from before rows were stamped, found only by its name or
+       number - and not that row. Stamping it fails on every sync (the id is
+       taken), and on a first sync, where the cloud's copy wins whatever its
+       age, it would put the old twin over the real one: a bill's price and
+       due date from months ago. Passed over, not deleted: whether anything
+       else still reads it is not this device's to know. */
+    if (!row.sync_id && weak?.syncId && remoteSyncIds.has(weak.syncId)) continue
 
     const target   = bySync ?? (collides ? null : weak)
     const remotets = row.updated_at ? new Date(row.updated_at).getTime() : 0

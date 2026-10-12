@@ -70,7 +70,14 @@ vi.mock('../db/db', () => {
       ...emptyTable(),
       toArray: async () => localFolders,
       get: async (/** @type {number} */ id) => localFolders.find(f => f.id === id),
-      add: async (/** @type {any} */ row) => { const id = localFolders.length + 1; localFolders.push({ ...row, id }); return id },
+      // A new row is given a stable id on the way in, as db.js's creating hook does.
+      add: async (/** @type {any} */ row) => { const id = localFolders.length + 1; localFolders.push({ ...row, syncId: row.syncId ?? `minted-${id}`, id }); return id },
+      update: async (/** @type {number} */ id, /** @type {any} */ patch) => {
+        const at = localFolders.findIndex(f => f.id === id)
+        if (at < 0) return 0
+        localFolders[at] = { ...localFolders[at], ...patch }
+        return 1
+      },
       where: (/** @type {string} */ key) => {
         if (key !== 'syncId') throw Object.assign(new Error(`KeyPath ${key} on object store note_folders is not indexed`), { name: 'SchemaError' })
         return { equals: (/** @type {string} */ v) => ({ first: async () => localFolders.find(f => f.syncId === v) }) }
@@ -221,6 +228,36 @@ describe('pullChanges', () => {
     server.note_folders = [{ id: 1, user_id: 'u1', local_id: 99, sync_id: 'f1', name: 'Work', created_at: '2026-10-01T00:00:00.000Z', updated_at: '2026-10-01T00:00:00.000Z' }]
     await pullChanges('u1')
     expect(localFolders).toHaveLength(1)
+  })
+
+  /* A row in the cloud with no stable id, named like one the cloud also holds
+     under its own: a copy left from before rows were stamped (an old bill's
+     price and due date, months stale). It is not that row. */
+  const twinOf = (/** @type {string} */ name) => ({ id: 7, user_id: 'u1', local_id: 3, sync_id: /** @type {string|null} */ (null), name, created_at: '2026-05-01T00:00:00.000Z', updated_at: '2026-05-01T00:00:00.000Z' })
+  const real = (/** @type {string} */ name) => ({ id: 1, user_id: 'u1', local_id: 99, sync_id: 'f1', name, created_at: '2026-10-01T00:00:00.000Z', updated_at: '2026-10-01T00:00:00.000Z' })
+
+  it('passes over a stale twin of a row it has, and does not try to give it that row\'s id', async () => {
+    localFolders = [{ id: 1, name: 'Work', syncId: 'f1', updatedAt: '2026-10-01T00:00:00.000Z', syncedAt: '2026-10-01T00:00:00.000Z' }]
+    server.note_folders = [real('Work'), twinOf('Work')]
+    await pullChanges('u1')
+    expect(localFolders).toHaveLength(1)
+    expect(localFolders[0].syncId).toBe('f1')
+    expect(serverWrites).not.toContain('update note_folders')
+  })
+
+  it('on a device that has none, brings the real one and not its twin, whichever the cloud lists first', async () => {
+    server.note_folders = [twinOf('Work'), real('Work')]
+    await pullChanges('u1')
+    expect(localFolders.map(f => f.syncId)).toEqual(['f1'])
+    expect(serverWrites).not.toContain('update note_folders')
+  })
+
+  it('still adopts a row with no stable id when nothing in the cloud is it', async () => {
+    server.note_folders = [twinOf('Personal')]
+    await pullChanges('u1')
+    expect(localFolders.map(f => f.name)).toEqual(['Personal'])
+    // Given this device's id, so the next push finds it.
+    expect(serverWrites).toContain('update note_folders')
   })
 
   it('reads only the tables it is asked for: a budget changed elsewhere is not a reason to read the whole account', async () => {
