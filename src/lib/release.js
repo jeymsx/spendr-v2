@@ -32,18 +32,8 @@ export const RELEASE_DATE = '2026-10-13'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'gift',
-    title: 'Wishlist',
-    desc: 'Park something you want with its price and a day to think it over. Spendr asks if you still want it then, and what you skip counts as kept.',
-  },
-  {
-    icon: 'receipt',
-    title: 'Paste a shop link',
-    desc: 'Paste a Shopee or Lazada share message into a wish and its name and price fill in.',
-  },
-  {
-    icon: 'phone',
-    title: 'More on Home',
-    desc: 'The round buttons on Home scroll sideways now, with Wishlist, Challenges, Quick log and Forecast. Expense, Income and Transfer are under +.',
+    icon: 'sparkle',
+    title: 'Spendr 1.0',
+    desc: 'Spendr is out of beta. Everything you’ve logged comes with you. Thank you for using it while it was being built.',
   },
 ]

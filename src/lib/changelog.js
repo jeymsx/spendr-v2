@@ -24,6 +24,15 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.24.0',
+    date: '2026-10-13',
+    items: [
+      { title: 'Wishlist', desc: 'Park something you want with its price and a day to think it over. Spendr asks if you still want it then, and what you skip counts as kept.' },
+      { title: 'Paste a shop link', desc: 'Paste a Shopee or Lazada share message into a wish and its name and price fill in.' },
+      { title: 'More on Home', desc: 'The round buttons on Home scroll sideways now, with Wishlist, Challenges, Quick log and Forecast. Expense, Income and Transfer are under +.' },
+    ],
+  },
+  {
     version: '0.23.0',
     date: '2026-10-12',
     items: [
