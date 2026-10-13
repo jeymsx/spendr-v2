@@ -55,6 +55,8 @@ const WebCategory = lazy(() => import('./pages/WebCategory'))
 const WebDebtPerson = lazy(() => import('./pages/WebDebtPerson'))
 const WebGoal = lazy(() => import('./pages/WebGoal'))
 const WebGoals = lazy(() => import('./pages/WebGoals'))
+const WebWishlist = lazy(() => import('./pages/WebWishlist'))
+const WishForm = lazy(() => import('../pages/WishForm'))
 const WebRecurring = lazy(() => import('./pages/WebRecurring'))
 const WebDebts = lazy(() => import('./pages/WebDebts'))
 const WebRecurringItem = lazy(() => import('./pages/WebRecurringItem'))
@@ -110,6 +112,7 @@ const FORM_ROUTES = [
   { path: '/insights/trend/settings', label: 'Trend settings', el: <TrendSettings /> },
   { path: '/recurring/new', label: 'New recurring', el: <RecurringForm /> },
   { path: '/recurring/:id/edit', label: 'Edit recurring', el: <RecurringForm /> },
+  { path: '/wishlist/:id', label: 'Wish', el: <WishForm /> },
 ]
 
 export default function WebApp() {
@@ -166,6 +169,8 @@ export default function WebApp() {
               <Route path="/budget" element={<WebBudget />} />
               <Route path="/categories/:name" element={<WebCategory />} />
               <Route path="/goals" element={<WebGoals />} />
+              <Route path="/wishlist" element={<WebWishlist />} />
+              <Route path="/wishlist/:id" element={<RouteDrawer label="Wish" fallback="/wishlist" under={<WebWishlist />}><WishForm /></RouteDrawer>} />
               <Route path="/goals/:id" element={<WebGoal />} />
               <Route path="/recurring" element={<WebRecurring />} />
               <Route path="/recurring/new" element={<RouteDrawer label="New recurring" fallback="/recurring" under={<WebRecurring />}><RecurringForm /></RouteDrawer>} />

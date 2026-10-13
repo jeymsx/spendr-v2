@@ -15,7 +15,7 @@ import { PaletteContext } from './paletteContext'
 import { setViewMode } from './useViewMode'
 import { AccountTile, CategoryTile } from './ui/display'
 import {
-  ISearch, IHome, IList, IWallet, IChart, IGauge, ITarget, IRepeat, IUsers, INote, ITrophy, IImport, ISettings,
+  ISearch, IHome, IList, IWallet, IChart, IGauge, ITarget, IGift, IRepeat, IUsers, INote, ITrophy, IImport, ISettings,
   IArrowUpRight, IArrowDownLeft, ITransfer, IZap, IPlus, IMoon, ISun, IPhone, IRefresh, ICornerDownLeft, ITag, IBell,
   ISliders, ILock, IPalette, IFileText,
   IHelp,
@@ -86,6 +86,7 @@ const PAGES = [
   { to: '/insights', label: 'Insights', Icon: IChart, keywords: 'reports spending trend net worth forecast' },
   { to: '/budget', label: 'Budget', Icon: IGauge, keywords: 'limits categories' },
   { to: '/goals', label: 'Goals', Icon: ITarget, keywords: 'savings' },
+  { to: '/wishlist', label: 'Wishlist', Icon: IGift, keywords: 'wish want buy later cooling off' },
   { to: '/recurring', label: 'Recurring', Icon: IRepeat, keywords: 'bills subscriptions income' },
   { to: '/debts', label: 'Debts', Icon: IUsers, keywords: 'people owe lend borrow' },
   { to: '/notes', label: 'Notes', Icon: INote },

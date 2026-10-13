@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import DateInput from '../components/ui/DateInput'
-import { useNavigate } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { useBack } from '../hooks/useBack'
 import { useLeaveGuard } from '../hooks/useBackGuard'
 import { homeAfterSave } from '../lib/navTrail'
@@ -37,6 +37,7 @@ import Rail from '../components/ui/Rail'
 import AmountInput from '../components/ui/AmountInput'
 import ConversionChip from '../components/ConversionChip'
 import { isEverydayAccount } from '../lib/accountMeta'
+import { markBought } from '../db/wishes'
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
@@ -92,6 +93,12 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
   const navigate = useNavigate()
   const back = useBack()
   const { showToast } = useToast()
+
+  /* Opened from the wishlist's Buy (pages/Wishlist.jsx): the wish it buys,
+     by its stable id, marked as bought once this expense is saved - not
+     before, so backing out of the form leaves the wish where it was. */
+  const location = useLocation()
+  const wishSyncId = !isEdit ? (location.state?.wish ?? null) : null
 
   const [amountStr,    setAmountStr]    = useState('0')
   const [description,  setDescription]  = useState('')
@@ -481,6 +488,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
         })
         await openReceivables(legRows[0]?.txId ?? null, splitLegs[0].category, byCategory)
         if (templateData) await saveTemplate(templateData)
+        if (wishSyncId) await markBought(wishSyncId, legRows[0]?.txId ?? null).catch(e => console.warn('[AddExpense] wish not marked:', e))
         showToast(shares.length
           ? `Split ${splitLegs.length} ways · ${shares.length} owe you`
           : `Split across ${splitLegs.length} categories`)
@@ -505,6 +513,7 @@ export default function AddExpense({ onCancel, onSaved, editTx = null } = {}) {
       await openReceivables(rows[0].txId, category.name)
 
       if (templateData) await saveTemplate(templateData)
+      if (wishSyncId) await markBought(wishSyncId, rows[0].txId).catch(e => console.warn('[AddExpense] wish not marked:', e))
       showToast(shares.length ? `Expense saved · ${shares.length} owe you`
               : count > 1 ? `${count} payments scheduled`
               : 'Expense saved')

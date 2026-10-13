@@ -36,6 +36,8 @@ const Debts        = lazy(() => import('./pages/Debts'))
 const EditTransaction = lazy(() => import('./pages/EditTransaction'))
 const PersonDetail = lazy(() => import('./pages/debts/PersonDetail'))
 const Goals        = lazy(() => import('./pages/Goals'))
+const Wishlist     = lazy(() => import('./pages/Wishlist'))
+const WishForm     = lazy(() => import('./pages/WishForm'))
 const GoalDetail   = lazy(() => import('./pages/GoalDetail'))
 const Recurring    = lazy(() => import('./pages/Recurring'))
 const RecurringDetail = lazy(() => import('./pages/RecurringDetail'))
@@ -143,6 +145,8 @@ export default function App() {
               <Route path="/debts/person/:key" element={<PersonDetail />} />
               <Route path="/goals"        element={<Goals />} />
               <Route path="/goals/:id"    element={<GoalDetail />} />
+              <Route path="/wishlist"     element={<Wishlist />} />
+              <Route path="/wishlist/:id" element={<WishForm />} />
               <Route path="/recurring"    element={<Recurring />} />
               {/* Before /recurring/:id, or "new" matches as an id. */}
               <Route path="/recurring/new" element={<RecurringForm />} />

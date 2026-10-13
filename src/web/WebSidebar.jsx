@@ -6,7 +6,7 @@ import { quickActionCounts } from '../pages/dashboard/shared'
 import { useBaseCurrency } from '../context/CurrencyContext'
 import useRates from '../hooks/useRates'
 import {
-  IHome, IList, IWallet, IChart, IGauge, ITarget, IRepeat, IUsers, INote, ITrophy, ISettings, ISidebar,
+  IHome, IList, IWallet, IChart, IGauge, ITarget, IGift, IRepeat, IUsers, INote, ITrophy, ISettings, ISidebar,
 } from './ui/icons'
 
 /**
@@ -74,11 +74,12 @@ export default function WebSidebar() {
   const debts = useLiveQuery(() => db.debts.toArray(), [], [])
   const goals = useLiveQuery(() => db.goals.toArray(), [], [])
   const accounts = useLiveQuery(() => db.accounts.toArray(), [], [])
+  const wishes = useLiveQuery(() => db.wishes.toArray(), [], [])
   const base = useBaseCurrency()
   const { table: rates } = useRates()
   const counts = useMemo(
-    () => quickActionCounts({ recurring, debts, goals, accounts, base, rates }),
-    [recurring, debts, goals, accounts, base, rates],
+    () => quickActionCounts({ recurring, debts, goals, accounts, wishes, base, rates }),
+    [recurring, debts, goals, accounts, wishes, base, rates],
   )
 
   /** @type {NavEntry[]} */
@@ -93,6 +94,7 @@ export default function WebSidebar() {
     // A category's page is part of the budget.
     { to: '/budget', label: 'Budget', Icon: IGauge, also: '/categories/' },
     { to: '/goals', label: 'Goals', Icon: ITarget, badge: counts.goals },
+    { to: '/wishlist', label: 'Wishlist', Icon: IGift, badge: counts.wishes },
     { to: '/recurring', label: 'Recurring', Icon: IRepeat, badge: counts.bills },
     { to: '/debts', label: 'Debts', Icon: IUsers, badge: counts.debts },
   ]
