@@ -129,7 +129,7 @@ export const HELP_ARTICLES = [
     keywords: ['navigation', 'menu', 'tabs', 'where is', 'settings', 'sidebar', 'lost'],
     body: [
       { p: 'On a phone, the bar at the bottom holds Home, Transactions, the + button, Accounts and Insights. Press the tab you are already on to jump back to the top.' },
-      { p: 'Home holds the rest. The bell and Settings sit at the top right. The round buttons open Goals, Debts and Recurring, and add an Expense, Income or Transfer. The Budget card opens your Budget page, and Achievements is at the top of Settings.' },
+      { p: 'Home holds the rest. The bell and Settings sit at the top right. The row of round buttons scrolls sideways: Goals, Debts, Recurring, Wishlist, Challenges, Quick log, Forecast and Notes. The Budget card opens your Budget page, and Achievements is also at the top of Settings.' },
       { p: 'A number on Goals, Debts or Recurring means one of them needs you: a goal that has reached its target, a debt due within a week, or a bill due soon.' },
       { p: 'On a computer, the sidebar lists Home, Transactions, Accounts and Insights, then Budget, Goals, Recurring and Debts, with Achievements and Settings below. The bar along the top searches everything and holds Add and the bell.' },
       { tip: 'In the Home Screen app on an iPhone, swipe in from the left edge of the screen to go back.' },
@@ -280,10 +280,10 @@ export const HELP_ARTICLES = [
     id: 'quick-log',
     topic: 'logging',
     title: 'How does quick log work?',
-    summary: 'Hold the + button and type it the way you’d say it, like “150 jollibee”. Spendr fills in the form for you to check and save.',
+    summary: 'Press Quick log on Home, or hold the + button, and type it the way you’d say it, like “150 jollibee”. Spendr fills in the form for you to check and save.',
     keywords: ['hold plus', 'fast entry', 'shortcut', 'type it', 'quick add', 'one line'],
     body: [
-      { p: 'Quick log turns a line of text into a filled-in form. Press and hold the + button at the bottom until it opens, then type what happened.' },
+      { p: 'Quick log turns a line of text into a filled-in form. Press Quick log in the row of round buttons on Home, or press and hold the + button at the bottom until it opens, then type what happened.' },
       { p: 'Start with the amount and add a word or two. “150 jollibee” is an expense, filed under the category you usually use for it. Add an account’s name to use that account. Words like salary, sahod, allowance or bonus make it income.' },
       { p: 'For a transfer, name both accounts as they are called in Spendr: “1000 from gcash to cash”. Add a fee with “15 fee”, and yesterday or kahapon for something from the day before.' },
       { shot: 'ql-expense-form', caption: 'What “185 starbucks” fills in.' },

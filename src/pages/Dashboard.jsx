@@ -104,6 +104,7 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   // real account balances, so "is it funded?" cannot be read off the row - it
   // has to go through the allocator, the same one the Goals page uses.
   const goalRows   = useLiveQuery(() => db.goals.toArray(),      [], [])
+  const wishRows   = useLiveQuery(() => db.wishes.toArray(),     [], [])
   // The default a category with no opinion of its own carries by (lib/rollover.js); undefined until read.
   const rolloverDefault = useLiveQuery(async () => !!(await db.meta.get('budgetRollover'))?.value, [], undefined)
   /* 'converted' or 'separated' - set in Settings, and only offered to a
@@ -334,10 +335,10 @@ export default function Dashboard({ layout = 'phone' } = {}) {
   const actionCounts = useMemo(
     () => quickActionCounts({
       recurring: recurring ?? [], debts: debts ?? [],
-      goals: goalRows ?? [], accounts: accounts ?? [],
+      goals: goalRows ?? [], accounts: accounts ?? [], wishes: wishRows ?? [],
       base: baseCurrency, rates,
     }),
-    [recurring, debts, goalRows, accounts, baseCurrency, rates],
+    [recurring, debts, goalRows, accounts, wishRows, baseCurrency, rates],
   )
 
   /* Net worth and its piles, from the one definition every screen uses -

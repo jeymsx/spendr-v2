@@ -82,7 +82,7 @@ describe('what does not count', () => {
 
   it('ignores a debt or bill with no due date at all', () => {
     expect(count({ debts: [owed(null)], recurring: [bill(undefined)] }))
-      .toEqual({ bills: 0, debts: 0, goals: 0 })
+      .toEqual({ bills: 0, debts: 0, goals: 0, wishes: 0 })
   })
 
   it('ignores an unparseable date rather than counting or throwing', () => {
@@ -118,6 +118,16 @@ describe('goals', () => {
 
 describe('defaults', () => {
   it('is all zeroes with nothing at all', () => {
-    expect(quickActionCounts()).toEqual({ bills: 0, debts: 0, goals: 0 })
+    expect(quickActionCounts()).toEqual({ bills: 0, debts: 0, goals: 0, wishes: 0 })
+  })
+
+  it('counts the wishes whose wait is over, and not the ones still cooling off or decided', () => {
+    const today = new Date(2026, 9, 21, 12)
+    const wishes = [
+      { name: 'a', price: 1, status: /** @type {const} */ ('waiting'), coolUntil: '2026-10-20' },
+      { name: 'b', price: 1, status: /** @type {const} */ ('waiting'), coolUntil: '2026-10-25' },
+      { name: 'c', price: 1, status: /** @type {const} */ ('skipped'), coolUntil: '2026-10-01' },
+    ]
+    expect(quickActionCounts({ wishes, today }).wishes).toBe(1)
   })
 })

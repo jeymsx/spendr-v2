@@ -1,31 +1,14 @@
 import { Link } from 'react-router-dom'
+import FadeScroller from '../../components/FadeScroller'
+import { RAIL_TOUCH } from '../../components/ui/Rail'
+import { IconGift } from '../wishlist/shared'
 
 // ── Quick actions ──────────────────────────────────────────────────────────────
 
-/* Four glyphs, one set: 24x24, 2px stroke on integer coordinates so the edges
+/* One set of glyphs: 24x24, 2px stroke on integer coordinates so the edges
    land on pixel boundaries at 1x, round caps, no fill, currentColor. Drawn
    from primitives rather than freehand curves, which is what stops one of
-   four looking hand-made next to its neighbours. */
-
-export function IconArrowOut() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 19V5" />
-      <path d="M5 12l7-7 7 7" />
-    </svg>
-  )
-}
-
-export function IconArrowIn() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M12 5v14" />
-      <path d="M5 12l7 7 7-7" />
-    </svg>
-  )
-}
+   them looking hand-made next to its neighbours. */
 
 export function IconTarget() {
   return (
@@ -63,14 +46,47 @@ export function IconRepeat() {
   )
 }
 
-export function IconTransfer() {
+/** A flag on its pole: a challenge taken on. */
+export function IconFlag() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M8 3L4 7l4 4" />
-      <path d="M4 7h16" />
-      <path d="M16 21l4-4-4-4" />
-      <path d="M20 17H4" />
+      <path d="M5 21V4" />
+      <path d="M5 4h13l-3 4.5 3 4.5H5" />
+    </svg>
+  )
+}
+
+/** A bolt: the quick log, as the add form's own button draws it. */
+export function IconBolt() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M13 2L4 14h7l-1 8 9-12h-7l1-8z" />
+    </svg>
+  )
+}
+
+/** A line running on past today's mark: the forecast. */
+export function IconForecast() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 17l5-5 4 3 4-5" />
+      <path d="M16 10l5-4" strokeDasharray="2 3" />
+      <path d="M3 21h18" />
+    </svg>
+  )
+}
+
+/** A page with lines: notes. */
+export function IconNote() {
+  return (
+    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
+      <path d="M14 3v5h5" />
+      <path d="M9 13h6M9 17h4" />
     </svg>
   )
 }
@@ -82,11 +98,11 @@ export function IconTransfer() {
  * carries aria-hidden and the link needs no aria-label - a screen reader
  * reads "Goals, link" rather than "Goals Goals".
  */
-export function QuickAction({ to, icon, label, badge = 0 }) {
+export function QuickAction({ to, icon, label, badge = 0, className = '' }) {
   return (
     <Link
       to={to}
-      className="flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-75"
+      className={`flex flex-col items-center gap-1.5 active:scale-95 transition-transform duration-75 ${className}`}
       /* The count is part of the link's name, not a separate announcement:
          "Bills, 2 need attention, link". A bare "2" floating next to the
          label would be read out with no idea what it counted. */
@@ -142,7 +158,7 @@ export function QuickAction({ to, icon, label, badge = 0 }) {
 }
 
 /**
- * Six doors, below the accounts.
+ * The doors, below the accounts, in a row that scrolls sideways.
  *
  * This replaced two rectangles, which replaced three, and the shape is the
  * point: the home screen was cards all the way down, so a row of discs reads
@@ -151,44 +167,60 @@ export function QuickAction({ to, icon, label, badge = 0 }) {
  * back - though each disc IS the card material, so the row still belongs to
  * the same surface family as the panels around it.
  *
- * Six rather than four because four left 16px of air either side of every
- * disc in an 81px column. Six columns are 58px, which is a disc and its
- * breathing room and nothing spare.
+ * ── Eight, and a rail ──
  *
- * Order is deliberate. Goals, Debts and Recurring come first because none of
- * them has another entry point anywhere in the app - and Recurring's only
- * other home, the Upcoming rows, renders nothing at all on a week when
- * nothing is due. Expense, Inflow and Transfer follow, in the order the add
- * sheet lists them, because the FAB already reaches all three; here they are
- * one tap instead of two.
+ * It was six columns across the page's width, gap-1 apart. It still is, for
+ * the first six: each door is a sixth of the row, less the gaps, so Goals to
+ * Quick log sit exactly where six columns put them and nothing is cut. The
+ * other two (0.24.0) wait past the right edge, and the row scrolls to them.
+ * The ends feather as they are scrolled past (FadeScroller) rather than
+ * slicing a disc down the middle - only 20px, the page's own gutter, so the
+ * fade lives in the margin and never dims Quick log - and only at an end that
+ * has more beyond it, so the row at rest has a hard left edge.
  *
- * Only the first three can carry a count, and that is not an oversight:
- * Goals, Debts and Bills are PLACES, and a place can have a backlog. Expense,
- * Inflow and Transfer are verbs - there is nothing waiting for you behind
- * them, so a badge there would have nothing to count.
+ * ── The order ──
  *
- * Every glyph is the accent, not red for Expense and green for Inflow the way
- * the add sheet colours them. Three hues among six discs would read as a
- * legend that means something, when the only thing being encoded is "these go
- * to different pages" - the labels already say that, and the destination
- * pages carry the semantics.
+ * Goals, Debts, Recurring and Wishlist first: places with a backlog, and the
+ * only way into them from Home. Then Challenges, which otherwise sat behind
+ * Settings › Achievements; Quick log, which otherwise meant knowing to hold
+ * the + (it opens with `?log=quick`, the address the daily check-in's
+ * notification already uses); the Forecast, which is otherwise two taps into
+ * Insights; and Notes. Expense, Income and Transfer gave their discs up: the +
+ * reaches all three, so here they were only ever saving a tap.
+ *
+ * Only the first four carry a count. They are PLACES, and a place can have a
+ * backlog - for the wishlist, wishes whose wait is over. A challenge under
+ * way, a forecast or a note is nothing to act on, and Quick log is a verb.
+ *
+ * Every glyph is the same quiet grey, not coloured by what it means. Several
+ * hues among eight discs would read as a legend, when the only thing being
+ * encoded is "these go to different pages" - the labels say that, and the
+ * destination pages carry the semantics.
  */
 export default function QuickActions({ counts = {} }) {
+  // A sixth of the row's width, less five gap-1s: six across, as the grid was.
+  const door = 'flex-none w-[calc((100%-1.25rem)/6)]'
   return (
-    // mt-8, not mt-5. Measured: mt-5 left 20px between the account cards and
-    // the discs while the Budget heading below sat 32px away, and the eye
-    // reads that as the row belonging to the carousel. 32px is the gap every
-    // other section on this screen uses, so matching it makes the row a peer
-    // rather than an appendix - and makes the space above and below it equal.
-    <section className="px-5 mt-8">
-      <div className="grid grid-cols-6 gap-1">
-        <QuickAction to="/goals"     icon={<IconTarget />}    label="Goals"    badge={counts.goals} />
-        <QuickAction to="/debts"     icon={<IconBanknote />}  label="Debts"    badge={counts.debts} />
-        <QuickAction to="/recurring" icon={<IconRepeat />}    label="Recurring" badge={counts.bills} />
-        <QuickAction to="/expense"   icon={<IconArrowOut />}  label="Expense" />
-        <QuickAction to="/inflow"    icon={<IconArrowIn />}   label="Income" />
-        <QuickAction to="/transfer"  icon={<IconTransfer />}  label="Transfer" />
-      </div>
+    /* mt-6 and the rail's pt-2: the 32px every section on this screen keeps
+       above it, with the top 8px inside the rail - room for a count that sits
+       on a disc's corner, which a scrolling row would otherwise clip. */
+    <section className="mt-6">
+      <FadeScroller
+        axis="x"
+        fade={20}
+        style={RAIL_TOUCH}
+        className="flex gap-1 px-5 pt-2 pb-1"
+        aria-label="Shortcuts"
+      >
+        <QuickAction className={door} to="/goals"     icon={<IconTarget />}   label="Goals"     badge={counts.goals} />
+        <QuickAction className={door} to="/debts"     icon={<IconBanknote />} label="Debts"     badge={counts.debts} />
+        <QuickAction className={door} to="/recurring" icon={<IconRepeat />}   label="Recurring" badge={counts.bills} />
+        <QuickAction className={door} to="/wishlist"  icon={<IconGift />}     label="Wishlist"  badge={counts.wishes} />
+        <QuickAction className={door} to="/achievements?tab=challenges" icon={<IconFlag />} label="Challenges" />
+        <QuickAction className={door} to="/?log=quick" icon={<IconBolt />}    label="Quick log" />
+        <QuickAction className={door} to="/insights/forecast" icon={<IconForecast />} label="Forecast" />
+        <QuickAction className={door} to="/notes"     icon={<IconNote />}     label="Notes" />
+      </FadeScroller>
     </section>
   )
 }

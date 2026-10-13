@@ -7,6 +7,7 @@ import { isSpend } from '../../lib/flows'
 import { isoToDateInput } from '../../utils/txDate'
 import { spendingRows } from '../../utils/installments'
 import { budgetLevel, canHaveBudget } from '../../lib/budgetLevels'
+import { readyCount } from '../../lib/wishes'
 
 // ── Formatters ─────────────────────────────────────────────────────────────────
 
@@ -179,6 +180,7 @@ export const DUE_SOON_DAYS = 7
  * @param {Array<Partial<Debt>>} [input.debts]
  * @param {Array<Partial<Goal>>} [input.goals]
  * @param {Array<Partial<Account>>} [input.accounts]
+ * @param {Array<WishRow>} [input.wishes]  the wishlist: the ones whose wait is over count
  * @param {Date} [input.today]
  * @param {string} [input.base]   the ledger's currency, for goals funded by a
  *   foreign account. Omitted, no conversion happens - see allocateGoals.
@@ -186,7 +188,7 @@ export const DUE_SOON_DAYS = 7
  * @returns {{bills: number, debts: number, goals: number}}
  */
 export function quickActionCounts({
-  recurring = [], debts = [], goals = [], accounts = [], today = new Date(),
+  recurring = [], debts = [], goals = [], accounts = [], wishes = [], today = new Date(),
   base = '', rates = null,
 } = {}) {
   const start = new Date(today)
@@ -217,5 +219,5 @@ export function quickActionCounts({
 
   const alloc = allocateGoals({ goals, accounts, base, rates })
 
-  return { bills, debts: debtCount, goals: alloc.active.filter(g => g.complete).length }
+  return { bills, debts: debtCount, goals: alloc.active.filter(g => g.complete).length, wishes: readyCount(wishes, today) }
 }
