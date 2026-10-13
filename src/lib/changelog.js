@@ -24,6 +24,15 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '1.0.1',
+    date: '2026-10-13',
+    items: [
+      { title: 'A quieter Wrapped', desc: 'Share is a small round button in the corner of each slide now, out of the way of your month.' },
+      { title: 'Even buttons on the computer', desc: 'Starting a challenge or opening a wish shows its two buttons across the dialog, under what they’re about.' },
+      { title: 'Spending in two columns', desc: 'On the computer, Insights › Spending lists every expense under By category, with the charts beside it.' },
+    ],
+  },
+  {
     version: '1.0.0',
     date: '2026-10-13',
     items: [

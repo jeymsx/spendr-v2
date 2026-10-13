@@ -33,17 +33,7 @@ export const RELEASE_DATE = '2026-10-13'
 export const RELEASE_NOTES = [
   {
     icon: 'gift',
-    title: 'A quieter Wrapped',
-    desc: 'Share is a small round button in the corner of each slide now, out of the way of your month.',
-  },
-  {
-    icon: 'desktop',
-    title: 'Even buttons on the computer',
-    desc: 'Starting a challenge or opening a wish shows its two buttons across the dialog, under what they’re about.',
-  },
-  {
-    icon: 'chart',
-    title: 'Spending in two columns',
-    desc: 'On the computer, Insights › Spending lists every expense under By category, with the charts beside it.',
+    title: 'Help pictures up to date',
+    desc: 'The help centre’s Wrapped pictures show the new share button in the corner.',
   },
 ]
