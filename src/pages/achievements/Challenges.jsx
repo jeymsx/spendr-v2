@@ -195,7 +195,7 @@ function StartSheet({ entry, categories, state, onClose }) {
         onClose={close}
         title={def?.name ?? ''}
         footer={
-          <div className="flex gap-3">
+          <div className="flex gap-3 sheet-foot-fill">
             <Button variant="secondary" className="flex-1" onClick={close}>Not now</Button>
             <Button className="flex-[1.6]" loading={busy} disabled={!valid} onClick={start}>Start challenge</Button>
           </div>
@@ -277,7 +277,7 @@ function RunningSheet({ row, state, onClose }) {
       onClose={close}
       title={row?.def.name ?? ''}
       footer={running ? (
-        <div className="flex gap-3">
+        <div className="flex gap-3 sheet-foot-fill">
           <Button variant="dangerTint" className="flex-1" onClick={quit}>{confirm ? 'Yes, give up' : 'Give up'}</Button>
           <Button className="flex-[1.6]" onClick={close}>Keep going</Button>
         </div>

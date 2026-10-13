@@ -2115,6 +2115,15 @@ html.web .sheet-panel .sheet-foot > .flex:not(.flex-col),
 html.web .sheet-panel-exit .sheet-foot > .flex:not(.flex-col) { justify-content: flex-end; }
 html.web .sheet-panel .sheet-foot > .flex:not(.flex-col) > *,
 html.web .sheet-panel-exit .sheet-foot > .flex:not(.flex-col) > * { flex: 0 0 auto; min-width: 112px; padding-left: 20px; padding-right: 20px; }
+/* Except under a centred body - a challenge's badge, a wish's price - where a
+   pair pushed to the right reads as knocked aside. There the footer keeps
+   the phone's shape: the pair across the width, the main one wider. */
+html.web .sheet-panel .sheet-foot > .flex.sheet-foot-fill:not(.flex-col),
+html.web .sheet-panel-exit .sheet-foot > .flex.sheet-foot-fill:not(.flex-col) { justify-content: stretch; }
+html.web .sheet-panel .sheet-foot > .flex.sheet-foot-fill:not(.flex-col) > *,
+html.web .sheet-panel-exit .sheet-foot > .flex.sheet-foot-fill:not(.flex-col) > * { flex: 1 1 0; }
+html.web .sheet-panel .sheet-foot > .flex.sheet-foot-fill:not(.flex-col) > :last-child:not(:first-child),
+html.web .sheet-panel-exit .sheet-foot > .flex.sheet-foot-fill:not(.flex-col) > :last-child:not(:first-child) { flex-grow: 1.6; }
 
 /* 520px: a transaction's details, a confirmation, a picker - a modal the
    width of what is in it. It was 680px on a wide screen, and a transaction's

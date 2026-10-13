@@ -1137,7 +1137,7 @@ export const HELP_ARTICLES = [
       { p: 'On the 1st, once a month has something logged in it, Spendr makes a full-screen story of it, and the bell says “Your August Wrapped is ready”. For the first three days of the month it’s a card on Home. After that, find it at the foot of Insights, or as the Wrapped tile on Insights on a computer.' },
       { p: 'Tap the right side for the next slide and the left to go back, or swipe. Hold to pause, and drag down to close.' },
       { shot: 'wrapped-summary' },
-      { p: 'Press Share on any slide. The summary comes in four looks to swipe between: Colour, Dark, Light and Lights out. Turn on Hide amounts to share the story without a single figure.' },
+      { p: 'Press the share button in the corner of any slide. The summary comes in four looks to swipe between: Colour, Dark, Light and Lights out. Turn on Hide amounts to share the story without a single figure.' },
       { tip: 'To see an earlier month, open Insights on 1M, step back with the arrows, and press the Wrapped row at the foot.' },
     ],
     related: ['insights-overview', 'achievements'],

@@ -36,7 +36,7 @@ export default function WishDetailSheet({ wish, open, onClose, onEdit, onBuy }) 
   const decidedOn = wish.decidedAt ? fmtDay(wish.decidedAt.slice(0, 10)) : null
 
   const footer = (
-    <div className="flex gap-3">
+    <div className="flex gap-3 sheet-foot-fill">
       <Button variant="secondary" className="flex-1" onClick={() => onEdit(wish)}>Edit</Button>
       {status !== 'bought' && (
         <Button className="flex-[2]" onClick={() => onBuy(wish)}>Buy</Button>

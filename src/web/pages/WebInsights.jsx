@@ -329,49 +329,53 @@ function Spending({ data, period }) {
   return (
     <>
       <Figures data={data} period={period} />
-      <div className="grid grid-cols-12 gap-5 mb-8">
-        <Panel className="col-span-7 self-start" title="By category" flush>
-          <DataTable
-            label="Spending by category"
-            rows={data.categorySegments}
-            rowKey={(c) => c.name}
-            onRowClick={(c) => navigate(`/categories/${encodeURIComponent(c.name)}`)}
-            empty={<Empty art="receipt" size="sm" title="Nothing spent" body={`Nothing spent ${periodPhrase(period)}.`} />}
-            columns={[
-              { key: 'name', header: 'Category', render: (c) => <span className="flex items-center gap-3 min-w-0"><CategoryTile cat={data.catMap[c.name] ?? c} size="sm" /><span className="truncate font-medium">{c.name}</span></span> },
-              {
-                key: 'share', header: 'Share', width: 200,
-                render: (c) => {
-                  const pct = (c.value / (data.totalSpent || 1)) * 100
-                  return <span className="flex items-center gap-3"><Progress className="flex-1" value={pct} color={c.color} /><span className="w-10 text-right text-13 d-num d-cell-muted">{Math.round(pct)}%</span></span>
+      {/* Every expense sits under By category, in the same column: the list
+          a category's row is a total of. Beside them, the two summaries,
+          at their own heights. */}
+      <div className="grid grid-cols-12 gap-5 mb-8 items-start">
+        <div className="col-span-7 min-w-0 flex flex-col gap-5">
+          <Panel title="By category" flush>
+            <DataTable
+              label="Spending by category"
+              rows={data.categorySegments}
+              rowKey={(c) => c.name}
+              onRowClick={(c) => navigate(`/categories/${encodeURIComponent(c.name)}`)}
+              empty={<Empty art="receipt" size="sm" title="Nothing spent" body={`Nothing spent ${periodPhrase(period)}.`} />}
+              columns={[
+                { key: 'name', header: 'Category', render: (c) => <span className="flex items-center gap-3 min-w-0"><CategoryTile cat={data.catMap[c.name] ?? c} size="sm" /><span className="truncate font-medium">{c.name}</span></span> },
+                {
+                  key: 'share', header: 'Share', width: 200,
+                  render: (c) => {
+                    const pct = (c.value / (data.totalSpent || 1)) * 100
+                    return <span className="flex items-center gap-3"><Progress className="flex-1" value={pct} color={c.color} /><span className="w-10 text-right text-13 d-num d-cell-muted">{Math.round(pct)}%</span></span>
+                  },
                 },
-              },
-              { key: 'count', header: 'Rows', width: 80, align: 'right', render: (c) => <span className="d-num d-cell-muted">{counts[c.name] ?? 0}</span> },
-              { key: 'amt', header: 'Spent', width: 140, align: 'right', render: (c) => <span className="d-num font-semibold">{fmt(c.value)}</span> },
-            ]}
-          />
-        </Panel>
-        {/* The column as tall as By category beside it: By account takes the rest. */}
+                { key: 'count', header: 'Rows', width: 80, align: 'right', render: (c) => <span className="d-num d-cell-muted">{counts[c.name] ?? 0}</span> },
+                { key: 'amt', header: 'Spent', width: 140, align: 'right', render: (c) => <span className="d-num font-semibold">{fmt(c.value)}</span> },
+              ]}
+            />
+          </Panel>
+          <Panel title="Every expense" meta={`${data.rankedExpenses.length.toLocaleString()} rows, biggest first`} flush>
+            <DataTable
+              label="Every expense"
+              rows={data.rankedExpenses}
+              rowKey={(t) => t.id}
+              onRowClick={(t) => setSelected(t)}
+              empty={<Empty art="receipt" size="sm" title="No expenses" body={`Nothing spent ${periodPhrase(period)}.`} />}
+              columns={[
+                { key: 'date', header: 'Date', width: 90, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
+                { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={data.catMap} /> },
+                { key: 'acct', header: 'Account', width: 170, render: (t) => <TxAccount tx={t} acctMap={data.acctMap} /> },
+                { key: 'amt', header: 'Amount', width: 130, align: 'right', render: (t) => <TxAmount tx={t} /> },
+              ]}
+            />
+          </Panel>
+        </div>
         <div className="col-span-5 flex flex-col gap-5">
           <Panel title="Where it went"><CategoryBreakdown data={data} limit={5} /></Panel>
-          <Panel className="flex-1 flex flex-col" bodyClassName="flex-1" title="By account"><AccountBreakdown data={data} /></Panel>
+          <Panel title="By account"><AccountBreakdown data={data} /></Panel>
         </div>
       </div>
-      <Panel title="Every expense" meta={`${data.rankedExpenses.length.toLocaleString()} rows, biggest first`} flush>
-        <DataTable
-          label="Every expense"
-          rows={data.rankedExpenses}
-          rowKey={(t) => t.id}
-          onRowClick={(t) => setSelected(t)}
-          empty={<Empty art="receipt" size="sm" title="No expenses" body={`Nothing spent ${periodPhrase(period)}.`} />}
-          columns={[
-            { key: 'date', header: 'Date', width: 100, render: (t) => <span className="d-cell-muted d-num">{shortDate(t.date)}</span> },
-            { key: 'desc', header: 'Description', render: (t) => <TxDescription tx={t} catMap={data.catMap} /> },
-            { key: 'acct', header: 'Account', width: 200, render: (t) => <TxAccount tx={t} acctMap={data.acctMap} /> },
-            { key: 'amt', header: 'Amount', width: 140, align: 'right', render: (t) => <TxAmount tx={t} /> },
-          ]}
-        />
-      </Panel>
       <TxDetailSheet open={!!selected} onClose={() => setSelected(null)} transaction={selected} accounts={data.accounts} categories={data.categories}
         onEdit={(t) => editTransaction(navigate, t, () => setSelected(null))} />
     </>

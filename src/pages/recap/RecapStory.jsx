@@ -25,7 +25,7 @@ import SummarySlide from './SummarySlide'
  * Each slide's own colour fills the screen edge to edge, with the card's
  * grain and light (theme.js, CardTexture), and cross-fades into the next.
  * Over it: the progress bars and the story's name at the top, the slide in
- * the middle, and Share at the foot of every slide - any slide can be sent as
+ * the middle, and a share icon in the foot's corner - any slide can be sent as
  * a picture of its own (ShareSheet, pictures.js). On a tablet or a desktop
  * the story is a phone-width column on its own backdrop, as a story is.
  *
@@ -443,7 +443,9 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
             </button>
           </div>
 
-          <footer className="absolute inset-x-0 bottom-0 z-20 px-5 flex items-center justify-center gap-3" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+          {/* Share is a quiet round icon in the corner, on the same glass as
+              Done: a white pill under every slide read as part of the slide. */}
+          <footer className="absolute inset-x-0 bottom-0 z-20 px-5 flex items-center justify-end gap-3" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
             {isLast && (
               <button
                 type="button"
@@ -457,13 +459,11 @@ export default function RecapStory({ recap: opened, currency, accent, theme, nam
               type="button"
               onClick={() => setSharing(true)}
               aria-label={isLast ? 'Share your Wrapped' : 'Share this slide'}
-              className={`${isLast ? 'flex-[1.4]' : 'px-6'} h-12 rounded-full flex items-center justify-center gap-2 text-15 font-semibold bg-white active:scale-[0.98] transition-transform shadow-[0_8px_20px_rgba(0,0,0,0.2)]`}
-              style={{ color: pal.deepInk }}
+              className="flex-none w-12 h-12 rounded-full flex items-center justify-center text-white bg-white/20 active:scale-95 transition-transform"
             >
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 15V4M8 8l4-4 4 4M6 12H5a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-6a1 1 0 0 0-1-1h-1" />
               </svg>
-              Share
             </button>
           </footer>
 
