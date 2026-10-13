@@ -173,7 +173,7 @@ export default [
 
   // Node scripts and config files run outside the browser.
   {
-    files: ['scripts/**/*.mjs', 'vite.config.js', 'eslint.config.js'],
+    files: ['scripts/**/*.mjs', 'dev/qa/**/*.mjs', 'vite.config.js', 'eslint.config.js'],
     languageOptions: { globals: { ...globals.node } },
   },
 

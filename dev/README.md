@@ -9,3 +9,5 @@ the project, so with `npm run dev` running they open at
 - `local/` holds seed scripts and demo-data pages that stay on this machine.
   It's ignored by git on purpose; `local/seed-sample-data.html` loads a
   believable sample ledger into the browser's own database.
+- `qa/` holds the browser checks: scripts that drive Chrome through the app
+  against a stand-in for Supabase. See `qa/README.md`.

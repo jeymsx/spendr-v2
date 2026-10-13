@@ -40,6 +40,7 @@ npm run build
 - A new synced table needs: Dexie version (`src/db/db.js`), `SYNCED_TABLES`,
   `SMALL_TABLES` with row mappers, the pull, `REALTIME_TABLES`, backups
   (`src/lib/backup.js`) and `clearLocalLedger`. `wishes` is a recent example.
+- The SQL side of a new table is in `supabase/CLAUDE.md`.
 
 ## Writing UI
 
@@ -51,7 +52,8 @@ npm run build
 - Lists are cards: a heading, then one card with hairline-separated rows.
 - Motion: smooth, no bounce, no glows or gradients.
 - Check UI in a real browser at phone (393px) and desktop (1440px) widths,
-  light and dark, before calling it done.
+  light and dark, before calling it done. The browser checks in `dev/qa`
+  (see its README) do this and stay in the repo; add one for a new feature.
 
 ## Words people read
 
@@ -87,10 +89,13 @@ npm run build
 | Need | Look in |
 |---|---|
 | A phone page | `src/pages/*.jsx`, routes in `src/App.jsx` |
-| A desktop page | `src/web/pages`, routes in `src/web/WebApp.jsx` |
+| A desktop page | `src/web/pages`, routes in `src/web/WebApp.jsx` (see `src/web/CLAUDE.md`) |
 | Sync | `src/lib/sync.js`, `src/components/SyncManager.jsx` |
 | Notifications and push reminders | `src/lib/notifications.js`, `src/lib/reminders.js` |
 | What's New | `src/lib/release.js`, `src/lib/changelog.js` |
 | Help centre | `src/lib/help.js` |
 | Dev-only pages | `dev/` (see `dev/README.md`) |
+| Browser checks | `dev/qa` (see `dev/qa/README.md`) |
+| The website | `site/` (see `site/CLAUDE.md`) |
+| The database and the edge function | `supabase/` (see `supabase/CLAUDE.md`) |
 | Old design notes | `docs/plans/` (historical; the code wins) |

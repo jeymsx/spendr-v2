@@ -1,0 +1,12 @@
+{
+  "name": "spendr-qa-standin",
+  "private": true,
+  "description": "A stand-in for Supabase for the browser checks in dev/qa. See dev/qa/README.md.",
+  "type": "module",
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "ws": "^8.22.0"
+  }
+}
