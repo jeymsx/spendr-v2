@@ -3,7 +3,7 @@
 // drawer re-cutting the chart behind it.
 import { session, APP } from './harness.mjs'
 const THEME = process.env.THEME ?? 'light'
-const s = await session({ port: 9986 })
+const s = await session()
 const rect = (sel) => s.evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } })()`)
 const strokes = () => s.evaluate(`(() => {
   const w = document.querySelector('.d-panel .recharts-wrapper') ?? document.querySelector('.recharts-wrapper')
@@ -21,7 +21,7 @@ try {
   await s.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false })
   await s.send('Emulation.setTouchEmulationEnabled', { enabled: false })
   await s.send('Emulation.setFocusEmulationEnabled', { enabled: true })
-  await s.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await s.until(`document.getElementById('status').textContent.startsWith('Sample data loaded')`, 90000)
   await s.evaluate(`localStorage.setItem('spendr-view-mode', 'desktop'); localStorage.setItem('spendr-sidebar', 'open'); localStorage.setItem('spendr-theme', '${THEME}')`)
   await s.send('Page.navigate', { url: APP + '/insights/trend' })
@@ -72,7 +72,7 @@ try {
   s.check('desktop: choosing Day in the drawer re-cuts the chart behind it', behind > 60, `${behind} points`)
   await s.evaluate(`document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))`); await s.sleep(900)
   s.check('desktop: closing the drawer returns to Trend', (await s.evaluate(`location.pathname`)) === '/insights/trend', await s.evaluate(`location.pathname`))
-  s.check('desktop: the panel is now titled by day', await s.evaluate(`/Day by day/.test(document.querySelector('.d-panel')?.textContent ?? '')`))
+  s.check('desktop: the chart\'s panel is now titled by day', await s.evaluate(`/Day by day/.test(document.querySelector('.recharts-wrapper')?.closest('.d-panel')?.textContent ?? '')`))
   await s.shot('trend-desktop-daily-3m.png')
 
   await s.evaluate(`document.querySelector('button[aria-label="Trend settings"]').click()`); await s.sleep(1500)

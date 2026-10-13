@@ -2,7 +2,7 @@
 import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
 const BASE = APP
-const s = await session({ port: 9976 })
+const s = await session()
 const top = () => s.evaluate(`Math.round(document.querySelector('.d-page:not([aria-hidden])')?.scrollTop ?? -1)`)
 const ready = (p) => s.until(`location.pathname === ${JSON.stringify(p)} && document.querySelector('.d-page:not([aria-hidden])') && !document.querySelector('.d-skel')`, 30000)
 const click = (sel) => s.evaluate(`document.querySelector(${JSON.stringify(sel)}).click()`)

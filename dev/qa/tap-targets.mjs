@@ -1,7 +1,7 @@
 // Tap targets under 32px on the main screens, with enough to find them in the source.
 import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
-const s = await session({ port: 9796 })
+const s = await session()
 const open = async (url, settle = 2500) => {
   await s.send('Page.navigate', { url })
   await s.until(`document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount`, 60000)

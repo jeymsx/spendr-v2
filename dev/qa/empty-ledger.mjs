@@ -1,7 +1,7 @@
 // With nothing in the ledger, no page may wait forever: every skeleton gives way to its empty state.
 import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
-const s = await session({ port: 9967 })
+const s = await session()
 try {
   await s.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
   await s.send('Emulation.setTouchEmulationEnabled', { enabled: false })

@@ -4,13 +4,15 @@ import { spawn } from 'node:child_process'
 import { writeFileSync, mkdirSync, mkdtempSync, rmSync, realpathSync } from 'node:fs'
 import { join } from 'node:path'
 import { tmpdir } from 'node:os'
+import { createServer } from 'node:net'
 import { fileURLToPath } from 'node:url'
 
 const HERE = fileURLToPath(new URL('.', import.meta.url))
 /** The repo, for reading package.json, vercel.json and the like. */
 export const ROOT = join(HERE, '..', '..')
-/** Screenshots and downloads land here; git ignores it. */
-export const OUT = join(HERE, 'out')
+/* Screenshots and downloads land outside the repo: a dev server watches every
+   file under it, and one crashed on a spreadsheet still being written. */
+export const OUT = process.env.QA_OUT ?? join(realpathSync.native(tmpdir()), 'spendr-qa-out')
 mkdirSync(OUT, { recursive: true })
 export const SCRATCH = OUT
 /** The dev server under test: APP=http://... in full, or APP_PORT. */
@@ -18,7 +20,18 @@ export const APP = process.env.APP ?? `http://localhost:${process.env.APP_PORT ?
 const CHROME = process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe'
 export const sleep = ms => new Promise(r => setTimeout(r, ms))
 
-export async function session({ port = 9444, headless = true, extraArgs = [] } = {}) {
+/** A port nothing is listening on, from the system. */
+const freePort = () => new Promise((res, rej) => {
+  const srv = createServer()
+  srv.once('error', rej)
+  srv.listen(0, '127.0.0.1', () => { const { port } = /** @type {import('node:net').AddressInfo} */ (srv.address()); srv.close(() => res(port)) })
+})
+
+/* The port a check asks for is ignored: each Chrome gets a free one, so
+   checks can run side by side, and a new session never talks to the last
+   one's Chrome while it is still closing on the same port. */
+export async function session({ headless = true, extraArgs = [] } = {}) {
+  const port = await freePort()
   /* Not under the scratchpad: that path is ~170 characters, and Chrome's
      CacheStorage files nest deep enough below a profile to pass Windows'
      260-character limit, which fails every caches.open() and so every
@@ -29,7 +42,7 @@ export async function session({ port = 9444, headless = true, extraArgs = [] } =
     ...(headless ? ['--headless=new'] : []),
     '--no-first-run', '--no-default-browser-check',
     '--disable-background-timer-throttling', '--disable-renderer-backgrounding',
-    '--disable-backgrounding-occluded-windows', ...extraArgs, 'about:blank',
+    '--disable-backgrounding-occluded-windows', '--disable-component-update', ...extraArgs, 'about:blank',
   ], { stdio: 'ignore' })
 
   let wsUrl, browserWs
@@ -85,7 +98,8 @@ export async function session({ port = 9444, headless = true, extraArgs = [] } =
   const goto = async (url, settle = 2000) => {
     const loaded = once('Page.loadEventFired')
     await send('Page.navigate', { url })
-    await Promise.race([loaded, timeout(20000, 'load ' + url)])
+    // Generous: a cold dev server compiles a route on its first visit.
+    await Promise.race([loaded, timeout(45000, 'load ' + url)])
     if (process.env.STEPS) console.log('STEP loaded', url)
     await sleep(settle)
   }

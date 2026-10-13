@@ -4,7 +4,7 @@ import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
 let failures = 0
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`) }
-const s = await session({ port: 9811, extraArgs: ['--overscroll-history-navigation=0', '--disable-features=OverscrollHistoryNavigation,TouchpadOverscrollHistoryNavigation'] })
+const s = await session({ extraArgs: ['--overscroll-history-navigation=0', '--disable-features=OverscrollHistoryNavigation,TouchpadOverscrollHistoryNavigation'] })
 const open = async (url, settle = 3000) => {
   await s.send('Page.navigate', { url })
   await s.until(`document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount`, 60000)

@@ -27,7 +27,7 @@ const cats = (tag) => `(async () => {
 const bodyText = (s) => s.evaluate('document.body.innerText')
 
 async function run(mode) {
-  const s = await session({ port: mode === 'phone' ? 9481 : 9482 })
+  const s = await session()
   if (mode === 'desktop') await s.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
   const tag = (mode === 'phone' ? 'P' : 'D') + Date.now().toString(36)
   await s.goto(APP + '/', 1500)

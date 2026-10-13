@@ -7,7 +7,7 @@ const W = Number(process.env.W || 1440)
 const RANGES = (process.env.RANGES || '1m,3m,6m,all').split(',')
 let failures = 0
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`) }
-const s = await session({ port: Number(process.env.CDP || 9941) })
+const s = await session()
 const open = async (url, settle = 2200) => {
   await s.send('Page.navigate', { url })
   await s.until(`document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount`, 90000)

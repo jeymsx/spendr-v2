@@ -2,7 +2,7 @@
 import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
 const BASE = APP
-const s = await session({ port: 9988 })
+const s = await session()
 const ev = (x) => s.evaluate(x)
 const ready = (p) => s.until(`location.pathname === ${JSON.stringify(p)} && document.querySelector('.d-page:not([aria-hidden])') && !document.querySelector('.d-skel')`, 30000)
 const go = async (p) => { await ev(`history.pushState(null, '', ${JSON.stringify(p)}); dispatchEvent(new PopStateEvent('popstate'))`); await ready(p.split('?')[0]); await s.sleep(900) }
@@ -34,7 +34,9 @@ try {
   console.log('plan', JSON.stringify(plan))
 
   // 1. Transactions: the plan once, its whole price, on the day bought.
-  await go('/transactions')
+  // Searched for: the table draws only the rows on screen, and the plan was bought two months back.
+  await go('/transactions?q=' + encodeURIComponent('iPhone 17'))
+  await s.until(`[...document.querySelectorAll('.d-page tbody tr')].some(r => /iPhone 17/.test(r.textContent))`, 10000)
   const listed = await ev(`[...document.querySelectorAll('.d-page tbody tr')].filter(r => /iPhone 17/.test(r.textContent)).map(r => r.textContent.replace(/\\s+/g, ' ').trim())`)
   s.check('Transactions lists the plan once', listed.length === 1, listed.join(' | '))
   s.check('at its whole price, with its term', /36,000\.00/.test(listed[0] ?? '') && /3,000\.00 × 12/.test(listed[0] ?? ''), listed[0])
@@ -52,6 +54,7 @@ try {
 
   const card = await ev(`(async () => { const db = (await import('/src/db/db.js')).default; return (await db.accounts.where('name').equals('BPI Credit').first()).id })()`)
   await go('/accounts/' + card)
+  await s.until(`/iPhone 17/.test(document.querySelector('.d-page')?.innerText ?? '')`, 15000)
   console.log('CARD', JSON.stringify(await ev(`document.querySelector('.d-page').innerText.replace(/\\s+/g, ' ').slice(0, 1600)`)))
   const cardText = await ev(`document.querySelector('.d-page').innerText`)
   const payments = (cardText.match(/iPhone 17 \(\d+\/12\)/g) ?? []).length

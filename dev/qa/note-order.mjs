@@ -4,7 +4,7 @@ import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
 let failures = 0
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`) }
-const s = await session({ port: 9991 })
+const s = await session()
 const clickNote = async (title) => {
   const b = JSON.parse(await s.evaluate(`(() => { const el = [...document.querySelectorAll('.d-twopane-side [data-web-id^="note-"]')].find(e => e.textContent.includes(${JSON.stringify(title)})); const r = el.getBoundingClientRect(); return JSON.stringify({ x: r.x + 40, y: r.y + r.height / 2 }) })()`))
   for (const type of ['mousePressed', 'mouseReleased']) await s.send('Input.dispatchMouseEvent', { type, x: b.x, y: b.y, button: 'left', clickCount: 1 })

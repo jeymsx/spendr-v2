@@ -1,7 +1,7 @@
 // Notes on the phone: folders as chips with counts, a folder narrows the list,
 // tags narrow it further, search finds across folders, and a new folder.
 import { session, APP } from './harness.mjs'
-const s = await session({ port: 9984 })
+const s = await session()
 const click = (sel, text) => s.evaluate(`(() => { const e = [...document.querySelectorAll(${JSON.stringify(sel)})].find(b => ${text ? `b.textContent.replace(/\\s+/g, ' ').trim().startsWith(${JSON.stringify(text)})` : 'true'}); if (!e) return false; e.click(); return true })()`)
 const chips = () => s.evaluate(`[...document.querySelectorAll('.note-filing [aria-label="Folders"] button')].map(b => b.textContent.replace(/\\s+/g, ' ').trim())`)
 const titles = () => s.evaluate(`[...document.querySelectorAll('.d-twopane-list [data-web-id]')].map(b => b.querySelector('span').textContent.trim())`)
@@ -17,7 +17,7 @@ try {
   await s.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
   await s.send('Emulation.setTouchEmulationEnabled', { enabled: false })
   await s.send('Emulation.setFocusEmulationEnabled', { enabled: true })
-  await s.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await s.until(`/Sample data loaded|Not loaded|Could not/.test(document.getElementById('status').textContent)`, 90000)
   await s.evaluate(`localStorage.setItem('spendr-view-mode', 'desktop'); localStorage.setItem('spendr-sidebar', 'open'); localStorage.setItem('spendr-theme', 'light'); sessionStorage.removeItem('spendr-notes-view')`)
   await s.send('Page.navigate', { url: APP + '/notes' })

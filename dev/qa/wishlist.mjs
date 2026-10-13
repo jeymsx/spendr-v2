@@ -23,9 +23,9 @@ const rowButton = (s, name, label) => s.evaluate(`(() => {
   const row = [...document.querySelectorAll('button')].find(b => b.textContent.includes(${JSON.stringify(name)}))?.parentElement
   const b = [...(row?.querySelectorAll('button') ?? [])].find(b => b.textContent.trim() === ${JSON.stringify(label)}); b?.click(); return !!b })()`)
 
-const s = await session({ port: 9491 })
+const s = await session()
 await s.send('Emulation.setFocusEmulationEnabled', { enabled: true })
-await s.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
 await s.until(`document.getElementById('status')?.textContent.startsWith('Sample data loaded')`, 90000)
 await s.evaluate(`localStorage.setItem('sb-localhost-auth-token', ${JSON.stringify(fake)}); localStorage.setItem('spendr-view-mode', 'phone'); localStorage.setItem('spendr-theme', 'light')`)
 await s.goto(APP + '/', 5000)
@@ -41,7 +41,7 @@ await s.evaluate(`(async () => { const { default: db } = await import('/src/db/d
 await sleep(600)
 
 let t = await text(s)
-s.check('Home: Goals, Debts, Recurring, Wishlist, Expense, Transfer, in that order', /Goals\s+Debts\s+(\d+\s+)?Recurring\s+(\d+\s+)?Wishlist\s+(\d+\s+)?Expense\s+Transfer/.test(t), (t.match(/Goals[\s\S]{0,80}Transfer/) ?? [''])[0].replace(/\s+/g, ' '))
+s.check('Home: Wishlist sits between Recurring and Challenges', /Goals\s+Debts\s+(\d+\s+)?Recurring\s+(\d+\s+)?Wishlist\s+(\d+\s+)?Challenges/.test(t), (t.match(/Goals[\s\S]{0,80}Challenges/) ?? [''])[0].replace(/\s+/g, ' '))
 await s.shot('wish-home.png')
 await s.evaluate(`document.querySelector('a[href="/wishlist"]')?.click()`)
 await sleep(1500)
@@ -171,7 +171,7 @@ s.check('nothing logged as an error on the phone', errors.length === 0, JSON.str
 await s.close()
 
 // ── The computer ──
-const d = await session({ port: 9492 })
+const d = await session()
 await d.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
 await d.goto(APP + '/', 1500)
 await d.evaluate(`localStorage.setItem('sb-localhost-auth-token', ${JSON.stringify(fake)}); localStorage.setItem('spendr-view-mode', 'desktop'); localStorage.setItem('spendr-theme', 'light')`)

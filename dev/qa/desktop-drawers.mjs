@@ -1,7 +1,7 @@
 // Every panel opened from its page leaves that page mounted under it (same element, same scroll); a cold open still draws the page it belongs to.
 import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
-const s = await session({ port: 9993 })
+const s = await session()
 const wait = (ms = 900) => s.sleep(ms)
 const mark = `document.querySelector('.d-page').dataset.mark = 'same'`
 const state = `(() => ({ path: location.pathname, mark: document.querySelector('.d-page')?.dataset.mark ?? null, drawer: !!document.querySelector('.d-drawer'), width: Math.round(document.querySelector('.d-drawer')?.getBoundingClientRect().width ?? 0), title: document.querySelector('.d-title')?.textContent ?? null }))()`

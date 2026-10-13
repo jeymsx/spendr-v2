@@ -8,7 +8,7 @@ const W = Number(process.env.W || 1440)
 const TAG = process.env.TAG || 'sq'
 let failures = 0
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`) }
-const s = await session({ port: Number(process.env.CDP || 9921) })
+const s = await session()
 const open = async (url, settle = 1800) => {
   await s.send('Page.navigate', { url })
   await s.until(`document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount`, 90000)
@@ -61,7 +61,7 @@ try {
   await s.sleep(200)
   await s.evaluate(`[...document.querySelectorAll('.d-set-line')].find(b => /Recently deleted/.test(b.textContent))?.click()`)
   await s.sleep(1200)
-  const del = JSON.parse(await s.evaluate(`JSON.stringify({ path: location.pathname, title: document.querySelector('.d-twopane-main .page-header-title, .d-twopane-main .d-title, .d-twopane-main h1')?.textContent ?? null, active: document.querySelector('.d-twopane-side .is-active')?.textContent ?? null })`))
+  const del = JSON.parse(await s.evaluate(`JSON.stringify({ path: location.pathname, title: document.querySelector('.d-twopane-main .page-header-title, .d-twopane-main .d-pane-title, .d-twopane-main .d-title, .d-twopane-main h1')?.textContent ?? null, active: document.querySelector('.d-twopane-side .is-active')?.textContent ?? null })`))
   check('Recently deleted opens in the right half', del.path === '/settings/deleted' && /Recently deleted/.test(del.title ?? '') && /Recently deleted/.test(del.active ?? ''), JSON.stringify(del))
 
   // Accent: a click applies it everywhere; the arrows move and apply.
@@ -90,6 +90,7 @@ try {
   check('Accent colour is under Preferences', /Preferences/.test(under.back ?? '') && /Preferences/.test(under.lit ?? ''), JSON.stringify(under))
   // App lock is in Preferences now; its old address lands there.
   await open(APP + '/settings/app-lock')
+  await s.until(`document.querySelector('#app-lock')`, 10000)
   const lock = JSON.parse(await s.evaluate(`JSON.stringify({ path: location.pathname, lock: !!document.querySelector('#app-lock'), items: document.querySelectorAll('.d-twopane-side .d-nav-item').length })`))
   check('App lock opens inside Preferences', lock.path === '/settings/preferences' && lock.lock, JSON.stringify(lock))
   const errs = s.consoleLog.filter(l => l.type === 'error' || l.type === 'exception')

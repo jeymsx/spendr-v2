@@ -4,7 +4,7 @@ import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
 let failures = 0
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`) }
-const s = await session({ port: 9791 })
+const s = await session()
 const open = async (url, settle = 2500) => {
   await s.send('Page.navigate', { url })
   await s.until(`document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount`, 60000)
@@ -26,11 +26,12 @@ try {
   await s.send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 })
   await open(APP + '/', 4000)
 
-  // What's New for 0.12.0, on a set-up app that last saw 0.11.0.
+  // What's New for this version, on a set-up app that last saw an older one.
   await s.evaluate(seedIdb({ version: '0.11.0' }))
   await open(APP + '/', 3500)
   const wn = await s.evaluate(`[...document.querySelectorAll('[role="dialog"]')].map(d => d.innerText).join(' ')`)
-  check("What's New shows 0.12.0's notes", /0\.12\.0/.test(wn) && /Signing in asks first/.test(wn) && /Glass empty screens/.test(wn), wn.replace(/\s+/g, ' ').slice(0, 160))
+  const notes = await s.evaluate(`(async () => { const r = await import('/src/lib/release.js'); return { version: r.APP_VERSION, titles: r.RELEASE_NOTES.map(n => n.title) } })()`)
+  check("What's New shows this version's notes", wn.includes(notes.version) && notes.titles.every(t => wn.includes(t)), wn.replace(/\s+/g, ' ').slice(0, 160))
   await s.shot('final-whatsnew.png')
   await s.clickText('Got it')
   await s.sleep(800)
@@ -68,6 +69,8 @@ try {
     await s.evaluate(`localStorage.setItem('spendr-theme', '${theme}')`)
     for (const [path, want] of [['/', 'No transactions yet'], ['/goals', 'No goals yet'], ['/debts', 'No debts yet'], ['/recurring', 'Nothing recurring yet'], ['/insights/forecast', 'Nothing scheduled']]) {
       await open(APP + path, 2500)
+      // A route's first visit compiles it; give the words a moment to arrive.
+      await s.until(`document.body.innerText.includes(${JSON.stringify(want)})`, 8000)
       const hasArt = await s.evaluate(`!!document.querySelector('main .glass-live, main img[src^="data:image/svg"], main img[src^="blob:"]')`)
       const t = await text()
       check(`${theme} ${path}: "${want}" with a glass picture`, t.includes(want) && hasArt, t.slice(0, 120))

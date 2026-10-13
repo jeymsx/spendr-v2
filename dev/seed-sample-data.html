@@ -1,0 +1,332 @@
+<!doctype html>
+<!--
+  Sample data to look at the whole app with: seven months of a believable
+  ledger - pay, rent and bills, meals, rides, shopping on a card, transfers to
+  savings, an investment, debts, a goal, bills that recur - and, once the
+  feature is there, notes in folders with tags.
+
+  HOW TO USE
+    Open http://localhost:5174/dev/seed-sample-data.html (any port of the dev
+    server) in the SAME browser you use for the app on that port. It loads
+    by itself; then follow the links. The page has a button to take it all
+    away again. Loading it a second time replaces the first.
+
+  It refuses to run over a real ledger: if the browser already holds
+  transactions that are not sample ones, it stops and says so.
+
+  A dev page, never served by a build (only the dev server serves it). The
+  browser checks in dev/qa start most of their runs here.
+
+  Every row it writes carries demoSeed: 'sample'. REMOVE IT BEFORE SIGNING
+  IN on that port: the rows are unsynced, and a sync would push them to your
+  real cloud data.
+-->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Spendr sample data</title>
+<style>
+  :root { color-scheme: light dark; --ink: #0f172a; --muted: #475569; --ground: #f8fafc; --card: #ffffff; --line: #e2e8f0; --accent: #2d9dff; }
+  @media (prefers-color-scheme: dark) { :root { --ink: #e8eef5; --muted: #97a6b8; --ground: #0b0f14; --card: #131a23; --line: #243040; } }
+  body { margin: 0; background: var(--ground); color: var(--ink); font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 32px 20px 48px; display: grid; gap: 18px; }
+  h1 { margin: 0; font-size: 26px; letter-spacing: -0.01em; }
+  h2 { margin: 0; font-size: 16px; }
+  p { margin: 0; color: var(--muted); }
+  #status { color: var(--ink); font-weight: 600; }
+  ul { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; }
+  a, button { font: 600 15px/1 system-ui, -apple-system, "Segoe UI", sans-serif; padding: 12px 16px; border-radius: 999px; text-decoration: none; cursor: pointer; }
+  a { background: var(--accent); color: #fff; }
+  a.ghost { background: var(--card); color: var(--ink); border: 1px solid var(--line); }
+  button { background: transparent; color: var(--ink); border: 1px solid var(--line); }
+  button.danger { color: #dc2626; border-color: currentColor; }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 16px; display: grid; gap: 10px; }
+</style>
+
+<main>
+  <h1>Sample data</h1>
+  <p id="status">Loading…</p>
+  <ul id="log"></ul>
+  <div class="links">
+    <a href="/?view=desktop">Home</a>
+    <a class="ghost" href="/accounts">Accounts</a>
+    <a class="ghost" href="/transactions">Transactions</a>
+    <a class="ghost" href="/insights">Insights</a>
+    <a class="ghost" href="/insights/spending">Spending</a>
+    <a class="ghost" href="/insights/forecast">Forecast</a>
+    <a class="ghost" href="/budget">Budget</a>
+    <a class="ghost" href="/notes">Notes</a>
+  </div>
+  <div class="card">
+    <h2>What is in it</h2>
+    <ul>
+      <li><b>Accounts</b>: Cash, GCash, BPI, Maya Savings, BPI Credit (a card with a statement), Pag-IBIG MP2 (an investment).</li>
+      <li><b>Seven months</b> of pay on the 15th and the month's end, freelance now and then, rent, bills, meals, rides, shopping on the card, gym, outings, gifts.</li>
+      <li><b>Transfers</b>: a saving each month, and the card paid after each statement.</li>
+      <li><b>Budgets</b> on most categories, <b>recurring</b> bills, two <b>debts</b>, a <b>goal</b>, two <b>templates</b>.</li>
+      <li><b>Notes</b>: a handful, in folders and with tags, a pinned one, one in the bin.</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h2>Remove it</h2>
+    <p>Deletes every sample row, and anything you added on the sample accounts while testing. Do this before signing in.</p>
+    <div class="links"><button id="reload">Load it again</button><button class="danger" id="remove">Remove sample data</button></div>
+  </div>
+</main>
+
+<script type="module">
+import db from '/src/db/db.js'
+import { APP_VERSION } from '/src/lib/release.js'
+import { readNote } from '/src/lib/notes.js'
+
+const TAG = 'sample'
+
+const $status = document.getElementById('status')
+const $log = document.getElementById('log')
+const $remove = document.getElementById('remove')
+const $reload = document.getElementById('reload')
+const status = (t) => { $status.textContent = t }
+const log = (t) => { const li = document.createElement('li'); li.textContent = t; $log.appendChild(li) }
+
+// A small deterministic generator, so the sample is the same every time it is loaded.
+let seedState = 20261007
+const rand = () => { seedState = (seedState * 1664525 + 1013904223) >>> 0; return seedState / 4294967296 }
+const between = (a, b) => a + Math.floor(rand() * (b - a + 1))
+const pick = (arr) => arr[Math.floor(rand() * arr.length)]
+const money = (a, b, step = 10) => Math.round(between(a, b) / step) * step
+
+const now = new Date()
+const today0 = new Date(now.getFullYear(), now.getMonth(), now.getDate())
+const at = (y, m, d, h = 12, min = 0) => new Date(y, m, d, h, min).toISOString()
+const daysAgo = (n, h = 12) => at(now.getFullYear(), now.getMonth(), now.getDate() - n, h)
+const lastDay = (y, m) => new Date(y, m + 1, 0).getDate()
+const ymd = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+/** The next date on day `dom` of the month, today or later, as a local day. */
+const nextOn = (dom) => { const d = new Date(now.getFullYear(), now.getMonth(), dom); if (d < today0) d.setMonth(d.getMonth() + 1); return ymd(d) }
+
+const CATEGORIES = [
+  // name, type, icon, color, monthly budget
+  ['Food', 'expense', '🍔', '#FFB347', 7500],
+  ['Groceries', 'expense', '🛒', '#22c55e', 6500],
+  ['Transpo', 'expense', '🚌', '#2D9DFF', 2500],
+  ['Bills', 'expense', '🧾', '#FF6B6B', 6500],
+  ['Rent', 'expense', '🏠', '#8b5cf6', 12000],
+  ['Shopping', 'expense', '🛍️', '#FF8CC8', 4000],
+  ['Personal', 'expense', '💆', '#20C997', 1500],
+  ['Health', 'expense', '💊', '#14b8a6', 2200],
+  ['Entertainment', 'expense', '🎬', '#a855f7', 2000],
+  ['Others', 'expense', '📦', '#6b7280', 0],
+  ['Transfer Fee', 'expense', '💸', '#f59e0b', 0],
+  ['Income', 'inflow', '💰', '#22c55e', 0],
+  ['Freelance', 'inflow', '💻', '#0ea5e9', 0],
+  ['Gift Money', 'inflow', '🎁', '#FF8CC8', 0],
+  ['Others', 'inflow', '📦', '#f59e0b', 0],
+  ['Transfer', 'transfer', '🔁', '#2D9DFF', 0],
+]
+
+const ACCOUNTS = [
+  { name: 'Cash', type: 'cash', balance: 2350, color: '#10b981' },
+  { name: 'GCash', type: 'ewallet', role: 'spending', balance: 6820, color: '#2D9DFF' },
+  { name: 'BPI', type: 'bank', role: 'spending', balance: 38400, color: '#ef4444' },
+  { name: 'Maya Savings', type: 'ewallet', role: 'savings', balance: 52000, color: '#10b981' },
+  { name: 'BPI Credit', type: 'credit', balance: -7450, creditLimit: 40000, statementDate: 25, dueDate: 15, cutoffDate: 25, minimumPayment: 850, color: '#7c3aed' },
+  { name: 'Pag-IBIG MP2', type: 'investment', role: 'invested', kind: 'mp2', balance: 52340, investedStart: 40000, valuedAt: daysAgo(10), color: '#0ea5e9' },
+]
+
+const MEALS = ['Jollibee', 'Mang Inasal', 'Starbucks', '7-Eleven', 'GrabFood', 'Chowking', 'Greenwich', 'Yellow Cab', 'Coffee Project']
+const RIDES = ['Grab', 'Angkas', 'MRT', 'Jeepney', 'Grab']
+const SHOPS = [['Shopee', 600, 3400], ['Lazada', 450, 2800], ['Uniqlo', 1200, 3900], ['SM Department Store', 900, 3200], ['Decathlon', 800, 4500]]
+const OUTINGS = [['Cinema', 380, 900], ['Concert ticket', 1500, 3800], ['Bowling', 450, 900], ['Arcade', 300, 700], ['Karaoke', 600, 1400]]
+
+/** Seven months of rows, oldest first, none after today. */
+function ledger() {
+  const rows = []
+  const add = (row, date) => { if (date <= now) rows.push({ ...row, date: date.toISOString() }) }
+  for (let m = -6; m <= 0; m++) {
+    const y = now.getFullYear(); const mo = now.getMonth() + m
+    const first = new Date(y, mo, 1)
+    const dim = lastDay(first.getFullYear(), first.getMonth())
+    const on = (d, h = 12) => new Date(first.getFullYear(), first.getMonth(), Math.min(d, dim), h)
+    const workday = (d) => { const x = on(d, 9); while (x.getDay() === 0 || x.getDay() === 6) x.setDate(x.getDate() - 1); return x }
+
+    // Pay, twice a month; freelance now and then.
+    add({ type: 'inflow', category: 'Income', description: 'Salary', account: 'BPI', amount: 24000 }, workday(15))
+    add({ type: 'inflow', category: 'Income', description: 'Salary', account: 'BPI', amount: 24000 }, workday(dim))
+    add({ type: 'inflow', category: 'Freelance', description: 'Design retainer', account: 'GCash', amount: 8000 }, on(3, 14))
+    if (m % 2 === 0) add({ type: 'inflow', category: 'Freelance', description: pick(['Logo job', 'Website fix', 'Poster design', 'Tutoring']), account: 'GCash', amount: money(5000, 13000, 500) }, on(between(8, 22)))
+    if (m === -4 || m === -1) add({ type: 'inflow', category: 'Gift Money', description: pick(['Birthday', 'Christmas gift', 'Ninang']), account: 'GCash', amount: money(1000, 3000, 500) }, on(between(2, 25)))
+
+    // Fixed bills.
+    add({ type: 'expense', category: 'Rent', description: 'Rent', account: 'BPI', amount: 12000 }, on(5, 10))
+    add({ type: 'expense', category: 'Bills', description: 'Meralco', account: 'BPI', amount: money(2100, 2900) }, on(24, 11))
+    add({ type: 'expense', category: 'Bills', description: 'Globe Postpaid', account: 'GCash', amount: 999 }, on(12, 11))
+    add({ type: 'expense', category: 'Bills', description: 'Water', account: 'GCash', amount: money(380, 520) }, on(10, 11))
+    add({ type: 'expense', category: 'Bills', description: 'Netflix', account: 'BPI Credit', amount: 549 }, on(20, 8))
+    add({ type: 'expense', category: 'Bills', description: 'Spotify', account: 'BPI Credit', amount: 169 }, on(18, 8))
+    add({ type: 'expense', category: 'Health', description: 'Gym membership', account: 'GCash', amount: 1200 }, on(3, 18))
+
+    // Groceries, weekly.
+    for (let w = 0; w < 4; w++) add({ type: 'expense', category: 'Groceries', description: pick(['SM Supermarket', 'Puregold', 'Landers']), account: pick(['Cash', 'GCash', 'BPI']), amount: money(1300, 2700) }, on(2 + w * 7 + between(0, 2), 17))
+
+    // Meals and rides, most days.
+    for (let d = 1; d <= dim; d++) {
+      const day = on(d, 13)
+      if (rand() < 0.7) add({ type: 'expense', category: 'Food', description: pick(MEALS), account: pick(['Cash', 'GCash', 'GCash']), amount: money(110, 460) }, day)
+      if (rand() < 0.3) add({ type: 'expense', category: 'Food', description: pick(['Dinner out', 'Milk tea', 'Bakery']), account: 'GCash', amount: money(140, 700) }, on(d, 19))
+      if (rand() < 0.45) add({ type: 'expense', category: 'Transpo', description: pick(RIDES), account: pick(['Cash', 'GCash']), amount: money(40, 340) }, on(d, 8))
+    }
+
+    // Shopping on the card, outings, the pharmacy, something personal.
+    for (let k = 0; k < between(2, 4); k++) { const [shop, lo, hi] = pick(SHOPS); add({ type: 'expense', category: 'Shopping', description: shop, account: 'BPI Credit', amount: money(lo, hi) }, on(between(2, 24), 15)) }
+    for (let k = 0; k < between(1, 3); k++) { const [what, lo, hi] = pick(OUTINGS); add({ type: 'expense', category: 'Entertainment', description: what, account: pick(['GCash', 'BPI Credit']), amount: money(lo, hi) }, on(between(4, 27), 20)) }
+    for (let k = 0; k < between(1, 2); k++) add({ type: 'expense', category: 'Health', description: 'Mercury Drug', account: 'Cash', amount: money(150, 900) }, on(between(3, 26), 16))
+    add({ type: 'expense', category: 'Personal', description: pick(['Haircut', 'Salon', 'Barber']), account: 'Cash', amount: money(250, 800) }, on(between(6, 20), 16))
+    if (rand() < 0.4) add({ type: 'expense', category: 'Others', description: pick(['Laundry', 'Repair', 'Donation', 'Parking']), account: 'Cash', amount: money(100, 600) }, on(between(3, 26), 14))
+
+    // Saving, and the card paid after its statement (the 25th).
+    add({ type: 'transfer', category: 'Transfer', description: 'To savings', fromAccount: 'BPI', toAccount: 'Maya Savings', amount: 5000 }, on(16, 10))
+    add({ type: 'transfer', category: 'Transfer', description: 'Cash out', fromAccount: 'GCash', toAccount: 'Cash', amount: 1500 }, on(between(6, 12), 14))
+    if (m < 0) add({ type: 'transfer', category: 'Transfer', description: 'Card payment', fromAccount: 'BPI', toAccount: 'BPI Credit', amount: money(6500, 9500, 50) }, on(28, 9))
+  }
+  // The investment's own movements.
+  rows.push({ type: 'transfer', category: 'Transfer', description: 'Contribution', fromAccount: 'BPI', toAccount: 'Pag-IBIG MP2', amount: 5000, date: daysAgo(40) })
+  rows.push({ type: 'inflow', category: 'Income', description: 'Value update', account: 'Pag-IBIG MP2', amount: 1200, adjust: 'value', date: daysAgo(10) })
+  return rows.sort((a, b) => a.date.localeCompare(b.date))
+}
+
+async function removeSample() {
+  const accts = await db.accounts.filter(a => a.demoSeed === TAG).toArray()
+  const names = new Set(accts.map(a => a.name))
+  const touches = (t) => t.demoSeed === TAG || names.has(t.account) || names.has(t.fromAccount) || names.has(t.toAccount)
+  const recs = await db.recurring.filter(r => r.demoSeed === TAG || names.has(r.account)).toArray()
+  const keys = accts.map(x => x.syncId).filter(Boolean)
+  const tables = [db.accounts, db.balances, db.transactions, db.recurring, db.debts, db.goals, db.templates, db.categories, db.notifications, db.notes, db.note_folders]
+  await db.transaction('rw', tables, async () => {
+    await db.transactions.bulkDelete(await db.transactions.filter(touches).primaryKeys())
+    await db.accounts.bulkDelete(accts.map(a => a.id))
+    for (const n of names) await db.balances.delete(n)
+    await db.recurring.bulkDelete(recs.map(r => r.id))
+    for (const t of [db.debts, db.goals, db.templates, db.categories, db.notes, db.note_folders]) {
+      await t.bulkDelete(await t.filter(r => r.demoSeed === TAG).primaryKeys())
+    }
+    await db.notifications.bulkDelete(await db.notifications.filter(n => keys.some(k => String(n.id).includes(k))).primaryKeys())
+    // An app with no account at all asks for setup; leave it the Cash it starts with.
+    if (!(await db.accounts.count())) {
+      await db.accounts.add({ name: 'Cash', type: 'cash', balance: 0, currency: 'PHP', color: '#10b981' })
+      await db.balances.put({ account: 'Cash', balance: 0 })
+    }
+  })
+  return { accounts: accts.length, recurring: recs.length }
+}
+
+async function seed() {
+  seedState = 20261007   // the same sample every time it is loaded
+  await db.open()
+  // Not over a real ledger.
+  const real = await db.transactions.filter(t => t.demoSeed !== TAG).count()
+  if (real > 0) {
+    status(`Not loaded: this browser already holds ${real} transactions that are not sample data. Use a browser profile or a port of its own.`)
+    return
+  }
+  if (await db.accounts.filter(a => a.demoSeed === TAG).count()) { await removeSample(); log('Replaced the sample data already here') }
+
+  const stamp = new Date().toISOString()
+  const rows = ledger()
+  const tableList = [db.accounts, db.balances, db.transactions, db.recurring, db.debts, db.goals, db.templates, db.categories, db.meta, db.notes, db.note_folders]
+  await db.transaction('rw', tableList, async () => {
+    // The Cash account the app starts with is replaced by the sample's own.
+    const starter = await db.accounts.filter(a => !a.demoSeed && a.name === 'Cash').toArray()
+    await db.accounts.bulkDelete(starter.map(a => a.id))
+    await db.categories.clear()
+
+    await db.categories.bulkAdd(CATEGORIES.map(([name, type, icon, color, budget], i) => ({ name, type, icon, color, budget, sort_order: i, synced: 0, demoSeed: TAG })))
+    log(`Added ${CATEGORIES.length} categories, budgets on most`)
+
+    const maxSort = (await db.accounts.toArray()).reduce((m, a) => Math.max(m, a.sort_order ?? 0), -1)
+    for (const [i, a] of ACCOUNTS.entries()) {
+      await db.accounts.add({ currency: 'PHP', sort_order: maxSort + 1 + i, synced: 0, demoSeed: TAG, ...a })
+      await db.balances.put({ account: a.name, balance: a.balance })
+    }
+    log(`Added ${ACCOUNTS.length} accounts: ${ACCOUNTS.map(a => a.name).join(', ')}`)
+
+    await db.transactions.bulkAdd(rows.map(r => ({ txId: crypto.randomUUID(), synced: 0, updatedAt: stamp, demoSeed: TAG, ...r })))
+    log(`Added ${rows.length} transactions over seven months`)
+
+    const recurring = [
+      { name: 'Salary', type: 'inflow', category: 'Income', amount: 24000, frequency: 'semimonthly', nextDate: nextOn(now.getDate() <= 15 ? 15 : lastDay(now.getFullYear(), now.getMonth())), account: 'BPI' },
+      { name: 'Rent', type: 'expense', category: 'Rent', amount: 12000, frequency: 'monthly', nextDate: nextOn(5), account: 'BPI' },
+      { name: 'Meralco', type: 'expense', category: 'Bills', amount: 2400, frequency: 'monthly', nextDate: nextOn(24), account: 'BPI' },
+      { name: 'Globe Postpaid', type: 'expense', category: 'Bills', amount: 999, frequency: 'monthly', nextDate: nextOn(12), account: 'GCash' },
+      { name: 'Netflix', type: 'expense', category: 'Bills', amount: 549, frequency: 'monthly', nextDate: nextOn(20), account: 'BPI Credit' },
+    ]
+    await db.recurring.bulkAdd(recurring.map(r => ({ active: true, synced: 0, demoSeed: TAG, ...r })))
+    log(`Added ${recurring.length} recurring: pay and four bills`)
+
+    await db.debts.bulkAdd([
+      { name: 'Lunch money', contact: 'Ana', amount: 1500, amountPaid: 500, type: 'owed_to_me', createdAt: daysAgo(12), synced: 0, demoSeed: TAG },
+      { name: 'Concert ticket', contact: 'Ben', amount: 4200, amountPaid: 0, type: 'i_owe', dueDate: nextOn(28), createdAt: daysAgo(5), synced: 0, demoSeed: TAG },
+    ])
+    await db.goals.add({ name: 'Japan trip', icon: '', target: 80000, accounts: ['Maya Savings'], targetDate: `${now.getFullYear() + 1}-04-01`, priority: 1, synced: 0, demoSeed: TAG })
+    await db.templates.bulkAdd([
+      { name: 'Lunch', type: 'expense', amount: 180, category: 'Food', account: 'Cash', demoSeed: TAG },
+      { name: 'Grab', type: 'expense', amount: 240, category: 'Transpo', account: 'GCash', demoSeed: TAG },
+    ])
+    log('Added 2 debts, a goal and 2 templates')
+
+    // So the app opens on Home rather than on setup, without the What's New sheet.
+    await db.meta.put({ key: 'onboarded', value: true })
+    await db.meta.put({ key: 'seeded', value: true, seededAt: stamp })
+    await db.meta.put({ key: 'whatsNewSeen', value: APP_VERSION })
+    await db.meta.put({ key: 'displayName', value: 'James', updatedAt: stamp })
+    await db.meta.put({ key: 'userName', value: 'James', updatedAt: stamp })
+
+    // Notes, in three folders, with tags: a pinned one, some unfiled, one in the bin.
+    const folderOf = {}
+    for (const name of ['Money', 'Ideas', 'Shopping']) {
+      const id = await db.note_folders.add({ name, createdAt: stamp, updatedAt: stamp, synced: 0, demoSeed: TAG })
+      folderOf[name] = (await db.note_folders.get(id)).syncId
+    }
+    const heading = (text) => ({ type: 'heading', attrs: { level: 1 }, content: [{ type: 'text', text }] })
+    const para = (text) => ({ type: 'paragraph', content: [{ type: 'text', text }] })
+    const tasks = (items) => ({ type: 'taskList', content: items.map(([text, checked]) => ({ type: 'taskItem', attrs: { checked }, content: [para(text)] })) })
+    const note = (title, blocks, { folder = null, tags = [], pinned = false, edited = 0, deleted = null } = {}) => ({
+      ...readNote({ type: 'doc', content: [heading(title), ...blocks] }),
+      pinned, folder: folder ? folderOf[folder] : null, tags,
+      createdAt: daysAgo(edited + 3), editedAt: daysAgo(edited, 9), deletedAt: deleted == null ? null : daysAgo(deleted),
+      synced: 0, demoSeed: TAG,
+    })
+    const notes = [
+      note('Payday plan', [para('Pay comes on the 15th and the 30th. In this order:'), tasks([['Rent, first', true], ['Card payment after the statement', false], ['Move 5,000 to Maya Savings', false], ['Whatever is left is for the week', false]])], { folder: 'Money', tags: ['payday', 'budget'], pinned: true, edited: 0 }),
+      note('Bills calendar', [para('Meralco on the 24th, Globe on the 12th, Netflix on the 20th. The card is due on the 15th.')], { folder: 'Money', tags: ['bills'], edited: 1 }),
+      note('Japan trip fund', [para('Target 80,000 by next April. 5,000 a month gets there with a little to spare.'), para('Look at flights in January.')], { folder: 'Money', tags: ['goals', 'travel'], edited: 6 }),
+      note('App ideas', [para('A way to see what a month cost per day of the week.'), para('Splitting a bill with a friend and keeping score.')], { folder: 'Ideas', tags: ['spendr', 'ideas'], edited: 2 }),
+      note('Gift ideas', [para('Ate: a plant. Kuya: a mechanical keyboard. Mama: the good rice cooker.')], { folder: 'Ideas', tags: ['gifts'], edited: 20 }),
+      note('Groceries', [tasks([['Rice', true], ['Eggs', false], ['Oat milk', false], ['Coffee', true], ['Laundry soap', false]])], { folder: 'Shopping', tags: ['groceries', 'weekly'], edited: 0 }),
+      note('Wishlist', [para('A pair of running shoes. A new phone case. Headphones when the old ones give out.')], { folder: 'Shopping', tags: ['wishlist'], edited: 45 }),
+      note('Notes from the call', [para('Move the review to Thursday. Send the numbers before then.')], { tags: ['work'], edited: 4 }),
+      note('A thought', [para('Spend on what you would do again.')], { edited: 9 }),
+      note('Old list', [para('Not needed any more.')], { edited: 12, deleted: 2 }),
+    ]
+    await db.notes.bulkAdd(notes)
+    log(`Added ${notes.length} notes in ${Object.keys(folderOf).length} folders, with tags (one is in Recently deleted)`)
+  })
+
+  status('Sample data loaded. Open the links above.')
+}
+
+$remove.addEventListener('click', async () => {
+  $remove.disabled = true
+  try {
+    const r = await removeSample()
+    status(`Removed: ${r.accounts} accounts, their transactions, ${r.recurring} recurring and the rest.`)
+  } catch (e) {
+    console.error(e); status(`Could not remove: ${e.message}`)
+  } finally { $remove.disabled = false }
+})
+$reload.addEventListener('click', async () => {
+  $reload.disabled = true; $log.textContent = ''
+  try { await seed() } catch (e) { console.error(e); status(`Could not load: ${e.message}`) } finally { $reload.disabled = false }
+})
+seed().catch(e => { console.error(e); status(`Could not load: ${e.message}`) })
+</script>

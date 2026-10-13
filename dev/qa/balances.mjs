@@ -5,8 +5,8 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 const rows = async (t) => (await fetch(`${API}/__rows?table=${t}`)).json()
 await fetch(`${API}/__reset`)
 
-const A = await session({ port: 9995 })   // the phone
-const B = await session({ port: 9996 })   // the laptop
+const A = await session()   // the phone
+const B = await session()   // the laptop
 const all = []
 const check = (name, ok, detail = '') => { A.check(name, ok, detail); all.push(ok) }
 const ONLY = (process.env.ONLY ?? '').split(',').filter(Boolean)
@@ -64,7 +64,7 @@ async function settle(label, ms = 6000) {
 }
 
 try {
-  await A.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await A.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await A.until(`document.getElementById('status').textContent.startsWith('Sample data loaded')`, 90000)
   await signIn(A, 'phone', 'A')
   await A.goto(APP + '/', 3000)

@@ -6,8 +6,8 @@ const sleep = (ms) => new Promise(r => setTimeout(r, ms))
 const rows = async (t) => (await fetch(`${API}/__rows?table=${t}`)).json()
 await fetch(`${API}/__reset`)
 
-const A = await session({ port: 9971 })   // someone's phone
-const B = await session({ port: 9972 })   // the developer's computer
+const A = await session()   // someone's phone
+const B = await session()   // the developer's computer
 const all = []
 const check = (name, ok, detail = '') => { A.check(name, ok, detail); all.push(ok) }
 const fake = (dev) => JSON.stringify({ access_token: 'tok' + dev, token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'refresh' + dev, user: { id: 'u1', aud: 'authenticated', role: 'authenticated', email: dev === 'D' ? 'sablayjames@gmail.com' : 'test@example.com', app_metadata: {}, user_metadata: { full_name: dev === 'D' ? 'James Sablay' : 'Test User' }, created_at: '2026-01-01T00:00:00Z' } })
@@ -19,7 +19,7 @@ const dialogText = (s) => s.evaluate(`[...document.querySelectorAll('[role=dialo
 
 try {
   // ── Someone's phone: signed in, an error already on the device ──
-  await A.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await A.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await A.until(`document.getElementById('status').textContent.startsWith('Sample data loaded')`, 90000)
   await signIn(A, 'phone', 'A')
   await A.evaluate(`localStorage.setItem('spendr-crash-log', JSON.stringify([{ at: new Date().toISOString(), last: new Date().toISOString(), count: 3, where: 'render', message: 'Cannot read properties of undefined (reading "balance")', stack: 'TypeError: Cannot read properties of undefined\\n    at Budget (Budget.jsx:120:4)\\n    at render', route: '/budget', version: '0.21.0', device: navigator.userAgent }]))`)
@@ -85,7 +85,7 @@ try {
   // ── The developer, on a computer ──
   await B.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 950, deviceScaleFactor: 1, mobile: false })
   await B.send('Emulation.setTouchEmulationEnabled', { enabled: false })
-  await B.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await B.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await B.until(`document.getElementById('status').textContent.startsWith('Sample data loaded')`, 90000)
   await signIn(B, 'desktop', 'D')
   await B.goto(APP + '/settings', 2000)

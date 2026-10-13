@@ -14,14 +14,14 @@ for (const mode of (process.env.MODES ?? 'desktop,phone').split(',')) {
   for (const theme of (process.env.THEMES ?? 'light,dark').split(',')) {
     const tag = `${mode} ${theme}`
     await fetch('http://localhost:54321/__reset', { method: 'POST' }).catch(() => {})
-    const s = await session({ port: mode === 'desktop' ? 9481 : 9482 })
+    const s = await session()
     if (mode === 'desktop') {
       await s.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 900, deviceScaleFactor: 1, mobile: false })
       await s.send('Emulation.setTouchEmulationEnabled', { enabled: false })
     }
     await s.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }] })
     try {
-      await s.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+      await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
       await s.until(`document.getElementById('status')?.textContent.startsWith('Sample data loaded')`, 90000)
       await s.evaluate(`localStorage.setItem('sb-localhost-auth-token', ${JSON.stringify(fake)}); localStorage.setItem('spendr-view-mode', '${mode}'); localStorage.setItem('spendr-theme', '${theme}')`)
       await s.goto(APP + '/', 5000)

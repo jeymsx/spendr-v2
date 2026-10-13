@@ -6,7 +6,7 @@ const THEME = process.env.THEME || 'light'
 const W = Number(process.env.W || 1440)
 let failures = 0
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`) }
-const s = await session({ port: Number(process.env.CDP || 9906) })
+const s = await session()
 const open = async (url, settle = 1600) => {
   await s.send('Page.navigate', { url })
   await s.until(`document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount`, 90000)
@@ -33,12 +33,14 @@ try {
     const before = s.consoleLog.length
     await open(APP + p)
     // A page's code arrives on its first visit; give its title a moment.
-    await s.until(`document.querySelector('.d-title, .page-header-title, h1')`, 8000)
+    await s.until(`document.querySelector('.d-title, .page-header-title, h1, [aria-label="Close Wrapped"]')`, 8000)
     const st = await s.evaluate(`(() => {
       const page = document.querySelector('.d-page, .web-split, .web-scroll')
       const over = [...document.querySelectorAll('.d-page, .web-pane, .web-scroll')].map(el => el.scrollWidth - el.clientWidth).reduce((a, b) => Math.max(a, b), 0)
       const h = document.querySelector('.d-title, .page-header-title, h1')
-      return { path: location.pathname, page: !!page, over, title: h?.textContent?.trim().slice(0, 40) ?? null, crashed: !!document.querySelector('[data-error-boundary], .error-boundary') || /Something went wrong/i.test(document.body.innerText) }
+      // Wrapped is a story over the page, named in its own header rather than a page title.
+      const story = document.querySelector('[aria-label="Close Wrapped"]') ? 'Wrapped' : null
+      return { path: location.pathname, page: !!page, over, title: h?.textContent?.trim().slice(0, 40) ?? story, crashed: !!document.querySelector('[data-error-boundary], .error-boundary') || /Something went wrong/i.test(document.body.innerText) }
     })()`)
     const errs = s.consoleLog.slice(before).filter(l => l.type === 'error' || l.type === 'exception')
     check(`${p}`, st.page && st.over <= 1 && !!st.title && !st.crashed && errs.length === 0,

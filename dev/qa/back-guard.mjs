@@ -4,7 +4,7 @@ import { session, APP } from './harness.mjs'
 import { seedIdb } from './seed.mjs'
 let failures = 0
 const check = (name, ok, detail = '') => { if (!ok) failures++; console.log(`${ok ? 'PASS' : 'FAIL'}  ${name}${detail ? '  -- ' + detail : ''}`) }
-const s = await session({ port: 9808, extraArgs: ['--overscroll-history-navigation=0', '--disable-features=OverscrollHistoryNavigation,TouchpadOverscrollHistoryNavigation'] })
+const s = await session({ extraArgs: ['--overscroll-history-navigation=0', '--disable-features=OverscrollHistoryNavigation,TouchpadOverscrollHistoryNavigation'] })
 const open = async (url, settle = 2800) => {
   await s.send('Page.navigate', { url })
   await s.until(`document.readyState === 'complete' && !!document.querySelector('#root')?.childElementCount`, 60000)
@@ -80,7 +80,8 @@ try {
   await click(`[...document.querySelectorAll('#app-main button')].find(b => /Food/.test(b.innerText))`)
   await s.evaluate(`[...document.querySelectorAll('#app-main button')].find(b => /Paying from|account/i.test(b.getAttribute('aria-label') || b.innerText))?.click()`)
   await s.sleep(900)
-  await s.evaluate(`[...document.querySelectorAll('[role=dialog] button')].find(b => /^Cash/.test(b.innerText.trim()))?.click()`)
+  // BPI, not Cash: the seeded Cash can run low enough that saving stops to warn about overdrawing it.
+  await s.evaluate(`[...document.querySelectorAll('[role=dialog] button')].find(b => /^BPI(?! Credit)/.test(b.innerText.trim()))?.click()`)
   await s.sleep(900)
   await s.sleep(300)
   await click(`[...document.querySelectorAll('#app-main button')].find(b => /^(Save|Review)/.test(b.innerText.trim()))`)

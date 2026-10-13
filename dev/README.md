@@ -6,8 +6,10 @@ the project, so with `npm run dev` running they open at
 
 - `standing-gallery.html` draws every case of the standing note on Home
   (`src/dev/standingGallery.jsx`).
+- `seed-sample-data.html` loads a believable sample ledger into the
+  browser's own database, and takes it away again. It refuses to run over a
+  real ledger.
 - `local/` holds seed scripts and demo-data pages that stay on this machine.
-  It's ignored by git on purpose; `local/seed-sample-data.html` loads a
-  believable sample ledger into the browser's own database.
+  It's ignored by git on purpose.
 - `qa/` holds the browser checks: scripts that drive Chrome through the app
   against a stand-in for Supabase. See `qa/README.md`.

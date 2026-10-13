@@ -5,8 +5,8 @@ import { session, sleep, APP } from './harness.mjs'
 
 const fake = JSON.stringify({ access_token: 'tokA', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'refreshA', user: { id: 'u1', aud: 'authenticated', role: 'authenticated', email: 'test@example.com', app_metadata: {}, user_metadata: { full_name: 'Test User' }, created_at: '2026-01-01T00:00:00Z' } })
 
-const s = await session({ port: 9495 })
-await s.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+const s = await session()
+await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
 await s.until(`document.getElementById('status')?.textContent.startsWith('Sample data loaded')`, 90000)
 await s.evaluate(`localStorage.setItem('sb-localhost-auth-token', ${JSON.stringify(fake)}); localStorage.setItem('spendr-view-mode', 'phone'); localStorage.setItem('spendr-theme', '${process.env.THEME ?? 'light'}')`)
 await s.goto(APP + '/', 5000)

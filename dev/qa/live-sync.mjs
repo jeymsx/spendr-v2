@@ -12,8 +12,8 @@ const logLen = async () => (await (await fetch(`${API}/__log`)).json()).filter(l
 const rows = async (t) => (await fetch(`${API}/__rows?table=${t}`)).json()
 await fetch(`${API}/__reset`)
 
-const A = await session({ port: 9993 })   // the phone
-const B = await session({ port: 9994 })   // the laptop
+const A = await session()   // the phone
+const B = await session()   // the laptop
 const all = []
 const check = (name, ok, detail = '') => { A.check(name, ok, detail); all.push(ok) }
 
@@ -25,7 +25,7 @@ const watchStat = (s, label, ms) => s.evaluate(`new Promise(res => { const seen 
 
 try {
   // ── The phone: sample data, signed in, first sync up ──
-  await A.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await A.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await A.until(`document.getElementById('status').textContent.startsWith('Sample data loaded')`, 90000)
   await signIn(A, 'phone', 'A')
   await A.goto(APP + '/', 3000)

@@ -17,7 +17,15 @@ export function seedIdb({ empty = false, version = CURRENT } = {}) {
   return `(async () => {
   const EMPTY = ${JSON.stringify(empty)}
   const VERSION = ${JSON.stringify(version)}
-  const db = await new Promise((res, rej) => { const r = indexedDB.open('SpendrDB'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) })
+  // On a cold dev server the app may not have made its database yet: wait for
+  // its tables, closing between looks so its upgrade isn't blocked.
+  let db = null
+  for (let i = 0; i < 40 && !db; i++) {
+    const open = await new Promise((res, rej) => { const r = indexedDB.open('SpendrDB'); r.onsuccess = () => res(r.result); r.onerror = () => rej(r.error) })
+    if (open.objectStoreNames.contains('meta')) db = open
+    else { open.close(); await new Promise(r => setTimeout(r, 500)) }
+  }
+  if (!db) throw new Error('the app has not made its database yet')
   const stores = [...db.objectStoreNames]
   const want = ['meta', 'accounts', 'balances', 'transactions', 'categories', 'recurring', 'debts', 'goals', 'templates']
   const tx = db.transaction(want.filter(s => stores.includes(s)), 'readwrite')

@@ -4,11 +4,20 @@ import { session, sleep, APP } from './harness.mjs'
 
 const fake = JSON.stringify({ access_token: 'tokA', token_type: 'bearer', expires_in: 3600, expires_at: Math.floor(Date.now() / 1000) + 3600, refresh_token: 'refreshA', user: { id: 'u1', aud: 'authenticated', role: 'authenticated', email: 'test@example.com', app_metadata: {}, user_metadata: { full_name: 'Test User' }, created_at: '2026-01-01T00:00:00Z' } })
 
-const s = await session({ port: 9484 })
+const s = await session()
 await s.send('Emulation.setFocusEmulationEnabled', { enabled: true })
-await s.goto(APP + '/', 1500)
+// The sample ledger first: a brand-new account with nothing in it opens on setup, not Home.
+await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
+await s.until(`document.getElementById('status')?.textContent.startsWith('Sample data loaded')`, 90000)
 await s.evaluate(`localStorage.setItem('sb-localhost-auth-token', ${JSON.stringify(fake)}); localStorage.setItem('spendr-view-mode', 'phone'); localStorage.setItem('spendr-theme', 'light')`)
 await s.goto(APP + '/', 4000)
+// This device's sample ledger goes up as the account's: the first-sync question, answered.
+if (await s.until(`[...document.querySelectorAll('button')].some(b => /Move them to my account|Keep both/.test(b.textContent))`, 6000)) {
+  await s.evaluate(`[...document.querySelectorAll('button')].find(b => /Move them to my account|Keep both/.test(b.textContent)).click()`)
+  await sleep(5000)
+  await s.evaluate(`[...document.querySelectorAll('button')].find(b => /Back to Home/.test(b.textContent))?.click()`)
+  await sleep(1500)
+}
 const name = 'QA Coffee ' + Date.now().toString(36).slice(-4)
 await s.evaluate(`(async () => {
   const { default: db } = await import('/src/db/db.js')

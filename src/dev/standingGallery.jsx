@@ -19,7 +19,7 @@ import { setBaseCurrency } from '../lib/money'
  * real composer from facts - not mock-ups - so what is on this page is what
  * the phone and the desktop would say in that situation. The first card is
  * this device's own ledger, read live: seed the sample data first
- * (/dev/local/seed-sample-data.html, a local-only page) to see the sample month.
+ * (/dev/seed-sample-data.html) to see the sample month.
  *
  *   ?theme=light  ?device=desktop  ?day=3  ?only=short
  */

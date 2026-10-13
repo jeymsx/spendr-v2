@@ -3,7 +3,7 @@
 // choice, and the settings page.
 import { session, APP } from './harness.mjs'
 const THEME = process.env.THEME ?? 'light'
-const s = await session({ port: 9985 })
+const s = await session()
 const SERIES = ['Expenses', 'Income', 'Net flow']
 const RED = '#ef4444', GREEN = '#22c55e', PRIMARY = 'var(--color-primary)'
 const strokes = () => s.evaluate(`(() => {
@@ -24,7 +24,7 @@ const clickSwitch = (label) => s.evaluate(`(() => { const b = [...document.query
 const meta = () => s.evaluate(`new Promise((res) => { const r = indexedDB.open('SpendrDB'); r.onsuccess = () => { const db = r.result; try { const g = db.transaction('meta').objectStore('meta').get('trendSettings'); g.onsuccess = () => { res(g.result ?? null); db.close() } } catch (e) { res('ERR ' + e.message) } } })`)
 const same = (a, b) => JSON.stringify(a) === JSON.stringify(b)
 try {
-  await s.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await s.until(`document.getElementById('status').textContent.startsWith('Sample data loaded')`, 90000)
   await s.evaluate(`localStorage.setItem('spendr-theme', '${THEME}'); localStorage.setItem('spendr-view-mode', 'phone')`)
 

@@ -5,7 +5,7 @@ import { session, sleep } from './harness.mjs'
 const BASE = `http://localhost:${process.env.SITE_PORT ?? 4325}`
 for (const [label, w, h, mobile] of [['phone', 390, 844, true], ['desk', 1440, 900, false]]) {
   for (const theme of ['light', 'dark']) {
-    const s = await session({ port: mobile ? 9496 : 9497 })
+    const s = await session()
     await s.send('Emulation.setDeviceMetricsOverride', { width: w, height: h, deviceScaleFactor: 1, mobile })
     await s.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: theme }, { name: 'prefers-reduced-motion', value: 'reduce' }] })
     await s.goto(BASE + '/features', 2500)

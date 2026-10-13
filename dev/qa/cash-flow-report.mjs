@@ -5,7 +5,7 @@ import { session, APP, OUT } from './harness.mjs'
 import { mkdirSync, readdirSync, statSync } from 'node:fs'
 const DL = OUT + '/downloads'
 mkdirSync(DL, { recursive: true })
-const s = await session({ port: 9982 })
+const s = await session()
 const move = (x, y) => s.send('Input.dispatchMouseEvent', { type: 'mouseMoved', x, y })
 const press = async (x, y) => { for (const type of ['mousePressed', 'mouseReleased']) await s.send('Input.dispatchMouseEvent', { type, x, y, button: 'left', clickCount: 1 }) }
 const rect = (sel) => s.evaluate(`(() => { const e = document.querySelector(${JSON.stringify(sel)}); if (!e) return null; const r = e.getBoundingClientRect(); return { x: r.x, y: r.y, w: r.width, h: r.height } })()`)
@@ -17,7 +17,7 @@ try {
   await s.send('Emulation.setDeviceMetricsOverride', { width: 1440, height: 1000, deviceScaleFactor: 1, mobile: false })
   await s.send('Emulation.setTouchEmulationEnabled', { enabled: false })
   await s.send('Emulation.setFocusEmulationEnabled', { enabled: true })
-  await s.send('Page.navigate', { url: APP + '/dev/local/seed-sample-data.html' })
+  await s.send('Page.navigate', { url: APP + '/dev/seed-sample-data.html' })
   await s.until(`document.getElementById('status').textContent.startsWith('Sample data loaded')`, 90000)
   await s.evaluate(`localStorage.setItem('spendr-view-mode', 'desktop'); localStorage.setItem('spendr-sidebar', 'open'); localStorage.setItem('spendr-theme', '${process.env.THEME ?? 'light'}')`)
   await s.send('Page.navigate', { url: APP + '/insights' })
@@ -69,7 +69,7 @@ try {
   await s.shot('cf-accounts.png')
   await s.evaluate(`[...document.querySelectorAll('.d-seg-item')].find(b => b.textContent.trim() === 'Categories')?.click()`); await s.sleep(500)
 
-  await s.send('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: DL, eventsEnabled: true }).catch(e => console.log('download behaviour:', e.message))
+  await s.browserSend('Browser.setDownloadBehavior', { behavior: 'allowAndName', downloadPath: DL, eventsEnabled: true }).catch(e => console.log('download behaviour:', e.message))
   const btn = await rect('button[aria-label="Save as a picture"]')
   await press(btn.x + btn.w / 2, btn.y + btn.h / 2); await s.sleep(3500)
   const toast = await s.evaluate(`document.body.innerText.match(/Saved spendr-cash-flow[^\\n]*/)?.[0] ?? null`)

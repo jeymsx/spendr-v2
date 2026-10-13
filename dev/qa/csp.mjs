@@ -1,7 +1,9 @@
 // The production build served with vercel.json's headers and rewrites, then
 // walked in headless Chrome: any Content-Security-Policy violation fails it.
 //
-//   npm run build && node dev/qa/csp.mjs              signed out
+//   npx vite build && node dev/qa/csp.mjs             signed out
+//   (not npm run build while a dev server is up: its prebuild rewrites
+//   public/flags, and the dev server's file watcher crashed on that)
 //   STANDIN=1 node dev/qa/csp.mjs                      signed in, against the stand-in;
 //                                                      build with VITE_SUPABASE_URL=http://localhost:54321
 //   DIST=<folder>                                      a build somewhere other than dist/
@@ -30,7 +32,7 @@ const server = createServer((req, res) => {
   res.end(readFileSync(file))
 }).listen(PORT)
 
-const s = await session({ port: 9471 })
+const s = await session()
 const violations = []
 const logs = []
 s.listeners.push(m => {

@@ -7,7 +7,7 @@ const SIDEBAR = process.env.SIDEBAR || 'open'
 const PAGES = ['/', '/transactions', '/accounts', '/accounts/1', '/accounts/5', '/insights', '/insights/spending', '/insights/trend', '/insights/net-worth', '/insights/forecast',
   '/budget', '/categories/Food', '/goals', '/recurring', '/debts', '/achievements', '/settings', '/settings/deleted']
 let failures = 0
-const s = await session({ port: 9987 })
+const s = await session()
 try {
   await s.send('Emulation.setDeviceMetricsOverride', { width: W, height: 900, deviceScaleFactor: 1, mobile: false })
   await s.send('Page.navigate', { url: APP + '/' }); await s.sleep(3000)
