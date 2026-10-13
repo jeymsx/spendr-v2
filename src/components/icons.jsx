@@ -184,7 +184,7 @@ import {
   CurrencyDollarCircle, CoinsSwap01, Globe01, Cursor01,
   Trophy01, Target04, CoinsStacked01, TrendUp01, BarChart10, Calculator,
   AlertCircle, CheckCircle, Lock01, PauseCircle, Monitor01, Cloud01,
-  File06, Edit05,
+  File06, Edit05, Gift01,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -216,6 +216,7 @@ export const IconReceipt   = uui(Receipt)            // loans on the Net worth p
 export const IconTransferUI = uui(SwitchHorizontal01) // a transfer template
 export const IconNotes     = uui(File06)         // Notes, from Home and the desktop's sidebar
 export const IconCompose   = uui(Edit05)         // a new note, as iOS Notes draws it
+export const IconGiftUI    = uui(Gift01)         // the wishlist, in What's New
 
 // Release-notes glyphs. Only What's New uses these, and only one row each -
 // which is why they are the vaguest names in this block. They stand for a

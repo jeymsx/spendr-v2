@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-10-12'
+export const RELEASE_DATE = '2026-10-13'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,23 +32,18 @@ export const RELEASE_DATE = '2026-10-12'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'categories',
-    title: 'Change the others too',
-    desc: 'Change a transaction’s category from its icon, and Spendr offers to move the others with the same description. Undo puts them all back.',
-  },
-  {
-    icon: 'sparkle',
-    title: 'Income, not Inflow',
-    desc: 'Money coming in is called Income everywhere now, from the Add button to your exports.',
+    icon: 'gift',
+    title: 'Wishlist',
+    desc: 'Park something you want with its price and a day to think it over. Spendr asks if you still want it then, and what you skip counts as kept.',
   },
   {
     icon: 'receipt',
-    title: 'Steadier amount typing',
-    desc: 'Refunds, splits, card and loan payments and quick edits read amounts as carefully as every other form. A template’s amount can be changed again.',
+    title: 'Paste a shop link',
+    desc: 'Paste a Shopee or Lazada share message into a wish and its name and price fill in.',
   },
   {
-    icon: 'bank',
-    title: 'No ghost bills',
-    desc: 'An old copy of a bill left in the cloud can no longer turn up on a new device.',
+    icon: 'phone',
+    title: 'More on Home',
+    desc: 'The round buttons on Home scroll sideways now, with Wishlist, Challenges, Quick log and Forecast. Expense, Income and Transfer are under +.',
   },
 ]

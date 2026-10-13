@@ -24,6 +24,16 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '0.23.0',
+    date: '2026-10-12',
+    items: [
+      { title: 'Change the others too', desc: 'Change a transaction’s category from its icon, and Spendr offers to move the others with the same description. Undo puts them all back.' },
+      { title: 'Income, not Inflow', desc: 'Money coming in is called Income everywhere now, from the Add button to your exports.' },
+      { title: 'Steadier amount typing', desc: 'Refunds, splits, card and loan payments and quick edits read amounts as carefully as every other form. A template’s amount can be changed again.' },
+      { title: 'No ghost bills', desc: 'An old copy of a bill left in the cloud can no longer turn up on a new device.' },
+    ],
+  },
+  {
     version: '0.22.0',
     date: '2026-10-10',
     items: [
