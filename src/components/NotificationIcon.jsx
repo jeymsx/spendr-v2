@@ -45,6 +45,8 @@ const GLYPHS = {
   dip: <><path d="M3 7l6 6 4-4 8 8" /><path d="M3 21h18" /></>,
   // Down into a tray: a backup file to save.
   save: <><path d="M12 3v12" /><path d="M7 10l5 5 5-5" /><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2" /></>,
+  // A wrapped present: a wish whose wait is over.
+  gift: <><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13" /><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" /><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5" /></>,
 }
 
 /**
@@ -78,6 +80,7 @@ export const NOTIFICATION_KINDS = {
   'forecast-floor':   { glyph: 'dip',    tone: 'soon' },
   'forecast-short':   { glyph: 'dip',    tone: 'late' },
   'backup-stale':     { glyph: 'save',   tone: 'news' },
+  'wish-ready':       { glyph: 'gift',   tone: 'news' },
 }
 
 /** @param {{kind: string}} props */

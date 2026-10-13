@@ -42,7 +42,7 @@ import { supabase as defaultClient } from './supabase'
 
 export const REALTIME_TABLES = [
   'transactions', 'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals',
-  'badges', 'challenges', 'trash', 'note_folders', 'notes', 'user_preferences', 'deletions',
+  'badges', 'challenges', 'trash', 'note_folders', 'notes', 'wishes', 'user_preferences', 'deletions',
 ]
 
 /** The one table whose being heard means the stream is live: the ledger. */

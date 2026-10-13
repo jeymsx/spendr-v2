@@ -1,6 +1,20 @@
 import { describe, it, expect } from 'vitest'
 import { budgetCrossings, collectNotifications, dayHeading, groupByDay, timeOf, freshBudgetToast } from './notifications'
 
+describe('the bell, for a wish whose wait is over', () => {
+  const wish = { syncId: 'w-1', name: 'Earbuds', price: 8990, currency: 'PHP', status: 'waiting', coolUntil: '2026-10-20', createdAt: new Date(2026, 9, 13, 10).toISOString() }
+
+  it('asks "Still want it?" from 9 on its day', () => {
+    expect(collectNotifications({ wishes: [wish], now: new Date(2026, 9, 20, 8) }).some(n => n.kind === 'wish-ready')).toBe(false)
+    const n = collectNotifications({ wishes: [wish], now: new Date(2026, 9, 20, 10) }).find(x => x.kind === 'wish-ready')
+    expect(n).toMatchObject({ id: 'wish:w-1:2026-10-20', title: 'Still want Earbuds?', url: '/wishlist' })
+  })
+
+  it('says nothing of one already decided', () => {
+    expect(collectNotifications({ wishes: [{ ...wish, status: 'bought' }], now: new Date(2026, 9, 21) }).some(n => n.kind === 'wish-ready')).toBe(false)
+  })
+})
+
 /**
  * The notifications list, worked out from the ledger. Local dates throughout,
  * "now" 25 September 2026 at 2pm.

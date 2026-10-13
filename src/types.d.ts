@@ -309,6 +309,31 @@ interface NoteFolderRow {
   [key: string]: any
 }
 
+/** Something wanted, parked to cool off before it is bought (lib/wishes.js). */
+interface WishRow {
+  id?: number
+  syncId?: string
+  name: string
+  /** In `currency`, the ledger's when it was made. */
+  price: number
+  currency?: string | null
+  link?: string | null
+  note?: string | null
+  /** The day to ask "Still want it?", 'YYYY-MM-DD'. */
+  coolUntil?: string | null
+  status?: 'waiting' | 'bought' | 'skipped' | 'saving'
+  decidedAt?: string | null
+  /** The expense it was bought with, when bought through Add expense. */
+  txId?: string | null
+  /** The goal it became, when saved up for. */
+  goalName?: string | null
+  createdAt?: string
+  updatedAt?: string
+  syncedAt?: string
+  synced?: number
+  [key: string]: any
+}
+
 /** The key-value table: seeded flags, tombstones, the user's settings. */
 interface MetaRow {
   key: string

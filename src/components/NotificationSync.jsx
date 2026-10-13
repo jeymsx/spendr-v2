@@ -46,6 +46,7 @@ export default function NotificationSync() {
   const categories   = useLiveQuery(() => db.categories.toArray(), [], undefined)
   const badges       = useLiveQuery(() => db.badges.toArray(), [], undefined)
   const challenges   = useLiveQuery(() => db.challenges.toArray(), [], undefined)
+  const wishes       = useLiveQuery(() => db.wishes.toArray(), [], undefined)
   const rollover     = useLiveQuery(async () => (await db.meta.get('budgetRollover'))?.value ?? false, [], undefined)
   // When a backup file was last saved here, for the reminder when it is old; null for never.
   const lastBackup   = useLiveQuery(async () => (await db.meta.get(LAST_BACKUP_KEY))?.value ?? null, [], undefined)
@@ -61,14 +62,14 @@ export default function NotificationSync() {
   }, [])
 
   useEffect(() => {
-    if ([accounts, transactions, recurring, categories, badges, challenges, rollover, lastBackup].some(v => v === undefined)) return
+    if ([accounts, transactions, recurring, categories, badges, challenges, wishes, rollover, lastBackup].some(v => v === undefined)) return
     if (!forecast) return
     const t = setTimeout(async () => {
       const now = new Date()
       try {
         const seenAt = await releaseSeenAt(CURRENT_VERSION, now)
         const candidates = collectNotifications({
-          accounts, transactions, recurring, categories, badges, challenges,
+          accounts, transactions, recurring, categories, badges, challenges, wishes,
           globalRollover: !!rollover,
           whatsNew: seenAt ? { version: CURRENT_VERSION, headline: WHATS_NEW_HEADLINE, at: seenAt } : null,
           forecast,
@@ -88,7 +89,7 @@ export default function NotificationSync() {
       }
     }, SETTLE_MS)
     return () => clearTimeout(t)
-  }, [accounts, transactions, recurring, categories, badges, challenges, rollover, lastBackup, forecast, tick])
+  }, [accounts, transactions, recurring, categories, badges, challenges, wishes, rollover, lastBackup, forecast, tick])
 
   return null
 }

@@ -26,6 +26,7 @@ import { stampTxCurrency } from '../lib/fxContext'
  *   trash:        import('dexie').Table<Record<string, any>, number>,
  *   notes:        import('dexie').Table<NoteRow, number>,
  *   note_folders: import('dexie').Table<NoteFolderRow, number>,
+ *   wishes:       import('dexie').Table<WishRow, number>,
  * }} SpendrDB
  */
 
@@ -260,12 +261,24 @@ db.version(17).stores({
   note_folders: '++id, syncId',
 })
 
+/* v18 - The wishlist (lib/wishes.js).
+ *
+ * One row per wish: a name, a price, the day to ask again, and what was
+ * decided. Indexed by syncId like every synced table, and by status, since the
+ * Home badge and the bell only ever want the ones still waiting. Named as on
+ * the server (037_wishes.sql) so the deletion log finds it. Synced, and in
+ * backups too. */
+db.version(18).stores({
+  wishes: '++id, syncId, status',
+})
+
 /** How long Recently deleted keeps a deletion, in days. */
 export const TRASH_DAYS = 30
 
 /** The tables that carry a syncId. Exported so sync and backup agree. */
 export const SYNCED_TABLES = [
   'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders',
+  'wishes',
 ]
 
 /** How a row is FILED, as opposed to what it says. Changing only these is not

@@ -9,7 +9,7 @@ import {
   goalToRow, rowToGoal,
   badgeToRow,
   challengeToRow, rowToChallenge, trashToRow, rowToTrash,
-  noteToRow, rowToNote, folderToRow, rowToFolder,
+  noteToRow, rowToNote, folderToRow, rowToFolder, wishToRow, rowToWish,
   isPendingDelete,
   isLocalIdConflict, unknownColumnOf, columnsToDrop,
   deleteRecurringRemote,
@@ -514,6 +514,34 @@ describe('note folders', () => {
   it('may be missing from a server that has not had 028: the columns a note gains are optional', () => {
     expect(columnsToDrop("Could not find the 'tags' column of 'notes' in the schema cache", ['tags', 'folder_sync_id'], [], ['user_id', 'sync_id'])).toEqual(['tags'])
     expect(columnsToDrop('column "folder_sync_id" of relation "notes" does not exist', ['tags', 'folder_sync_id'], ['tags'], ['user_id', 'sync_id'])).toEqual(['folder_sync_id'])
+  })
+})
+
+describe('wishes', () => {
+  const local = {
+    id: 3, syncId: 'w-1', name: 'Earbuds', price: 8990, currency: 'PHP', link: 'https://shp.ee/x', note: /** @type {string|null} */ (null),
+    coolUntil: '2026-10-20', status: /** @type {const} */ ('skipped'), decidedAt: '2026-10-21T01:00:00.000Z',
+    txId: /** @type {string|null} */ (null), goalName: /** @type {string|null} */ (null), createdAt: '2026-10-13T01:00:00.000Z', updatedAt: '2026-10-21T01:00:00.000Z', synced: UNSYNCED,
+  }
+
+  it('go up by their sync_id alone, with no local_id for another device to mistake', () => {
+    const row = wishToRow(local, UID)
+    expect(row).toEqual({
+      user_id: UID, sync_id: 'w-1', name: 'Earbuds', price: 8990, currency: 'PHP', link: 'https://shp.ee/x', note: null,
+      cool_until: '2026-10-20', status: 'skipped', decided_at: local.decidedAt, tx_id: null, goal_name: null,
+      created_at: local.createdAt, updated_at: local.updatedAt,
+    })
+    expect(row).not.toHaveProperty('local_id')
+  })
+
+  it('come down as they went, marked as the cloud\'s', () => {
+    const { id: _id, synced: _s, ...rest } = local
+    expect(rowToWish(wishToRow(local, UID))).toEqual({ ...rest, synced: SYNCED })
+  })
+
+  it('come down waiting when the status is not one the app knows', () => {
+    expect(rowToWish({ sync_id: 'w-2', name: 'Lamp', price: '1200.50', status: 'maybe', updated_at: '2026-10-21T00:00:00.000Z' }))
+      .toMatchObject({ status: 'waiting', price: 1200.5, name: 'Lamp' })
   })
 })
 

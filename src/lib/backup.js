@@ -34,7 +34,7 @@ export const BACKUP_VERSION = 2
 
 const BACKUP_TABLES = [
   'transactions', 'accounts', 'categories', 'templates', 'recurring', 'debts',
-  'goals', 'badges', 'challenges', 'trash', 'notes', 'note_folders',
+  'goals', 'badges', 'challenges', 'trash', 'notes', 'note_folders', 'wishes',
 ]
 
 /* Badges are the one table a restore MERGES rather than replaces - look for
@@ -153,7 +153,7 @@ export async function restoreBackup(raw) {
   const stampBadge = (rows) => (rows ?? []).map(r => withoutSyncedAt({ ...r, synced: UNSYNCED }))
 
   // Captured before the wipe so we know what the backup drops.
-  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges, oldTrash, oldNotes, oldFolders, oldRecurring, oldDebts] = await Promise.all([
+  const [oldTxs, oldAccounts, oldCategories, oldTemplates, oldGoals, oldChallenges, oldTrash, oldNotes, oldFolders, oldRecurring, oldDebts, oldWishes] = await Promise.all([
     db.transactions.toArray(),
     db.accounts.toArray(),
     db.categories.toArray(),
@@ -165,6 +165,7 @@ export async function restoreBackup(raw) {
     db.note_folders.toArray(),
     db.recurring.toArray(),
     db.debts.toArray(),
+    db.wishes.toArray(),
   ])
 
   /* Each call names the table it is restoring. A backup file is parsed JSON,
@@ -201,6 +202,8 @@ export async function restoreBackup(raw) {
   const notes      = /** @type {NoteRow[]} */ (stamp(data.notes)).map(n => ({ ...n, pushed: !!n.syncId }))
   // The folders they are filed in, and the same reason to name them.
   const folders    = /** @type {NoteFolderRow[]} */ (stamp(data.note_folders))
+  // The wishlist (lib/wishes.js), from a file made since it existed.
+  const wishes     = /** @type {WishRow[]} */ (stamp(data.wishes))
 
   const keptTxIds  = new Set(transactions.map(t => t.txId).filter(Boolean))
   const droppedTxIds = oldTxs.map(t => t.txId).filter(id => id && !keptTxIds.has(id))
@@ -215,11 +218,12 @@ export async function restoreBackup(raw) {
   const keptFolderIds     = new Set(folders.map(f => f.syncId).filter(Boolean))
   const keptRecurringIds  = new Set(recurring.map(r => r.syncId).filter(Boolean))
   const keptDebtIds       = new Set(debts.map(d => d.syncId).filter(Boolean))
+  const keptWishIds       = new Set(wishes.map(w => w.syncId).filter(Boolean))
 
   await db.transaction('rw', [
     db.transactions, db.accounts, db.categories, db.templates,
     db.recurring, db.debts, db.goals, db.badges, db.balances, db.meta, db.notifications,
-    db.challenges, db.trash, db.notes, db.note_folders,
+    db.challenges, db.trash, db.notes, db.note_folders, db.wishes,
   ], async () => {
     /* The notifications list is about the ledger it was worked out from. A
        restored ledger gets its own, worked out afresh - and arriving all at
@@ -236,6 +240,7 @@ export async function restoreBackup(raw) {
     if (Array.isArray(data.trash))        { await db.trash.clear();        await db.trash.bulkAdd(trash) }
     if (Array.isArray(data.notes))        { await db.notes.clear();        await db.notes.bulkAdd(notes) }
     if (Array.isArray(data.note_folders)) { await db.note_folders.clear(); await db.note_folders.bulkAdd(folders) }
+    if (Array.isArray(data.wishes))       { await db.wishes.clear();       await db.wishes.bulkAdd(wishes) }
     // Merged, not replaced - see the note by BACKUP_TABLES. bulkPut so a badge already held
     // locally keeps its row rather than colliding on the `key` primary key.
     if (Array.isArray(data.badges) && badges.length) await db.badges.bulkPut(badges)
@@ -323,6 +328,12 @@ export async function restoreBackup(raw) {
   if (Array.isArray(data.note_folders)) {
     for (const f of oldFolders) {
       if (f.syncId && !keptFolderIds.has(f.syncId)) await queueRemoteDelete('note_folders', { sync_id: f.syncId })
+    }
+  }
+  // And wishes made after the backup, for the same reason. A file from before the wishlist leaves it alone.
+  if (Array.isArray(data.wishes)) {
+    for (const w of oldWishes) {
+      if (w.syncId && !keptWishIds.has(w.syncId)) await queueRemoteDelete('wishes', { sync_id: w.syncId })
     }
   }
   /* Bills and debts too, which were missing here: a bill added after the
@@ -422,7 +433,7 @@ function writeLocalPrefs(prefs) {
 }
 
 export async function buildBackupPayload() {
-  const [transactions, accounts, categories, templates, recurring, debts, goals, badges, challenges, trash, notes, note_folders] =
+  const [transactions, accounts, categories, templates, recurring, debts, goals, badges, challenges, trash, notes, note_folders, wishes] =
     await Promise.all([
       db.transactions.toArray(),
       db.accounts.toArray(),
@@ -436,6 +447,7 @@ export async function buildBackupPayload() {
       db.trash.toArray(),
       db.notes.toArray(),
       db.note_folders.toArray(),
+      db.wishes.toArray(),
     ])
 
   const meta = (await db.meta.toArray())
@@ -450,6 +462,7 @@ export async function buildBackupPayload() {
     trash,
     notes,
     note_folders,
+    wishes,
     /* Added in version 2. A version 1 file simply has neither, and the
        restore leaves the current settings alone rather than blanking them. */
     meta,

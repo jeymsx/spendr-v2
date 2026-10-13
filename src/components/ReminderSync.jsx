@@ -34,6 +34,7 @@ export default function ReminderSync({ userId }) {
   const accounts  = useLiveQuery(() => db.accounts.toArray(), [], undefined)
   const txs       = useLiveQuery(() => db.transactions.toArray(), [], undefined)
   const recurring = useLiveQuery(() => db.recurring.toArray(), [], undefined)
+  const wishes    = useLiveQuery(() => db.wishes.toArray(), [], undefined)
   const nudge     = useNudge()
   const { caughtUp } = useSyncState()
   /* Bumped when the connection comes back, so an upload that failed offline
@@ -56,14 +57,14 @@ export default function ReminderSync({ userId }) {
   }, [userId])
 
   useEffect(() => {
-    if (!accounts || !txs || !recurring || nudge === undefined || !caughtUp) return
+    if (!accounts || !txs || !recurring || !wishes || nudge === undefined || !caughtUp) return
     const t = setTimeout(() => {
       if (typeof navigator !== 'undefined' && navigator.onLine === false) return
-      const list = buildReminders({ accounts, transactions: txs, recurring, nudge })
+      const list = buildReminders({ accounts, transactions: txs, recurring, nudge, wishes })
       syncReminders(userId, list).catch(e => console.warn('[reminders] sync:', e?.message ?? e))
     }, 3000)
     return () => clearTimeout(t)
-  }, [userId, accounts, txs, recurring, nudge, caughtUp, tick])
+  }, [userId, accounts, txs, recurring, wishes, nudge, caughtUp, tick])
 
   return null
 }

@@ -12,6 +12,7 @@ import { isFlowRow, isSpend } from './flows'
 import { loanStatus } from './loans'
 import { investmentStatus, STALE_AFTER_DAYS } from './investments'
 import { spendingRows } from '../utils/installments'
+import { isReady, readyAt, wishBody } from './wishes'
 
 /**
  * What belongs in the notifications list, worked out from the ledger.
@@ -58,7 +59,7 @@ export const BACKUP_MIN_ENTRIES = 10
 const DAY_MS = 864e5
 
 /**
- * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'milestone'|'challenge'|'recap'|'whats-new'|'loan-due'|'investment-stale'|'forecast-floor'|'forecast-short'|'backup-stale'} NotificationKind
+ * @typedef {'card-due'|'card-overdue'|'bill-due'|'bill-overdue'|'budget-warn'|'budget-over'|'badge'|'milestone'|'challenge'|'recap'|'whats-new'|'loan-due'|'investment-stale'|'forecast-floor'|'forecast-short'|'backup-stale'|'wish-ready'} NotificationKind
  *
  * @typedef {object} FeedItem
  * @property {string} id
@@ -104,6 +105,7 @@ function latest(stages, nowMs) {
  * @param {Array<Record<string, any>>} [input.categories]
  * @param {Array<{key: string, earnedAt?: string, silent?: boolean}>} [input.badges]
  * @param {Array<Record<string, any>>} [input.challenges]  stored challenge attempts
+ * @param {Array<Record<string, any>>} [input.wishes]  the wishlist, for the ones whose wait is over
  * @param {boolean} [input.globalRollover]
  * @param {{version: string, headline: string, at: string}|null} [input.whatsNew]
  *   this release, dated when this device first had it - null when there is
@@ -118,7 +120,7 @@ function latest(stages, nowMs) {
  */
 export function collectNotifications({
   accounts = [], transactions = [], recurring = [], categories = [], badges = [], challenges = [],
-  globalRollover = false, whatsNew = null, forecast = null, lastBackup = undefined, now = new Date(),
+  wishes = [], globalRollover = false, whatsNew = null, forecast = null, lastBackup = undefined, now = new Date(),
 } = {}) {
   const nowMs = now.getTime()
   const floor = nowMs - FEED_WINDOW_DAYS * DAY_MS
@@ -302,6 +304,18 @@ export function collectNotifications({
     offer({
       id: `challenge:${c.syncId ?? c.id}`, kind: 'challenge', at: c.finishedAt,
       title: `Challenge won: ${def.name}`, body: def.win, url: '/achievements?tab=challenges',
+    })
+  }
+
+  // ── A wish whose wait is over: "Still want it?", worded as the push is (lib/reminders.js) ──
+  for (const w of wishes) {
+    if (!w || !isReady(/** @type {WishRow} */ (w), now)) continue
+    const at = readyAt(/** @type {WishRow} */ (w))
+    offer({
+      id: `wish:${w.syncId ?? w.id}:${w.coolUntil ?? ''}`, kind: 'wish-ready', at: at.toISOString(),
+      title: `Still want ${w.name}?`,
+      body: wishBody(/** @type {WishRow} */ (w), at),
+      url: '/wishlist',
     })
   }
 

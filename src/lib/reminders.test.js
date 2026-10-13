@@ -1,6 +1,22 @@
 import { describe, it, expect } from 'vitest'
 import { buildReminders, reminderDigest, stableKey, MAX_REMINDERS } from './reminders'
 
+describe('a wish whose wait ends', () => {
+  const now = new Date(2026, 9, 13, 12)
+  const wish = { syncId: 'w-1', name: 'Earbuds', price: 8990, currency: 'PHP', status: 'waiting', coolUntil: '2026-10-20', createdAt: new Date(2026, 9, 13, 10).toISOString() }
+
+  it('is asked about at 9 on its day, with its price and how long it waited', () => {
+    const r = buildReminders({ wishes: [wish], now }).find(x => x.tag.startsWith('wish:'))
+    expect(r).toMatchObject({ tag: 'wish:w-1:2026-10-20', title: 'Still want Earbuds?', body: '₱8,990.00, parked 7 days ago', url: '/wishlist' })
+    expect(new Date(r?.fireAt ?? 0).getHours()).toBe(9)
+  })
+
+  it('is not asked about once decided, or once its day has passed', () => {
+    expect(buildReminders({ wishes: [{ ...wish, status: 'skipped' }], now }).some(x => x.tag.startsWith('wish:'))).toBe(false)
+    expect(buildReminders({ wishes: [{ ...wish, coolUntil: '2026-10-10' }], now }).some(x => x.tag.startsWith('wish:'))).toBe(false)
+  })
+})
+
 /**
  * What the phone uploads for the server to send.
  *

@@ -9,6 +9,7 @@ import { isFlowRow } from './flows'
 import { loanStatus } from './loans'
 import { nudgeReminders } from './nudge'
 import { spendingRows } from '../utils/installments'
+import { readyAt, wishBody } from './wishes'
 
 /**
  * The reminders a ledger is owed, worked out on the device.
@@ -150,10 +151,11 @@ const byTime = (a, b) => a.fireAt.localeCompare(b.fireAt) || a.tag.localeCompare
  * @param {Array<Record<string, any>>} [input.transactions]
  * @param {Array<Record<string, any>>} [input.recurring]
  * @param {unknown} [input.nudge]  the daily check-in's time, 'HH:MM', or off
+ * @param {Array<Record<string, any>>} [input.wishes]  the wishlist: each waiting one is asked about when its wait ends
  * @param {Date} [input.now]
  * @returns {Reminder[]}
  */
-export function buildReminders({ accounts = [], transactions = [], recurring = [], nudge = null, now = new Date() } = {}) {
+export function buildReminders({ accounts = [], transactions = [], recurring = [], nudge = null, wishes = [], now = new Date() } = {}) {
   const until = now.getTime() + HORIZON_DAYS * DAY_MS
   /** @type {Reminder[]} */
   const out = []
@@ -256,6 +258,21 @@ export function buildReminders({ accounts = [], transactions = [], recurring = [
       title: `Your ${monthName(month)} Wrapped is ready`,
       body: 'See how your month went',
       url: `/recap/${month}`,
+    })
+  }
+
+  /* A wish, the morning its wait ends (lib/wishes.js): the same words the
+     bell has for it. Decided early, it is not in the list, and the upload
+     withdraws it. */
+  for (const w of wishes) {
+    if (!w || (w.status ?? 'waiting') !== 'waiting' || !w.coolUntil) continue
+    const at = readyAt(/** @type {WishRow} */ (w))
+    push({
+      tag: `wish:${w.syncId ?? w.id}:${w.coolUntil}`,
+      fireAt: at.toISOString(),
+      title: `Still want ${w.name}?`,
+      body: wishBody(/** @type {WishRow} */ (w), at),
+      url: '/wishlist',
     })
   }
 

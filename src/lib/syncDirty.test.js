@@ -31,7 +31,7 @@ const earlier = (n) => new Date(Date.UTC(2026, 9, 1, 10, 0, 0) + n * 1000).toISO
 // ── An in-memory Dexie, as far as sync.js uses it ───────────────────────────
 
 const BOOKKEEPING = new Set(['syncId', 'synced', 'pushed', 'syncedAt', 'balance', 'opening', 'balanceSent'])
-const SYNCED_TABLES = ['accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders']
+const SYNCED_TABLES = ['accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders', 'wishes']
 
 /** @param {any} row */
 const copy = (row) => (row ? structuredClone(row) : row)
@@ -145,7 +145,7 @@ let afterFirst = null
 
 /** @type {Record<string, MemTable>} */
 let tables = {}
-const NAMES = ['transactions', 'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders', 'balances', 'notifications']
+const NAMES = ['transactions', 'accounts', 'categories', 'debts', 'recurring', 'templates', 'goals', 'challenges', 'trash', 'notes', 'note_folders', 'wishes', 'balances', 'notifications']
 function freshTables() {
   tables = Object.fromEntries(NAMES.map(n => [n, new MemTable(n, n === 'balances' ? 'account' : 'id')]))
   tables.badges = new MemTable('badges', 'key')

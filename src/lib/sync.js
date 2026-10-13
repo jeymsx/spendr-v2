@@ -475,6 +475,33 @@ export function folderToRow(r, userId) {
 }
 
 /**
+ * A wish (lib/wishes.js, migrations/037_wishes.sql). No local_id: a wish is
+ * known by its stable id alone, so a pull can never take another device's
+ * numbering for a match.
+ *
+ * @param {WishRow} r
+ * @param {string} userId
+ */
+export function wishToRow(r, userId) {
+  return {
+    user_id:    userId,
+    sync_id:    r.syncId ?? null,
+    name:       r.name ?? '',
+    price:      Number(r.price) || 0,
+    currency:   r.currency ?? null,
+    link:       r.link ?? null,
+    note:       r.note ?? null,
+    cool_until: r.coolUntil ?? null,
+    status:     r.status ?? 'waiting',
+    decided_at: r.decidedAt ?? null,
+    tx_id:      r.txId ?? null,
+    goal_name:  r.goalName ?? null,
+    created_at: r.createdAt ?? null,
+    updated_at: r.updatedAt ?? new Date().toISOString(),
+  }
+}
+
+/**
  * @param {Template} r
  * @param {string} userId
  */
@@ -753,6 +780,27 @@ export function rowToFolder(row) {
   return {
     ...syncIdOf(row),
     name:      String(row.name ?? ''),
+    createdAt: row.created_at ?? null,
+    updatedAt: row.updated_at,
+    synced:    SYNCED,
+  }
+}
+
+/** @param {Record<string, any>} row */
+export function rowToWish(row) {
+  const status = ['waiting', 'bought', 'skipped', 'saving'].includes(row.status) ? row.status : 'waiting'
+  return {
+    ...syncIdOf(row),
+    name:      String(row.name ?? ''),
+    price:     Number(row.price) || 0,
+    currency:  row.currency ?? null,
+    link:      row.link ?? null,
+    note:      row.note ?? null,
+    coolUntil: row.cool_until ?? null,
+    status,
+    decidedAt: row.decided_at ?? null,
+    txId:      row.tx_id ?? null,
+    goalName:  row.goal_name ?? null,
     createdAt: row.created_at ?? null,
     updatedAt: row.updated_at,
     synced:    SYNCED,
@@ -1150,6 +1198,7 @@ const SMALL_TABLES = {
   badges:       { table: () => db.badges,       toRow: badgeToRow,     on: 'user_id,key',       label: 'badges push' },
   challenges:   { table: () => db.challenges,   toRow: challengeToRow, on: 'user_id,sync_id',   label: 'challenges push' },
   note_folders: { table: () => db.note_folders, toRow: folderToRow,    on: 'user_id,sync_id',   label: 'note folders push' },
+  wishes:       { table: () => db.wishes,       toRow: wishToRow,      on: 'user_id,sync_id',   label: 'wishes push' },
 }
 
 /** The steps for the two tables that keep their own marks, by their optionalSync names. */
@@ -1206,6 +1255,7 @@ export async function syncToSupabase(userId, { only = null } = {}) {
   if (wants('challenges')) await pushOptional('challenges', userId)
   await optionalSync(TRASH_STEP, () => pushTrash(userId))
   if (wants('note_folders')) await pushOptional('note_folders', userId)
+  if (wants('wishes'))       await pushOptional('wishes', userId)
   await optionalSync(NOTES_STEP, () => pushNotes(userId))
   if (wants('meta')) await pushPreferences(userId)
 }
@@ -2181,6 +2231,9 @@ export async function syncFromSupabase(userId, { onAdded, only = null, ...opts }
         : null),
       pending, opts))
   if (wants('notes')) await optionalSync('notes pull', () => pullNotes(userId, pending, opts))
+  // Known by the stable id alone: no name to match by, and no local_id is sent (wishToRow).
+  if (wants('wishes')) await optionalSync('wishes pull', () =>
+    pullSimpleTable('wishes', db.wishes, rowToWish, null, userId, null, pending, opts))
 
   // Guarantee system categories exist locally even if never pushed to Supabase
   if (wants('categories')) await ensureSystemCategories()
@@ -2875,7 +2928,7 @@ async function clearLocalLedger() {
   const tables = [
     db.transactions, db.balances, db.accounts, db.categories, db.debts,
     db.recurring, db.templates, db.goals, db.challenges, db.badges, db.trash,
-    db.notes, db.note_folders, db.notifications,
+    db.notes, db.note_folders, db.notifications, db.wishes,
   ]
   await db.transaction('rw', [...tables, db.meta], async () => {
     for (const t of tables) await t.clear()
