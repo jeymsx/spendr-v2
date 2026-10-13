@@ -120,7 +120,7 @@ async function quickLog(page, phrase) {
 
 const PAGES = [
   ['home', '/', showBalance], ['transactions', '/transactions'], ['accounts', '/accounts'], ['card', '/accounts/9'],
-  ['budget', '/budget'], ['recurring', '/recurring'], ['debts', '/debts'], ['goals', '/goals'],
+  ['budget', '/budget'], ['recurring', '/recurring'], ['debts', '/debts'], ['goals', '/goals'], ['wishlist', '/wishlist'],
   ['insights', '/insights', null, 2400], ['networth', '/insights/net-worth', null, 2400],
   ['forecast', '/insights/forecast', null, 2400], ['achievements', '/achievements?tab=badges', null, 2000],
 ]
@@ -158,8 +158,10 @@ for (const theme of WHICH === 'both' ? ['dark', 'light'] : [WHICH]) {
   // Wrapped is the same in both themes, so it is captured once.
   if (theme === 'dark' && want('wrapped')) {
     await page.goto(BASE + '/recap/2026-08')
-    await page.waitForSelector('button[aria-label="Pause recap"]', { timeout: 20000 })
-    await page.locator('button[aria-label="Pause recap"]').click()
+    await page.waitForSelector('button[aria-label="Pause Wrapped"]', { timeout: 20000 })
+    await page.locator('button[aria-label="Pause Wrapped"]').click()
+    // Off the button again, or the arrow keys below light its focus ring in every shot.
+    await page.evaluate(() => document.activeElement?.blur?.())
     await wait(page, 300)
     for (let i = 0; i < 3; i++) { await page.keyboard.press('ArrowLeft'); await wait(page, 300) }
     for (let i = 0; i < SLIDES.length; i++) {

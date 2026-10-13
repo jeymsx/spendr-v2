@@ -30,9 +30,10 @@ export const GROUPS: Group[] = [
       { name: 'transactions', alt: 'The transactions list, grouped by day' },
     ],
     items: [
-      { icon: 'bolt', title: 'Quick log', body: 'Hold the + and type “185 starbucks”. It fills in the amount, the category and the account, and learns as you go.' },
+      { icon: 'bolt', title: 'Quick log', body: 'Tap Quick log on Home, or hold the +, and type “185 starbucks”. It fills in the amount, the category and the account, and learns as you go.' },
       { icon: 'category', title: 'Categories under your thumb', body: 'A row you swipe, every category in its own colour and icon, right on the form.' },
       { icon: 'template', title: 'Templates', body: 'Save the ones you log every week, and add them again in a tap.' },
+      { icon: 'replace', title: 'Fix a category once', body: 'Change one transaction’s category and Spendr offers to move the others with the same description too.' },
       { icon: 'arrows-split-2', title: 'Split it, or share it', body: 'File one purchase under several categories, or note what friends owe you for it. Their share refunds the purchase when they pay you back.' },
       { icon: 'hand-finger-left', title: 'Swipe to delete', body: 'Swipe a transaction away. It waits in Recently deleted for 30 days, to put back.' },
       { icon: 'file-import', title: 'Bring your history', body: 'Import a CSV from a spreadsheet or another app, step by step.' },
@@ -93,20 +94,22 @@ export const GROUPS: Group[] = [
   },
   {
     id: 'debts',
-    nav: 'Debts & goals',
-    eyebrow: 'Debts and goals',
-    title: 'Pay off and save up.',
-    lede: 'What you owe, what you’re owed, and what you’re saving for, all worked out from what’s actually there.',
+    nav: 'Saving & debts',
+    eyebrow: 'Wishlist, goals and debts',
+    title: 'Think twice, save up, pay off.',
+    lede: 'What you want, what you’re saving for, and who owes whom, all worked out from what’s actually there.',
     shots: [
-      { name: 'debts', alt: 'Debts: the net position with everyone' },
+      { name: 'wishlist', alt: 'The wishlist: what waiting has kept, wishes ready to decide and those still cooling off' },
       { name: 'goals', alt: 'Goals funded in order, with rings of progress' },
     ],
     items: [
+      { icon: 'hourglass', title: 'A wishlist that makes you wait', body: 'Park something you want with its price. On the day you pick, Spendr asks if you still want it, and what you skip counts as kept.' },
+      { icon: 'link', title: 'Paste a shop link', body: 'Paste a Shopee or Lazada share message into a wish and its name and price fill in.' },
       { icon: 'users', title: 'Who owes whom', body: 'Lend and borrow with friends and family, log partial payments, and see overdue ones flagged.' },
       { icon: 'scale', title: 'Where you stand', body: 'One figure for your net position with everyone, in your favour or not.' },
       { icon: 'target', title: 'Goals funded by real money', body: 'Goals are funded by what’s in your accounts, not by a number you type in.' },
       { icon: 'sort-descending', title: 'In the order you choose', body: 'Your money fills the first goal to its target, then the next, so every peso is counted once.' },
-      { icon: 'circle-number-1', title: 'A number when it needs you', body: 'Bills, Debts and Goals show a count the moment one of them needs attention.' },
+      { icon: 'circle-number-1', title: 'A number when it needs you', body: 'Bills, Debts, Goals and the Wishlist show a count the moment one of them needs attention.' },
     ],
   },
   {
@@ -157,6 +160,7 @@ export const GROUPS: Group[] = [
       { icon: 'file-spreadsheet', title: 'Export and back up', body: 'Export to CSV, get one spreadsheet of everything, or back up everything as one file you can restore.' },
       { icon: 'file-type-pdf', title: 'A monthly report', body: 'Download any month as a PDF.' },
       { icon: 'refresh', title: 'Sync, if you want it', body: 'Sign in with Google to keep your phone and computer in step, or don’t: everything works without it.' },
+      { icon: 'trash', title: 'Delete your account', body: 'Remove your account and everything synced to it from inside the app, whenever you want.' },
     ],
   },
   {
@@ -182,7 +186,7 @@ export const GROUPS: Group[] = [
     desktop: true,
     items: [
       { icon: 'layout-sidebar', title: 'Made for a big screen', body: 'Home in two columns, and a split view for accounts, Insights, Recurring, Debts and Goals: the list on the left, what you picked on the right.' },
-      { icon: 'keyboard', title: 'A key for every entry', body: 'Press E, I or T from anywhere to add an expense, an inflow or a transfer, and Q for quick log.' },
+      { icon: 'keyboard', title: 'A key for every entry', body: 'Press E, I or T from anywhere to add an expense, income or a transfer, and Q for quick log.' },
       { icon: 'devices', title: 'In step with your phone', body: 'Sign in with Google on both, and what you log on one is on the other.' },
     ],
   },

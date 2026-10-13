@@ -40,11 +40,15 @@ export const FAQ: { q: string; a: string }[] = [
     a: 'Any time: export to CSV, get one spreadsheet of everything, back up everything as one file you can restore, or download a monthly PDF report.',
   },
   {
+    q: 'Can I delete my account?',
+    a: 'Yes, from inside the app: Settings › Cloud sync › Delete my account. It removes your account and everything synced to it, and clears the device too.',
+  },
+  {
     q: 'Does it handle other currencies?',
     a: 'Yes. Give an account its own currency and Spendr converts it at daily rates, or shows each currency on a line of its own.',
   },
   {
     q: 'Who makes Spendr?',
-    a: 'James Sablay. Questions and ideas are welcome at <a href="mailto:jamesandgen111@gmail.com">jamesandgen111@gmail.com</a>.',
+    a: 'James Sablay. Questions and ideas are welcome: send one from Settings › Report a bug in the app, or write to <a href="mailto:jamesandgen111@gmail.com">jamesandgen111@gmail.com</a>.',
   },
 ]
