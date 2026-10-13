@@ -71,7 +71,7 @@ function collect(dir, out = []) {
 const HERE = dirname(fileURLToPath(import.meta.url))
 const files = process.argv.length > 2
   ? process.argv.slice(2)
-  : collect(join(HERE, '..', 'src'))
+  : collect(join(HERE, '..', '..', 'src'))
 let problems = 0
 
 /** The primitives themselves are allowed to spell things out - they are where

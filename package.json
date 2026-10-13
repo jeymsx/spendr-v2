@@ -10,12 +10,12 @@
     "prebuild": "node scripts/copy-flags.mjs",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "node scripts/check.mjs",
+    "check": "node scripts/checks/check.mjs",
     "typecheck": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
     "lint": "eslint .",
-    "design": "node scripts/designcheck.mjs"
+    "design": "node scripts/checks/designcheck.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",

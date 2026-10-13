@@ -87,7 +87,7 @@ function collect(dir, out = []) {
 const HERE = dirname(fileURLToPath(import.meta.url))
 const files = process.argv.length > 2
   ? process.argv.slice(2)
-  : collect(join(HERE, '..', 'src'))
+  : collect(join(HERE, '..', '..', 'src'))
 
 const norm = (p) => p.replace(/\\/g, '/')
 let problems = 0

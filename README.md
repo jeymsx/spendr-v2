@@ -1,109 +1,96 @@
 <div align="center">
-  <img src="public/icons/icon-512.png" alt="Spendr Logo" width="64" height="64"/>
+  <img src="public/icons/icon-512.png" alt="Spendr" width="64" height="64"/>
   <h1>Spendr</h1>
-  <p>A mobile-first personal finance PWA built for Filipinos — track expenses, manage credit cards, log debts, and visualize spending, all offline and synced across devices.</p>
-
-  <p>
-    <img src="https://img.shields.io/badge/React_18-20232A?style=flat-square&logo=react&logoColor=61DAFB" alt="React"/>
-    <img src="https://img.shields.io/badge/Vite-646CFF?style=flat-square&logo=vite&logoColor=white" alt="Vite"/>
-    <img src="https://img.shields.io/badge/Tailwind_CSS_v4-06B6D4?style=flat-square&logo=tailwindcss&logoColor=white" alt="Tailwind CSS"/>
-    <img src="https://img.shields.io/badge/Dexie.js_(IndexedDB)-FF6B35?style=flat-square" alt="Dexie.js"/>
-    <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=flat-square&logo=supabase&logoColor=white" alt="Supabase"/>
-    <img src="https://img.shields.io/badge/PWA-installable-5A0FC8?style=flat-square&logo=googlechrome&logoColor=white" alt="PWA"/>
-  </p>
+  <p>A personal finance app for the Philippines: log what you spend in seconds, see where it goes, and keep more of it. Works offline, installs like an app, and syncs across your devices.</p>
+  <p><a href="https://spendr-v2.vercel.app">spendr-v2.vercel.app</a></p>
 </div>
 
----
+![Spendr](docs/images/spendr-main.png)
 
-![Spendr App](assets/spendr-main.png)
+## What it does
 
----
+- **Accounts the way you have them:** cash, GCash and Maya, banks, credit cards
+  with their statements and due dates, loans and investments, in any currency.
+- **Fast logging:** expense, income or transfer, or type "150 jollibee" into
+  quick log. Spendr remembers which category a description goes under.
+  Templates, splits, refunds and installment plans are built in.
+- **Budgets:** monthly limits per category, with leftovers rolled over or
+  moved into savings.
+- **Bills and pay:** recurring bills with reminders, and a forecast of what's
+  safe to spend until payday that learns when your pay comes in.
+- **Saving:** goals funded by your real balances, a wishlist that makes you
+  wait before you buy, and no-spend challenges.
+- **Debts:** who owes you and whom you owe, with partial payments.
+- **Insights:** spending by category, trends, net worth, and a monthly Wrapped.
+- **Yours to keep:** works without a connection, backs up to a file, imports
+  and exports CSV, locks with Face ID, and deletes your account from inside
+  the app.
 
-## Features
+## Run it
 
-- **Offline-first** — all data lives in IndexedDB (Dexie.js); works without any connection
-- **Cross-device sync** — optional Supabase backend with `updated_at` conflict resolution
-- **Transaction logging** — expense, income, and transfer flows with a custom numeric keypad
-- **Account hierarchy** — group GCash Wallet + GCash Savings under one "GCash" parent
-- **Credit card intelligence** — live available credit computed from billing cycle transactions, not a stored balance
-- **Budget tracking** — per-category monthly limits with compact 2-column chip grid on home and insights
-- **Debts** — track "I lent / I owe" with partial payment history and overdue detection
-- **Recurring bills** — daily/weekly/monthly/yearly with one-tap "Pay Now" that auto-advances the next date
-- **Analytics** — donut, bar, and area charts with month navigation
-- **Data export** — CSV, full JSON backup, monthly PDF report
-- **Accent color system** — 8 presets + custom hex; every UI element adapts in real time
-- **QR codes** — attach a payment QR (5:7 crop, base64) to any account; synced across devices
-- **48 Philippine presets** — GCash, Maya, BPI, BDO, UnionBank, and more
-
----
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Framework | React 18 + Vite |
-| Styling | Tailwind CSS v4 |
-| Routing | React Router v6 |
-| Local DB | Dexie.js (IndexedDB) |
-| Backend / Auth | Supabase (PostgreSQL + RLS) |
-| Charts | Recharts |
-| PDF Export | @react-pdf/renderer |
-| CSV Parsing | PapaParse |
-| Drag & Drop | @dnd-kit/core + @dnd-kit/sortable |
-| Image Crop | react-image-crop |
-| PWA | vite-plugin-pwa + Workbox |
-
----
-
-## Project layout
-
-```
-src/
-  pages/            one folder per page that outgrew a file
-    dashboard/      wallet clip-path, tiles, upcoming, quick actions
-    accounts/       form, QR sheets, card style, list card, balance trend
-    goals/          ring, form sheet, sort sheet
-    debts/          card, form sheet, payment sheet
-    insights/       charts, trivia, trend, panels, tables
-    import/         one module per wizard step, plus the CSV parser
-    onboarding/     one module per phase of the flow
-    transactions/   filter sheet, amount slider, quick chips
-    settings/       categories, budgets, templates, backup, profile
-  components/
-    ui/             the design system - Button, Field, Sheet, Card, …
-  lib/              pure domain logic: goals, badges, quickParse, sync, money
-  utils/            pure helpers: credit cycles, recurring dates, money input
-  db/               Dexie schema, migrations and the write helpers
-  web/              the desktop layer, which is its own files
-  types.d.ts        the ten record shapes, declared once
+```bash
+npm ci
+cp .env.example .env    # your Supabase URL and anon key; leave blank to run without sync
+npm run dev             # http://localhost:5173
 ```
 
-A page keeps its own folder only when it earned one. The rule is that a file
-holds one thing: `Debts.jsx` is the page, and the form sheet, the payment
-sheet and the card each have their own module, because they were four things
-sharing 1,111 lines.
+Without Supabase settings the app runs fully on the device, signed out.
+
+### Supabase (for sign-in and sync)
+
+1. Create a project, and copy its URL and anon key into `.env`.
+2. Run every file in `supabase/migrations/`, in number order, in the SQL
+   editor. Each one is safe to run twice.
+3. Turn on Google under Authentication › Providers.
+4. For push reminders, deploy `supabase/functions/send-reminders` (its header
+   lists the secrets it needs; `node scripts/vapid-keys.mjs` makes the keys).
 
 ## Checks
 
-```
-npm run check      # six checkers over src/**
-npm test           # 516 tests
+```bash
+npm run check   # types, plus AST checks: unbound names, use before declaration,
+                # hooks after an early return, broken imports, hand-rolled UI,
+                # em dashes in copy
+npm test        # vitest
 npm run lint
+npm run build
 ```
 
-`npm run check` runs, in order:
+CI runs the same four on every push (`.github/workflows/ci.yml`).
 
-| | what it catches |
-|---|---|
-| `typecheck` | `tsc --noEmit` over the logic layer, reading JSDoc. Nothing is emitted, so it can fail a build but never change one. |
-| `scopecheck` | identifiers that are never bound — five ReferenceErrors have shipped past a green `vite build` |
-| `tdzcheck` | use before declaration |
-| `hookcheck` | a hook after an early return |
-| `importcheck` | an import naming an export that does not exist. Invisible to eslint and to scopecheck, because the import statement binds the identifier either way. |
-| `designcheck` | hand-rolled UI where a primitive already exists |
+## Project layout
 
----
+```text
+src/
+  pages/        the phone's pages; a folder when a page has parts
+  web/          the computer's layout and its own pages
+  components/   shared components; ui/ is the design system
+  lib/          domain rules (sync, budgets, forecast, help centre, ...)
+  db/           the local database (Dexie) and the writes to it
+  utils/  hooks/  context/  layouts/
+supabase/
+  migrations/   numbered SQL, run by hand in order
+  functions/    the push reminder function
+site/           the landing page (Astro)
+scripts/        checks/ (npm run check), tools/ (one-off code edits), build helpers
+docs/           how it's built, how releases work, and old plans
+dev/            dev-only pages (local/ is not tracked)
+```
+
+More in [docs/architecture.md](docs/architecture.md).
+
+## Versions
+
+Semantic versioning from 1.0.0: MAJOR for changes people have to relearn,
+MINOR for anything new, PATCH for fixes. See
+[docs/releasing.md](docs/releasing.md).
+
+## Built with
+
+React 18, Vite 6, Tailwind CSS 4, Dexie 4 (IndexedDB), Supabase (Postgres,
+row-level security, Realtime), Motion, Recharts, Tiptap, react-pdf, and
+vite-plugin-pwa.
 
 ## License
 
-© 2024–2025 James Sablay. All rights reserved.
+© 2024–2026 James Sablay. All rights reserved.

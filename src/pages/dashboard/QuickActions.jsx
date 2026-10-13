@@ -119,7 +119,7 @@ export function QuickAction({ to, icon, label, badge = 0, className = '' }) {
           copying that pair verbatim would have shipped a failing graphic:
           slate-400 on the white card is 2.56:1, under the 3:1 WCAG 1.4.11
           asks of an icon that means something. (It is one of the 235
-          instances of that pair noted in plan.md - the shades are the wrong
+          instances of that pair noted in docs/plans/plan.md - the shades are the wrong
           way round app-wide.)
 
           slate-500 works in BOTH themes, so there is no dark: variant here at

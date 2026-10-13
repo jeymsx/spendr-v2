@@ -2,7 +2,7 @@
  * Situations to write a note for: a way of being, in the order money tends
  * to put people in them. Each is a full set of facts - the same shape the
  * phone reads from its own tables - so the composer is tested against every
- * standing and every edge, and the gallery (standing-gallery.html) draws each
+ * standing and every edge, and the gallery (dev/standing-gallery.html) draws each
  * as the note itself.
  *
  * The first is the sample-data page's own October, to the peso; the rest

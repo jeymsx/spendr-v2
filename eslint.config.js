@@ -26,7 +26,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
  * clutter. At zero, the next one fails the build instead of joining a crowd.
  */
 export default [
-  { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'seed-*.js', 'site/**'] },
+  { ignores: ['dist/**', 'dev-dist/**', 'node_modules/**', 'dev/local/**', 'site/**'] },
 
   js.configs.recommended,
 
@@ -67,7 +67,7 @@ export default [
  
          Left as errors, `npm run lint` would be red on day one, which teaches
          you to ignore it. As warnings it exits 0 today, so any NEW violation
-         stands out - and the backlog is written down in plan.md rather than
+         stands out - and the backlog is written down in docs/plans/plan.md rather than
          hidden here. AccountDetail's ref-write-during-render is the one worth
          fixing first: it is idempotent today, but it is the kind of thing
          that breaks under concurrent rendering. */

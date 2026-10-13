@@ -976,7 +976,7 @@ export async function pullPreferences(userId, { first = false } = {}) {
 
 // ── Tables that may not exist remotely yet ───────────────────────────────────
 //
-// `goals` ships with a Supabase migration (src/supabase/migrations/004_goals.sql).
+// `goals` ships with a Supabase migration (supabase/migrations/004_goals.sql).
 // Until that is
 // applied, every goals query comes back "relation does not exist" - and since
 // syncToSupabase awaits each push in sequence and pushTable throws, one missing
@@ -1491,7 +1491,7 @@ async function pullTrash(userId, pending, opts = {}) {
 /**
  * Columns that may not exist remotely yet, per table.
  *
- * `design` arrives with src/supabase/migrations/005_account_design.sql. The
+ * `design` arrives with supabase/migrations/005_account_design.sql. The
  * problem is that pushTable sends EVERY account in one upsert and PostgREST
  * rejects the whole request if it names a column the table does not have - so
  * shipping the mapping before the migration ran would not have degraded

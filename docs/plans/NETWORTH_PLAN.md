@@ -11,7 +11,7 @@ Started 2026-09-28 while the user sleeps. Their instructions, verbatim in spirit
 - **Debts count toward net worth, behind a toggle** in Preferences › Behaviour.
 - The forecast is ported from Latr (`../finance-simulator`, `lib/finance.ts` buildProjection), trimmed.
 - UX must stay simple: no new tabs, reuse existing screens, and hide what isn't used.
-- **Write the SQL migration afterwards:** `src/supabase/migrations/023_…sql`. 022 is taken by trash.
+- **Write the SQL migration afterwards:** `supabase/migrations/023_…sql`. 022 is taken by trash.
 
 ## Key design decision (read this first after a context compression)
 
@@ -99,7 +99,7 @@ refunds already are (see `lib/txMoney.js` header):
 - [x] Loan dues in the forecast and the notifications.
 
 ### Finish
-- [x] `src/supabase/migrations/023_net_worth_forecast.sql`.
+- [x] `supabase/migrations/023_net_worth_forecast.sql`.
 - [x] Changelog entry (lib/changelog.js). Version bump? Leave that to the user; don't push.
 - [x] Full QA pass: `npm run check`, `npm run lint`, `npm test`, `npm run build`.
   - Browser QA on port 5190: long names, small phone, light/dark, reduced motion, empty states.
@@ -176,7 +176,7 @@ merged, version not bumped. Desktop (`src/web/**`) untouched.
 
 ## Before anything else: run migration 023
 
-`src/supabase/migrations/023_net_worth_forecast.sql` - five nullable columns (`transactions.adjust`,
+`supabase/migrations/023_net_worth_forecast.sql` - five nullable columns (`transactions.adjust`,
 `accounts.kind / invested_start / valued_at`, `recurring.type`). Additive, re-runnable. **Run it in the Supabase
 SQL editor before any device opens this build.** Sync keeps working without it (the retry now drops only the
 missing column), but a correction or value row pushed before it runs never gets its `adjust` mark on the server

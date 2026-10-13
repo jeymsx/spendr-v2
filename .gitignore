@@ -25,6 +25,9 @@ Thumbs.db
 # Vite PWA dev output
 dev-dist/
 
+# Dev-only pages and seed scripts that stay on this machine (dev/README.md).
+dev/local/
+
 # Claude Code local settings
 .claude/
 CASE_STUDY.md

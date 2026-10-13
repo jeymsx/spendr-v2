@@ -4,7 +4,7 @@ Badges grew into **achievements**: challenges, milestones and badges under one
 roof, drawn as 3D glass medallions instead of the old PNG artwork, with a
 full-screen moment and a shareable 9:16 picture when you earn one.
 
-**One thing to do:** run `src/supabase/migrations/021_challenges.sql` in the
+**One thing to do:** run `supabase/migrations/021_challenges.sql` in the
 Supabase SQL editor before (or right after) deploying. Until it is applied,
 challenges stay on the device they were started on; everything else syncs as
 before. Milestones need nothing new: they are rows in `badges` (006).
@@ -150,7 +150,7 @@ one CSS layer (`html.flat` in `index.css`), applied before first paint from
 | `src/pages/settings/Preferences.jsx` | Appearance and behaviour |
 | `src/db/db.js` (v13) | The local `challenges` table |
 | `src/lib/sync.js` | `challengeToRow`, `rowToChallenge`, and their `optionalSync` calls |
-| `src/supabase/migrations/021_challenges.sql` | The SQL above, with its reasoning |
+| `supabase/migrations/021_challenges.sql` | The SQL above, with its reasoning |
 
 ## 8. Decisions you may want to overrule
 

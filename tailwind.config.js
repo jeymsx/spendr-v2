@@ -39,7 +39,7 @@ export default {
        * the app's caption, 13px its row text, 15px its form rows, 17px its
        * sheet titles - so they are named here rather than argued away. What
        * goes is the typing: `text-[13px]` becomes `text-13`, the set is
-       * closed, and scripts/designcheck.mjs fails a build that invents a
+       * closed, and scripts/checks/designcheck.mjs fails a build that invents a
        * thirty-second one.
        *
        * NO line-height, deliberately. Tailwind's named steps each ship one
