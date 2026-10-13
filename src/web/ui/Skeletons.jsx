@@ -510,14 +510,3 @@ export function RouteSkeleton() {
   )
 }
 
-/** The plain outline: a title, a row of figures, two panels. */
-export function PageSkeleton() {
-  return (
-    <div className="d-page" aria-hidden="true">
-      <div className="d-page-inner" style={{ maxWidth: 1400 }}>
-        <HeadSkeleton />
-        <BoardSkeleton />
-      </div>
-    </div>
-  )
-}

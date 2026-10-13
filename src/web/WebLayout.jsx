@@ -32,9 +32,8 @@ const sectionOf = (pathname) => pathname.split('/')[1] || 'home'
 /**
  * Desktop shell: the sidebar, and the page beside it, filling the window.
  *
- * Each page lays itself out (components/WebPane.jsx): one scrolling column,
- * or a list and its detail side by side, each scrolling on its own. So the
- * shell does not scroll - it only holds them.
+ * Each page lays itself out (web/ui/Page.jsx, PhonePage.jsx): its own
+ * scrolling column. So the shell does not scroll - it only holds them.
  *
  * Same ErrorBoundary and Suspense placement as the phone's AppLayout, so a
  * page that throws or is still loading keeps the sidebar there to leave by.

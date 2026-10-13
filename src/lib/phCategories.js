@@ -1,8 +1,3 @@
-export const CAT_PALETTE = [
-  '#2D9DFF', '#FF6B6B', '#FFB347', '#51CF66', '#845EF7',
-  '#FF8CC8', '#20C997', '#FCC419', '#74C0FC', '#F06595',
-]
-
 // Shown as locked pre-selected chips in each grid
 export const LOCKED_EXPENSE = { name: 'Others',  icon: '📦', color: '#6b7280', type: 'expense' }
 export const LOCKED_INFLOW  = { name: 'Income',  icon: '💰', color: '#22c55e', type: 'inflow'  }
@@ -57,10 +52,3 @@ export const INFLOW_PRESETS = [
   { name: 'Others',     icon: '📦', color: '#6b7280', type: 'inflow' },
 ]
 
-export const EMOJI_SUGGESTIONS = [
-  '🍔', '🛍️', '🚗', '🧾', '🎮', '💆', '🏠', '💊',
-  '🎓', '✈️', '🐾', '💻', '🎁', '🔧', '🏋️', '🍷',
-  '👗', '🧴', '📱', '🎵', '🍼', '🙏', '🚬', '📦',
-  '💎', '🎯', '⚽', '🎨', '📚', '🔑', '💡', '🚀',
-  '🌿', '🛒', '🏆', '🌍', '🎲', '🎤', '💼', '📈',
-]

@@ -766,14 +766,6 @@ const PICTURES = {
 /** Every picture there is, by name. */
 export const GLASS_NAMES = Object.keys(PICTURES)
 
-let seq = 0
-/** A fresh id prefix. Inline pictures share one document, and two with the
- *  same ids would draw each other's gradients. */
-export function glassId() {
-  seq = (seq + 1) % 1e6
-  return `gx${seq.toString(36)}`
-}
-
 /**
  * A picture, as SVG markup.
  *

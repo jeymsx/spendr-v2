@@ -53,9 +53,6 @@ export const pct = (n) => `${Math.round(num(n))}%`
 /** "1 day", "8 days". @param {number} n @param {string} one @param {string} [many] */
 export const count = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
-/** "today", "tomorrow", "in 8 days". @param {number} n days from now */
-export const inDays = (n) => (n <= 0 ? 'today' : n === 1 ? 'tomorrow' : `in ${n} days`)
-
 /**
  * A day inside a sentence: "today", "tomorrow", "on Monday" for the week
  * ahead, "on Oct 15" beyond it, "on Oct 2" for a day already gone.

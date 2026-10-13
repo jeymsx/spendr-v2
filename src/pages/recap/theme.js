@@ -41,8 +41,6 @@ import { contrastRatio, parseHex, toHex } from '../../lib/color'
 
 /** The spring every morph and entrance uses. */
 export const SPRING = { type: 'spring', bounce: 0, visualDuration: 0.5 }
-/** Colour has no velocity to carry, so it eases rather than springs. */
-export const COLOR_EASE = { duration: 0.45, ease: [0.22, 1, 0.36, 1] }
 /** Leaving is quicker than arriving, and accelerates away rather than settling. */
 export const EXIT = { duration: 0.22, ease: [0.4, 0, 1, 1] }
 /** How long a slide stays before moving on by itself. */

@@ -23,8 +23,6 @@
 
 /** Arrivals and settles: fast out of the gate, a long soft landing. */
 export const EASE_OUT = 'cubic-bezier(0.22, 1, 0.36, 1)'
-/** Sheets. The iOS curve: most of the travel in the first third. */
-export const EASE_SHEET = 'cubic-bezier(0.32, 0.72, 0, 1)'
 /** Leaving: starts gently and accelerates away rather than settling. */
 export const EASE_EXIT = 'cubic-bezier(0.4, 0, 1, 1)'
 /**

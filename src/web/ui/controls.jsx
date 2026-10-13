@@ -137,8 +137,5 @@ function SearchInput({ value, onChange, placeholder = 'Search', className = '', 
   )
 })
 
-/** A key on the keyboard, as a hint. @param {{children: import('react').ReactNode}} props */
-export const Kbd = ({ children }) => <kbd className="d-kbd">{children}</kbd>
-
 /** Ctrl on Windows and Linux, ⌘ on a Mac. */
 export const MOD = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/.test(navigator.platform || navigator.userAgent) ? '⌘' : 'Ctrl'

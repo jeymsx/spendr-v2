@@ -18,11 +18,6 @@ import { INVISIBLE } from '../../lib/nameKey'
 // it - so requiring it made Spendr reject its own export file.
 export const SPENDR_REQUIRED_COLS = ['txId', 'type', 'date', 'description', 'category', 'payment', 'account', 'fromAccount', 'toAccount', 'amount']
 export const TABLE_REQUIRED_COLS = ['tx_id', 'type', 'transaction_date', 'description', 'category', 'from_account', 'to_account', 'amount']
-/** What Spendr's export also writes, each optional: a file without them imports as before. */
-export const SPENDR_OPTIONAL_COLS = [
-  'refundOf', 'splitId', 'installmentId', 'toAmount', 'toCurrency',
-  'currency', 'baseAmount', 'baseCurrency', 'adjust',
-]
 export const VALID_TYPES = new Set(['expense', 'inflow', 'transfer'])
 
 export const TRANSFER_RE = /Transfer:\s*(.+?)\s*→\s*(.+)/
@@ -169,7 +164,6 @@ export function fmtBytes(bytes) {
 
 // ── Icons ──────────────────────────────────────────────────────────────────────
 
-
 export function IconFile() {
   return (
     <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -178,7 +172,6 @@ export function IconFile() {
     </svg>
   )
 }
-
 
 export function IconWarning() {
   return (

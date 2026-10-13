@@ -1,6 +1,21 @@
 import {
-  Bold01, Italic01, Underline01, Strikethrough01, Dotpoints01, FlipBackward, FlipForward,
-  Pin01, Share01, DotsHorizontal, Trash01, Folder, FolderPlus, Tag01, Check, Plus, XClose, Sliders01, Edit03,
+  Bold01,
+  Italic01,
+  Underline01,
+  Strikethrough01,
+  Dotpoints01,
+  Pin01,
+  Share01,
+  DotsHorizontal,
+  Trash01,
+  Folder,
+  FolderPlus,
+  Tag01,
+  Check,
+  Plus,
+  XClose,
+  Sliders01,
+  Edit03,
 } from '@untitledui/icons'
 
 /**
@@ -36,8 +51,6 @@ export const IconItalic = pack(Italic01)
 export const IconUnderline = pack(Underline01)
 export const IconStrike = pack(Strikethrough01)
 export const IconBullets = pack(Dotpoints01)
-export const IconUndo = pack(FlipBackward)
-export const IconRedo = pack(FlipForward)
 export const IconPin = pack(Pin01)
 export const IconShare = pack(Share01)
 export const IconMore = pack(DotsHorizontal)
@@ -107,16 +120,6 @@ export function IconQuote({ size }) {
   return (
     <Drawn size={size}>
       <path d="M4.5 5v14M9.5 8h10.5M9.5 12h10.5M9.5 16h7" />
-    </Drawn>
-  )
-}
-
-/** A marker's tip, for highlighting. @param {{size?: number}} props */
-export function IconMarker({ size }) {
-  return (
-    <Drawn size={size}>
-      <path d="m9 11-6 6v3h9l3-3" />
-      <path d="m22 12-4.6 4.6a2 2 0 0 1-2.8 0l-5.2-5.2a2 2 0 0 1 0-2.8L14 4" />
     </Drawn>
   )
 }

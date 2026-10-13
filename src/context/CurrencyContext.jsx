@@ -1,7 +1,7 @@
-import { Fragment, createContext, useContext, useEffect, useMemo, useState } from 'react'
+import { Fragment, createContext, useContext, useEffect, useState } from 'react'
 import { useLiveQuery } from '../hooks/useLiveQuery'
 import db from '../db/db'
-import { DEFAULT_CURRENCY, currencyOf, isCurrencyCode } from '../lib/currency'
+import { DEFAULT_CURRENCY, isCurrencyCode } from '../lib/currency'
 import { setBaseCurrency } from '../lib/money'
 
 /**
@@ -107,19 +107,6 @@ export function CurrencyProvider({ children }) {
  */
 export function useBaseCurrency() {
   return useContext(CurrencyContext)
-}
-
-/**
- * The base currency's description, for a symbol or a name.
- *
- * currencyOf rather than the registry directly: the base can now be any of
- * the provider's hundred and eighty, and only twenty-two of those are in the
- * registry - the rest are described through Intl. A straight index would have
- * spread `undefined` and left this returning a code and nothing else.
- */
-export function useBaseCurrencyInfo() {
-  const code = useBaseCurrency()
-  return useMemo(() => ({ code, ...currencyOf(code) }), [code])
 }
 
 export default CurrencyContext

@@ -176,15 +176,41 @@ export function IconWallet({ size = 16, strokeWidth = '2', stroke = 'currentColo
 // the default size to 18, which is what most call sites in this app want; a
 // call site can still pass either prop, because the spread comes last.
 import {
-  AlertTriangle, X as XClose, Check, Trash01, Download01, Scales02, Stars01,
-  Bell01, Zap, Bank, Wallet01, CreditCard01, Phone01, BankNote01,
-  Receipt, SwitchHorizontal01,
-  CalendarCheck01, CoinsHand, Grid01, Brush01, Palette, Settings01,
-  Contrast01, ZapFast,
-  CurrencyDollarCircle, CoinsSwap01, Globe01, Cursor01,
-  Trophy01, Target04, CoinsStacked01, TrendUp01, BarChart10, Calculator,
-  AlertCircle, CheckCircle, Lock01, PauseCircle, Monitor01, Cloud01,
-  File06, Edit05, Gift01,
+  AlertTriangle,
+  X as XClose,
+  Check,
+  Trash01,
+  Download01,
+  Scales02,
+  Stars01,
+  Bell01,
+  Zap,
+  Bank,
+  Wallet01,
+  CreditCard01,
+  Phone01,
+  BankNote01,
+  Receipt,
+  SwitchHorizontal01,
+  CoinsHand,
+  Grid01,
+  Palette,
+  Settings01,
+  Contrast01,
+  CoinsSwap01,
+  Trophy01,
+  Target04,
+  CoinsStacked01,
+  TrendUp01,
+  BarChart10,
+  CheckCircle,
+  Lock01,
+  PauseCircle,
+  Monitor01,
+  Cloud01,
+  File06,
+  Edit05,
+  Gift01,
 } from '@untitledui/icons'
 
 function uui(Cmp, defaultSize = 18) {
@@ -216,24 +242,14 @@ export const IconReceipt   = uui(Receipt)            // loans on the Net worth p
 export const IconTransferUI = uui(SwitchHorizontal01) // a transfer template
 export const IconNotes     = uui(File06)         // Notes, from Home and the desktop's sidebar
 export const IconCompose   = uui(Edit05)         // a new note, as iOS Notes draws it
-export const IconGiftUI    = uui(Gift01)         // the wishlist, in What's New
-
-// Release-notes glyphs. Only What's New uses these, and only one row each -
-// which is why they are the vaguest names in this block. They stand for a
-// CHANGE ("bills got a page", "the colours are readable now") rather than for
-// a thing in the app, so there is nothing more concrete to call them.
-export const IconBillHistory = uui(CalendarCheck01)  // a bill and its posted charges
+export const IconGiftUI    = uui(Gift01)           // a bill and its posted charges
 export const IconDebt        = uui(CoinsHand)        // money owed, in either direction
 export const IconCategories  = uui(Grid01)
-export const IconDrawn       = uui(Brush01)          // the icon set replacing the emoji
+          // the icon set replacing the emoji
 export const IconPalette     = uui(Palette)          // accent colour
 export const IconSettings    = uui(Settings01)
-export const IconContrast    = uui(Contrast01)       // the light-mode contrast pass
-export const IconQuickLog    = uui(ZapFast)          // hold the + and type a line
-export const IconCurrency    = uui(CurrencyDollarCircle) // an account in another currency
-export const IconRates       = uui(CoinsSwap01)      // the exchange-rate table
-export const IconWorldMoney  = uui(Globe01)          // a net worth across currencies
-export const IconTap         = uui(Cursor01)         // the + that would not respond
+export const IconContrast    = uui(Contrast01)                  // an account in another currency
+export const IconRates       = uui(CoinsSwap01)                         // the + that would not respond
 export const IconDesktop     = uui(Monitor01)        // the desktop layout
 
 /**
@@ -275,6 +291,4 @@ export const IconTarget    = uui(Target04)
 export const IconCoins     = uui(CoinsStacked01)
 export const IconTrendUp   = uui(TrendUp01)
 export const IconBarChart  = uui(BarChart10)
-export const IconCalc      = uui(Calculator)
-export const IconAlert     = uui(AlertCircle)
 export const IconCheckCircle = uui(CheckCircle)

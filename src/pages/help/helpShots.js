@@ -39,5 +39,3 @@ export function shotUrl(name, theme) {
   return s[theme] ?? s.dark ?? s.light ?? null
 }
 
-/** The names there are pictures for, for the test that holds help.js to them. */
-export const SHOT_NAMES = Object.keys(SHOTS)

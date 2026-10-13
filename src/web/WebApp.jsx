@@ -13,12 +13,11 @@ import './web.css'
 import './pro.css'
 
 /**
- * The desktop app: every route the phone has, rendering the phone's page.
- *
- * What the desktop adds is where a page sits (WebLayout, components/WebPane,
- * pages/WebSections) - never a second version of what it does. A feature
- * added to a phone page is on the desktop the moment it lands, reading the
- * same tables and syncing through the same SyncManager.
+ * The desktop app: every route the phone has, as a desktop page of its own
+ * (web/pages, laid out by web/ui/Page) or as the phone's page in the
+ * desktop's frame (PhonePage, RouteDrawer). Either way it reads the same
+ * tables and syncs through the same SyncManager, so there is never a second
+ * version of what a page does - only of where it sits.
  *
  * Addresses mirror App.jsx exactly, so a notification's link, a bookmark, or
  * switching layouts mid-page lands on the same thing in either.

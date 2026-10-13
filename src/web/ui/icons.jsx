@@ -35,7 +35,6 @@ function Svg({ size = 16, className = '', children }) {
 /** @param {IconProps} p */ export const IList = (p) => <Svg {...p}><path d="M8 6h13M8 12h13M8 18h13" /><path d="M3.5 6h.01M3.5 12h.01M3.5 18h.01" /></Svg>
 /** @param {IconProps} p */ export const IWallet = (p) => <Svg {...p}><path d="M19 7V5a1 1 0 0 0-1-1H5a2 2 0 0 0 0 4h15a1 1 0 0 1 1 1v4h-3a2 2 0 0 0 0 4h3a1 1 0 0 0 1-1v-2" /><path d="M3 6v13a2 2 0 0 0 2 2h15a1 1 0 0 0 1-1v-3" /></Svg>
 /** @param {IconProps} p */ export const IChart = (p) => <Svg {...p}><path d="M3 3v18h18" /><path d="M7 15l4-4 3 3 5-6" /></Svg>
-/** @param {IconProps} p */ export const IPie = (p) => <Svg {...p}><path d="M21 12a9 9 0 1 1-9-9v9z" /><path d="M15 3.5A9 9 0 0 1 20.5 9H15z" /></Svg>
 /** @param {IconProps} p */ export const ITarget = (p) => <Svg {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="5" /><circle cx="12" cy="12" r="1" /></Svg>
 /** @param {IconProps} p */ export const IGift = (p) => <Svg {...p}><rect x="3" y="8" width="18" height="4" rx="1" /><path d="M12 8v13" /><path d="M19 12v7a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2v-7" /><path d="M7.5 8a2.5 2.5 0 0 1 0-5C10 3 12 8 12 8s2-5 4.5-5a2.5 2.5 0 0 1 0 5" /></Svg>
 /** @param {IconProps} p */ export const IRepeat = (p) => <Svg {...p}><path d="m17 2 4 4-4 4" /><path d="M3 11v-1a4 4 0 0 1 4-4h14" /><path d="m7 22-4-4 4-4" /><path d="M21 13v1a4 4 0 0 1-4 4H3" /></Svg>
@@ -48,11 +47,9 @@ function Svg({ size = 16, className = '', children }) {
 /** @param {IconProps} p */ export const IPlus = (p) => <Svg {...p}><path d="M12 5v14M5 12h14" /></Svg>
 /** @param {IconProps} p */ export const IBell = (p) => <Svg {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Svg>
 /** @param {IconProps} p */ export const IChevronDown = (p) => <Svg {...p}><path d="m6 9 6 6 6-6" /></Svg>
-/** @param {IconProps} p */ export const IChevronUp = (p) => <Svg {...p}><path d="m18 15-6-6-6 6" /></Svg>
 /** @param {IconProps} p */ export const IChevronRight = (p) => <Svg {...p}><path d="m9 18 6-6-6-6" /></Svg>
 /** @param {IconProps} p */ export const IChevronLeft = (p) => <Svg {...p}><path d="m15 18-6-6 6-6" /></Svg>
 /** @param {IconProps} p */ export const IX = (p) => <Svg {...p}><path d="M18 6 6 18M6 6l12 12" /></Svg>
-/** @param {IconProps} p */ export const IFilter = (p) => <Svg {...p}><path d="M3 5h18l-7 8.5V19l-4 2v-7.5z" /></Svg>
 /** @param {IconProps} p */ export const ICalendar = (p) => <Svg {...p}><rect x="3" y="5" width="18" height="16" rx="2" /><path d="M16 3v4M8 3v4M3 10h18" /></Svg>
 /** @param {IconProps} p */ export const IMore = (p) => <Svg {...p}><circle cx="5" cy="12" r="1" /><circle cx="12" cy="12" r="1" /><circle cx="19" cy="12" r="1" /></Svg>
 /** @param {IconProps} p */ export const ICheck = (p) => <Svg {...p}><path d="M20 6 9 17l-5-5" /></Svg>
@@ -68,21 +65,15 @@ function Svg({ size = 16, className = '', children }) {
 /** @param {IconProps} p */ export const ITrash = (p) => <Svg {...p}><path d="M3 6h18M8 6V4a1 1 0 0 1 1-1h6a1 1 0 0 1 1 1v2M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /></Svg>
 /** @param {IconProps} p */ export const IEdit = (p) => <Svg {...p}><path d="M12 20h9" /><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z" /></Svg>
 /** @param {IconProps} p */ export const ITag = (p) => <Svg {...p}><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z" /><path d="M7.5 7.5h.01" /></Svg>
-/** @param {IconProps} p */ export const IEye = (p) => <Svg {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></Svg>
-/** @param {IconProps} p */ export const IEyeOff = (p) => <Svg {...p}><path d="M9.9 4.24A9.1 9.1 0 0 1 12 4c6.5 0 10 7 10 7a18.5 18.5 0 0 1-2.16 3.19M6.6 6.6A18.4 18.4 0 0 0 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6" /><path d="M14.12 14.12a3 3 0 1 1-4.24-4.24M2 2l20 20" /></Svg>
 /** @param {IconProps} p */ export const ISidebar = (p) => <Svg {...p}><rect x="3" y="4" width="18" height="16" rx="2" /><path d="M9 4v16" /></Svg>
-/** @param {IconProps} p */ export const ICommand = (p) => <Svg {...p}><path d="M15 6v12a3 3 0 1 0 3-3H6a3 3 0 1 0 3 3V6a3 3 0 1 0-3 3h12a3 3 0 1 0-3-3" /></Svg>
 /** @param {IconProps} p */ export const IUser = (p) => <Svg {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1" /></Svg>
-/** @param {IconProps} p */ export const IExternal = (p) => <Svg {...p}><path d="M15 3h6v6M10 14 21 3" /><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6" /></Svg>
 /** @param {IconProps} p */ export const IZap = (p) => <Svg {...p}><path d="M13 2 4 14h7l-1 8 9-12h-7z" /></Svg>
-/** @param {IconProps} p */ export const ICircleDot = (p) => <Svg {...p}><circle cx="12" cy="12" r="9" /><circle cx="12" cy="12" r="2" /></Svg>
 /** @param {IconProps} p */ export const IGrid = (p) => <Svg {...p}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></Svg>
 /** @param {IconProps} p */ export const IBank = (p) => <Svg {...p}><path d="M3 21h18M4 10h16M5 10v8M9.5 10v8M14.5 10v8M19 10v8M12 3l9 5H3z" /></Svg>
 /** @param {IconProps} p */ export const ICard = (p) => <Svg {...p}><rect x="2" y="5" width="20" height="14" rx="2" /><path d="M2 10h20M6 15h4" /></Svg>
 /** @param {IconProps} p */ export const ICamera = (p) => <Svg {...p}><path d="M14.5 4h-5L8 6H5a2 2 0 0 0-2 2v10a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-3z" /><circle cx="12" cy="13" r="3.5" /></Svg>
 /** @param {IconProps} p */ export const ISliders = (p) => <Svg {...p}><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6" /></Svg>
 /** @param {IconProps} p */ export const IGauge = (p) => <Svg {...p}><path d="M12 14l4-4" /><path d="M3.34 19a10 10 0 1 1 17.32 0" /></Svg>
-/** @param {IconProps} p */ export const IClock = (p) => <Svg {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Svg>
 /** @param {IconProps} p */ export const IAlert = (p) => <Svg {...p}><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></Svg>
 /** @param {IconProps} p */ export const ILogOut = (p) => <Svg {...p}><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" /></Svg>
 /** @param {IconProps} p */ export const ICornerDownLeft = (p) => <Svg {...p}><path d="M9 10 4 15l5 5" /><path d="M20 4v7a4 4 0 0 1-4 4H4" /></Svg>
