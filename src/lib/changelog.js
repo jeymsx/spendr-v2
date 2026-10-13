@@ -24,6 +24,13 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '1.0.0',
+    date: '2026-10-13',
+    items: [
+      { title: 'Spendr 1.0', desc: 'Spendr is out of beta. Everything you’ve logged comes with you. Thank you for using it while it was being built.' },
+    ],
+  },
+  {
     version: '0.24.0',
     date: '2026-10-13',
     items: [

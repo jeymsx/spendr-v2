@@ -32,8 +32,18 @@ export const RELEASE_DATE = '2026-10-13'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'sparkle',
-    title: 'Spendr 1.0',
-    desc: 'Spendr is out of beta. Everything you’ve logged comes with you. Thank you for using it while it was being built.',
+    icon: 'gift',
+    title: 'A quieter Wrapped',
+    desc: 'Share is a small round button in the corner of each slide now, out of the way of your month.',
+  },
+  {
+    icon: 'desktop',
+    title: 'Even buttons on the computer',
+    desc: 'Starting a challenge or opening a wish shows its two buttons across the dialog, under what they’re about.',
+  },
+  {
+    icon: 'chart',
+    title: 'Spending in two columns',
+    desc: 'On the computer, Insights › Spending lists every expense under By category, with the charts beside it.',
   },
 ]
