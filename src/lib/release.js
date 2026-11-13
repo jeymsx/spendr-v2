@@ -20,7 +20,7 @@ import { version } from '../../package.json'
 export const APP_VERSION = version
 
 /** When this release went out, 'YYYY-MM-DD'. */
-export const RELEASE_DATE = '2026-10-13'
+export const RELEASE_DATE = '2026-11-13'
 
 /**
  * @typedef {object} ReleaseNote
@@ -32,8 +32,8 @@ export const RELEASE_DATE = '2026-10-13'
 /** @type {ReleaseNote[]} */
 export const RELEASE_NOTES = [
   {
-    icon: 'gift',
-    title: 'Help pictures up to date',
-    desc: 'The help centre’s Wrapped pictures show the new share button in the corner.',
+    icon: 'phone',
+    title: 'A clear top on iPhone',
+    desc: 'The top of a page, Home’s greeting included, no longer looks blurred before you scroll.',
   },
 ]

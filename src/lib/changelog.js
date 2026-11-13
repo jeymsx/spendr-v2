@@ -24,6 +24,13 @@ export const CHANGELOG = [
     items: RELEASE_NOTES.map(({ title, desc }) => ({ title, desc })),
   },
   {
+    version: '1.0.2',
+    date: '2026-10-13',
+    items: [
+      { title: 'Help pictures up to date', desc: 'The help centre’s Wrapped pictures show the new share button in the corner.' },
+    ],
+  },
+  {
     version: '1.0.1',
     date: '2026-10-13',
     items: [
