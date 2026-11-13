@@ -1,4 +1,5 @@
-// A page's pinned header (components/ui/PinnedTop.jsx) is clear at rest and
+// The top blurs are off at rest: Home's status bar frost, and a page's
+// pinned header (components/ui/PinnedTop.jsx), which is clear at rest and
 // frosted only once the page scrolls under it, even with the window left a
 // few pixels down, as an iPhone leaves it after the keyboard. Watched against
 // the window, that offset frosted the bar on a page nobody had scrolled.
@@ -25,7 +26,25 @@ if (await s.until(`[...document.querySelectorAll('button')].some(b => b.textCont
   await sleep(1200)
 }
 
+/* Home has no pinned top: the status bar's frost covers its greeting. At
+   rest it is hidden, not only see-through, since an iPhone can still blur
+   through a backdrop filter at opacity 0. */
+const status = (el) => s.evaluate(`(() => { const cs = getComputedStyle(${el}); return cs.visibility + ' ' + Number(cs.opacity).toFixed(2) })()`)
+const statusFrost = `document.querySelector('.status-frost')`
+const home = `document.getElementById('app-main')`
+s.check('Home at rest: the status frost is hidden', await status(statusFrost) === 'hidden 0.00', await status(statusFrost))
+await s.evaluate(`${home}.scrollTop = 300`)
+await sleep(600)
+s.check('Home scrolled: the status frost is drawn', await status(statusFrost) === 'visible 1.00', await status(statusFrost))
+await s.evaluate(`${home}.scrollTop = 0`)
+await sleep(80)
+const fading = await s.evaluate(`${statusFrost}.getAnimations().some(a => a.transitionProperty === 'opacity')`)
+s.check('back at the top, it fades out rather than vanishing', fading)
+await sleep(600)
+s.check('and is hidden once faded', await status(statusFrost) === 'hidden 0.00', await status(statusFrost))
+
 const frosted = `document.querySelector('#app-main .pinned-top')?.hasAttribute('data-under')`
+const headerFrost = `document.querySelector('#app-main .pinned-top-frost')`
 const main = `document.getElementById('app-main')`
 /* Client-side, as a tap would: a fresh load would put the window back. */
 const open = async (path) => {
@@ -36,9 +55,11 @@ const open = async (path) => {
 
 await open('/recurring')
 s.check('at rest, the header is clear', await s.evaluate(frosted) === false)
+s.check('and its frost is hidden, not only see-through', await status(headerFrost) === 'hidden 0.00', await status(headerFrost))
 await s.evaluate(`${main}.scrollTop = 240`)
 await sleep(500)
 s.check('scrolled, the header frosts', await s.evaluate(frosted) === true)
+s.check('and its frost is drawn', await status(headerFrost) === 'visible 1.00', await status(headerFrost))
 await s.shot('pinned-top-scrolled.png')
 await s.evaluate(`${main}.scrollTop = 0`)
 await sleep(500)

@@ -1727,7 +1727,11 @@ html { overscroll-behavior-x: none; }
   bottom: calc(-1 * var(--frost-reach));
   pointer-events: none;
   opacity: 0;
-  transition: opacity 220ms var(--ease-out);
+  /* Hidden too once it has faded, not only see-through: an iPhone can go on
+     drawing a backdrop blur at opacity 0, and the page's top sat blurred
+     with nothing scrolled. The fade still plays; visibility flips after it. */
+  visibility: hidden;
+  transition: opacity 220ms var(--ease-out), visibility 0s linear 220ms;
 }
 .pinned-top-haze {
   -webkit-backdrop-filter: blur(6px);
@@ -1746,7 +1750,11 @@ html { overscroll-behavior-x: none; }
   background: linear-gradient(to bottom, rgba(2, 6, 23, 0.55), rgba(2, 6, 23, 0.32) calc(100% - var(--frost-reach)), rgba(2, 6, 23, 0));
 }
 .pinned-top[data-under] .pinned-top-haze,
-.pinned-top[data-under] .pinned-top-frost { opacity: 1; }
+.pinned-top[data-under] .pinned-top-frost {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
 /* Tighter once the page is under it: the row moves up towards the status
    bar, as an iPhone's does. A move, not a smaller box, so nothing below it
    jumps by the same amount mid-scroll. */
@@ -1774,7 +1782,10 @@ html { overscroll-behavior-x: none; }
   z-index: 45;
   pointer-events: none;
   opacity: 0;
-  transition: opacity 220ms var(--ease-out);
+  /* Hidden after the fade, as a pinned top's frost is (above): at opacity 0
+     an iPhone could still blur Home's greeting through it. */
+  visibility: hidden;
+  transition: opacity 220ms var(--ease-out), visibility 0s linear 220ms;
   background: linear-gradient(to bottom, rgba(248, 250, 252, 0.8), rgba(248, 250, 252, 0.55) 68%, rgba(248, 250, 252, 0));
   -webkit-backdrop-filter: blur(20px) saturate(160%);
   backdrop-filter: blur(20px) saturate(160%);
@@ -1784,7 +1795,11 @@ html { overscroll-behavior-x: none; }
 .dark .status-frost {
   background: linear-gradient(to bottom, rgba(2, 6, 23, 0.55), rgba(2, 6, 23, 0.32) 68%, rgba(2, 6, 23, 0));
 }
-.status-frost[data-under] { opacity: 1; }
+.status-frost[data-under] {
+  opacity: 1;
+  visibility: visible;
+  transition-delay: 0s;
+}
 /* own-top: a page that pins a top of its own, New account and the importer. */
 #app-main:has(.pinned-top, .own-top) ~ .status-frost { display: none; }
 

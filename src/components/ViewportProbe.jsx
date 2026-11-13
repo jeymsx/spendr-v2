@@ -81,6 +81,17 @@ function snap() {
 }
 
 /** @param {string[]} log */
+/**
+ * A frost layer's state: on or off, its opacity, and whether it is drawn.
+ * @param {Element|null} el
+ */
+function frostState(el) {
+  if (!el) return '-'
+  const cs = getComputedStyle(el)
+  const on = el.hasAttribute('data-under') || !!el.closest('[data-under]')
+  return `${on ? 'on' : 'off'} ${Number(cs.opacity).toFixed(2)} ${cs.visibility === 'visible' ? 'drawn' : 'hidden'}`
+}
+
 function read(log) {
   const vv = window.visualViewport
   const main = document.getElementById('app-main')
@@ -97,6 +108,8 @@ function read(log) {
     `scrollY ${r(window.scrollY)} tallest ${tallestSeen()} kb ${keyboardIsUp() ? 'UP' : 'down'}`,
     `100dvh ${p.dvh} fixed ${r(p.fixed.top)}+${r(p.fixed.height)} shell ${r(shell?.top)}+${r(shell?.height)}`,
     `nav ${nav ? getComputedStyle(nav).display : '-'} ${r(navBox?.top)}..${r(navBox?.bottom)} main ${r(main?.scrollTop)}`,
+    // Which top blur is on, and whether it is drawn at all: for a page blurred at rest.
+    `frost ${frostState(document.querySelector('.status-frost'))} top ${frostState(document.querySelector('#app-main .pinned-top-frost'))}`,
     `focus ${label(el)} ${box ? `${r(box.top)}..${r(box.bottom)}` : ''}${document.documentElement.classList.contains('field-typing') ? ' room' : ''}`,
     ...log,
   ]
