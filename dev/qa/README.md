@@ -64,6 +64,7 @@ node dev/qa/wishlist.mjs                 # one, on its own
 | `template-amount` | A template's amount can be changed on its confirm sheet |
 | `installments` | An installment plan counts as one purchase everywhere |
 | `wishlist` | The wishlist on the phone and computer: add, wait, decide, buy |
+| `pinned-top` | A page's pinned header is clear at rest, even with the window left moved as the iPhone keyboard leaves it, and frosts once scrolled |
 | `home-rail` | Home's eight round buttons, in order, scrolling sideways |
 | `getting-started` | The Getting started list in Notifications (not Home or Help), its panel and bell row on the computer, its help article |
 | `notes`, `note-order` | Folders, tags and search; opening a note doesn't reorder the list |

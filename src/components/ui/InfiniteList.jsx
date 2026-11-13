@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { scrollParent } from '../../utils/scrollParent'
 
 /**
  * A long list that grows as you scroll, instead of a "Load more" button.
@@ -60,15 +61,6 @@ export function useInfiniteList(items, { page = PAGE, resetKey = null } = {}) {
   }
 }
 
-/** The nearest ancestor that scrolls - <main> in this app, a sheet's body in a sheet. @param {HTMLElement} el */
-function scroller(el) {
-  for (let p = el.parentElement; p; p = p.parentElement) {
-    const oy = getComputedStyle(p).overflowY
-    if (oy === 'auto' || oy === 'scroll') return p
-  }
-  return null
-}
-
 /**
  * The bottom of a growing list: asks for the next page as it comes within
  * LOOKAHEAD of the screen, and says the list is complete once it is - when
@@ -89,7 +81,7 @@ export function ListEnd({ list, done, className = '' }) {
        a fresh one reports that straight away, and the next page follows. */
     const io = new IntersectionObserver(
       (entries) => { if (entries.some(e => e.isIntersecting)) more() },
-      { root: scroller(el), rootMargin: `0px 0px ${LOOKAHEAD}px 0px` },
+      { root: scrollParent(el), rootMargin: `0px 0px ${LOOKAHEAD}px 0px` },
     )
     io.observe(el)
     return () => io.disconnect()

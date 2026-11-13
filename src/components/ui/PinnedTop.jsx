@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { scrollParent } from '../../utils/scrollParent'
 
 /**
  * What stays at the top of a page while the page scrolls under it: the back
@@ -27,6 +28,11 @@ import { useEffect, useRef, useState } from 'react'
  * the page may scroll in the phone's main column, a desktop pane or a sheet,
  * and an IntersectionObserver neither knows nor cares which.
  *
+ * It watches the sentinel against whatever scrolls the page, never the
+ * window. Against the window, an iPhone that the keyboard had left moved by
+ * a few pixels (hooks/useKeyboardGuard.js) put the 4px sentinel above the
+ * screen, and the bar sat frosted over a page nobody had scrolled.
+ *
  * The desktop keeps its own chrome: html.web leaves the bar in the flow and
  * draws no frost (index.css).
  *
@@ -41,7 +47,10 @@ export default function PinnedTop({ children, className = '' }) {
     if (!el || typeof IntersectionObserver === 'undefined') return
     /* The sentinel is 4px tall, so the frost waits for a scroll you meant
        rather than a pixel of rubber band. */
-    const io = new IntersectionObserver(([e]) => setUnder(e.intersectionRatio === 0))
+    const io = new IntersectionObserver(
+      ([e]) => setUnder(e.intersectionRatio === 0),
+      { root: scrollParent(el) },
+    )
     io.observe(el)
     return () => io.disconnect()
   }, [])
